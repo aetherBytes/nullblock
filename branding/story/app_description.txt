@@ -1,0 +1,5 @@
+This is  Fast API, React application. The intention is to build an interactive app with a game-like feel to it.
+
+There will be the ability to connect to a web3 wallet, and interact with various elements of that account via the ECHO.jsx component.
+
+Please analyze the provided code files and notify me when you are ready to begin a conversation.
