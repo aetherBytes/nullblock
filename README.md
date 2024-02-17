@@ -1,8 +1,10 @@
 
-# Welcome to [Your App Name]!
+# Welcome to NullBlock!
+
+![Alt text for the image](https://github.com/aetherBytes/nullblock/blob/prod/branding/landing1.png)
 
 ## 🚀 About the Project
-[Your App Name] is a cutting-edge web application built with the power and performance of WASM (WebAssembly) and Rust, combined with the flexibility of TypeScript and the dynamic UI capabilities of React. Dive into a seamless experience where high performance meets modern web development, bringing you an app that's both lightning-fast and user-friendly.
+NullBlock is a cutting-edge web application built with the power and performance of WASM (WebAssembly) and Rust, combined with the flexibility of TypeScript and the dynamic UI capabilities of React. Dive into a seamless experience where high performance meets modern web development, bringing you an app that's both lightning-fast and user-friendly.
 
 ### Key Features:
 - **High Performance:** Utilizing WASM and Rust for compute-intensive tasks, ensuring your app runs at blazing speeds.
@@ -11,7 +13,7 @@
 - **Cross-Platform:** Runs effortlessly on any device, providing a consistent user experience everywhere.
 
 ## 🛠️ Getting Started
-Follow these simple steps to get [Your App Name] up and running on your local machine for development and testing purposes.
+Follow these simple steps to get NullBlock up and running on your local machine for development and testing purposes.
 
 ### Prerequisites:
 - Node.js
@@ -21,7 +23,7 @@ Follow these simple steps to get [Your App Name] up and running on your local ma
 ### Installation:
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/your-repo-link/your-app-name.git
+git clone https://github.com/aetherBytes/nullblock
 cd your-app-name
 ```
 
@@ -51,4 +53,4 @@ We welcome contributions! Whether it's submitting bugs, requesting new features,
 Encountered a problem? Have a question? Our community is here to help. Reach out to us through our support channels or open an issue on GitHub.
 
 ## 📃 License
-[Your App Name] is open-sourced under the MIT License. See the LICENSE file for more details.
+NullBlock is open-sourced under the MIT License. See the LICENSE file for more details.
