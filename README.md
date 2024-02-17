@@ -1,7 +1,11 @@
 
 # Welcome to NullBlock!
 
-![Moxi Landing image](./branding/landing1.png)
+
+<div align="center">
+    <img src="./branding/landing_1_base.svg" alt="Moxi Landing image">
+</div>
+
 
 ## 🚀 About the Project
 NullBlock is a cutting-edge web application built with the power and performance of WASM (WebAssembly) and Rust, combined with the flexibility of TypeScript and the dynamic UI capabilities of React. Dive into a seamless experience where high performance meets modern web development, bringing you an app that's both lightning-fast and user-friendly.
