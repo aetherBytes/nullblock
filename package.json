@@ -1,8 +1,15 @@
 {
-  "name": "@aetherBytes/nullblock",
+  "name": "@lomray/vite-template",
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "develop": "ssr-boost dev",
+    "build": "ssr-boost build",
+    "build:amplify": "ssr-boost build-amplify --is-optimize",
+    "build:vercel": "ssr-boost build-vercel --is-optimize",
+    "start:ssr": "ssr-boost start",
+    "start:spa": "ssr-boost start --only-client",
+    "preview": "ssr-boost preview",
     "lint:check": "eslint --ext \".ts,.tsx\" \"src/**/*.{ts,tsx,*.ts,*tsx}\"",
     "lint:format": "eslint --fix --ext \".ts,.tsx\" \"src/**/*.{ts,tsx,*.ts,*tsx}\"",
     "style:check": "stylelint \"src/**/*.{css,scss}\"",
@@ -11,7 +18,18 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@lomray/consistent-suspense": "^2.0.2",
+    "@lomray/react-head-manager": "^2.0.2",
+    "@lomray/react-mobx-manager": "^3.0.1",
+    "@lomray/react-route-manager": "^2.0.0",
+    "@lomray/vite-ssr-boost": "^2.3.1",
     "axios": "^1.6.7",
+    "classnames": "^2.5.1",
+    "cookie-parser": "^1.4.6",
+    "isbot": "^4.4.0",
+    "js-cookie": "^3.0.5",
+    "mobx": "^6.12.0",
+    "mobx-react-lite": "^4.0.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-loading-skeleton": "^3.4.0",
@@ -20,6 +38,9 @@
   "devDependencies": {
     "@commitlint/cli": "^18.6.0",
     "@commitlint/config-conventional": "^18.6.0",
+    "@lomray/eslint-config-react": "^4.1.1",
+    "@lomray/prettier-config": "^2.0.1",
+    "@lomray/stylelint-config": "^2.0.1",
     "@semantic-release/exec": "^6.0.3",
     "@types/cookie-parser": "^1.4.6",
     "@types/js-cookie": "^3.0.6",
@@ -42,6 +63,8 @@
     "sass": "^1.70.0",
     "semantic-release": "^21.1.2",
     "stylelint": "^16.2.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vite": "^5.1.1",
+    "vite-bundle-visualizer": "^1.0.1"
   }
 }
