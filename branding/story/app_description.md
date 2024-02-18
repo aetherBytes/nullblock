@@ -1,9 +1,5 @@
 # **Introducing Snake Bytes: Revolutionize Your Python Projects**
 
-<div align="center">
-  <img src="./branding/snakebytesblack.png" alt="Snake Bytes Logo">
-</div>
-
 Welcome to Snake Bytes, where innovation meets efficiency in python software development. Tailored for small businesses and individual entrepreneurs, our web service is not just a platform but a gateway to transforming your ideas into reality without the overhead of a full-time professional hire.
 
 ## **Why Snake Bytes?**
@@ -33,30 +29,4 @@ Our platform harnesses the power of React, Next.Js, FastAPI, and more, ensuring 
 ## **Join the Revolution**
 
 Step into the future of python software development with Snake Bytes. Our commitment to quality, innovation, and accessibility makes us the ideal partner for your next project. Let's build something extraordinary together.
-2. **Install dependencies:**
-```bash
-npm install
-```
 
-3. **Build the WASM module:**
-```bash
-wasm-pack build
-```
-
-4. **Run the development server:**
-```bash
-npm start
-```
-Navigate to `http://localhost:3000` to see the app in action!
-
-## 📚 Documentation
-Dive deeper into our application with our comprehensive documentation. Learn about the architecture, how to contribute, and more.
-
-## 💡 Contributing
-We welcome contributions! Whether it's submitting bugs, requesting new features, or contributing code, our community is open to all. Check out our contributing guidelines for more information.
-
-## 📞 Support
-Encountered a problem? Have a question? Our community is here to help. Reach out to us through our support channels or open an issue on GitHub.
-
-## 📃 License
-NullBlock is open-sourced under the MIT License. See the LICENSE file for more details.
