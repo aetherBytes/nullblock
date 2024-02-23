@@ -59,7 +59,7 @@
   "placementConstraints": [],
   "memory": "100",
   "taskRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
-  "family": "vite-template",
+  "family": "SnakeBytes",
   "pidMode": null,
   "requiresCompatibilities": [
     "EC2"
