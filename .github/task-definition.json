@@ -1,6 +1,6 @@
 {
   "ipcMode": null,
-  "executionRoleArn": "arn:aws:iam::771350349623:role/ECSTaskDefinitionRole",
+  "executionRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
   "containerDefinitions": [
     {
       "dnsSearchDomains": null,
@@ -25,7 +25,7 @@
       "resourceRequirements": null,
       "ulimits": null,
       "repositoryCredentials": {
-        "credentialsParameter": "arn:aws:secretsmanager:eu-west-1:771350349623:secret:ecs/docker-github-EvtP4B"
+        "credentialsParameter": "arn:aws:secretsmanager:us-east-2:058264371750:secret:ecs/docker-github-EvtP4B"
       },
       "dnsServers": null,
       "mountPoints": [],
@@ -58,7 +58,7 @@
   ],
   "placementConstraints": [],
   "memory": "100",
-  "taskRoleArn": "arn:aws:iam::771350349623:role/ECSTaskDefinitionRole",
+  "taskRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
   "family": "vite-template",
   "pidMode": null,
   "requiresCompatibilities": [
