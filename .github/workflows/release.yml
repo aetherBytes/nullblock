@@ -61,7 +61,7 @@ jobs:
     uses: Lomray-Software/vite-ssr-boost/.github/workflows/ssr-boost-deploy-aws.yml@prod
     with:
       image: ${{ needs.docker-build.outputs.image-tag }}
-      service: vite-template
+      service: SnakeBytes
       cluster: DevCluster
       task-container-name: web
     secrets:
