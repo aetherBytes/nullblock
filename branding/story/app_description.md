@@ -16,7 +16,7 @@ Dive into a pool of possibilities with our diverse technological specializations
 - Comprehensive Data analysis and Visualization
 - Advanced Machine Learning, Data Science, and Engineering
 - State-of-the-art Data Warehousing, Lakes, and Modeling
-- Innovative AI Agents, Chatbots, and RAG LLM Agents
+- Innovative AI Agents, Chatbots, and RAG LLM Agents and more!
 
 ## **Customizable Tiers for Every Need**
 
