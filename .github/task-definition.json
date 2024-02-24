@@ -25,7 +25,7 @@
       "resourceRequirements": null,
       "ulimits": null,
       "repositoryCredentials": {
-        "credentialsParameter": "arn:aws:secretsmanager:us-east-1:058264371750:secret:ecs/docker-github-EvtP4B"
+        "credentialsParameter": "arn:aws:secretsmanager:us-east-1:058264371750:secret:github-docker-token-g5Hrtm"
       },
       "dnsServers": null,
       "mountPoints": [],
