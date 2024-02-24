@@ -18,7 +18,7 @@
           "containerPort": 3000
         }
       ],
-      "command": [npm, run, start:ssr],
+      "command": ["npm", "run", "start:ssr"],
       "linuxParameters": null,
       "cpu": 0,
       "environment": [],
