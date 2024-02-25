@@ -6,14 +6,17 @@
       "dnsSearchDomains": null,
       "environmentFiles": null,
       "logConfiguration": {
-        "logDriver": "none",
-        "secretOptions": null,
-        "options": null
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/SnakeBytes",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
       },
       "entryPoint": [],
       "portMappings": [
         {
-          "hostPort": 0,
+          "hostPort": 80,
           "protocol": "tcp",
           "containerPort": 3000
         }
@@ -71,3 +74,4 @@
   "proxyConfiguration": null,
   "volumes": []
 }
+
