@@ -52,8 +52,8 @@ jobs:
       registry: ghcr.io
       image-name: ${{ github.repository }}/web
       version: ${{ needs.release.outputs.version }}
-    #   app-build-path: ./path/to/microservice/build
-    # # Specify the path to the directory containing the Dockerfile if it's within the microservice directory
+      app-build-path: ./svc/hecate/build
+    # Specify the path to the directory containing the Dockerfile if it's within the microservice directory
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
