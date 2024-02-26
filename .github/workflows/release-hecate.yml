@@ -1,4 +1,4 @@
-name: Release app
+name: Release Hecate
 
 on:
   push:
@@ -25,24 +25,24 @@ jobs:
     concurrency:
       group: ${{ github.ref }}-inject-version
       cancel-in-progress: true
-
     steps:
+      - uses: actions/checkout@v3
+      - name: Navigate to microservice directory
+        run: cd svc/hecate
       - uses: actions/download-artifact@v4
         with:
           name: build-artifact
-
       - name: Inject version
         uses: jacobtomlinson/gha-find-replace@v3
         with:
           find: '"APP_VERSION"'
           replace: '"${{ needs.release.outputs.version }}"'
           regex: false
-
       - name: App build
         uses: actions/upload-artifact@v4
         with:
           name: build-artifact
-          path: ${{ github.workspace }}
+          path: ${{ github.workspace }}/path/to/microservice
           overwrite: true
 
   docker-build:
@@ -52,7 +52,8 @@ jobs:
       registry: ghcr.io
       image-name: ${{ github.repository }}/web
       version: ${{ needs.release.outputs.version }}
-      app-build-path: ./build
+    #   app-build-path: ./path/to/microservice/build
+    # # Specify the path to the directory containing the Dockerfile if it's within the microservice directory
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -64,7 +65,9 @@ jobs:
       service: SnakeBytes
       cluster: DevCluster
       task-container-name: web
+    # Add the directory path of the microservice if needed by the external workflow
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
+
