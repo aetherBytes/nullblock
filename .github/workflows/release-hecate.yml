@@ -1,4 +1,4 @@
-name: Release Hecate
+name: Release app
 
 on:
   push:
@@ -25,35 +25,24 @@ jobs:
     concurrency:
       group: ${{ github.ref }}-inject-version
       cancel-in-progress: true
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Navigate to microservice directory and Inject version
-        run: |
-          cd svc/hecate
-          echo "Injecting version ${{ needs.release.outputs.version }}"
-        # Ensures the following steps run in the correct directory
-        working-directory: ./svc/hecate
       - uses: actions/download-artifact@v4
         with:
           name: build-artifact
+
       - name: Inject version
         uses: jacobtomlinson/gha-find-replace@v3
         with:
           find: '"APP_VERSION"'
           replace: '"${{ needs.release.outputs.version }}"'
           regex: false
-        working-directory: ./svc/hecate
-      - name: App build and upload artifact
-        run: |
-          # Your build commands here, for example:
-          npm install
-          npm run build
-        working-directory: ./svc/hecate
-        # Adjust this to match your actual build and artifact upload commands
-      - uses: actions/upload-artifact@v4
+
+      - name: App build
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifact
-          path: ./svc/hecate/build
+          path: ${{ github.workspace }}
           overwrite: true
 
   docker-build:
@@ -63,7 +52,7 @@ jobs:
       registry: ghcr.io
       image-name: ${{ github.repository }}/web
       version: ${{ needs.release.outputs.version }}
-      app-build-path: ./svc/hecate/build
+      app-build-path: ./build
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -79,4 +68,3 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
-
