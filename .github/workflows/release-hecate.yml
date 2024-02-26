@@ -1,4 +1,4 @@
-name: release app
+name: Release app
 
 on:
   push:
@@ -6,49 +6,40 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: svc/hecate
-    uses: lomray-software/vite-ssr-boost/.github/workflows/ssr-boost-build.yml@prod
+    uses: Lomray-Software/vite-ssr-boost/.github/workflows/ssr-boost-build.yml@prod
     with:
       app-build-args: --unlock-robots
 
   release:
     needs: [build]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: subdirectory/path
-    uses: lomray-software/vite-ssr-boost/.github/workflows/ssr-boost-release.yml@prod
+    uses: Lomray-Software/vite-ssr-boost/.github/workflows/ssr-boost-release.yml@prod
     with:
       has-release-asset: true
     secrets:
-      github-token: ${{ secrets.github_token }}
+      github-token: ${{ secrets.GITHUB_TOKEN }}
 
+  # inject actual version to app (only demo)
   inject-version:
     needs: [release]
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.ref }}-inject-version
       cancel-in-progress: true
-    defaults:
-      run:
-        working-directory: subdirectory/path
+
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v4
         with:
           name: build-artifact
 
-      - name: inject version
-        uses: jacobtomlinson/gha-find-replace@v4
+      - name: Inject version
+        uses: jacobtomlinson/gha-find-replace@v3
         with:
-          find: '"app_version"'
+          find: '"APP_VERSION"'
           replace: '"${{ needs.release.outputs.version }}"'
           regex: false
 
-      - name: app build
-        uses: actions/upload-artifact@v5
+      - name: App build
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifact
           path: ${{ github.workspace }}
@@ -56,33 +47,25 @@ jobs:
 
   docker-build:
     needs: [release, inject-version]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: subdirectory/path
-    uses: lomray-software/vite-ssr-boost/.github/workflows/ssr-boost-docker-build.yml@prod
+    uses: Lomray-Software/vite-ssr-boost/.github/workflows/ssr-boost-docker-build.yml@prod
     with:
       registry: ghcr.io
       image-name: ${{ github.repository }}/web
       version: ${{ needs.release.outputs.version }}
       app-build-path: ./build
     secrets:
-      github-token: ${{ secrets.github_token }}
+      github-token: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-aws:
     needs: [docker-build]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: subdirectory/path
-    uses: lomray-software/vite-ssr-boost/.github/workflows/ssr-boost-deploy-aws.yml@prod
+    uses: Lomray-Software/vite-ssr-boost/.github/workflows/ssr-boost-deploy-aws.yml@prod
     with:
       image: ${{ needs.docker-build.outputs.image-tag }}
-      service: snakebytes
-      cluster: devcluster
+      service: SnakeBytes
+      cluster: DevCluster
       task-container-name: web
     secrets:
-      aws_access_key_id: ${{ secrets.aws_access_key_id }}
-      aws_secret_access_key: ${{ secrets.aws_secret_access_key }}
-      aws_region: ${{ secrets.aws_region }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
 
