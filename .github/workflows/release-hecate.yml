@@ -27,6 +27,7 @@ jobs:
       cancel-in-progress: true
 
     steps:
+      working-directory: "svc/hecate"
       - uses: actions/download-artifact@v4
         with:
           name: build-artifact
