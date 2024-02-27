@@ -62,7 +62,7 @@ jobs:
       version: ${{ needs.release.outputs.version }}
       app-build-path: svc/hecate/build
       service-path: ${{ inputs.service-path }}
-      secrets:
+    secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-aws:
