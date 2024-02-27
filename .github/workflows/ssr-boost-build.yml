@@ -53,7 +53,6 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          path: ${{ inputs.service-path }}
           node-version: ${{ inputs.node-version }}
           cache: 'npm'
 
