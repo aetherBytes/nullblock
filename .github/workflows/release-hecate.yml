@@ -53,7 +53,7 @@ jobs:
       registry: ghcr.io
       image-name: ${{ github.repository }}/web
       version: ${{ needs.release.outputs.version }}
-      app-build-path: ./build
+      app-build-path: svc/hecate/build
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
