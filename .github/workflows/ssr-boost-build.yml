@@ -26,6 +26,10 @@ on:
         required: false
         type: boolean
         default: false
+      service-path:
+        required: false
+        type: string
+        default: 'svc/hecate' 
     secrets:
       github-token:
         required: false
@@ -41,6 +45,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Change to service directory
+        run: cd ${{ inputs.service-path }}
 
       - run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.github-token }}" > ~/.npmrc
 
