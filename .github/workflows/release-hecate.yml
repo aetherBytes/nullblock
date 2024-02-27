@@ -51,7 +51,7 @@ jobs:
     uses: Lomray-Software/vite-ssr-boost/.github/workflows/ssr-boost-docker-build.yml@prod
     with:
       registry: ghcr.io
-      image-name: ${{ github.repository }}/web
+      image-name: ${{ github.repository }}/hecate
       version: ${{ needs.release.outputs.version }}
       app-build-path: svc/hecate/build
     secrets:
@@ -62,9 +62,9 @@ jobs:
     uses: Lomray-Software/vite-ssr-boost/.github/workflows/ssr-boost-deploy-aws.yml@prod
     with:
       image: ${{ needs.docker-build.outputs.image-tag }}
-      service: SnakeBytes
+      service: Hecate
       cluster: DevCluster
-      task-container-name: web
+      task-container-name: hecate
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
