@@ -44,12 +44,12 @@ jobs:
       cancel-in-progress: true
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Change to service directory
         run: |
           cd ${{ inputs.service-path }}
           ls
-
-      - uses: actions/checkout@v4
 
       - run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.github-token }}" > ~/.npmrc
 
