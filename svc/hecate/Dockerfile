@@ -13,8 +13,8 @@ RUN mkdir -p $WEB_PATH
 WORKDIR $WEB_PATH
 
 COPY ${BUILD_PATH} $WEB_PATH/build
-COPY ./svc/hecate/package.json $WEB_PATH/package.json
-COPY ./svc/hecate/package-lock.json $WEB_PATH/package-lock.json
+COPY $BUILD_PATH/package.json $WEB_PATH/package.json
+COPY $BUILD_PATH/package-lock.json $WEB_PATH/package-lock.json
 
 RUN npm ci --omit=dev
 
