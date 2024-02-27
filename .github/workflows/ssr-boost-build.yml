@@ -46,11 +46,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Change to service directory
-        run: |
-          cd ${{ inputs.service-path }}
-          ls
-
       - run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.github-token }}" > ~/.npmrc
 
       - uses: actions/setup-node@v4
@@ -66,18 +61,25 @@ jobs:
 
       - name: Run eslint
         if: ${{ !inputs.should-skip-eslint }}
-        run: npm run lint:check
-
+        run: |
+          cd ${{ inputs.service-path }}
+          npm run lint:check
+          
       - name: Typescript check
         if: ${{ !inputs.should-skip-typescript }}
-        run: npm run ts:check
+        run: |
+          cd ${{ inputs.service-path }}
+          npm run ts:check
 
       - name: Stylelint check
         if: ${{ !inputs.should-skip-stylelint }}
-        run: npm run style:check
+        run: |
+          cd ${{ inputs.service-path }}
+          npm run style:check
 
       - name: Build application
         run: |
+          cd ${{ inputs.service-path }}
           npm pkg delete scripts.prepare
           echo ${{ secrets.build-env }} >> .env
           npm run build -- ${{ inputs.app-build-args }}
@@ -97,6 +99,7 @@ jobs:
         with:
           name: build-artifact
           path: |
+            ${{ inputs.service-path }}/dist
             build
             package.json
             package-lock.json
