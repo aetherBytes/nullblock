@@ -22,7 +22,7 @@ on:
       service-path:
         required: true
         type: string
-        default: '../../svc/hecate/'
+        default: svc/hecate
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true

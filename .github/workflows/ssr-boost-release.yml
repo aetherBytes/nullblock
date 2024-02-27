@@ -14,14 +14,14 @@ on:
       service-path:
         required: true
         type: string
-        default: '../../svc/hecate/'
+        default: svc/hecate
     secrets:
       github-token:
         required: true
     outputs:
       version:
         description: "New package version"
-        value: ${{ jobs.release.outputs.version }}
+        value: ${{ jobsbs.release.outputs.version }}
 
 jobs:
   release:
