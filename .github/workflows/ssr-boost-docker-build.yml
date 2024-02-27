@@ -26,7 +26,7 @@ on:
       service-path:
         required: true
         type: string
-        default: '../../svc/hecate/'
+        default: svc/hecate
     secrets:
       github-token:
         required: true
@@ -79,7 +79,7 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ${{ inputs.service-path }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
