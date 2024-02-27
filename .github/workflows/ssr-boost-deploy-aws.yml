@@ -18,7 +18,11 @@ on:
       task-definition:
         required: false
         type: string
-        default: .github/task-definition.json
+        default: .github/task-definition.json 
+      service-path:
+        required: true
+        type: string
+        default: '../../svc/hecate/'
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
