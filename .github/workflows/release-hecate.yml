@@ -55,7 +55,7 @@ jobs:
 
   docker-build:
     needs: [release, inject-version]
-    uses: Lomray-Software/vite-ssr-boost/.github/workflows/ssr-boost-docker-build.yml@prod
+    uses: ./.github/workflows/ssr-boost-docker-build.yml
     with:
       registry: ghcr.io
       image-name: ${{ github.repository }}/hecate
@@ -66,7 +66,7 @@ jobs:
 
   deploy-aws:
     needs: [docker-build]
-    uses: Lomray-Software/vite-ssr-boost/.github/workflows/ssr-boost-deploy-aws.yml@prod
+    uses: ./.github/workflows/ssr-boost-deploy-aws.yml
     with:
       image: ${{ needs.docker-build.outputs.image-tag }}
       service: Hecate
