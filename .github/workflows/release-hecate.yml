@@ -13,7 +13,7 @@ jobs:
 
   release:
     needs: [build]
-    uses: Lomray-Software/vite-ssr-boost/.github/workflows/ssr-boost-release.yml@prod
+    uses: ./.github/workflows/ssr-boost-release.yml
     with:
       has-release-asset: true
       service-path: svc/hecate
