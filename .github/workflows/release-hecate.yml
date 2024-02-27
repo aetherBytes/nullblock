@@ -16,8 +16,7 @@ jobs:
     uses: Lomray-Software/vite-ssr-boost/.github/workflows/ssr-boost-release.yml@prod
     with:
       has-release-asset: true
-      release-asset-name: Hecate
-      release-asset-path: svc/hecate/build
+      service-path: svc/hecate
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
