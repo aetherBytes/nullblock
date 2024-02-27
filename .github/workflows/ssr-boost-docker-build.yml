@@ -83,7 +83,4 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            SERVICE_PATH=${{ inputs.service-path }}
-            BUILD_PATH=${{ inputs.app-build-path }}
-            ${{ secrets.extra-build-args }}
+
