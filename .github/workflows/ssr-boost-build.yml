@@ -27,7 +27,7 @@ on:
         type: boolean
         default: false
       service-path:
-        required: false
+        required: true
         type: string
         default: svc/hecate
     secrets:
@@ -47,7 +47,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Change to service directory
-        run: cd ${{ inputs.service-path }}
+        run: |
+          cd ${{ inputs.service-path }}
+          ls
 
       - run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.github-token }}" > ~/.npmrc
 
@@ -57,7 +59,9 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci
+          ls  
 
       - name: Run eslint
         if: ${{ !inputs.should-skip-eslint }}
