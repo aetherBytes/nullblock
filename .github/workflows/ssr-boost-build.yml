@@ -61,7 +61,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          ls
+          cd ${{ inputs.service-path }}
           npm ci
 
       - name: Run eslint
