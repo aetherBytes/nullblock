@@ -36,6 +36,7 @@
     "react-router-dom": "^6.22.0"
   },
   "devDependencies": {
+    "@actions/core": "^1.10.1",
     "@commitlint/cli": "^18.6.0",
     "@commitlint/config-conventional": "^18.6.0",
     "@lomray/eslint-config-react": "^4.1.1",
