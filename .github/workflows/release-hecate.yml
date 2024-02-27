@@ -16,6 +16,7 @@ jobs:
     uses: ./.github/workflows/ssr-boost-release.yml
     with:
       has-release-asset: true
+      service-path: svc/hecate
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
