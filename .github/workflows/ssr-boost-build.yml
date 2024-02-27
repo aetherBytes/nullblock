@@ -61,8 +61,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          ls
           npm ci
-          ls  
 
       - name: Run eslint
         if: ${{ !inputs.should-skip-eslint }}
