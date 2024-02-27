@@ -1,0 +1,91 @@
+name: SSR BOOST Build
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        required: false
+        type: string
+        default: 18.19.0
+      app-build-args:
+        required: false
+        type: string
+      docker-file:
+        required: false
+        type: string
+        default: node_modules/@lomray/vite-ssr-boost/workflow/Dockerfile
+      should-skip-eslint:
+        required: false
+        type: boolean
+        default: false
+      should-skip-typescript:
+        required: false
+        type: boolean
+        default: false
+      should-skip-stylelint:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      github-token:
+        required: false
+      build-env:
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.ref }}-build
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.github-token }}" > ~/.npmrc
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run eslint
+        if: ${{ !inputs.should-skip-eslint }}
+        run: npm run lint:check
+
+      - name: Typescript check
+        if: ${{ !inputs.should-skip-typescript }}
+        run: npm run ts:check
+
+      - name: Stylelint check
+        if: ${{ !inputs.should-skip-stylelint }}
+        run: npm run style:check
+
+      - name: Build application
+        run: |
+          npm pkg delete scripts.prepare
+          echo ${{ secrets.build-env }} >> .env
+          npm run build -- ${{ inputs.app-build-args }}
+
+      - name: Prepare docker file
+        if: ${{ inputs.docker-file != '' }}
+        shell: bash
+        id: prepare-docker
+        run: |
+          # ignore errors
+          set +e
+          cp ${{ inputs.docker-file }} Dockerfile
+          echo "docker-file-name=Dockerfile" >> $GITHUB_OUTPUT
+
+      - name: Archive build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact
+          path: |
+            build
+            package.json
+            package-lock.json
+            ${{ steps.prepare-docker.outputs.docker-file-name }}

@@ -6,10 +6,9 @@ on:
 
 jobs:
   build:
-    uses: Lomray-Software/vite-ssr-boost/.github/workflows/ssr-boost-build.yml@prod
+    uses: ./.github/workflows/ssr-boost-build.yml
     with:
       app-build-args: --unlock-robots
-      working-directory: 'svc/hecate'
 
   release:
     needs: [build]
