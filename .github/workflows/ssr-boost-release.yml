@@ -21,7 +21,7 @@ on:
     outputs:
       version:
         description: "New package version"
-        value: ${{ jobsbs.release.outputs.version }}
+        value: ${{ jobs.release.outputs.version }}
 
 jobs:
   release:
