@@ -14,8 +14,8 @@ RUN mkdir -p $WEB_PATH
 WORKDIR $WEB_PATH
 
 COPY ${BUILD_PATH} $WEB_PATH/build
-COPY ./package.json $WEB_PATH/package.json
-COPY ./package-lock.json $WEB_PATH/package-lock.json
+COPY $SERVICE_PATH/package.json $WEB_PATH/package.json
+COPY $SERVICE_PATH/package-lock.json $WEB_PATH/package-lock.json
 
 RUN npm ci --omit=dev
 
