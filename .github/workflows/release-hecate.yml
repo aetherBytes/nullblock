@@ -7,7 +7,7 @@ on:
       service-path:
         required: true
         type: string
-        default: '../../svc/hecate/'
+        default: svc/hecate
 
 jobs:
   build:
