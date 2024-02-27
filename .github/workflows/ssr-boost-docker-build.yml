@@ -88,3 +88,4 @@ jobs:
           build-args: |
             BUILD_PATH=${{ inputs.app-build-path }}
             ${{ secrets.extra-build-args }}
+            SERVICE_PATH=${{ inputs.service-path }}
