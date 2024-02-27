@@ -1,7 +1,5 @@
 FROM node:18.13.0-alpine
 
-MAINTAINER Yarmaliuk Mikhail <mikhail.yarmaliuk@lomray.com>
-
 ARG BUILD_PATH
 ARG RUN_TYPE=ssr
 ARG ENV_MODE=production
