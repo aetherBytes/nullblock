@@ -57,7 +57,7 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache: 'npm'
-          cache-dependency-path: '../../svc/hecate/package-lock.json'
+          cache-dependency-path: 'svc/hecate/package-lock.json'
 
       - name: Install dependencies
         run: |
