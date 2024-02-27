@@ -9,6 +9,7 @@ jobs:
     uses: ./.github/workflows/ssr-boost-build.yml
     with:
       app-build-args: --unlock-robots
+      service-path: svc/hecate
 
   release:
     needs: [build]
