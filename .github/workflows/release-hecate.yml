@@ -55,7 +55,7 @@ jobs:
       registry: ghcr.io
       image-name: ${{ github.repository }}/hecate
       version: ${{ needs.release.outputs.version }}
-      app-build-path: svc/hecate
+      app-build-path: svc/hecate/build
       service-path: svc/hecate
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
