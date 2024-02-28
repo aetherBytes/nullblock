@@ -56,7 +56,7 @@
       "dockerLabels": null,
       "systemControls": null,
       "privileged": null,
-      "name": "Hecate"
+      "name": "hecate"
     }
   ],
   "placementConstraints": [],
