@@ -85,7 +85,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             BUILD_PATH=${{ inputs.app-build-path }}
-            SERVICE_PATH=${{ inputs.service-path }}
             ${{ secrets.extra-build-args }}
 
 
