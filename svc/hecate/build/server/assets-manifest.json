@@ -1,0 +1,231 @@
+{
+  "0-0": [
+    {
+      "url": "/assets/index-A5QXkktb.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-aixtSp9T.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-uFwcIIYl.js",
+      "weight": 1.9,
+      "type": "script",
+      "isNested": true,
+      "isPreload": false
+    },
+    {
+      "url": "/assets/index-czNst27u.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/react-h3aPdYU7.svg",
+      "weight": 3,
+      "type": "image",
+      "isNested": false,
+      "isPreload": true
+    }
+  ],
+  "0-1-0": [
+    {
+      "url": "/assets/index-PyjnExAa.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-aixtSp9T.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-uFwcIIYl.js",
+      "weight": 1.9,
+      "type": "script",
+      "isNested": true,
+      "isPreload": false
+    },
+    {
+      "url": "/assets/index-ynni4X5V.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/suspense-query-EA-YMlDK.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/axios-Mti6sQpH.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    }
+  ],
+  "0-1-1": [
+    {
+      "url": "/assets/index-B-TJ899z.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-aixtSp9T.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-uFwcIIYl.js",
+      "weight": 1.9,
+      "type": "script",
+      "isNested": true,
+      "isPreload": false
+    },
+    {
+      "url": "/assets/index-k4PdxoTb.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/suspense-query-EA-YMlDK.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-wXXQEM9s.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/axios-Mti6sQpH.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    }
+  ],
+  "0-2": [
+    {
+      "url": "/assets/index-aixtSp9T.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-uFwcIIYl.js",
+      "weight": 1.9,
+      "type": "script",
+      "isNested": true,
+      "isPreload": false
+    },
+    {
+      "url": "/assets/index-GfsP_Ec0.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/suspense-query-EA-YMlDK.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-wXXQEM9s.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    }
+  ],
+  "0-3": [
+    {
+      "url": "/assets/index-aixtSp9T.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-uFwcIIYl.js",
+      "weight": 1.9,
+      "type": "script",
+      "isNested": true,
+      "isPreload": false
+    },
+    {
+      "url": "/assets/index-WI8_OOz-.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/suspense-query-EA-YMlDK.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/axios-Mti6sQpH.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    }
+  ],
+  "0-4": [
+    {
+      "url": "/assets/index-aixtSp9T.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-uFwcIIYl.js",
+      "weight": 1.9,
+      "type": "script",
+      "isNested": true,
+      "isPreload": false
+    },
+    {
+      "url": "/assets/index-G_l3EKuI.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": false,
+      "isPreload": true
+    }
+  ]
+}
