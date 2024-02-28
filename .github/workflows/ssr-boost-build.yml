@@ -99,7 +99,6 @@ jobs:
         with:
           name: build-artifact
           path: |
-            ${{ inputs.service-path }}
             build
             package.json
             package-lock.json
