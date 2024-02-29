@@ -38,8 +38,8 @@ const Home: FCRoute = () => {
   return (
     <>
       <Meta>
-        <title>Home page</title>
-        <meta name="description" content="Home page" />
+        <title>NullBlock</title>
+        <meta name="description" content="Home" />
       </Meta>
       <div>SPA, SSR, Mobx, Consistent Suspense, Meta tags</div>
       <div>
