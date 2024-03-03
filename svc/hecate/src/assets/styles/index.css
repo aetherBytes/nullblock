@@ -1,33 +1,34 @@
 :root {
-  --background-color: #242424; /* Light theme background color */
-  --text-color: rgba(255, 255, 255, 0.87); /* Light theme text color */
-  --link-color: #646cff; /* Light theme link color */
-  --link-hover-color: #535bf2; /* Light theme link hover color */
-  --button-background-color: #1a1a1a; /* Light theme button background color */
-  --button-hover-border-color: #646cff; /* Light theme button hover border color */
-  --background-image: url('../images/light.png');/* Dark theme background image */
+  background-color: #242424;
+  color: rgba(255, 255, 255, 0.87);
 
+  color-scheme: light dark;
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
   font-synthesis: none;
   font-weight: 400;
   line-height: 1.5;
   text-rendering: optimizeLegibility;
   -webkit-text-size-adjust: 100%;
-  color-scheme: light dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background-color: #ffffff; /* Dark theme background color */
-    --text-color: #213547; /* Dark theme text color */
-    --link-color: #646cff; /* Dark theme link color */
-    --link-hover-color: #747bff; /* Dark theme link hover color */
-    --button-background-color: #f9f9f9; /* Dark theme button background color */
-    --button-hover-border-color: #646cff; /* Dark theme button hover border color */
-    --background-image: url('../images/light.png');/* Dark theme background image */
-  }
+#root {
+  margin: 0 auto;
+  /* max-width: 1 /px; */
+  /* padding: 2rem; */
+  text-align: center;
+}
+
+a {
+  color: #646cff;
+  font-weight: 500;
+  text-decoration: inherit;
+}
+
+a:hover {
+  color: #535bf2;
 }
 
 body {
@@ -36,33 +37,15 @@ body {
   min-height: 100vh;
   min-width: 320px;
   place-items: center;
-  background-color: var(--background-color);
-  color: var(--text-color);
-  background-image: var(--background-image);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
 }
 
-#root {
-  margin: 0 auto;
-  max-width: 1280px;
-  padding: 2rem;
-  text-align: center;
-}
-
-a {
-  color: var(--link-color);
-  font-weight: 500;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: var(--link-hover-color);
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
 }
 
 button {
-  background-color: var(--button-background-color);
+  background-color: #1a1a1a;
   border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
@@ -74,7 +57,7 @@ button {
 }
 
 button:hover {
-  border-color: var(--button-hover-border-color);
+  border-color: #646cff;
 }
 
 button:focus,
@@ -86,3 +69,15 @@ button:focus-visible {
   margin-top: 20px;
 }
 
+@media (prefers-color-scheme: light) {
+  :root {
+    background-color: #ffffff;
+    color: #213547;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}

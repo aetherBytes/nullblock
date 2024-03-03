@@ -1,1 +1,24 @@
+// styles.module.scss
+.backgroundImage {
+  // background-image: url('../../assets/images/green_dawn.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/red_dawn.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/red_dawn_2.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nilblock.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nulllrok.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nulllbok.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nexoliths.png'); // Adjust the pathn_2according to your project structure
+  // background-image: url('../../assets/images/nexoliths_2.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nexoliths_3.png'); // Adjust the path according to your project structure
+  background-image: url('../../assets/images/nexoliths_4.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nexoliths_5.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nex_gate.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nowhere_bridge.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/crystal_conduit.png'); // Adjust the path according to your project structure
+  background-size: cover; // Cover the entire page
+  background-position: center; // Center the background image
+  height: 100vh; // Make sure it covers the full view height
+  width: 100vw; // Cover the full view width
+  margin: 0; // Remove any margin
+  padding: 0; // Remove any padding
+}
 
