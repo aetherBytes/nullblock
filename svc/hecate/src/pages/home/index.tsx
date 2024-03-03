@@ -14,7 +14,7 @@ interface ILoaderData {
   isDefaultCrawler: boolean;
 }
 
-/**
+/**🧙
  * Home page
  * @constructor
  */
@@ -36,69 +36,10 @@ const Home: FCRoute = () => {
   };
 
   return (
-    <>
-      <Meta>
-        <title>NullBlock</title>
-        <meta name="description" content="Home" />
-      </Meta>
-      <div>SPA, SSR, Mobx, Consistent Suspense, Meta tags</div>
-      <div>
-        {hasVersion && (
-          <p>
-            Version: <strong>{APP_VERSION}</strong>
-          </p>
-        )}
-        <p>Type: {IS_SSR_MODE ? 'SSR' : 'SPA'}</p>
-      </div>
-      <div className={styles.logos}>
-        <a href="https://vitejs.dev/" target="_blank" rel="nofollow">
-          <img src="/vite.svg" className={styles.logo} alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" rel="nofollow">
-          <img src={ReactLogoImg} className={styles.logo} alt="React logo" />
-        </a>
-        <a href="https://github.com/Lomray-Software/vite-ssr-boost" target="_blank">
-          <img
-            src="https://raw.githubusercontent.com/Lomray-Software/vite-ssr-boost/prod/logo.png"
-            className={cn(styles.logo, styles.logoBoost)}
-            alt="SSR Boost logo"
-          />
-        </a>
-        <a href="https://github.com/Lomray-Software/react-mobx-manager" target="_blank">
-          <img
-            src="https://raw.githubusercontent.com/Lomray-Software/react-mobx-manager/prod/logo.png"
-            className={cn(styles.logo, styles.logoBoost)}
-            alt="Mobx Store Manager logo"
-          />
-        </a>
-      </div>
-      <div className={styles.card}>
-        <button type="button" onClick={toggleCrawler}>
-          You are watching site like: <strong>{isCrawler ? 'Search bot' : 'Human'}</strong>
-        </button>
-        <p>
-          <Link to={RouteManager.makeURL('details')}>How to works Suspense?</Link>
-        </p>
-        <p>
-          <Link to={RouteManager.makeURL('errorBoundary')}>Investigate error boundary.</Link>
-        </p>
-        <p>
-          <Link to={RouteManager.makeURL('nestedSuspense')}>What about nested Suspense?</Link>
-        </p>
-        <p>
-          <Link to={RouteManager.makeURL('redirect')}>Redirect demo</Link>
-        </p>
-        <p>
-          <Link to={RouteManager.makeURL('notLazy')}>Not lazy page demo</Link>
-        </p>
-      </div>
-      <p className={styles.navigateExplain}>Click on the links to learn more</p>
-      <p className={styles.navigateExplain}>
-        <a href="https://github.com/Lomray-Software/vite-template" target="_blank" rel="nofollow">
-          Open repository
-        </a>
-      </p>
-    </>
+    <div>
+      {/* Optional: Content or actions based on isCrawler state */}
+      {/* The background image styling remains in your CSS/SCSS */}
+    </div>
   );
 };
 

@@ -27,7 +27,6 @@ const App: FC<PropsWithChildren<IApp>> = ({ children, client, server }) => {
     <ConsistentSuspenseProvider>
       <StoreManagerProvider storeManager={storeManager}>
         <MetaManagerProvider manager={metaManager}>
-          <h1>Welcome to demo app</h1>
           <Suspense fallback={<Fallback />}>{children}</Suspense>
         </MetaManagerProvider>
       </StoreManagerProvider>
