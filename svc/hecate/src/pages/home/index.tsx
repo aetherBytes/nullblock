@@ -14,7 +14,7 @@ interface ILoaderData {
   isDefaultCrawler: boolean;
 }
 
-/**🧙
+/**
  * Home page
  * @constructor
  */
@@ -36,7 +36,7 @@ const Home: FCRoute = () => {
   };
 
   return (
-    <div>
+    <div className={styles.backgroundImage}>
       {/* Optional: Content or actions based on isCrawler state */}
       {/* The background image styling remains in your CSS/SCSS */}
     </div>
