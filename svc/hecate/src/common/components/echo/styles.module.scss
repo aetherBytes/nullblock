@@ -1,0 +1,195 @@
+@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+
+// Define font styles
+$comic-font: 'Comic Sans MS', sans-serif;
+$heading-font-weight: 700;
+$normal-font-weight: 400;
+$base-font-size-title: 24px;
+$base-font-size: 18px;
+
+
+.echoScreen {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; // Aligns children to the start of the flex container
+  align-items: center; // Centers items horizontally, not vertically
+  background: linear-gradient(to right, rgba(255, 0, 255, 0.5), rgba(128, 0, 128, 0.5));
+  border: 2px solid #ff00ff;
+  border-radius: 10px;
+  box-shadow:
+    0 0 8px #ff00ff,
+    0 0 20px #800080;
+  color: #ffffff;
+  flex-direction: column;
+  height: 550px; /* Longer length */
+  justify-content: center;
+  left: 100px; /* Distance from the left edge of the parent container */
+  padding-top: 0; /* Remove padding from the top */
+  position: absolute; /* Position screen on the left */
+  transition: all 0.3s ease;
+  width: 1200px; /* Smaller width */
+  z-index: 101; /* Ensure the screen is on top of other elements */
+
+  &.loading {
+    background-color: #f0f0f0;
+    color: #cccccc;
+  }
+
+  &.success {
+    background-color: #4caf50;
+    color: #ffffff;
+  }
+
+  &.error {
+    background-color: #f44336;
+    color: #ffffff;
+  }
+
+  &.transitionState {
+    transition:
+      background-color 0.5s ease,
+      color 0.5s ease;
+  }
+}
+
+.contentWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; // Adjust this to control the vertical start point of the content
+  width: 100%;
+  padding: 20px; // Keep padding but ensure it's not excessively pushing content down
+  height: auto; // Consider setting a specific max-height if necessary
+}
+
+
+// Apply font styles
+.echoTitle {
+  font-family: $comic-font;
+  font-size: $base-font-size-title;
+  // padding: 0 20px;
+  // margin-top: 0;
+}
+
+.echoContent {
+  font-family: $comic-font;
+  font-size: $base-font-size;
+  // padding: 0 20px;
+  // margin-top: 0;
+  // text-align: center;
+}
+
+
+.echoImage {
+  width: auto; // Adjust the width of the image
+  height: 700px; // Adjust the height of the image
+  margin-right: 0px; // Keep space between the icon and the text
+  object-fit: contain; // Ensure the image scales correctly without distortion
+}
+.echoImageThrone {
+  width: auto; // Adjust the width of the image
+  height: 600px; // Adjust the height of the image
+  margin-right: 0px; // Keep space between the icon and the text
+  object-fit: contain; // Ensure the image scales correctly without distortion
+}
+
+.echoImageSmall {
+  width: auto; // Adjust the width of the image
+  height: 250px; // Adjust the height of the image
+  margin-right: 0px; // Keep space between the icon and the text
+  object-fit: contain; // Ensure the image scales correctly without distortion
+}
+
+
+.echoButton {
+  background: linear-gradient(to left, rgba(255, 0, 255, 0.7), rgba(128, 0, 128, 0.7));
+  border: 2px solid #ff00ff;
+  border-radius: 5px;
+  box-shadow:
+    0 0 8px #ff00ff,
+    0 0 20px #800080;
+  color: white;
+  margin-bottom: 20px;
+  text-decoration: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+
+  &:not(:first-child) {
+    margin-top: 10px;
+  }
+
+  &:hover {
+    background: linear-gradient(to left, rgba(255, 20, 255, 0.8), rgba(128, 20, 128, 0.8));
+    box-shadow:
+      0 0 10px #ff00ff,
+      0 0 25px #800080;
+  }
+}
+
+// Assuming the direct parent of .buttonsContainer has a class .parentContainer
+.parentContainer {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end; // Align child elements (including .buttonsContainer) to the right
+  padding-left: 100px;
+  padding-right: 200px;
+  padding-top: 75px;
+}
+
+// .buttonsContainer {
+//   align-items: center; // Keep items centered within the container
+//   display: flex;
+//   flex-direction: column;
+//   justify-content: flex-start; // Keeps items aligned to the top, adjust as needed
+//   margin-right: 20px; // Distance from the right edge of the parent container
+//   padding-top: 100px; // Control initial distance from the top, increase to move down
+// }
+
+.popupOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5); // Semi-transparent background
+  z-index: 100; // Ensure the overlay is on top of other elements
+}
+
+.popupContent {
+  width: 600px; // Same as EchoScreen
+  height: 800px; // Same as EchoScreen
+  background: linear-gradient(to right, rgba(255, 0, 255, 0.5), rgba(128, 0, 128, 0.5));
+  border: 2px solid #ff00ff;
+  box-shadow:
+    0 0 8px #ff00ff,
+    0 0 20px #800080;
+  color: #ffffff;
+  font-family: $comic-font;
+  font-size: $base-font-size;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; // Center content vertically
+  align-items: center; // Center content horizontally
+  position: relative; // To position close button or other content
+  border-radius: 10px;
+}
+
+
+.tabsContainer {
+  display: flex;
+  justify-content: center; // Center tabs horizontally
+  padding: 10px 0; // Add some padding above and below the tabs
+  background-color: transparent; // Make background transparent
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1); // Optional: Add a subtle shadow below the tabs
+
+  .echoButton {
+    margin: 0 10px; // Space out the buttons
+    // Rest of the .echoButton styles remain unchanged
+  }
+}
+
+
