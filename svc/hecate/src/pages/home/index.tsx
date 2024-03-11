@@ -1,55 +1,52 @@
-import { Meta } from '@lomray/react-head-manager';
-import { IS_SSR_MODE } from '@lomray/vite-ssr-boost/constants/common';
 import type { FCRoute } from '@lomray/vite-ssr-boost/interfaces/fc-route';
-import cn from 'classnames';
-import Cookies from 'js-cookie';
-import { useState } from 'react';
-import { Link, useLoaderData } from 'react-router-dom';
-import ReactLogoImg from '@assets/images/react.svg';
-import { APP_VERSION, IS_PROD } from '@constants/index';
-import RouteManager from '@services/route-manager';
+import React, { useState } from 'react';
+import bigBeerus from '@assets/images/big_beerus_clip.png';
+import Echo from '@components/echo/echo';
 import styles from './styles.module.scss';
+import XLogo from '@assets/images/X_logo_black.png';
+import discordLogo from '@assets/images/discord_logo_black.png';
+import telegramLogo from '@assets/images/telegram_logo_black.png';
 
-interface ILoaderData {
-  isDefaultCrawler: boolean;
-}
-
-/**
- * Home page
- * @constructor
- */
 const Home: FCRoute = () => {
-  const { isDefaultCrawler } = useLoaderData() as ILoaderData;
-  const [isCrawler, setIsCrawler] = useState(isDefaultCrawler);
+  const [showPopup, setShowPopup] = useState(false);
 
-  // show only on deployed application
-  const hasVersion = IS_PROD && !APP_VERSION.startsWith('APP_');
-
-  /**
-   * Enable/disable stream for demo
-   */
-  const toggleCrawler = () => {
-    const nextVal = isCrawler ? '0' : '1';
-
-    setIsCrawler(nextVal === '1');
-    Cookies.set('isCrawler', nextVal);
+  const handleNudesClick = () => {
+    // Simply show the popup without redirecting
+    setShowPopup(true);
   };
 
   return (
     <div className={styles.backgroundImage}>
-      {/* Optional: Content or actions based on isCrawler state */}
-      {/* The background image styling remains in your CSS/SCSS */}
+      <Echo />
+      <div className={styles.buttonsContainer}>
+        {/* Links updated to open in a new tab */}
+        <a
+          href="https://twitter.com/MoxiSKeeper"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.echoButton}
+        >
+          <img src={XLogo} alt="Twitter Logo" />
+        </a>
+        <a
+          href="https://twitter.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.echoButton}        >
+          <img src={discordLogo} alt="Discord Logo" />
+        </a>
+        <a
+          href="https://twitter.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.echoButton}
+        >
+          <img src={telegramLogo} alt="Telegram Logo" />
+        </a>
+      </div>
     </div>
   );
 };
 
-Home.loader = ({ request }): ILoaderData => {
-  const isDefaultCrawler =
-    request.headers.get('cookie')?.includes('isCrawler=1') ?? Cookies.get('isCrawler') === '1';
-
-  return {
-    isDefaultCrawler,
-  };
-};
-
 export default Home;
+
