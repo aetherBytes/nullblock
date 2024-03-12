@@ -25,17 +25,17 @@ const Echo = () => {
 
   return (
     <div className={styles.parentContainer}>
-      <div className={styles.sidebar}>
-        {Object.keys(screensConfig).map((screen) => (
-          <ButtonWrapper
-            key={screen}
-            buttonText={screensConfig[screen].buttonText}
-            setCurrentScreen={() => handleButtonClick(screen)}
-            title={screensConfig[screen].title}
-          />
-        ))}
-      </div>
       <div className={styles.mainScreenContent}>
+        <div className={styles.sidebar}>
+          {Object.keys(screensConfig).map((screen) => (
+            <ButtonWrapper
+              key={screen}
+              buttonText={screensConfig[screen].buttonText}
+              setCurrentScreen={() => handleButtonClick(screen)}
+              title={screensConfig[screen].title}
+            />
+          ))}
+        </div>
         <UnifiedEchoScreen
           screenTitle={screensConfig[currentScreen].title}
           images={{
