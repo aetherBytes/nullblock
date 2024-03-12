@@ -7,7 +7,6 @@ interface IUnifiedEchoScreenProps {
   images: {
     main: string;
     small?: string;
-    throne?: string;
   };
   isPopupVisible: boolean;
   onClosePopup: () => void;
@@ -26,13 +25,10 @@ const UnifiedEchoScreen: React.FC<IUnifiedEchoScreenProps> = ({
   popupContent,
 }) => {
   return (
-    <div className={isPopupVisible ? `${styles.echoScreenWithPopup}` : styles.echoScreen}>
+    <div className={styles.echoScreen}>
       <div className={styles.contentWrapper}>
         {/* Main image */}
         {images.main && <img src={images.main} alt="Main visual" className={styles.echoImage} />}
-
-        {/* Optional throne image */}
-        {images.throne && <img src={images.throne} alt="Throne visual" className={styles.echoImageThrone} />}
 
         {/* Title */}
         <h2 className={styles.echoTitle}>{screenTitle}</h2>

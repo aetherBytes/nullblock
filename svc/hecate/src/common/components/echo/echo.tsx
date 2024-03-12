@@ -41,12 +41,10 @@ const Echo = () => {
           images={{
             main: screensConfig[currentScreen].image,
             small: screensConfig[currentScreen].image_small,
-            throne: screensConfig[currentScreen].image_throne,
           }}
           isPopupVisible={showPopup}
           onClosePopup={handleClosePopup}
           content={screensConfig[currentScreen].content}
-          additionalContent={[screensConfig[currentScreen].content_2, screensConfig[currentScreen].content_3].filter(Boolean)} // Filters out undefined values
           popupContent={popupContent}
         />
       </div>
