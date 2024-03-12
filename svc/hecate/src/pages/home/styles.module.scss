@@ -1,5 +1,4 @@
 .backgroundImage {
-  background-attachment: fixed;
   // background-image: url('../../assets/images/green_dawn.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/red_dawn.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/red_dawn_2.png'); // Adjust the path according to your project structure
@@ -18,11 +17,11 @@
   background-size: cover;
   width: 100vw;
   height: 100vh; // Explicitly set to cover the full view height
-  position: fixed; // Make sure it's fixed and covers the entire viewport
-  top: 0; // Align to the top
-  left: 0; // Align to the left
-  margin: 0;
-  padding: 0;
+  // position: fixed; // Make sure it's fixed and covers the entire viewport
+  // top: 0; // Align to the top
+  // left: 0; // Align to the left
+  // margin: 0;
+  // padding: 0;
   overflow: hidden; // Prevent any overflow from causing scroll
 }
 
@@ -62,63 +61,4 @@
       0 0 25px #800080;
   }
 }
-
-// Apply a global style reset to ensure no unexpected margins or paddings
-html,
-body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden; // This will ensure that the body doesn't scroll
-  height: 100%; // Ensure the body takes up full viewport height
-}
-
-.echoScreen,
-.popup {
-  align-items: center;
-  background: linear-gradient(to right, rgba(255, 0, 255, 0.5), rgba(128, 0, 128, 0.5));
-  border: 2px solid #ff00ff;
-  border-radius: 10px;
-  box-shadow:
-    0 0 8px #ff00ff,
-    0 0 20px #800080;
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  position: fixed; // Use fixed for popup to ensure it's centered relative to viewport
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 600px;
-  padding: 20px;
-  z-index: 10; // Ensure it's above other content
-}
-
-// Targeting text elements specifically for color
-.echoScreen p,
-.echoScreen button,
-.popup p,
-.popup button {
-  color: #ffffff; // Ensuring text is white
-}
-
-.echoScreen button,
-.popup button {
-  cursor: pointer;
-  margin-top: 20px;
-  background-color: #ff00ff; // Example button background in popup
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  &:hover {
-    background-color: darken(#ff00ff, 10%);
-  }
-}
-
-.popupImage {
-  max-width: 100%; // Ensures the image is not wider than the popup
-  height: auto; // Maintains aspect ratio
-  margin-bottom: 20px; // Adds some space between the image and the text
-}
-
 
