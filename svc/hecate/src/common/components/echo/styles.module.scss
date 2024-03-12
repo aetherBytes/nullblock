@@ -43,11 +43,11 @@ $base-font-size: 18px;
   display: flex;
   flex-direction: row;
 
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(125, 249, 255, 0.5));
-  border: 2px solid #7DF9FF;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(125, 249, 255, 0.3));
+  // border: 2px solid #7DF9FF;
   border-radius: 10px;
   box-shadow:
-    0 0 8px #7DF9FF, /* Electric light blue glow */
+    0 0 8px #1a1cb5, /* Electric light blue glow */
     0 0 20px #7DF9FF; /* Electric light blue glow */
 
   height: 100%;
@@ -59,12 +59,12 @@ $base-font-size: 18px;
 .echoScreen {
   display: flex;
   flex-direction: column;
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(128, 0, 128, 0.60));
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba( 26, 28, 181 , 0.35));
   // border: 2px solid #ff00ff;
   border-radius: 10px;
   box-shadow:
-    0 0 8px #7DF9FF,
-    0 0 20px #800080;
+    0 0 8px #1a1cb5,
+    0 0 20px #7DF9FF;
   color: #ffffff;
   height: 100%; /* Longer length */
   width: 100%; /* Full width */

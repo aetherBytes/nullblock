@@ -10,7 +10,7 @@
   // background-image: url('../../assets/images/nexoliths_3.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/nexoliths_4.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/nexoliths_5.png'); // Adjust the path according to your project structure
-  background-image: url('../../assets/images/nex_gate.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nex_gate.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/nowhere_bridge.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/crystal_conduit.png'); // Adjust the path according to your project structure
   background-position: center;
@@ -42,7 +42,7 @@
   border-radius: 5px;
   box-shadow:
     0 0 8px #7DF9FF,
-    0 0 20px #800080;
+    0 0 20px #7DF9FF;
   color: white;
   margin-bottom: 20px;
   text-decoration: none;
@@ -55,10 +55,13 @@
   }
 
   &:hover {
-    background: linear-gradient(to left, rgba(255, 20, 255, 0.8), rgba(128, 20, 128, 0.8));
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba( 26, 28, 181 , 0.35));
     box-shadow:
       0 0 10px #7DF9FF,
       0 0 25px #800080;
   }
 }
 
+.hidden {
+  visibility: hidden;
+}
