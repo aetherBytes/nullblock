@@ -1,5 +1,5 @@
 import type { FCRoute } from '@lomray/vite-ssr-boost/interfaces/fc-route';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import bigBeerus from '@assets/images/big_beerus_clip.png';
 import Echo from '@components/echo/echo';
 import styles from './styles.module.scss';
@@ -8,33 +8,15 @@ import discordLogo from '@assets/images/discord_logo_black.png';
 import telegramLogo from '@assets/images/telegram_logo_black.png';
 
 const Home: FCRoute = () => {
-  const [backgroundImageIndex, setBackgroundImageIndex] = useState(-1); // Initial index set to -1
-  const backgroundImages = [
-    '../../assets/images/green_dawn.png',
-    '../../assets/images/red_dawn.png',
-    '../../assets/images/red_dawn_2.png',
-    '../../assets/images/nilblock.png',
-    '../../assets/images/nexoliths.png',
-    '../../assets/images/nexoliths_2.png',
-    '../../assets/images/nexoliths_3.png',
-    '../../assets/images/nexoliths_4.png',
-    '../../assets/images/nexoliths_5.png',
-    '../../assets/images/nex_gate.png',
-    '../../assets/images/nowhere_bridge.png',
-  ];
+  const [showPopup, setShowPopup] = useState(false);
 
-  useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * backgroundImages.length);
-    setBackgroundImageIndex(randomIndex);
-  }, []);
+  const handleNudesClick = () => {
+    // Simply show the popup without redirecting
+    setShowPopup(true);
+  };
 
   return (
-    <div
-      className={styles.backgroundImage}
-      style={{
-        backgroundImage: `url(${backgroundImageIndex !== -1 ? backgroundImages[backgroundImageIndex] : 'about:blank'})` // Set initial image to blank if index is -1
-      }}
-    >
+    <div className={styles.backgroundImage}>
       <Echo />
       <div className={styles.buttonsContainer}>
         {/* Links updated to open in a new tab */}
@@ -50,8 +32,7 @@ const Home: FCRoute = () => {
           href="https://twitter.com"
           target="_blank"
           rel="noopener noreferrer"
-          className={styles.echoButton}
-        >
+          className={styles.echoButton}        >
           <img src={discordLogo} alt="Discord Logo" />
         </a>
         <a
