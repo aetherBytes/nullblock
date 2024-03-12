@@ -26,12 +26,12 @@
 
 
 .echoButton {
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(128, 0, 128, 0.60));
+  background: linear-gradient(to left, rgba(255, 0, 255, 0.3), rgba(128, 0, 128, 0.3));
   // border: 2px solid #ff00ff;
-  // border-radius: 5px;
+  border-radius: 5px;
   box-shadow:
-    0 0 8px #7DF9FF,
-    0 0 20px #800080;
+    0 0 8px #1a1cb5,
+    0 0 20px #7DF9FF;
   color: white;
   margin-bottom: 20px;
   text-decoration: none;
@@ -44,7 +44,7 @@
   }
 
   &:hover {
-    background: linear-gradient(to left, rgba(255, 20, 255, 0.8), rgba(128, 20, 128, 0.8));
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba( 26, 28, 181 , 0.35));
     box-shadow:
       0 0 10px #7DF9FF,
       0 0 25px #800080;
