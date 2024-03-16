@@ -9,20 +9,19 @@
 
 .characterContainer img {
   position: fixed;
-  filter: drop-shadow(0 0 8px #5b00b0) drop-shadow(0 0 40px #fef2ff);
+  // Adjusted drop-shadow for a radiant light blue/white glow
+  filter: drop-shadow(0 0 8px rgba(173, 216, 230, 0.6)) drop-shadow(0 0 20px rgba(240, 248, 255, 0.8));
   display: block;
   max-width: 100%;
   height: auto;
   top: 100px;
   right: 20px;
   animation: float 4s ease-in-out infinite;
-  // Adjust shadow for depth - can customize based on your preference
-  // box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 img {
-  display: block; // Remove potential extra space below the image
-  max-width: 100%; // Ensure the image is responsive
-  height: auto; // Maintain aspect ratio
+  display: block; // Ensures the image is block level to remove extra space below
+  max-width: 100%; // Makes the image responsive
+  height: auto; // Maintains the image's aspect ratio
 }
 
