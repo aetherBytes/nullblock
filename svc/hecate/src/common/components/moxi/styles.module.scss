@@ -1,17 +1,18 @@
 @keyframes float {
-  0%,
-  100% {
+  0%, 100% {
     transform: translateY(0);
   }
   50% {
     transform: translateY(-20px);
   }
 }
+
 img {
   display: block; // Ensures the image is block level to remove extra space below
   height: auto; // Maintains the image's aspect ratio
   max-width: 100%; // Makes the image responsive
 }
+
 .characterContainer img {
   animation: float 4s ease-in-out infinite;
   display: block;
@@ -24,3 +25,23 @@ img {
   right: 20px;
   top: 100px;
 }
+
+@media screen and (max-width: 768px) {
+  .characterContainer img {
+    max-width: 50%; // Make the image smaller on mobile in portrait orientation
+    top: 40%; // Adjust top positioning for mobile in portrait orientation
+  }
+}
+
+
+@media screen and (max-width: 768px) and (orientation: landscape) {
+  .characterContainer img {
+    max-width: 30%; // Further reduce the image size for landscape orientation
+    // top: 10%; // Adjust top positioning for landscape orientation
+    // left: 10%; // Position the image on the left side of the screen
+    transform: scaleX(-1) !important; // Reflect the image along the vertical axis
+    right: auto; // Override any previous right positioning
+  }
+}
+
+

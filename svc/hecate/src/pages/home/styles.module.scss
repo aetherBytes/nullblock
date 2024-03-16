@@ -16,21 +16,18 @@
   // background-image: url('../../assets/images/world_0.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/darkmoon.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/crystal_conduit.png'); // Adjust the path according to your project structure
+
+
   background-position: center;
   background-size: cover;
-  height: 100vh; // Explicitly set to cover the full view height
-  // position: fixed; // Make sure it's fixed and covers the entire viewport
-  // top: 0; // Align to the top
-  // left: 0; // Align to the left
-  // margin: 0;
-  // padding: 0;
-  overflow: hidden; // Prevent any overflow from causing scroll
+  height: 100vh;
+  overflow: hidden;
   width: 100vw;
 }
 
 .buttonsContainer {
   align-items: center;
-  bottom: 100px; // Adjust this to ensure it fits within the viewport without causing overflow
+  bottom: 100px;
   display: flex;
   flex-direction: row;
   gap: 50px;
@@ -41,27 +38,38 @@
 .echoButton {
   background: linear-gradient(to left, rgba(100, 149, 237, 0.5), rgba(25, 25, 112, 0.5));
   border-radius: 5px;
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.2),
-    inset 0 -4px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 -4px 2px rgba(0, 0, 0, 0.2);
   color: white;
   cursor: pointer;
-  display: block; // Adjust as needed
+  display: block;
   margin-bottom: 20px;
   padding: 10px 20px;
-  text-align: center; // Center the text if the buttons are block elements
+  text-align: center;
   transition: all 0.3s ease;
 
   &:not(:first-child) {
     margin-top: 10px;
   }
 
-  &:hover,
-  &:focus {
+  &:hover, &:focus {
     background: linear-gradient(to right, rgba(65, 105, 225, 0.7), rgba(25, 25, 112, 0.7));
-    box-shadow:
-      0 4px 8px rgba(0, 0, 0, 0.3),
-      inset 0 -6px 3px rgba(0, 0, 0, 0.3);
-    color: #e0ffff; // A lighter shade for contrast
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 -6px 3px rgba(0, 0, 0, 0.3);
+    color: #e0ffff;
   }
 }
+
+/* Media query for mobile screens */
+@media screen and (max-width: 768px) {
+  .buttonsContainer {
+    bottom: 20px; // Closer to the bottom for easier thumb reach
+    right: 20px; // Adjusted to ensure it doesn't overflow the screen
+    flex-direction: row; // Stack buttons vertically
+    gap: 20px; // Reduce the gap for compactness
+  }
+
+  .echoButton {
+    padding: 8px 16px; // Slightly reduce padding for compactness
+    // Optionally, adjust font size, button width etc. for better mobile fit
+  }
+}
+
