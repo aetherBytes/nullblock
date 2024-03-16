@@ -1,7 +1,14 @@
+// ButtonWrapper.tsx
 import React from 'react';
-import styles from './styles.module.scss'; // Adjust the import path as necessary
+import styles from './styles.module.scss';
 
-const ButtonWrapper = ({ title, buttonText, setCurrentScreen }) => (
+interface ButtonWrapperProps {
+  title: string;
+  buttonText: string;
+  setCurrentScreen: (screen: string) => void;
+}
+
+const ButtonWrapper: React.FC<ButtonWrapperProps> = ({ title, buttonText, setCurrentScreen }) => (
   <div>
     <button type="button" className={styles.echoButton} onClick={() => setCurrentScreen(title)}>
       {buttonText}

@@ -1,13 +1,15 @@
-// CloseButton.jsx
+// CloseButton.tsx
 import React from 'react';
-import styles from './styles.module.scss'; // Import styles for the close button
+import styles from './styles.module.scss';
 
-const CloseButton = ({ onClose }) => {
-  return (
-    <button className={styles.closeButton} onClick={onClose}>
-      Close
-    </button>
-  );
-};
+interface CloseButtonProps {
+  onClose: () => void;
+}
+
+const CloseButton: React.FC<CloseButtonProps> = ({ onClose }) => (
+  <button type="button" className={styles.closeButton} onClick={onClose}>
+    Close
+  </button>
+);
 
 export default CloseButton;

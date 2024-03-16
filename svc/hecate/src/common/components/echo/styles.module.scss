@@ -9,86 +9,130 @@ $base-font-size: 18px;
 
 // Animation Keyframes
 @keyframes flickerGlow {
-  0%, 100% { box-shadow: 0 0 8px rgba(100, 149, 237, 0.4), 0 0 20px rgba(100, 149, 237, 0.4); }
-  50% { box-shadow: 0 0 10px rgba(100, 149, 237, 0.5), 0 0 25px rgba(100, 149, 237, 0.5); }
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px rgba(100, 149, 237, 0.4),
+      0 0 20px rgba(100, 149, 237, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 10px rgba(100, 149, 237, 0.5),
+      0 0 25px rgba(100, 149, 237, 0.5);
+  }
 }
 
 @keyframes moveGradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 @keyframes typing {
-  from { width: 0; }
-  to { width: 100%; }
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
 }
 
 @keyframes blinkCaret {
-  from, to { border-color: transparent; }
-  50% { border-color: rgba(100, 149, 237, 0.5); }
+  from,
+  to {
+    border-color: transparent;
+  }
+  50% {
+    border-color: rgba(100, 149, 237, 0.5);
+  }
 }
 
 @keyframes backgroundFade {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 // Base Echo Screen styles with darker blue theme
 .parentContainer {
+  height: 60%;
   padding-left: 75px;
   padding-top: 75px;
-  height: 60%;
   width: 60%;
 }
 
 .sidebar {
-  width: 10%;
   padding-right: 20px;
+  width: 10%;
   button {
     animation: pulse 2s infinite ease-in-out;
   }
 }
 
 .mainScreenContent {
-  display: flex;
-  flex-direction: row;
+  animation:
+    flickerGlow 2s infinite ease-in-out,
+    moveGradient 10s ease infinite,
+    backgroundFade 6s ease infinite;
   background: linear-gradient(to right, rgba(65, 105, 225, 0.5), rgba(25, 25, 112, 0.3));
   background-size: 200% 200%;
-  animation: flickerGlow 2s infinite ease-in-out, moveGradient 10s ease infinite, backgroundFade 6s ease infinite;
   border-radius: 10px;
-  box-shadow: 0 0 8px rgba(100, 149, 237, 0.3), 0 0 20px rgba(100, 149, 237, 0.3);
+  box-shadow:
+    0 0 8px rgba(100, 149, 237, 0.3),
+    0 0 20px rgba(100, 149, 237, 0.3);
+  display: flex;
+  flex-direction: row;
   height: 100%;
-  width: 100%;
   padding: 20px;
+  width: 100%;
 }
 
 .echoScreen {
-  display: flex;
-  flex-direction: column;
   background: linear-gradient(to right, rgba(65, 105, 225, 0.5), rgba(25, 25, 112, 0.35));
   border-radius: 10px;
-  box-shadow: 0 0 8px rgba(100, 149, 237, 0.3), 0 0 20px rgba(100, 149, 237, 0.3);
+  box-shadow:
+    0 0 8px rgba(100, 149, 237, 0.3),
+    0 0 20px rgba(100, 149, 237, 0.3);
   color: #ffffff;
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  width: 100%;
   justify-content: center;
+  width: 100%;
 
-  .echoTitle, .echoContent {
+  .echoTitle,
+  .echoContent {
+    animation:
+      typing 3.5s steps(40, end),
+      blinkCaret 0.75s step-end infinite;
+    border-right: 0.15em solid rgba(100, 149, 237, 0.5);
     display: inline-block;
     overflow: hidden;
-    border-right: .15em solid rgba(100, 149, 237, 0.5);
     white-space: nowrap;
-    animation: typing 3.5s steps(40, end), blinkCaret .75s step-end infinite;
   }
 
-  .echoImage, .echoImageSmall {
+  .echoImage,
+  .echoImageSmall {
     animation: pulse 2s infinite ease-in-out;
   }
 }
-
