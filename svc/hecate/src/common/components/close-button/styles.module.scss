@@ -1,0 +1,15 @@
+.closeButton {
+  background: transparent; /* Transparent background */
+  bottom: 10px; /* Adjust bottom spacing as needed */
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: auto; /* Push the button to the bottom */
+  padding: 10px 20px;
+  position: absolute;
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(to left, rgba(255, 20, 255, 0.8), rgba(128, 20, 128, 0.8));
+  }
+}

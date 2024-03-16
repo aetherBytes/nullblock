@@ -1,29 +1,67 @@
-.logos {
+.backgroundImage {
+  // background-image: url('../../assets/images/green_dawn.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/red_dawn.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/red_dawn_2.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nilblock.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nulllrok.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nulllbok.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nexoliths.png'); // Adjust the pathn_2according to your project structure
+  background-image: url('../../assets/images/nexoliths_2.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nexoliths_3.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nexoliths_4.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nexoliths_5.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nex_gate.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nowhere_bridge.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/forrest.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/world_0.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/darkmoon.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/crystal_conduit.png'); // Adjust the path according to your project structure
+  background-position: center;
+  background-size: cover;
+  height: 100vh; // Explicitly set to cover the full view height
+  // position: fixed; // Make sure it's fixed and covers the entire viewport
+  // top: 0; // Align to the top
+  // left: 0; // Align to the left
+  // margin: 0;
+  // padding: 0;
+  overflow: hidden; // Prevent any overflow from causing scroll
+  width: 100vw;
+}
+
+.buttonsContainer {
   align-items: center;
+  bottom: 100px; // Adjust this to ensure it fits within the viewport without causing overflow
   display: flex;
+  flex-direction: row;
+  gap: 50px;
+  position: absolute;
+  right: 200px;
 }
 
-.logo {
-  display: inline-block;
-  height: 6em;
-  padding: 1.5em;
-  transition: filter 300ms;
-  will-change: filter;
+.echoButton {
+  background: linear-gradient(to left, rgba(100, 149, 237, 0.5), rgba(25, 25, 112, 0.5));
+  border-radius: 5px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 -4px 2px rgba(0, 0, 0, 0.2);
+  color: white;
+  cursor: pointer;
+  display: block; // Adjust as needed
+  margin-bottom: 20px;
+  padding: 10px 20px;
+  text-align: center; // Center the text if the buttons are block elements
+  transition: all 0.3s ease;
 
-  &:hover {
-    filter: drop-shadow(0 0 2em #646cffaa);
+  &:not(:first-child) {
+    margin-top: 10px;
   }
-}
 
-.logoBoost {
-  height: 150px;
-  width: 150px;
-}
-
-.card {
-  padding: 0 2em 2em;
-}
-
-.navigateExplain {
-  color: #888;
+  &:hover,
+  &:focus {
+    background: linear-gradient(to right, rgba(65, 105, 225, 0.7), rgba(25, 25, 112, 0.7));
+    box-shadow:
+      0 4px 8px rgba(0, 0, 0, 0.3),
+      inset 0 -6px 3px rgba(0, 0, 0, 0.3);
+    color: #e0ffff; // A lighter shade for contrast
+  }
 }
