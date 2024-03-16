@@ -47,7 +47,7 @@ jobs:
         run: npm run build -- --throw-warnings
         working-directory: svc/hecate/
 
-      - name: Commit lint PR title
-        run: echo "${{ github.event.pull_request.title }}" | npx --no-install
-        # run: echo "${{ github.event.pull_request.title }}" | npx --no-install commitlint -g commitlint.config.js
-        working-directory: svc/hecate/
+      # - name: Commit lint PR title
+      #   run: echo "${{ github.event.pull_request.title }}" | npx --no-install
+      #   # run: echo "${{ github.event.pull_request.title }}" | npx --no-install commitlint -g commitlint.config.js
+      #   working-directory: svc/hecate/
