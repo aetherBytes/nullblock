@@ -1,3 +1,5 @@
+// Add to your existing styles.module.scss
+
 @import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
 
 // Define font styles
@@ -7,6 +9,32 @@ $normal-font-weight: 400;
 $base-font-size-title: 24px;
 $base-font-size: 18px;
 
+// Animation Keyframes
+@keyframes flickerGlow {
+  0%, 100% { box-shadow: 0 0 8px #1a1cb5, 0 0 20px #7DF9FF; }
+  50% { box-shadow: 0 0 10px #1a1cb5, 0 0 25px #7DF9FF; }
+}
+
+@keyframes moveGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blinkCaret {
+  from, to { border-color: transparent; }
+  50% { border-color: #7DF9FF; }
+}
 
 // Base Echo Screen styles
 .parentContainer {
@@ -18,162 +46,50 @@ $base-font-size: 18px;
 
 .sidebar {
   width: 10%;
-  // background-color: white;
-  z-index: 12;
   padding-right: 20px;
+  // Apply pulse animation to buttons
+  button {
+    animation: pulse 2s infinite ease-in-out;
+  }
 }
 
-// Black-Green gradient
-// .mainScreenContent {
-//   display: flex;
-//   flex-direction: row;
-//   background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(57, 255, 20, 0.5));
-//   border: 2px solid #39FF14;
-//   border-radius: 10px;
-//   box-shadow:
-//     0 0 8px #39FF14, /* Neon green glow */
-//     0 0 20px #39FF14; /* Neon green glow */
-//   height: 100%;
-//   width: 100%;
-//   padding: 20px;
-// }
-
-// Black-Blue gradient
+// Black-Blue gradient with flickering glow and background movement
 .mainScreenContent {
   display: flex;
   flex-direction: row;
-
   background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(125, 249, 255, 0.3));
-  // border: 2px solid #7DF9FF;
+  background-size: 200% 200%;
+  animation: flickerGlow 2s infinite ease-in-out, moveGradient 10s ease infinite;
   border-radius: 10px;
-  box-shadow:
-    0 0 8px #1a1cb5, /* Electric light blue glow */
-    0 0 20px #7DF9FF; /* Electric light blue glow */
-
+  box-shadow: 0 0 8px #1a1cb5, 0 0 20px #7DF9FF;
   height: 100%;
   width: 100%;
   padding: 20px;
 }
 
-
 .echoScreen {
   display: flex;
   flex-direction: column;
   background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba( 26, 28, 181 , 0.35));
-  // border: 2px solid #ff00ff;
   border-radius: 10px;
-  box-shadow:
-    0 0 8px #1a1cb5,
-    0 0 20px #7DF9FF;
+  box-shadow: 0 0 8px #1a1cb5, 0 0 20px #7DF9FF;
   color: #ffffff;
-  height: 100%; /* Longer length */
-  width: 100%; /* Full width */
+  height: 100%;
+  width: 100%;
   justify-content: center;
-  // left: 100px; /* Distance from the left edge of the parent container */
-  // padding-top: 0; /* Remove padding from the top */
-  // position: absolute; /* Position screen on the left */
-  // transition: all 0.3s ease;
-  // width: 1200px; /* Smaller width */
-  // z-index: 11; /* Ensure the screen is on top of other elements */
+
+  // Apply typing animation to title and content
+  .echoTitle, .echoContent {
+    display: inline-block;
+    overflow: hidden;
+    border-right: .15em solid orange; // Adjust as needed
+    white-space: nowrap;
+    animation: typing 3.5s steps(40, end), blinkCaret .75s step-end infinite;
+  }
+
+  // Apply pulse animation to images
+  .echoImage, .echoImageSmall {
+    animation: pulse 2s infinite ease-in-out;
+  }
 }
-
-// .contentWrapper {
-//   display: flex;
-//   flex-direction: column;
-//   align-items: center;
-//   justify-content: flex-start; // Adjust this to control the vertical start point of the content
-//   width: 100%;
-//   padding: 20px; // Keep padding but ensure it's not excessively pushing content down
-//   height: auto; // Consider setting a specific max-height if necessary
-// }
-//
-//
-// // Apply font styles
-// .echoTitle {
-//   font-family: $comic-font;
-//   font-size: $base-font-size-title;
-//   // padding: 0 20px;
-//   // margin-top: 0;
-// }
-//
-// .echoContent {
-//   font-family: $comic-font;
-//   font-size: $base-font-size;
-//   // padding: 0 20px;
-//   // margin-top: 0;
-//   // text-align: center;
-// }
-//
-//
-// .echoImage {
-//   width: auto; // Adjust the width of the image
-//   height: 700px; // Adjust the height of the image
-//   margin-right: 0px; // Keep space between the icon and the text
-//   object-fit: contain; // Ensure the image scales correctly without distortion
-// }
-// .echoImageThrone {
-//   width: auto; // Adjust the width of the image
-//   height: 600px; // Adjust the height of the image
-//   margin-right: 0px; // Keep space between the icon and the text
-//   object-fit: contain; // Ensure the image scales correctly without distortion
-// }
-//
-// .echoImageSmall {
-//   width: auto; // Adjust the width of the image
-//   height: 250px; // Adjust the height of the image
-//   margin-right: 0px; // Keep space between the icon and the text
-//   object-fit: contain; // Ensure the image scales correctly without distortion
-// }
-//
-//
-
-//
-// .popupOverlay {
-//   position: fixed;
-//   top: 0;
-//   left: 0;
-//   width: 100%;
-//   height: 100%;
-//   display: flex;
-//   align-items: center;
-//   justify-content: center;
-//   background-color: rgba(0, 0, 0, 0.5); // Semi-transparent background
-//   z-index: 10; // Ensure the overlay is on top of other elements
-// }
-//
-// .popupContent {
-//   width: 600px; // Same as EchoScreen
-//   height: 800px; // Same as EchoScreen
-//   background: linear-gradient(to right, rgba(255, 0, 255, 0.5), rgba(128, 0, 128, 0.5));
-//   border: 2px solid #ff00ff;
-//   box-shadow:
-//     0 0 8px #ff00ff,
-//     0 0 20px #800080;
-//   color: #ffffff;
-//   font-family: $comic-font;
-//   font-size: $base-font-size;
-//   display: flex;
-//   flex-direction: column;
-//   justify-content: center; // Center content vertically
-//   align-items: center; // Center content horizontally
-//   position: relative; // To position close button or other content
-//   border-radius: 10px;
-// }
-//
-//
-// .tabsContainer {
-//   display: flex;
-//   justify-content: center; // Center tabs horizontally
-//   padding: 10px 0; // Add some padding above and below the tabs
-//   background-color: transparent; // Make background transparent
-//   box-shadow: 0 2px 4px rgba(0,0,0,0.1); // Optional: Add a subtle shadow below the tabs
-//
-//   .echoButton {
-//     margin: 0 10px; // Space out the buttons
-//     // Rest of the .echoButton styles remain unchanged
-//   }
-// }
-// // Assuming the direct parent of .buttonsContainer has a class .parentContainer
-//
-//
 
