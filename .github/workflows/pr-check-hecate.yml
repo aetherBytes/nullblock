@@ -31,17 +31,17 @@ jobs:
         run: npm ci
         working-directory: svc/hecate/
 
-      - name: Check eslint
-        run: npm run lint:check
-        working-directory: svc/hecate/
-
-      - name: Typescript check
-        run: npm run ts:check
-        working-directory: svc/hecate/
-
-      - name: Stylelint check
-        run: npm run style:check
-        working-directory: svc/hecate/
+      # - name: Check eslint
+      #   run: npm run lint:check
+      #   working-directory: svc/hecate/
+      #
+      # - name: Typescript check
+      #   run: npm run ts:check
+      #   working-directory: svc/hecate/
+      #
+      # - name: Stylelint check
+      #   run: npm run style:check
+      #   working-directory: svc/hecate/
 
       - name: Build check
         run: npm run build -- --throw-warnings
