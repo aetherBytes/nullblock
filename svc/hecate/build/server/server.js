@@ -26,7 +26,6 @@ const AppLayout = () => /* @__PURE__ */ jsxs("div", { children: [
 ] });
 const IS_PROD = true;
 const API_GATEWAY = "https://randomuser.me/api";
-const APP_VERSION = "APP_VERSION";
 const manager = new Manager({
   routes: {
     home: {
@@ -101,11 +100,11 @@ const NotLazy = () => /* @__PURE__ */ jsxs(Fragment, { children: [
 const detailsRoutes = [
   {
     index: true,
-    lazy: () => n(() => import("./assets/index-ss-jiuba.js"), "@pages/details/index")
+    lazy: () => n(() => import("./assets/index-yYyHn4Kv.js"), "@pages/details/index")
   },
   {
     path: manager.path("details.user"),
-    lazy: () => n(() => import("./assets/index-hoxfs9gj.js"), "@pages/details/user")
+    lazy: () => n(() => import("./assets/index--Y4diWF9.js"), "@pages/details/user")
   }
 ];
 const routes = [
@@ -115,7 +114,7 @@ const routes = [
     children: [
       {
         index: true,
-        lazy: () => n(() => import("./assets/index-GJRdY89c.js"), "@pages/home")
+        lazy: () => n(() => import("./assets/index-Fu3ugNO7.js"), "@pages/home")
       },
       {
         path: manager.path("details"),
@@ -127,7 +126,7 @@ const routes = [
       },
       {
         path: manager.path("nestedSuspense"),
-        lazy: () => n(() => import("./assets/index-MWvh2DZI.js"), "@pages/nested-suspense")
+        lazy: () => n(() => import("./assets/index-u3tXzqN8.js"), "@pages/nested-suspense")
       },
       {
         path: manager.path("redirect"),
@@ -143,10 +142,7 @@ const routes = [
 const App = ({ children, client, server: server2 }) => {
   const storeManager = (client == null ? void 0 : client.storeManager) ?? (server2 == null ? void 0 : server2.storeManager);
   const metaManager = (client == null ? void 0 : client.metaManager) ?? (server2 == null ? void 0 : server2.metaManager);
-  return /* @__PURE__ */ jsx(ConsistentSuspenseProvider, { children: /* @__PURE__ */ jsx(StoreManagerProvider, { storeManager, children: /* @__PURE__ */ jsxs(MetaManagerProvider, { manager: metaManager, children: [
-    /* @__PURE__ */ jsx("h1", { children: "Welcome to demo app" }),
-    /* @__PURE__ */ jsx(Suspense, { fallback: /* @__PURE__ */ jsx(Fallback, {}), children })
-  ] }) }) });
+  return /* @__PURE__ */ jsx(ConsistentSuspenseProvider, { children: /* @__PURE__ */ jsx(StoreManagerProvider, { storeManager, children: /* @__PURE__ */ jsx(MetaManagerProvider, { manager: metaManager, children: /* @__PURE__ */ jsx(Suspense, { fallback: /* @__PURE__ */ jsx(Fallback, {}), children }) }) }) });
 };
 const AppStrict = (props) => /* @__PURE__ */ jsx(StrictMode, { children: /* @__PURE__ */ jsx(App, { ...props }) });
 const patternsToRemove = new Set(["Amazon CloudFront"].map(isbotPatterns).flat());
@@ -246,9 +242,8 @@ const server = entryServer(AppStrict, routes, {
   })
 });
 export {
-  APP_VERSION as A,
+  API_GATEWAY as A,
   Fallback as F,
-  API_GATEWAY as a,
   server as default,
   manager as m
 };

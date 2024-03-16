@@ -1,0 +1,26 @@
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+img {
+  display: block; // Ensures the image is block level to remove extra space below
+  height: auto; // Maintains the image's aspect ratio
+  max-width: 100%; // Makes the image responsive
+}
+.characterContainer img {
+  animation: float 4s ease-in-out infinite;
+  display: block;
+  // Adjusted drop-shadow for a radiant light blue/white glow
+  filter: drop-shadow(0 0 8px rgba(173, 216, 230, 0.6))
+    drop-shadow(0 0 20px rgba(240, 248, 255, 0.8));
+  height: auto;
+  max-width: 100%;
+  position: fixed;
+  right: 20px;
+  top: 100px;
+}
