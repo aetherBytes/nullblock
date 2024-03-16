@@ -8,12 +8,6 @@ import discordLogo from '@assets/images/discord_logo_black.png';
 import telegramLogo from '@assets/images/telegram_logo_black.png';
 
 const Home: FCRoute = () => {
-  const [showPopup, setShowPopup] = useState(false);
-
-  const handleNudesClick = () => {
-    // Simply show the popup without redirecting
-    setShowPopup(true);
-  };
 
   return (
     <div className={styles.backgroundImage}>
