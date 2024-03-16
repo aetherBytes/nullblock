@@ -9,6 +9,8 @@ const Echo = () => {
   const [currentScreen, setCurrentScreen] = useState('Dashboard');
   const [showPopup, setShowPopup] = useState(false);
   const [popupContent, setPopupContent] = useState(null);
+  // Additional state to track the unique key for animations
+  const [animationKey, setAnimationKey] = useState(Date.now());
 
   const handleButtonClick = (screen) => {
     const screenConfig = screensConfig[screen];
@@ -19,6 +21,8 @@ const Echo = () => {
       setShowPopup(false);
     }
     setCurrentScreen(screen);
+    // Update the animation key on screen change
+    setAnimationKey(Date.now());
   };
 
   const handleClosePopup = () => setShowPopup(false);
@@ -37,6 +41,7 @@ const Echo = () => {
           ))}
         </div>
         <UnifiedEchoScreen
+          key={animationKey} // Use the unique key here
           screenTitle={screensConfig[currentScreen].title}
           images={{
             main: screensConfig[currentScreen].image,
@@ -45,6 +50,7 @@ const Echo = () => {
           isPopupVisible={showPopup}
           onClosePopup={handleClosePopup}
           content={screensConfig[currentScreen].content}
+          additionalContent={screensConfig[currentScreen].additionalContent || []}
           popupContent={popupContent}
         />
       </div>
