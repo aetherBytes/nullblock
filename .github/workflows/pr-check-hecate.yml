@@ -49,4 +49,4 @@ jobs:
 
       - name: Commit lint PR title
         run: echo "${{ github.event.pull_request.title }}" | npx --no-install commitlint -g commitlint.config.js
-
+        working_dir: svc/hecate/
