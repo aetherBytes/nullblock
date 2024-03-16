@@ -2,6 +2,7 @@ import type { FCRoute } from '@lomray/vite-ssr-boost/interfaces/fc-route';
 import React, { useState } from 'react';
 import bigBeerus from '@assets/images/big_beerus_clip.png';
 import Echo from '@components/echo/echo';
+import Moxi from '@components/moxi/moxi';
 import styles from './styles.module.scss';
 import XLogo from '@assets/images/X_logo_black.png';
 import discordLogo from '@assets/images/discord_logo_black.png';
@@ -11,6 +12,7 @@ const Home: FCRoute = () => {
 
   return (
     <div className={styles.backgroundImage}>
+      <Moxi />
       <Echo />
       <div className={styles.buttonsContainer}>
         {/* Links updated to open in a new tab */}

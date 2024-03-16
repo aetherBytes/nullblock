@@ -1,0 +1,28 @@
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.characterContainer img {
+  position: fixed;
+  filter: drop-shadow(0 50px 50px rgba(0,0,0,.75));
+  display: block;
+  max-width: 100%;
+  height: auto;
+  top: 100px;
+  right: 20px;
+  animation: float 4s ease-in-out infinite;
+  // Adjust shadow for depth - can customize based on your preference
+  // box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+img {
+  display: block; // Remove potential extra space below the image
+  max-width: 100%; // Ensure the image is responsive
+  height: auto; // Maintain aspect ratio
+}
+
