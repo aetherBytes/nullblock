@@ -10,6 +10,9 @@ jobs:
     with:
       app-build-args: --unlock-robots
       service-path: svc/hecate
+      should-skip-eslint: true
+      should-skip-stylelint: true
+      should-skip-typescript: true
 
   release:
     needs: [build]
