@@ -1,6 +1,5 @@
 import React from 'react';
 import styles from '@components/echo/styles.module.scss'; // Ensure your styles are set up correctly
-import CloseButton from '@components/close-button/close-button'; // Import CloseButton component
 
 const PopupContent = ({ onClose, content, isEchoScreenVisible }) => {
   const popupStyle = {
@@ -17,4 +16,3 @@ const PopupContent = ({ onClose, content, isEchoScreenVisible }) => {
 };
 
 export default PopupContent;
-
