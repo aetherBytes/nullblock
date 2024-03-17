@@ -22,14 +22,14 @@ img {
   height: auto;
   max-width: 100%;
   position: fixed;
-  right: 20px;
-  top: 100px;
+  right: 2%;
+  top: 20%;
 }
 
 @media screen and (max-width: 768px) {
   .characterContainer img {
     max-width: 50%; // Make the image smaller on mobile in portrait orientation
-    top: 40%; // Adjust top positioning for mobile in portrait orientation
+    top: 50%; // Adjust top positioning for mobile in portrait orientation
   }
 }
 
@@ -37,8 +37,7 @@ img {
 @media screen and (max-width: 768px) and (orientation: landscape) {
   .characterContainer img {
     max-width: 30%; // Further reduce the image size for landscape orientation
-    // top: 10%; // Adjust top positioning for landscape orientation
-    // left: 10%; // Position the image on the left side of the screen
+    top: 45%; // Adjust top positioning for landscape orientation
     transform: scaleX(-1) !important; // Reflect the image along the vertical axis
     right: auto; // Override any previous right positioning
   }
