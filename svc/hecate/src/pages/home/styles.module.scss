@@ -6,11 +6,11 @@
   // background-image: url('../../assets/images/nulllrok.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/nulllbok.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/nexoliths.png'); // Adjust the pathn_2according to your project structure
-  background-image: url('../../assets/images/nexoliths_2.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nexoliths_2.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/nexoliths_3.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/nexoliths_4.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/nexoliths_5.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/nex_gate.png'); // Adjust the path according to your project structure
+  background-image: url('../../assets/images/nex_gate.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/nowhere_bridge.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/forrest.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/world_0.png'); // Adjust the path according to your project structure
@@ -66,7 +66,8 @@
   }
 
   .echoButton {
-    padding: 6px 12px; // Slightly reduce padding for compactness
+    // padding: 4px 8px; // Slightly reduce padding for compactness
+    // padding: 6px 12px; // Slightly reduce padding for compactness
     // Optionally, adjust font size, button width etc. for better mobile fit
   }
 }
@@ -75,13 +76,6 @@
 @media screen and (max-width: 1024px) and (orientation: landscape) {
   .buttonsContainer {
     top: 90%; // Closer to the bottom for easier thumb reach
-    // right: 20px; // Adjusted to ensure it doesn't overflow the screen
-    // flex-direction: row; // Stack buttons vertically
-    // gap: 5%; // Reduce the gap for compactness
-  }
-  .echoButton {
-    // padding: 6px 12px; // Further reduce padding for landscape mode
-    // Optionally, adjust font size, button width etc. for better fit in landscape mode
   }
 }
 
