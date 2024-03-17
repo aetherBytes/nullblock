@@ -1,5 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
-
 /* Define font styles */
 $comic-font: 'Comic Sans MS', sans-serif;
 $heading-font-weight: 700;
@@ -163,4 +162,25 @@ $base-font-size: 18px;
     margin: 0 auto; /* Center the echo screen horizontally */
   }
 }
+
+ /* Media query for mobile landscape screens */
+@media screen and (max-width: 1024px) and (orientation: landscape) {
+  .parentContainer,
+  .echoScreen {
+    max-height: 80vh; /* Limit the height to 70% of the viewport height */
+    overflow-y: auto; /* Enable vertical scrolling for overflow content */
+    overflow-x: hidden; /* Hide horizontal scrollbar */
+  }
+}
+
+/* Media query for landscape orientation on mobile devices */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+  .parentContainer,
+  .echoScreen {
+    max-height: 80vh; /* Limit the height to 70% of the viewport height */
+    overflow-y: auto; /* Enable vertical scrolling for overflow content */
+    overflow-x: hidden; /* Hide horizontal scrollbar */
+  }
+}
+
 

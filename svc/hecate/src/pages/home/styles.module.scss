@@ -59,15 +59,29 @@
 /* Media query for mobile screens */
 @media screen and (max-width: 768px) {
   .buttonsContainer {
-    bottom: 20px; // Closer to the bottom for easier thumb reach
-    right: 20px; // Adjusted to ensure it doesn't overflow the screen
+    top: 90%; // Closer to the bottom for easier thumb reach
+    // right: 20px; // Adjusted to ensure it doesn't overflow the screen
     flex-direction: row; // Stack buttons vertically
-    gap: 20px; // Reduce the gap for compactness
+    gap: 5%; // Reduce the gap for compactness
   }
 
   .echoButton {
-    padding: 8px 16px; // Slightly reduce padding for compactness
+    padding: 6px 12px; // Slightly reduce padding for compactness
     // Optionally, adjust font size, button width etc. for better mobile fit
+  }
+}
+
+/* Media query for mobile landscape screens */
+@media screen and (max-width: 1024px) and (orientation: landscape) {
+  .buttonsContainer {
+    top: 90%; // Closer to the bottom for easier thumb reach
+    // right: 20px; // Adjusted to ensure it doesn't overflow the screen
+    // flex-direction: row; // Stack buttons vertically
+    // gap: 5%; // Reduce the gap for compactness
+  }
+  .echoButton {
+    // padding: 6px 12px; // Further reduce padding for landscape mode
+    // Optionally, adjust font size, button width etc. for better fit in landscape mode
   }
 }
 
