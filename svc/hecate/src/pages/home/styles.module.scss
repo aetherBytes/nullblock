@@ -25,16 +25,6 @@
   width: 100vw;
 }
 
-.buttonsContainer {
-  align-items: center;
-  bottom: 2.5%;
-  display: flex;
-  flex-direction: row;
-  gap: 50px;
-  position: absolute;
-  right: 2.5%;
-  z-index: 12;
-}
 
 .echoButton {
   background: linear-gradient(to left, rgba(100, 149, 237, 0.5), rgba(25, 25, 112, 0.5));
@@ -56,26 +46,31 @@
   }
 }
 
+
+.buttonsContainer {
+  align-items: center;
+  bottom: 0%; /* Initial bottom position */
+  display: flex;
+  flex-direction: row;
+  gap: 50px;
+  position: absolute;
+  right: 2.5%;
+  z-index: 12;
+}
+
 /* Media query for mobile screens */
 @media screen and (max-width: 768px) {
   .buttonsContainer {
-    top: 95%; // Closer to the bottom for easier thumb reach
-    // right: 20px; // Adjusted to ensure it doesn't overflow the screen
-    flex-direction: row; // Stack buttons vertically
-    gap: 5%; // Reduce the gap for compactness
-  }
-
-  .echoButton {
-    // padding: 4px 8px; // Slightly reduce padding for compactness
-    // padding: 6px 12px; // Slightly reduce padding for compactness
-    // Optionally, adjust font size, button width etc. for better mobile fit
+    top: 80%;  //* Adjusted bottom position for mobile screens */
+    flex-direction: row; /* Stack buttons vertically */
+    gap: 10px; /* Reduce the gap between buttons */
+    right: 2.5%; /* Keep the buttons aligned to the right */
   }
 }
 
 /* Media query for mobile landscape screens */
 @media screen and (max-width: 1024px) and (orientation: landscape) {
   .buttonsContainer {
-    top: 95%; // Closer to the bottom for easier thumb reach
+    bottom: 0%; /* Adjusted bottom position for landscape mode */
   }
 }
-
