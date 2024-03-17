@@ -68,7 +68,7 @@ jobs:
     uses: ./.github/workflows/ssr-boost-deploy-aws.yml
     with:
       image: ${{ needs.docker-build.outputs.image-tag }}
-      service: Hecate
+      service: hecate
       cluster: DevCluster
       task-container-name: hecate
       service-path: svc/hecate
