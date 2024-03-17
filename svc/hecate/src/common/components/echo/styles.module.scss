@@ -79,10 +79,9 @@ $base-font-size: 18px;
   color: #ffffff;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start; // Changed to align content to the top
-  min-height: 100%; // Changed from fixed height to min-height
+  height: 100%;
+  justify-content: center;
   width: 100%;
-  overflow-y: auto; // Allows scrolling for overflow content
 
   .echoTitle,
   .echoContent {
@@ -90,9 +89,7 @@ $base-font-size: 18px;
     border-right: 0.15em solid rgba(100, 149, 237, 0.5);
     display: inline-block;
     overflow: hidden;
-    white-space: normal; // Changed from nowrap to normal to allow text wrapping
-    word-wrap: break-word; // Ensures words can break and wrap
-    overflow-wrap: break-word; // Ensures content wraps within container
+    white-space: nowrap;
   }
 
   .echoImage,
@@ -128,7 +125,7 @@ $base-font-size: 18px;
   }
 
   .echoScreen {
-    z-index: 10; // Ensure it's above other content but adjust according to your layout
+     z-index: 10; // Ensure it's above other content but adjust according to your layout
     padding: 10px; // Reduced padding for the Echo screen
     // Adjust layout and sizing as needed
   }
