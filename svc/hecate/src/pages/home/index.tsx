@@ -4,13 +4,12 @@ import XLogo from '@assets/images/X_logo_black.png';
 import discordLogo from '@assets/images/discord_logo_black.png';
 import telegramLogo from '@assets/images/telegram_logo_black.png';
 import Echo from '@components/echo/echo';
-import Moxi from '@components/moxi/moxi';
+import Moxi from '@components/moxi/parent';
 import styles from './styles.module.scss';
 
 const Home: FCRoute = () => (
   <div className={styles.backgroundImage}>
     <Moxi />
-    <Echo />
     <div className={styles.buttonsContainer}>
       {/* Links updated to open in a new tab */}
       <a
