@@ -59,7 +59,7 @@
 /* Media query for mobile screens */
 @media screen and (max-width: 768px) {
   .buttonsContainer {
-    top: 90%; // Closer to the bottom for easier thumb reach
+    top: 95%; // Closer to the bottom for easier thumb reach
     // right: 20px; // Adjusted to ensure it doesn't overflow the screen
     flex-direction: row; // Stack buttons vertically
     gap: 5%; // Reduce the gap for compactness
@@ -75,7 +75,7 @@
 /* Media query for mobile landscape screens */
 @media screen and (max-width: 1024px) and (orientation: landscape) {
   .buttonsContainer {
-    top: 90%; // Closer to the bottom for easier thumb reach
+    top: 95%; // Closer to the bottom for easier thumb reach
   }
 }
 
