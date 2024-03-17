@@ -1,10 +1,10 @@
 import React from 'react';
 import styles from '@components/echo/styles.module.scss';
 import Popup from '@components/popup-content/popup-content';
-// Define props interface if using TypeScript
+
 interface IUnifiedEchoScreenProps {
   screenTitle: string;
-  images: {
+  images?: {
     main: string;
     small?: string;
   };
@@ -17,11 +17,11 @@ interface IUnifiedEchoScreenProps {
 
 const UnifiedEchoScreen: React.FC<IUnifiedEchoScreenProps> = ({
   screenTitle,
-  images,
+  images = { main: '', small: '' }, // Default images prop if not provided
   isPopupVisible,
   onClosePopup,
   content,
-  additionalContent = [],
+  additionalContent = [], // Default value for additionalContent
   popupContent,
 }) => (
   <div className={styles.echoScreen}>
@@ -52,3 +52,4 @@ const UnifiedEchoScreen: React.FC<IUnifiedEchoScreenProps> = ({
 );
 
 export default UnifiedEchoScreen;
+
