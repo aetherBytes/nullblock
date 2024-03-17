@@ -49,7 +49,7 @@ $base-font-size: 18px;
   padding-left: 2.5%;
   padding-top: 2.5%;
   width: 65%;
-  display: flex;
+  // display: flex;
   justify-content: center;
   align-items: center;
 }
@@ -102,19 +102,58 @@ $base-font-size: 18px;
   animation: pulse 2s infinite ease-in-out;
 }
 
-/* Adjustments for large screens */
-@media screen and (min-width: 1200px) {
+// Adjustments for mobile screens across the Echo component, parent containers, and buttons
+@media screen and (max-width: 768px) {
   .parentContainer {
-    align-items: flex-start; /* Align items to the start */
+    padding: 5px; // Reduce padding for more space
+    width: auto; // Adjust width to fit mobile screens
+    height: auto; // Adjust height based on content
+  }
+
+  .sidebar {
+    width: 100%; // Full width for a horizontal layout or adjust as needed
+    padding-right: 0; // Remove extra padding
+    display: flex; // Ensure buttons align correctly
+    justify-content: space-around; // Distribute buttons evenly
+    button {
+      padding: 5px 10px; // Smaller buttons
+      font-size: 12px; // Smaller font size for button text
+    }
   }
 
   .mainScreenContent {
-    align-items: flex-start; /* Align items to the start */
+    flex-direction: column; // Stack elements vertically
+    padding: 10px; // Reduced padding
   }
 
   .echoScreen {
-    height: auto; /* Allow height to adjust based on content */
-    max-height: none; /* Remove maximum height limit */
+    z-index: 10; // Ensure it's above other content but adjust according to your layout
+    padding: 10px; // Reduced padding for the Echo screen
+    max-height: 70vh; // Limit the height to 70% of the viewport height
+    overflow-y: auto; // Enable vertical scrolling for overflow content
+  }
+
+  .echoImage {
+    width: 40%; // Further reduce the main image size
+    margin: 0 auto; // Center the image
+  }
+
+  .echoImageSmall {
+    width: 25%; // Further reduce the secondary image size
+    margin: 0 auto; // Center the image
+  }
+
+  .echoTitle,
+  .echoContent {
+    font-size: 12px; // Further reduce font size for titles and content
+    white-space: normal; // Override any non-wrapping settings for mobile
+    word-wrap: break-word; // Ensures words can break and wrap
+    overflow-wrap: break-word; // Ensures content wraps within container
+  }
+
+  .echoButton {
+    padding: 8px 16px; // Adjust padding to make buttons smaller
+    font-size: 12px; // Smaller text for better readability on small screens
+    margin: 5px 0; // Adjust margins to ensure buttons don't take too much space
   }
 }
-
