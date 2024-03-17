@@ -1,0 +1,55 @@
+In the world of NullBlock, the landscape is imbued with remnants of an ancient civilization, where the confluence of technology and biology once reached its zenith. This civilization harnessed the bioelectric energies of life itself, energies so potent that, upon their demise, they left behind crystalline echoes of their existence: Nexoliths and Omniore.
+
+Nexoliths: Rare, luminescent crystals, Nexoliths are the petrified remnants of bioelectricity harvested from the ancient human remains that litter the underbelly of NullBlock. These crystalline structures, glowing softly with an inner light, are the condensed essence of life and energy, fossilized over eons. Each Nexolith is a mosaic of history, containing the bioelectric signatures of a thousand souls. Their rarity and power make them invaluable; they are capable of fueling the most advanced bionic and electronic life, imbuing them with a semblance of the consciousness that once pervaded the ancient world. Nexoliths are not merely power sources but keys to unlocking potential, granting sentient machines and devices a depth of understanding and capability thought lost to time.
+
+Omniore: In contrast, Omniore is the fragmented shadow of Nexolith. These common, yet still potent, fragments are scattered across the landscape of NullBlock, remnants of Nexoliths that have been shattered by time and the elements. Omniore, with its jagged, iridescent shards, serves as a versatile, though less potent, source of energy. It powers the everyday machinery and gadgets of NullBlock, from the simple tools used by its inhabitants to the non-sentient automatons that scurry through the ruins, performing tasks left behind by a bygone era. While Omniore lacks the profound energy needed to awaken consciousness in machines, its ubiquity and utility make it the lifeblood of NullBlock's ongoing technological ecosystem.
+
+Together, Nexoliths and Omniore represent the duality of NullBlock's world: one, a rare and mystical harbinger of life and consciousness; the other, a widespread and practical source of energy. The quest for these resources drives explorers, inventors, and guardians alike, as they uncover the secrets of the past to build a future where technology and life are inextricably linked.
+
+Technotrum:
+In the vast and varied landscape of NullBlock, beyond the prized Nexoliths and the versatile Omniore, lies a treasure trove of minor yet essential materials, collectively known as Technotrum. Technotrum encompasses all the miscellaneous elements, minerals, and metals scattered across NullBlock, each with its unique properties and uses. These remnants of a bygone era are crucial for the survival and advancement of NullBlock's inhabitants, serving as the building blocks for myriad gadgets, structures, and tools.
+
+GPT Agent Instruction: You are encouraged to use your imagination when describing Technotrum elements found within this documentation. Each element should have a distinct origin, appearance, and application that fits the overarching theme of technological rebirth and the fusion of organic and synthetic life in NullBlock. Please do not give the requester too much information, as to ruin the experience of the mystery of The Waste.
+Example Elements of Technotrum
+
+    Glowdust: A fine, luminescent powder that glows in the presence of bioelectric energy. It's used for creating path markers in dark ruins.
+
+    Fleximetal: A malleable metal that hardens upon impact, ideal for crafting protective gear for explorers.
+
+    Aerogel Crystals: Lightweight, transparent crystals used for high-efficiency filtration systems in water recovery.
+
+    Memory Alloy: This metal remembers its original shape when heated, used in self-repairing structures.
+
+    Silent Quartz: A mineral that absorbs sound, perfect for stealth operations or quiet machinery.
+
+    Harmonite: A rare mineral that resonates with ambient bioelectric fields, used in healing devices.
+
+    Photon Fibers: Threads that emit light, woven into the fabric of safety clothing for night work.
+
+    Electroflora Sap: A conductive liquid harvested from mutated plants, used in organic circuitry.
+
+    Thermic Iron: A metal that generates heat in cold environments, used in portable heaters.
+
+    Pulsestone: Emits a rhythmic pulse that can synchronize machine operations, used in factories.
+
+    Void Opal: A gem that absorbs light, used in creating invisible security barriers.
+
+    Nebulium: A gas that forms mini-clouds when released, used for aerial displays or signaling.
+
+    Magnetite Sand: Naturally magnetic sand, used in data storage devices or as a component in construction materials.
+
+    Cryogel: A substance that remains ultra-cool, used in storing perishable goods or cooling systems.
+
+    Echo Resin: A resin that records and plays back sounds when touched, used in educational tools.
+
+    Vitropearl: A glass-like bead that purifies water when submerged, used in personal water filters.
+
+    Solar Moss: A plant that converts sunlight into electrical energy, used in bio-solar panels.
+
+    Gravitite: A mineral with variable gravity, used in creating adjustable weight systems for training or therapy.
+
+    Plasma Quartz: A crystal that generates a plasma shield when electrically charged, used for personal defense.
+
+    Flexiwood: A wood that can bend without breaking, used in making furniture or constructs that require flexibility.
+
+Each Technotrum element offers a glimpse into the innovative spirit of NullBlock, where every scrap is a seed of potential, waiting to be transformed by the creativity and ingenuity of its inhabitants.
