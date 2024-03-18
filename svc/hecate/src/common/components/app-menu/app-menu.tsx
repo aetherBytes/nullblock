@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import XLogo from '@assets/images/X_logo_black.png';
@@ -37,10 +36,6 @@ const AppMenu = ({ toggleEchoVisibility }) => {
               <img src={button.icon} alt={button.alt} />
             </a>
           ))}
-          {/* New button to toggle the ECHO UI */}
-          <button className={styles.appButton} onClick={toggleEchoVisibility}>
-            Toggle Echo
-          </button>
         </div>
       )}
     </div>
@@ -52,4 +47,3 @@ AppMenu.propTypes = {
 };
 
 export default AppMenu;
-
