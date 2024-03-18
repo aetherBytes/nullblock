@@ -7,7 +7,7 @@ import styles from './styles.module.scss';
 import moxi_black from '@assets/images/moxi_avatar_black_200.png';
 
 const Home = () => {
-  const [isEchoVisible, setIsEchoVisible] = useState(false);
+  const [isEchoVisible, setIsEchoVisible] = useState(true);
 
   const toggleEchoVisibility = () => setIsEchoVisible(prev => !prev);
 
