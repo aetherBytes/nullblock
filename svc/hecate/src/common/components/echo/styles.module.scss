@@ -167,7 +167,7 @@ $base-font-size: 18px;
 @media screen and (max-width: 1024px) and (orientation: landscape) {
   .parentContainer,
   .echoScreen {
-    max-height: 80vh; /* Limit the height to 70% of the viewport height */
+    max-height: 85vh; /* Limit the height to 70% of the viewport height */
     overflow-y: auto; /* Enable vertical scrolling for overflow content */
     overflow-x: hidden; /* Hide horizontal scrollbar */
   }
@@ -177,7 +177,7 @@ $base-font-size: 18px;
 @media screen and (max-width: 768px) and (orientation: landscape) {
   .parentContainer,
   .echoScreen {
-    max-height: 80vh; /* Limit the height to 70% of the viewport height */
+    max-height: 85vh; /* Limit the height to 70% of the viewport height */
     overflow-y: auto; /* Enable vertical scrolling for overflow content */
     overflow-x: hidden; /* Hide horizontal scrollbar */
   }
