@@ -1,0 +1,63 @@
+.indexButton {
+  background: linear-gradient(to left, rgba(100, 149, 237, 0.15), rgba(25, 25, 112, 0.15));
+  border-radius: 100px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 -4px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+
+  &:hover,
+  &:focus {
+    background: linear-gradient(to right, rgba(65, 105, 225, 0.7), rgba(25, 25, 112, 0.7));
+    box-shadow:
+      0 4px 8px rgba(0, 0, 0, 0.3),
+      inset 0 -6px 3px rgba(0, 0, 0, 0.3);
+    color: #e0ffff; // A lighter shade for contrast
+  }
+}
+
+.indexButton2 {
+  background: linear-gradient(to left, rgba(100, 149, 237, 0.15), rgba(25, 25, 112, 0.15));
+  border-radius: 10px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 -4px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+
+  &:hover,
+  &:focus {
+    background: linear-gradient(to right, rgba(65, 105, 225, 0.7), rgba(25, 25, 112, 0.7));
+    box-shadow:
+      0 4px 8px rgba(0, 0, 0, 0.3),
+      inset 0 -6px 3px rgba(0, 0, 0, 0.3);
+    color: #e0ffff; // A lighter shade for contrast
+  }
+}
+
+.echoButtonImg {
+  width: 150px; // Set your desired width
+  height: auto; // Set your desired height
+  // object-fit: contain; // This ensures the image is scaled correctly within the dimensions
+
+  @media screen and (max-width: 768px) {
+    width: 50px; // Adjust width for small/mobile screens
+    height: 50px; // Adjust height for small/mobile screens
+  }
+}
+
+.buttonsContainer {
+  display: flex;
+  flex-direction: row;
+  position: fixed;
+  bottom: 5%;
+  gap: 10%;
+  right: 5%;
+  z-index: 12;
+
+  @media screen and (max-width: 768px) {
+    bottom: 2%; /* Adjust bottom position for small/mobile screens */
+    right: 2%; /* Adjust right position for small/mobile screens */
+    gap: 5%; /* Decrease gap between buttons for small/mobile screens */
+  }
+}
+

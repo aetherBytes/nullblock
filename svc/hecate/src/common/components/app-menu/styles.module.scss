@@ -14,22 +14,7 @@
   display: block; /* Show the menu when active */
 }
 
-.appButton img {
-  width: 40px; /* Adjust image size */
-  height: 40px; /* Adjust image size */
-  margin-right: 10px; /* Add some spacing between the icon and text */
-}
-
 .appButton:hover img {
   filter: brightness(1.5); /* Adjust brightness on hover */
-}
-
-/* Additional styles for Echo button */
-.echoButton {
-  background-color: #ff6e00; /* Your desired button background color */
-}
-
-.echoButton:hover {
-  background-color: #e65c00; /* Adjust hover color */
 }
 

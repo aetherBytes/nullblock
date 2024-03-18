@@ -25,20 +25,3 @@
   width: 100vw;
 }
 
-
-.buttonsContainer {
-  display: flex;
-  flex-direction: row;
-  position: fixed;
-  bottom: 5%;
-  gap: 10%;
-  right: 2.5%;
-  z-index: 12;
-
-  @media screen and (max-width: 768px) {
-    bottom: 2%; /* Adjust bottom position for small/mobile screens */
-    right: 2%; /* Adjust right position for small/mobile screens */
-    gap: 5%; /* Decrease gap between buttons for small/mobile screens */
-  }
-}
-
