@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import styles from './styles.module.scss';
-import ButtonWrapper from '@components/button-wrapper/button-wrapper';
+import ButtonWrapper2 from '@components/index-button-wrapper/button-wrapper-2';
 import XLogo from '@assets/images/X_logo_black.png';
 import discordLogo from '@assets/images/discord_logo_black.png';
 import telegramLogo from '@assets/images/telegram_logo_black.png';
 // Import the image for the button face
-import echoButtonImage from '@assets/images/menu_white.png'; // Ensure this path is correct
+import echoButtonImage from '@assets/images/menu.png'; // Ensure this path is correct
 
 const AppMenu = ({ toggleEchoVisibility }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -24,7 +24,7 @@ const AppMenu = ({ toggleEchoVisibility }) => {
   return (
     <div className={styles.appMenu}>
       {/* Use ButtonWrapper with an image */}
-      <ButtonWrapper title="Apps" buttonImage={echoButtonImage} setCurrentScreen={toggleMenu} />
+      <ButtonWrapper2 title="Apps" buttonImage={echoButtonImage} setCurrentScreen={toggleMenu}/>
       <div className={`${styles.menuContainer} ${isMenuOpen ? styles.active : ''}`}>
         {buttons.map((button, index) => (
           <a
@@ -38,9 +38,6 @@ const AppMenu = ({ toggleEchoVisibility }) => {
           </a>
         ))}
         {/* You can still use the regular button for other actions, like toggling the ECHO UI */}
-        <button className={`${styles.appButton} ${styles.echoButton}`} onClick={toggleEchoVisibility}>
-          Toggle Echo
-        </button>
       </div>
     </div>
   );

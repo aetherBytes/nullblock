@@ -8,13 +8,10 @@
   cursor: pointer;
   display: block; // Adjust as needed
   margin-bottom: 20px;
-  padding: 10px 20px;
+  // padding: 10px 20px;
   text-align: center; // Center the text if the buttons are block elements
   transition: all 0.3s ease;
 
-  &:not(:first-child) {
-    margin-top: 10px;
-  }
 
   &:hover,
   &:focus {
@@ -27,7 +24,13 @@
 }
 
 .echoButtonImg {
-  width: 100px; // Set your desired width
-  height: 100px; // Set your desired height
-  object-fit: contain; // This ensures the image is scaled correctly within the dimensions
+  width: 75%; // Set your desired width
+  height: auto; // Set your desired height
+  // object-fit: contain; // This ensures the image is scaled correctly within the dimensions
+
+  @media screen and (max-width: 768px) {
+    width: 50px; // Adjust width for small/mobile screens
+    height: 50px; // Adjust height for small/mobile screens
+  }
 }
+
