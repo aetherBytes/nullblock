@@ -1,11 +1,12 @@
-// AppMenu.jsx
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
+import styles from './styles.module.scss';
+import ButtonWrapper from '@components/button-wrapper/button-wrapper';
 import XLogo from '@assets/images/X_logo_black.png';
 import discordLogo from '@assets/images/discord_logo_black.png';
 import telegramLogo from '@assets/images/telegram_logo_black.png';
-import styles from './styles.module.scss';
-import ButtonWrapper from '@components/button-wrapper/button-wrapper';
+// Import the image for the button face
+import echoButtonImage from '@assets/images/menu_white.png'; // Ensure this path is correct
 
 const AppMenu = ({ toggleEchoVisibility }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,7 +23,8 @@ const AppMenu = ({ toggleEchoVisibility }) => {
 
   return (
     <div className={styles.appMenu}>
-      <ButtonWrapper title="Apps" buttonText="Apps" setCurrentScreen={toggleMenu} />
+      {/* Use ButtonWrapper with an image */}
+      <ButtonWrapper title="Apps" buttonImage={echoButtonImage} setCurrentScreen={toggleMenu} />
       <div className={`${styles.menuContainer} ${isMenuOpen ? styles.active : ''}`}>
         {buttons.map((button, index) => (
           <a
@@ -35,7 +37,7 @@ const AppMenu = ({ toggleEchoVisibility }) => {
             <img src={button.icon} alt={button.alt} />
           </a>
         ))}
-        {/* New button to toggle the ECHO UI */}
+        {/* You can still use the regular button for other actions, like toggling the ECHO UI */}
         <button className={`${styles.appButton} ${styles.echoButton}`} onClick={toggleEchoVisibility}>
           Toggle Echo
         </button>

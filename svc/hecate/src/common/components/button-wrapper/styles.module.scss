@@ -25,3 +25,9 @@
     color: #e0ffff; // A lighter shade for contrast
   }
 }
+
+.echoButtonImg {
+  width: 100px; // Set your desired width
+  height: 100px; // Set your desired height
+  object-fit: contain; // This ensures the image is scaled correctly within the dimensions
+}
