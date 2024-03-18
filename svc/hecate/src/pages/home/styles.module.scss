@@ -25,7 +25,6 @@
   width: 100vw;
 }
 
-
 .echoButton {
   background: linear-gradient(to left, rgba(100, 149, 237, 0.5), rgba(25, 25, 112, 0.5));
   border-radius: 5px;
@@ -33,26 +32,42 @@
   color: white;
   cursor: pointer;
   display: block;
-  // text-align: center;
   transition: all 0.3s ease;
-
 
   &:hover, &:focus {
     background: linear-gradient(to right, rgba(65, 105, 225, 0.7), rgba(25, 25, 112, 0.7));
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 -6px 3px rgba(0, 0, 0, 0.3);
     color: #e0ffff;
   }
+
+  @media screen and (max-width: 768px) {
+    width: 50px; /* Decrease button width for small/mobile screens */
+    font-size: 12px; /* Decrease font size for small/mobile screens */
+  }
 }
 
-
 .buttonsContainer {
-  // align-items: center;
   display: flex;
   flex-direction: row;
   position: fixed;
-  bottom: 0%;
+  bottom: 5%;
   gap: 10%;
   right: 2.5%;
   z-index: 12;
+
+  @media screen and (max-width: 768px) {
+    bottom: 2%; /* Adjust bottom position for small/mobile screens */
+    right: 2%; /* Adjust right position for small/mobile screens */
+    gap: 5%; /* Decrease gap between buttons for small/mobile screens */
+  }
+}
+
+.echoImage {
+  width: 75px; /* Set the width of the image */
+  height: auto; /* Set the height of the image */
+
+  @media screen and (max-width: 768px) {
+    width: 40px; /* Decrease image width for small/mobile screens */
+  }
 }
 
