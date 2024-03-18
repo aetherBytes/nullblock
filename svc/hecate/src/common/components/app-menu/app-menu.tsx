@@ -1,9 +1,11 @@
+// AppMenu.jsx
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import XLogo from '@assets/images/X_logo_black.png';
 import discordLogo from '@assets/images/discord_logo_black.png';
 import telegramLogo from '@assets/images/telegram_logo_black.png';
 import styles from './styles.module.scss';
+import ButtonWrapper from '@components/button-wrapper/button-wrapper';
 
 const AppMenu = ({ toggleEchoVisibility }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,9 +22,7 @@ const AppMenu = ({ toggleEchoVisibility }) => {
 
   return (
     <div className={styles.appMenu}>
-      <button className={styles.appButton} onClick={toggleMenu}>
-        Apps
-      </button>
+      <ButtonWrapper title="Apps" buttonText="Apps" setCurrentScreen={toggleMenu} />
       <div className={`${styles.menuContainer} ${isMenuOpen ? styles.active : ''}`}>
         {buttons.map((button, index) => (
           <a
@@ -36,7 +36,7 @@ const AppMenu = ({ toggleEchoVisibility }) => {
           </a>
         ))}
         {/* New button to toggle the ECHO UI */}
-        <button className={styles.appButton} onClick={toggleEchoVisibility}>
+        <button className={`${styles.appButton} ${styles.echoButton}`} onClick={toggleEchoVisibility}>
           Toggle Echo
         </button>
       </div>
