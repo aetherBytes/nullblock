@@ -33,9 +33,7 @@
   color: white;
   cursor: pointer;
   display: block;
-  margin-bottom: 20px;
-  padding: 10px 20px;
-  text-align: center;
+  // text-align: center;
   transition: all 0.3s ease;
 
 
@@ -48,29 +46,13 @@
 
 
 .buttonsContainer {
-  align-items: center;
-  bottom: 0%; /* Initial bottom position */
+  // align-items: center;
   display: flex;
   flex-direction: row;
-  gap: 50px;
-  position: absolute;
+  position: fixed;
+  bottom: 0%;
+  gap: 10%;
   right: 2.5%;
   z-index: 12;
 }
 
-/* Media query for mobile screens */
-@media screen and (max-width: 768px) {
-  .buttonsContainer {
-    top: 80%;  //* Adjusted bottom position for mobile screens */
-    flex-direction: row; /* Stack buttons vertically */
-    gap: 10px; /* Reduce the gap between buttons */
-    right: 2.5%; /* Keep the buttons aligned to the right */
-  }
-}
-
-/* Media query for mobile landscape screens */
-@media screen and (max-width: 1024px) and (orientation: landscape) {
-  .buttonsContainer {
-    bottom: 0%; /* Adjusted bottom position for landscape mode */
-  }
-}

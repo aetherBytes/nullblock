@@ -1,18 +1,23 @@
-// Import React
-import React from 'react';
-import MoxiImage from '@assets/images/moxi_lets_go.png'; // Ensure the path is correct
-import styles from './styles.module.scss'; // Adjust the import path as needed
 
-// Add a prop type for the new onToggleEcho function
+import React from 'react';
+import MoxiImage from '@assets/images/moxi_lets_go.png';
+import styles from './styles.module.scss';
+
 interface MoxiProps {
-  onToggleEcho: () => void;
+  onToggleEcho: () => void; // Ensure the prop name is onToggleEcho
 }
 
-const Moxi: React.FC<MoxiProps> = ({ onToggleEcho }) => (
-  <div className={styles.characterContainer} onClick={onToggleEcho} style={{ cursor: 'pointer' }}>
-    <img src={MoxiImage} alt="Moxi" />
-  </div>
-);
+const Moxi: React.FC<MoxiProps> = ({ onToggleEcho }) => {
+  const handleClick = () => {
+    onToggleEcho(); // Call the onToggleEcho function when Moxi is clicked
+  };
+
+  return (
+    <div className={styles.characterContainer} onClick={handleClick} style={{ cursor: 'pointer' }}>
+      <img src={MoxiImage} alt="Moxi" />
+    </div>
+  );
+};
 
 export default Moxi;
 
