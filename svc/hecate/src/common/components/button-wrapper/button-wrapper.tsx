@@ -1,19 +1,27 @@
-// ButtonWrapper.tsx
+// ButtonWrapper.jsx
 import React from 'react';
+import PropTypes from 'prop-types';
 import styles from './styles.module.scss';
 
-interface ButtonWrapperProps {
-  title: string;
-  buttonText: string;
-  setCurrentScreen: (screen: string) => void;
-}
+const ButtonWrapper = ({ title, buttonText, setCurrentScreen }) => {
+  const handleClick = () => {
+    setCurrentScreen(); // Invoke the toggleMenu function
+  };
 
-const ButtonWrapper: React.FC<ButtonWrapperProps> = ({ title, buttonText, setCurrentScreen }) => (
-  <div>
-    <button type="button" className={styles.echoButton} onClick={() => setCurrentScreen(title)}>
-      {buttonText}
-    </button>
-  </div>
-);
+  return (
+    <div>
+      <button type="button" className={styles.echoButton} onClick={handleClick}>
+        {buttonText}
+      </button>
+    </div>
+  );
+};
+
+ButtonWrapper.propTypes = {
+  title: PropTypes.string.isRequired,
+  buttonText: PropTypes.string.isRequired,
+  setCurrentScreen: PropTypes.func.isRequired,
+};
 
 export default ButtonWrapper;
+

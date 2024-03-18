@@ -1,26 +1,8 @@
-.appMenu {
-  position: relative;
-  display: inline-block;
-}
-
-.appButton {
-  background-color: transparent;
-  border: none;
-  color: #ffffff;
-  font-size: 16px;
-  cursor: pointer;
-  transition: color 0.3s ease;
-}
-
-.appButton:hover {
-  color: #00ffcc; /* Change color on hover */
-}
-
 .menuContainer {
   position: absolute;
-  top: calc(100% + 10px); /* Position the menu below the button with some spacing */
+  bottom: calc(100% + 10px); /* Position the menu above the button with some spacing */
   right: 0;
-  background-color: #0d0d0d; /* Dark background color */
+  background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent background color */
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Add shadow effect */
   padding: 10px;
@@ -40,5 +22,14 @@
 
 .appButton:hover img {
   filter: brightness(1.5); /* Adjust brightness on hover */
+}
+
+/* Additional styles for Echo button */
+.echoButton {
+  background-color: #ff6e00; /* Your desired button background color */
+}
+
+.echoButton:hover {
+  background-color: #e65c00; /* Adjust hover color */
 }
 
