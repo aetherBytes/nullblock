@@ -23,21 +23,23 @@ const AppMenu = ({ toggleEchoVisibility }) => {
       <button className={styles.appButton} onClick={toggleMenu}>
         Apps
       </button>
-      {isMenuOpen && (
-        <div className={styles.menuContainer}>
-          {buttons.map((button, index) => (
-            <a
-              key={index}
-              href={button.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.appButton}
-            >
-              <img src={button.icon} alt={button.alt} />
-            </a>
-          ))}
-        </div>
-      )}
+      <div className={`${styles.menuContainer} ${isMenuOpen ? styles.active : ''}`}>
+        {buttons.map((button, index) => (
+          <a
+            key={index}
+            href={button.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.appButton}
+          >
+            <img src={button.icon} alt={button.alt} />
+          </a>
+        ))}
+        {/* New button to toggle the ECHO UI */}
+        <button className={styles.appButton} onClick={toggleEchoVisibility}>
+          Toggle Echo
+        </button>
+      </div>
     </div>
   );
 };
@@ -47,3 +49,4 @@ AppMenu.propTypes = {
 };
 
 export default AppMenu;
+

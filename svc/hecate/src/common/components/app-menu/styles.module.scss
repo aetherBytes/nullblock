@@ -1,0 +1,44 @@
+.appMenu {
+  position: relative;
+  display: inline-block;
+}
+
+.appButton {
+  background-color: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.appButton:hover {
+  color: #00ffcc; /* Change color on hover */
+}
+
+.menuContainer {
+  position: absolute;
+  top: calc(100% + 10px); /* Position the menu below the button with some spacing */
+  right: 0;
+  background-color: #0d0d0d; /* Dark background color */
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Add shadow effect */
+  padding: 10px;
+  z-index: 100;
+  display: none; /* Initially hide the menu */
+}
+
+.menuContainer.active {
+  display: block; /* Show the menu when active */
+}
+
+.appButton img {
+  width: 40px; /* Adjust image size */
+  height: 40px; /* Adjust image size */
+  margin-right: 10px; /* Add some spacing between the icon and text */
+}
+
+.appButton:hover img {
+  filter: brightness(1.5); /* Adjust brightness on hover */
+}
+

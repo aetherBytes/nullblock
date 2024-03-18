@@ -1,23 +1,23 @@
 
 import React, { useState } from 'react';
-import Moxi from '@components/moxi/parent';
-import Echo from '@components/echo/echo';
-import AppMenu from '@components/app-menu/app-menu';
-import styles from './styles.module.scss';
-import moxi_black from '@assets/images/moxi_avatar_black_200.png';
+import Moxi from '@components/moxi/moxi'; // Adjust the import path as needed
+import Echo from '@components/echo/echo'; // Adjust the import path as needed
+import AppMenu from '@components/app-menu/app-menu'; // Adjust the import path as needed
+import styles from './styles.module.scss'; // Ensure the path is correct for your styles
+import moxi_black from '@assets/images/moxi_avatar_white.png'; // Adjust the import path as needed
 
 const Home = () => {
-  const [isEchoVisible, setIsEchoVisible] = useState(true);
+  const [isEchoVisible, setIsEchoVisible] = useState(false);
 
   const toggleEchoVisibility = () => setIsEchoVisible(prev => !prev);
 
   return (
     <div className={styles.backgroundImage}>
       <Moxi toggleEchoVisibility={toggleEchoVisibility} />
+      <AppMenu toggleEchoVisibility={toggleEchoVisibility} /> {/* Pass the toggleEchoVisibility prop */}
       <div className={styles.buttonsContainer}>
-        <AppMenu toggleEchoVisibility={toggleEchoVisibility} />
         <button onClick={toggleEchoVisibility} className={styles.echoButton}>
-          <img src={moxi_black} alt="Moxi Logo" />
+          <img src={moxi_black} alt="Moxi Logo" className={styles.echoImage} />
         </button>
       </div>
       {isEchoVisible && <Echo />}
