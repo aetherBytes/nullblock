@@ -1,15 +1,9 @@
-
 .indexButton, .indexButton2 {
   animation: flickerGlow 2s infinite ease-in-out, moveGradient 10s ease infinite;
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(48, 25, 52, 0.5), rgba(25, 25, 112, 0.3));
-  background-size: 200% 200%;
+  background: transparent;
   border: none;
   /* Adjust top and bottom corners for a tab shape, with top corners significantly rounded */
-  border-radius: 20px 20px 5px 5px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 0 10px rgba(0, 255, 255, 0.5);
   color: #e0ffff;
-  padding: 10px 20px;
-  margin: 0px 5px; /* Space between tabs */
   transition: all 0.3s ease, transform 0.3s ease;
   cursor: pointer;
   font-size: 16px;
@@ -25,7 +19,7 @@
 }
 
 .echoButtonImg {
-  width: 75px;
+  width: 100px;
   height: auto;
   filter: drop-shadow(0 0 8px rgba(173, 216, 230, 0.6))
     drop-shadow(0 0 20px rgba(240, 248, 255, 0.4));
@@ -44,18 +38,16 @@
 
 @media screen and (max-width: 768px) {
   .indexButton, .indexButton2 {
-    padding: 8px 16px;
     font-size: 14px;
     // margin: 0 3px;
   }
 
   .echoButtonImg {
-    width: 35px;
+    width: 60px;
   }
 
   .buttonsContainer {
-    gap: 2%;
-    top: 78%;
+    top: 75%;
   }
 }
  /* Media query for mobile landscape screens */
@@ -67,12 +59,13 @@
   }
 
   .echoButtonImg {
-    width: 40px;
+    width: 60px;
   }
 
   .buttonsContainer {
-    gap: 2%;
+    // gap: 2%;
     top: 85%;
+    right: 0%;
   }
 }
 

@@ -69,6 +69,23 @@ Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots 
     </div>,
     popupContent: null, // No popup content for this screen
   },
+  Chat: {
+    title: 'Chat with ECHO',
+    buttonText: 'Chat',
+    usePopup: true,
+    content: <div>{/* Chat screen content */}
+    <p>
+      The chat system is currently initializing. Please wait while the system initializes.
+    </p>
+    </div>,
+    popupContent: (
+      <div>
+        <p>
+          The chat system is currently initializing. Please wait while the system initializes.
+        </p>
+      </div>
+    ),
+  },
   // Add other screens as needed
 };
 
