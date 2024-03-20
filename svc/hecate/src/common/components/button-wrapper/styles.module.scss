@@ -1,36 +1,96 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+
+/* Animation Keyframes */
+@keyframes flickerGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(100, 149, 237, 0.4), 0 0 20px rgba(100, 149, 237, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(100, 149, 237, 0.5), 0 0 25px rgba(100, 149, 237, 0.5);
+  }
+}
+
+@keyframes moveGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blinkCaret {
+  from, to { border-color: transparent; }
+  50% { border-color: rgba(100, 149, 237, 0.5); }
+}
+
+@keyframes backgroundFade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Button Styles with Futuristic UI Feel */
 .echoButton {
   background: linear-gradient(to left, rgba(100, 149, 237, 0.5), rgba(25, 25, 112, 0.5));
   border-radius: 5px;
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.2),
-    inset 0 -4px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 -4px 2px rgba(0, 0, 0, 0.2);
   color: white;
   cursor: pointer;
-  display: block; // Adjust as needed
+  display: block;
   margin-bottom: 20px;
-  // padding: 10px 20px;
-  text-align: center; // Center the text if the buttons are block elements
+  text-align: center;
   transition: all 0.3s ease;
+  font-family: 'Comic Sans MS', sans-serif;
+  background-size: 200% 200%;
 
-
-  &:hover,
-  &:focus {
+  &:hover, &:focus {
     background: linear-gradient(to right, rgba(65, 105, 225, 0.7), rgba(25, 25, 112, 0.7));
-    box-shadow:
-      0 4px 8px rgba(0, 0, 0, 0.3),
-      inset 0 -6px 3px rgba(0, 0, 0, 0.3);
-    color: #e0ffff; // A lighter shade for contrast
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 -6px 3px rgba(0, 0, 0, 0.3);
+    color: #e0ffff;
+    animation: none; /* Disable flickering and gradient movement on hover/focus for a solid appearance */
   }
 }
 
 .echoButtonImg {
-  width: 75%; // Set your desired width
-  height: auto; // Set your desired height
-  // object-fit: contain; // This ensures the image is scaled correctly within the dimensions
+  width: 75%;
+  height: auto;
+  display: block; /* Ensure it's properly centered in its container */
+  margin: 0 auto; /* Center the image within the button */
+  transition: transform 0.3s ease; /* Smooth transformation on hover */
 
-  @media screen and (max-width: 768px) {
-    width: 50px; // Adjust width for small/mobile screens
-    height: 50px; // Adjust height for small/mobile screens
+  &:hover, &:focus {
+    transform: scale(1.1); /* Slightly enlarge image on hover/focus for interactivity */
   }
 }
+
+/* Apply Comic Sans MS font to all elements */
+* {
+  font-family: 'Comic Sans MS', sans-serif;
+}
+
+/* Responsiveness for Smaller Screens */
+@media screen and (max-width: 768px) {
+  .echoButton {
+    padding: 8px 16px; /* Adjust padding to make buttons smaller */
+    font-size: 12px; /* Smaller text for better readability on small screens */
+    margin: 5px 0; /* Adjust margins to ensure buttons don't take too much space */
+  }
+
+  .echoButtonImg {
+    width: 50px; /* Adjust width for small/mobile screens */
+    height: 50px; /* Adjust height for small/mobile screens */
+  }
+
+  /* Additional responsiveness for other elements as needed */
+}
+
+/* Add more media queries and CSS here for further responsive adjustments */
 
