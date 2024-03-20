@@ -2,62 +2,70 @@
   display: none; /* Initially hide the menu */
 }
 
-
 .menuContainer.active {
   display: flex; /* Use flexbox */
   flex-direction: row-reverse; /* Reverse order to increment upwards */
   position: absolute; /* Position absolutely */
   bottom: calc(100% + 15px); /* Adjusted */
-  background: linear-gradient(to right, rgba(65, 105, 225, 0.5), rgba(25, 25, 112, 0.35));
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(48, 25, 52, 0.5), rgba(25, 25, 112, 0.3));
+  animation: flickerGlow 2s infinite ease-in-out, moveGradient 10s ease infinite;
   border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  padding: 2px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2), 0 0 10px rgba(0, 255, 255, 0.5);
+  padding: 20px; /* Increased padding for more space around buttons */
   z-index: 100;
   max-width: 605px; /* Set a max-width */
   gap: 30px; /* Space between items */
   left: 0;
 }
 
-.appButton {
-  background: linear-gradient(to left, rgba(100, 149, 237, 0.5), rgba(25, 25, 112, 0.5));
-  border-radius: 5px;
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.2),
-    inset 0 -4px 2px rgba(0, 0, 0, 0.2);
-  color: white;
-  cursor: pointer;
-  display: block; // Adjust as needed
-  padding: 20px;
-  text-align: center; // Center the text if the buttons are block elements
-  transition: all 0.3s ease;
 
+.appButton {
+  background: linear-gradient(to left, rgba(0, 76, 153, 0.5), rgba(0, 38, 77, 0.5));
+  background-size: 200% 200%;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 -4px 2px rgba(0, 0, 0, 0.2);
+  color: #e0ffff;
+  cursor: pointer;
+  display: block;
+  // padding: 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+  font-weight: bold;
 
   &:hover,
   &:focus {
-    background: linear-gradient(to right, rgba(65, 105, 225, 0.7), rgba(25, 25, 112, 0.7));
-    box-shadow:
-      0 4px 8px rgba(0, 0, 0, 0.3),
-      inset 0 -6px 3px rgba(0, 0, 0, 0.3);
-    color: #e0ffff; // A lighter shade for contrast
+    background: linear-gradient(to right, rgba(0, 76, 153, 0.7), rgba(0, 38, 77, 0.7));
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 15px rgba(0, 255, 255, 0.7);
+    color: #ffffff;
+    transform: translateY(-5px);
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .appButton {
+    padding: 10px; /* Adjust padding for small/mobile screens */
   }
 
-  @media screen and (max-width: 768px) {
-    padding: 0; // Adjust padding for small/mobile screens
+  .appButton img {
+    width: 50px; /* Adjust width for small/mobile screens */
+    height: 50px; /* Adjust height for small/mobile screens */
   }
 }
 
 .appButton img {
-  width: 75%; // Set your desired width
-  height: auto; // Set your desired height
-  // object-fit: contain; // This ensures the image is scaled correctly within the dimensions
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 0 8px rgba(173, 216, 230, 0.6))
+    drop-shadow(0 0 20px rgba(240, 248, 255, 0.8));
+  transition: filter 0.3s ease;
 
   @media screen and (max-width: 768px) {
-    width: 50px; // Adjust width for small/mobile screens
-    height: 50px; // Adjust height for small/mobile screens
+    width: 50px; /* Adjust width for small/mobile screens */
+    height: 50px; /* Adjust height for small/mobile screens */
   }
 }
 
 .appButton:hover img {
-  filter: brightness(1.5); /* Adjust brightness on hover */
+  filter: brightness(1.5) drop-shadow(0 0 10px cyan); /* Enhance brightness on hover and add cyan glow */
 }
 

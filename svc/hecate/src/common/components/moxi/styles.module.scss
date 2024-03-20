@@ -23,13 +23,15 @@ img {
   max-width: 100%;
   position: fixed;
   right: 2%;
-  top: 15%;
+  top: 10%;
 }
 
 @media screen and (max-width: 768px) {
   .characterContainer img {
     max-width: 50%; // Make the image smaller on mobile in portrait orientation
-    top: 50%; // Adjust top positioning for mobile in portrait orientation
+    transform: scaleX(-1) !important; // Reflect the image along the vertical axis
+    bottom: 10%;// Adjust top positioning for mobile in portrait orientation
+    right: auto; // Override any previous right positioning
   }
 }
 
