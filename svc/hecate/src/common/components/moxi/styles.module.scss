@@ -30,7 +30,7 @@ img {
   .characterContainer img {
     max-width: 50%; // Make the image smaller on mobile in portrait orientation
     transform: scaleX(-1) !important; // Reflect the image along the vertical axis
-    bottom: 10%;// Adjust top positioning for mobile in portrait orientation
+    top: 60%;// Adjust top positioning for mobile in portrait orientation
     right: auto; // Override any previous right positioning
   }
 }
