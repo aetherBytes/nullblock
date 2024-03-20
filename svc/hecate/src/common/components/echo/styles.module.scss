@@ -61,7 +61,7 @@ $base-font-size: 18px;
 
 .mainScreenContent {
   animation: flickerGlow 2s infinite ease-in-out, moveGradient 10s ease infinite, backgroundFade 6s ease infinite;
-  background: linear-gradient(to right, rgba(65, 105, 225, 0.5), rgba(25, 25, 112, 0.3));
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(48, 25, 52, 0.5), rgba(25, 25, 112, 0.3));
   background-size: 200% 200%;
   border-radius: 10px;
   box-shadow: 0 0 8px rgba(100, 149, 237, 0.3), 0 0 20px rgba(100, 149, 237, 0.3);
@@ -177,7 +177,7 @@ $base-font-size: 18px;
 @media screen and (max-width: 768px) and (orientation: landscape) {
   .parentContainer,
   .echoScreen {
-    max-height: 85vh; /* Limit the height to 70% of the viewport height */
+    max-height: 80vh; /* Limit the height to 70% of the viewport height */
     overflow-y: auto; /* Enable vertical scrolling for overflow content */
     overflow-x: hidden; /* Hide horizontal scrollbar */
   }
