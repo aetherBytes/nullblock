@@ -1,3 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+
+$comic-font: 'Comic Sans MS', sans-serif;
+$floating-color: rgba(100, 149, 237, 0.7);
+
 @keyframes float {
   0%, 100% {
     transform: translateY(0);
@@ -16,33 +21,50 @@ img {
 .characterContainer img {
   animation: float 4s ease-in-out infinite;
   display: block;
-  // Adjusted drop-shadow for a radiant light blue/white glow
   filter: drop-shadow(0 0 8px rgba(173, 216, 230, 0.6))
-    drop-shadow(0 0 20px rgba(240, 248, 255, 0.8));
+          drop-shadow(0 0 20px rgba(240, 248, 255, 0.8));
   height: auto;
   max-width: 100%;
   position: fixed;
   right: 2%;
-  top: 10%;
+  top: 20%;
 }
 
 @media screen and (max-width: 768px) {
   .characterContainer img {
     max-width: 50%; // Make the image smaller on mobile in portrait orientation
-    transform: scaleX(-1) !important; // Reflect the image along the vertical axis
-    top: 60%;// Adjust top positioning for mobile in portrait orientation
+    // Reflect the image along the vertical axis and include the floating animation
+    animation: floatMobilePortrait 4s ease-in-out infinite;
+    top: 60%; // Adjust top positioning for mobile in portrait orientation
     right: auto; // Override any previous right positioning
   }
-}
 
+  @keyframes floatMobilePortrait {
+    0%, 100% {
+      transform: translateY(0) scaleX(-1);
+    }
+    50% {
+      transform: translateY(-20px) scaleX(-1);
+    }
+  }
+}
 
 @media screen and (max-width: 768px) and (orientation: landscape) {
   .characterContainer img {
     max-width: 30%; // Further reduce the image size for landscape orientation
     top: 45%; // Adjust top positioning for landscape orientation
-    transform: scaleX(-1) !important; // Reflect the image along the vertical axis
+    // Reflect the image along the vertical axis and include the floating animation
+    animation: floatMobileLandscape 4s ease-in-out infinite;
     right: auto; // Override any previous right positioning
   }
-}
 
+  @keyframes floatMobileLandscape {
+    0%, 100% {
+      transform: translateY(0) scaleX(-1);
+    }
+    50% {
+      transform: translateY(-20px) scaleX(-1);
+    }
+  }
+}
 
