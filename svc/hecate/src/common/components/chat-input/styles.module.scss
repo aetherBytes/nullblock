@@ -1,0 +1,97 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+
+$comic-font: 'Comic Sans MS', sans-serif;
+$floating-color: rgba(100, 149, 237, 0.7);
+
+.chatInputContainer {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 70%;
+  z-index: 30;
+  padding: 10px;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.85), rgba(48, 25, 52, 0.85));
+  border-radius: 10px;
+  box-shadow: 0 0 8px rgba(100, 149, 237, 0.5), 0 0 20px rgba(100, 149, 237, 0.5);
+}
+
+.chatInput {
+  width: calc(100% - 20px);
+  padding: 10px;
+  font-size: 16px;
+  border: 2px solid $floating-color;
+  border-radius: 5px;
+  background-color: transparent;
+  color: white;
+  font-family: $comic-font;
+
+  &:focus {
+    outline: none;
+    animation: flickerGlow 1.5s infinite;
+  }
+}
+
+.floatingMessage {
+  position: fixed;
+  bottom: 60px;
+  left: 20px;
+  padding: 5px 10px;
+  background-color: $floating-color;
+  color: white;
+  border-radius: 5px;
+  font-family: $comic-font;
+  animation: moveUp 3s ease-in-out forwards;
+}
+
+// Keyframes for animations
+@keyframes flickerGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(100, 149, 237, 0.4), 0 0 20px rgba(100, 149, 237, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(100, 149, 237, 0.5), 0 0 25px rgba(100, 149, 237, 0.5);
+  }
+}
+
+@keyframes moveUp {
+  from {
+    opacity: 1;
+    bottom: 60px;
+  }
+  to {
+    opacity: 0;
+    bottom: 400px;
+  }
+}
+
+// Responsive adjustments for mobile screens
+@media (max-width: 768px) {
+  .chatInputContainer {
+    width: 90%; // Use a percentage of the screen width
+    bottom: 0%; // Closer to the edge of the screen
+    left: 2.5%; // Center the container
+    padding: 8px;
+  }
+
+  .chatInput {
+    width: calc(100% - 16px); // Adjust width to account for padding
+    // margin: 0 8px; // Adjust margin to align with new padding
+    padding: 8px;
+    font-size: 14px; // Slightly smaller font size for better fit
+  }
+
+  .floatingMessage {
+    bottom: 50px; // Position messages slightly higher to avoid overlap
+  }
+}
+
+// Additional considerations for landscape mode
+@media (max-width: 768px) and (orientation: landscape) {
+  .chatInputContainer {
+    width: 65%; // Allow more space for the chat input
+    // bottom: 10px;
+    // left: 4%; // Adjus /t left position for better centering
+  }
+}
+
