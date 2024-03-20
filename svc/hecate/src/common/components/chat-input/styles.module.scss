@@ -1,8 +1,35 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
 
+/* Define font styles */
 $comic-font: 'Comic Sans MS', sans-serif;
 $floating-color: rgba(100, 149, 237, 0.7);
+
+/* Animation Keyframes */
+@keyframes flickerGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(100, 149, 237, 0.4), 0 0 20px rgba(100, 149, 237, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(100, 149, 237, 0.5), 0 0 25px rgba(100, 149, 237, 0.5);
+  }
+}
+
+@keyframes moveGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes moveUp {
+  from {
+    opacity: 1;
+    bottom: 60px;
+  }
+  to {
+    opacity: 0;
+    bottom: 400px;
+  }
+}
 
 .chatInputContainer {
   position: fixed;
@@ -11,7 +38,9 @@ $floating-color: rgba(100, 149, 237, 0.7);
   width: 70%;
   z-index: 30;
   padding: 10px;
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.85), rgba( 255, 194, 113 , 0.2));
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(48, 25, 52, 0.6), rgba(255, 194, 113, 0.3));
+  background-size: 200% 200%;
+  animation: moveGradient 10s ease infinite;
   border-radius: 10px;
   box-shadow: 0 0 8px rgba(100, 149, 237, 0.5), 0 0 20px rgba(100, 149, 237, 0.5);
 }
@@ -44,54 +73,30 @@ $floating-color: rgba(100, 149, 237, 0.7);
   animation: moveUp 3s ease-in-out forwards;
 }
 
-// Keyframes for animations
-@keyframes flickerGlow {
-  0%, 100% {
-    box-shadow: 0 0 8px rgba(100, 149, 237, 0.4), 0 0 20px rgba(100, 149, 237, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 10px rgba(100, 149, 237, 0.5), 0 0 25px rgba(100, 149, 237, 0.5);
-  }
-}
-
-@keyframes moveUp {
-  from {
-    opacity: 1;
-    bottom: 60px;
-  }
-  to {
-    opacity: 0;
-    bottom: 400px;
-  }
-}
-
-// Responsive adjustments for mobile screens
+/* Responsive adjustments for mobile screens */
 @media (max-width: 768px) {
   .chatInputContainer {
-    width: 90%; // Use a percentage of the screen width
-    bottom: 0%; // Closer to the edge of the screen
-    left: 2.5%; // Center the container
+    width: 90%;
+    bottom: 0%;
+    left: 2.5%;
     padding: 8px;
   }
 
   .chatInput {
-    width: calc(100% - 16px); // Adjust width to account for padding
-    // margin: 0 8px; // Adjust margin to align with new padding
+    width: calc(100% - 16px);
     padding: 8px;
-    font-size: 14px; // Slightly smaller font size for better fit
+    font-size: 14px;
   }
 
   .floatingMessage {
-    bottom: 50px; // Position messages slightly higher to avoid overlap
+    bottom: 50px;
   }
 }
 
-// Additional considerations for landscape mode
+/* Additional considerations for landscape mode */
 @media (max-width: 768px) and (orientation: landscape) {
   .chatInputContainer {
-    width: 65%; // Allow more space for the chat input
-    // bottom: 10px;
-    // left: 4%; // Adjus /t left position for better centering
+    width: 65%;
   }
 }
 
