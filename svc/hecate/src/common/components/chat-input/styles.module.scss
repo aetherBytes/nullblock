@@ -96,7 +96,8 @@ $floating-color: rgba(100, 149, 237, 0.7);
 /* Additional considerations for landscape mode */
 @media (max-width: 768px) and (orientation: landscape) {
   .chatInputContainer {
-    width: 65%;
+    width: calc(100% - 90px);
+    padding: 8px;
   }
 }
 

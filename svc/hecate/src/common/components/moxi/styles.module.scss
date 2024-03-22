@@ -35,7 +35,7 @@ img {
     max-width: 50%; // Make the image smaller on mobile in portrait orientation
     // Reflect the image along the vertical axis and include the floating animation
     animation: floatMobilePortrait 4s ease-in-out infinite;
-    top: 60%; // Adjust top positioning for mobile in portrait orientation
+    top: 45%; // Adjust top positioning for mobile in portrait orientation
     right: auto; // Override any previous right positioning
   }
 
@@ -52,7 +52,7 @@ img {
 @media screen and (max-width: 768px) and (orientation: landscape) {
   .characterContainer img {
     max-width: 30%; // Further reduce the image size for landscape orientation
-    top: 45%; // Adjust top positioning for landscape orientation
+    top: 25%; // Adjust top positioning for landscape orientation
     // Reflect the image along the vertical axis and include the floating animation
     animation: floatMobileLandscape 4s ease-in-out infinite;
     right: auto; // Override any previous right positioning
