@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import styles from './styles.module.scss';
+import styles from './button-wrapper.module.scss';
 
 const ButtonWrapper = ({ title, buttonImage, buttonText, setCurrentScreen }) => {
   const handleClick = () => {

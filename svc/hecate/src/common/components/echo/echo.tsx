@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ButtonWrapper from '@components/button-wrapper/button-wrapper';
 import UnifiedEchoScreen from './echo-screen';
 import screensConfig from './screens-config'; // Ensure this path is correct
-import styles from './styles.module.scss';
+import styles from './echo.module.scss';
 
 const Echo = () => {
   const [currentScreen, setCurrentScreen] = useState('Dashboard');
