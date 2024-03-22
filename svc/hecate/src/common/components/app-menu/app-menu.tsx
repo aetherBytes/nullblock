@@ -24,7 +24,7 @@ const AppMenu = ({ toggleEchoVisibility }) => {
   return (
     <div className={styles.appMenu}>
       {/* Use ButtonWrapper with an image */}
-      <ButtonWrapper2 title="Apps" buttonImage={echoButtonImage} setCurrentScreen={toggleMenu}/>
+      <ButtonWrapper2 title="Social Medial Links" buttonText="Socials" setCurrentScreen={toggleMenu}/>
       <div className={`${styles.menuContainer} ${isMenuOpen ? styles.active : ''}`}>
         {buttons.map((button, index) => (
           <a

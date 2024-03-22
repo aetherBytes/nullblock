@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
 .backgroundImage {
   // background-image: url('../../assets/images/green_dawn.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/red_dawn.png'); // Adjust the path according to your project structure
@@ -9,9 +10,9 @@
   // background-image: url('../../assets/images/nexoliths_2.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/nexoliths_3.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/nexoliths_4.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/nexoliths_5.png'); // Adjust the path according to your project structure
+  background-image: url('../../assets/images/nexoliths_5.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/nex_gate.png'); // Adjust the path according to your project structure
-  background-image: url('../../assets/images/nowhere_bridge.png'); // Adjust the path according to your project structure
+  // background-image: url('../../assets/images/nowhere_bridge.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/forrest.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/world_0.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/darkmoon.png'); // Adjust the path according to your project structure
@@ -23,3 +24,21 @@
   width: 100vw;
 }
 
+.bottomUIContainer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  // align-items: center;
+  // gap: 2px; /* Adds a sm25l gap between elements */
+  padding: 25px; /* Padding on the sides and bottom */
+  az-index: 30; /* Ensure it's above other content */
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
+  color: white; /* White text */
+
+  // background-image: url('path/to/your/background/image.jpg'); /* Placeholder for background image */
+  // background-size: cover;
+  // background-position: center;
+}

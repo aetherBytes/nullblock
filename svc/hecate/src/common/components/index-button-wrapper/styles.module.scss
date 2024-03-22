@@ -31,7 +31,7 @@
   align-items: center;
   justify-content: flex-end;
   position: fixed;
-  bottom: 1%;
+  bottom: 2%;
   right: 1%;
   z-index: 12;
 }
@@ -43,11 +43,11 @@
   }
 
   .echoButtonImg {
-    width: 60px;
+    width: 50px;
   }
 
   .buttonsContainer {
-    top: 75%;
+    // top: 75%;
   }
 }
  /* Media query for mobile landscape screens */
