@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styles from './styles.module.scss';
+import styles from './chat-input.module.scss';
 
 const ChatInput = () => {
   const [message, setMessage] = useState('');
