@@ -9,7 +9,7 @@ import styles from './styles.module.scss'; // Ensure the path is correct for you
 import ChatInput from '@components/chat-input/chat-input'; // Ensure the import path is correct
 
 const Home = () => {
-  const [isEchoVisible, setIsEchoVisible] = useState(true);
+  const [isEchoVisible, setIsEchoVisible] = useState(false);
 
   const toggleEchoVisibility = () => setIsEchoVisible(prev => !prev);
 
