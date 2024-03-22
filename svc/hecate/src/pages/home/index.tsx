@@ -5,7 +5,7 @@ import AppMenu from '@components/app-menu/app-menu'; // Adjust the import path a
 import styles_buttons from '@components/index-button-wrapper/styles.module.scss'; // Ensure the path is correct for your styles
 import menu_white from '@assets/images/menu_echo.png'; // Adjust the import path as needed
 import ButtonWrapper from '@components/index-button-wrapper/button-wrapper'; // Adjust the import path as needed
-import styles from './styles.module.scss'; // Ensure the path is correct for your styles
+import styles from './index.module.scss'; // Ensure the path is correct for your styles
 import ChatInput from '@components/chat-input/chat-input'; // Ensure the import path is correct
 
 const Home = () => {

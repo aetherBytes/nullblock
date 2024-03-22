@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '@components/echo/styles.module.scss'; // Ensure your styles are set up correctly
+import styles from '@components/echo/echo.module.scss'; // Ensure your styles are set up correctly
 
 const PopupContent = ({ onClose, content, isEchoScreenVisible }) => {
   const popupStyle = {

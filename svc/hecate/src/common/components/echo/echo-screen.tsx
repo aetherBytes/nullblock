@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from '@components/echo/styles.module.scss';
+import styles from '@components/echo/echo.module.scss';
 import Popup from '@components/popup-content/popup-content';
 
 interface IUnifiedEchoScreenProps {

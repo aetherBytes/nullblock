@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import styles from './styles.module.scss';
+import styles from './app-menu.module.scss';
 import ButtonWrapper2 from '@components/index-button-wrapper/button-wrapper-2';
 import XLogo from '@assets/images/X_logo_black.png';
 import discordLogo from '@assets/images/discord_logo_black.png';
