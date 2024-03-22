@@ -1,6 +1,68 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
 
+/* Font and Color Variables */
+$comic-font: 'Comic Sans MS', sans-serif;
+$floating-color: rgba(100, 149, 237, 0.7);
+$background-gradient-start: rgba(0, 0, 0, 0.8);
+$background-gradient-middle: rgba(48, 25, 52, 0.6);
+$background-gradient-end: rgba(255, 194, 113, 0.3);
+
+/* Reusable Animation Keyframes */
+@keyframes flickerGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px $floating-color, 0 0 20px $floating-color;
+  }
+  50% {
+    box-shadow: 0 0 10px lighten($floating-color, 5%), 0 0 25px lighten($floating-color, 5%);
+  }
+}
+
+@keyframes moveGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+
+.appMenu {
+  background: linear-gradient(to left, $background-gradient-start, $background-gradient-middle, $background-gradient-end);
+  animation: moveGradient 10s ease infinite, flickerGlow 2s infinite ease-in-out;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2), 0 0 10px $floating-color;
+  padding: 10px;
+  z-index: 25;
+  gap: 15px;
+  font-family: $comic-font;
+  color: white;
+  width: calc(100% - 175px); /* Adjust width as needed */
+}
+
+
+.menuItem {
+  background: linear-gradient(to left, rgba(0, 76, 153, 0.5), rgba(0, 38, 77, 0.5));
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 -4px 2px rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  text-align: center;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  &:hover, &:focus {
+    background: linear-gradient(to right, rgba(0, 76, 153, 0.7), rgba(0, 38, 77, 0.7));
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 15px lighten($floating-color, 10%);
+    transform: translateY(-5px);
+  }
+}
+
+/* Enhancements for Futuristic Feel */
+* {
+  text-shadow: 0 0 3px $floating-color;
+}
+
+body {
+  font-family: $comic-font;
+  background-color: #000; /* Emphasizes the UI elements */
+}
+
 /* Animation Keyframes */
 @keyframes flickerGlow {
   0%, 100% {
@@ -84,6 +146,10 @@
 
 
 @media screen and (max-width: 768px) and (orientation: portrait) {
+  .appMenu {
+    width: 100%;
+    padding: 5px;
+  }
   .appButton {
     min-width: 30px; /* Adjust for better touch targets */
     padding: 12px;

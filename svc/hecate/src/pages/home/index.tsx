@@ -16,9 +16,11 @@ const Home = () => {
   return (
     <div className={styles.backgroundImage}>
       <Moxi toggleEchoVisibility={toggleEchoVisibility} />
-      <ChatInput />
+      <div className={styles.bottomUIContainer}>
+        <AppMenu />
+        <ChatInput />
+      </div>
       <div className={styles_buttons.buttonsContainer}>
-        <AppMenu toggleEchoVisibility={toggleEchoVisibility} />
         <ButtonWrapper title="ECHO" buttonImage={menu_white} setCurrentScreen={toggleEchoVisibility} />
       </div>
       {isEchoVisible && <Echo />}

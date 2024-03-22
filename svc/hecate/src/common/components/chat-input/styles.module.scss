@@ -32,14 +32,13 @@ $floating-color: rgba(100, 149, 237, 0.7);
 }
 
 .chatInputContainer {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  width: 70%;
-  z-index: 30;
+  // position: fixed;
+  // bottom: 20px;
+  // left: 20px;
+  width: calc(100% - 175px); /* Adjust width as needed */
+  // z-index: 30;
   padding: 10px;
   background: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(48, 25, 52, 0.6), rgba(255, 194, 113, 0.3));
-  background-size: 200% 200%;
   animation: moveGradient 10s ease infinite;
   border-radius: 10px;
   box-shadow: 0 0 8px rgba(100, 149, 237, 0.5), 0 0 20px rgba(100, 149, 237, 0.5);
@@ -49,17 +48,18 @@ $floating-color: rgba(100, 149, 237, 0.7);
   width: calc(100% - 20px);
   padding: 10px;
   font-size: 16px;
-  border: 2px solid $floating-color;
+  border: 2px solid rgba(100, 149, 237, 0.7); /* Adjust as needed */
   border-radius: 5px;
   background-color: transparent;
   color: white;
-  font-family: $comic-font;
+  font-family: 'Comic Sans MS', sans-serif; /* Adjust as needed */
 
   &:focus {
     outline: none;
-    animation: flickerGlow 1.5s infinite;
+    /* Animation for focus state */
   }
 }
+
 
 .floatingMessage {
   position: fixed;
@@ -76,10 +76,10 @@ $floating-color: rgba(100, 149, 237, 0.7);
 /* Responsive adjustments for mobile screens */
 @media (max-width: 768px) {
   .chatInputContainer {
-    width: 90%;
-    bottom: 0%;
-    left: 2.5%;
-    padding: 8px;
+    width: calc(100% - 80px);
+    // bottom: 0%;
+    // left: 2.5 %;
+    // padding: 8px;
   }
 
   .chatInput {
