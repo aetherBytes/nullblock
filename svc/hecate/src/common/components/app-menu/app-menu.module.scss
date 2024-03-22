@@ -8,24 +8,11 @@ $background-gradient-start: rgba(0, 0, 0, 0.8);
 $background-gradient-middle: rgba(48, 25, 52, 0.6);
 $background-gradient-end: rgba(255, 194, 113, 0.3);
 
-/* Reusable Animation Keyframes */
-@keyframes flickerGlow {
-  0%, 100% {
-    box-shadow: 0 0 8px $floating-color, 0 0 20px $floating-color;
-  }
-  50% {
-    box-shadow: 0 0 10px lighten($floating-color, 5%), 0 0 25px lighten($floating-color, 5%);
-  }
-}
-
-@keyframes moveGradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
 
 .appMenu {
+  display: flex;
+  flex-direction: row;
+  // justify-content: center;
   background: linear-gradient(to left, $background-gradient-start, $background-gradient-middle, $background-gradient-end);
   animation: moveGradient 10s ease infinite, flickerGlow 2s infinite ease-in-out;
   border-radius: 10px;
@@ -35,7 +22,7 @@ $background-gradient-end: rgba(255, 194, 113, 0.3);
   gap: 15px;
   font-family: $comic-font;
   color: white;
-  width: calc(100% - 175px); /* Adjust width as needed */
+  // width: calc(100% - 175px); /* Adjust width as needed */
 }
 
 
