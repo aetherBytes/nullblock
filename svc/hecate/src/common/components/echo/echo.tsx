@@ -16,24 +16,26 @@ interface ScreenConfig {
 
 interface EchoProps {
   screensConfig: { [key: string]: ScreenConfig };
+  defaultScreenKey: string;
 }
 
-const Echo: React.FC<EchoProps> = ({ screensConfig }) => {
-  const defaultScreen = Object.keys(screensConfig)[0];
-  const [currentScreen, setCurrentScreen] = useState<string>(defaultScreen);
+const Echo: React.FC<EchoProps> = ({ screensConfig, defaultScreenKey }) => {
+  const [currentScreen, setCurrentScreen] = useState<string>(defaultScreenKey);
   const [showPopup, setShowPopup] = useState<boolean>(false);
   const [popupContent, setPopupContent] = useState<JSX.Element | null>(null);
   const [isEchoVisible, setIsEchoVisible] = useState<boolean>(true);
   const [animationKey, setAnimationKey] = useState<number>(Date.now());
 
   useEffect(() => {
-    setCurrentScreen(defaultScreen); // Update currentScreen when screensConfig changes
-  }, [screensConfig, defaultScreen]);
+    // Ensure current screen is updated if defaultScreenKey changes,
+    // which might be useful if your configs could change dynamically.
+    setCurrentScreen(defaultScreenKey);
+  }, [defaultScreenKey]);
 
   const handleButtonClick = (screen: string) => {
     const screenConfig = screensConfig[screen];
 
-    if (screenConfig.usePopup) {
+    if (screenConfig?.usePopup) {
       setPopupContent(screenConfig.popupContent);
       setShowPopup(true);
     } else {

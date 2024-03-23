@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styles from './app-menu.module.scss';
 import ButtonWrapper2 from '@components/index-button-wrapper/button-wrapper-2';
+import Echo from '@components/echo/echo';
 import EchoChat from '@components/echo/echo-chat/echo-chat';
 import XLogo from '@assets/images/X_logo_black.png';
 import discordLogo from '@assets/images/discord_logo_black.png';
