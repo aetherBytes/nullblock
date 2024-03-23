@@ -48,6 +48,11 @@ const Echo: React.FC<EchoProps> = ({ screensConfig, defaultScreenKey }) => {
 
   const handleClosePopup = () => setShowPopup(false);
 
+  const closeCurrentScreen = () => {
+    setShowPopup(false);
+    setCurrentScreen(defaultScreenKey); // Close current screen by resetting to default
+  };
+
   return (
     <div className={styles.parentContainer}>
       <div className={styles.mainScreenContent}>
@@ -74,6 +79,7 @@ const Echo: React.FC<EchoProps> = ({ screensConfig, defaultScreenKey }) => {
             content={screensConfig[currentScreen]?.content}
             additionalContent={screensConfig[currentScreen]?.additionalContent || []}
             popupContent={popupContent}
+            closeCurrentScreen={closeCurrentScreen} // Pass closeCurrentScreen function to child component
           />
         )}
       </div>
