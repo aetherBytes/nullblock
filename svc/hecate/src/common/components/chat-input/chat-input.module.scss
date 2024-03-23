@@ -3,6 +3,7 @@
 /* Define font styles */
 $comic-font: 'Comic Sans MS', sans-serif;
 $floating-color: rgba(100, 149, 237, 0.7);
+
 /* Animation Keyframes */
 @keyframes flickerGlow {
   0%, 100% {
@@ -31,6 +32,9 @@ $floating-color: rgba(100, 149, 237, 0.7);
 }
 
 .chatInputContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 10px;
   background: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(48, 25, 52, 0.6), rgba(255, 194, 113, 0.3));
   animation: moveGradient 10s ease infinite;
@@ -39,21 +43,37 @@ $floating-color: rgba(100, 149, 237, 0.7);
 }
 
 .chatInput {
-  width: calc(100% - 20px);
+  flex-grow: 1;
+  margin-right: 8px; // Spacing between input and button
   padding: 10px;
   font-size: 16px;
-  border: 2px solid rgba(100, 149, 237, 0.7); /* Adjust as needed */
+  border: 2px solid rgba(100, 149, 237, 0.7);
   border-radius: 5px;
   background-color: transparent;
   color: white;
-  font-family: 'Comic Sans MS', sans-serif; /* Adjust as needed */
+  font-family: $comic-font;
 
   &:focus {
     outline: none;
-    /* Animation for focus state */
   }
 }
 
+.sendButton {
+  padding: 10px 15px;
+  font-size: 16px;
+  background-color: transparent;
+  border: 2px solid rgba(100, 149, 237, 0.7);
+  border-radius: 5px;
+  color: white;
+  font-family: $comic-font;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+
+  &:hover {
+    background-color: rgba(100, 149, 237, 0.7);
+    color: black;
+  }
+}
 
 .floatingMessage {
   position: fixed;
