@@ -6,12 +6,8 @@ const screensConfig = {
     content: (
       <div>
         {/* Dashboard content */}
-        <h3>
-          Nexus Interface Initilized. Please wait for the grid to load...
-        </h3>
-        <p>
-          Please login to activate your Nexus User Interface.
-        </p>
+        <h3>Nexus Interface Initialized. Please wait for the grid to load...</h3>
+        <p>Please login to activate your Nexus User Interface.</p>
       </div>
     ),
     popupContent: null, // No popup content for this screen
@@ -20,3 +16,4 @@ const screensConfig = {
 };
 
 export default screensConfig;
+

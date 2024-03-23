@@ -1,22 +1,13 @@
-export class Echo extends React.Component {
-  // Existing Echo implementation
-}
-
-// Create EchoChat.js
 import React from 'react';
-import { echoChatScreensConfig } from './echo-chat-screens-config'; // This should be your specific config for EchoChat
+import Echo from '@components/echo/echo'; // Update the import path as necessary
+import baseScreensConfig from '@components/echo/screens-config'; // Update this path
+import echoChatScreensConfig from './echo-chat-screens-config'; // Ensure this path is correct
 
-export class EchoChat extends Echo {
-  constructor(props) {
-    super(props);
-    this.state = {
-      ...this.state, // Inherit base state
-      currentScreen: 'ChatDashboard', // Default or initial screen for EchoChat
-      // Customize or extend state as needed
-    };
-  }
+const EchoChat: React.FC = () => {
+  const mergedScreensConfig = { ...baseScreensConfig, ...echoChatScreensConfig };
 
-  // Override or extend methods as needed, or use additional props for customization
-}
+  return <Echo screensConfig={mergedScreensConfig} />;
+};
 
 export default EchoChat;
+

@@ -1,29 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ButtonWrapper from '@components/button-wrapper/button-wrapper';
 import UnifiedEchoScreen from './echo-screen';
-import screensConfig from './screens-config'; // Ensure this path is correct
 import styles from './echo.module.scss';
 
-const Echo = () => {
-  const [currentScreen, setCurrentScreen] = useState('Nexus');
-  const [showPopup, setShowPopup] = useState(false);
-  const [popupContent, setPopupContent] = useState(null);
-  const [isEchoVisible, setIsEchoVisible] = useState(true); // State to control visibility, remains unchanged here
-  const [animationKey, setAnimationKey] = useState(Date.now());
+interface ScreenConfig {
+  title: string;
+  buttonText: string;
+  usePopup: boolean;
+  content: JSX.Element;
+  popupContent?: JSX.Element;
+  image?: string;
+  image_small?: string;
+  additionalContent?: JSX.Element[];
+}
 
-  const handleButtonClick = (screen) => {
+interface EchoProps {
+  screensConfig: { [key: string]: ScreenConfig };
+}
+
+const Echo: React.FC<EchoProps> = ({ screensConfig }) => {
+  const defaultScreen = Object.keys(screensConfig)[0];
+  const [currentScreen, setCurrentScreen] = useState<string>(defaultScreen);
+  const [showPopup, setShowPopup] = useState<boolean>(false);
+  const [popupContent, setPopupContent] = useState<JSX.Element | null>(null);
+  const [isEchoVisible, setIsEchoVisible] = useState<boolean>(true);
+  const [animationKey, setAnimationKey] = useState<number>(Date.now());
+
+  useEffect(() => {
+    setCurrentScreen(defaultScreen); // Update currentScreen when screensConfig changes
+  }, [screensConfig, defaultScreen]);
+
+  const handleButtonClick = (screen: string) => {
     const screenConfig = screensConfig[screen];
 
     if (screenConfig.usePopup) {
-      setPopupContent(screenConfig.content);
+      setPopupContent(screenConfig.popupContent);
       setShowPopup(true);
     } else {
       setShowPopup(false);
     }
 
     setCurrentScreen(screen);
-    // Removed the toggling of isEchoVisible to keep the Echo screen always visible when changing screens
-    setAnimationKey(Date.now()); // Use this to trigger animations or re-renders as needed
+    setAnimationKey(Date.now());
   };
 
   const handleClosePopup = () => setShowPopup(false);
@@ -41,19 +59,18 @@ const Echo = () => {
             />
           ))}
         </div>
-        {/* Conditional rendering based on isEchoVisible state, which now remains true unless externally modified */}
         {isEchoVisible && (
           <UnifiedEchoScreen
             key={animationKey}
-            screenTitle={screensConfig[currentScreen].title}
+            screenTitle={screensConfig[currentScreen]?.title}
             images={{
-              main: screensConfig[currentScreen].image,
-              small: screensConfig[currentScreen].image_small,
+              main: screensConfig[currentScreen]?.image,
+              small: screensConfig[currentScreen]?.image_small,
             }}
             isPopupVisible={showPopup}
             onClosePopup={handleClosePopup}
-            content={screensConfig[currentScreen].content}
-            additionalContent={screensConfig[currentScreen].additionalContent || []}
+            content={screensConfig[currentScreen]?.content}
+            additionalContent={screensConfig[currentScreen]?.additionalContent || []}
             popupContent={popupContent}
           />
         )}
