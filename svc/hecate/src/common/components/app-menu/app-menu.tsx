@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import styles from './app-menu.module.scss';
 import ButtonWrapper2 from '@components/index-button-wrapper/button-wrapper-2';
-import Echo from '@components/echo/echo'; // Assuming Echo component is properly exported and path is correct
+import EchoChat from '@components/echo/echo';
 import XLogo from '@assets/images/X_logo_black.png';
 import discordLogo from '@assets/images/discord_logo_black.png';
 import telegramLogo from '@assets/images/telegram_logo_black.png';
 
 const AppMenu = ({ toggleEchoVisibility }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isEchoVisible, setIsEchoVisible] = useState(false); // State to control the visibility of the ECHO
+  const [isEchoVisible, setIsEchoVisible] = useState(false);
 
   const toggleMenu = () => {
     setIsMenuOpen(prevState => !prevState);
@@ -29,7 +29,7 @@ const AppMenu = ({ toggleEchoVisibility }) => {
   return (
     <div>
       {/* Conditionally render the Echo component based on isEchoVisible state */}
-      {isEchoVisible && <Echo />}
+      {isEchoVisible && <EchoChat />}
       <div className={styles.appMenu}>
         <ButtonWrapper2 title="Toggle ECHO" buttonText="EChat" setCurrentScreen={toggleEcho} />
         <ButtonWrapper2 title="Toggle Social Media Menu" buttonText="Social Media" setCurrentScreen={toggleMenu} />
