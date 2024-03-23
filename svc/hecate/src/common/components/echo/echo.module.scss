@@ -44,10 +44,9 @@ $base-font-size: 18px;
 
 /* Base Echo Screen styles with darker blue theme */
 .parentContainer {
-  padding: 2.5%;
-  padding-top: 1%;
-  width: 65%;
-  align-items: center;
+  width: 70%;
+  position: fixed;
+  top: 2%;
 }
 
 .sidebar {
@@ -65,18 +64,23 @@ $base-font-size: 18px;
   flex-direction: row;
   padding: 20px;
   overflow: hidden;
+  top: 50%;
 }
 
 .echoScreen {
-  background: linear-gradient(to right, rgba( 255, 194, 113 , 0.25), rgba(25, 25, 112, 0.5));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background: linear-gradient(to right, rgba(255, 194, 113, 0.25), rgba(25, 25, 112, 0.5));
   border-radius: 10px;
   box-shadow: 0 0 8px rgba(100, 149, 237, 0.3), 0 0 20px rgba(100, 149, 237, 0.3);
   color: #ffffff;
-  display: flex;
   width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  max-height: 75vh; /* Set maximum height to 80% of viewport height */
+  max-height: 75vh;
 }
 
 .echoTitle,
@@ -88,6 +92,8 @@ $base-font-size: 18px;
   word-wrap: break-word;
   overflow-wrap: break-word;
   padding: 10px;
+  text-align: center;
+  width: auto;
 }
 
 .echoImage,
@@ -95,86 +101,80 @@ $base-font-size: 18px;
   animation: pulse 2s infinite ease-in-out;
 }
 
-// Adjustments for mobile screens across the Echo component, parent containers, and buttons
 @media screen and (max-width: 768px) {
   .parentContainer {
-    padding: 5px; /* Reduce padding for more space */
-    width: auto; /* Adjust width to fit mobile screens */
-    height: auto; /* Adjust height based on content */
+    padding-right: 25px;
+    width: auto;
+    height: auto;
   }
 
   .sidebar {
-    width: 100%; /* Full width for a horizontal layout or adjust as needed */
-    padding-right: 0; /* Remove extra padding */
-    display: flex; /* Ensure buttons align correctly */
-    justify-content: space-around; /* Distribute buttons evenly */
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
     button {
-      padding: 5px 10px; /* Smaller buttons */
-      font-size: 12px; /* Smaller font size for button text */
+      padding: 5px 10px;
+      font-size: 12px;
     }
   }
 
-  .mainScreenContent {
-    flex-direction: column; /* Stack elements vertically */
-    padding: 10px; /* Reduced padding */
+ .mainScreenContent {
+    flex-direction: column;
+    padding: 10px;
   }
 
   .echoScreen {
-    z-index: 10; /* Ensure it's above other content but adjust according to your layout */
-    padding: 10px; /* Reduced padding for the Echo screen */
-    max-height: 65vh; /* Limit the height to 70% of the viewport height */
-    overflow-y: auto; /* Enable vertical scrolling for overflow content */
+    z-index: 10;
+    max-height: 65vh;
+    overflow-y: auto;
   }
 
   .echoImage {
-    width: 40%; /* Further reduce the main image size */
-    margin: 0 auto; /* Center the image */
+    width: 40%;
+    margin: 0 auto;
   }
 
   .echoImageSmall {
-    width: 25%; /* Further reduce the secondary image size */
-    margin: 0 auto; /* Center the image */
+    width: 25%;
+    margin: 0 auto;
   }
 
   .echoTitle,
   .echoContent {
-    font-size: 12px; /* Further reduce font size for titles and content */
-    white-space: normal; /* Override any non-wrapping settings for mobile */
-    word-wrap: break-word; /* Ensures words can break and wrap */
-    overflow-wrap: break-word; /* Ensures content wraps within container */
+    font-size: 12px;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .echoButton {
-    padding: 8px 16px; /* Adjust padding to make buttons smaller */
-    font-size: 12px; /* Smaller text for better readability on small screens */
-    margin: 5px 0; /* Adjust margins to ensure buttons don't take too much space */
+    padding: 8px 16px;
+    font-size: 12px;
+    margin: 5px 0;
   }
 
-  /* Adjust echo screen width for portrait mode */
   .echoScreen {
-    width: 90%; /* Set width to 90% of viewport width */
-    margin: 0 auto; /* Center the echo screen horizontally */
+    width: 90%;
+    margin: 0 auto;
   }
 }
 
- /* Media query for mobile landscape screens */
 @media screen and (max-width: 1024px) and (orientation: landscape) {
-  .parentContainer,
+  .parentContainer {
+    width: 92%;
+  }
+
   .echoScreen {
-    max-height: 85vh; /* Limit the height to 70% of the viewport height */
-    overflow-y: auto; /* Enable vertical scrolling for overflow content */
-    overflow-x: hidden; /* Hide horizontal scrollbar */
+    max-height: 50vh;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 }
 
-/* Media query for landscape orientation on mobile devices */
 @media screen and (max-width: 768px) and (orientation: landscape) {
-  .parentContainer,
-  .echoScreen {
-    max-height: 80vh; /* Limit the height to 70% of the viewport height */
-    overflow-y: auto; /* Enable vertical scrolling for overflow content */
-    overflow-x: hidden; /* Hide horizontal scrollbar */
+  .parentContainer, .echoScreen {
+    width: 92%;
+    max-height: 50vh;
   }
 }
-
 

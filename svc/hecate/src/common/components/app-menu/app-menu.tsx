@@ -30,9 +30,7 @@ const AppMenu = ({ toggleEchoVisibility }) => {
     <div>
       {/* Conditionally render the Echo component based on isEchoVisible state */}
       {isEchoVisible && <Echo />}
-
       <div className={styles.appMenu}>
-        {/* Add EChat button for toggling the ECHO interface */}
         <ButtonWrapper2 title="Toggle ECHO" buttonText="EChat" setCurrentScreen={toggleEcho} />
         <ButtonWrapper2 title="Toggle Social Media Menu" buttonText="Social Media" setCurrentScreen={toggleMenu} />
         <div className={`${styles.menuContainer} ${isMenuOpen ? styles.active : ''}`}>
