@@ -1,33 +1,46 @@
 import React, { useState } from 'react';
-import Moxi from '@components/moxi/moxi'; // Adjust the import path as needed
-import AppMenu from '@components/app-menu/app-menu'; // Adjust the import path as needed
-import ChatInput from '@components/chat-input/chat-input'; // Ensure the import path is correct
-import ButtonWrapper from '@components/button-wrapper/button-wrapper'; // Ensure the import path is correct
-import styles from './index.module.scss'; // Ensure the path is correct for your styles
+import Moxi from '@components/moxi/moxi';
+import AppMenu from '@components/app-menu/app-menu';
+import ChatInput from '@components/chat-input/chat-input';
+import ButtonWrapper from '@components/button-wrapper/button-wrapper';
+import Echo from '@components/echo/echo'; // Adjust import path as needed
+import EchoChat from '@components/echo/echo-chat/echo-chat'; // Adjust import path as needed
+import baseScreensConfig from '@components/echo/screens-config'; // Adjust path as necessary
+import styles from './index.module.scss';
 
 const Home = () => {
-  const [isUIVisible, setIsUIVisible] = useState(true); // Controls the visibility of all UI elements
+  const [isUIVisible, setIsUIVisible] = useState(false);
+  const [showEchoChat, setShowEchoChat] = useState(false);
 
   const toggleUIVisibility = () => {
     setIsUIVisible(!isUIVisible);
+    if (!isUIVisible) setShowEchoChat(false); // Resets to base Echo screen when turning off
+  };
+
+  const toggleToEchoChat = () => {
+    setIsUIVisible(true);
+    setShowEchoChat(true);
   };
 
   return (
     <div className={styles.backgroundImage}>
       <Moxi />
-      <ButtonWrapper
-        title="Main Power"
-        buttonText={isUIVisible ? 'Turn Off' : 'Turn On'}
-        setCurrentScreen={toggleUIVisibility}
-      />
-      {isUIVisible && (
-        <>
-          <div className={styles.bottomUIContainer}>
-            <AppMenu toggleEchoVisibility={() => {}} />
+      <div className={styles.powerButton}>
+        <ButtonWrapper
+          title="Main Power"
+          buttonText={isUIVisible ? 'Turn Off' : 'Turn On'}
+          setCurrentScreen={toggleUIVisibility}
+        />
+      </div>
+      <div className={styles.bottomUIContainer}> {/* Ensure this div wraps the conditional content */}
+        {isUIVisible && (
+          <>
+            <AppMenu toggleEchoVisibility={toggleToEchoChat} />
+            {showEchoChat ? <EchoChat /> : <Echo screensConfig={baseScreensConfig} defaultScreenKey="Nexus" />}
             <ChatInput />
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

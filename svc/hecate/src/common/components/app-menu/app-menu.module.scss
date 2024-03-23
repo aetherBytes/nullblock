@@ -20,6 +20,7 @@ $background-gradient-end: rgba(255, 194, 113, 0.3);
   gap: 15px;
   font-family: $comic-font;
   color: white;
+  width: calc(100% - 250px);
 }
 
 
@@ -130,14 +131,15 @@ body {
 
 @media screen and (max-width: 768px) and (orientation: portrait) {
   .appMenu {
-    padding: 5px;
+    padding: 2px;
+    width: 100%;
   }
 
 }
 
 @media screen and (max-width: 768px) and (orientation: landscape) {
   .appMenu {
-    // width: 100%;
+    width: 100%;
     // padding: 5px;
   }
 
