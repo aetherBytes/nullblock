@@ -18,8 +18,11 @@ const Home = () => {
   };
 
   const toggleToEchoChat = () => {
-    setIsUIVisible(true);
     setShowEchoChat(true);
+  };
+
+  const closeEchoScreen = () => {
+    setShowEchoChat(false);
   };
 
   return (
@@ -35,7 +38,7 @@ const Home = () => {
       <div className={styles.bottomUIContainer}> {/* Ensure this div wraps the conditional content */}
         {isUIVisible && (
           <>
-            <AppMenu toggleEchoVisibility={toggleToEchoChat} />
+            <AppMenu toggleEchoVisibility={toggleToEchoChat} closeEchoScreen={closeEchoScreen} />
             {showEchoChat ? <EchoChat /> : <Echo screensConfig={baseScreensConfig} defaultScreenKey="Nexus" />}
             <ChatInput />
           </>

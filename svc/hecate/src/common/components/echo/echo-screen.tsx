@@ -13,43 +13,43 @@ interface IUnifiedEchoScreenProps {
   content: string;
   additionalContent?: string[];
   popupContent?: React.ReactNode;
+  closeCurrentScreen: () => void; // Add prop for closing current screen
 }
 
 const UnifiedEchoScreen: React.FC<IUnifiedEchoScreenProps> = ({
   screenTitle,
-  images = { main: '', small: '' }, // Default images prop if not provided
+  images = { main: '', small: '' },
   isPopupVisible,
   onClosePopup,
   content,
-  additionalContent = [], // Default value for additionalContent
+  additionalContent = [],
   popupContent,
-}) => (
-  <div className={styles.echoScreen}>
-    <div className={styles.contentWrapper}>
-      {/* Main image */}
-      {images.main && <img src={images.main} alt="Main visual" className={styles.echoImage} />}
+  closeCurrentScreen, // Receive closeCurrentScreen function from parent
+}) => {
+  const handleButtonClick = () => {
+    closeCurrentScreen(); // Close current screen before opening a new one
+    // Additional logic for handling button click if needed
+  };
 
-      {/* Title */}
-      <h2 className={styles.echoTitle}>{screenTitle}</h2>
-
-      {/* Content paragraphs */}
-      <p className={styles.echoContent}>{content}</p>
-      {additionalContent.map((text, index) => (
-        <p key={index} className={styles.echoContent}>
-          {text}
-        </p>
-      ))}
-
-      {/* Optional small image */}
-      {images.small && (
-        <img src={images.small} alt="Small visual" className={styles.echoImageSmall} />
-      )}
+  return (
+    <div className={styles.echoScreen}>
+      <div className={styles.contentWrapper}>
+        {images.main && <img src={images.main} alt="Main visual" className={styles.echoImage} />}
+        <h2 className={styles.echoTitle}>{screenTitle}</h2>
+        <p className={styles.echoContent}>{content}</p>
+        {additionalContent.map((text, index) => (
+          <p key={index} className={styles.echoContent}>
+            {text}
+          </p>
+        ))}
+        {images.small && (
+          <img src={images.small} alt="Small visual" className={styles.echoImageSmall} />
+        )}
+      </div>
+      {isPopupVisible && popupContent && <Popup onClose={onClosePopup}>{popupContent}</Popup>}
     </div>
-
-    {/* Popup */}
-    {isPopupVisible && popupContent && <Popup onClose={onClosePopup}>{popupContent}</Popup>}
-  </div>
-);
+  );
+};
 
 export default UnifiedEchoScreen;
 

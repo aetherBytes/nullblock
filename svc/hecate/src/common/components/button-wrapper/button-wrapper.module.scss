@@ -1,30 +1,29 @@
-@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;1,400&display=swap');
 
 .echoButton, .powerButton {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(to left, rgba(100, 149, 237, 0.5), rgba(25, 25, 112, 0.5));
-  border: none;
-  border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 -4px 2px rgba(0, 0, 0, 0.2);
-  color: white;
+  background: linear-gradient(145deg, #0f0c29, #302b63, #24243e); /* Updated gradient */
+  border: 1px solid #5D54A4; /* Subtle border */
+  border-radius: 8px; /* Less rounded corners for a modern look */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2), inset 0 -4px 2px rgba(255, 255, 255, 0.1);
+  color: #E0E0E0; /* Lighter text color for contrast */
   cursor: pointer;
   display: inline-flex;
   justify-content: center;
   align-items: center;
   margin: 10px;
-  padding: 12px 24px;
+  padding: 15px 30px; /* Adjusted padding for a wider look */
   text-align: center;
-  transition: all 0.3s ease;
-  font-family: 'Comic Sans MS', sans-serif;
-  text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #87CEFA, 0 0 30px #87CEFA, 0 0 40px #87CEFA, 0 0 55px #87CEFA, 0 0 75px #87CEFA;
-  user-select: none; // Prevent text selection
+  transition: transform 0.4s ease, box-shadow 0.4s ease; /* Smoothed transitions */
+  font-family: 'Roboto', sans-serif; /* Futuristic font choice */
+  text-shadow: none; /* Removed text shadow for a cleaner look */
+  user-select: none;
+}
 
-  &:hover, &:focus {
-    background-position: right center; // Change the direction of the gradient
-    color: #e0ffff;
-    text-decoration: none;
-  }
+.echoButton:hover, .echoButton:focus, .powerButton:hover, .powerButton:focus {
+  transform: scale(1.05); /* Subtle scale effect */
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4); /* Enhanced shadow for depth */
 }
 
 .ripple {
@@ -33,12 +32,12 @@
   transform: scale(0);
   animation: ripple-effect 600ms linear;
   background-color: rgba(255, 255, 255, 0.7);
-  pointer-events: none; // Ensure the ripple doesn't interfere with clicking.
+  pointer-events: none;
 }
 
 @keyframes ripple-effect {
   to {
-    transform: scale(4);
+    transform: scale(2.5); /* Reduced scale for subtlety */
     opacity: 0;
   }
 }
@@ -46,20 +45,19 @@
 .powerButton {
   right: 2.5%;
   bottom: 2.5%;
-  padding: 10px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 24px;
+  padding: 15px; /* Unified padding */
+  border-radius: 50%; /* Circular shape */
+  background-color: #0f0c29; /* Darker, consistent background */
+  color: #E0E0E0;
+  font-size: 20px; /* Adjusted for balance */
   z-index: 35;
-  // Specific styles for the power button can go here
 }
 
 /* Responsive adjustments */
 @media screen and (max-width: 768px) {
   .echoButton, .powerButton {
-    padding: 8px 16px; // Smaller padding for small screens
-    font-size: 14px; // Adjust font size for readability
+    padding: 10px 20px; /* Reduced padding */
+    font-size: 16px; /* Scaled font size */
   }
 }
 
