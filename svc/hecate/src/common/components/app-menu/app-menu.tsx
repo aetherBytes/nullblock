@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './app-menu.module.scss';
 import ButtonWrapper2 from '@components/index-button-wrapper/button-wrapper-2';
-import Echo from '@components/echo/echo';
 import EchoChat from '@components/echo/echo-chat/echo-chat';
 import XLogo from '@assets/images/X_logo_black.png';
 import discordLogo from '@assets/images/discord_logo_black.png';
@@ -9,19 +8,25 @@ import telegramLogo from '@assets/images/telegram_logo_black.png';
 
 interface AppMenuProps {
   toggleEchoVisibility?: () => void; // Making it optional
+  showDefaultEchoScreen?: boolean;
 }
 
-const AppMenu: React.FC<AppMenuProps> = ({ toggleEchoVisibility }) => {
+const AppMenu: React.FC<AppMenuProps> = ({ toggleEchoVisibility, showDefaultEchoScreen = false }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isEchoVisible, setIsEchoVisible] = useState(false);
+  const [isEchoVisible, setIsEchoVisible] = useState(showDefaultEchoScreen); // Initialize based on prop
+
+  useEffect(() => {
+    // React to changes in showDefaultEchoScreen prop
+    setIsEchoVisible(showDefaultEchoScreen);
+  }, [showDefaultEchoScreen]);
 
   const toggleMenu = () => {
-    setIsMenuOpen(prevState => !prevState);
+    setIsMenuOpen(!isMenuOpen);
   };
 
   const toggleEcho = () => {
-    setIsEchoVisible(prevState => !prevState);
-    toggleEchoVisibility?.(); // Call if exists
+    setIsEchoVisible(!isEchoVisible);
+    toggleEchoVisibility?.(); // Optionally call if exists
   };
 
   const buttons = [
@@ -49,4 +54,5 @@ const AppMenu: React.FC<AppMenuProps> = ({ toggleEchoVisibility }) => {
 };
 
 export default AppMenu;
+
 
