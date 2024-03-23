@@ -3,16 +3,15 @@ const echoChatScreensConfig = {
     title: 'Chat with ECHO',
     buttonText: 'Chat',
     usePopup: true,
-    content: <div>{/* Chat screen content */}
-    <p>
-      The chat system is currently initializing. Please wait while the system initializes.
-    </p>
-    </div>,
+    content: (
+      <div>
+        {/* Chat screen content */}
+        <p>The chat system is currently initializing. Please wait while the system initializes.</p>
+      </div>
+    ),
     popupContent: (
       <div>
-        <p>
-          The chat system is currently initializing. Please wait while the system initializes.
-        </p>
+        <p>The chat system is currently initializing. Please wait while the system initializes.</p>
       </div>
     ),
   },
@@ -20,3 +19,4 @@ const echoChatScreensConfig = {
 };
 
 export default echoChatScreensConfig;
+
