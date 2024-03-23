@@ -5,7 +5,7 @@ import screensConfig from './screens-config'; // Ensure this path is correct
 import styles from './echo.module.scss';
 
 const Echo = () => {
-  const [currentScreen, setCurrentScreen] = useState('Dashboard');
+  const [currentScreen, setCurrentScreen] = useState('Nexus');
   const [showPopup, setShowPopup] = useState(false);
   const [popupContent, setPopupContent] = useState(null);
   const [isEchoVisible, setIsEchoVisible] = useState(true); // State to control visibility, remains unchanged here
