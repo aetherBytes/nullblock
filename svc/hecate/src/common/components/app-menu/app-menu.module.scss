@@ -131,16 +131,16 @@ body {
 
 @media screen and (max-width: 768px) and (orientation: portrait) {
   .appMenu {
-    padding: 2px;
-    width: 100%;
+    padding: 6px;
+    width: calc(100% - 100px);
   }
 
 }
 
 @media screen and (max-width: 768px) and (orientation: landscape) {
   .appMenu {
-    width: 100%;
-    // padding: 5px;
+    width: calc(100% - 120px);
+    padding: 6px;
   }
 
 }

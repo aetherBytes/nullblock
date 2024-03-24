@@ -1,4 +1,46 @@
-@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');/* Define font styles */
+$comic-font: 'Comic Sans MS', sans-serif;
+$heading-font-weight: 700;
+$normal-font-weight: 400;
+$base-font-size-title: 24px;
+$base-font-size: 18px;
+/* Animation Keyframes */
+@keyframes flickerGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(100, 149, 237, 0.4), 0 0 20px rgba(100, 149, 237, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(100, 149, 237, 0.5), 0 0 25px rgba(100, 149, 237, 0.5);
+  }
+}
+
+@keyframes moveGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blinkCaret {
+  from, to { border-color: transparent; }
+  50% { border-color: rgba(100, 149, 237, 0.5); }
+}
+
+@keyframes backgroundFade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+
 .backgroundImage {
   // background-image: url('../../assets/images/green_dawn.png'); // Adjust the path according to your project structure
   // background-image: url('../../assets/images/red_dawn.png'); // Adjust the path according to your project structure
@@ -34,7 +76,7 @@
   // align-items: center;
   // gap: 2px; /* Adds a sm25l gap between elements */
   padding: 25px; /* Padding on the sides and bottom */
-  az-index: 30; /* Ensure it's above other content */
+  z-index: 30; /* Ensure it's above other content */
   background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
   color: white; /* White text */
 
@@ -43,35 +85,66 @@
   // background-position: center;
 }
 
+
+.powerButtonContainer {
+  /* Container styles */
+  display: flex;
+  color: white;
+  position: fixed;
+  bottom: 2%;
+  right: 2%;
+  // background: linear-gradient(to right, rgba(0, 76, 153, 0.7), rgba(0, 38, 77, 0.7));
+  // box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 15px rgba(0, 255, 255, 0.7);
+  z-index: 40;
+
+}
+
 .powerButton {
   display: flex;
-  // align-items: center;
+  color: white;
+  flex-direction: column; /* Stack elements vertically */
+  align-items: center; /* Center-align the button contents */
   justify-content: center;
-  position: fixed;
-  right: 2.5%;
-  bottom: 2.5%;
-  padding: 10px;
-  border-radius: 50%;
-  // color: white;
-  font-size: 24px;
-  cursor: pointer;
-  // transition: background-color 0.3s; /* Smooth transition on hover */
-  z-index: 35; /* Ensure it's above other content */
+  padding: 10px; /* Padding around the button */
+  background: linear-gradient(to right, rgba(255, 194, 113, 0.25), rgba(25, 25, 112, 0.5));
+  border-radius: 15px;
+}
 
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+.powerButtonImage {
+  width: 150px; /* Example size, adjust as needed */
+}
+
+
+@media screen and (max-width: 768px) {
+  .powerButtonContainer {
+    width: 25px; /* Example size, adjust as needed */
+    padding-bottom: 5px; /* Padding on the bottom */
+    padding-right: 70px; /* Padding on the right */
+  }
+  .powerButtonImage {
+    width: 40px; /* Example size, adjust as needed */
   }
 }
 
-@media screen and (max-width: 768px) and (orientation: portrait) {
-  .powerButton {
-    right: 0%;
+@media screen and (max-width: 1024px) and (orientation: landscape) {
+  .powerButtonContainer {
+    width: 35px; /* Example size, adjust as needed */
+    right: 5%;
+    padding: 5px; /* Padding around the button */
   }
-
+  .powerButtonImage {
+    width: 40px; /* Example size, adjust as needed */
+  }
 }
 
 @media screen and (max-width: 768px) and (orientation: landscape) {
-
+  .powerButtonContainer {
+    width: 35px; /* Example size, adjust as needed */
+    right: 10%;
+    padding: 10px; /* Padding around the button */
+  }
+  .powerButtonImage {
+    width: 40px; /* Example size, adjust as needed */
+  }
 
 }
-

@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import Moxi from '@components/moxi/moxi';
 import AppMenu from '@components/app-menu/app-menu';
+import EchoChat from '@components/echo/echo-chat/echo-chat';
+import Echo from '@components/echo/echo';
 import ChatInput from '@components/chat-input/chat-input';
-import ButtonWrapper from '@components/button-wrapper/button-wrapper';
-import Echo from '@components/echo/echo'; // Adjust import path as needed
-import EchoChat from '@components/echo/echo-chat/echo-chat'; // Adjust import path as needed
-import baseScreensConfig from '@components/echo/screens-config'; // Adjust path as necessary
+import baseScreensConfig from '@components/echo/screens-config';
 import styles from './index.module.scss';
-import powerOff from '@assets/images/echoChimp_1.png';
-import powerOn from '@assets/images/echoChimp_0.png';
+import powerOn from '@assets/images/echoChimp_1.png';
+import powerOff from '@assets/images/echoChimp_0.png';
 
 const Home = () => {
   const [isUIVisible, setIsUIVisible] = useState(false);
@@ -16,7 +14,9 @@ const Home = () => {
 
   const toggleUIVisibility = () => {
     setIsUIVisible(!isUIVisible);
-    if (!isUIVisible) setShowEchoChat(false); // Resets to base Echo screen when turning off
+    if (!isUIVisible) {
+      setShowEchoChat(false); // Resets to base Echo screen when turning off
+    }
   };
 
   const toggleToEchoChat = () => {
@@ -29,16 +29,16 @@ const Home = () => {
 
   return (
     <div className={styles.backgroundImage}>
-      <Moxi />
-      <div className={styles.powerButton}>
-        <ButtonWrapper
-          title="Main Power"
-          buttonText={isUIVisible ? 'Deactivate ECHO' : 'Activate ECHO'}
-          buttonImage={isUIVisible ? powerOn : powerOff}
-          setCurrentScreen={toggleUIVisibility}
-        />
+      <div className={styles.powerButtonContainer}> {/* Use a container class for the div */}
+        <button
+          onClick={toggleUIVisibility}
+          className={styles.powerButton} // Ensure the button has its own styles
+        >
+          <img src={isUIVisible ? powerOff : powerOn} alt="Power Button" className={styles.powerButtonImage} />
+          <span>{isUIVisible ? 'Deactivate ECHO' : 'Activate ECHO'}</span>
+        </button>
       </div>
-      <div className={styles.bottomUIContainer}> {/* Ensure this div wraps the conditional content */}
+      <div className={styles.bottomUIContainer}>
         {isUIVisible && (
           <>
             <AppMenu toggleEchoVisibility={toggleToEchoChat} closeEchoScreen={closeEchoScreen} />
@@ -52,4 +52,7 @@ const Home = () => {
 };
 
 export default Home;
+
+
+
 
