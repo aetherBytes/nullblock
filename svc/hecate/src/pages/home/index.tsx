@@ -7,6 +7,8 @@ import Echo from '@components/echo/echo'; // Adjust import path as needed
 import EchoChat from '@components/echo/echo-chat/echo-chat'; // Adjust import path as needed
 import baseScreensConfig from '@components/echo/screens-config'; // Adjust path as necessary
 import styles from './index.module.scss';
+import powerOn from '@assets/images/power-on.png';
+import powerOff from '@assets/images/power-off.png';
 
 const Home = () => {
   const [isUIVisible, setIsUIVisible] = useState(false);
@@ -31,7 +33,8 @@ const Home = () => {
       <div className={styles.powerButton}>
         <ButtonWrapper
           title="Main Power"
-          buttonText={isUIVisible ? 'Turn Off' : 'Turn On'}
+          buttonText={isUIVisible ? 'Deactivate ECHO' : 'Activate ECHO'}
+          // buttonImage={isUIVisible ? '/images/power-off.png' : '/images/power-on.png'}
           setCurrentScreen={toggleUIVisibility}
         />
       </div>
