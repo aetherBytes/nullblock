@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+
 /* Define font styles */
 $comic-font: 'Comic Sans MS', sans-serif;
 $heading-font-weight: 700;
@@ -7,25 +8,26 @@ $base-font-size-title: 24px;
 $base-font-size: 18px;
 
 /* Theme colors */
-$background-dark: #000000; /* Black */
-$background-light: #ff8c00; /* Orange */
-$accent-color: rgba(255, 165, 0, 0.5); /* Lighter Orange for effects */
+$background-dark: #121212; /* Darker Black */
+$background-light: #333333; /* Dark Grey */
+// $accent-color: #33ff33; /* Neon Green for effects */
+$accent-color: #ff8c00; /* Orange for effects */
 $text-color: #ffffff; /* White for text */
+
+/* Enhanced Accent Colors for Hover and Active States */
+$hover-color: adjust-color($accent-color, $lightness: -20%);
+$active-color: adjust-color($accent-color, $lightness: -40%);
 
 /* Animation Keyframes */
 @keyframes flickerGlow {
-  0%, 100% {
-    box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
-  }
-  50% {
-    box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
-  }
+  0%, 100% { box-shadow: 0 0 4px $accent-color, 0 0 16px $accent-color; }
+  10%, 90% { box-shadow: 0 0 8px $accent-color, 0 0 18px $accent-color; }
+  50% { box-shadow: 0 0 16px $accent-color, 0 0 32px $accent-color; }
 }
 
-@keyframes moveGradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+@keyframes scanLine {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
 }
 
 @keyframes pulse {
@@ -45,10 +47,10 @@ $text-color: #ffffff; /* White for text */
 
 @keyframes backgroundFade {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  50% { opacity: 0.75; }
 }
 
-/* Base Echo Screen styles with black and orange theme */
+/* Base Echo Screen styles with black and neon green theme */
 .parentContainer {
   width: 70%;
   position: fixed;
@@ -62,7 +64,7 @@ $text-color: #ffffff; /* White for text */
 }
 
 .mainScreenContent {
-  animation: backgroundFade 6s ease infinite, flickerGlow 2s infinite ease-in-out, moveGradient 10s ease infinite;
+  animation: backgroundFade 6s ease infinite, flickerGlow 2s infinite ease-in-out, scanLine 20s linear infinite;
   background: linear-gradient(to right, $background-dark, $background-light);
   border-radius: 10px;
   box-shadow: 0 0 8px $background-dark, 0 0 20px $background-light;
@@ -79,14 +81,13 @@ $text-color: #ffffff; /* White for text */
   justify-content: center;
   align-items: center;
   text-align: center;
-  background: linear-gradient(to right, $background-light, $background-dark);
+  background: linear-gradient(145deg, $background-dark, $background-light);
   border-radius: 10px;
-  box-shadow: 0 0 8px $background-dark, 0 0 20px $background-light;
+  box-shadow: 0 0 10px $background-dark, inset 0 0 20px $accent-color;
   color: $text-color;
   width: 100%;
   overflow-y: auto;
-  overflow-x: hidden;
-  max-height: 75vh;
+  animation: scanLine 20s linear infinite, backgroundFade 6s ease-in-out infinite;
 }
 
 .echoTitle,
@@ -100,6 +101,8 @@ $text-color: #ffffff; /* White for text */
   padding: 10px;
   text-align: center;
   width: auto;
+  color: $text-color;
+  font-family: $comic-font;
 }
 
 .echoImage,
@@ -183,4 +186,3 @@ $text-color: #ffffff; /* White for text */
     max-height: 50vh;
   }
 }
-
