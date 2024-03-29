@@ -3,7 +3,8 @@
 /* Font and Color Variables */
 $comic-font: 'Comic Sans MS', sans-serif;
 $accent-color: rgba(255, 165, 0, 0.7); /* Lighter Orange for effects */
-$background-dark: #000000; /* Black */
+$background-dark: rgba(0, 0, 0, 0.6); /* Black */
+$background-dark_2: rgba(0, 0, 0, 0.9); /* Darker Black */
 $background-orange: #ff8c00; /* Orange */
 $background-light-orange: rgba(255, 140, 0, 0.3); /* Light Orange */
 
@@ -77,7 +78,7 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: linear-gradient(to right, $background-dark, $background-orange, $background-light-orange);
+  background: linear-gradient(to right, $background-dark_2, $background-orange, $background-light-orange);
   background-size: 200% 200%;
   animation: flickerGlow 2s infinite ease-in-out, moveGradient 10s ease infinite;
   border-radius: 8px;

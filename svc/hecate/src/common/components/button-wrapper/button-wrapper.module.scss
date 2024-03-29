@@ -1,55 +1,82 @@
-// Importing Roboto font from Google Fonts
-@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
 
-// Defining base colors for the dark Pip-Boy theme
-$theme-dark: #0a0a0a; // Deep black for background
-$theme-accent: rgba(204, 85, 0, 0.8); // Intense burnt orange for accents
-$border-color: rgba(204, 85, 0, 1); // Solid burnt orange for borders
-$text-color: #FFFFFF; // White for text to ensure readability
-$ripple-color: rgba(204, 85, 0, 0.5); // Muted burnt orange for ripple effect
+// Defining base colors for the futuristic theme
+$base-dark: #121212; // Deep, dark black for contrast
+// $accent-color: #00ffcc; // Bright, neon cyan for a striking look
+$accent-color: #ff8c00; // Orange for a warm, futuristic feel
+$text-color: #ffffff; // Pure white for clarity and readability
 
-// Styling for buttons to match the Pip-Boy theme
+// Styling for futuristic buttons
 .echoButton, .powerButton {
+  font-family: 'Comic Sans MS', cursive;
+  background-color: transparent;
+  color: $text-color !important; // Ensure text color remains bright white
+  border: 2px solid transparent;
+  border-radius: 4px;
+  padding: 10px 30px;
+  font-size: 16px;
+  cursor: pointer;
+  outline: none;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(145deg, $theme-dark, $theme-accent, $theme-dark);
-  border: 2px solid $border-color; // Emphasizing borders with burnt orange
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 -4px 2px rgba(255, 255, 255, 0.04);
-  color: $text-color;
-  cursor: pointer;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  margin: 10px;
-  padding: 15px 30px;
-  text-align: center;
-  transition: transform 0.3s ease, box-shadow 0.3s ease; // Faster transition for a snappier feel
-  font-family: 'Roboto', sans-serif;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7); // Adding text shadow for depth
-  user-select: none;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+
+  // Hover and focus styles
+  &:hover, &:focus {
+    border-color: $accent-color;
+    background-color: $base-dark;
+    // Keeping text color declaration to maintain consistency, though !important flag is primarily effective
+    color: $text-color !important; // Ensures text color remains white on hover/focus
+  }
+
+  // After pseudo-element for the glowing effect
+  &:after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background-color: $accent-color;
+    border-radius: 50%;
+    z-index: 0;
+    transition: width 0.4s ease, height 0.4s ease, top 0.4s ease, left 0.4s ease, opacity 0.5s ease;
+    opacity: 0;
+  }
+
+  // Hover and focus styles for the glowing effect
+  &:hover:after, &:focus:after {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.2;
+  }
+
+  // Inner content styling
+  span {
+    position: relative;
+    z-index: 1;
+    color: $text-color !important; // Ensuring inner text remains bright white
+  }
+
+  // Ripple effect (Optional)
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(0);
+    animation: ripple-effect 600ms linear;
+    background-color: rgba($accent-color, 0.7);
+    pointer-events: none;
+  }
 }
 
-// Adjusting hover and focus states for added depth and emphasis
-.echoButton:hover, .echoButton:focus, .powerButton:hover, .powerButton:focus {
-  transform: scale(1.08); // Slightly larger scale for emphasis
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); // Increased shadow for more depth
-}
-
-// Styling for the ripple effect to match the theme
-.ripple {
-  position: absolute;
-  border-radius: 50%;
-  transform: scale(0);
-  animation: ripple-effect 500ms linear; // Shortening animation for quicker feedback
-  background-color: $ripple-color;
-  pointer-events: none;
-}
-
-// Defining the ripple-effect animation
+// Keyframes for the ripple effect
 @keyframes ripple-effect {
   to {
-    transform: scale(4); // Ensuring the ripple effect is noticeable
+    transform: scale(4);
     opacity: 0;
   }
 }

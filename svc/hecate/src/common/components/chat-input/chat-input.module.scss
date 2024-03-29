@@ -4,7 +4,8 @@
 $comic-font: 'Comic Sans MS', sans-serif;
 $accent-color: rgba(255, 165, 0, 0.7); /* Lighter Orange for effects */
 $background-dark: #000000; /* Black */
-$background-orange: #ff8c00; /* Orange */
+// $background-orange: #ff8c00; /* Orange */
+$background-orange: rgba(255, 140, 0, 0.5); /* Orange */
 $background-light-orange: rgba(255, 140, 0, 0.3); /* Light Orange */
 
 @keyframes flickerGlow {
@@ -83,7 +84,7 @@ $background-light-orange: rgba(255, 140, 0, 0.3); /* Light Orange */
   bottom: 60px;
   left: 20px;
   padding: 15px 30px;
-  background: linear-gradient(to right, $background-dark, $background-orange, $background-light-orange);
+  background: $background-dark;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2), 0 0 10px $accent-color;
   color: white;
   border-radius: 15px;
