@@ -1,45 +1,56 @@
+// Importing Roboto font from Google Fonts
 @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;1,400&display=swap');
 
+// Defining base colors for the dark Pip-Boy theme
+$theme-dark: #0a0a0a; // Deep black for background
+$theme-accent: rgba(204, 85, 0, 0.8); // Intense burnt orange for accents
+$border-color: rgba(204, 85, 0, 1); // Solid burnt orange for borders
+$text-color: #FFFFFF; // White for text to ensure readability
+$ripple-color: rgba(204, 85, 0, 0.5); // Muted burnt orange for ripple effect
+
+// Styling for buttons to match the Pip-Boy theme
 .echoButton, .powerButton {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(145deg, rgba(15, 12, 41, 0.8), rgba(48, 43, 99, 0.6), rgba(36, 36, 62, 0.4));
-  border: 1px solid #5D54A4; /* Subtle border */
-  border-radius: 8px; /* Less rounded corners for a modern look */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2), inset 0 -4px 2px rgba(255, 255, 255, 0.1);
-  color: #E0E0E0; /* Lighter text color for contrast */
+  background: linear-gradient(145deg, $theme-dark, $theme-accent, $theme-dark);
+  border: 2px solid $border-color; // Emphasizing borders with burnt orange
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 -4px 2px rgba(255, 255, 255, 0.04);
+  color: $text-color;
   cursor: pointer;
   display: inline-flex;
   justify-content: center;
   align-items: center;
   margin: 10px;
-  padding: 15px 30px; /* Adjusted padding for a wider look */
+  padding: 15px 30px;
   text-align: center;
-  transition: transform 0.4s ease, box-shadow 0.4s ease; /* Smoothed transitions */
-  font-family: 'Roboto', sans-serif; /* Futuristic font choice */
-  text-shadow: none; /* Removed text shadow for a cleaner look */
+  transition: transform 0.3s ease, box-shadow 0.3s ease; // Faster transition for a snappier feel
+  font-family: 'Roboto', sans-serif;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7); // Adding text shadow for depth
   user-select: none;
 }
 
+// Adjusting hover and focus states for added depth and emphasis
 .echoButton:hover, .echoButton:focus, .powerButton:hover, .powerButton:focus {
-  transform: scale(1.05); /* Subtle scale effect */
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4); /* Enhanced shadow for depth */
+  transform: scale(1.08); // Slightly larger scale for emphasis
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); // Increased shadow for more depth
 }
 
+// Styling for the ripple effect to match the theme
 .ripple {
   position: absolute;
   border-radius: 50%;
   transform: scale(0);
-  animation: ripple-effect 600ms linear;
-  background-color: rgba(255, 255, 255, 0.7);
+  animation: ripple-effect 500ms linear; // Shortening animation for quicker feedback
+  background-color: $ripple-color;
   pointer-events: none;
 }
 
+// Defining the ripple-effect animation
 @keyframes ripple-effect {
   to {
-    transform: scale(2.5); /* Reduced scale for subtlety */
+    transform: scale(4); // Ensuring the ripple effect is noticeable
     opacity: 0;
   }
 }
-
 

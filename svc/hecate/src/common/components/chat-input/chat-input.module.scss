@@ -2,14 +2,17 @@
 
 /* Define font styles */
 $comic-font: 'Comic Sans MS', sans-serif;
-$floating-color: rgba(100, 149, 237, 0.7);
+$accent-color: rgba(255, 165, 0, 0.7); /* Lighter Orange for effects */
+$background-dark: #000000; /* Black */
+$background-orange: #ff8c00; /* Orange */
+$background-light-orange: rgba(255, 140, 0, 0.3); /* Light Orange */
 
 @keyframes flickerGlow {
   0%, 100% {
-    box-shadow: 0 0 8px rgba(70, 70, 70, 0.3), 0 0 20px rgba(70, 70, 70, 0.3);
+    box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
   }
   50% {
-  box-shadow: 0 0 8px rgba(70, 70, 70, 0.3), 0 0 20px rgba(70, 70, 70, 0.3);
+    box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
   }
 }
 
@@ -35,10 +38,10 @@ $floating-color: rgba(100, 149, 237, 0.7);
   align-items: center;
   justify-content: space-between;
   padding: 10px;
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(48, 25, 52, 0.6), rgba(255, 194, 113, 0.3));
+  background: linear-gradient(to right, $background-dark, $background-orange, $background-light-orange);
   animation: moveGradient 10s ease infinite;
   border-radius: 10px;
-  box-shadow: 0 0 8px rgba(70, 70, 70, 0.3), 0 0 20px rgba(70, 70, 70, 0.3);
+  box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
   width: calc(100% - 250px);
 }
 
@@ -47,7 +50,7 @@ $floating-color: rgba(100, 149, 237, 0.7);
   margin-right: 8px; // Spacing between input and button
   padding: 10px;
   font-size: 16px;
-  border: 2px solid rgba(100, 149, 237, 0.7);
+  border: 2px solid $accent-color;
   border-radius: 5px;
   background-color: transparent;
   color: white;
@@ -61,17 +64,17 @@ $floating-color: rgba(100, 149, 237, 0.7);
 .sendButton {
   padding: 10px 15px;
   font-size: 16px;
-  background-color: transparent;
-  border: 2px solid rgba(100, 149, 237, 0.7);
+  background-color: $background-orange;
+  border: 2px solid $background-dark;
   border-radius: 5px;
-  color: white;
+  color: $background-dark;
   font-family: $comic-font;
   cursor: pointer;
   transition: background-color 0.3s, color 0.3s;
 
   &:hover {
-    background-color: rgba(100, 149, 237, 0.7);
-    color: black;
+    background-color: darken($background-orange, 10%);
+    color: white;
   }
 }
 
@@ -80,8 +83,8 @@ $floating-color: rgba(100, 149, 237, 0.7);
   bottom: 60px;
   left: 20px;
   padding: 15px 30px;
-  background: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(48, 25, 52, 0.6), rgba(255, 194, 113, 0.3));
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2), 0 0 10px $floating-color;
+  background: linear-gradient(to right, $background-dark, $background-orange, $background-light-orange);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2), 0 0 10px $accent-color;
   color: white;
   border-radius: 15px;
   font-family: $comic-font;

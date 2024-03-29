@@ -1,16 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');/* Define font styles */
+@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+
+/* Define font styles */
 $comic-font: 'Comic Sans MS', sans-serif;
 $heading-font-weight: 700;
 $normal-font-weight: 400;
 $base-font-size-title: 24px;
 $base-font-size: 18px;
+
+/* Theme colors */
+$background-dark: #000000; /* Black */
+$background-light: #ff8c00; /* Orange */
+$accent-color: rgba(255, 165, 0, 0.5); /* Lighter Orange for effects */
+$text-color: #ffffff; /* White for text */
+
 /* Animation Keyframes */
 @keyframes flickerGlow {
   0%, 100% {
-    box-shadow: 0 0 8px rgba(100, 149, 237, 0.4), 0 0 20px rgba(100, 149, 237, 0.4);
+    box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
   }
   50% {
-    box-shadow: 0 0 10px rgba(100, 149, 237, 0.5), 0 0 25px rgba(100, 149, 237, 0.5);
+    box-shadow: 0 0 10px $accent-color, 0 0 25px $accent-color;
   }
 }
 
@@ -32,7 +41,7 @@ $base-font-size: 18px;
 
 @keyframes blinkCaret {
   from, to { border-color: transparent; }
-  50% { border-color: rgba(100, 149, 237, 0.5); }
+  50% { border-color: $accent-color; }
 }
 
 @keyframes backgroundFade {
@@ -40,30 +49,8 @@ $base-font-size: 18px;
   50% { opacity: 0.6; }
 }
 
-
 .backgroundImage {
-  // background-image: url('../../assets/images/green_dawn.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/red_dawn.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/red_dawn_2.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/nilblock.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/nulllrok.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/nulllbok.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/nexoliths.png'); // Adjust the pathn_2according to your project structure
-  // background-image: url('../../assets/images/nexoliths_2.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/nexoliths_3.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/nexoliths_4.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/nexoliths_5.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/nex_gate.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/nowhere_bridge.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/forrest.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/world_0.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/darkmoon.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/void_01.png'); // Adjust the path  /according to your project structure
-  // background-image: url('../../assets/images/purple_0.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/forrest_0.png'); // Adjust the path according to your project structure
-  background-image: url('../../assets/images/void_02.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/void_01.png'); // Adjust the path according to your project structure
-  // background-image: url('../../assets/images/void_01.png'); // Adjust the path according to your project structure
+  background-image: url('../../assets/images/agent_orange_0.png');
   background-position: center;
   background-size: cover;
   height: 100vh;
@@ -78,78 +65,59 @@ $base-font-size: 18px;
   right: 0;
   display: flex;
   flex-direction: column;
-  // align-items: center;
-  // gap: 2px; /* Adds a sm25l gap between elements */
-  padding: 25px; /* Padding on the sides and bottom */
-  z-index: 30; /* Ensure it's above other content */
-  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
-  color: white; /* White text */
-
-  // background-image: url('path/to/your/background/image.jpg'); /* Placeholder for background image */
-  // background-size: cover;
-  // background-position: center;
+  padding: 25px;
+  z-index: 30;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: $text-color;
 }
 
-
 .powerButtonContainer {
-  /* Container styles */
   display: flex;
-  color: white;
+  color: $text-color;
   position: fixed;
-  bottom: 2%;
+  bottom: 0%;
   right: 2%;
-  // background: linear-gradient(to right, rgba(0, 76, 153, 0.7), rgba(0, 38, 77, 0.7));
-  // box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 15px rgba(0, 255, 255, 0.7);
   z-index: 40;
-
 }
 
 .powerButton {
   display: flex;
-  color: white;
-  flex-direction: column; /* Stack elements vertically */
-  align-items: center; /* Center-align the button contents */
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  padding: 10px; /* Padding around the button */
-  background: linear-gradient(to right, rgba(255, 194, 113, 0.25), rgba(25, 25, 112, 0.5));
+  padding: 10px;
+  background: transparent;
   border-radius: 15px;
+  color: $text-color;
+  font-size: 1.5rem;
 }
 
 .powerButtonImage {
-  width: 150px; /* Example size, adjust as needed */
+  width: 150px;
 }
 
-
 @media screen and (max-width: 768px) {
+  .backgroundImage {
+    background-position: 85% center; /* Shift background to the right */
+  }
   .powerButtonContainer {
-    width: 25px; /* Example size, adjust as needed */
-    padding-bottom: 5px; /* Padding on the bottom */
-    padding-right: 70px; /* Padding on the right */
+    right: 0;
+  }
+  .powerButton {
+    padding: 10px;
+    font-size: 1rem;
   }
   .powerButtonImage {
-    width: 40px; /* Example size, adjust as needed */
+    width: 100px;
   }
 }
 
 @media screen and (max-width: 1024px) and (orientation: landscape) {
-  .powerButtonContainer {
-    width: 35px; /* Example size, adjust as needed */
-    right: 5%;
-    padding: 5px; /* Padding around the button */
-  }
-  .powerButtonImage {
-    width: 40px; /* Example size, adjust as needed */
-  }
+
+
 }
 
 @media screen and (max-width: 768px) and (orientation: landscape) {
-  .powerButtonContainer {
-    width: 35px; /* Example size, adjust as needed */
-    right: 10%;
-    padding: 10px; /* Padding around the button */
-  }
-  .powerButtonImage {
-    width: 40px; /* Example size, adjust as needed */
-  }
 
 }
+
