@@ -2,27 +2,27 @@
 
 /* Font and Color Variables */
 $comic-font: 'Comic Sans MS', sans-serif;
-$floating-color: rgba(100, 149, 237, 0.7);
-$background-gradient-start: rgba(0, 0, 0, 0.8);
-$background-gradient-middle: rgba(48, 25, 52, 0.6);
-$background-gradient-end: rgba(255, 194, 113, 0.3);
+$accent-color: rgba(255, 165, 0, 0.7); /* Lighter Orange for effects */
+$background-dark: #000000; /* Black */
+$background-orange: #ff8c00; /* Orange */
+$background-light-orange: rgba(255, 140, 0, 0.3); /* Light Orange */
 
 /* Animation Keyframes */
 @keyframes flickerGlow {
   0%, 100% {
-    box-shadow: 0 0 8px rgba(70, 70, 70, 0.3), 0 0 20px rgba(70, 70, 70, 0.3);
+    box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
   }
   50% {
-  box-shadow: 0 0 8px rgba(70, 70, 70, 0.3), 0 0 20px rgba(70, 70, 70, 0.3);
+    box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
   }
 }
+
 .appMenu {
   display: flex;
   flex-direction: row;
-  background: linear-gradient(to left, $background-gradient-start, $background-gradient-middle, $background-gradient-end);
-  animation: moveGradient 10s ease infinite, flickerGlow 2s infinite ease-in-out;
+  // background: linear-gradient(to left, $background-dark, $background-orange, $background-light-orange);
   border-radius: 10px;
-  box-shadow: 0 0 8px rgba(70, 70, 70, 0.3), 0 0 20px rgba(70, 70, 70, 0.3);
+  box-shadow: 0 0 8px black, 0 0 20px $accent-color;
   padding: 10px;
   z-index: 25;
   gap: 15px;
@@ -31,32 +31,29 @@ $background-gradient-end: rgba(255, 194, 113, 0.3);
   width: calc(100% - 250px);
 }
 
-
 .menuItem {
-  background: linear-gradient(to left, rgba(0, 76, 153, 0.5), rgba(0, 38, 77, 0.5));
+  background: linear-gradient(to left, $background-dark, darken($background-dark, 5%));
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 -4px 2px rgba(0, 0, 0, 0.2);
   padding: 10px;
   text-align: center;
   transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
   &:hover, &:focus {
-    background: linear-gradient(to right, rgba(0, 76, 153, 0.7), rgba(0, 38, 77, 0.7));
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 15px lighten($floating-color, 10%);
+    background: linear-gradient(to right, $background-orange, darken($background-orange, 10%));
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 15px $accent-color;
     transform: translateY(-5px);
   }
 }
 
 /* Enhancements for Futuristic Feel */
 * {
-  text-shadow: 0 0 3px $floating-color;
+  text-shadow: 0 0 3px $accent-color;
 }
 
 body {
   font-family: $comic-font;
-  background-color: #000; /* Emphasizes the UI elements */
+  background-color: $background-dark; /* Emphasizes the UI elements */
 }
-
-
 
 @keyframes moveGradient {
   0% { background-position: 0% 50%; }
@@ -80,11 +77,11 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(48, 25, 52, 0.8), rgba(25, 25, 112, 0.6));
+  background: linear-gradient(to right, $background-dark, $background-orange, $background-light-orange);
   background-size: 200% 200%;
   animation: flickerGlow 2s infinite ease-in-out, moveGradient 10s ease infinite;
   border-radius: 8px;
-  box-shadow: 0 0 8px rgba(70, 70, 70, 0.3), 0 0 20px rgba(70, 70, 70, 0.3);
+  box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
   padding: 20px;
   z-index: 25;
   max-width: 605px;
@@ -93,9 +90,9 @@ body {
 
 /* App Button Style with Consistent Theme */
 .appButton {
-  background: linear-gradient(to left, rgba(0, 76, 153, 0.5), rgba(0, 38, 77, 0.5));
+  background: linear-gradient(to left, $background-dark, darken($background-dark, 5%));
   border-radius: 10px;
-  box-shadow: 0 0 8px rgba(70, 70, 70, 0.3), 0 0 20px rgba(70, 70, 70, 0.3);
+  box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
   color: #e0ffff;
   cursor: pointer;
   display: flex;
@@ -108,8 +105,8 @@ body {
   font-weight: bold;
   min-width: 50px;
   &:hover, &:focus {
-    background: linear-gradient(to right, rgba(0, 76, 153, 0.7), rgba(0, 38, 77, 0.7));
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 15px rgba(100, 149, 237, 0.7);
+    background: linear-gradient(to right, $background-orange, darken($background-orange, 10%));
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 15px $accent-color;
     color: #ffffff;
     transform: translateY(-5px);
   }
@@ -119,22 +116,20 @@ body {
   max-width: 100%;
   max-height: 40px;
   object-fit: contain;
-  filter: drop-shadow(0 0 8px rgba(173, 216, 230, 0.6))
-          drop-shadow(0 0 20px rgba(240, 248, 255, 0.8));
+  filter: drop-shadow(0 0 8px $accent-color)
+          drop-shadow(0 0 20px $accent-color);
   transition: filter 0.3s ease;
 }
 
 .appButton:hover img {
-  filter: brightness(1.5) drop-shadow(0 0 10px cyan);
+  filter: brightness(1.5) drop-shadow(0 0 10px $accent-color);
 }
-
 
 @media screen and (max-width: 768px) and (orientation: portrait) {
   .appMenu {
     padding: 6px;
     width: calc(100% - 100px);
   }
-
 }
 
 @media screen and (max-width: 768px) and (orientation: landscape) {
@@ -142,7 +137,5 @@ body {
     width: calc(100% - 120px);
     padding: 6px;
   }
-
 }
-
 

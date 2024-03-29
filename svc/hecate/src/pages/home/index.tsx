@@ -5,8 +5,8 @@ import Echo from '@components/echo/echo';
 import ChatInput from '@components/chat-input/chat-input';
 import baseScreensConfig from '@components/echo/screens-config';
 import styles from './index.module.scss';
-import powerOn from '@assets/images/echoChimp_1.png';
-import powerOff from '@assets/images/echoChimp_0.png';
+import powerOn from '@assets/images/echo_bot.png';
+import powerOff from '@assets/images/echo_bot_black.png';
 
 const Home = () => {
   const [isUIVisible, setIsUIVisible] = useState(false);
@@ -34,8 +34,8 @@ const Home = () => {
           onClick={toggleUIVisibility}
           className={styles.powerButton} // Ensure the button has its own styles
         >
-          <img src={isUIVisible ? powerOff : powerOn} alt="Power Button" className={styles.powerButtonImage} />
-          <span>{isUIVisible ? 'Deactivate ECHO' : 'Activate ECHO'}</span>
+          <img src={isUIVisible ? powerOn : powerOff} alt="Power button" className={styles.powerButtonImage}/>
+          <span>{isUIVisible ? 'Deactivate' : 'Activate'}</span>
         </button>
       </div>
       <div className={styles.bottomUIContainer}>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styles from './app-menu.module.scss';
-import ButtonWrapper2 from '@components/index-button-wrapper/button-wrapper-2';
+import ButtonWrapper from '@components/button-wrapper/button-wrapper';
 import EchoChat from '@components/echo/echo-chat/echo-chat';
 import XLogo from '@assets/images/X_logo_black.png';
 import discordLogo from '@assets/images/discord_logo_black.png';
@@ -33,8 +33,8 @@ const AppMenu: React.FC<AppMenuProps> = ({ toggleEchoVisibility, showDefaultEcho
   return (
     <div>
       <div className={styles.appMenu}>
-        <ButtonWrapper2 title="Toggle ECHO" buttonText="EChat" setCurrentScreen={toggleEcho} />
-        <ButtonWrapper2 title="Toggle Social Media Menu" buttonText="Social Media" setCurrentScreen={toggleMenu} />
+        <ButtonWrapper title="Toggle ECHO" buttonText="EChat" setCurrentScreen={toggleEcho} />
+        <ButtonWrapper title="Toggle Social Media Menu" buttonText="Social Media" setCurrentScreen={toggleMenu} />
         <div className={`${styles.menuContainer} ${isMenuOpen ? styles.active : ''}`}>
           {buttons.map((button, index) => (
             <a key={index} href={button.href} target="_blank" rel="noopener noreferrer" className={styles.appButton}>
