@@ -84,13 +84,15 @@ $background-light-orange: rgba(255, 140, 0, 0.3); /* Light Orange */
   bottom: 60px;
   left: 20px;
   padding: 15px 30px;
-  background: $background-dark;
+  background: rgba(255, 140, 0, 0.5); /* Updated to transparent burnt orange */
+  border: 2px solid $background-dark; /* Black border */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2), 0 0 10px $accent-color;
   color: white;
   border-radius: 15px;
   font-family: $comic-font;
   animation: moveUp 3s ease-in-out forwards;
 }
+
 
 /* Responsive adjustments for mobile screens */
 @media (max-width: 768px) {
