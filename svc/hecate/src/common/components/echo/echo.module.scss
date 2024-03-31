@@ -83,7 +83,7 @@ $active-color: adjust-color($accent-color, $lightness: -40%);
   text-align: center;
   background: linear-gradient(145deg, $background-dark, $background-light);
   border-radius: 10px;
-  box-shadow: 0 0 10px $background-dark, inset 0 0 20px $accent-color;
+  box-shadow: 0 0 10px $background-dark, inset 0 0 10px $accent-color;
   color: $text-color;
   width: 100%;
   overflow-y: auto;

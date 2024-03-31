@@ -81,3 +81,17 @@ $text-color: #ffffff; // Pure white for clarity and readability
   }
 }
 
+@media screen and (max-width: 768px) and (orientation: portrait) {
+  .echoButton, .powerButton {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+}
+
+@media screen and (max-width: 768px) and (orientation: landscape) {
+  .echoButton, .powerButton {
+    padding: 8px 15px;
+    font-size: 14px;
+  }
+}
+
