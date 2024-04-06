@@ -1,0 +1,188 @@
+@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+
+/* Define font styles */
+$comic-font: 'Comic Sans MS', sans-serif;
+$heading-font-weight: 700;
+$normal-font-weight: 400;
+$base-font-size-title: 24px;
+$base-font-size: 18px;
+
+/* Theme colors */
+$background-dark: #121212; /* Darker Black */
+$background-light: #333333; /* Dark Grey */
+// $accent-color: #33ff33; /* Neon Green for effects */
+$accent-color: #ff8c00; /* Orange for effects */
+$text-color: #ffffff; /* White for text */
+
+/* Enhanced Accent Colors for Hover and Active States */
+$hover-color: adjust-color($accent-color, $lightness: -20%);
+$active-color: adjust-color($accent-color, $lightness: -40%);
+
+/* Animation Keyframes */
+@keyframes flickerGlow {
+  0%, 100% { box-shadow: 0 0 4px $accent-color, 0 0 16px $accent-color; }
+  10%, 90% { box-shadow: 0 0 8px $accent-color, 0 0 18px $accent-color; }
+  50% { box-shadow: 0 0 16px $accent-color, 0 0 32px $accent-color; }
+}
+
+@keyframes scanLine {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blinkCaret {
+  from, to { border-color: transparent; }
+  50% { border-color: $accent-color; }
+}
+
+@keyframes backgroundFade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+
+/* Base Echo Screen styles with black and neon green theme */
+.parentContainer {
+  width: 70%;
+  position: fixed;
+  top: 2%;
+}
+
+.sidebar {
+  padding-right: 5%;
+  width: 10%;
+  overflow-y: auto;
+}
+
+.mainScreenContent {
+  animation: backgroundFade 6s ease infinite, flickerGlow 2s infinite ease-in-out, scanLine 20s linear infinite;
+  background: linear-gradient(to right, $background-dark, $background-light);
+  border-radius: 10px;
+  box-shadow: 0 0 8px $background-dark, 0 0 20px $background-light;
+  display: flex;
+  flex-direction: row;
+  padding: 20px;
+  overflow: hidden;
+  top: 50%;
+}
+
+.echoScreen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background: linear-gradient(145deg, $background-dark, $background-light);
+  border-radius: 10px;
+  box-shadow: 0 0 10px $background-dark, inset 0 0 10px $accent-color;
+  color: $text-color;
+  width: 100%;
+  overflow-y: auto;
+  animation: scanLine 20s linear infinite, backgroundFade 6s ease-in-out infinite;
+}
+
+.echoTitle,
+.echoContent {
+  animation: typing 3.5s steps(40, end), blinkCaret 0.75s step-end infinite;
+  border-right: 0.15em solid $accent-color;
+  display: inline-block;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  padding: 10px;
+  text-align: center;
+  width: auto;
+  color: $text-color;
+  font-family: $comic-font;
+}
+
+.echoImage,
+.echoImageSmall {
+  animation: pulse 2s infinite ease-in-out;
+}
+
+@media screen and (max-width: 768px) {
+  .parentContainer {
+    padding-right: 25px;
+    width: auto;
+    height: auto;
+  }
+
+  .sidebar {
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    button {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+  }
+
+ .mainScreenContent {
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  .echoScreen {
+    z-index: 10;
+    max-height: 65vh;
+    overflow-y: auto;
+  }
+
+  .echoImage {
+    width: 40%;
+    margin: 0 auto;
+  }
+
+  .echoImageSmall {
+    width: 25%;
+    margin: 0 auto;
+  }
+
+  .echoTitle,
+  .echoContent {
+    font-size: 12px;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .echoButton {
+    padding: 8px 16px;
+    font-size: 12px;
+    margin: 5px 0;
+  }
+
+  .echoScreen {
+    width: 90%;
+    margin: 0 auto;
+  }
+}
+
+@media screen and (max-width: 1024px) and (orientation: landscape) {
+  .parentContainer {
+    width: 92%;
+  }
+
+  .echoScreen {
+    max-height: 50vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
+@media screen and (max-width: 768px) and (orientation: landscape) {
+  .parentContainer, .echoScreen {
+    width: 92%;
+    max-height: 50vh;
+  }
+}
