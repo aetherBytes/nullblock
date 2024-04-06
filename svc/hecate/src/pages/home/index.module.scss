@@ -138,8 +138,8 @@ $text-color: #ffffff; /* White for text */
   height: 100vh;
   z-index: 20; // Ensure this is above the fog overlay
   // pointer-events: none; // Allow clicks to pass through, if needed
-  filter: drop-shadow(0 0 10px rgba(0, 0, 255, 0.2)) /* Blue with 50% opacity */
-          drop-shadow(0 0 20px rgba(148, 0, 211, 0.2)); /* Electric purple with 50% opacity */
+//   filter: drop-shadow(0 0 10px rgba(0, 0, 255, 0.2)) /* Blue with 50% opacity */
+//           drop-shadow(0 0 20px rgba(148, 0, 211, 0.2)); /* Electric purple with 50% opacity */
 }
 
 /* Add any additional media queries as needed */
