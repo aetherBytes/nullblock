@@ -1,58 +1,32 @@
-import React, { useState } from 'react';
-import AppMenu from '@components/app-menu/app-menu';
-import EchoChat from '@components/echo/echo-chat/echo-chat';
-import Echo from '@components/echo/echo';
-import ChatInput from '@components/chat-input/chat-input';
-import baseScreensConfig from '@components/echo/screens-config';
+import React, { useEffect } from 'react';
 import styles from './index.module.scss';
-import powerOn from '@assets/images/echo_bot.png';
-import powerOff from '@assets/images/echo_bot_black.png';
 
 const Home = () => {
-  const [isUIVisible, setIsUIVisible] = useState(false);
-  const [showEchoChat, setShowEchoChat] = useState(false);
+  useEffect(() => {
+    const updateFogEffect = (e) => {
+      const fogOverlay = document.getElementById('fogOverlay');
+      const x = e.clientX;
+      const y = e.clientY;
+      // Making the fog effect darker around the mouse cursor
+      fogOverlay.style.background = `radial-gradient(circle at ${x}px ${y}px, transparent 100px, rgba(0, 0, 0, 0.9) 150px)`;
+    };
 
-  const toggleUIVisibility = () => {
-    setIsUIVisible(!isUIVisible);
-    if (!isUIVisible) {
-      setShowEchoChat(false); // Resets to base Echo screen when turning off
-    }
-  };
+    window.addEventListener('mousemove', updateFogEffect);
 
-  const toggleToEchoChat = () => {
-    setShowEchoChat(true);
-  };
-
-  const closeEchoScreen = () => {
-    setShowEchoChat(false);
-  };
+    return () => {
+      window.removeEventListener('mousemove', updateFogEffect);
+    };
+  }, []);
 
   return (
-    <div className={styles.backgroundImage}>
-      <div className={styles.powerButtonContainer}> {/* Use a container class for the div */}
-        <button
-          onClick={toggleUIVisibility}
-          className={styles.powerButton} // Ensure the button has its own styles
-        >
-          <img src={isUIVisible ? powerOn : powerOff} alt="Power button" className={styles.powerButtonImage}/>
-          <span>{isUIVisible ? 'Deactivate' : 'Activate'}</span>
-        </button>
+    <>
+      <div className={styles.backgroundImage}>
+        {/* Your existing content */}
       </div>
-      <div className={styles.bottomUIContainer}>
-        {isUIVisible && (
-          <>
-            <AppMenu toggleEchoVisibility={toggleToEchoChat} closeEchoScreen={closeEchoScreen} />
-            {showEchoChat ? <EchoChat /> : <Echo screensConfig={baseScreensConfig} defaultScreenKey="Nexus" />}
-            <ChatInput />
-          </>
-        )}
-      </div>
-    </div>
+      <div className={styles.fogOverlay} id="fogOverlay"></div>
+    </>
   );
 };
 
 export default Home;
-
-
-
 
