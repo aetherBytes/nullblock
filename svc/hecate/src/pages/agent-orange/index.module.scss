@@ -50,7 +50,7 @@ $text-color: #ffffff; /* White for text */
 }
 
 .backgroundImage {
-  background-image: url('../../assets/images/town_2.png');
+  background-image: url('../../assets/images/agent_orange_0.png');
   background-position: center;
   background-size: cover;
   height: 100vh;
@@ -98,7 +98,7 @@ $text-color: #ffffff; /* White for text */
 
 @media screen and (max-width: 768px) {
   .backgroundImage {
-    background-position: 85% center;
+    background-position: 85% center; /* Shift background to the right */
   }
   .powerButtonContainer {
     right: 0;
@@ -112,16 +112,12 @@ $text-color: #ffffff; /* White for text */
   }
 }
 
-.fogOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.9); /* Dark initial overlay for a denser fog effect */
-  pointer-events: none;
-  mix-blend-mode: multiply;
+@media screen and (max-width: 1024px) and (orientation: landscape) {
+
+
 }
 
-/* Add any additional media queries as needed */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+
+}
 
