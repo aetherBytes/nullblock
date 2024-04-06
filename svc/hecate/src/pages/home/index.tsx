@@ -8,11 +8,11 @@ const Home = () => {
       const fogOverlay = document.getElementById('fogOverlay');
       const x = e.clientX;
       const y = e.clientY;
-      fogOverlay.style.background = `radial-gradient(circle at ${x}px ${y}px, transparent 100px, rgba(0, 0, 0, 0.75) 150px)`;
+      fogOverlay.style.background = `radial-gradient(circle at ${x}px ${y}px, transparent 100px, rgba(0, 0, 0, 0.9) 150px)`;
     };
 
     const fogOverlay = document.getElementById('fogOverlay');
-    fogOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+    fogOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
 
     window.addEventListener('mousemove', updateFogEffect);
 
