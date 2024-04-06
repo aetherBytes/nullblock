@@ -1,0 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+
+/* Font and Color Variables */
+$comic-font: 'Comic Sans MS', sans-serif;
+$accent-color: rgba(255, 165, 0, 0.7); /* Lighter Orange for effects */
+$background-dark: rgba(0, 0, 0, 0.6); /* Black */
+$background-dark_2: rgba(0, 0, 0, 0.9); /* Darker Black */
+$background-orange: #ff8c00; /* Orange */
+$background-light-orange: rgba(255, 140, 0, 0.3); /* Light Orange */
+
+/* Animation Keyframes */
+@keyframes flickerGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
+  }
+  50% {
+    box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
+  }
+}
+
+.appMenu {
+  display: flex;
+  flex-direction: row;
+  // background: linear-gradient(to left, $background-dark, $background-orange, $background-light-orange);
+  border-radius: 10px;
+  box-shadow: 0 0 8px black, 0 0 20px $accent-color;
+  padding: 10px;
+  z-index: 25;
+  gap: 15px;
+  font-family: $comic-font;
+  color: white;
+  width: calc(100% - 250px);
+}
+
+/* Enhancements for Futuristic Feel */
+* {
+  text-shadow: 0 0 3px $accent-color;
+}
+
+body {
+  font-family: $comic-font;
+  background-color: $background-dark; /* Emphasizes the UI elements */
+}
+
+@keyframes moveGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.menuContainer {
+  display: none;
+}
+
+.menuContainer.active {
+  display: flex;
+  flex-direction: row-reverse;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(to right, $background-dark_2, $background-orange, $background-light-orange);
+  background-size: 200% 200%;
+  animation: flickerGlow 2s infinite ease-in-out, moveGradient 10s ease infinite;
+  border-radius: 8px;
+  box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
+  padding: 20px;
+  z-index: 25;
+  max-width: 605px;
+  gap: 30px;
+}
+
+/* App Button Style with Consistent Theme */
+.appButton {
+  background: linear-gradient(to left, $background-dark, darken($background-dark, 5%));
+  border-radius: 10px;
+  box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
+  color: #e0ffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  text-align: center;
+  transition: all 0.3s ease;
+  animation: pulse 2s infinite;
+  font-weight: bold;
+  min-width: 50px;
+  &:hover, &:focus {
+    background: linear-gradient(to right, $background-orange, darken($background-orange, 10%));
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 15px $accent-color;
+    color: #ffffff;
+    transform: translateY(-5px);
+  }
+}
+
+.appButton img {
+  max-width: 100%;
+  max-height: 40px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px $accent-color)
+          drop-shadow(0 0 20px $accent-color);
+  transition: filter 0.3s ease;
+}
+
+.appButton:hover img {
+  filter: brightness(1.5) drop-shadow(0 0 10px $accent-color);
+}
+
+@media screen and (max-width: 768px) and (orientation: portrait) {
+  .appMenu {
+    padding: 6px;
+    width: calc(100% - 100px);
+  }
+}
+
+@media screen and (max-width: 768px) and (orientation: landscape) {
+  .appMenu {
+    width: calc(100% - 120px);
+    padding: 6px;
+  }
+}
+
