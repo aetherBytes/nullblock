@@ -12,7 +12,8 @@ import powerOff from '@assets/images/echo_bot_black.png';
 
 const Home = () => {
   const [isUIVisible, setIsUIVisible] = useState(true); // Default to true
-  const [showEchoChat, setShowEchoChat] = useState(false);
+  const [showEchoChat, setShowEchoChat] = useState(false); // Initially false
+  const [showAppMenu, setShowAppMenu] = useState(false); // Initially false
 
   useEffect(() => {
     const updateFogEffect = (e) => {
@@ -31,18 +32,23 @@ const Home = () => {
   }, []);
 
   const toggleUIVisibility = () => {
-    setIsUIVisible(!isUIVisible);
-    if (!isUIVisible) {
-      setShowEchoChat(false);
-    }
+    setShowEchoChat(false); // Close Echo screens
+    setShowAppMenu(false); // Close App menu
   };
 
   const toggleToEchoChat = () => {
     setShowEchoChat(true);
+    setShowAppMenu(false); // Close App menu when Echo chat is opened
   };
 
   const closeEchoScreen = () => {
     setShowEchoChat(false);
+    setShowAppMenu(false); // Close App menu when Echo chat is closed
+  };
+
+  const toggleAppMenu = () => {
+    setShowAppMenu(!showAppMenu);
+    setShowEchoChat(false); // Close Echo chat when App menu is opened
   };
 
   return (
@@ -62,7 +68,11 @@ const Home = () => {
       <div className={styles.bottomUIContainer}>
         {isUIVisible && (
           <>
-            <AppMenu toggleEchoVisibility={toggleToEchoChat} closeEchoScreen={closeEchoScreen} />
+            <AppMenu
+              toggleEchoVisibility={toggleToEchoChat}
+              closeEchoScreen={closeEchoScreen}
+              showAppMenu={showAppMenu} // Pass showAppMenu state to AppMenu
+            />
             {showEchoChat && <EchoChat />}
             <ChatInput />
           </>
