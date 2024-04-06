@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import styles from './app-menu.module.scss';
 import ButtonWrapper from '@components/button-wrapper/button-wrapper';
@@ -10,9 +11,10 @@ interface AppMenuProps {
   toggleEchoVisibility?: () => void; // Making it optional
   showDefaultEchoScreen?: boolean;
   closeEchoScreen: () => void; // Function to close Echo screen
+  toggleAppMenuVisibility: () => void; // Function to toggle App Menu
 }
 
-const AppMenu: React.FC<AppMenuProps> = ({ toggleEchoVisibility, showDefaultEchoScreen = false, closeEchoScreen }) => {
+const AppMenu: React.FC<AppMenuProps> = ({ toggleEchoVisibility, showDefaultEchoScreen = false, closeEchoScreen, toggleAppMenuVisibility }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -22,6 +24,7 @@ const AppMenu: React.FC<AppMenuProps> = ({ toggleEchoVisibility, showDefaultEcho
   const toggleEcho = () => {
     closeEchoScreen(); // Close existing Echo screen
     toggleEchoVisibility?.(); // Optionally call if exists
+    toggleAppMenuVisibility(); // Close App menu when toggling Echo
   };
 
   const buttons = [
@@ -48,7 +51,4 @@ const AppMenu: React.FC<AppMenuProps> = ({ toggleEchoVisibility, showDefaultEcho
 };
 
 export default AppMenu;
-
-
-
 
