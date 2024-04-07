@@ -1,30 +1,29 @@
 
+// Home.js
 import React, { useState, useEffect } from 'react';
 import Spline from '@splinetool/react-spline';
-import AppMenu from '@components/echo-screens/home-screen/app-menu/app-menu';
+import AppMenu from '@components/echo-screens/home-screen/app-menu/app-menu'; // Update this path as needed
 import EchoChat from '@components/echo-screens/home-screen/echo-chat/echo-chat';
-import Echo from '@components/echo-screens/home-screen/echo';
 import ChatInput from '@components/echo-screens/home-screen/chat-input/chat-input';
-import baseScreensConfig from '@components/echo-screens/home-screen/screens-config';
-import styles from './index.module.scss';
-import powerOn from '@assets/images/echo_bot.png';
-import powerOff from '@assets/images/echo_bot_black.png';
+import styles from './index.module.scss'; // Update this path as needed
+import powerOn from '@assets/images/echo_bot.png'; // Update this path as needed
+import powerOff from '@assets/images/echo_bot_black.png'; // Update this path as needed
 
 const Home = () => {
-  const [isUIVisible, setIsUIVisible] = useState(true); // Default to true
-  const [showEchoChat, setShowEchoChat] = useState(false); // Initially false
-  const [showAppMenu, setShowAppMenu] = useState(false); // Initially false
+  const [isUIVisible, setIsUIVisible] = useState(true);
+  const [showEchoChat, setShowEchoChat] = useState(false);
 
   useEffect(() => {
-    const updateFogEffect = (e) => {
-      const fogOverlay = document.getElementById('fogOverlay');
-      const x = e.clientX;
-      const y = e.clientY;
-      fogOverlay.style.background = `radial-gradient(circle at ${x}px ${y}px, transparent 100px, rgba(0, 0, 0, 0.25) 150px)`;
-    };
-
     const fogOverlay = document.getElementById('fogOverlay');
-    fogOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.25)';
+    // Optionally set an initial darker state for the fog overlay here if needed.
+    // This line is commented out because the initial state is handled by CSS.
+    // fogOverlay.style.background = 'rgba(0, 0, 0, 0.75)';
+
+    const updateFogEffect = (e) => {
+      if (fogOverlay) {
+        fogOverlay.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, transparent 100px, rgba(0, 0, 0, 0.25) 200px)`;
+      }
+    };
 
     window.addEventListener('mousemove', updateFogEffect);
 
@@ -32,23 +31,10 @@ const Home = () => {
   }, []);
 
   const toggleUIVisibility = () => {
-    setShowEchoChat(false); // Close Echo screens
-    setShowAppMenu(false); // Close App menu
-  };
-
-  const toggleToEchoChat = () => {
-    setShowEchoChat(true);
-    setShowAppMenu(false); // Close App menu when Echo chat is opened
-  };
-
-  const closeEchoScreen = () => {
-    setShowEchoChat(false);
-    setShowAppMenu(false); // Close App menu when Echo chat is closed
-  };
-
-  const toggleAppMenu = () => {
-    setShowAppMenu(!showAppMenu);
-    setShowEchoChat(false); // Close Echo chat when App menu is opened
+    setIsUIVisible(!isUIVisible);
+    if (!isUIVisible) {
+      setShowEchoChat(false);
+    }
   };
 
   return (
@@ -57,10 +43,7 @@ const Home = () => {
       <div id="fogOverlay" className={styles.fogOverlay}></div>
       <Spline className={styles.splineObject} scene="https://prod.spline.design/1Q-qMj7C6kFIofgB/scene.splinecode" />
       <div className={styles.powerButtonContainer}>
-        <button
-          onClick={toggleUIVisibility}
-          className={styles.powerButton}
-        >
+        <button onClick={toggleUIVisibility} className={styles.powerButton}>
           <img src={isUIVisible ? powerOn : powerOff} alt="Power button" className={styles.powerButtonImage} />
           <span>{isUIVisible ? 'Deactivate' : 'Activate'}</span>
         </button>
@@ -69,9 +52,9 @@ const Home = () => {
         {isUIVisible && (
           <>
             <AppMenu
-              toggleEchoVisibility={toggleToEchoChat}
-              closeEchoScreen={closeEchoScreen}
-              showAppMenu={showAppMenu} // Pass showAppMenu state to AppMenu
+              toggleEchoVisibility={() => setShowEchoChat(!showEchoChat)}
+              closeEchoScreen={() => setShowEchoChat(false)}
+              isUIVisible={isUIVisible}
             />
             {showEchoChat && <EchoChat />}
             <ChatInput />
