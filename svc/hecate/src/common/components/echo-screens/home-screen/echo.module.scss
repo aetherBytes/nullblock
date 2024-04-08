@@ -8,7 +8,6 @@ $normal-font-weight: 400;
 $base-font-size-title: 20px;
 $base-font-size: 16px;
 
-
 /* Theme colors */
 $background-dark: rgba(26, 26, 81, 0.9); // Dark transparent blue-purple-pink background
 $background-light: rgba(153, 102, 204, 0.6); // Light transparent blue-purple-pink background
@@ -18,9 +17,9 @@ $accent-color: #d8a8d8; // Pink
 $secondary-accent-color: #4682B4; // Dark blue
 
 /* New color scheme for content and echo screens */
-$content-background-color: rgba(0, 51, 102, 0.5); /* Transparent darker blue background for content */
-// $content-text-color: #FF69B4; // Pink text color for co /ntent
-$content-text-color: #FFFFFF; // White text color for cont
+$content-background-color: rgba(0, 51, 102, 0.33); /* Transparent darker blue background for content */
+$content-text-color: #FFFFFF; // White text color for content
+
 /* Enhanced Accent Colors for Hover and Active States */
 $hover-color: #2e1a38; //
 $active-color: #FF69B4; // Pink active effect color
@@ -31,6 +30,24 @@ $sidebar-background-color: $content-background-color; // Same background color a
 $sidebar-glow-color: $hover-color; // Lighter glow color for sidebar
 $sidebar-shadow-color: $hover-color; // Lighter shadow color for sidebar
 $sidebar-inset-color: #d8a8d8; // Dark transparent blue-purple-pink inset color for sidebar
+
+/* Define additional variables for the new effects */
+$glow-color: rgba(204, 153, 255, 0.75); // Soft glow color
+$flicker-animation-duration: 3s; // Duration of the flicker animation
+$border-glow-intensity: 0.8; // Intensity of the border glow
+
+/* Flickering effect for background containers */
+@keyframes flickerEffect {
+  0% { opacity: 1; }
+  50% { opacity: 0.8; }
+  100% { opacity: 1; }
+}
+
+/* Glowing borders for containers */
+.parentContainer, .sidebar, .mainScreenContent .echoContent, .mainScreenContent .echoTitle {
+  box-shadow: 0 0 10px $glow-color, 0 0 20px $glow-color, 0 0 30px $accent-color;
+  border: 1px solid $glow-color;
+}
 
 /* Animations */
 @keyframes holographicEffect {
@@ -53,6 +70,7 @@ html, body {
   border-radius: 15px;
   overflow: hidden;
   padding: 20px;
+  animation: flickerEffect $flicker-animation-duration infinite;
 }
 
 .sidebar {
@@ -66,6 +84,7 @@ html, body {
   align-items: center; /* Center the content vertically */
   flex-direction: column; /* Stack buttons vertically */
   padding: 10px; /* Add minimal padding */
+  animation: flickerEffect $flicker-animation-duration infinite;
 }
 
 .mainScreenContent {
@@ -74,6 +93,8 @@ html, body {
   justify-content: center;
   align-items: center;
   padding-left: 12%; /* Increased Left padding to ensure content doesn't touch sidebar */
+  padding-right: 2.5%; /* Increased Right padding to ensure content doesn't touch sidebar */
+  box-shadow: 0 0 20px $glow-color, inset 0 0 10px $accent-color;
 }
 
 /* Applying the new pastel color scheme for screen elements */
@@ -84,6 +105,13 @@ html, body {
   padding: 15px; /* Adjust padding for internal spacing */
   margin-bottom: 15px; /* Space between each content div */
   border-radius: 5px; /* Rounded corners */
+  animation: flickerEffect $flicker-animation-duration infinite;
+}
+
+/* Interactive hover effects */
+.sidebar button:hover, .mainScreenContent .echoContent:hover, .mainScreenContent .echoTitle:hover {
+  box-shadow: 0 0 15px $hover-color, 0 0 25px $hover-color, 0 0 35px $active-color;
+  transform: scale(1.05); /* Slightly enlarge on hover */
 }
 
 @media (max-width: 768px) {
