@@ -9,36 +9,31 @@ $base-font-size-title: 20px;
 $base-font-size: 16px;
 
 /* Theme colors */
-$background-dark: #0A0F0D;
-$background-light: #1A2930;
-$background-light-2: rgba(26, 41, 48, 0.75); // Original lighter background for sidebar
-$screen-background-color: #16232E; // New darker color for screens
-$accent-color: #7FFFD4;
-$text-color: #E0FFFF;
+$background-dark: #1E2126; // Darker pastel blue-grey
+$background-light: #30353E; // Slightly lighter pastel blue-grey
+$background-light-2: rgba(48, 53, 62, 0.75); // Transparent lighter background for sidebar
+$screen-background-color: #252A31; // Darker pastel blue-grey for screens
+$accent-color: #FF5733; // Orange
+$text-color: #FF5733; // Orange text color
 
 /* New color scheme for content and echo screens */
-$content-background-color: rgba(29, 29, 42, 0.9); // Transparent dark blue background for content
-$content-text-color: #D4D4E7; // Light text color for content
+$content-background-color: rgba(37, 42, 49, 0.9); // Transparent darker pastel blue-grey background for content
+$content-text-color: #FF5733; // Orange text color for content
 
 /* Enhanced Accent Colors for Hover and Active States */
-$hover-color: #000000; // Darker hover effect color
-$active-color: #000000; // Darker active effect color
+$hover-color: #FF5733; // Orange hover effect color
+$active-color: #FF5733; // Orange active effect color
 
 /* New color scheme for sidebar with transparency */
 $sidebar-background-color: $content-background-color; // Same background color as content for sidebar
 $sidebar-glow-color: $hover-color; // Lighter glow color for sidebar
 $sidebar-shadow-color: $hover-color; // Lighter shadow color for sidebar
-$sidebar-inset-color: $content-text-color; // Lighter inset color for sidebar
+$sidebar-inset-color: #31353D; // Darker pastel blue-grey inset color for sidebar
 
 /* Animations */
-@keyframes neonGlow {
-  0%, 100% { text-shadow: 0 0 4px $sidebar-glow-color, 0 0 10px $sidebar-glow-color; }
-  50% { text-shadow: 0 0 6px $sidebar-glow-color, 0 0 15px $sidebar-glow-color; }
-}
-
-@keyframes backgroundShift {
-  0%, 100% { background-size: 200% 200%; background-position: left bottom; }
-  50% { background-size: 200% 200%; background-position: right top; }
+@keyframes holographicEffect {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
 }
 
 html, body {
@@ -55,7 +50,6 @@ html, body {
   box-shadow: 0 0 10px $background-dark, inset 0 0 20px $accent-color;
   border-radius: 15px;
   overflow: hidden;
-  animation: backgroundShift 15s ease infinite;
   padding: 20px;
 }
 
@@ -64,15 +58,13 @@ html, body {
   left: 4%;
   height: 70%;
   background: $sidebar-background-color; // Same background color as content for sidebar
-  box-shadow: 0 0 40px $sidebar-inset-color, inset 0 0 40px $sidebar-shadow-color; /* Define inset shadow first, then hover shadow */
+  box-shadow: 0 0 20px $sidebar-inset-color, inset 0 0 20px $sidebar-shadow-color; /* Define inset shadow first, then hover shadow */
   display: flex; /* Add display flex */
   justify-content: center; /* Center the content horizontally */
   align-items: center; /* Center the content vertically */
   flex-direction: column; /* Stack buttons vertically */
   padding: 10px; /* Add minimal padding */
 }
-
-
 
 .mainScreenContent {
   flex: 1;
@@ -82,11 +74,11 @@ html, body {
   padding-left: 12%; /* Increased Left padding to ensure content doesn't touch sidebar */
 }
 
-/* Applying the new darker color scheme for screen elements */
+/* Applying the new pastel color scheme for screen elements */
 .mainScreenContent .echoContent, .mainScreenContent .echoTitle {
-  background-color: $content-background-color; /* Transparent dark blue background color for screens */
-  color: $content-text-color; /* Light text color for screens */
-  box-shadow: 0 0 20px $hover-color, inset 0 0 40px $content-text-color, 0 0 30px $hover-color; /* Enhanced for dark glow effect */
+  background-color: $content-background-color; /* Transparent darker pastel blue-grey background color for screens */
+  color: $content-text-color; /* Orange text color for screens */
+  box-shadow: 0 0 20px $hover-color, inset 0 0 20px $content-text-color, 0 0 20px $hover-color; /* Enhanced for minimal glow effect */
   padding: 15px; /* Adjust padding for internal spacing */
   margin-bottom: 15px; /* Space between each content div */
   border-radius: 5px; /* Rounded corners */
@@ -115,4 +107,3 @@ html, body {
     padding-right: 0; /* Adjusted for mobile view */
   }
 }
-
