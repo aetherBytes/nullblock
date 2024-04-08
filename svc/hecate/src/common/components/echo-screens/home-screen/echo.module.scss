@@ -19,130 +19,89 @@ $hover-color: lighten($accent-color, 10%);
 $active-color: darken($accent-color, 10%);
 
 /* Animations */
-@keyframes flickerGlow {
-  0%, 100% { box-shadow: 0 0 5px $accent-color, 0 0 10px $accent-color; }
-  50% { box-shadow: 0 0 20px $accent-color, 0 0 40px $accent-color; }
+@keyframes neonGlow {
+  0%, 100% { text-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color; }
+  50% { text-shadow: 0 0 15px $accent-color, 0 0 30px $accent-color; }
 }
 
-@keyframes scanLine {
-  0%, 100% { background-position: 0% 0%; }
-  50% { background-position: 100% 100%; }
+@keyframes backgroundShift {
+  0%, 100% { background-size: 200% 200%; background-position: left bottom; }
+  50% { background-size: 200% 200%; background-position: right top; }
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+@keyframes holographicHover {
+  0%, 100% { box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color; }
+  50% { box-shadow: 0 0 15px $accent-color, 0 0 30px $accent-color; }
 }
 
-@keyframes typing {
-  from { width: 0; }
-  to { width: 100%; }
-}
-
-@keyframes blinkCaret {
-  from, to { border-color: transparent; }
-  50% { border-color: $accent-color; }
-}
-
-@keyframes backgroundFade {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.75; }
-}
-
-/* Base Echo Screen styles */
-.parentContainer {
-  width: 70%;
-  position: fixed;
-  top: 2%;
+body, html {
+  height: 100%;
+  margin: 0;
+  padding: 0;
   font-family: $font-family;
+  background-color: $background-dark; /* Updated background color for the entire body */
+}
+
+/* New container to ensure content is centered and above the bottom UI */
+.contentContainer {
+  position: relative;
+  max-width: 1200px; /* Adjust based on your content size */
+  margin: 0 auto;
+  padding: 50px 20px; /* Space from the top and sides */
+}
+
+.parentContainer {
+  background: $background-light;
+  box-shadow: 0 0 10px $background-dark, inset 0 0 20px $accent-color;
+  border-radius: 15px;
+  overflow: hidden;
+  position: fixed;
+  top: 2.5%;
+  animation: backgroundShift 15s ease infinite;
+  padding: 20px;
 }
 
 .sidebar {
-  padding-right: 5%;
-  width: 10%;
-  overflow-y: auto;
-  font-family: $font-family;
-}
-
-.mainScreenContent {
-  animation: backgroundFade 6s ease infinite, scanLine 20s linear infinite;
-  background: linear-gradient(to right, $background-dark, $background-light);
-  border-radius: 10px;
-  box-shadow: 0 0 8px $background-dark, 0 0 20px $background-light;
-  display: flex;
-  flex-direction: row;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 20%;
+  height: 100%;
+  background: rgba($background-dark, 0.9);
+  border-right: 3px solid $accent-color;
   padding: 20px;
-  overflow: hidden;
-  font-family: $font-family;
+  box-shadow: inset 0 0 10px $accent-color;
+  animation: neonGlow 2s ease-in-out infinite alternate;
+  z-index: 2;
 }
 
-.echoScreen {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  background: linear-gradient(145deg, $background-dark, $background-light);
-  border-radius: 10px;
-  box-shadow: 0 0 10px $background-dark, inset 0 0 10px $accent-color;
-  color: $text-color;
-  width: 100%;
-  overflow-y: auto;
-  font-family: $font-family;
-  animation: scanLine 20s linear infinite, backgroundFade 6s ease-in-out infinite;
+.mainContent {
+  margin-left: 25%;
+  padding: 20px;
+  animation: neonGlow 1.5s ease-in-out infinite alternate;
 }
 
-.echoTitle,
-.echoContent {
-  animation: typing 3.5s steps(40, end), blinkCaret 0.75s step-end infinite;
-  border-right: 0.15em solid $accent-color;
-  display: inline-block;
-  white-space: normal;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  padding: 10px;
-  text-align: center;
-  width: auto;
-  color: $text-color;
-  font-family: $font-family;
+/* Hover effects */
+button:hover, a:hover, .sidebar li:hover {
+  color: $hover-color;
+  animation: neonGlow 2s infinite;
 }
 
-.echoImage,
-.echoImageSmall {
-  animation: pulse 2s infinite ease-in-out;
-  border: 2px solid $accent-color;
-}
-
-@media screen and (max-width: 768px) {
-  .parentContainer, .sidebar, .mainScreenContent, .echoScreen, .echoImage, .echoImageSmall, .echoTitle, .echoContent {
-    width: auto;
-    height: auto;
-    font-size: $base-font-size;
-    padding: 5px;
-  }
-
+@media (max-width: 768px) {
   .sidebar {
+    position: fixed; /* Adjust for mobile to not overlap with main content */
     width: 100%;
-    display: flex;
-    justify-content: space-around;
-
-    button {
-      padding: 5px 10px;
-      font-size: 12px;
-    }
+    bottom: 0;
+    top: auto;
+    height: 60px; /* Adjust based on your bottom UI */
+    overflow-x: auto;
+    border-top: 3px solid $accent-color;
+    z-index: 5; /* Ensure it's above other content */
   }
-}
 
-@media screen and (max-width: 1024px) and (orientation: landscape) {
-  .parentContainer, .echoScreen {
-    width: 92%;
-  }
-}
-
-@media screen and (max-width: 768px) and (orientation: landscape) {
-  .parentContainer, .echoScreen {
-    width: 92%;
-    max-height: 50vh;
+  .mainContent {
+    margin-left: 0;
+    margin-bottom: 80px; /* Provide space for the sidebar on mobile */
   }
 }
 
