@@ -8,27 +8,29 @@ $normal-font-weight: 400;
 $base-font-size-title: 20px;
 $base-font-size: 16px;
 
+
 /* Theme colors */
-$background-dark: #1E2126; // Darker pastel blue-grey
-$background-light: #30353E; // Slightly lighter pastel blue-grey
-$background-light-2: rgba(48, 53, 62, 0.75); // Transparent lighter background for sidebar
-$screen-background-color: #252A31; // Darker pastel blue-grey for screens
-$accent-color: #FF5733; // Orange
-$text-color: #FF5733; // Orange text color
+$background-dark: rgba(26, 26, 81, 0.9); // Dark transparent blue-purple-pink background
+$background-light: rgba(153, 102, 204, 0.6); // Light transparent blue-purple-pink background
+$background-light-2: rgba(204, 153, 255, 0.75); // Transparent lighter background for sidebar
+$screen-background-color: rgba(51, 51, 153, 0.9); // Darker transparent blue-purple-pink for screens
+$accent-color: #d8a8d8; // Pink
+$secondary-accent-color: #4682B4; // Dark blue
 
 /* New color scheme for content and echo screens */
-$content-background-color: rgba(37, 42, 49, 0.9); // Transparent darker pastel blue-grey background for content
-$content-text-color: #FF5733; // Orange text color for content
-
+$content-background-color: rgba(0, 51, 102, 0.5); /* Transparent darker blue background for content */
+// $content-text-color: #FF69B4; // Pink text color for co /ntent
+$content-text-color: #FFFFFF; // White text color for cont
 /* Enhanced Accent Colors for Hover and Active States */
-$hover-color: #FF5733; // Orange hover effect color
-$active-color: #FF5733; // Orange active effect color
+$hover-color: #2e1a38; //
+$active-color: #FF69B4; // Pink active effect color
+$dark-glow-color: rgba(26, 26, 81, 0.5); // Dark glow color outside pink glow
 
 /* New color scheme for sidebar with transparency */
 $sidebar-background-color: $content-background-color; // Same background color as content for sidebar
 $sidebar-glow-color: $hover-color; // Lighter glow color for sidebar
 $sidebar-shadow-color: $hover-color; // Lighter shadow color for sidebar
-$sidebar-inset-color: #31353D; // Darker pastel blue-grey inset color for sidebar
+$sidebar-inset-color: #d8a8d8; // Dark transparent blue-purple-pink inset color for sidebar
 
 /* Animations */
 @keyframes holographicEffect {
@@ -47,7 +49,7 @@ html, body {
 .parentContainer {
   display: flex;
   height: 80vh;
-  box-shadow: 0 0 10px $background-dark, inset 0 0 20px $accent-color;
+  box-shadow: 0 0 10px $background-dark, inset 0 0 20px $accent-color, 0 0 20px $dark-glow-color; /* Added dark glow outside pink glow */
   border-radius: 15px;
   overflow: hidden;
   padding: 20px;
@@ -58,7 +60,7 @@ html, body {
   left: 4%;
   height: 70%;
   background: $sidebar-background-color; // Same background color as content for sidebar
-  box-shadow: 0 0 20px $sidebar-inset-color, inset 0 0 20px $sidebar-shadow-color; /* Define inset shadow first, then hover shadow */
+  box-shadow: 0 0 20px $sidebar-inset-color, inset 0 0 80px $sidebar-shadow-color; /* Define inset shadow first, then hover shadow */
   display: flex; /* Add display flex */
   justify-content: center; /* Center the content horizontally */
   align-items: center; /* Center the content vertically */
@@ -76,9 +78,9 @@ html, body {
 
 /* Applying the new pastel color scheme for screen elements */
 .mainScreenContent .echoContent, .mainScreenContent .echoTitle {
-  background-color: $content-background-color; /* Transparent darker pastel blue-grey background color for screens */
-  color: $content-text-color; /* Orange text color for screens */
-  box-shadow: 0 0 20px $hover-color, inset 0 0 20px $content-text-color, 0 0 20px $hover-color; /* Enhanced for minimal glow effect */
+  background-color: $content-background-color; /* Transparent darker pastel blue-purple-pink background color for screens */
+  color: $content-text-color; /* Pink text color for screens */
+  box-shadow: 20px 20px 75px $hover-color, inset 0 0 20px $accent-color, 20px 20px 75px $hover-color; /* Enhanced for minimal glow effect */
   padding: 15px; /* Adjust padding for internal spacing */
   margin-bottom: 15px; /* Space between each content div */
   border-radius: 5px; /* Rounded corners */
@@ -107,3 +109,4 @@ html, body {
     padding-right: 0; /* Adjusted for mobile view */
   }
 }
+
