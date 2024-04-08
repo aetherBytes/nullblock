@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
 
 /* Define font styles */
@@ -9,10 +8,11 @@ $base-font-size-title: 20px;
 $base-font-size: 16px;
 
 /* Theme colors */
-$background-dark: #0A0F0D; /* Darker shade for depth */
-$background-light: #1A2930; /* Subtle grey for complexity */
-$accent-color: #7FFFD4; /* Aquamarine for mystical energy effects */
-$text-color: #E0FFFF; /* Light cyan for readability */
+$background-dark: #0A0F0D;
+$background-light: #1A2930;
+$background-light-2: rgba(26, 41, 48, 0.75);
+$accent-color: #7FFFD4;
+$text-color: #E0FFFF;
 
 /* Enhanced Accent Colors for Hover and Active States */
 $hover-color: lighten($accent-color, 10%);
@@ -34,74 +34,65 @@ $active-color: darken($accent-color, 10%);
   50% { box-shadow: 0 0 15px $accent-color, 0 0 30px $accent-color; }
 }
 
-body, html {
+html, body {
   height: 100%;
   margin: 0;
   padding: 0;
   font-family: $font-family;
-  background-color: $background-dark; /* Updated background color for the entire body */
-}
-
-/* New container to ensure content is centered and above the bottom UI */
-.contentContainer {
-  position: relative;
-  max-width: 1200px; /* Adjust based on your content size */
-  margin: 0 auto;
-  padding: 50px 20px; /* Space from the top and sides */
+  background-color: $background-dark;
 }
 
 .parentContainer {
-  background: $background-light;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 0 10px $background-dark, inset 0 0 20px $accent-color;
   border-radius: 15px;
   overflow: hidden;
-  position: fixed;
-  top: 2.5%;
   animation: backgroundShift 15s ease infinite;
   padding: 20px;
 }
 
 .sidebar {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 20%;
-  height: 100%;
-  background: rgba($background-dark, 0.9);
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  width: 10%;
+  height: 80%;
+  background: $background-light-2;
   border-right: 3px solid $accent-color;
-  padding: 20px;
   box-shadow: inset 0 0 10px $accent-color;
   animation: neonGlow 2s ease-in-out infinite alternate;
-  z-index: 2;
+  text-align: left;
+  padding-left: 20px;
 }
 
 .mainContent {
-  margin-left: 25%;
-  padding: 20px;
-  animation: neonGlow 1.5s ease-in-out infinite alternate;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Hover effects */
-button:hover, a:hover, .sidebar li:hover {
-  color: $hover-color;
-  animation: neonGlow 2s infinite;
+.button, .link, .sidebar li {
+  &:hover {
+    color: $hover-color;
+    animation: neonGlow 2s infinite;
+  }
 }
 
 @media (max-width: 768px) {
   .sidebar {
-    position: fixed; /* Adjust for mobile to not overlap with main content */
+    position: fixed;
     width: 100%;
     bottom: 0;
-    top: auto;
-    height: 60px; /* Adjust based on your bottom UI */
+    height: 60px;
     overflow-x: auto;
     border-top: 3px solid $accent-color;
-    z-index: 5; /* Ensure it's above other content */
+    z-index: 5;
   }
 
   .mainContent {
-    margin-left: 0;
-    margin-bottom: 80px; /* Provide space for the sidebar on mobile */
+    margin-bottom: 80px;
   }
 }
 
