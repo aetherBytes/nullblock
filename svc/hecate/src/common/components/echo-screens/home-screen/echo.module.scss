@@ -10,7 +10,8 @@ $base-font-size: 16px;
 /* Theme colors */
 $background-dark: #0A0F0D;
 $background-light: #1A2930;
-$background-light-2: rgba(26, 41, 48, 0.75);
+$background-light-2: rgba(26, 41, 48, 0.75); // Original lighter background for sidebar
+$screen-background-color: #16232E; // New darker color for screens
 $accent-color: #7FFFD4;
 $text-color: #E0FFFF;
 
@@ -53,8 +54,9 @@ html, body {
 }
 
 .sidebar {
-  flex: 0 0 10%;
-  height: 100%;
+  position: fixed;
+  left: 4%;
+  height: 70%;
   background: $background-light-2;
   border-right: 3px solid $accent-color;
   box-shadow: inset 0 0 10px $accent-color;
@@ -68,13 +70,16 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding-left: 20px; /* Left padding to ensure content doesn't touch sidebar */
-  padding-right: 20px; /* Right padding for symmetry */
+  padding-left: 12%; /* Increased Left padding to ensure content doesn't touch sidebar */
 }
 
-/* Specific padding for text content */
+/* Applying the new darker color for screen elements */
 .mainScreenContent .echoContent, .mainScreenContent .echoTitle {
-  padding: 0 5%; /* Additional left and right padding for text elements */
+  background-color: $screen-background-color; /* New darker color for screens */
+  box-shadow: 0 0 20px $background-dark, inset 0 0 10px $accent-color, 0 0 30px $accent-color; /* Enhanced for dark glow effect */
+  padding: 15px; /* Adjust padding for internal spacing */
+  margin-bottom: 15px; /* Space between each content div */
+  border-radius: 5px; /* Rounded corners */
 }
 
 @media (max-width: 768px) {
@@ -97,6 +102,7 @@ html, body {
     margin-bottom: 80px;
     width: 100%;
     padding-left: 0; /* Remove left padding on mobile */
-    padding-right: 0; /* Remove right padding on mobile */
+    padding-right: 0; /* Adjusted for mobile view */
   }
 }
+
