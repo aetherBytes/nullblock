@@ -1,3 +1,4 @@
+// Echo Component
 import React, { useState, useEffect } from 'react';
 import ButtonWrapper from '@components/button-wrapper/button-wrapper';
 import UnifiedEchoScreen from './echo-screen';
@@ -27,21 +28,17 @@ const Echo: React.FC<EchoProps> = ({ screensConfig, defaultScreenKey }) => {
   const [animationKey, setAnimationKey] = useState<number>(Date.now());
 
   useEffect(() => {
-    // Ensure current screen is updated if defaultScreenKey changes,
-    // which might be useful if your configs could change dynamically.
     setCurrentScreen(defaultScreenKey);
   }, [defaultScreenKey]);
 
   const handleButtonClick = (screen: string) => {
     const screenConfig = screensConfig[screen];
-
     if (screenConfig?.usePopup) {
       setPopupContent(screenConfig.popupContent);
       setShowPopup(true);
     } else {
       setShowPopup(false);
     }
-
     setCurrentScreen(screen);
     setAnimationKey(Date.now());
   };
@@ -50,7 +47,7 @@ const Echo: React.FC<EchoProps> = ({ screensConfig, defaultScreenKey }) => {
 
   const closeCurrentScreen = () => {
     setShowPopup(false);
-    setCurrentScreen(defaultScreenKey); // Close current screen by resetting to default
+    setCurrentScreen(defaultScreenKey);
   };
 
   return (
@@ -79,7 +76,7 @@ const Echo: React.FC<EchoProps> = ({ screensConfig, defaultScreenKey }) => {
             content={screensConfig[currentScreen]?.content}
             additionalContent={screensConfig[currentScreen]?.additionalContent || []}
             popupContent={popupContent}
-            closeCurrentScreen={closeCurrentScreen} // Pass closeCurrentScreen function to child component
+            closeCurrentScreen={closeCurrentScreen}
           />
         )}
       </div>
