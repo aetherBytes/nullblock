@@ -6,8 +6,8 @@ import AppMenu from '@components/echo-screens/home-screen/app-menu/app-menu'; //
 import EchoChat from '@components/echo-screens/home-screen/echo-chat/echo-chat';
 import ChatInput from '@components/echo-screens/home-screen/chat-input/chat-input';
 import styles from './index.module.scss'; // Update this path as needed
-import powerOn from '@assets/images/echo_bot.png'; // Update this path as needed
-import powerOff from '@assets/images/echo_bot_black.png'; // Update this path as needed
+import powerOn from '@assets/images/echo_bot_night.png'; // Update this path as needed
+import powerOff from '@assets/images/echo_bot_white.png'; // Update this path as needed
 
 const Home = () => {
   const [isUIVisible, setIsUIVisible] = useState(true);
