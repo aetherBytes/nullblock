@@ -1,33 +1,19 @@
 
-// Home.js
 import React, { useState, useEffect } from 'react';
-import Spline from '@splinetool/react-spline';
-import AppMenu from '@components/echo-screens/home-screen/app-menu/app-menu'; // Update this path as needed
+import AppMenu from '@components/echo-screens/home-screen/app-menu/app-menu';
 import EchoChat from '@components/echo-screens/home-screen/echo-chat/echo-chat';
 import ChatInput from '@components/echo-screens/home-screen/chat-input/chat-input';
-import styles from './index.module.scss'; // Update this path as needed
-import powerOn from '@assets/images/echo_bot_night.png'; // Update this path as needed
-import powerOff from '@assets/images/echo_bot_white.png'; // Update this path as needed
+import styles from './index.module.scss';
+import powerOn from '@assets/images/echo_bot_night.png';
+import powerOff from '@assets/images/echo_bot_white.png';
+import Moxi from '@components/moxi/moxi'; // Import Moxi component
 
 const Home = () => {
   const [isUIVisible, setIsUIVisible] = useState(true);
   const [showEchoChat, setShowEchoChat] = useState(false);
 
   useEffect(() => {
-    const fogOverlay = document.getElementById('fogOverlay');
-    // Optionally set an initial darker state for the fog overlay here if needed.
-    // This line is commented out because the initial state is handled by CSS.
-    // fogOverlay.style.background = 'rgba(0, 0, 0, 0.75)';
-
-    const updateFogEffect = (e) => {
-      if (fogOverlay) {
-        fogOverlay.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, transparent 100px, rgba(0, 0, 0, 0.25) 200px)`;
-      }
-    };
-
-    window.addEventListener('mousemove', updateFogEffect);
-
-    return () => window.removeEventListener('mousemove', updateFogEffect);
+    // Your useEffect code here
   }, []);
 
   const toggleUIVisibility = () => {
@@ -41,7 +27,6 @@ const Home = () => {
     <>
       <div className={styles.backgroundImage}></div>
       <div id="fogOverlay" className={styles.fogOverlay}></div>
-      <Spline className={styles.splineObject} scene="https://prod.spline.design/1Q-qMj7C6kFIofgB/scene.splinecode" />
       <div className={styles.powerButtonContainer}>
         <button onClick={toggleUIVisibility} className={styles.powerButton}>
           <img src={isUIVisible ? powerOn : powerOff} alt="Power button" className={styles.powerButtonImage} />
@@ -49,6 +34,8 @@ const Home = () => {
         </button>
       </div>
       <div className={styles.bottomUIContainer}>
+        {/* Render Moxi component always */}
+        <Moxi />
         {isUIVisible && (
           <>
             <AppMenu
@@ -66,4 +53,5 @@ const Home = () => {
 };
 
 export default Home;
+
 
