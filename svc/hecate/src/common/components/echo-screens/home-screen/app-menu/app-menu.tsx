@@ -21,7 +21,7 @@ const AppMenu = ({
   }, [isUIVisible]);
 
   const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+    setIsMenuOpen(!isMenuOpen); // Toggle the menu state
   };
 
   const buttons = [
