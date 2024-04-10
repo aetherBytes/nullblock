@@ -21,6 +21,7 @@ const Home = () => {
     if (!isUIVisible) {
       setShowEchoChat(false);
     }
+    setShowEchoChat(true);
   };
 
   return (
@@ -30,12 +31,14 @@ const Home = () => {
       <div className={styles.powerButtonContainer}>
         <button onClick={toggleUIVisibility} className={styles.powerButton}>
           <img src={isUIVisible ? powerOn : powerOff} alt="Power button" className={styles.powerButtonImage} />
-          <span>{isUIVisible ? 'Deactivate' : 'Activate'}</span>
+          <span> {isUIVisible ? 'Turn off' : 'Turn on'
+          }</span>
         </button>
       </div>
       <div className={styles.bottomUIContainer}>
         {/* Render Moxi component always */}
         <Moxi />
+
         {isUIVisible && (
           <>
             <AppMenu
@@ -44,9 +47,9 @@ const Home = () => {
               isUIVisible={isUIVisible}
             />
             {showEchoChat && <EchoChat />}
-            <ChatInput />
           </>
         )}
+        <ChatInput />
       </div>
     </>
   );
