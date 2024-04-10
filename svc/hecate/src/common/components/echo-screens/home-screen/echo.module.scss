@@ -38,14 +38,14 @@ $border-glow-intensity: 0.8; // Intensity of the border glow
 
 /* Flickering effect for background containers */
 @keyframes flickerEffect {
-  0% { opacity: 1; }
+  0% { opacity: 0.9; }
   50% { opacity: 0.8; }
-  100% { opacity: 1; }
+  100% { opacity: 0.9; }
 }
 
 /* Glowing borders for containers */
 .parentContainer, .sidebar, .mainScreenContent .echoContent, .mainScreenContent .echoTitle {
-  box-shadow: 0 0 10px $glow-color, 0 0 20px $glow-color, 0 0 30px $accent-color;
+  box-shadow: 0 0 5px $glow-color, 0 0 10px $glow-color, 0 0 15px $accent-color;
   border: 1px solid $glow-color;
 }
 
@@ -55,6 +55,67 @@ $border-glow-intensity: 0.8; // Intensity of the border glow
   100% { filter: hue-rotate(360deg); }
 }
 
+/* Animation Keyframes from previous SCSS */
+@keyframes flickerGlow {
+  0%, 100% { box-shadow: 0 0 2px $accent-color, 0 0 8px $accent-color; }
+  10%, 90% { box-shadow: 0 0 4px $accent-color, 0 0 10px $accent-color; }
+  50% { box-shadow: 0 0 8px $accent-color, 0 0 16px $accent-color; }
+}
+
+@keyframes scanLine {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blinkCaret {
+  from, to { border-color: transparent; }
+  50% { border-color: $accent-color; }
+}
+
+@keyframes backgroundFade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+
+/* Applying the new pastel color scheme for screen elements */
+.mainScreenContent .echoContent, .mainScreenContent .echoTitle {
+  background-color: $content-background-color; /* Transparent darker pastel blue-purple-pink background color for screens */
+  color: $content-text-color; /* Pink text color for screens */
+  box-shadow: 0 0 50px $content-background-color, inset 0 0 20px $accent-color; /* Enhanced for minimal glow effect */
+  padding: 15px; /* Adjust padding for internal spacing */
+  margin-bottom: 15px; /* Space between each content div */
+  border-radius: 5px; /* Rounded corners */
+  animation: scanLine 20s linear infinite, backgroundFade 6s ease infinite, flickerEffect $flicker-animation-duration infinite, typing 3.5s steps(40, end); /* Include flicker animation */
+}
+
+/* Blinking caret animation */
+.mainScreenContent .echoContent::after,
+.mainScreenContent .echoTitle::after {
+  content: '';
+  display: inline-block;
+  width: 0.15em;
+  height: 1em;
+  border-left: 0.05em solid $accent-color; /* Adjust the border style */
+  animation: blinkCaret 0.75s step-end infinite; /* Apply blinkCaret animation */
+}
+
+/* Interactive hover effects */
+.sidebar button:hover, .mainScreenContent .echoContent:hover, .mainScreenContent .echoTitle:hover {
+  box-shadow: 0 0 10px $hover-color, 0 0 15px $hover-color, 0 0 20px $active-color;
+  transform: scale(1.05); /* Slightly enlarge on hover */
+}
+
+/* Root styles */
 html, body {
   height: 100%;
   margin: 0;
@@ -95,23 +156,6 @@ html, body {
   padding-left: 12%; /* Increased Left padding to ensure content doesn't touch sidebar */
   padding-right: 2.5%; /* Increased Right padding to ensure content doesn't touch sidebar */
   box-shadow: 0 0 20px $glow-color, inset 0 0 10px $accent-color;
-}
-
-/* Applying the new pastel color scheme for screen elements */
-.mainScreenContent .echoContent, .mainScreenContent .echoTitle {
-  background-color: $content-background-color; /* Transparent darker pastel blue-purple-pink background color for screens */
-  color: $content-text-color; /* Pink text color for screens */
-  box-shadow: 20px 20px 75px $hover-color, inset 0 0 20px $accent-color, 20px 20px 75px $hover-color; /* Enhanced for minimal glow effect */
-  padding: 15px; /* Adjust padding for internal spacing */
-  margin-bottom: 15px; /* Space between each content div */
-  border-radius: 5px; /* Rounded corners */
-  animation: flickerEffect $flicker-animation-duration infinite;
-}
-
-/* Interactive hover effects */
-.sidebar button:hover, .mainScreenContent .echoContent:hover, .mainScreenContent .echoTitle:hover {
-  box-shadow: 0 0 15px $hover-color, 0 0 25px $hover-color, 0 0 35px $active-color;
-  transform: scale(1.05); /* Slightly enlarge on hover */
 }
 
 @media (max-width: 768px) {
