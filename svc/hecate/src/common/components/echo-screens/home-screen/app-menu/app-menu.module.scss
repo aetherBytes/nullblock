@@ -1,12 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+/* Define font styles */
+$comic-font: 'Comic Sans MS', sans-serif;
+$orbitron-font: 'Orbitron', sans-serif; // Added Orbitron font
 
 /* Font and Color Variables */
-$comic-font: 'Comic Sans MS', sans-serif;
-$accent-color: rgba(255, 165, 0, 0.7); /* Lighter Orange for effects */
-$background-dark: rgba(0, 0, 0, 0.6); /* Black */
-$background-dark_2: rgba(0, 0, 0, 0.9); /* Darker Black */
-$background-orange: #ff8c00; /* Orange */
-$background-light-orange: rgba(255, 140, 0, 0.3); /* Light Orange */
+$accent-color: rgba(204, 153, 255, 0.75); /* Soft glow color */
+$background-dark: rgba(26, 26, 81, 0.9); /* Dark transparent blue-purple-pink background */
+$background-dark_2: rgba(153, 102, 204, 0.6); /* Light transparent blue-purple-pink background */
+$background-light: rgba(51, 51, 153, 0.9); /* Darker transparent blue-purple-pink for screens */
 
 /* Animation Keyframes */
 @keyframes flickerGlow {
@@ -21,13 +23,13 @@ $background-light-orange: rgba(255, 140, 0, 0.3); /* Light Orange */
 .appMenu {
   display: flex;
   flex-direction: row;
-  // background: linear-gradient(to left, $background-dark, $background-orange, $background-light-orange);
   border-radius: 10px;
   box-shadow: 0 0 8px black, 0 0 20px $accent-color;
   padding: 10px;
+  padding-left: 30px;
   z-index: 25;
-  gap: 15px;
-  font-family: $comic-font;
+  gap: 40px;
+  font-family: $orbitron-font; /* Changed font to Orbitron */
   color: white;
   width: calc(100% - 250px);
 }
@@ -38,7 +40,7 @@ $background-light-orange: rgba(255, 140, 0, 0.3); /* Light Orange */
 }
 
 body {
-  font-family: $comic-font;
+  font-family: $orbitron-font; /* Changed font to Orbitron */
   background-color: $background-dark; /* Emphasizes the UI elements */
 }
 
@@ -64,7 +66,7 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: linear-gradient(to right, $background-dark_2, $background-orange, $background-light-orange);
+  background: linear-gradient(to right, $background-dark_2, $background-dark, $background-light);
   background-size: 200% 200%;
   animation: flickerGlow 2s infinite ease-in-out, moveGradient 10s ease infinite;
   border-radius: 8px;
@@ -79,7 +81,7 @@ body {
 .appButton {
   background: linear-gradient(to left, $background-dark, darken($background-dark, 5%));
   border-radius: 10px;
-  box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
+  box-shadow: 0 0 8px $background-dark, 0 0 20px $background-dark;
   color: #e0ffff;
   cursor: pointer;
   display: flex;
@@ -92,7 +94,7 @@ body {
   font-weight: bold;
   min-width: 50px;
   &:hover, &:focus {
-    background: linear-gradient(to right, $background-orange, darken($background-orange, 10%));
+    background: linear-gradient(to right, $background-dark, $background-light);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 0 15px $accent-color;
     color: #ffffff;
     transform: translateY(-5px);

@@ -1,13 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
 
-/* Define font styles */
-$comic-font: 'Comic Sans MS', sans-serif;
-$accent-color: rgba(255, 165, 0, 0.7); /* Lighter Orange for effects */
-$background-dark: #000000; /* Black */
-// $background-orange: #ff8c00; /* Orange */
-$background-orange: rgba(255, 140, 0, 0.5); /* Orange */
-$background-light-orange: rgba(255, 140, 0, 0.3); /* Light Orange */
+/* Font and Color Variables */
+$orbitron-font: 'Orbitron', sans-serif;
+$accent-color: rgba(204, 153, 255, 0.35); // Soft glow color
+$base-dark: rgba(26, 26, 81, 0.9); // Dark transparent blue-purple-pink background
+$background-light: rgba(51, 51, 153, 0.9); // Darker transparent blue-purple-pink for screens
+$text-color: #e0ffff; // Bright white text color
 
+/* Keyframes for animations */
 @keyframes flickerGlow {
   0%, 100% {
     box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
@@ -23,87 +23,91 @@ $background-light-orange: rgba(255, 140, 0, 0.3); /* Light Orange */
   100% { background-position: 0% 50%; }
 }
 
-@keyframes moveUp {
-  from {
-    opacity: 1;
-    bottom: 60px;
-  }
-  to {
-    opacity: 0;
-    bottom: 700px;
-  }
-}
-
+/* Styling for chat input container */
 .chatInputContainer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px;
-  background: linear-gradient(to right, $background-dark, $background-orange, $background-light-orange);
+  background: linear-gradient(to left, $base-dark, darken($base-dark, 5%));
   animation: moveGradient 10s ease infinite;
   border-radius: 10px;
   box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
-  width: calc(100% - 250px);
+  font-family: $orbitron-font;
+  width: calc(100% - 230px);
 }
 
+/* Styling for chat input */
 .chatInput {
   flex-grow: 1;
-  margin-right: 8px; // Spacing between input and button
+  margin-right: 8px;
   padding: 10px;
   font-size: 16px;
-  border: 2px solid $accent-color;
-  border-radius: 5px;
+  border: none;
+  border-bottom: 2px solid $accent-color;
   background-color: transparent;
-  color: white;
-  font-family: $comic-font;
+  color: $text-color;
+  font-family: $orbitron-font;
 
   &:focus {
     outline: none;
   }
 }
 
+/* Styling for send button */
 .sendButton {
   padding: 10px 15px;
   font-size: 16px;
-  background-color: $background-orange;
-  border: 2px solid $background-dark;
+  background-color: $background-light;
+  border: none;
   border-radius: 5px;
-  color: $background-dark;
-  font-family: $comic-font;
+  color: $text-color;
+  font-family: $orbitron-font;
   cursor: pointer;
   transition: background-color 0.3s, color 0.3s;
 
   &:hover {
-    background-color: darken($background-orange, 10%);
+    background-color: $base-dark;
     color: white;
   }
 }
 
+
+@keyframes moveUp {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-1000%);
+    opacity: 0;
+  }
+}
+
+/* Styling for floating message */
 .floatingMessage {
   position: fixed;
   bottom: 60px;
   left: 20px;
   padding: 15px 30px;
-  background: rgba(255, 140, 0, 0.5); /* Updated to transparent burnt orange */
-  border: 2px solid $background-dark; /* Black border */
+  background: rgba(51, 51, 153, 0.9);
+  border: 2px solid $base-dark;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2), 0 0 10px $accent-color;
   color: white;
   border-radius: 15px;
-  font-family: $comic-font;
+  font-family: $orbitron-font;
   animation: moveUp 3s ease-in-out forwards;
+  z-index: 30;
 }
-
 
 /* Responsive adjustments for mobile screens */
 @media (max-width: 768px) {
   .chatInputContainer {
     padding: 6px;
-    width: calc(100% - 100px);
   }
   .chatInput {
     padding: 6px;
     font-size: 14px;
-    width: calc(100% - 100px);
   }
   .sendButton {
     padding: 8px 12px;
