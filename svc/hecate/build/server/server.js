@@ -111,6 +111,7 @@ const routes = [
   {
     ErrorBoundary: NotFound,
     Component: AppLayout,
+    pathId: "@components/layouts/app",
     children: [
       {
         index: true,
@@ -134,7 +135,8 @@ const routes = [
       },
       {
         path: manager.path("notLazy"),
-        Component: NotLazy
+        Component: NotLazy,
+        pathId: "@pages/not-lazy"
       }
     ]
   }
