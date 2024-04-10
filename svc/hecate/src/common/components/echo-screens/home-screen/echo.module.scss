@@ -145,6 +145,7 @@ html, body {
   align-items: center; /* Center the content vertically */
   flex-direction: column; /* Stack buttons vertically */
   padding: 10px; /* Add minimal padding */
+  gap: 20px; /* Add gap between buttons */
   animation: flickerEffect $flicker-animation-duration infinite;
 }
 
