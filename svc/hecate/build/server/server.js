@@ -89,7 +89,7 @@ const styles = {
   container,
   text
 };
-const CodeSplitting = lazy(() => import("./assets/index-Ab5z-WWX.js"));
+const CodeSplitting = lazy(() => import("./assets/index-3xe8KF9d.js"));
 const NotLazy = () => /* @__PURE__ */ jsxs(Fragment, { children: [
   /* @__PURE__ */ jsxs("div", { className: styles.container, children: [
     /* @__PURE__ */ jsx("div", { className: styles.text, children: "Styled text" }),
@@ -100,22 +100,21 @@ const NotLazy = () => /* @__PURE__ */ jsxs(Fragment, { children: [
 const detailsRoutes = [
   {
     index: true,
-    lazy: () => n(() => import("./assets/index-yYyHn4Kv.js"), "@pages/details/index")
+    lazy: n(() => import("./assets/index-iuHIxk7-.js"), "@pages/details/index")
   },
   {
     path: manager.path("details.user"),
-    lazy: () => n(() => import("./assets/index--Y4diWF9.js"), "@pages/details/user")
+    lazy: n(() => import("./assets/index-CAyabwVt.js"), "@pages/details/user")
   }
 ];
 const routes = [
   {
     ErrorBoundary: NotFound,
     Component: AppLayout,
-    pathId: "@components/layouts/app",
     children: [
       {
         index: true,
-        lazy: () => n(() => import("./assets/index-Z1g2YVV8.js"), "@pages/home")
+        lazy: n(() => import("./assets/index-CjL3aL39.js"), "@pages/home")
       },
       {
         path: manager.path("details"),
@@ -123,20 +122,19 @@ const routes = [
       },
       {
         path: manager.path("errorBoundary"),
-        lazy: () => n(() => import("./assets/index-_Xcmwo2B.js"), "@pages/error-boundary")
+        lazy: n(() => import("./assets/index-BavhgPqO.js"), "@pages/error-boundary")
       },
       {
         path: manager.path("nestedSuspense"),
-        lazy: () => n(() => import("./assets/index-u3tXzqN8.js"), "@pages/nested-suspense")
+        lazy: n(() => import("./assets/index-DmMLY2qT.js"), "@pages/nested-suspense")
       },
       {
         path: manager.path("redirect"),
-        lazy: () => n(() => import("./assets/index-RwlbDKlw.js"), "@pages/redirect")
+        lazy: n(() => import("./assets/index-PZkKyJBC.js"), "@pages/redirect")
       },
       {
         path: manager.path("notLazy"),
-        Component: NotLazy,
-        pathId: "@pages/not-lazy"
+        Component: NotLazy
       }
     ]
   }
