@@ -53,16 +53,6 @@ const Echo: React.FC<EchoProps> = ({ screensConfig, defaultScreenKey }) => {
   return (
     <div className={styles.parentContainer}>
       <div className={styles.mainScreenContent}>
-        <div className={styles.sidebar}>
-          {Object.keys(screensConfig).map((screen) => (
-            <ButtonWrapper
-              key={screen}
-              buttonText={screensConfig[screen].buttonText}
-              setCurrentScreen={() => handleButtonClick(screen)}
-              title={screensConfig[screen].title}
-            />
-          ))}
-        </div>
         {isEchoVisible && (
           <UnifiedEchoScreen
             key={animationKey}
@@ -79,6 +69,16 @@ const Echo: React.FC<EchoProps> = ({ screensConfig, defaultScreenKey }) => {
             closeCurrentScreen={closeCurrentScreen}
           />
         )}
+        <div className={styles.sidebar}>
+          {Object.keys(screensConfig).map((screen) => (
+            <ButtonWrapper
+              key={screen}
+              buttonText={screensConfig[screen].buttonText}
+              setCurrentScreen={() => handleButtonClick(screen)}
+              title={screensConfig[screen].title}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

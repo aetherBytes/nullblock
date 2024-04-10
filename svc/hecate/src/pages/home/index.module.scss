@@ -124,17 +124,17 @@ $text-color: #ffffff; /* White for text */
   }
 }
 
-.fogOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.25); // Start with a darker overlay
-  pointer-events: none;
-  mix-blend-mode: multiply;
-  z-index: 10; // Below the Spline object but above the background
-}
+// .fogOverlay {
+//   position: fixed;
+//   top: 0;
+//   left: 0;
+//   width: 100vw;
+//   height: 100vh;
+//   background-color: rgba(0, 0, 0, 0.25); // Start with a darker overlay
+//   pointer-events: none;
+//   mix-blend-mode: multiply;
+//   z-index: 1200; // Below the Spline object but above the background
+// }
 /* Spline object specific styles */
 .splineObject {
   position: fixed;

@@ -132,6 +132,7 @@ html, body {
   overflow: hidden;
   padding: 20px;
   animation: flickerEffect $flicker-animation-duration infinite;
+  z-index: 11; /* Ensure parent container is above background */
 }
 
 .sidebar {
@@ -154,7 +155,7 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding-left: 12%; /* Increased Left padding to ensure content doesn't touch sidebar */
+  padding-left: 35%; /* Increased Left padding to ensure content doesn't touch sidebar */
   padding-right: 2.5%; /* Increased Right padding to ensure content doesn't touch sidebar */
   box-shadow: 0 0 20px $glow-color, inset 0 0 10px $accent-color;
 }

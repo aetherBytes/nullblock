@@ -28,6 +28,7 @@ $text-color: #e0ffff; // Bright white text color
   overflow: hidden;
   text-transform: uppercase;
   letter-spacing: 1px;
+  z-index: 110;
 
   /* Hover and focus styles */
   &:hover, &:focus {

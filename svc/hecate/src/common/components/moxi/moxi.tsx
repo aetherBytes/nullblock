@@ -1,6 +1,6 @@
 
 import React from 'react';
-import MoxiImage from '@assets/images/moxi_lets_go.png';
+import MoxiImage from '@assets/images/night_wolf_1.png';
 import styles from './styles.module.scss';
 
 
