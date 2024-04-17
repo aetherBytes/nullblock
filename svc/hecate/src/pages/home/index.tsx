@@ -17,13 +17,6 @@ const Home = () => {
     // Your useEffect code here
   }, []);
 
-  const toggleUIVisibility = () => {
-    setIsUIVisible(!isUIVisible);
-    if (!isUIVisible) {
-      setShowEchoChat(false);
-    }
-    setShowEchoChat(true);
-  };
 
   return (
     <>
@@ -31,25 +24,23 @@ const Home = () => {
       <StarsCanvas/>
       <div className={styles.backgroundImage}/>
       <div className={styles.powerButtonContainer}>
-        <button onClick={toggleUIVisibility} className={styles.powerButton}>
-          <img src={isUIVisible ? powerOn : powerOff} alt="Power button" className={styles.powerButtonImage} />
-          <span> {isUIVisible ? 'Turn off' : 'Turn on'
+        <button className={styles.powerButton}>
+          <img src={isUIVisible ? powerOn : powerOff} alt="Profile button" className={styles.profileButtonImage} />
+          <span> {isUIVisible ? 'Profile' : 'Log in'
           }</span>
         </button>
       </div>
       <div className={styles.bottomUIContainer}>
         {/* Render Moxi component always */}
         <Moxi />
-        {isUIVisible && (
-          <>
-            <AppMenu
+        <>
+          {showEchoChat && <EchoChat />}
+        </>
+        <AppMenu
               toggleEchoVisibility={() => setShowEchoChat(!showEchoChat)}
               closeEchoScreen={() => setShowEchoChat(false)}
               isUIVisible={isUIVisible}
             />
-            {showEchoChat && <EchoChat />}
-          </>
-        )}
         <ChatInput />
       </div>
     </>
