@@ -1,0 +1,252 @@
+{
+  "0-0": [
+    {
+      "url": "/assets/index-BKRmoeke.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-CaDVScL8.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-Dt78V53N.js",
+      "weight": 1.9,
+      "type": "script",
+      "isNested": true,
+      "isPreload": false
+    },
+    {
+      "url": "/assets/index--yb6_6jq.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/echo_bot_night-CBKXRJLc.png",
+      "weight": 3,
+      "type": "image",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/echo_bot_white-C7yP3Jt3.png",
+      "weight": 3,
+      "type": "image",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/night_wolf_1-CbSwW3hQ.png",
+      "weight": 3,
+      "type": "image",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/wild_plains_0-D4fWYcmP.png",
+      "weight": 3,
+      "type": "image",
+      "isNested": false,
+      "isPreload": true
+    }
+  ],
+  "0-1-0": [
+    {
+      "url": "/assets/index-_KOcTEBr.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-CaDVScL8.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-Dt78V53N.js",
+      "weight": 1.9,
+      "type": "script",
+      "isNested": true,
+      "isPreload": false
+    },
+    {
+      "url": "/assets/index-KiYWjpWc.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/suspense-query-QTHvTbu_.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/axios-Cm0UX6qg.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    }
+  ],
+  "0-1-1": [
+    {
+      "url": "/assets/index-H5Mnz33P.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-CaDVScL8.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-Dt78V53N.js",
+      "weight": 1.9,
+      "type": "script",
+      "isNested": true,
+      "isPreload": false
+    },
+    {
+      "url": "/assets/index-Dt5mO9Rs.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/suspense-query-QTHvTbu_.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-BxOC54Jl.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/axios-Cm0UX6qg.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    }
+  ],
+  "0-2": [
+    {
+      "url": "/assets/index-CaDVScL8.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-Dt78V53N.js",
+      "weight": 1.9,
+      "type": "script",
+      "isNested": true,
+      "isPreload": false
+    },
+    {
+      "url": "/assets/index-C4Q_dHWq.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/suspense-query-QTHvTbu_.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-BxOC54Jl.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    }
+  ],
+  "0-3": [
+    {
+      "url": "/assets/index-CaDVScL8.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-Dt78V53N.js",
+      "weight": 1.9,
+      "type": "script",
+      "isNested": true,
+      "isPreload": false
+    },
+    {
+      "url": "/assets/index-Cpl_tafP.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/suspense-query-QTHvTbu_.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/axios-Cm0UX6qg.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": true,
+      "isPreload": true
+    }
+  ],
+  "0-4": [
+    {
+      "url": "/assets/index-CaDVScL8.css",
+      "weight": 1,
+      "type": "style",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/index-Dt78V53N.js",
+      "weight": 1.9,
+      "type": "script",
+      "isNested": true,
+      "isPreload": false
+    },
+    {
+      "url": "/assets/index-ebzKIPdf.js",
+      "weight": 2,
+      "type": "script",
+      "isNested": false,
+      "isPreload": true
+    }
+  ]
+}
