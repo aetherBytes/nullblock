@@ -132,7 +132,6 @@ html, body {
   overflow: hidden;
   padding: 20px;
   animation: flickerEffect $flicker-animation-duration infinite;
-  z-index: 11; /* Ensure parent container is above background */
 }
 
 .sidebar {

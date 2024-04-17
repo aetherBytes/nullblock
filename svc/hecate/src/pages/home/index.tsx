@@ -7,6 +7,7 @@ import styles from './index.module.scss';
 import powerOn from '@assets/images/echo_bot_night.png';
 import powerOff from '@assets/images/echo_bot_white.png';
 import Moxi from '@components/moxi/moxi'; // Import Moxi component
+import StarsCanvas from '@components/stars/stars'; // Import StarsCanvas component
 
 const Home = () => {
   const [isUIVisible, setIsUIVisible] = useState(true);
@@ -26,8 +27,9 @@ const Home = () => {
 
   return (
     <>
-      <div className={styles.backgroundImage}></div>
-      <div id="fogOverlay" className={styles.fogOverlay}></div>
+      {/* Render the StarsCanvas component as the background */},
+      <StarsCanvas/>
+      <div className={styles.backgroundImage}/>
       <div className={styles.powerButtonContainer}>
         <button onClick={toggleUIVisibility} className={styles.powerButton}>
           <img src={isUIVisible ? powerOn : powerOff} alt="Power button" className={styles.powerButtonImage} />
@@ -38,7 +40,6 @@ const Home = () => {
       <div className={styles.bottomUIContainer}>
         {/* Render Moxi component always */}
         <Moxi />
-
         {isUIVisible && (
           <>
             <AppMenu
@@ -56,5 +57,6 @@ const Home = () => {
 };
 
 export default Home;
+
 
 

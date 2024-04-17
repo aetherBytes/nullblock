@@ -13,6 +13,11 @@ $background-light: #ff8c00; /* Orange */
 $accent-color: rgba(255, 165, 0, 0.5); /* Lighter Orange for effects */
 $text-color: #ffffff; /* White for text */
 
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* Prevents scrolling */
+}
 /* Animation Keyframes */
 @keyframes flickerGlow {
   0%, 100% {
@@ -55,9 +60,11 @@ $text-color: #ffffff; /* White for text */
   // background-image: url('../../assets/images/red_tree.png');
   // background-image: url('../../assets/images/red_block.png');
   // background-image: url('../../assets/images/nexoliths.png');
-  background-image: url('../../assets/images/nexoliths_9.png');
+  // background-image: url('../../assets/images/nexoliths_11.png');
   // background-image: url('../../assets/images/waste_0.png');
   // background-image: url('../../assets/images/nowhere_bridge.png');
+  // background-image: url('../../assets/images/float_0.png');
+  background-image: url('../../assets/images/wild_plains_0.png');
   background-position: center; // Center the background image
   background-size: cover; // Cover the entire area of the element
   position: fixed; // Position fixed to the viewport
@@ -65,7 +72,7 @@ $text-color: #ffffff; /* White for text */
   left: 0;
   width: 100vw; // Full viewport width
   height: 100vh; // Full viewport height
-  z-index: 5; // Ensure it's below other overlay elements
+  z-index: 0; // Ensure it's below other overlay elements
   overflow: hidden; // Prevent any overflow from the image
 }
 
@@ -107,6 +114,7 @@ $text-color: #ffffff; /* White for text */
 .powerButtonImage {
   width: 150px;
 }
+
 
 @media screen and (max-width: 768px) {
   .backgroundImage {

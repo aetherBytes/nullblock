@@ -6,7 +6,7 @@ img {
 
 .characterContainer img {
   // animation: float 4s ease-in-out infinite;
-  display: block;
+  // display: block;
   filter: drop-shadow(0 0 8px rgba(173, 216, 230, 0.4))
           drop-shadow(0 0 20px rgba(240, 248, 255, 0.4));
   height: auto;
@@ -15,7 +15,6 @@ img {
   left: 2%;
   top: 20%;
   transform: scaleX(-1); // Reflect the image along the vertical axis
-  z-index: 10;
 }
 
 @media screen and (max-width: 768px) {

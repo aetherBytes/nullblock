@@ -22,6 +22,8 @@
     "@lomray/react-mobx-manager": "^3.0.1",
     "@lomray/react-route-manager": "^2.0.0",
     "@lomray/vite-ssr-boost": "^2.3.1",
+    "@react-three/drei": "^9.105.3",
+    "@react-three/fiber": "^8.16.1",
     "@splinetool/loader": "^1.0.93",
     "@splinetool/react-spline": "^2.2.6",
     "@splinetool/runtime": "^1.0.93",
@@ -39,7 +41,8 @@
     "react-dom": "^18.2.0",
     "react-loading-skeleton": "^3.4.0",
     "react-router-dom": "^6.22.0",
-    "tailwindcss": "^3.4.1"
+    "tailwindcss": "^3.4.1",
+    "three": "^0.163.0"
   },
   "devDependencies": {
     "@actions/core": "^1.10.1",

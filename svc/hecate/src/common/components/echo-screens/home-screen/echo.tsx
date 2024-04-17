@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import ButtonWrapper from '@components/button-wrapper/button-wrapper';
 import UnifiedEchoScreen from './echo-screen';
 import styles from './echo.module.scss';
+import StarsCanvasEcho from '@components/stars/stars-echo'; // Import StarsCanvas component
 
 interface ScreenConfig {
   title: string;
@@ -52,6 +53,7 @@ const Echo: React.FC<EchoProps> = ({ screensConfig, defaultScreenKey }) => {
 
   return (
     <div className={styles.parentContainer}>
+      <StarsCanvasEcho />
       <div className={styles.mainScreenContent}>
         {isEchoVisible && (
           <UnifiedEchoScreen
