@@ -33,9 +33,7 @@ const Home = () => {
       <div className={styles.bottomUIContainer}>
         {/* Render Moxi component always */}
         <Moxi />
-        <>
-          {showEchoChat && <EchoChat />}
-        </>
+        <>{showEchoChat && <EchoChat />}</>
         <AppMenu
               toggleEchoVisibility={() => setShowEchoChat(!showEchoChat)}
               closeEchoScreen={() => setShowEchoChat(false)}
