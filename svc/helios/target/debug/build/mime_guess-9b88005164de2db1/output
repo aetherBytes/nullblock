@@ -1,1 +1,0 @@
-cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/home/sage/repos/nullblock/svc/helios/target/debug/build/mime_guess-9b88005164de2db1/out/mime_types_generated.rs
