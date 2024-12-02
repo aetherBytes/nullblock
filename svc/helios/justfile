@@ -12,9 +12,21 @@ lint:
 build:
     hatch build
 
-# Run CLI / GUI
+# Run Helios Server
 run:
-    python helios.py
+    python src/helios/helios.py
+
+# Run Helios Server in debug mode
+run-debug:
+    python src/helios/helios.py --debug
+
+# Check logs
+logs:
+    tail -f logs/helios.log
+
+# check status of the Server
+status:
+    curl http://localhost:5000/status
 
 # Run all checks (linting, formatting check, type checking, and tests)
 check:
