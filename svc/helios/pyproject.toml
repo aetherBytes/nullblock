@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-pacakges = ["src/helios"]
+packages = ["src/helios"]
 
 [tool.hatch.envs.default]
 dependencies = [
