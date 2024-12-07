@@ -14,7 +14,7 @@ build:
 
 # Run Helios Server
 run:
-    python src/helios/helios.py
+    python src/helios/main.py
 
 # Run Helios Server in debug mode
 run-debug:
