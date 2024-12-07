@@ -5,22 +5,19 @@ build-backend = "hatchling.build"
 readme = "README.md"
 
 [project]
-name = "Helios"
+name = "helios"
 version = "0.1.0"
-description = """
-
-"""
+description = """"""
 readme = "README.md"
 authors = [
     {name = "PervySoftware", email = "your.email@example.com"}
 ]
 
 dependencies = [
-    "solana==0.28.0",  # Version specified for stability
-    "requests",  # For making HTTP requests if needed
-    "pandas==1.5.3",  # For data manipulation
-    "websockets==10.4",  # For WebSocket server functionality
-    "json==2.0.9"  # For JSON operations
+    "solana==0.35.1",  # Version specified for stability
+    "requests==2.32.3",  # For making HTTP requests if needed
+    "pandas==2.2.3",  # For data manipulation
+    "websockets>=9.0,<12.0",  # For WebSocket server functionality
 ]
 
 [tool.hatch.build.targets.wheel]

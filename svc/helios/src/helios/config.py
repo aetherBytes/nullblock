@@ -2,3 +2,8 @@
 SOLANA_RPC_URL = "YOUR_SOLANA_RPC_URL_HERE"
 # Address to watch, could be a wallet or smart contract
 WATCH_ADDRESS = "YOUR_SOLANA_ADDRESS_HERE"
+
+
+class Config:
+    SOLANA_RPC_URL = SOLANA_RPC_URL
+    WATCH_ADDRESS = WATCH_ADDRESS

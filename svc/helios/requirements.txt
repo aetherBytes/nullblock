@@ -1,4 +1,4 @@
-websockets==10.4
-solana==0.28.0
-pandas==1.5.3
-json==2.0.9
+websockets==14.1
+solana==0.35.1
+pandas==2.2.3
+requests==2.32.3
