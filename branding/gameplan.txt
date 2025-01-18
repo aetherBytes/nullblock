@@ -56,3 +56,14 @@ Deployment Options:
     Web App: Primary interface for full functionality.
     Browser Extension: For quick access and notifications while browsing.
     Mobile App: For on-the-go management of Krawlers and wallet interactions.
+
+
+
+
+CODE:
+
+Architecture Overview:
+
+    Server: Hosts the main application logic, potentially handles API requests from the frontend, and interacts directly with its PostgreSQL database. It could also act as a producer or consumer in Kafka for specific operations.
+    Frontend: User interface, which communicates with the Server for user interactions. It doesn't necessarily need direct access to databases or Kafka but would benefit from real-time updates via WebSocket or server-sent events facilitated by Kafka messages.
+    Backend Service: Does heavy lifting with data, perhaps processing, analytics, or storing results in its PostgreSQL database. It can produce data to Kafka topics or consume messages for further processing or updates.
