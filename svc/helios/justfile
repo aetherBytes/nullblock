@@ -58,9 +58,9 @@ update-reqs:
 
 # sync envs
 sync:
+    just update-reqs
     hatch env prune
     hatch env create
-    just update-reqs
 
 # Alias for convenience
 t: test
