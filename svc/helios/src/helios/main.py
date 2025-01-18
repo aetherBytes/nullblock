@@ -8,6 +8,9 @@ import websockets
 # from helios.config import config
 import pandas as pd
 
+from helios import config
+
+
 # async def broadcast_data(
 #     websocket: websockets.WebSocketServerProtocol, data: str
 # ) -> None:
@@ -56,6 +59,7 @@ if __name__ == "__main__":
     $$ |  $$ |$$ |_____ $$ |_____  _$$ |_ $$ \__$$ |/  \__$$ |      /  \__$$ |$$ |_____ $$ |  $$ |  $$ $$/   $$ |_____ $$ |  $$ |
     $$ |  $$ |$$       |$$       |/ $$   |$$    $$/ $$    $$/       $$    $$/ $$       |$$ |  $$ |   $$$/    $$       |$$ |  $$ |
     $$/   $$/ $$$$$$$$/ $$$$$$$$/ $$$$$$/  $$$$$$/   $$$$$$/         $$$$$$/  $$$$$$$$/ $$/   $$/     $/     $$$$$$$$/ $$/   $$/"""
-
     print(service_name)
     # asyncio.run(main())
+    config = config.config()
+    print(config.test)
