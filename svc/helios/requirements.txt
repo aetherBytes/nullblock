@@ -57,6 +57,8 @@ python-dotenv==1.0.1
     # via
     #   helios (pyproject.toml)
     #   uvicorn
+python-json-logger==3.2.1
+    # via helios (pyproject.toml)
 pytz==2024.2
     # via pandas
 pyyaml==6.0.2

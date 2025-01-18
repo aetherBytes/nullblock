@@ -14,11 +14,8 @@ build:
 
 # Run Helios Server
 run:
-    python src/helios/main.py
-
-# Run Helios Server in debug mode
-run-debug:
-    python src/helios/helios.py --debug
+    #!/usr/bin/env bash
+    uvicorn src.helios.main:app --reload --port 8000
 
 # Check logs
 logs:
