@@ -1,2 +1,58 @@
+Nullblock:
+
+    Web3 Heads Up Display: This could be the overarching user interface, providing real-time data and interaction 
+    with the blockchain and other agents /interfaces.
 
 
+MVP Goals:
+    
+    Start with a web app.
+    Basic Web3 Wallet Connection: Start with integration for one or two popular wallets.
+    Minimal HUD: A basic version of the heads-up display for user interaction.
+    Simple Krawler Deployment: Ability to deploy a basic Krawler for one task. (Start with trading bot?)
+
+
+Full Vision:
+
+    Web App Interface: A sleek, dark-themed UI that feels like stepping into a cyberpunk world.
+    Connect with Popular Web3 Wallets: Expand to include Metamask, Trust Wallet, etc.
+    Plug in Go-to LLM: Integrate with a leading language model like Grok 2 for user interaction, providing natural language processing capabilities.
+    Plug in Your Own Agent: Allow users to integrate custom AI agents for specialized tasks.
+
+
+Interaction:
+
+    Social Media: Integrate with platforms where users can share their "Dark Deeds" or achievements, enhancing community interaction.
+    Pub/Sub for Interaction: Use publish/subscribe models for real-time communication between agents, APIs, and the user interface.
+    Rolling Summaries: Provide users with periodic updates or summaries of their and their agents' activities.
+
+
+Krawlers:
+
+    Nanites: Use this term to describe the autonomous agents that can be programmed or learn to perform tasks on the blockchain.
+    Automation and Data Gathering: Krawlers could have different specialties - some for trading, others for data analysis or contract deployment.
+    Trading Bot Features: Implement basic trading functions with the ability to upgrade or customize based on user needs.
+    Contract Interaction Interface: Users can write or upload smart contracts for Krawlers to deploy or interact with.
+    Code Contagion: A high-level feature where advanced users can deploy swarms of Krawlers to alter contract behavior, with strict ethical guidelines.
+    Nexus: The control center for all Krawler activities, where they're managed, upgraded, or sent back into the blockchain.
+    Shadow Seeds: These could be initial Krawler sets or templates that users can customize or evolve.
+
+
+Byte Blight:
+
+    Monitoring and Alerts: Use this system to not only protect but also to inform users of market opportunities or threats.
+    Wallet Monitoring: Regular checks for vulnerabilities or scams related to the connected wallets.
+    Extended Monitoring: Keep an eye on related or flagged wallets for security or strategic reasons.
+
+
+Shadow Ledger:
+
+    Task and Reward System: A dark, mysterious board where users can post or accept tasks, possibly with anonymity features.
+    API for Adding Tasks: Allow developers or users to programmatically add new "Dark Deeds" to the ledger.
+
+
+Deployment Options:
+
+    Web App: Primary interface for full functionality.
+    Browser Extension: For quick access and notifications while browsing.
+    Mobile App: For on-the-go management of Krawlers and wallet interactions.
