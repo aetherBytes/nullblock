@@ -34,6 +34,8 @@ dependencies = [
 
 [tool.mypy]
 strict = true
+ignore_missing_imports = true
+
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.

@@ -1,7 +1,5 @@
-import json
 from dotenv import load_dotenv
 import os
-from typing_extensions import Self
 
 
 class Config:
