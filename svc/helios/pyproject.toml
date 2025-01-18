@@ -21,6 +21,8 @@ dependencies = [
     "websockets>=9.0,<12.0",  # For WebSocket server functionality
     "solders>=0.21.0,<0.22.0",  # For soldering
     "python-dotenv>=1.0.1",  # For loading environment variables
+    "fastapi==0.115.6",  # For the FastAPI server
+    "uvicorn[standard]==0.34.0",  # For running the FastAPI server
 ]
 
 [tool.hatch.build.targets.wheel]

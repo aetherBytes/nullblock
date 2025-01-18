@@ -1,55 +1,94 @@
-# import asyncio
-# from typing import Dict, Any, List
-# import websockets
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import HTMLResponse
+from solana.publickey import PublicKey
+from solana.rpc.api import Client
+from starlette.responses import RedirectResponse
+import json
+from solders.rpc.responses import GetBalanceResp
 
-# from helios.solana_utils import setup_solana_client, get_transactions
+from helios.config import config
 
-# from helios.processing_utils import process_and_clean_data, serialized_data
-# from helios.config import config
-# import pandas as pd
+app = FastAPI()
 
-from helios import config
-
-
-# async def broadcast_data(
-#     websocket: websockets.WebSocketServerProtocol, data: str
-# ) -> None:
-#     await websocket.send(data)
-#
-#
-# async def handler(websocket: websockets.WebSocketServerProtocol, path: str) -> None:
-#     client = setup_solana_client()
-#     while True:
-#         try:
-#             # Fetch latest transactions for the watched address
-#             raw_data: Dict[str, List[Dict[str, Any]]] = get_transactions(
-#                 client, config.WATCH_ADDRESS
-#             )
-#
-#             # Process and clean data
-#             processed_data: pd.DataFrame = process_and_clean_data(raw_data["result"])
-#
-#             # Serialize data for WebSocket transmission
-#             serialized_data: str = serialize_data(processed_data)
-#
-#             # Broadcast data to all connected clients
-#             await broadcast_data(websocket, serialized_data)
-#
-#             # Wait for a bit before the next fetch to avoid overloading
-#             await asyncio.sleep(60)  # 1 minute
-#
-#         except Exception as e:
-#             print(f"Error in data processing or transmission: {e}")
-#             # Continue the loop to try again after a short delay
-#             await asyncio.sleep(10)  # 10 seconds delay on error
-#
-#
-# async def main() -> None:
-#     async with websockets.serve(handler, "localhost", 8765):
-#         await asyncio.Future()  # run forever
+# Configure Solana client
+solana_client = Client(
+    "https://api.mainnet-beta.solana.com"
+)  # Use testnet or devnet for testing
 
 
+# Phantom detection and connection
+async def detect_and_connect_phantom(request: Request):
+    if "phantom" not in request.cookies:
+        raise HTTPException(status_code=400, detail="Phantom wallet not detected")
+
+    phantom = json.loads(request.cookies.get("phantom", "{}"))
+    if not phantom.get("isConnected", False):
+        raise HTTPException(status_code=400, detail="Phantom wallet not connected")
+
+    return PublicKey(phantom["publicKey"])
+
+
+@app.get("/", response_class=HTMLResponse)
+async def index():
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Helios: Phantom Login</title>
+        <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+    </head>
+    <body>
+        <h1>Welcome to Helios</h1>
+        <p>Please connect your Phantom wallet to access features.</p>
+        <button onclick="connectPhantom()">Connect Phantom</button>
+        <script>
+        function connectPhantom() {
+            if ('phantom' in window) {
+                const phantom = window.phantom.solana;
+                phantom.connect().then(({ publicKey }) => {
+                    if (publicKey) {
+                        document.cookie = `phantom=${JSON.stringify({publicKey: publicKey.toString(), isConnected: true})}; path=/`;
+                        window.location.href = '/dashboard';
+                    }
+                });
+            } else {
+                alert('Please install Phantom wallet');
+            }
+        }
+        </script>
+    </body>
+    </html>
+    """
+
+
+@app.get("/dashboard")
+async def dashboard(request: Request):
+    try:
+        public_key = await detect_and_connect_phantom(request)
+        balance = await get_balance(public_key)
+        return {"message": f"Welcome, {public_key}", "balance": balance}
+    except HTTPException:
+        return RedirectResponse(url="/", status_code=303)
+
+
+# Example interaction: get Solana balance
+async def get_balance(public_key: PublicKey):
+    balance_response: GetBalanceResp = await solana_client.get_balance(public_key)
+    return balance_response.value / 1e9  # Convert lamports to SOL
+
+
+@app.get("/logout")
+async def logout(request: Request):
+    response = RedirectResponse(url="/")
+    response.delete_cookie("phantom")
+    return response
+
+
+# Main block for testing if run directly
 if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
     service_name = r""" __    __  ________  __        ______   ______    ______          ______   ________  _______   __     __  ________  _______  
     /  |  /  |/        |/  |      /      | /      \  /      \        /      \ /        |/       \ /  |   /  |/        |/       \ 
     $$ |  $$ |$$$$$$$$/ $$ |      $$$$$$/ /$$$$$$  |/$$$$$$  |      /$$$$$$  |$$$$$$$$/ $$$$$$$  |$$ |   $$ |$$$$$$$$/ $$$$$$$  |
