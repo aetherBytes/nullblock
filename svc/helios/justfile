@@ -51,11 +51,21 @@ pre-commit-setup:
 pre-commit-run:
     pre-commit run --all-files
 
-# 
+# Update requirements.txt 
+update-reqs:
+    #!/usr/bin/env bash
+    pip-compile pyproject.toml --output-file=requirements.txt
+
+# sync envs
+sync:
+    hatch env prune
+    hatch env create
+    just update-reqs
 
 # Alias for convenience
 t: test
 l: lint
 c: check
 i: install
+s: sync
 
