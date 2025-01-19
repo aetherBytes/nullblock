@@ -56,6 +56,7 @@ const Home: React.FC = () => {
       <div className={styles.scene}>
         <div className={styles.fire}></div>
         <div className={styles.robot}></div>
+        <div className={styles.trader2}></div>
       </div>
       <div style={{ position: 'relative', zIndex: 2 }}> {/* Increased z-index to ensure it's above scene */}
         {walletConnected ? (

@@ -112,3 +112,72 @@ h1, h2, h3, h4, h5, h6 {
   75%, 87.49% { background-position: -768px 0px; }
   87.5%, 100% { background-position: -896px 0px; }
 }
+.trader2 {
+  position: fixed;
+  bottom: 44.2px; /* 20px * 2.2 */
+  left: calc(50% - 440px); /* Adjusted left position to scale with the sprite */
+  width: 330px; /* 150px * 2.2 */
+  height: 376.2px; /* 171px * 2.2 */
+  z-index: 101; /* Above background but below interactive elements */
+  background-image: url('../../assets/images/traders/Trader_2/Idle.png');
+  background-size: 4620px 376.2px; /* 2100px * 2.2, 171px * 2.2 */
+  animation: traderIdle 1s steps(14) infinite;
+  animation-timing-function: step-end; /* Ensure no transition between steps */
+  overflow: hidden;
+}
+
+@keyframes traderIdle {
+  0%, 7.14% { background-position: 0px 0px; }
+  7.15%, 14.28% { background-position: -330px 0px; } /* 150px * 2.2 */
+  14.29%, 21.42% { background-position: -660px 0px; }
+  21.43%, 28.56% { background-position: -990px 0px; }
+  28.57%, 35.70% { background-position: -1320px 0px; }
+  35.71%, 42.84% { background-position: -1650px 0px; }
+  42.85%, 50.00% { background-position: -1980px 0px; }
+  50.01%, 57.14% { background-position: -2310px 0px; }
+  57.15%, 64.28% { background-position: -2640px 0px; }
+  64.29%, 71.42% { background-position: -2970px 0px; }
+  71.43%, 78.56% { background-position: -3300px 0px; }
+  78.57%, 85.70% { background-position: -3630px 0px; }
+  85.71%, 92.84% { background-position: -3960px 0px; }
+  92.85%, 100% { background-position: -4290px 0px; }
+}
+
+.robot {
+  position: absolute;
+  bottom: 0; /* Adjust to fit your scene */
+  left: calc(50% + 100px); /* Position to the right of the fire, adjust as necessary */
+  width: 325px; /* Original 500px * 0.65 */
+  height: 260px; /* Original 400px * 0.65 */
+  z-index: 101;
+  background-image: url('../../assets/images/robot/Assets/SpriteSheets/Idle.png');
+  background-size: 1625px 1625px; /* Original 2500px * 0.65 for both dimensions */
+  animation: robotIdle 2s steps(25) infinite;
+  animation-timing-function: step-end; /* Ensure no transition between steps */
+  overflow: hidden;
+}
+
+@keyframes robotIdle {
+  // Adjusted keyframes to reflect the new size:
+  0%, 4.76% { background-position: 0px 0px; }
+  4.77%, 9.52% { background-position: -325px 0px; } /* Original -500px * 0.65 */
+  9.53%, 14.28% { background-position: -650px 0px; }
+  14.29%, 19.04% { background-position: -975px 0px; }
+  19.05%, 23.80% { background-position: -1300px 0px; }
+  23.81%, 28.56% { background-position: -1625px 0px; }
+  28.57%, 33.32% { background-position: 0px -325px; }
+  33.33%, 38.08% { background-position: -325px -325px; }
+  38.09%, 42.84% { background-position: -650px -325px; }
+  42.85%, 47.60% { background-position: -975px -325px; }
+  47.61%, 52.36% { background-position: -1300px -325px; }
+  52.37%, 57.12% { background-position: -1625px -325px; }
+  57.13%, 61.88% { background-position: 0px -650px; }
+  61.89%, 66.64% { background-position: -325px -650px; }
+  66.65%, 71.40% { background-position: -650px -650px; }
+  71.41%, 76.16% { background-position: -975px -650px; }
+  76.17%, 80.92% { background-position: -1300px -650px; }
+  80.93%, 85.68% { background-position: -1625px -650px; }
+  85.69%, 90.44% { background-position: 0px -975px; }
+  90.45%, 95.20% { background-position: -325px -975px; }
+  95.21%, 100% { background-position: -650px -975px; } /* Last frame */
+}
