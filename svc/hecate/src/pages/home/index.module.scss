@@ -112,9 +112,10 @@ h1, h2, h3, h4, h5, h6 {
   75%, 87.49% { background-position: -768px 0px; }
   87.5%, 100% { background-position: -896px 0px; }
 }
+
 .trader2 {
   position: fixed;
-  bottom: 44.2px; /* 20px * 2.2 */
+  bottom: 30px; /* 20px * 2.2 */
   left: calc(50% - 440px); /* Adjusted left position to scale with the sprite */
   width: 330px; /* 150px * 2.2 */
   height: 376.2px; /* 171px * 2.2 */
@@ -180,4 +181,27 @@ h1, h2, h3, h4, h5, h6 {
   85.69%, 90.44% { background-position: 0px -975px; }
   90.45%, 95.20% { background-position: -325px -975px; }
   95.21%, 100% { background-position: -650px -975px; } /* Last frame */
+}
+
+.trader1 {
+  position: fixed;
+  bottom: 30px; /* 20px * 2 */
+  left: 0px; /* Position all the way to the left */
+  width: 342px; /* 171px * 2 */
+  height: 342px; /* 171px * 2 */
+  z-index: 101; /* Above background but below interactive elements */
+  background-image: url('../../assets/images/traders/Trader_1/Idle.png');
+  background-size: 2052px 342px; /* 1026px * 2, 171px * 2 */
+  animation: trader1Idle 1s steps(6) infinite;
+  animation-timing-function: step-end; /* Ensure no transition between steps */
+  overflow: hidden;
+}
+
+@keyframes trader1Idle {
+  0%, 16.66% { background-position: 0px 0px; }
+  16.67%, 33.33% { background-position: -342px 0px; } /* 171px * 2 */
+  33.34%, 50.00% { background-position: -684px 0px; }
+  50.01%, 66.66% { background-position: -1026px 0px; }
+  66.67%, 83.33% { background-position: -1368px 0px; }
+  83.34%, 100% { background-position: -1710px 0px; }
 }
