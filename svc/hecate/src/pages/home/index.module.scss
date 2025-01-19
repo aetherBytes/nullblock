@@ -26,6 +26,7 @@ html, body {
   left: 0;
   width: 100%;
   height: 100%;
+  z-index: -100;
   background-color: $background-dark;
 
   /* Fog effect */
@@ -73,4 +74,57 @@ h1, h2, h3, h4, h5, h6 {
     background-color: $accent-color;
     color: $text-color;
   }
+}
+.scene {
+  position: fixed; /* Changed to fixed for exact positioning at the bottom */
+  bottom: 0; /* Stick to the bottom */
+  left: 0; /* Start from the left */
+  width: 100vw; /* Full viewport width */
+  height: 20vh; /* 20% of viewport height for the scene */
+  z-index: 1000; /* Ensure it's above backgroundImage but below buttons */
+  background: transparent; /* Transparent to see through to backgroundImage */
+  display: flex; /* Use flex for easier positioning of child elements */
+  justify-content: center; /* Center horizontally */
+  align-items: flex-end; /* Align items to the bottom */
+}
+
+.robot {
+  position: absolute; /* Absolute within scene */
+  bottom: 0; /* At the bottom of the scene */
+  left: 110px; /* Adjust to not overlap with fire */
+  width: 50px;
+  height: 50px;
+  z-index: 101; /* Above fire */
+  background-image: url('../../assets/images/echo_bot_white.png'); /* Placeholder for robot pixel art */
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+
+.fire {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 150px;
+  background-image: url('../../assets/images/campfire-sheet.png');
+  background-size: 1200px 150px;
+  animation: campfireFlicker 1s steps(8) infinite;
+  animation-timing-function: step-end;
+  overflow: hidden;
+}
+
+@keyframes campfireFlicker {
+  0%, 12.49% { background-position: 0px 0px; }
+  12.5%, 24.99% { background-position: -150px 0px; }
+  25%, 37.49% { background-position: -300px 0px; }
+  37.5%, 49.99% { background-position: -450px 0px; }
+  50%, 62.49% { background-position: -600px 0px; }
+  62.5%, 74.99% { background-position: -750px 0px; }
+  75%, 87.49% { background-position: -900px 0px; }
+  87.5%, 100% { background-position: -1050px 0px; }
 }
