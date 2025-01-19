@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import styles from './index.module.scss';
-import StarsCanvas from '@components/stars/stars'; // Import StarsCanvas component
+import StarsCanvas from '@components/stars/stars'; // Assuming this component exists
 
-const Home = () => {
-  const [walletConnected, setWalletConnected] = useState(false);
+const Home: React.FC = () => {
+  const [walletConnected, setWalletConnected] = useState<boolean>(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,8 +52,12 @@ const Home = () => {
   return (
     <>
       <div className={styles.backgroundImage} />
-      <StarsCanvas/>
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <StarsCanvas />
+      <div className={styles.scene}>
+        <div className={styles.fire}></div>
+        <div className={styles.robot}></div>
+      </div>
+      <div style={{ position: 'relative', zIndex: 2 }}> {/* Increased z-index to ensure it's above scene */}
         {walletConnected ? (
           <div>
             <p>Connected with: {publicKey}</p>
