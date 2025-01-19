@@ -1,160 +1,76 @@
-@import url('https://fonts.googleapis.com/css2?family=Comic+Sans+MS&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap');
 
 /* Define font styles */
-$comic-font: 'Comic Sans MS', sans-serif;
+$batman-font: 'Open Sans', sans-serif;
 $heading-font-weight: 700;
 $normal-font-weight: 400;
 $base-font-size-title: 24px;
 $base-font-size: 18px;
 
 /* Theme colors */
-$background-dark: #000000; /* Black */
-$background-light: #ff8c00; /* Orange */
-$accent-color: rgba(255, 165, 0, 0.5); /* Lighter Orange for effects */
-$text-color: #ffffff; /* White for text */
+$background-dark: #1a1a1a; /* Dark gray for a cave-like feel */
+$fog-color: rgba(100, 100, 100, 0.3); /* Light gray overlay for fog effect */
+$accent-color: #4a90e2; /* Blue for cyberpunk neon accents */
+$text-color: #e0e0e0; /* Light gray for text readability in dark theme */
 
 html, body {
   height: 100%;
   margin: 0;
   overflow: hidden; /* Prevents scrolling */
 }
-/* Animation Keyframes */
-@keyframes flickerGlow {
-  0%, 100% {
-    box-shadow: 0 0 8px $accent-color, 0 0 20px $accent-color;
-  }
-  50% {
-    box-shadow: 0 0 10px $accent-color, 0 0 25px $accent-color;
-  }
-}
 
-@keyframes moveGradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-@keyframes typing {
-  from { width: 0; }
-  to { width: 100%; }
-}
-
-@keyframes blinkCaret {
-  from, to { border-color: transparent; }
-  50% { border-color: $accent-color; }
-}
-
-@keyframes backgroundFade {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-
+/* Background for the cave-like atmosphere */
 .backgroundImage {
-  // background-image: url('../../assets/images/town_2.png');
-  // background-image: url('../../assets/images/purple_0.png');
-  // background-image: url('../../assets/images/red_tree.png');
-  // background-image: url('../../assets/images/red_block.png');
-  // background-image: url('../../assets/images/nexoliths.png');
-  // background-image: url('../../assets/images/nexoliths_11.png');
-  // background-image: url('../../assets/images/waste_0.png');
-  // background-image: url('../../assets/images/nowhere_bridge.png');
-  // background-image: url('../../assets/images/float_0.png');
-  background-image: url('../../assets/images/wild_plains_0.png');
-  background-position: center; // Center the background image
-  background-size: cover; // Cover the entire area of the element
-  position: fixed; // Position fixed to the viewport
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100vw; // Full viewport width
-  height: 100vh; // Full viewport height
-  z-index: 0; // Ensure it's below other overlay elements
-  overflow: hidden; // Prevent any overflow from the image
-}
+  width: 100%;
+  height: 100%;
+  background-color: $background-dark;
 
-
-.bottomUIContainer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 25px;
-  z-index: 30; // UI elements above the fog but below the Spline object
-  background-color: rgba(0, 0, 0, 0.5);
-  color: $text-color;
-}
-
-.powerButtonContainer {
-  display: flex;
-  color: $text-color;
-  position: fixed;
-  bottom: 0%;
-  right: 2%;
-  z-index: 40; // Ensuring interactive elements are accessible
-}
-
-.powerButton {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
-  background: transparent;
-  border-radius: 15px;
-  color: $text-color;
-  font-size: 1.5rem;
-}
-
-.profileButtonImage {
-  width: 150px;
-}
-
-
-@media screen and (max-width: 768px) {
-  .backgroundImage {
-    background-position: 85% center;
-  }
-  .powerButtonContainer {
+  /* Fog effect */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
     right: 0;
-  }
-  .powerButton {
-    padding: 10px;
-    font-size: 1rem;
-  }
-  .powerButtonImage {
-    width: 100px;
+    bottom: 0;
+    background: linear-gradient(to bottom,
+      transparent,
+      $fog-color 30%,
+      $fog-color 70%,
+      transparent
+    );
+    pointer-events: none; /* Ensures the fog doesn't interfere with clicks */
   }
 }
 
-// .fogOverlay {
-//   position: fixed;
-//   top: 0;
-//   left: 0;
-//   width: 100vw;
-//   height: 100vh;
-//   background-color: rgba(0, 0, 0, 0.25); // Start with a darker overlay
-//   pointer-events: none;
-//   mix-blend-mode: multiply;
-//   z-index: 1200; // Below the Spline object but above the background
-// }
-/* Spline object specific styles */
-.splineObject {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 20; // Ensure this is above the fog overlay
-  // pointer-events: none; // Allow clicks to pass through, if needed
-//   filter: drop-shadow(0 0 10px rgba(0, 0, 255, 0.2)) /* Blue with 50% opacity */
-//           drop-shadow(0 0 20px rgba(148, 0, 211, 0.2)); /* Electric purple with 50% opacity */
+/* Text styles */
+body {
+  font-family: $batman-font;
+  color: $text-color;
+  font-size: $base-font-size;
 }
 
-/* Add any additional media queries as needed */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: $heading-font-weight;
+  font-size: $base-font-size-title;
+}
 
+/* Accent for interactive elements or highlights */
+.button {
+  color: $accent-color;
+  border: 1px solid $accent-color;
+  background: transparent;
+  padding: 10px 20px;
+  font-size: $base-font-size;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+
+  &:hover {
+    background-color: $accent-color;
+    color: $text-color;
+  }
+}

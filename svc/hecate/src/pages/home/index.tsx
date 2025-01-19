@@ -1,51 +1,78 @@
-
 import React, { useState, useEffect } from 'react';
-import AppMenu from '@components/echo-screens/home-screen/app-menu/app-menu';
-import EchoChat from '@components/echo-screens/home-screen/echo-chat/echo-chat';
-import ChatInput from '@components/echo-screens/home-screen/chat-input/chat-input';
+import { Connection, PublicKey } from '@solana/web3.js';
 import styles from './index.module.scss';
-import powerOn from '@assets/images/echo_bot_night.png';
-import powerOff from '@assets/images/echo_bot_white.png';
-import Moxi from '@components/moxi/moxi'; // Import Moxi component
 import StarsCanvas from '@components/stars/stars'; // Import StarsCanvas component
 
 const Home = () => {
-  const [isUIVisible, setIsUIVisible] = useState(true);
-  const [showEchoChat, setShowEchoChat] = useState(false);
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [publicKey, setPublicKey] = useState<string | null>(null);
 
   useEffect(() => {
-    // Your useEffect code here
+    const connectPhantom = async () => {
+      if ('phantom' in window) {
+        const provider = (window as any).phantom?.solana;
+        if (provider) {
+          try {
+            const { publicKey } = await provider.connect();
+            setPublicKey(publicKey.toString());
+            setWalletConnected(true);
+          } catch (error) {
+            console.error('Error connecting to Phantom:', error);
+          }
+        } else {
+          console.log('Phantom wallet not detected');
+        }
+      } else {
+        console.log('Please install Phantom wallet extension');
+      }
+    };
+
+    connectPhantom();
   }, []);
 
+  const manualConnect = async () => {
+    if ('phantom' in window) {
+      const provider = (window as any).phantom?.solana;
+      if (provider) {
+        try {
+          const { publicKey } = await provider.connect();
+          setPublicKey(publicKey.toString());
+          setWalletConnected(true);
+        } catch (error) {
+          console.error('Manual connect error:', error);
+        }
+      } else {
+        alert('Phantom wallet not detected');
+      }
+    } else {
+      alert('Please install Phantom wallet extension');
+    }
+  };
 
   return (
     <>
-      {/* Render the StarsCanvas component as the background */},
+      <div className={styles.backgroundImage} />
       <StarsCanvas/>
-      <div className={styles.backgroundImage}/>
-      <div className={styles.powerButtonContainer}>
-        <button className={styles.powerButton}>
-          <img src={isUIVisible ? powerOn : powerOff} alt="Profile button" className={styles.profileButtonImage} />
-          <span> {isUIVisible ? 'Profile' : 'Log in'
-          }</span>
-        </button>
-      </div>
-      <div className={styles.bottomUIContainer}>
-        {/* Render Moxi component always */}
-        <Moxi />
-        <>{showEchoChat && <EchoChat />}</>
-        <AppMenu
-              toggleEchoVisibility={() => setShowEchoChat(!showEchoChat)}
-              closeEchoScreen={() => setShowEchoChat(false)}
-              isUIVisible={isUIVisible}
-            />
-        <ChatInput />
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        {walletConnected ? (
+          <div>
+            <p>Connected with: {publicKey}</p>
+            <button
+              onClick={() => {
+                setWalletConnected(false);
+                setPublicKey(null);
+              }}
+              className={styles.button}
+            >
+              Disconnect
+            </button>
+          </div>
+        ) : (
+          <button onClick={manualConnect} className={styles.button}>Connect Phantom</button>
+        )}
       </div>
     </>
   );
 };
 
 export default Home;
-
-
-

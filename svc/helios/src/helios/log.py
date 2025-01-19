@@ -1,7 +1,8 @@
 import logging
 import logging.config
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger.json import JsonFormatter
 from typing import Any, Dict, Optional
+
 
 # Define the logging configuration
 logging_config = {
@@ -9,7 +10,7 @@ logging_config = {
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
-            "()": jsonlogger.JsonFormatter,  # type: ignore
+            "()": JsonFormatter,
             "format": "%(asctime)s %(levelname)s %(name)s %(message)s %(context)s",
         },
     },
@@ -43,11 +44,12 @@ logging.config.dictConfig(logging_config)
 
 # Custom logging function to handle context
 def log_with_context(
-    logger: logging.Logger,
     level: str,
     message: str,
+    logger: logging.Logger,
     context: Optional[Dict[str, Any]] = None,
 ) -> None:
+
     extra = {"context": context} if context else {}
     if level.lower() == "debug":
         logger.debug(message, extra=extra)
