@@ -24,6 +24,7 @@
     "@lomray/vite-ssr-boost": "^2.3.1",
     "@react-three/drei": "^9.105.3",
     "@react-three/fiber": "^8.16.1",
+    "@solana/web3.js": "^1.98.0",
     "@splinetool/loader": "^1.0.93",
     "@splinetool/react-spline": "^2.2.6",
     "@splinetool/runtime": "^1.0.93",
