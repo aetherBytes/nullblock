@@ -88,31 +88,15 @@ h1, h2, h3, h4, h5, h6 {
   align-items: flex-end; /* Align items to the bottom */
 }
 
-.robot {
-  position: absolute; /* Absolute within scene */
-  bottom: 0; /* At the bottom of the scene */
-  left: 110px; /* Adjust to not overlap with fire */
-  width: 50px;
-  height: 50px;
-  z-index: 101; /* Above fire */
-  background-image: url('../../assets/images/echo_bot_white.png'); /* Placeholder for robot pixel art */
-}
-
-@keyframes flicker {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-
-
 .fire {
   position: fixed;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  width: 150px;
-  height: 150px;
+  width: 128px; /* Increased width by 4x */
+  height: 256px; /* Increased height by 4x */
   background-image: url('../../assets/images/campfire-sheet.png');
-  background-size: 1200px 150px;
+  background-size: 1024px 256px; /* Total size of the sprite sheet scaled up */
   animation: campfireFlicker 1s steps(8) infinite;
   animation-timing-function: step-end;
   overflow: hidden;
@@ -120,11 +104,11 @@ h1, h2, h3, h4, h5, h6 {
 
 @keyframes campfireFlicker {
   0%, 12.49% { background-position: 0px 0px; }
-  12.5%, 24.99% { background-position: -150px 0px; }
-  25%, 37.49% { background-position: -300px 0px; }
-  37.5%, 49.99% { background-position: -450px 0px; }
-  50%, 62.49% { background-position: -600px 0px; }
-  62.5%, 74.99% { background-position: -750px 0px; }
-  75%, 87.49% { background-position: -900px 0px; }
-  87.5%, 100% { background-position: -1050px 0px; }
+  12.5%, 24.99% { background-position: -128px 0px; } /* Adjusted for scaled frame size */
+  25%, 37.49% { background-position: -256px 0px; }
+  37.5%, 49.99% { background-position: -384px 0px; }
+  50%, 62.49% { background-position: -512px 0px; }
+  62.5%, 74.99% { background-position: -640px 0px; }
+  75%, 87.49% { background-position: -768px 0px; }
+  87.5%, 100% { background-position: -896px 0px; }
 }
