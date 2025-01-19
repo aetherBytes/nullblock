@@ -90,7 +90,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .fire {
   position: fixed;
-  bottom: 20px;
+  bottom: 50px;
   left: 50%;
   transform: translateX(-50%);
   width: 128px; /* Increased width by 4x */
@@ -113,43 +113,12 @@ h1, h2, h3, h4, h5, h6 {
   87.5%, 100% { background-position: -896px 0px; }
 }
 
-.trader2 {
-  position: fixed;
-  bottom: 30px; /* 20px * 2.2 */
-  left: calc(50% - 440px); /* Adjusted left position to scale with the sprite */
-  width: 330px; /* 150px * 2.2 */
-  height: 376.2px; /* 171px * 2.2 */
-  z-index: 101; /* Above background but below interactive elements */
-  background-image: url('../../assets/images/traders/Trader_2/Idle.png');
-  background-size: 4620px 376.2px; /* 2100px * 2.2, 171px * 2.2 */
-  animation: traderIdle 1s steps(14) infinite;
-  animation-timing-function: step-end; /* Ensure no transition between steps */
-  overflow: hidden;
-}
-
-@keyframes traderIdle {
-  0%, 7.14% { background-position: 0px 0px; }
-  7.15%, 14.28% { background-position: -330px 0px; } /* 150px * 2.2 */
-  14.29%, 21.42% { background-position: -660px 0px; }
-  21.43%, 28.56% { background-position: -990px 0px; }
-  28.57%, 35.70% { background-position: -1320px 0px; }
-  35.71%, 42.84% { background-position: -1650px 0px; }
-  42.85%, 50.00% { background-position: -1980px 0px; }
-  50.01%, 57.14% { background-position: -2310px 0px; }
-  57.15%, 64.28% { background-position: -2640px 0px; }
-  64.29%, 71.42% { background-position: -2970px 0px; }
-  71.43%, 78.56% { background-position: -3300px 0px; }
-  78.57%, 85.70% { background-position: -3630px 0px; }
-  85.71%, 92.84% { background-position: -3960px 0px; }
-  92.85%, 100% { background-position: -4290px 0px; }
-}
-
 .robot {
   position: absolute;
   bottom: 0; /* Adjust to fit your scene */
   left: calc(50% + 100px); /* Position to the right of the fire, adjust as necessary */
   width: 325px; /* Original 500px * 0.65 */
-  height: 260px; /* Original 400px * 0.65 */
+  height: 230px; /* Original 400px * 0.65 */
   z-index: 101;
   background-image: url('../../assets/images/robot/Assets/SpriteSheets/Idle.png');
   background-size: 1625px 1625px; /* Original 2500px * 0.65 for both dimensions */
@@ -185,14 +154,14 @@ h1, h2, h3, h4, h5, h6 {
 
 .trader1 {
   position: fixed;
-  bottom: 30px; /* 20px * 2 */
+  bottom: 10px; /* 20px * 2 */
   left: 0px; /* Position all the way to the left */
   width: 342px; /* 171px * 2 */
   height: 342px; /* 171px * 2 */
   z-index: 101; /* Above background but below interactive elements */
   background-image: url('../../assets/images/traders/Trader_1/Idle.png');
   background-size: 2052px 342px; /* 1026px * 2, 171px * 2 */
-  animation: trader1Idle 1s steps(6) infinite;
+  animation: trader1Idle 3s steps(6) infinite;
   animation-timing-function: step-end; /* Ensure no transition between steps */
   overflow: hidden;
 }
@@ -204,4 +173,59 @@ h1, h2, h3, h4, h5, h6 {
   50.01%, 66.66% { background-position: -1026px 0px; }
   66.67%, 83.33% { background-position: -1368px 0px; }
   83.34%, 100% { background-position: -1710px 0px; }
+}
+
+.trader3 {
+  position: fixed;
+  bottom: 10px; /* 20px * 2 */
+  right: 0px; /* Position all the way to the right */
+  width: 342px; /* 171px * 2 */
+  height: 342px; /* 171px * 2 */
+  z-index: 101; /* Above background but below interactive elements */
+  background-image: url('../../assets/images/traders/Trader_3/Idle.png');
+  background-size: 2052px 342px; /* 1026px * 2, 171px * 2 */
+  animation: trader3Idle 2s steps(6) infinite;
+  animation-timing-function: step-end; /* Ensure no transition between steps */
+  overflow: hidden;
+}
+
+@keyframes trader3Idle {
+  0%, 16.66% { background-position: 0px 0px; }
+  16.67%, 33.33% { background-position: -342px 0px; } /* 171px * 2 */
+  33.34%, 50.00% { background-position: -684px 0px; }
+  50.01%, 66.66% { background-position: -1026px 0px; }
+  66.67%, 83.33% { background-position: -1368px 0px; }
+  83.34%, 100% { background-position: -1710px 0px; }
+}
+
+.trader2 {
+  position: fixed;
+  bottom: 10px; /* 20px * 0.7 */
+  left: calc(50% - 320px); /* Adjusted left to maintain centering, 200px * 0.7 */
+  width: 231px; /* 330px * 0.7 */
+  height: 263.34px; /* 376.2px * 0.7 */
+  z-index: 101;
+  background-image: url('../../assets/images/traders/Trader_2/Idle.png');
+  background-size: 3234px 263.34px; /* 4620px * 0.7, 376.2px * 0.7 */
+  animation: traderIdleCycle 10s steps(14) infinite; /* Assuming the same animation logic */
+  animation-timing-function: step-end;
+  overflow: hidden;
+}
+
+@keyframes traderIdleCycle {
+  /* ... existing keyframes, but adjust each background-position by 0.7 */
+  0%, 2.38% { background-position: 0px 0px; }
+  2.39%, 4.76% { background-position: -231px 0px; } /* -330px * 0.7 */
+  4.77%, 7.14% { background-position: -462px 0px; }
+  7.15%, 9.52% { background-position: -693px 0px; }
+  9.53%, 11.90% { background-position: -924px 0px; }
+  11.91%, 14.28% { background-position: -1155px 0px; }
+  14.29%, 16.66% { background-position: -1386px 0px; }
+  16.67%, 19.04% { background-position: -1617px 0px; }
+  19.05%, 21.42% { background-position: -1848px 0px; }
+  21.43%, 23.80% { background-position: -2079px 0px; }
+  23.81%, 26.18% { background-position: -2310px 0px; }
+  26.19%, 28.56% { background-position: -2541px 0px; }
+  28.57%, 30.94% { background-position: -2772px 0px; }
+  30.95%, 33.32% { background-position: -3003px 0px; }
 }
