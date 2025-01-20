@@ -64,21 +64,7 @@ const Home: React.FC = () => {
         <div className={styles.trader1}></div>
       </div>
       <div style={{ position: 'relative', zIndex: 2 }}>
-        {walletConnected ? (
-          <div>
-            <p>Connected with: {publicKey}</p>
-            <button
-              onClick={() => {
-                setWalletConnected(false);
-                setPublicKey(null);
-                setShowEcho(false);
-              }}
-              className={styles.button}
-            >
-              Disconnect
-            </button>
-          </div>
-        ) : (
+        {!walletConnected && (
           <button onClick={manualConnect} className={styles.button}>Connect Phantom</button>
         )}
       </div>

@@ -1,49 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import styles from './echo.module.scss';
+import { fetchWalletData } from '@services/api'; // Import the new API function
 
-import { fetchWalletData } from '@services/api';
-type Screen = 'home' | 'settings' | 'transactions'; // Add more screen types as needed
+type Screen = 'home' | 'settings'; // Only these two screens for now
 
 const Echo: React.FC = () => {
   const [screen, setScreen] = useState<Screen>('home');
-  const [walletData, setWalletData] = useState<any>(null); // Adjust type according to your backend response
+  const [walletData, setWalletData] = useState<any>(null);
+  const [showSecondaryScreen, setShowSecondaryScreen] = useState(true); // Default to visible
 
   useEffect(() => {
     const loadWalletData = async () => {
       try {
-        const data = await fetchWalletData();
+        // Replace with actual public key logic
+        const data = await fetchWalletData("YOUR_PUBLIC_KEY_HERE");
         setWalletData(data);
       } catch (error) {
         console.error('Failed to fetch wallet data:', error);
-        // Optionally, set a state to show error message or fallback UI
       }
     };
 
     loadWalletData();
-  }, []); // Empty dependency array means this effect runs once on mount
+  }, []);
 
-  const renderHomeScreen = () => {
-    if (!walletData) return <p>Loading...</p>;
+  const renderControlScreen = () => (
+    <div className={styles.controlScreen}>
+      <button onClick={() => setScreen('home')} className={styles.controlButton}>Home</button>
+      <button onClick={() => setScreen('settings')} className={styles.controlButton}>Settings</button>
+      <button onClick={() => setShowSecondaryScreen(!showSecondaryScreen)} className={styles.controlButton}>Toggle HUD</button>
+    </div>
+  );
 
-    return (
-      <div className={styles.hud}>
-        <h2 className={styles.hudTitle}>Wallet Overview</h2>
-        <p>Balance: <span>{walletData.balance} SOL</span></p>
-        <p>Address: <span>{walletData.address.slice(0, 6)}...{walletData.address.slice(-4)}</span></p>
-        <p>Transactions: <span>{walletData.transactionCount}</span></p>
-        {/* Add more data points as needed */}
-      </div>
-    );
-  };
+  const renderHomeScreen = () => (
+    <div className={styles.hudScreen}>
+      {walletData ? (
+        <>
+          <h2 className={styles.hudTitle}>Wallet Overview</h2>
+          <p>Balance: <span>{walletData.balance} SOL</span></p>
+          <p>Address: <span>{walletData.address.slice(0, 6)}...{walletData.address.slice(-4)}</span></p>
+          <p>Transactions: <span>{walletData.transactionCount}</span></p>
+        </>
+      ) : (
+        <p>Loading...</p>
+      )}
+    </div>
+  );
+
+  const renderSettingsScreen = () => (
+    <div className={styles.settingsScreen}>
+      <p>Connected with: {walletData?.address}</p>
+      <button onClick={() => {
+        // Here you would handle disconnection logic
+        console.log('Disconnecting wallet');
+      }} className={styles.button}>Disconnect</button>
+    </div>
+  );
 
   const renderScreen = () => {
     switch (screen) {
       case 'home':
         return renderHomeScreen();
       case 'settings':
-        return <p>Settings screen content...</p>; // Placeholder
-      case 'transactions':
-        return <p>Transactions screen content...</p>; // Placeholder
+        return renderSettingsScreen();
       default:
         return null;
     }
@@ -51,13 +69,13 @@ const Echo: React.FC = () => {
 
   return (
     <div className={styles.echoContainer}>
-      <div className={styles.echoScreen}>
-        {renderScreen()}
-      </div>
-      <div className={styles.navButtons}>
-        <button onClick={() => setScreen('home')} className={styles.navButton}>Home</button>
-        <button onClick={() => setScreen('transactions')} className={styles.navButton}>Transactions</button>
-        <button onClick={() => setScreen('settings')} className={styles.navButton}>Settings</button>
+      {showSecondaryScreen && (
+        <div className={styles.hudWindow}>
+          {renderScreen()}
+        </div>
+      )}
+      <div className={styles.controlWindow}>
+        {renderControlScreen()}
       </div>
     </div>
   );

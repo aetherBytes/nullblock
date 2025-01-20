@@ -2,61 +2,82 @@
 
 .echoContainer {
   position: fixed;
-  bottom: 50px; // Adjust based on your layout
-  left: 50px; // Adjust based on your layout
-  width: 300px;
-  height: 400px; // Increased height for more screen content
-  background-color: rgba($background-dark, 0.8); // Semi-transparent dark background
-  border: 1px solid $accent-color;
   z-index: 1002;
-  box-shadow: 0 0 20px rgba($black-glow, 0.5);
-  display: flex;
-  flex-direction: column;
 
-  .echoScreen {
-    width: 100%;
-    height: 85%; // Most of the space for screen content
-    background-color: rgba($accent-color, 0.2); // Light blue with transparency
+  .hudWindow {
+    position: fixed;
+    top: 50%; // Center vertically
+    left: 50%; // Center horizontally
+    transform: translate(-50%, -50%); // Adjust to true center
+    width: 300px;
+    height: 250px;
+    background-color: rgba($accent-color, 0.2);
+    border: 1px solid $accent-color;
     color: $text-color;
     padding: 10px;
     overflow-y: auto;
-    border-radius: 5px 5px 0 0; // Top corners rounded
+    box-shadow: 0 0 20px rgba($black-glow, 0.5);
 
-    .hud {
-      padding: 10px;
-      border: 1px solid rgba($accent-color, 0.5);
-      border-radius: 5px;
-      background: rgba($text-color, 0.1); // Light overlay for readability
+    .hudTitle {
+      text-align: center;
+      color: $accent-color;
+      font-size: 1.2em;
+      margin-bottom: 10px;
+    }
 
-      .hudTitle {
-        text-align: center;
-        color: $accent-color;
-        font-size: 1.2em;
-        margin-bottom: 10px;
-      }
-
-      p {
-        margin: 5px 0;
-        span {
-          font-weight: bold;
-        }
+    p {
+      margin: 5px 0;
+      span {
+        font-weight: bold;
       }
     }
   }
 
-  .navButtons {
+  .controlWindow {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    width: 200px;
+    height: 100px;
+    background-color: rgba($background-dark, 0.8);
+    border: 1px solid $accent-color;
+    box-shadow: 0 0 20px rgba($black-glow, 0.5);
     display: flex;
+    flex-direction: column;
     justify-content: space-around;
-    padding: 5px;
-    background: rgba($background-dark, 0.9); // Darker background for buttons
+    align-items: center;
 
-    .navButton {
+    .controlButton {
       color: $accent-color;
       background: transparent;
       border: 1px solid $accent-color;
       padding: 5px 10px;
       cursor: pointer;
       transition: all 0.3s ease;
+
+      &:hover {
+        background-color: $accent-color;
+        color: $text-color;
+      }
+    }
+  }
+
+  .settingsScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+
+    .button {
+      color: $accent-color;
+      border: 1px solid $accent-color;
+      background: transparent;
+      padding: 10px 20px;
+      font-size: $base-font-size;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease, color 0.3s ease;
 
       &:hover {
         background-color: $accent-color;
