@@ -29,7 +29,7 @@
       "@constants/*": ["./constants/*"],
       "@interfaces/*": ["./interfaces/*"],
       "@pages/*": ["./pages/*"],
-      "@routes/*": ["./routes/*"]
+      "@routes/*": ["./routes/*"],
     }
   },
   "include": ["src", "types", "vite.config.ts"],
