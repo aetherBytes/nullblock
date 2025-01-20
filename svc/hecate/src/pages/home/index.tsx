@@ -3,10 +3,12 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import styles from './index.module.scss';
 import StarsCanvas from '@components/stars/stars';
 import FogCanvas from '@components/fog/fog';
+import Echo from '@components/echo/echo';
 
 const Home: React.FC = () => {
   const [walletConnected, setWalletConnected] = useState<boolean>(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
+  const [showEcho, setShowEcho] = useState<boolean>(false);
 
   useEffect(() => {
     const connectPhantom = async () => {
@@ -17,6 +19,7 @@ const Home: React.FC = () => {
             const { publicKey } = await provider.connect();
             setPublicKey(publicKey.toString());
             setWalletConnected(true);
+            setShowEcho(true); // Automatically show Echo on initial connection
           } catch (error) {
             console.error('Error connecting to Phantom:', error);
           }
@@ -39,6 +42,7 @@ const Home: React.FC = () => {
           const { publicKey } = await provider.connect();
           setPublicKey(publicKey.toString());
           setWalletConnected(true);
+          setShowEcho(true); // Show Echo after manual connection
         } catch (error) {
           console.error('Manual connect error:', error);
         }
@@ -59,7 +63,7 @@ const Home: React.FC = () => {
         <div className={styles.robot}></div>
         <div className={styles.trader1}></div>
       </div>
-      <div style={{ position: 'relative', zIndex: 2 }}> {/* Increased z-index to ensure it's above scene */}
+      <div style={{ position: 'relative', zIndex: 2 }}>
         {walletConnected ? (
           <div>
             <p>Connected with: {publicKey}</p>
@@ -67,6 +71,7 @@ const Home: React.FC = () => {
               onClick={() => {
                 setWalletConnected(false);
                 setPublicKey(null);
+                setShowEcho(false);
               }}
               className={styles.button}
             >
@@ -77,6 +82,7 @@ const Home: React.FC = () => {
           <button onClick={manualConnect} className={styles.button}>Connect Phantom</button>
         )}
       </div>
+      {showEcho && <Echo />} {/* Render Echo when showEcho is true */}
     </>
   );
 };
