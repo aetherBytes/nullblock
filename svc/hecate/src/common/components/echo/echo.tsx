@@ -29,11 +29,21 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
     loadWalletData();
   }, [publicKey]);
 
+  // Update to turn on ECHO screen when any button is clicked if it's off
+  const toggleScreen = (newScreen: Screen) => {
+    if (!showSecondaryScreen) {
+      setShowSecondaryScreen(true);
+    }
+    setScreen(newScreen);
+  };
+
   const renderControlScreen = () => (
     <div className={styles.controlScreen}>
-      <button onClick={() => setScreen('home')} className={styles.controlButton}>Home</button>
-      <button onClick={() => setScreen('settings')} className={styles.controlButton}>Settings</button>
-      <button onClick={() => setShowSecondaryScreen(!showSecondaryScreen)} className={styles.controlButton}>Toggle HUD</button>
+      <button onClick={() => toggleScreen('home')} className={styles.controlButton}>NEXUS</button>
+      <button onClick={() => toggleScreen('settings')} className={styles.controlButton}>Settings</button>
+      <button onClick={() => setShowSecondaryScreen(!showSecondaryScreen)} className={styles.controlButton}>
+        ECHO {showSecondaryScreen ? '(Off)' : '(On)'}
+      </button>
     </div>
   );
 
@@ -49,6 +59,12 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
       ) : (
         <p>Loading...</p>
       )}
+      <div className={styles.bottomLeftInfo}>
+        <p>Electronic Communications HUB and Omnitool</p>
+      </div>
+      <div className={styles.bottomRightInfo}>
+        <p>biological interface online... connected entity: {publicKey || 'loading'}</p>
+      </div>
     </div>
   );
 

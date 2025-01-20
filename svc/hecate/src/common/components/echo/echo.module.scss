@@ -6,30 +6,52 @@
 
   .hudWindow {
     position: fixed;
-    top: 50%; // Center vertically
-    left: 50%; // Center horizontally
-    transform: translate(-50%, -50%); // Adjust to true center
-    width: 300px;
-    height: 250px;
-    background-color: rgba($accent-color, 0.2);
-    border: 1px solid $accent-color;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 60vh; // Increased by 5% from previous height (55vh + 5% = 60vh)
+    max-height: 85vh; // Increase max height to match new height
+    background-color: rgba($accent-color, 0.1);
+    border: 2px solid $accent-color;
+    border-radius: 10px;
     color: $text-color;
-    padding: 10px;
+    padding: 20px;
     overflow-y: auto;
-    box-shadow: 0 0 20px rgba($black-glow, 0.5);
+    box-shadow: 0 0 30px $black-glow;
+    font-family: $batman-font;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 
     .hudTitle {
-      text-align: center;
       color: $accent-color;
-      font-size: 1.2em;
-      margin-bottom: 10px;
+      font-size: 2em;
+      margin-bottom: 20px;
     }
 
     p {
-      margin: 5px 0;
+      font-size: $base-font-size;
+      margin: 10px 0;
       span {
         font-weight: bold;
       }
+    }
+
+    .bottomLeftInfo, .bottomRightInfo {
+      position: absolute;
+      bottom: 20px;
+      font-size: 0.9em;
+      color: rgba($accent-color, 0.7);
+    }
+
+    .bottomLeftInfo {
+      left: 20px;
+    }
+
+    .bottomRightInfo {
+      right: 20px;
+      text-align: right;
     }
   }
 
@@ -37,23 +59,31 @@
     position: fixed;
     bottom: 10px;
     right: 10px;
-    width: 200px;
-    height: 100px;
-    background-color: rgba($background-dark, 0.8);
-    border: 1px solid $accent-color;
-    box-shadow: 0 0 20px rgba($black-glow, 0.5);
+    width: 250px;
+    height: auto;
+    background-color: rgba($background-dark, 0.9);
+    border: 2px solid $accent-color;
+    border-radius: 10px;
+    box-shadow: 0 0 30px $black-glow;
     display: flex;
     flex-direction: column;
-    justify-content: space-around;
-    align-items: center;
+    padding: 10px;
 
     .controlButton {
+      width: 100%;
+      height: 50px;
       color: $accent-color;
       background: transparent;
-      border: 1px solid $accent-color;
-      padding: 5px 10px;
+      border: 2px solid $accent-color;
+      border-radius: 5px;
+      margin: 5px 0;
+      padding: 0;
+      font-size: 16px;
       cursor: pointer;
       transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
       &:hover {
         background-color: $accent-color;
@@ -71,13 +101,14 @@
 
     .button {
       color: $accent-color;
-      border: 1px solid $accent-color;
+      border: 2px solid $accent-color;
       background: transparent;
       padding: 10px 20px;
       font-size: $base-font-size;
       text-decoration: none;
       cursor: pointer;
       transition: background-color 0.3s ease, color 0.3s ease;
+      border-radius: 5px;
 
       &:hover {
         background-color: $accent-color;
