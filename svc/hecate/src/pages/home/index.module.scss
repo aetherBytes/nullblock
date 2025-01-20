@@ -90,11 +90,11 @@ h1, h2, h3, h4, h5, h6 {
 
 .fire {
   position: fixed;
-  bottom: 50px;
+  bottom: 0px;
   left: 50%;
   transform: translateX(-50%);
   width: 128px; /* Increased width by 4x */
-  height: 256px; /* Increased height by 4x */
+  height: 240px; /* Increased height by 4x */
   background-image: url('../../assets/images/campfire-sheet.png');
   background-size: 1024px 256px; /* Total size of the sprite sheet scaled up */
   animation: campfireFlicker 1s steps(8) infinite;
