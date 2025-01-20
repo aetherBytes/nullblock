@@ -1,0 +1,26 @@
+@import '../../../pages/home/index.module.scss';
+
+.echoContainer {
+  position: fixed;
+  bottom: 50px; // Adjust based on your layout
+  left: 50px; // Adjust based on your layout
+  width: 300px; // Example width
+  height: 200px; // Example height
+  background-color: $background-dark;
+  border: 1px solid $accent-color;
+  z-index: 1002; // Higher z-index to ensure visibility over other elements
+  box-shadow: 0 0 20px rgba($black-glow, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .echoScreen {
+    width: 90%;
+    height: 90%;
+    background-color: $text-color;
+    color: $background-dark;
+    padding: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+}
