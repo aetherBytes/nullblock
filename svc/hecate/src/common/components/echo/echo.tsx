@@ -1,27 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import styles from './echo.module.scss';
-import { fetchWalletData } from '@services/api'; // Import the new API function
+import { fetchWalletData } from '@services/api';
 
-type Screen = 'home' | 'settings'; // Only these two screens for now
+type Screen = 'home' | 'settings';
 
-const Echo: React.FC = () => {
+interface EchoProps {
+  publicKey: string | null;
+  onDisconnect: () => void;
+}
+
+const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
   const [screen, setScreen] = useState<Screen>('home');
   const [walletData, setWalletData] = useState<any>(null);
-  const [showSecondaryScreen, setShowSecondaryScreen] = useState(true); // Default to visible
+  const [showSecondaryScreen, setShowSecondaryScreen] = useState(true);
 
   useEffect(() => {
     const loadWalletData = async () => {
-      try {
-        // Replace with actual public key logic
-        const data = await fetchWalletData("YOUR_PUBLIC_KEY_HERE");
-        setWalletData(data);
-      } catch (error) {
-        console.error('Failed to fetch wallet data:', error);
+      if (publicKey) {
+        try {
+          const data = await fetchWalletData(publicKey);
+          setWalletData(data);
+        } catch (error) {
+          console.error('Failed to fetch wallet data:', error);
+        }
       }
     };
 
     loadWalletData();
-  }, []);
+  }, [publicKey]);
 
   const renderControlScreen = () => (
     <div className={styles.controlScreen}>
@@ -48,11 +54,8 @@ const Echo: React.FC = () => {
 
   const renderSettingsScreen = () => (
     <div className={styles.settingsScreen}>
-      <p>Connected with: {walletData?.address}</p>
-      <button onClick={() => {
-        // Here you would handle disconnection logic
-        console.log('Disconnecting wallet');
-      }} className={styles.button}>Disconnect</button>
+      <p>Connected with: {publicKey}</p>
+      <button onClick={onDisconnect} className={styles.button}>Disconnect</button>
     </div>
   );
 

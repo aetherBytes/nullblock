@@ -19,7 +19,7 @@ const Home: React.FC = () => {
             const { publicKey } = await provider.connect();
             setPublicKey(publicKey.toString());
             setWalletConnected(true);
-            setShowEcho(true); // Automatically show Echo on initial connection
+            setShowEcho(true);
           } catch (error) {
             console.error('Error connecting to Phantom:', error);
           }
@@ -42,7 +42,7 @@ const Home: React.FC = () => {
           const { publicKey } = await provider.connect();
           setPublicKey(publicKey.toString());
           setWalletConnected(true);
-          setShowEcho(true); // Show Echo after manual connection
+          setShowEcho(true);
         } catch (error) {
           console.error('Manual connect error:', error);
         }
@@ -51,6 +51,23 @@ const Home: React.FC = () => {
       }
     } else {
       alert('Please install Phantom wallet extension');
+    }
+  };
+
+  // Function to handle disconnection
+  const handleDisconnect = async () => {
+    if ('phantom' in window) {
+      const provider = (window as any).phantom?.solana;
+      if (provider) {
+        try {
+          await provider.disconnect();
+          setWalletConnected(false);
+          setPublicKey(null);
+          setShowEcho(false);
+        } catch (error) {
+          console.error('Error disconnecting from Phantom:', error);
+        }
+      }
     }
   };
 
@@ -68,7 +85,7 @@ const Home: React.FC = () => {
           <button onClick={manualConnect} className={styles.button}>Connect Phantom</button>
         )}
       </div>
-      {showEcho && <Echo />} {/* Render Echo when showEcho is true */}
+      {showEcho && <Echo publicKey={publicKey} onDisconnect={handleDisconnect} />} {/* Pass publicKey and disconnect function */}
     </>
   );
 };
