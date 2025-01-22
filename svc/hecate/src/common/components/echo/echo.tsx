@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styles from './echo.module.scss';
 import { fetchWalletData } from '@services/api';
 
-type Screen = 'home' | 'settings';
+type Screen = 'nexus' | 'bioMods' | 'captainsLog' | 'blackMarket' | 'externalInterfaces';
 
 interface EchoProps {
   publicKey: string | null;
@@ -10,7 +10,7 @@ interface EchoProps {
 }
 
 const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
-  const [screen, setScreen] = useState<Screen>('home');
+  const [screen, setScreen] = useState<Screen>('nexus');
   const [walletData, setWalletData] = useState<any>(null);
   const [showSecondaryScreen, setShowSecondaryScreen] = useState(true);
 
@@ -29,7 +29,6 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
     loadWalletData();
   }, [publicKey]);
 
-  // Update to turn on ECHO screen when any button is clicked if it's off
   const toggleScreen = (newScreen: Screen) => {
     if (!showSecondaryScreen) {
       setShowSecondaryScreen(true);
@@ -38,16 +37,19 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
   };
 
   const renderControlScreen = () => (
-    <div className={styles.controlScreen}>
-      <button onClick={() => toggleScreen('home')} className={styles.controlButton}>NEXUS</button>
-      <button onClick={() => toggleScreen('settings')} className={styles.controlButton}>Settings</button>
+    <div className={styles.controlWindow}>
+      <button onClick={() => toggleScreen('nexus')} className={styles.controlButton}>NEXUS</button>
+      <button onClick={() => toggleScreen('bioMods')} className={styles.controlButton}>Bio Mods</button>
+      <button onClick={() => toggleScreen('captainsLog')} className={styles.controlButton}>Captains Log</button>
+      <button onClick={() => toggleScreen('blackMarket')} className={styles.controlButton}>Black Market</button>
+      <button onClick={() => toggleScreen('externalInterfaces')} className={styles.controlButton}>External Interfaces</button>
       <button onClick={() => setShowSecondaryScreen(!showSecondaryScreen)} className={styles.controlButton}>
         ECHO {showSecondaryScreen ? '(Off)' : '(On)'}
       </button>
     </div>
   );
 
-  const renderHomeScreen = () => (
+  const renderNexusScreen = () => (
     <div className={styles.hudScreen}>
       {walletData ? (
         <>
@@ -68,19 +70,46 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
     </div>
   );
 
-  const renderSettingsScreen = () => (
-    <div className={styles.settingsScreen}>
-      <p>Connected with: {publicKey}</p>
-      <button onClick={onDisconnect} className={styles.button}>Disconnect</button>
+  const renderBioModsScreen = () => (
+    <div className={styles.hudScreen}>
+      <h2 className={styles.hudTitle}>Bio Modifications</h2>
+      <p>This would be where users could manage or view their bio enhancements.</p>
+    </div>
+  );
+
+  const renderCaptainsLogScreen = () => (
+    <div className={styles.hudScreen}>
+      <h2 className={styles.hudTitle}>Captain's Log</h2>
+      <p>Here you could log or view mission logs, personal notes, or whatever a captain might do.</p>
+    </div>
+  );
+
+  const renderBlackMarketScreen = () => (
+    <div className={styles.hudScreen}>
+      <h2 className={styles.hudTitle}>Black Market</h2>
+      <p>Access to underground dealings, perhaps for trading or acquiring rare items.</p>
+    </div>
+  );
+
+  const renderExternalInterfacesScreen = () => (
+    <div className={styles.hudScreen}>
+      <h2 className={styles.hudTitle}>External Interfaces</h2>
+      <p>Interact with external systems or devices, possibly for hacking or system integration.</p>
     </div>
   );
 
   const renderScreen = () => {
     switch (screen) {
-      case 'home':
-        return renderHomeScreen();
-      case 'settings':
-        return renderSettingsScreen();
+      case 'nexus':
+        return renderNexusScreen();
+      case 'bioMods':
+        return renderBioModsScreen();
+      case 'captainsLog':
+        return renderCaptainsLogScreen();
+      case 'blackMarket':
+        return renderBlackMarketScreen();
+      case 'externalInterfaces':
+        return renderExternalInterfacesScreen();
       default:
         return null;
     }
@@ -93,9 +122,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
           {renderScreen()}
         </div>
       )}
-      <div className={styles.controlWindow}>
-        {renderControlScreen()}
-      </div>
+      {renderControlScreen()}
     </div>
   );
 };
