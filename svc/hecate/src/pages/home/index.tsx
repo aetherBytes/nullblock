@@ -11,27 +11,44 @@ const Home: React.FC = () => {
   const [showEcho, setShowEcho] = useState<boolean>(false);
 
   useEffect(() => {
-    const connectPhantom = async () => {
+    const checkWalletConnection = async () => {
       if ('phantom' in window) {
         const provider = (window as any).phantom?.solana;
         if (provider) {
-          try {
-            const { publicKey } = await provider.connect();
-            setPublicKey(publicKey.toString());
-            setWalletConnected(true);
-            setShowEcho(true);
-          } catch (error) {
-            console.error('Error connecting to Phantom:', error);
+          // Check if Phantom is already connected
+          if (provider.isConnected) {
+            try {
+              const connectedPublicKey = await provider.getPublicKey();
+              setPublicKey(connectedPublicKey.toString());
+              setWalletConnected(true);
+              setShowEcho(true);
+              localStorage.setItem('walletPublickey', connectedPublicKey.toString());
+            } catch (error) {
+              console.error('Failed to get public key:', error);
+              // If we can't get the public key, we might need to connect again
+              localStorage.removeItem('walletPublickey');
+            }
+          } else {
+            // Check if there's a saved public key from a previous session
+            const savedPublicKey = localStorage.getItem('walletPublickey');
+            if (savedPublicKey) {
+              try {
+                // Attempt to reconnect with the saved public key
+                await provider.connect();
+                setPublicKey(savedPublicKey);
+                setWalletConnected(true);
+                setShowEcho(true);
+              } catch (error) {
+                console.error('Failed to auto-reconnect:', error);
+                localStorage.removeItem('walletPublickey');
+              }
+            }
           }
-        } else {
-          console.log('Phantom wallet not detected');
         }
-      } else {
-        console.log('Please install Phantom wallet extension');
       }
     };
 
-    connectPhantom();
+    checkWalletConnection();
   }, []);
 
   const manualConnect = async () => {
@@ -43,6 +60,7 @@ const Home: React.FC = () => {
           setPublicKey(publicKey.toString());
           setWalletConnected(true);
           setShowEcho(true);
+          localStorage.setItem('walletPublickey', publicKey.toString());
         } catch (error) {
           console.error('Manual connect error:', error);
         }
@@ -50,11 +68,10 @@ const Home: React.FC = () => {
         alert('Phantom wallet not detected');
       }
     } else {
-      alert('Please install Phantom wallet extension');
+      alert('Please install Phantom wallet extension from the Chrome Web Store.');
     }
   };
 
-  // Function to handle disconnection
   const handleDisconnect = async () => {
     if ('phantom' in window) {
       const provider = (window as any).phantom?.solana;
@@ -64,6 +81,7 @@ const Home: React.FC = () => {
           setWalletConnected(false);
           setPublicKey(null);
           setShowEcho(false);
+          localStorage.removeItem('walletPublickey');
         } catch (error) {
           console.error('Error disconnecting from Phantom:', error);
         }
@@ -85,7 +103,7 @@ const Home: React.FC = () => {
           <button onClick={manualConnect} className={styles.button}>Connect Phantom</button>
         )}
       </div>
-      {showEcho && <Echo publicKey={publicKey} onDisconnect={handleDisconnect} />} {/* Pass publicKey and disconnect function */}
+      {showEcho && <Echo publicKey={publicKey} onDisconnect={handleDisconnect} />}
     </>
   );
 };

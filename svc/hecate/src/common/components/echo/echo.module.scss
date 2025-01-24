@@ -88,6 +88,38 @@
     }
   }
 
+  .nexus {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .walletInfo {
+      width: 100%;
+      text-align: left;
+      margin-bottom: 20px;
+    }
+
+    .nexusActions {
+      display: flex;
+      gap: 10px;
+      margin: 20px 0;
+
+      button {
+        background: none;
+        border: 1px solid $accent-color;
+        color: $accent-color;
+        padding: 5px 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background-color: $accent-color;
+          color: $text-color;
+        }
+      }
+    }
+  }
+
   .settingsScreen {
     display: flex;
     flex-direction: column;

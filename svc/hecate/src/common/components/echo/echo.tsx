@@ -36,6 +36,11 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
     setScreen(newScreen);
   };
 
+  const handleDisconnect = () => {
+    onDisconnect();
+    setShowSecondaryScreen(false);
+  };
+
   const renderControlScreen = () => (
     <div className={styles.controlWindow}>
       <button onClick={() => toggleScreen('nexus')} className={styles.controlButton}>NEXUS</button>
@@ -43,32 +48,38 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
       <button onClick={() => toggleScreen('captainsLog')} className={styles.controlButton}>Captains Log</button>
       <button onClick={() => toggleScreen('blackMarket')} className={styles.controlButton}>Black Market</button>
       <button onClick={() => toggleScreen('externalInterfaces')} className={styles.controlButton}>External Interfaces</button>
-      <button onClick={() => setShowSecondaryScreen(!showSecondaryScreen)} className={styles.controlButton}>
-        ECHO {showSecondaryScreen ? '(Off)' : '(On)'}
+      <button onClick={handleDisconnect} className={styles.controlButton}>
+        Disconnect
       </button>
     </div>
   );
 
-  const renderNexusScreen = () => (
-    <div className={styles.hudScreen}>
-      {walletData ? (
-        <>
-          <h2 className={styles.hudTitle}>Wallet Overview</h2>
-          <p>Balance: <span>{walletData.balance} SOL</span></p>
-          <p>Address: <span>{walletData.address.slice(0, 6)}...{walletData.address.slice(-4)}</span></p>
-          <p>Transactions: <span>{walletData.transactionCount}</span></p>
-        </>
-      ) : (
-        <p>Loading...</p>
-      )}
-      <div className={styles.bottomLeftInfo}>
-        <p>Electronic Communications HUB and Omnitool</p>
+  const renderNexusScreen = () => {
+    if (!walletData) return <p>Loading...</p>;
+
+    return (
+      <div className={`${styles.hudScreen} ${styles.nexus}`}>
+        <h2 className={styles.hudTitle}>NEXUS</h2>
+        <div className={styles.walletInfo}>
+          <p><strong>Balance:</strong> <span>{walletData.balance} SOL</span></p>
+          <p><strong>Address:</strong> <span>{publicKey?.slice(0, 6)}...{publicKey?.slice(-4)}</span></p>
+          <p><strong>Transactions:</strong> <span>{walletData.transactionCount}</span></p>
+          {walletData.holdings &&
+            <p><strong>Holdings:</strong>
+              <span>{Object.keys(walletData.holdings).map(h => `${h}: ${walletData.holdings[h]} `)}</span>
+            </p>
+          }
+        </div>
+        <div className={styles.nexusActions}>
+          <button onClick={() => alert('Feature not implemented yet')}>Send SOL</button>
+          <button onClick={() => alert('Feature not implemented yet')}>Receive SOL</button>
+        </div>
+        <div className={styles.bottomLeftInfo}>
+          <p>Electronic Communications HUB and Omnitool</p>
+        </div>
       </div>
-      <div className={styles.bottomRightInfo}>
-        <p>biological interface online... connected entity: {publicKey || 'loading'}</p>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderBioModsScreen = () => (
     <div className={styles.hudScreen}>
