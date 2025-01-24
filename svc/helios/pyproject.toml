@@ -24,6 +24,7 @@ dependencies = [
     "fastapi==0.115.6",  # For the FastAPI server
     "uvicorn[standard]==0.34.0",  # For running the FastAPI server
     "python-json-logger==3.2.1",  # For logging
+    "pydantic==2.10.5",  # For data validation
 ]
 
 [tool.hatch.build.targets.wheel]
