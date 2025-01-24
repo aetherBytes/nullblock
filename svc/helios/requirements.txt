@@ -48,7 +48,9 @@ numpy==2.2.1
 pandas==2.2.3
     # via helios (pyproject.toml)
 pydantic==2.10.5
-    # via fastapi
+    # via
+    #   fastapi
+    #   helios (pyproject.toml)
 pydantic-core==2.27.2
     # via pydantic
 python-dateutil==2.9.0.post0
