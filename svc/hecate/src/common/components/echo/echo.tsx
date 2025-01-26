@@ -12,7 +12,6 @@ interface EchoProps {
 const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
   const [screen, setScreen] = useState<Screen>('nexus');
   const [walletData, setWalletData] = useState<any>(null);
-  const [showSecondaryScreen, setShowSecondaryScreen] = useState(true);
 
   useEffect(() => {
     const loadWalletData = async () => {
@@ -29,29 +28,23 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
     loadWalletData();
   }, [publicKey]);
 
-  const toggleScreen = (newScreen: Screen) => {
-    if (!showSecondaryScreen) {
-      setShowSecondaryScreen(true);
-    }
+  const changeScreen = (newScreen: Screen) => {
     setScreen(newScreen);
   };
 
   const handleDisconnect = () => {
     onDisconnect();
-    setShowSecondaryScreen(false);
   };
 
   const renderControlScreen = () => (
-    <div className={styles.controlWindow}>
-      <button onClick={() => toggleScreen('nexus')} className={styles.controlButton}>NEXUS</button>
-      <button onClick={() => toggleScreen('bioMods')} className={styles.controlButton}>Bio Mods</button>
-      <button onClick={() => toggleScreen('captainsLog')} className={styles.controlButton}>Captains Log</button>
-      <button onClick={() => toggleScreen('blackMarket')} className={styles.controlButton}>Black Market</button>
-      <button onClick={() => toggleScreen('externalInterfaces')} className={styles.controlButton}>External Interfaces</button>
-      <button onClick={handleDisconnect} className={styles.controlButton}>
-        Disconnect
-      </button>
-    </div>
+    <nav className={styles.verticalNavbar}>
+      <button onClick={() => changeScreen('nexus')} className={styles.navButton}>NEXUS</button>
+      <button onClick={() => changeScreen('bioMods')} className={styles.navButton}>Bio Mods</button>
+      <button onClick={() => changeScreen('captainsLog')} className={styles.navButton}>Captain's Log</button>
+      <button onClick={() => changeScreen('blackMarket')} className={styles.navButton}>Black Market</button>
+      <button onClick={() => changeScreen('externalInterfaces')} className={styles.navButton}>Interfaces</button>
+      <button onClick={handleDisconnect} className={styles.navButton}>Disconnect</button>
+    </nav>
   );
 
   const renderNexusScreen = () => {
@@ -128,11 +121,9 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
 
   return (
     <div className={styles.echoContainer}>
-      {showSecondaryScreen && (
-        <div className={styles.hudWindow}>
-          {renderScreen()}
-        </div>
-      )}
+      <div className={styles.hudWindow}>
+        {renderScreen()}
+      </div>
       {renderControlScreen()}
     </div>
   );

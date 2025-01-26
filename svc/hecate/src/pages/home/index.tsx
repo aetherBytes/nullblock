@@ -95,7 +95,6 @@ const Home: React.FC = () => {
       <StarsCanvas />
       <div className={styles.scene}>
         <div className={styles.fire}></div>
-        <div className={styles.robot}></div>
         <div className={styles.trader1}></div>
       </div>
       <div style={{ position: 'relative', zIndex: 2 }}>

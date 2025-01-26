@@ -170,7 +170,7 @@ h1, h2, h3, h4, h5, h6 {
 .trader1 {
   position: fixed;
   bottom: 12px;
-  left: calc(50% - 450px);
+  right: -3.0%;
   width: 342px;
   height: 342px;
   z-index: 101;
@@ -178,6 +178,7 @@ h1, h2, h3, h4, h5, h6 {
   background-size: 2052px 342px;
   animation: trader1Idle 3s steps(6) infinite;
   animation-timing-function: step-end;
+  transform: scaleX(-1); /* Reflect over the y-axis */
   overflow: hidden;
 }
 

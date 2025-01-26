@@ -7,7 +7,7 @@ Nullblock:
 MVP Goals:
     
     Start with a web app.
-    Basic Web3 Wallet Connection: Start with integration for one or two popular wallets.
+    Basic Web3 Wallet Connection: Start with integration for one wallet. (Phantom for now)
     Minimal HUD: A basic version of the heads-up display for user interaction.
     Simple Krawler Deployment: Ability to deploy a basic Krawler for one task. (Start with trading bot?)
 
