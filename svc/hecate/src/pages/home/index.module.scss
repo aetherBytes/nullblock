@@ -8,19 +8,25 @@ $base-font-size-title: 24px;
 $base-font-size: 18px;
 
 /* Theme colors */
-$background-dark: #1a1a1a; /* Dark gray for a cave-like feel */
-$fog-color: rgba(100, 100, 100, 0.3); /* Light gray overlay for fog effect */
-$accent-color: #4a90e2; /* Blue for cyberpunk neon accents */
-$text-color: #e0e0e0; /* Light gray for text readability in dark theme */
-$black-glow: rgba(0, 0, 0, 0.5); /* Black glow effect added for new effect */
+$background-dark: #0a0a0a;
+$fog-color: rgba(20, 20, 20, 0.5);
+$accent-color: #2a4a6a;
+$echo-blue: #4a90e2;
+$echo-gray: #b0b0b0;
+$echo-border: #3a3a3a;
+$text-color: #b0b0b0;
+$button-text: #d0d0d0;
+$alert-color: #ff4500; /* Orange for "System Notification" */
+$black-glow: rgba(0, 0, 0, 0.8);
+$flame-glow: rgba(40, 10, 0, 0.25); /* Darkest, most muted orange-brown yet */
 
 html, body {
   height: 100%;
   margin: 0;
-  overflow: hidden; /* Prevents scrolling */
+  overflow: hidden;
 }
 
-/* Background for the cave-like atmosphere */
+/* Background for dark void/forest */
 .backgroundImage {
   position: fixed;
   top: 0;
@@ -30,7 +36,6 @@ html, body {
   z-index: -100;
   background-color: $background-dark;
 
-  /* Fog effect */
   &::after {
     content: '';
     position: absolute;
@@ -40,24 +45,23 @@ html, body {
     bottom: 0;
     background: linear-gradient(to bottom,
       transparent,
-      $fog-color 30%,
-      $fog-color 70%,
+      $fog-color 20%,
+      $fog-color 80%,
       transparent
     );
-    pointer-events: none; /* Ensures the fog doesn't interfere with clicks */
+    pointer-events: none;
   }
 
-  /* New: Black glow effect from the bottom */
   &::before {
     content: '';
     position: absolute;
     left: 0;
     right: -50%;
     bottom: 0;
-    height: 100px; /* Adjust this value for glow spread */
-    background: radial-gradient(ellipse at center, $black-glow 0%, transparent 70%);
-    pointer-events: none; /* Ensures the glow doesn't interfere with clicks */
-    z-index: 1; /* To be above the background but below other content */
+    height: 150px;
+    background: radial-gradient(ellipse at center, $flame-glow 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 1;
   }
 }
 
@@ -73,29 +77,38 @@ h1, h2, h3, h4, h5, h6 {
   font-size: $base-font-size-title;
 }
 
-/* Accent for interactive elements or highlights */
+/* Button with System notification */
 .button {
-  color: $accent-color;
-  border: 1px solid $accent-color;
-  background: transparent;
-  padding: 10px 20px;
+  color: $echo-gray;
+  border: 1px solid $echo-border;
+  background: rgba($echo-gray, 0.1);
+  padding: 12px 24px;
   font-size: $base-font-size;
+  font-weight: $normal-font-weight;
   text-decoration: none;
   cursor: pointer;
   transition: background-color 0.3s ease, color 0.3s ease;
+  text-align: center;
+  letter-spacing: 0.5px;
 
   &:hover {
-    background-color: $accent-color;
-    color: $text-color
+    background-color: $echo-blue;
+    color: $background-dark;
+  }
+
+  .alertText {
+    color: $alert-color;
+    font-weight: $heading-font-weight;
   }
 }
 
+/* Scene container */
 .scene {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100vw;
-  height: 20vh;
+  height: 25vh;
   z-index: 1000;
   background: transparent;
   display: flex;
@@ -103,6 +116,7 @@ h1, h2, h3, h4, h5, h6 {
   align-items: flex-end;
 }
 
+/* Campfire with orange flicker */
 .fire {
   position: fixed;
   bottom: 10px;
@@ -112,7 +126,7 @@ h1, h2, h3, h4, h5, h6 {
   height: 240px;
   background-image: url('../../assets/images/campfire-sheet.png');
   background-size: 1024px 256px;
-  animation: campfireFlicker 1s steps(8) infinite;
+  animation: campfireFlicker 1s steps(8) infinite, campfireGlow 1.5s ease-in-out infinite alternate;
   animation-timing-function: step-end;
   overflow: hidden;
 }
@@ -128,154 +142,53 @@ h1, h2, h3, h4, h5, h6 {
   87.5%, 100% { background-position: -896px 0px; }
 }
 
-.robot {
-  position: absolute;
-  bottom: 0; /* Adjust to fit your scene */
-  left: calc(50% + 100px); /* Position to the right of the fire, adjust as necessary */
-  width: 325px; /* Original 500px * 0.65 */
-  height: 240px; /* Original 400px * 0.65 */
-  z-index: 101;
-  background-image: url('../../assets/images/robot/Assets/SpriteSheets/Idle.png');
-  background-size: 1625px 1625px; /* Original 2500px * 0.65 for both dimensions */
-  animation: robotIdle 2s steps(25) infinite;
-  animation-timing-function: step-end; /* Ensure no transition between steps */
-  overflow: hidden;
+@keyframes campfireGlow {
+  0% { filter: brightness(0.8) drop-shadow(0 0 5px $flame-glow); }
+  100% { filter: brightness(1.2) drop-shadow(0 0 15px $flame-glow); }
 }
 
-@keyframes robotIdle {
-  // Adjusted keyframes to reflect the new size:
-  0%, 4.76% { background-position: 0px 0px; }
-  4.77%, 9.52% { background-position: -325px 0px; } /* Original -500px * 0.65 */
-  9.53%, 14.28% { background-position: -650px 0px; }
-  14.29%, 19.04% { background-position: -975px 0px; }
-  19.05%, 23.80% { background-position: -1300px 0px; }
-  23.81%, 28.56% { background-position: -1625px 0px; }
-  28.57%, 33.32% { background-position: 0px -325px; }
-  33.33%, 38.08% { background-position: -325px -325px; }
-  38.09%, 42.84% { background-position: -650px -325px; }
-  42.85%, 47.60% { background-position: -975px -325px; }
-  47.61%, 52.36% { background-position: -1300px -325px; }
-  52.37%, 57.12% { background-position: -1625px -325px; }
-  57.13%, 61.88% { background-position: 0px -650px; }
-  61.89%, 66.64% { background-position: -325px -650px; }
-  66.65%, 71.40% { background-position: -650px -650px; }
-  71.41%, 76.16% { background-position: -975px -650px; }
-  76.17%, 80.92% { background-position: -1300px -650px; }
-  80.93%, 85.68% { background-position: -1625px -650px; }
-  85.69%, 90.44% { background-position: 0px -975px; }
-  90.45%, 95.20% { background-position: -325px -975px; }
-  95.21%, 100% { background-position: -650px -975px; } /* Last frame */
-}
-
-.trader1 {
-  position: fixed;
-  bottom: 12px;
-  right: -3.0%;
-  width: 342px;
-  height: 342px;
-  z-index: 101;
-  background-image: url('../../assets/images/traders/Trader_1/Idle.png');
-  background-size: 2052px 342px;
-  animation: trader1Idle 3s steps(6) infinite;
-  animation-timing-function: step-end;
-  transform: scaleX(-1); /* Reflect over the y-axis */
-  overflow: hidden;
-}
-
-@keyframes trader1Idle {
-  0%, 16.66% { background-position: 0px 0px; }
-  16.67%, 33.33% { background-position: -342px 0px; }
-  33.34%, 50.00% { background-position: -684px 0px; }
-  50.01%, 66.66% { background-position: -1026px 0px; }
-  66.67%, 83.33% { background-position: -1368px 0px; }
-  83.34%, 100% { background-position: -1710px 0px; }
-}
-
-.trader2 {
-  position: fixed;
-  bottom: 10px;
-  left: calc(50% - 320px);
-  width: 231px;
-  height: 263.34px;
-  z-index: 101;
-  background-image: url('../../assets/images/traders/Trader_2/Idle.png');
-  background-size: 3234px 263.34px;
-  animation: traderIdleCycle 10s steps(14) infinite;
-  animation-timing-function: step-end;
-  overflow: hidden;
-}
-
-@keyframes traderIdleCycle {
-  0%, 2.38% { background-position: 0px 0px; }
-  2.39%, 4.76% { background-position: -231px 0px; }
-  4.77%, 7.14% { background-position: -462px 0px; }
-  7.15%, 9.52% { background-position: -693px 0px; }
-  9.53%, 11.90% { background-position: -924px 0px; }
-  11.91%, 14.28% { background-position: -1155px 0px; }
-  14.29%, 16.66% { background-position: -1386px 0px; }
-  16.67%, 19.04% { background-position: -1617px 0px; }
-  19.05%, 21.42% { background-position: -1848px 0px; }
-  21.43%, 23.80% { background-position: -2079px 0px; }
-  23.81%, 26.18% { background-position: -2310px 0px; }
-  26.19%, 28.56% { background-position: -2541px 0px; }
-  28.57%, 30.94% { background-position: -2772px 0px; }
-  30.95%, 33.32% { background-position: -3003px 0px; }
-}
-
-.trader3 {
-  position: fixed;
-  bottom: 10px;
-  right: 0px;
-  width: 342px;
-  height: 342px;
-  z-index: 101;
-  background-image: url('../../assets/images/traders/Trader_3/Idle.png');
-  background-size: 2052px 342px;
-  animation: trader3Idle 2s steps(6) infinite;
-  animation-timing-function: step-end;
-  overflow: hidden;
-}
-
-@keyframes trader3Idle {
-  0%, 16.66% { background-position: 0px 0px; }
-  16.67%, 33.33% { background-position: -342px 0px; }
-  33.34%, 50.00% { background-position: -684px 0px; }
-  50.01%, 66.66% { background-position: -1026px 0px; }
-  66.67%, 83.33% { background-position: -1368px 0px; }
-  83.34%, 100% { background-position: -1710px 0px; }
-}
-
+/* Nyxrael with flicker */
 .nyx {
   position: fixed;
   bottom: 10px;
   right: -1%;
-  width: 385px;  // Keep width
-  height: 425px; // Shorter height
+  width: 385px;
+  height: 425px;
   z-index: 101;
   background-image: url('../../assets/images/fallen-angel/Fallen_Angels_1/PNG/PNG Sequences/Idle/sprite_sheet.png');
-  background-size: 1540px 2000px; // Adjusted for 385×500px frames (4x4 grid)
+  background-size: 1540px 2000px;
   background-repeat: no-repeat;
-  animation: nyxIdleCycle 3s steps(16) infinite;
+  animation: nyxIdleCycle 3s steps(16) infinite, nyxFlicker 1.5s ease-in-out infinite alternate;
   animation-timing-function: step-end;
   transform: scaleX(-1);
   overflow: hidden;
 }
 
 @keyframes nyxIdleCycle {
-  0%, 6.25% { background-position: 0px 0px; }           // Row 1, Col 1
-  6.26%, 12.50% { background-position: -385px 0px; }    // Row 1, Col 2
-  12.51%, 18.75% { background-position: -770px 0px; }   // Row 1, Col 3
-  18.76%, 25.00% { background-position: -1155px 0px; }  // Row 1, Col 4
-  25.01%, 31.25% { background-position: 0px -500px; }   // Row 2, Col 1
+  0%, 6.25% { background-position: 0px 0px; }
+  6.26%, 12.50% { background-position: -385px 0px; }
+  12.51%, 18.75% { background-position: -770px 0px; }
+  18.76%, 25.00% { background-position: -1155px 0px; }
+  25.01%, 31.25% { background-position: 0px -500px; }
   31.26%, 37.50% { background-position: -385px -500px; }
   37.51%, 43.75% { background-position: -770px -500px; }
   43.76%, 50.00% { background-position: -1155px -500px; }
-  50.01%, 56.25% { background-position: 0px -1000px; }  // Row 3, Col 1
+  50.01%, 56.25% { background-position: 0px -1000px; }
   56.26%, 62.50% { background-position: -385px -1000px; }
   62.51%, 68.75% { background-position: -770px -1000px; }
   68.76%, 75.00% { background-position: -1155px -1000px; }
-  75.01%, 81.25% { background-position: 0px -1500px; }  // Row 4, Col 1
+  75.01%, 81.25% { background-position: 0px -1500px; }
   81.26%, 87.50% { background-position: -385px -1500px; }
   87.51%, 93.75% { background-position: -770px -1500px; }
-  93.76%, 100% { background-position: -1155px -1500px; } // Row 4, Col 4
+  93.76%, 100% { background-position: -1155px -1500px; }
+}
+
+@keyframes nyxFlicker {
+  0% { filter: brightness(0.7); }
+  100% { filter: brightness(1.0); }
+}
+
+/* Dim other characters */
+.robot, .trader1, .trader2, .trader3 {
+  filter: brightness(0.6);
 }

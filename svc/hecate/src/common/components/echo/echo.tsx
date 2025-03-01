@@ -57,11 +57,12 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
           <p><strong>Balance:</strong> <span>{walletData.balance} SOL</span></p>
           <p><strong>Address:</strong> <span>{publicKey?.slice(0, 6)}...{publicKey?.slice(-4)}</span></p>
           <p><strong>Transactions:</strong> <span>{walletData.transactionCount}</span></p>
-          {walletData.holdings &&
-            <p><strong>Holdings:</strong>
+          {walletData.holdings && (
+            <p>
+              <strong>Holdings:</strong>
               <span>{Object.keys(walletData.holdings).map(h => `${h}: ${walletData.holdings[h]} `)}</span>
             </p>
-          }
+          )}
         </div>
         <div className={styles.nexusActions}>
           <button onClick={() => alert('Feature not implemented yet')}>Send SOL</button>
