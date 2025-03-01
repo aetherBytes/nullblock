@@ -10,22 +10,43 @@
     left: 1.5%;
     width: 80%;
     height: 100vh;
-    max-height: 85vh;
+    max-height: 60vh; /* ~60% of screen height */
     background-color: rgba($background-dark, 0.7);
-    background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), /* Scanlines */
-                      linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-    background-size: 100% 4px, 4px 100%; /* Scanline spacing */
+    background-image: linear-gradient(rgba($echo-gray, 0.06) 2px, transparent 2px), /* Rough scanlines */
+                      linear-gradient(90deg, rgba($echo-gray, 0.06) 2px, transparent 2px),
+                      radial-gradient(circle at 50% 50%, rgba(70, 35, 20, 0.15) 0%, transparent 70%), /* Subtle relic core */
+                      url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAAXNSR0IArs4c6QAAACFJREFUKFNjZGBg+P///38GBoaHh4eHh4fHx8fHx8fHx8fGxsYAdOIBB73MBtAAAAAASUVORK5CYII='); /* Cracked metal texture */
+    background-size: 100% 6px, 6px 100%, 120% 120%, 8px 8px;
+    background-position: center;
     border: 1px solid $echo-border;
     border-radius: 0;
     color: $echo-gray;
     padding: 50px;
     overflow-y: auto;
-    box-shadow: inset 0 0 10px rgba($echo-gray, 0.2); /* Inner glow */
+    box-shadow: inset 0 0 10px rgba($echo-gray, 0.2);
     font-family: $batman-font;
     display: flex;
     flex-direction: column;
     align-items: center;
-    animation: screenFlicker 3s infinite;
+    animation: softEcho 20s infinite ease-in-out, corePulse 4s infinite alternate;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to bottom,
+        rgba($echo-gray, 0.02) 1%,
+        transparent 1%,
+        transparent 99%,
+        rgba($echo-gray, 0.02) 99%
+      );
+      background-size: 100% 120px;
+      animation: scanlineWaver 10s infinite ease-in-out;
+      pointer-events: none;
+    }
 
     .hudTitle {
       color: $echo-blue;
@@ -35,6 +56,7 @@
     }
 
     p {
+      filter: brightness(1); /* Keep text stable */
       font-size: $base-font-size;
       margin: 10px 0;
       span {
@@ -60,10 +82,38 @@
     }
   }
 
-  @keyframes screenFlicker {
-    0%, 100% { opacity: 1; }
-    2%, 4% { opacity: 0.95; }
-    6% { opacity: 1; }
+  @keyframes softEcho {
+    0% { filter: brightness(1) contrast(1); }      /* Still */
+    12% { filter: brightness(0.998) contrast(1.002); } /* Faint waver */
+    25% { filter: brightness(1) contrast(1); }     /* Long pause */
+    30% { filter: brightness(0.997) contrast(1.003); } /* Subtle glitch */
+    33% { filter: brightness(0.999) contrast(1.001); }
+    40% { filter: brightness(1) contrast(1); }     /* Long pause */
+    55% { filter: brightness(0.996) contrast(1.004); } /* Faint waver */
+    65% { filter: brightness(1) contrast(1); }     /* Long pause */
+    70% { filter: brightness(0.995) contrast(1.005); } /* Subtle glitch */
+    73% { filter: brightness(0.998) contrast(1.002); }
+    85% { filter: brightness(1) contrast(1); }     /* Long pause */
+    90% { filter: brightness(0.997) contrast(1.003); } /* Final waver */
+    100% { filter: brightness(1) contrast(1); }
+  }
+
+  @keyframes scanlineWaver {
+    0% { background-position: 0 0; opacity: 0.85; }
+    15% { background-position: 0 3%; opacity: 0.9; } /* Slow drift */
+    20% { background-position: 0 4%; opacity: 0.87; } /* Faint glitch */
+    22% { background-position: 0 2%; opacity: 0.85; }
+    40% { background-position: 0 6%; opacity: 0.9; } /* Pause */
+    60% { background-position: 0 8%; opacity: 0.85; } /* Drift */
+    65% { background-position: 0 9%; opacity: 0.88; } /* Faint glitch */
+    67% { background-position: 0 7%; opacity: 0.85; }
+    85% { background-position: 0 10%; opacity: 0.9; } /* Long pause */
+    100% { background-position: 0 12%; opacity: 0.85; }
+  }
+
+  @keyframes corePulse {
+    0% { background-position: center, center, 50% 50%, center; }
+    100% { background-position: center, center, 55% 55%, center; }
   }
 
   .verticalNavbar {
