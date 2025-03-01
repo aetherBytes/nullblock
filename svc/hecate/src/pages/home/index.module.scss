@@ -244,3 +244,38 @@ h1, h2, h3, h4, h5, h6 {
   66.67%, 83.33% { background-position: -1368px 0px; }
   83.34%, 100% { background-position: -1710px 0px; }
 }
+
+.nyx {
+  position: fixed;
+  bottom: 10px;
+  right: -1%;
+  width: 385px;  // Keep width
+  height: 425px; // Shorter height
+  z-index: 101;
+  background-image: url('../../assets/images/fallen-angel/Fallen_Angels_1/PNG/PNG Sequences/Idle/sprite_sheet.png');
+  background-size: 1540px 2000px; // Adjusted for 385×500px frames (4x4 grid)
+  background-repeat: no-repeat;
+  animation: nyxIdleCycle 3s steps(16) infinite;
+  animation-timing-function: step-end;
+  transform: scaleX(-1);
+  overflow: hidden;
+}
+
+@keyframes nyxIdleCycle {
+  0%, 6.25% { background-position: 0px 0px; }           // Row 1, Col 1
+  6.26%, 12.50% { background-position: -385px 0px; }    // Row 1, Col 2
+  12.51%, 18.75% { background-position: -770px 0px; }   // Row 1, Col 3
+  18.76%, 25.00% { background-position: -1155px 0px; }  // Row 1, Col 4
+  25.01%, 31.25% { background-position: 0px -500px; }   // Row 2, Col 1
+  31.26%, 37.50% { background-position: -385px -500px; }
+  37.51%, 43.75% { background-position: -770px -500px; }
+  43.76%, 50.00% { background-position: -1155px -500px; }
+  50.01%, 56.25% { background-position: 0px -1000px; }  // Row 3, Col 1
+  56.26%, 62.50% { background-position: -385px -1000px; }
+  62.51%, 68.75% { background-position: -770px -1000px; }
+  68.76%, 75.00% { background-position: -1155px -1000px; }
+  75.01%, 81.25% { background-position: 0px -1500px; }  // Row 4, Col 1
+  81.26%, 87.50% { background-position: -385px -1500px; }
+  87.51%, 93.75% { background-position: -770px -1500px; }
+  93.76%, 100% { background-position: -1155px -1500px; } // Row 4, Col 4
+}
