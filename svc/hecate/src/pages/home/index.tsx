@@ -15,7 +15,6 @@ const Home: React.FC = () => {
       if ('phantom' in window) {
         const provider = (window as any).phantom?.solana;
         if (provider) {
-          // Check if Phantom is already connected
           if (provider.isConnected) {
             try {
               const connectedPublicKey = await provider.getPublicKey();
@@ -25,15 +24,12 @@ const Home: React.FC = () => {
               localStorage.setItem('walletPublickey', connectedPublicKey.toString());
             } catch (error) {
               console.error('Failed to get public key:', error);
-              // If we can't get the public key, we might need to connect again
               localStorage.removeItem('walletPublickey');
             }
           } else {
-            // Check if there's a saved public key from a previous session
             const savedPublicKey = localStorage.getItem('walletPublickey');
             if (savedPublicKey) {
               try {
-                // Attempt to reconnect with the saved public key
                 await provider.connect();
                 setPublicKey(savedPublicKey);
                 setWalletConnected(true);
@@ -97,9 +93,11 @@ const Home: React.FC = () => {
         <div className={styles.fire}></div>
         <div className={styles.nyx}></div>
       </div>
-      <div style={{ position: 'relative', zIndex: 2 }}>
+      <div style={{ position: 'relative', zIndex: 2, textAlign: 'center', paddingTop: '20px' }}>
         {!walletConnected && (
-          <button onClick={manualConnect} className={styles.button}>Connect Phantom</button>
+          <button onClick={manualConnect} className={styles.button}>
+            <span className={styles.alertText}>System Notification:</span> Harvest ready. Proceed?
+          </button>
         )}
       </div>
       {showEcho && <Echo publicKey={publicKey} onDisconnect={handleDisconnect} />}
