@@ -16,19 +16,19 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    background-color: rgba($background-dark, 0.12);
-    background-image: linear-gradient(rgba($echo-gray, 0.015) 2px, transparent 2px),
-                      linear-gradient(90deg, rgba($echo-gray, 0.015) 2px, transparent 2px),
-                      radial-gradient(circle at 50% 50%, rgba(70, 35, 20, 0.05) 0%, transparent 70%),
+    background-color: rgba($background-dark, 0.06);
+    background-image: linear-gradient(rgba($echo-gray, 0.006) 2px, transparent 2px),
+                      linear-gradient(90deg, rgba($echo-gray, 0.006) 2px, transparent 2px),
+                      radial-gradient(circle at 50% 50%, rgba(70, 35, 20, 0.015) 0%, transparent 70%),
                       url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAAXNSR0IArs4c6QAAACFJREFUKFNjZGBg+P///38GBoaHh4eHh4fHx8fHx8fHx8fGxsYAdOIBB73MBtAAAAAASUVORK5CYII=');
     background-size: 100% 6px, 6px 100%, 120% 120%, 8px 8px;
     background-position: center;
-    border: 1px solid rgba($echo-border, 0.3);
+    border: 1px solid rgba($echo-border, 0.1);
     border-radius: 0;
     color: $echo-gray;
     padding: 2rem;
-    box-shadow: inset 0 0 15px rgba($echo-gray, 0.08),
-                0 0 30px rgba($background-dark, 0.3);
+    box-shadow: inset 0 0 15px rgba($echo-gray, 0.03),
+                0 0 30px rgba($background-dark, 0.1);
     font-family: $batman-font;
     animation: softEcho 20s infinite ease-in-out, corePulse 4s infinite alternate;
 
@@ -41,9 +41,9 @@
       height: 2px;
       background: linear-gradient(90deg, 
         transparent 0%,
-        rgba($echo-blue, 0.2) 25%,
-        rgba($echo-blue, 0.4) 50%,
-        rgba($echo-blue, 0.2) 75%,
+        rgba($echo-blue, 0.1) 25%,
+        rgba($echo-blue, 0.2) 50%,
+        rgba($echo-blue, 0.1) 75%,
         transparent 100%
       );
       animation: scanlineGlow 4s infinite ease-in-out;
@@ -57,10 +57,10 @@
       width: 100%;
       height: 100%;
       background: linear-gradient(to bottom,
-        rgba($echo-gray, 0.008) 1%,
+        rgba($echo-gray, 0.005) 1%,
         transparent 1%,
         transparent 99%,
-        rgba($echo-gray, 0.008) 99%
+        rgba($echo-gray, 0.005) 99%
       );
       background-size: 100% 120px;
       animation: scanlineWaver 10s infinite ease-in-out;
@@ -71,24 +71,36 @@
     .hudTitle {
       color: $echo-blue;
       font-size: 2.2em;
-      margin-bottom: 1.5rem;
+      margin-bottom: 2rem;
       text-transform: uppercase;
-      letter-spacing: 2px;
-      text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+      letter-spacing: 3px;
+      text-shadow: 0 0 15px rgba($echo-blue, 0.2);
       position: relative;
-      padding-bottom: 0.5rem;
+      padding-bottom: 1rem;
 
-      &::after {
+      &::before {
         content: '';
         position: absolute;
         bottom: 0;
         left: 0;
-        width: 100px;
-        height: 2px;
+        width: 100%;
+        height: 1px;
         background: linear-gradient(90deg,
-          rgba($echo-blue, 0.8) 0%,
-          rgba($echo-blue, 0.2) 100%
+          rgba($echo-blue, 0.4) 0%,
+          rgba($echo-blue, 0.1) 50%,
+          transparent 100%
         );
+      }
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 50px;
+        height: 1px;
+        background: rgba($echo-blue, 0.4);
+        box-shadow: 0 0 10px rgba($echo-blue, 0.3);
       }
     }
 
@@ -129,9 +141,9 @@
     display: flex;
     justify-content: center;
     gap: 1px;
-    background: rgba($background-dark, 0.3);
+    background: rgba($background-dark, 0.1);
     padding: 5px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 
     &::after {
       content: '';
@@ -142,7 +154,7 @@
       height: 1px;
       background: linear-gradient(90deg,
         transparent 0%,
-        rgba($echo-blue, 0.3) 50%,
+        rgba($echo-blue, 0.15) 50%,
         transparent 100%
       );
     }
@@ -150,7 +162,7 @@
     .navButton {
       height: 50px;
       color: $echo-gray;
-      background: rgba($background-dark, 0.4);
+      background: rgba($background-dark, 0.12);
       border: none;
       font-size: 16px;
       text-align: center;
@@ -163,6 +175,7 @@
       text-transform: uppercase;
       letter-spacing: 1px;
       font-weight: 600;
+      backdrop-filter: blur(2px);
       
       &::after {
         content: '';
@@ -171,15 +184,15 @@
         left: 50%;
         width: 0;
         height: 2px;
-        background: $echo-blue;
+        background: rgba($echo-blue, 0.5);
         transition: all 0.3s ease;
         transform: translateX(-50%);
       }
 
       &:hover {
-        background: rgba($echo-blue, 0.15);
+        background: rgba($echo-blue, 0.1);
         color: lighten($echo-blue, 20%);
-        text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+        text-shadow: 0 0 8px rgba($echo-blue, 0.3);
 
         &::after {
           width: 80%;
@@ -197,29 +210,130 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-  }
+    position: relative;
+    padding: 2rem;
+    background: rgba($background-dark, 0.06);
+    border: 1px solid rgba($echo-blue, 0.05);
+    box-shadow: inset 0 0 20px rgba($echo-blue, 0.015);
+    backdrop-filter: blur(1px);
 
-  .nexus {
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba($echo-gray, 0.015) 0px,
+        rgba($echo-gray, 0.015) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+      pointer-events: none;
+      animation: scanline 10s linear infinite;
+    }
+
     .walletInfo {
-      margin-bottom: 1rem;
+      position: relative;
+      margin: 1.5rem 0;
+      padding: 1.5rem;
+      background: rgba($background-dark, 0.1);
+      border: 1px solid rgba($echo-blue, 0.06);
+      backdrop-filter: blur(2px);
+      
+      &::before {
+        content: '';
+        position: absolute;
+        top: -1px;
+        left: -1px;
+        width: calc(100% + 2px);
+        height: calc(100% + 2px);
+        background: linear-gradient(45deg, 
+          rgba($echo-blue, 0.15) 0%,
+          transparent 30%,
+          transparent 70%,
+          rgba($echo-blue, 0.15) 100%
+        );
+        opacity: 0.3;
+        pointer-events: none;
+      }
+
+      p {
+        position: relative;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba($echo-gray, 0.08);
+        
+        &:last-child {
+          border-bottom: none;
+        }
+
+        strong {
+          color: rgba($echo-gray, 0.8);
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          font-size: 0.9em;
+          margin-right: 1rem;
+        }
+
+        span {
+          color: $echo-blue;
+          text-shadow: 0 0 10px rgba($echo-blue, 0.2);
+          font-family: monospace;
+          letter-spacing: 1px;
+        }
+      }
     }
 
     .nexusActions {
       display: flex;
-      gap: 10px;
-      margin: 1rem 0;
+      gap: 1rem;
+      margin: 1.5rem 0;
 
       button {
-        background: none;
-        border: 1px solid rgba($echo-gray, 0.3);
+        flex: 1;
+        padding: 0.8rem 1.5rem;
+        background: rgba($background-dark, 0.4);
+        border: 1px solid rgba($echo-blue, 0.2);
         color: $echo-gray;
-        padding: 5px 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+
+        &::before {
+          content: '';
+          position: absolute;
+          top: -2px;
+          left: -2px;
+          width: calc(100% + 4px);
+          height: calc(100% + 4px);
+          background: linear-gradient(45deg,
+            transparent 0%,
+            rgba($echo-blue, 0.1) 50%,
+            transparent 100%
+          );
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
 
         &:hover {
-          background-color: rgba($echo-blue, 0.2);
-          color: $echo-blue;
+          background: rgba($echo-blue, 0.15);
+          color: lighten($echo-blue, 20%);
+          text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+          border-color: rgba($echo-blue, 0.4);
+
+          &::before {
+            opacity: 1;
+          }
+        }
+
+        &:active {
+          transform: translateY(1px);
         }
       }
     }
@@ -260,27 +374,41 @@
 }
 
 @keyframes softEcho {
-  0% { filter: brightness(1) contrast(1) saturate(1); }
-  45% { filter: brightness(0.998) contrast(1.002) saturate(1.02); }
-  50% { filter: brightness(0.995) contrast(1.005) saturate(1.05); }
-  55% { filter: brightness(0.998) contrast(1.002) saturate(1.02); }
-  100% { filter: brightness(1) contrast(1) saturate(1); }
+  0% { filter: brightness(1) contrast(1) saturate(1); opacity: 0.75; }
+  45% { filter: brightness(0.998) contrast(1.002) saturate(1.02); opacity: 0.72; }
+  50% { filter: brightness(0.995) contrast(1.005) saturate(1.05); opacity: 0.7; }
+  55% { filter: brightness(0.998) contrast(1.002) saturate(1.02); opacity: 0.72; }
+  100% { filter: brightness(1) contrast(1) saturate(1); opacity: 0.75; }
 }
 
 @keyframes scanlineWaver {
-  0% { background-position: 0 0; opacity: 0.85; }
-  15% { background-position: 0 3%; opacity: 0.9; }
-  20% { background-position: 0 4%; opacity: 0.87; }
-  22% { background-position: 0 2%; opacity: 0.85; }
-  40% { background-position: 0 6%; opacity: 0.9; }
-  60% { background-position: 0 8%; opacity: 0.85; }
-  65% { background-position: 0 9%; opacity: 0.88; }
-  67% { background-position: 0 7%; opacity: 0.85; }
-  85% { background-position: 0 10%; opacity: 0.9; }
-  100% { background-position: 0 12%; opacity: 0.85; }
+  0% { background-position: 0 0; opacity: 0.75; }
+  15% { background-position: 0 3%; opacity: 0.8; }
+  20% { background-position: 0 4%; opacity: 0.77; }
+  22% { background-position: 0 2%; opacity: 0.75; }
+  40% { background-position: 0 6%; opacity: 0.8; }
+  60% { background-position: 0 8%; opacity: 0.75; }
+  65% { background-position: 0 9%; opacity: 0.78; }
+  67% { background-position: 0 7%; opacity: 0.75; }
+  85% { background-position: 0 10%; opacity: 0.8; }
+  100% { background-position: 0 12%; opacity: 0.75; }
 }
 
 @keyframes corePulse {
   0% { background-position: center, center, 50% 50%, center; }
   100% { background-position: center, center, 55% 55%, center; }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0.5;
+  }
 }
