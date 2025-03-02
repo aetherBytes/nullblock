@@ -68,9 +68,6 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
           <button onClick={() => alert('Feature not implemented yet')}>Send SOL</button>
           <button onClick={() => alert('Feature not implemented yet')}>Receive SOL</button>
         </div>
-        <div className={styles.bottomLeftInfo}>
-          <p>Electronic Communications HUB and Omnitool</p>
-        </div>
       </div>
     );
   };
@@ -122,10 +119,10 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
 
   return (
     <div className={styles.echoContainer}>
+      {renderControlScreen()}
       <div className={styles.hudWindow}>
         {renderScreen()}
       </div>
-      {renderControlScreen()}
     </div>
   );
 };
