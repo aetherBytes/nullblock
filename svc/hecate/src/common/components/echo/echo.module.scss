@@ -3,32 +3,51 @@
 .echoContainer {
   position: fixed;
   z-index: 1002;
+  top: 2.5vh;
+  left: 2.5vw;
+  right: 2.5vw;
+  bottom: 2.5vh;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 
   .hudWindow {
-    position: fixed;
-    top: 2.5%;
-    left: 1.5%;
-    width: 80%;
-    height: 100vh;
-    max-height: 60vh; /* ~60% of screen height */
-    background-color: rgba($background-dark, 0.7);
-    background-image: linear-gradient(rgba($echo-gray, 0.06) 2px, transparent 2px), /* Rough scanlines */
-                      linear-gradient(90deg, rgba($echo-gray, 0.06) 2px, transparent 2px),
-                      radial-gradient(circle at 50% 50%, rgba(70, 35, 20, 0.15) 0%, transparent 70%), /* Subtle relic core */
-                      url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAAXNSR0IArs4c6QAAACFJREFUKFNjZGBg+P///38GBoaHh4eHh4fHx8fHx8fHx8fGxsYAdOIBB73MBtAAAAAASUVORK5CYII='); /* Cracked metal texture */
-    background-size: 100% 6px, 6px 100%, 120% 120%, 8px 8px;
-    background-position: center;
-    border: 1px solid $echo-border;
-    border-radius: 0;
-    color: $echo-gray;
-    padding: 50px;
-    overflow-y: auto;
-    box-shadow: inset 0 0 10px rgba($echo-gray, 0.2);
-    font-family: $batman-font;
+    position: relative;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    background-color: rgba($background-dark, 0.12);
+    background-image: linear-gradient(rgba($echo-gray, 0.015) 2px, transparent 2px),
+                      linear-gradient(90deg, rgba($echo-gray, 0.015) 2px, transparent 2px),
+                      radial-gradient(circle at 50% 50%, rgba(70, 35, 20, 0.05) 0%, transparent 70%),
+                      url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAAXNSR0IArs4c6QAAACFJREFUKFNjZGBg+P///38GBoaHh4eHh4fHx8fHx8fHx8fGxsYAdOIBB73MBtAAAAAASUVORK5CYII=');
+    background-size: 100% 6px, 6px 100%, 120% 120%, 8px 8px;
+    background-position: center;
+    border: 1px solid rgba($echo-border, 0.3);
+    border-radius: 0;
+    color: $echo-gray;
+    padding: 2rem;
+    box-shadow: inset 0 0 15px rgba($echo-gray, 0.08),
+                0 0 30px rgba($background-dark, 0.3);
+    font-family: $batman-font;
     animation: softEcho 20s infinite ease-in-out, corePulse 4s infinite alternate;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, 
+        transparent 0%,
+        rgba($echo-blue, 0.2) 25%,
+        rgba($echo-blue, 0.4) 50%,
+        rgba($echo-blue, 0.2) 75%,
+        transparent 100%
+      );
+      animation: scanlineGlow 4s infinite ease-in-out;
+    }
 
     &::after {
       content: '';
@@ -38,30 +57,51 @@
       width: 100%;
       height: 100%;
       background: linear-gradient(to bottom,
-        rgba($echo-gray, 0.02) 1%,
+        rgba($echo-gray, 0.008) 1%,
         transparent 1%,
         transparent 99%,
-        rgba($echo-gray, 0.02) 99%
+        rgba($echo-gray, 0.008) 99%
       );
       background-size: 100% 120px;
       animation: scanlineWaver 10s infinite ease-in-out;
       pointer-events: none;
+      mix-blend-mode: overlay;
     }
 
     .hudTitle {
       color: $echo-blue;
-      font-size: 2em;
-      margin-bottom: 20px;
-      text-shadow: none;
+      font-size: 2.2em;
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+      position: relative;
+      padding-bottom: 0.5rem;
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100px;
+        height: 2px;
+        background: linear-gradient(90deg,
+          rgba($echo-blue, 0.8) 0%,
+          rgba($echo-blue, 0.2) 100%
+        );
+      }
     }
 
     p {
-      filter: brightness(1); /* Keep text stable */
       font-size: $base-font-size;
-      margin: 10px 0;
+      margin: 0.5rem 0;
+      line-height: 1.6;
+      letter-spacing: 0.5px;
+
       span {
         font-weight: bold;
         color: $echo-blue;
+        text-shadow: 0 0 5px rgba($echo-blue, 0.3);
       }
     }
 
@@ -82,128 +122,165 @@
     }
   }
 
-  @keyframes softEcho {
-    0% { filter: brightness(1) contrast(1); }      /* Still */
-    12% { filter: brightness(0.998) contrast(1.002); } /* Faint waver */
-    25% { filter: brightness(1) contrast(1); }     /* Long pause */
-    30% { filter: brightness(0.997) contrast(1.003); } /* Subtle glitch */
-    33% { filter: brightness(0.999) contrast(1.001); }
-    40% { filter: brightness(1) contrast(1); }     /* Long pause */
-    55% { filter: brightness(0.996) contrast(1.004); } /* Faint waver */
-    65% { filter: brightness(1) contrast(1); }     /* Long pause */
-    70% { filter: brightness(0.995) contrast(1.005); } /* Subtle glitch */
-    73% { filter: brightness(0.998) contrast(1.002); }
-    85% { filter: brightness(1) contrast(1); }     /* Long pause */
-    90% { filter: brightness(0.997) contrast(1.003); } /* Final waver */
-    100% { filter: brightness(1) contrast(1); }
-  }
-
-  @keyframes scanlineWaver {
-    0% { background-position: 0 0; opacity: 0.85; }
-    15% { background-position: 0 3%; opacity: 0.9; } /* Slow drift */
-    20% { background-position: 0 4%; opacity: 0.87; } /* Faint glitch */
-    22% { background-position: 0 2%; opacity: 0.85; }
-    40% { background-position: 0 6%; opacity: 0.9; } /* Pause */
-    60% { background-position: 0 8%; opacity: 0.85; } /* Drift */
-    65% { background-position: 0 9%; opacity: 0.88; } /* Faint glitch */
-    67% { background-position: 0 7%; opacity: 0.85; }
-    85% { background-position: 0 10%; opacity: 0.9; } /* Long pause */
-    100% { background-position: 0 12%; opacity: 0.85; }
-  }
-
-  @keyframes corePulse {
-    0% { background-position: center, center, 50% 50%, center; }
-    100% { background-position: center, center, 55% 55%, center; }
-  }
-
   .verticalNavbar {
-    position: fixed;
-    top: 10%;
-    width: 150px;
-    right: 2.5%;
+    position: relative;
+    width: 100%;
+    min-height: 60px;
     display: flex;
-    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    background: rgba($background-dark, 0.3);
+    padding: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba($echo-blue, 0.3) 50%,
+        transparent 100%
+      );
+    }
 
     .navButton {
-      width: 100%;
       height: 50px;
       color: $echo-gray;
-      background: rgba($echo-gray, 0.1);
+      background: rgba($background-dark, 0.4);
       border: none;
-      border-bottom: 1px solid $echo-border;
       font-size: 16px;
       text-align: center;
-      padding-left: 10px;
+      padding: 0 25px;
       cursor: pointer;
       transition: all 0.3s ease;
-      margin-bottom: 10px;
-
-      &:hover {
+      min-width: 120px;
+      max-width: 150px;
+      position: relative;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 0;
+        height: 2px;
         background: $echo-blue;
-        color: $background-dark;
+        transition: all 0.3s ease;
+        transform: translateX(-50%);
       }
 
-      &:last-child {
-        border-bottom: none;
-        margin-bottom: 0;
+      &:hover {
+        background: rgba($echo-blue, 0.15);
+        color: lighten($echo-blue, 20%);
+        text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+
+        &::after {
+          width: 80%;
+        }
+      }
+
+      &:active {
+        transform: translateY(1px);
       }
     }
   }
 
-  .nexus {
+  .nexus, .hudScreen, .settingsScreen {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    min-height: 0;
+  }
 
+  .nexus {
     .walletInfo {
-      width: 100%;
-      text-align: left;
-      margin-bottom: 20px;
+      margin-bottom: 1rem;
     }
 
     .nexusActions {
       display: flex;
       gap: 10px;
-      margin: 20px 0;
+      margin: 1rem 0;
 
       button {
         background: none;
-        border: 1px solid $echo-gray;
+        border: 1px solid rgba($echo-gray, 0.3);
         color: $echo-gray;
         padding: 5px 10px;
         cursor: pointer;
         transition: all 0.3s ease;
 
         &:hover {
-          background-color: $echo-blue;
-          color: $background-dark;
+          background-color: rgba($echo-blue, 0.2);
+          color: $echo-blue;
         }
       }
     }
   }
 
-  .settingsScreen {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
+  .hudScreen {
+    .hudTitle {
+      color: $echo-blue;
+      font-size: 2em;
+      margin-bottom: 1rem;
+      text-shadow: none;
+    }
+  }
 
+  .settingsScreen {
     .button {
       color: $echo-gray;
-      border: 1px solid $echo-gray;
+      border: 1px solid rgba($echo-gray, 0.3);
       background: transparent;
       padding: 10px 20px;
       font-size: $base-font-size;
       text-decoration: none;
       cursor: pointer;
-      transition: background-color 0.3s ease, color 0.3s ease;
+      transition: all 0.3s ease;
       border-radius: 0;
 
       &:hover {
-        background-color: $echo-blue;
-        color: $background-dark;
+        background-color: rgba($echo-blue, 0.2);
+        color: $echo-blue;
       }
     }
   }
+}
+
+@keyframes scanlineGlow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes softEcho {
+  0% { filter: brightness(1) contrast(1) saturate(1); }
+  45% { filter: brightness(0.998) contrast(1.002) saturate(1.02); }
+  50% { filter: brightness(0.995) contrast(1.005) saturate(1.05); }
+  55% { filter: brightness(0.998) contrast(1.002) saturate(1.02); }
+  100% { filter: brightness(1) contrast(1) saturate(1); }
+}
+
+@keyframes scanlineWaver {
+  0% { background-position: 0 0; opacity: 0.85; }
+  15% { background-position: 0 3%; opacity: 0.9; }
+  20% { background-position: 0 4%; opacity: 0.87; }
+  22% { background-position: 0 2%; opacity: 0.85; }
+  40% { background-position: 0 6%; opacity: 0.9; }
+  60% { background-position: 0 8%; opacity: 0.85; }
+  65% { background-position: 0 9%; opacity: 0.88; }
+  67% { background-position: 0 7%; opacity: 0.85; }
+  85% { background-position: 0 10%; opacity: 0.9; }
+  100% { background-position: 0 12%; opacity: 0.85; }
+}
+
+@keyframes corePulse {
+  0% { background-position: center, center, 50% 50%, center; }
+  100% { background-position: center, center, 55% 55%, center; }
 }
