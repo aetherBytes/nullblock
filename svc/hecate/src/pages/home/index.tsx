@@ -66,10 +66,64 @@ const Home: React.FC = () => {
       type: 'user'
     });
 
-    if (input.toLowerCase().startsWith('/help')) {
+    const command = input.toLowerCase();
+
+    if (command === '/clear') {
+      setMessages([{
+        id: 1,
+        text: "System: Chat log cleared.",
+        type: 'message' as MessageType
+      }]);
+      return;
+    }
+
+    if (command === '/status') {
+      const statusMessages: ChatMessage[] = [
+        {
+          id: messages.length + 2,
+          text: "System: Running system diagnostics...",
+          type: 'message'
+        },
+        {
+          id: messages.length + 3,
+          text: "System Update: Neural interface status: " + (walletConnected ? 'ACTIVE' : 'INACTIVE'),
+          type: 'update' as MessageType
+        }
+      ];
+
+      if (walletConnected && publicKey) {
+        statusMessages.push({
+          id: messages.length + 4,
+          text: `System: Connected to neural node ${publicKey.slice(0, 6)}...${publicKey.slice(-4)}`,
+          type: 'message'
+        });
+        if (showEcho) {
+          statusMessages.push({
+            id: messages.length + 5,
+            text: "System: ECHO interface engaged and operational",
+            type: 'message'
+          });
+        }
+      } else {
+        statusMessages.push({
+          id: messages.length + 4,
+          text: "System Alert: No active neural connection detected",
+          type: 'alert'
+        });
+      }
+
+      statusMessages.forEach((msg, index) => {
+        setTimeout(() => {
+          addMessage(msg);
+        }, 500 * (index + 1));
+      });
+      return;
+    }
+
+    if (command === '/help') {
       addMessage({
         id: messages.length + 2,
-        text: "System: Available commands: /help, /status, /clear",
+        text: "System: Available commands: /help - Display available commands, /status - Check system status, /clear - Clear chat log",
         type: 'message'
       });
     } else {
@@ -225,8 +279,8 @@ const Home: React.FC = () => {
           localStorage.setItem('walletPublickey', publicKey.toString());
           addMessage({
             id: messages.length + 1,
-            text: "System Update: Neural link established. Initializing enhanced interface...",
-            type: "update"
+            text: "System: Neural link established. Initializing enhanced interface...",
+            type: "message"
           });
         } catch (error) {
           console.error('Manual connect error:', error);
