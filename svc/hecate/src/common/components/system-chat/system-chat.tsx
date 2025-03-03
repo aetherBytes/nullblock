@@ -18,6 +18,7 @@ interface SystemChatProps {
 const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false, onUserInput }) => {
   const [input, setInput] = useState('');
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState('/logs');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -68,7 +69,14 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
     return <p>{text}</p>;
   };
 
-  return (
+  return isCollapsed ? (
+    <button 
+      className={`${styles.collapsedButton} ${isEchoActive ? styles.withEcho : ''}`}
+      onClick={() => setIsCollapsed(false)}
+    >
+      [ CHAT ]
+    </button>
+  ) : (
     <div className={`${styles.chatContainer} ${isEchoActive ? styles.withEcho : ''} ${isFullScreen ? styles.fullScreen : ''}`}>
       <div className={styles.chatHeader}>
         <div className={styles.roomSelector}>
@@ -92,12 +100,20 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
             </div>
           )}
         </div>
-        <button 
-          className={styles.toggleButton}
-          onClick={() => setIsFullScreen(!isFullScreen)}
-        >
-          {isFullScreen ? '[ Minimize ]' : '[ Expand ]'}
-        </button>
+        <div className={styles.controls}>
+          <button 
+            className={styles.toggleButton}
+            onClick={() => setIsCollapsed(true)}
+          >
+            [ Collapse ]
+          </button>
+          <button 
+            className={styles.toggleButton}
+            onClick={() => setIsFullScreen(!isFullScreen)}
+          >
+            {isFullScreen ? '[ Minimize ]' : '[ Expand ]'}
+          </button>
+        </div>
       </div>
       <div className={styles.messageList}>
         {messages.map((message) => (
