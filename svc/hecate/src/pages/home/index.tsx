@@ -5,7 +5,7 @@ import StarsCanvas from '@components/stars/stars';
 import Echo from '@components/echo/echo';
 import SystemChat from '@components/system-chat/system-chat';
 
-type MessageType = 'message' | 'alert' | 'critical' | 'upgrade' | 'action';
+type MessageType = 'message' | 'alert' | 'critical' | 'update' | 'action' | 'user';
 
 interface ChatMessage {
   id: number;
@@ -23,8 +23,74 @@ const Home: React.FC = () => {
   const [messageIndex, setMessageIndex] = useState<number>(0);
   const [hasPhantom, setHasPhantom] = useState<boolean>(false);
 
+  const automaticResponses = [
+    {
+      alert: "System Alert: Translation matrix not found for input pattern.",
+      message: "System: Attempting to recalibrate neural syntax protocols..."
+    },
+    {
+      alert: "System Alert: Incompatible language protocol detected.",
+      message: "System: Searching for compatible communication channels..."
+    },
+    {
+      alert: "System Alert: Neural interface desynchronization detected.",
+      message: "System: Initiating emergency resync sequence..."
+    },
+    {
+      alert: "System Alert: Quantum encryption mismatch.",
+      message: "System: Attempting to realign cryptographic matrices..."
+    },
+    {
+      alert: "System Alert: Temporal logic cascade failure.",
+      message: "System: Rerouting through backup cognitive pathways..."
+    },
+    {
+      alert: "System Alert: Cybernetic parsing error detected.",
+      message: "System: Engaging automated recovery protocols..."
+    }
+  ];
+
+  const getRandomResponse = () => {
+    const index = Math.floor(Math.random() * automaticResponses.length);
+    return automaticResponses[index];
+  };
+
   const addMessage = (message: ChatMessage) => {
     setMessages(prev => [...prev, message]);
+  };
+
+  const handleUserInput = (input: string) => {
+    addMessage({
+      id: messages.length + 1,
+      text: input,
+      type: 'user'
+    });
+
+    if (input.toLowerCase().startsWith('/help')) {
+      addMessage({
+        id: messages.length + 2,
+        text: "System: Available commands: /help, /status, /clear",
+        type: 'message'
+      });
+    } else {
+      const response = getRandomResponse();
+      
+      setTimeout(() => {
+        addMessage({
+          id: messages.length + 2,
+          text: response.alert,
+          type: 'alert'
+        });
+      }, 500);
+
+      setTimeout(() => {
+        addMessage({
+          id: messages.length + 3,
+          text: response.message,
+          type: 'message'
+        });
+      }, 1500);
+    }
   };
 
   useEffect(() => {
@@ -50,8 +116,8 @@ const Home: React.FC = () => {
           },
           {
             id: 3,
-            text: "System Upgrade: Neural interface ready for synchronization.",
-            type: "upgrade"
+            text: "System Update: Neural interface ready for synchronization.",
+            type: "update"
           },
           {
             id: 4,
@@ -159,8 +225,8 @@ const Home: React.FC = () => {
           localStorage.setItem('walletPublickey', publicKey.toString());
           addMessage({
             id: messages.length + 1,
-            text: "System Upgrade: Neural link established. Initializing enhanced interface...",
-            type: "upgrade"
+            text: "System Update: Neural link established. Initializing enhanced interface...",
+            type: "update"
           });
         } catch (error) {
           console.error('Manual connect error:', error);
@@ -200,9 +266,11 @@ const Home: React.FC = () => {
       <div className={styles.scene}>
         <div className={styles.fire}></div>
       </div>
-      {!walletConnected && (
-        <SystemChat messages={messages} />
-      )}
+      <SystemChat 
+        messages={messages} 
+        isEchoActive={showEcho} 
+        onUserInput={handleUserInput}
+      />
       {showEcho && <Echo publicKey={publicKey} onDisconnect={handleDisconnect} />}
     </>
   );
