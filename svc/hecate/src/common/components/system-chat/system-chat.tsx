@@ -17,6 +17,7 @@ interface SystemChatProps {
 
 const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false, onUserInput }) => {
   const [input, setInput] = useState('');
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -36,11 +37,13 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
 
   const formatMessage = (text: string, type: ChatMessage['type']) => {
     const parts = text.split(': ');
-    if (parts.length === 2 && parts[0].startsWith('System')) {
+    if (parts.length >= 2 && parts[0].startsWith('System')) {
+      const prefix = parts[0];
+      const content = parts.slice(1).join(': ');
       return (
         <p>
-          <span className={styles.system}>{parts[0]}: </span>
-          {parts[1]}
+          <span className={styles.system}>{prefix}: </span>
+          {content}
         </p>
       );
     }
@@ -48,7 +51,15 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
   };
 
   return (
-    <div className={`${styles.chatContainer} ${isEchoActive ? styles.withEcho : ''}`}>
+    <div className={`${styles.chatContainer} ${isEchoActive ? styles.withEcho : ''} ${isFullScreen ? styles.fullScreen : ''}`}>
+      <div className={styles.chatHeader}>
+        <button 
+          className={styles.toggleButton}
+          onClick={() => setIsFullScreen(!isFullScreen)}
+        >
+          {isFullScreen ? '[ Minimize ]' : '[ Expand ]'}
+        </button>
+      </div>
       <div className={styles.messageList}>
         {messages.map((message) => (
           <div
