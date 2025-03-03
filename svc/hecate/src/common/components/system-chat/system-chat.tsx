@@ -18,7 +18,25 @@ interface SystemChatProps {
 const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false, onUserInput }) => {
   const [input, setInput] = useState('');
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState('/logs');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const chatRooms = [
+    { id: 'logs', name: '/logs', available: true },
+    { id: 'agents', name: '/agents', available: false },
+    { id: 'camp', name: '/camp', available: false },
+    { id: 'reality', name: '/reality', available: false }
+  ];
+
+  const handleRoomSelect = (roomId: string) => {
+    setIsDropdownOpen(false);
+    if (roomId !== 'logs') {
+      onUserInput?.('System Alert: Neural pathway not yet established. Access restricted.');
+      return;
+    }
+    setSelectedRoom(`/${roomId}`);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,6 +71,27 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
   return (
     <div className={`${styles.chatContainer} ${isEchoActive ? styles.withEcho : ''} ${isFullScreen ? styles.fullScreen : ''}`}>
       <div className={styles.chatHeader}>
+        <div className={styles.roomSelector}>
+          <button 
+            className={styles.dropdownButton}
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          >
+            [ {selectedRoom} ]
+          </button>
+          {isDropdownOpen && (
+            <div className={styles.dropdownContent}>
+              {chatRooms.map(room => (
+                <button
+                  key={room.id}
+                  className={`${styles.roomOption} ${!room.available ? styles.disabled : ''}`}
+                  onClick={() => handleRoomSelect(room.id)}
+                >
+                  {room.name} {!room.available && '(locked)'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button 
           className={styles.toggleButton}
           onClick={() => setIsFullScreen(!isFullScreen)}

@@ -69,10 +69,94 @@ $text-color: #c8c8d0;
 
   .chatHeader {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     padding: 0 0.5rem 0.5rem 0;
     border-bottom: 1px solid rgba($echo-blue, 0.1);
     margin-bottom: 0.5rem;
+
+    .roomSelector {
+      position: relative;
+      
+      .dropdownButton {
+        background: none;
+        border: none;
+        color: rgba($echo-blue, 0.7);
+        font-family: monospace;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        padding: 0.25rem 0.5rem;
+
+        &:hover {
+          color: lighten($echo-blue, 20%);
+          text-shadow: 0 0 8px rgba($echo-blue, 0.4);
+        }
+      }
+
+      .dropdownContent {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 150px;
+        background: rgba($background-dark, 0.95);
+        border: 1px solid rgba($echo-blue, 0.2);
+        border-radius: 2px;
+        padding: 0.5rem;
+        z-index: 1006;
+        margin-top: 0.5rem;
+        box-shadow: 0 0 15px rgba($background-dark, 0.3);
+        backdrop-filter: blur(5px);
+
+        &::before {
+          content: '';
+          position: absolute;
+          top: -5px;
+          left: 10px;
+          width: 8px;
+          height: 8px;
+          background: rgba($background-dark, 0.95);
+          border-left: 1px solid rgba($echo-blue, 0.2);
+          border-top: 1px solid rgba($echo-blue, 0.2);
+          transform: rotate(45deg);
+        }
+
+        .roomOption {
+          display: block;
+          width: 100%;
+          padding: 0.5rem 1rem;
+          text-align: left;
+          background: none;
+          border: none;
+          color: rgba($echo-blue, 0.7);
+          font-family: monospace;
+          font-size: 0.9rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          border-radius: 2px;
+
+          &:hover:not(.disabled) {
+            background: rgba($echo-blue, 0.1);
+            color: lighten($echo-blue, 20%);
+            text-shadow: 0 0 8px rgba($echo-blue, 0.4);
+          }
+
+          &.disabled {
+            color: rgba($echo-gray, 0.5);
+            cursor: not-allowed;
+            font-style: italic;
+
+            &:hover {
+              background: none;
+              color: rgba($echo-gray, 0.5);
+            }
+          }
+
+          & + .roomOption {
+            margin-top: 0.25rem;
+          }
+        }
+      }
+    }
 
     .toggleButton {
       background: none;
