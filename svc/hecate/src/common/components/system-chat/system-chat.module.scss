@@ -29,186 +29,8 @@ $text-color: #c8c8d0;
   display: flex;
   flex-direction: column;
 
-  &.fullScreen {
-    position: fixed;
-    top: 15vh;
-    left: 2.5vw;
-    right: 2.5vw;
-    bottom: 2.5vh;
-    width: auto;
-    transform: none;
-    max-width: none;
-    background: rgba($background-dark, 0.85);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba($echo-blue, 0.3);
-    box-shadow: inset 0 0 30px rgba($echo-blue, 0.05),
-                0 0 20px rgba($background-dark, 0.3);
-    padding: 2rem;
-    
-    .messageList {
-      flex: 1;
-      max-height: none;
-      margin: 1rem 0;
-      padding: 0 1rem;
-    }
-
-    .inputContainer {
-      margin-top: 2rem;
-      padding: 1rem;
-      border-top: 1px solid rgba($echo-blue, 0.2);
-      
-      input {
-        width: 90%;
-        margin: 0 auto;
-        display: block;
-        padding: 0.75rem 1.5rem;
-        font-size: 1.1rem;
-      }
-    }
-  }
-
-  .chatHeader {
-    display: flex;
-    justify-content: space-between;
-    padding: 0 0.5rem 0.5rem 0;
-    border-bottom: 1px solid rgba($echo-blue, 0.1);
-    margin-bottom: 0.5rem;
-
-    .roomSelector {
-      position: relative;
-      
-      .dropdownButton {
-        background: none;
-        border: none;
-        color: rgba($echo-blue, 0.7);
-        font-family: monospace;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        padding: 0.25rem 0.5rem;
-
-        &:hover {
-          color: lighten($echo-blue, 20%);
-          text-shadow: 0 0 8px rgba($echo-blue, 0.4);
-        }
-      }
-
-      .dropdownContent {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        min-width: 150px;
-        background: rgba($background-dark, 0.95);
-        border: 1px solid rgba($echo-blue, 0.2);
-        border-radius: 2px;
-        padding: 0.5rem;
-        z-index: 1006;
-        margin-top: 0.5rem;
-        box-shadow: 0 0 15px rgba($background-dark, 0.3);
-        backdrop-filter: blur(5px);
-
-        &::before {
-          content: '';
-          position: absolute;
-          top: -5px;
-          left: 10px;
-          width: 8px;
-          height: 8px;
-          background: rgba($background-dark, 0.95);
-          border-left: 1px solid rgba($echo-blue, 0.2);
-          border-top: 1px solid rgba($echo-blue, 0.2);
-          transform: rotate(45deg);
-        }
-
-        .roomOption {
-          display: block;
-          width: 100%;
-          padding: 0.5rem 1rem;
-          text-align: left;
-          background: none;
-          border: none;
-          color: rgba($echo-blue, 0.7);
-          font-family: monospace;
-          font-size: 0.9rem;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          border-radius: 2px;
-
-          &:hover:not(.disabled) {
-            background: rgba($echo-blue, 0.1);
-            color: lighten($echo-blue, 20%);
-            text-shadow: 0 0 8px rgba($echo-blue, 0.4);
-          }
-
-          &.disabled {
-            color: rgba($echo-gray, 0.5);
-            cursor: not-allowed;
-            font-style: italic;
-
-            &:hover {
-              background: none;
-              color: rgba($echo-gray, 0.5);
-            }
-          }
-
-          & + .roomOption {
-            margin-top: 0.25rem;
-          }
-        }
-      }
-    }
-
-    .toggleButton {
-      background: none;
-      border: none;
-      color: rgba($echo-blue, 0.7);
-      font-family: monospace;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      padding: 0.25rem 0.5rem;
-
-      &:hover {
-        color: lighten($echo-blue, 20%);
-        text-shadow: 0 0 8px rgba($echo-blue, 0.4);
-      }
-    }
-  }
-
   &.withEcho {
-    &.fullScreen {
-      top: 15vh;
-      bottom: 2.5vh;
-      left: 2.5vw;
-      right: 2.5vw;
-      width: auto;
-      transform: none;
-      height: auto;
-      padding: 2rem;
-      
-      .messageList {
-        flex: 1;
-        max-height: none;
-        margin: 1rem 0;
-        padding: 0 1rem;
-        mask-image: none;
-      }
-
-      .inputContainer {
-        margin-top: 2rem;
-        padding: 1rem;
-        border-top: 1px solid rgba($echo-blue, 0.2);
-        width: 100%;
-        
-        input {
-          width: 90%;
-          margin: 0 auto;
-          display: block;
-        }
-      }
-    }
-
-    bottom: 8rem;
+    bottom: 4rem;
     left: 50%;
     transform: translateX(-50%);
     width: 85%;
@@ -236,6 +58,47 @@ $text-color: #c8c8d0;
         width: 85%;
         margin: 1rem;
       }
+    }
+  }
+
+  &.fullScreen {
+    position: fixed;
+    top: 6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 95vw;
+    height: calc(100vh - 14rem);
+    margin: 1rem 0;
+    z-index: 1005;
+    background: rgba($background-dark, 0.25);
+    border: 1px solid rgba($echo-blue, 0.2);
+    box-shadow: inset 0 0 30px rgba($echo-blue, 0.05),
+                0 0 20px rgba($background-dark, 0.3);
+
+    .messageList {
+      max-height: calc(100vh - 20rem);
+      padding: 0 1.5rem;
+    }
+
+    .inputContainer {
+      padding: 1rem;
+      margin: 0;
+      background: rgba($background-dark, 0.2);
+      border-top: 1px solid rgba($echo-blue, 0.15);
+
+      input {
+        width: 95%;
+        margin: 0;
+      }
+    }
+
+    &.withEcho {
+      padding: 1.5rem;
+      height: calc(100vh - 14rem);
+      background: rgba($background-dark, 0.35);
+      border: 1px solid rgba($echo-blue, 0.25);
+      box-shadow: inset 0 0 40px rgba($echo-blue, 0.06),
+                  0 0 25px rgba($background-dark, 0.4);
     }
   }
 
@@ -316,6 +179,16 @@ $text-color: #c8c8d0;
     animation: messageAppear 0.3s ease-out forwards;
     font-family: monospace;
     letter-spacing: 0.5px;
+    padding: 0.5rem;
+    border-radius: 2px;
+    background: rgba($background-dark, 0.1);
+    border: 1px solid rgba($echo-blue, 0.05);
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba($background-dark, 0.15);
+      border-color: rgba($echo-blue, 0.1);
+    }
 
     p {
       color: lighten($text-color, 15%);
@@ -333,40 +206,61 @@ $text-color: #c8c8d0;
     &.message .system {
       color: lighten($echo-purple, 10%);
       text-shadow: 0 0 10px rgba($echo-purple, 0.4);
-    }
-
-    &.alert p {
-      color: lighten($text-color, 20%);
       font-weight: 600;
-      text-shadow: 0 0 10px rgba($text-color, 0.3);
     }
 
-    &.alert .system {
-      color: lighten($echo-orange, 10%);
-      text-shadow: 0 0 10px rgba($echo-orange, 0.4);
+    &.alert {
+      background: rgba($echo-orange, 0.05);
+      border-color: rgba($echo-orange, 0.1);
+
+      p {
+        color: lighten($text-color, 20%);
+        font-weight: 600;
+        text-shadow: 0 0 10px rgba($text-color, 0.3);
+      }
+
+      .system {
+        color: lighten($echo-orange, 10%);
+        text-shadow: 0 0 10px rgba($echo-orange, 0.4);
+      }
     }
 
-    &.critical .system {
-      color: lighten($echo-red, 10%);
-      text-shadow: 0 0 10px rgba($echo-red, 0.4);
-      font-weight: 700;
+    &.critical {
+      background: rgba($echo-red, 0.05);
+      border-color: rgba($echo-red, 0.1);
+
+      .system {
+        color: lighten($echo-red, 10%);
+        text-shadow: 0 0 10px rgba($echo-red, 0.4);
+        font-weight: 700;
+      }
     }
 
-    &.update p {
-      color: $text-color;
-      text-shadow: 0 0 10px rgba($text-color, 0.3);
+    &.update {
+      background: rgba($echo-green, 0.05);
+      border-color: rgba($echo-green, 0.1);
+
+      p {
+        color: $text-color;
+        text-shadow: 0 0 10px rgba($text-color, 0.3);
+      }
+
+      .system {
+        color: lighten($echo-green, 10%);
+        text-shadow: 0 0 10px rgba($echo-green, 0.4);
+      }
     }
 
-    &.update .system {
-      color: lighten($echo-green, 10%);
-      text-shadow: 0 0 10px rgba($echo-green, 0.4);
-    }
-
-    &.user p {
-      color: lighten($echo-blue, 20%);
+    &.user {
+      background: rgba($echo-blue, 0.05);
+      border-color: rgba($echo-blue, 0.1);
       text-align: right;
-      text-shadow: 0 0 10px rgba($echo-blue, 0.3);
-      font-style: italic;
+
+      p {
+        color: lighten($echo-blue, 20%);
+        text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+        font-style: italic;
+      }
     }
 
     .actionButton {
@@ -417,6 +311,91 @@ $text-color: #c8c8d0;
       }
     }
   }
+
+  .chatHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0 0.5rem;
+
+    .roomSelector {
+      position: relative;
+
+      .dropdownButton {
+        background: none;
+        border: none;
+        color: lighten($echo-blue, 15%);
+        font-family: monospace;
+        font-size: 1rem;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        transition: all 0.3s ease;
+
+        &:hover {
+          color: lighten($echo-blue, 25%);
+          text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+        }
+      }
+
+      .dropdownContent {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: rgba($background-dark, 0.95);
+        border: 1px solid rgba($echo-blue, 0.2);
+        border-radius: 2px;
+        padding: 0.5rem;
+        z-index: 1006;
+        min-width: 150px;
+
+        .roomOption {
+          display: block;
+          width: 100%;
+          padding: 0.5rem;
+          background: none;
+          border: none;
+          color: lighten($echo-blue, 15%);
+          font-family: monospace;
+          font-size: 0.9rem;
+          text-align: left;
+          cursor: pointer;
+          transition: all 0.3s ease;
+
+          &:hover:not(.disabled) {
+            background: rgba($echo-blue, 0.1);
+            color: lighten($echo-blue, 25%);
+          }
+
+          &.disabled {
+            color: $echo-gray;
+            cursor: not-allowed;
+          }
+        }
+      }
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+
+      .toggleButton {
+        background: none;
+        border: none;
+        color: lighten($echo-blue, 15%);
+        font-family: monospace;
+        font-size: 1rem;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        transition: all 0.3s ease;
+
+        &:hover {
+          color: lighten($echo-blue, 25%);
+          text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+        }
+      }
+    }
+  }
 }
 
 @keyframes messageAppear {
@@ -441,5 +420,32 @@ $text-color: #c8c8d0;
   100% {
     transform: translateY(100%);
     opacity: 0.5;
+  }
+}
+
+.collapsedButton {
+  position: fixed;
+  z-index: 1005;
+  bottom: 2rem;
+  left: 2rem;
+  background: rgba($background-dark, 0.2);
+  border: 1px solid rgba($echo-blue, 0.2);
+  color: lighten($echo-blue, 15%);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: monospace;
+  font-size: 1rem;
+
+  &:hover {
+    background: rgba($echo-blue, 0.15);
+    border-color: rgba($echo-blue, 0.4);
+    color: lighten($echo-blue, 20%);
+    text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+  }
+
+  &.withEcho {
+    bottom: 4rem;
+    left: 6rem;
   }
 } 
