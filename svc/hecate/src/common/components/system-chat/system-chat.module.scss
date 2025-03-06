@@ -147,10 +147,11 @@ $text-color: #c8c8d0;
   }
 
   .inputContainer {
+    position: relative;
+    width: 100%;
     margin-top: auto;
     border-top: 1px solid rgba($echo-blue, 0.1);
-    width: 100%;
-
+    
     input {
       width: 85%;
       margin: 1rem;
@@ -168,10 +169,38 @@ $text-color: #c8c8d0;
         border-color: rgba($echo-blue, 0.4);
         box-shadow: 0 0 10px rgba($echo-blue, 0.1);
       }
-
+      
       &::placeholder {
         color: rgba($echo-gray, 0.5);
+        text-decoration: line-through;
       }
+      
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+        background: rgba($background-dark, 0.4);
+        
+        &::placeholder {
+          text-decoration: line-through;
+        }
+        
+        &:focus {
+          border-color: rgba($echo-blue, 0.2);
+          box-shadow: none;
+        }
+      }
+    }
+    
+    .invalidText {
+      position: absolute;
+      right: 3rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba($echo-gray, 0.5);
+      font-style: italic;
+      font-size: 0.9em;
+      pointer-events: none;
+      white-space: nowrap;
     }
   }
 
@@ -449,4 +478,24 @@ $text-color: #c8c8d0;
     bottom: 4rem;
     left: 6rem;
   }
+
+  &.hasNotification::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 8px;
+    height: 8px;
+    background: rgba(255, 236, 179, 0.9);
+    border-radius: 50%;
+    border: 1px solid rgba($background-dark, 0.3);
+    box-shadow: 0 0 8px rgba(255, 236, 179, 0.8);
+    animation: pulseNotification 2s infinite ease-in-out;
+  }
+}
+
+@keyframes pulseNotification {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
 } 
