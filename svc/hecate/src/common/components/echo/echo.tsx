@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styles from './echo.module.scss';
 import { fetchWalletData } from '@services/api';
 
-type Screen = 'camp' | 'inventory' | 'activeReality' | 'nexusMarket' | 'interfaces';
+type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
 
 interface EchoProps {
   publicKey: string | null;
@@ -12,6 +12,15 @@ interface EchoProps {
 const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
   const [screen, setScreen] = useState<Screen>('camp');
   const [walletData, setWalletData] = useState<any>(null);
+
+  // Define which screens are unlocked
+  const unlockedScreens = ['camp'];
+
+  const handleScreenChange = (newScreen: Screen) => {
+    if (unlockedScreens.includes(newScreen)) {
+      setScreen(newScreen);
+    }
+  };
 
   useEffect(() => {
     const loadWalletData = async () => {
@@ -33,10 +42,13 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
       const provider = (window as any).phantom?.solana;
       if (provider) {
         try {
-          // Force disconnect and clear session
+          // Force disconnect from Phantom
           await provider.disconnect();
-          await provider.request({ method: 'disconnect' });
+          // Clear all session data
           localStorage.removeItem('walletPublickey');
+          localStorage.removeItem('hasSeenEcho');
+          localStorage.removeItem('chatCollapsedState');
+          // Show lock instruction before disconnecting
           onDisconnect();
         } catch (error) {
           console.error('Error disconnecting from Phantom:', error);
@@ -47,29 +59,59 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
 
   const renderControlScreen = () => (
     <nav className={styles.verticalNavbar}>
-      <button onClick={() => setScreen('camp')} className={styles.navButton}>CAMP</button>
-      <button onClick={() => setScreen('inventory')} className={styles.navButton}>INVENTORY</button>
-      <button onClick={() => setScreen('activeReality')} className={styles.navButton}>ACTIVE REALITY</button>
-      <button onClick={() => setScreen('nexusMarket')} className={styles.navButton}>NEXUS MARKET</button>
-      <button onClick={() => setScreen('interfaces')} className={styles.navButton}>INTERFACES</button>
-      <button onClick={handleDisconnect} className={styles.navButton}>DISCONNECT</button>
+      <button onClick={() => handleScreenChange('camp')} className={styles.navButton}>
+        CAMP
+      </button>
+      <button 
+        onClick={() => handleScreenChange('inventory')} 
+        className={`${styles.navButton} ${!unlockedScreens.includes('inventory') ? styles.locked : ''}`}
+        disabled={!unlockedScreens.includes('inventory')}
+      >
+        CACHE <span className={styles.lockIcon}>[LOCKED]</span>
+      </button>
+      <button 
+        onClick={() => handleScreenChange('campaign')} 
+        className={`${styles.navButton} ${!unlockedScreens.includes('campaign') ? styles.locked : ''}`}
+        disabled={!unlockedScreens.includes('campaign')}
+      >
+        CAMPAIGN <span className={styles.lockIcon}>[LOCKED]</span>
+      </button>
+      <button 
+        onClick={() => handleScreenChange('lab')} 
+        className={`${styles.navButton} ${!unlockedScreens.includes('lab') ? styles.locked : ''}`}
+        disabled={!unlockedScreens.includes('lab')}
+      >
+        LAB <span className={styles.lockIcon}>[LOCKED]</span>
+      </button>
+      <button onClick={handleDisconnect} className={styles.navButton}>
+        DISCONNECT
+      </button>
     </nav>
+  );
+
+  const renderLockedScreen = () => (
+    <div className={styles.hudScreen}>
+      <h2 className={styles.hudTitle}>ACCESS RESTRICTED</h2>
+      <div className={styles.lockedContent}>
+        <p>This feature is currently locked.</p>
+        <p>Return to camp and await further instructions.</p>
+      </div>
+    </div>
   );
 
   const renderCampScreen = () => (
     <div className={styles.hudScreen}>
-      <h2 className={styles.hudTitle}>NEURAL SANCTUARY</h2>
+      <h2 className={styles.hudTitle}>BASE CAMP</h2>
       <div className={styles.walletInfo}>
-        <p><strong>Neural Link:</strong> <span>{publicKey?.slice(0, 6)}...{publicKey?.slice(-4)}</span></p>
-        <p><strong>Quantum Balance:</strong> <span>{walletData?.balance || '0'} SOL</span></p>
+        <p><strong>ID:</strong> <span>{publicKey?.slice(0, 6)}...{publicKey?.slice(-4)}</span></p>
+        <p><strong>Balance:</strong> <span>{walletData?.balance || '0'} SOL</span></p>
       </div>
       <div className={styles.campContent}>
-        <p>Welcome to your neural sanctuary, a secure haven within the digital void. This encrypted space serves as your command center for reality manipulation and neural augmentation.</p>
-        <p>Current System Status:</p>
+        <p>Camp Status:</p>
         <ul>
-          <li>Neural Link: <span className={styles.active}>ACTIVE</span></li>
-          <li>Reality Anchors: <span className={styles.pending}>CALIBRATING</span></li>
-          <li>Quantum Signature: <span className={styles.stable}>STABLE</span></li>
+          <li>Perimeter: <span className={styles.active}>SECURE</span></li>
+          <li>Systems: <span className={styles.pending}>SCANNING</span></li>
+          <li>Defense: <span className={styles.stable}>ACTIVE</span></li>
         </ul>
       </div>
     </div>
@@ -77,91 +119,74 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
 
   const renderInventoryScreen = () => (
     <div className={styles.hudScreen}>
-      <h2 className={styles.hudTitle}>NEURAL ARSENAL</h2>
+      <h2 className={styles.hudTitle}>CACHE</h2>
       <div className={styles.inventorySection}>
-        <h3>QUANTUM AUGMENTS</h3>
+        <h3>WEAPONS</h3>
         <div className={styles.emptyState}>
-          <p>No neural modifications detected.</p>
-          <p>Visit the Nexus Market to acquire reality-altering tools.</p>
+          <p>No weapons found.</p>
+          <p>Complete missions to acquire gear.</p>
         </div>
       </div>
       <div className={styles.inventorySection}>
-        <h3>MEMORY FRAGMENTS</h3>
+        <h3>SUPPLIES</h3>
         <div className={styles.emptyState}>
-          <p>Memory bank initialization required.</p>
-          <p>Install memory cards to unlock enhanced capabilities.</p>
+          <p>Cache empty.</p>
+          <p>Gather resources to expand inventory.</p>
         </div>
       </div>
     </div>
   );
 
-  const renderActiveRealityScreen = () => (
+  const renderCampaignScreen = () => (
     <div className={styles.hudScreen}>
-      <h2 className={styles.hudTitle}>REALITY NEXUS</h2>
+      <h2 className={styles.hudTitle}>CAMPAIGN</h2>
       <div className={styles.realityContent}>
         <div className={styles.realityStatus}>
-          <h3>CURRENT REALITY STRAND</h3>
-          <p>Initialization Phase: <span>ALPHA</span></p>
-          <p>Reality Stability: <span>97.3%</span></p>
+          <h3>PROGRESS</h3>
+          <p>Current Level: <span>1</span></p>
+          <p>Completion: <span>0%</span></p>
         </div>
         <div className={styles.missions}>
-          <h3>ACTIVE PROTOCOLS</h3>
-          <p className={styles.placeholder}>Scanning quantum frequencies...</p>
-          <p className={styles.placeholder}>Awaiting reality stabilization...</p>
+          <h3>OBJECTIVES</h3>
+          <p className={styles.placeholder}>No active missions</p>
+          <p className={styles.placeholder}>Complete training to begin</p>
         </div>
       </div>
     </div>
   );
 
-  const renderNexusMarketScreen = () => (
+  const renderLabScreen = () => (
     <div className={styles.hudScreen}>
-      <h2 className={styles.hudTitle}>QUANTUM NEXUS EXCHANGE</h2>
-      <div className={styles.marketContent}>
-        <div className={styles.marketSection}>
-          <h3>FEATURED AUGMENTS</h3>
-          <p className={styles.placeholder}>Market protocols initializing...</p>
-        </div>
-        <div className={styles.marketSection}>
-          <h3>MEMORY FRAGMENTS</h3>
-          <p className={styles.placeholder}>Quantum signature verification required...</p>
-        </div>
-        <div className={styles.marketSection}>
-          <h3>REALITY TOKENS</h3>
-          <p className={styles.placeholder}>Token matrix stabilizing...</p>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderInterfacesScreen = () => (
-    <div className={styles.hudScreen}>
-      <h2 className={styles.hudTitle}>NEURAL INTERFACES</h2>
+      <h2 className={styles.hudTitle}>LAB</h2>
       <div className={styles.interfaceContent}>
         <div className={styles.interfaceSection}>
-          <h3>ACTIVE CONNECTIONS</h3>
-          <p>Phantom Neural Bridge: <span className={styles.connected}>CONNECTED</span></p>
-          <p>Reality Anchor: <span className={styles.initializing}>INITIALIZING</span></p>
+          <h3>SYSTEMS</h3>
+          <p>Phantom: <span className={styles.connected}>CONNECTED</span></p>
+          <p>Core: <span className={styles.initializing}>INITIALIZING</span></p>
         </div>
         <div className={styles.interfaceSection}>
-          <h3>AVAILABLE PROTOCOLS</h3>
-          <p className={styles.placeholder}>Scanning for compatible neural interfaces...</p>
+          <h3>CONFIGURATIONS</h3>
+          <p className={styles.placeholder}>No active modifications</p>
+          <p className={styles.placeholder}>Run diagnostics to begin</p>
         </div>
       </div>
     </div>
   );
 
   const renderScreen = () => {
+    if (!unlockedScreens.includes(screen)) {
+      return renderLockedScreen();
+    }
+
     switch (screen) {
       case 'camp':
         return renderCampScreen();
       case 'inventory':
         return renderInventoryScreen();
-      case 'activeReality':
-        return renderActiveRealityScreen();
-      case 'nexusMarket':
-        return renderNexusMarketScreen();
-      case 'interfaces':
-        return renderInterfacesScreen();
+      case 'campaign':
+        return renderCampaignScreen();
+      case 'lab':
+        return renderLabScreen();
       default:
         return null;
     }

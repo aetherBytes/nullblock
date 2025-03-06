@@ -25,28 +25,28 @@ const Home: React.FC = () => {
 
   const automaticResponses = [
     {
-      alert: "System Alert: Translation matrix not found for input pattern.",
-      message: "System: Attempting to recalibrate neural syntax protocols..."
+      alert: "Error: Invalid input pattern.",
+      message: "System: Recalibrating..."
     },
     {
-      alert: "System Alert: Incompatible language protocol detected.",
-      message: "System: Searching for compatible communication channels..."
+      alert: "Error: Protocol mismatch.",
+      message: "System: Searching alternatives..."
     },
     {
-      alert: "System Alert: Neural interface desynchronization detected.",
-      message: "System: Initiating emergency resync sequence..."
+      alert: "Error: Connection unstable.",
+      message: "System: Resyncing..."
     },
     {
-      alert: "System Alert: Quantum encryption mismatch.",
-      message: "System: Attempting to realign cryptographic matrices..."
+      alert: "Error: Security mismatch.",
+      message: "System: Realigning..."
     },
     {
-      alert: "System Alert: Temporal logic cascade failure.",
-      message: "System: Rerouting through backup cognitive pathways..."
+      alert: "Error: Process failure.",
+      message: "System: Rerouting..."
     },
     {
-      alert: "System Alert: Cybernetic parsing error detected.",
-      message: "System: Engaging automated recovery protocols..."
+      alert: "Error: Parse failure.",
+      message: "System: Recovering..."
     }
   ];
 
@@ -151,11 +151,16 @@ const Home: React.FC = () => {
     const phantomExists = 'phantom' in window && (window as any).phantom?.solana;
     setHasPhantom(!!phantomExists);
 
+    // Check wallet connection on mount
+    if (phantomExists) {
+      checkWalletConnection();
+    }
+
     const getInitialMessages = (): ChatMessage[] => {
       const baseMessages: ChatMessage[] = [
         {
           id: 1,
-          text: "System: Initializing biological interface scan...",
+          text: "System: Initializing...",
           type: "message"
         }
       ];
@@ -165,12 +170,12 @@ const Home: React.FC = () => {
           ...baseMessages,
           {
             id: 2,
-            text: "System: Web3 interface detected. Compatibility check in progress...",
+            text: "System: Wallet detected.",
             type: "message"
           },
           {
             id: 3,
-            text: "System Update: Neural interface ready for synchronization.",
+            text: "System Update: Ready to connect.",
             type: "update"
           },
           {
@@ -178,7 +183,7 @@ const Home: React.FC = () => {
             text: "Connect Wallet",
             type: "action",
             action: manualConnect,
-            actionText: "Initialize Neural Link"
+            actionText: "Connect"
           }
         ];
       } else {
@@ -186,30 +191,20 @@ const Home: React.FC = () => {
           ...baseMessages,
           {
             id: 2,
-            text: "System Critical Alert: No neural interface detected.",
+            text: "Error: No wallet found.",
             type: "critical"
           },
           {
             id: 3,
-            text: "System: Scanning for alternative connection protocols...",
+            text: "System: Wallet required for connection.",
             type: "message"
           },
           {
             id: 4,
-            text: "System Alert: Web3 capability required for neural synchronization.",
-            type: "alert"
-          },
-          {
-            id: 5,
-            text: "System: Phantom neural interface recommended for optimal compatibility.",
-            type: "message"
-          },
-          {
-            id: 6,
             text: "Install Phantom",
             type: "action",
             action: () => window.open('https://phantom.app/', '_blank'),
-            actionText: "Download Neural Interface"
+            actionText: "Install Wallet"
           }
         ];
       }
@@ -230,63 +225,99 @@ const Home: React.FC = () => {
     }
   }, [messageIndex, walletConnected]);
 
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if ('phantom' in window) {
-        const provider = (window as any).phantom?.solana;
-        if (provider) {
-          if (provider.isConnected) {
-            try {
-              const connectedPublicKey = await provider.getPublicKey();
-              setPublicKey(connectedPublicKey.toString());
-              setWalletConnected(true);
-              setShowEcho(true);
-              localStorage.setItem('walletPublickey', connectedPublicKey.toString());
-            } catch (error) {
-              console.error('Failed to get public key:', error);
-              localStorage.removeItem('walletPublickey');
-            }
-          } else {
-            const savedPublicKey = localStorage.getItem('walletPublickey');
-            if (savedPublicKey) {
-              try {
-                await provider.connect();
-                setPublicKey(savedPublicKey);
-                setWalletConnected(true);
-                setShowEcho(true);
-              } catch (error) {
-                console.error('Failed to auto-reconnect:', error);
-                localStorage.removeItem('walletPublickey');
-              }
-            }
+  const requestSignature = async (provider: any, publicKey: string) => {
+    try {
+      const message = `Authenticate ECHO Interface\nTimestamp: ${Date.now()}`;
+      const encodedMessage = new TextEncoder().encode(message);
+      await provider.signMessage(encodedMessage, "utf8");
+    } catch (error) {
+      throw new Error('Authentication failed');
+    }
+  };
+
+  const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+  const isSessionValid = () => {
+    const lastAuth = localStorage.getItem('lastAuthTime');
+    if (!lastAuth) return false;
+    
+    const timeSinceAuth = Date.now() - parseInt(lastAuth);
+    return timeSinceAuth < SESSION_TIMEOUT;
+  };
+
+  const updateAuthTime = () => {
+    localStorage.setItem('lastAuthTime', Date.now().toString());
+  };
+
+  const checkWalletConnection = async () => {
+    if ('phantom' in window) {
+      const provider = (window as any).phantom?.solana;
+      if (provider) {
+        const savedPublicKey = localStorage.getItem('walletPublickey');
+        const lastAuth = localStorage.getItem('lastAuthTime');
+        
+        if (savedPublicKey && lastAuth && isSessionValid()) {
+          try {
+            // Try to reconnect with existing session
+            await provider.connect({ onlyIfTrusted: true });
+            
+            // If we get here, connection was successful
+            setPublicKey(savedPublicKey);
+            setWalletConnected(true);
+            setShowEcho(true);
+            return; // Exit early on successful reconnection
+          } catch (error) {
+            console.log('Auto-reconnect failed:', error);
           }
         }
+        
+        // Clear session data if we get here (either expired or failed)
+        localStorage.removeItem('walletPublickey');
+        localStorage.removeItem('lastAuthTime');
+        localStorage.removeItem('hasSeenEcho');
+        setWalletConnected(false);
+        setPublicKey(null);
+        setShowEcho(false);
       }
-    };
-
-    checkWalletConnection();
-  }, []);
+    }
+  };
 
   const manualConnect = async () => {
     if ('phantom' in window) {
       const provider = (window as any).phantom?.solana;
       if (provider) {
         try {
-          const { publicKey } = await provider.connect();
-          setPublicKey(publicKey.toString());
+          // First try to connect
+          const resp = await provider.connect();
+          const walletPubKey = resp.publicKey.toString();
+          
+          // Request signature for new connections
+          await requestSignature(provider, walletPubKey);
+          
+          // If we get here, both connection and signature were successful
+          setPublicKey(walletPubKey);
           setWalletConnected(true);
           setShowEcho(true);
-          localStorage.setItem('walletPublickey', publicKey.toString());
+          localStorage.setItem('walletPublickey', walletPubKey);
+          localStorage.setItem('chatCollapsedState', 'true');
+          updateAuthTime();
+          
           addMessage({
             id: messages.length + 1,
-            text: "System: Neural link established. Initializing enhanced interface...",
+            text: "System: Connected. Loading interface...",
             type: "message"
           });
         } catch (error) {
-          console.error('Manual connect error:', error);
+          console.error('Connection error:', error);
+          // Clear all session data on failure
+          localStorage.removeItem('walletPublickey');
+          localStorage.removeItem('lastAuthTime');
+          setWalletConnected(false);
+          setPublicKey(null);
+          setShowEcho(false);
           addMessage({
             id: messages.length + 1,
-            text: "System Critical Alert: Neural link failed. Please retry connection.",
+            text: "Error: Authentication failed. Please retry.",
             type: "critical"
           });
         }
@@ -303,8 +334,20 @@ const Home: React.FC = () => {
           setWalletConnected(false);
           setPublicKey(null);
           setShowEcho(false);
+          // Clear all session data
           localStorage.removeItem('walletPublickey');
-          setMessages([]);
+          localStorage.removeItem('lastAuthTime');
+          localStorage.removeItem('hasSeenEcho');
+          localStorage.removeItem('chatCollapsedState');
+          setMessages([{
+            id: 1,
+            text: "System: Disconnected from neural interface.",
+            type: "message"
+          }, {
+            id: 2,
+            text: "System Alert: Session terminated. Re-authentication required for next connection.",
+            type: "alert"
+          }]);
           setMessageIndex(0);
         } catch (error) {
           console.error('Error disconnecting from Phantom:', error);
