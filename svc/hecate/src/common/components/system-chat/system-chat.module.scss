@@ -17,46 +17,32 @@ $text-color: #c8c8d0;
   left: 50%;
   transform: translateX(-50%);
   width: 85%;
-  max-width: 800px;
-  background: rgba($background-dark, 0.15);
-  border: 1px solid rgba($echo-blue, 0.15);
-  box-shadow: inset 0 0 20px rgba($echo-blue, 0.03),
-              0 0 15px rgba($background-dark, 0.2);
-  backdrop-filter: blur(3px);
-  padding: 1.5rem 2rem;
-  border-radius: 4px;
-  transition: all 0.5s ease-in-out;
-  display: flex;
-  flex-direction: column;
-
+   height: 50vh;
+  
   &.withEcho {
-    bottom: 4rem;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80%;
-    max-width: 1200px;
-    height: 25vh;
-    padding: 0.75rem 2rem;
+    bottom: 8rem;
+    height: 20vh;
+    min-height: 200px;
+    max-height: calc(100vh - 45vh);
+    padding: 0;
     
-    .messageList {
-      max-height: 20vh;
-      padding: 0 1.5rem;
-      margin-bottom: 0.5rem;
-      mask-image: linear-gradient(to top, 
-        rgba(0, 0, 0, 1) 0%,
-        rgba(0, 0, 0, 1) 60%,
-        rgba(0, 0, 0, 0) 100%
-      );
-    }
-
-    .inputContainer {
-      padding: 0;
-      margin: 0;
-      width: 100%;
+    .hudWindow {
+      padding: 0.5rem 1rem;
+      background-color: rgba($background-dark, 0.85);
       
-      input {
-        width: 90%;
-        margin: 1rem;
+      .chatHeader {
+        padding: 0 0.25rem;
+      }
+      
+      .messageList {
+        padding: 0 0.25rem;
+      }
+      
+      .inputContainer {
+        input {
+          width: calc(100% - 1rem);
+          margin: 0 0.5rem;
+        }
       }
     }
   }
@@ -67,416 +53,314 @@ $text-color: #c8c8d0;
     left: 50%;
     transform: translateX(-50%);
     width: 85%;
-    max-width: 800px;
-    height: auto;
-    bottom: 4.5vh;
+    max-width: 1200px;
+    height: calc(100vh - 12rem);
     margin: 0;
     z-index: 1005;
-    background: rgba($background-dark, 0.95);
-    border: 1px solid rgba($echo-blue, 0.2);
-    box-shadow: inset 0 0 30px rgba($echo-blue, 0.05),
-                0 0 20px rgba($background-dark, 0.3);
-    padding: 1.5rem;
-
-    .messageList {
-      max-height: calc(100% - 8rem);
-      padding: 0 1.5rem;
-    }
-
-    .inputContainer {
-      padding: 1rem;
-      margin: 0;
-      background: rgba($background-dark, 0.2);
-      border-top: 1px solid rgba($echo-blue, 0.15);
-
-      input {
-        width: 95%;
-        margin: 0;
-      }
-    }
 
     &.withEcho {
-      background: rgba($background-dark, 0.95);
-      border: 1px solid rgba($echo-blue, 0.25);
-      box-shadow: inset 0 0 40px rgba($echo-blue, 0.06),
-                  0 0 25px rgba($background-dark, 0.4);
+      height: calc(100vh - 12rem);
+      max-height: calc(100vh - 12rem);
+      top: 8rem;
+      
+      .hudWindow {
+        background-color: rgba($background-dark, 0.85);
+        backdrop-filter: blur(10px);
+      }
     }
   }
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
+  .hudWindow {
+    position: relative;
     height: 100%;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba($echo-gray, 0.015) 0px,
-      rgba($echo-gray, 0.015) 1px,
-      transparent 1px,
-      transparent 2px
-    );
-    pointer-events: none;
-    animation: scanline 10s linear infinite;
-  }
-
-  .messageList {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
-    max-height: 60vh;
-    overflow-y: auto;
-    transition: all 0.3s ease;
-    margin-bottom: 0.5rem;
-    padding: 0 0.5rem;
+    background-color: rgba($background-dark, 0.06);
+    background-image: linear-gradient(rgba($echo-gray, 0.006) 2px, transparent 2px),
+                    linear-gradient(90deg, rgba($echo-gray, 0.006) 2px, transparent 2px),
+                    radial-gradient(circle at 50% 50%, rgba(70, 35, 20, 0.015) 0%, transparent 70%);
+    background-size: 100% 6px, 6px 100%, 120% 120%;
+    background-position: center;
+    border: 1px solid rgba($echo-border, 0.1);
+    color: $echo-gray;
+    padding: 1rem 2rem;
+    box-shadow: inset 0 0 15px rgba($echo-gray, 0.03),
+                0 0 30px rgba($background-dark, 0.1);
+    font-family: $batman-font;
+    animation: softEcho 20s infinite ease-in-out;
+    overflow: hidden;
 
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: rgba($echo-gray, 0.1);
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: rgba($echo-blue, 0.3);
-      border-radius: 2px;
-    }
-  }
-
-  .inputContainer {
-    position: relative;
-    width: 100%;
-    margin-top: auto;
-    border-top: 1px solid rgba($echo-blue, 0.1);
-    
-    input {
-      width: 85%;
-      margin: 1rem;
-      background: rgba($background-dark, 0.2);
-      border: 1px solid rgba($echo-blue, 0.2);
-      color: lighten($echo-blue, 15%);
-      padding: 0.5rem 1rem;
-      font-family: monospace;
-      font-size: 1rem;
-      outline: none;
-      transition: all 0.3s ease;
-      border-radius: 2px;
-
-      &:focus {
-        border-color: rgba($echo-blue, 0.4);
-        box-shadow: 0 0 10px rgba($echo-blue, 0.1);
-      }
-      
-      &::placeholder {
-        color: rgba($echo-gray, 0.5);
-        text-decoration: line-through;
-      }
-      
-      &:disabled {
-        cursor: not-allowed;
-        opacity: 0.7;
-        background: rgba($background-dark, 0.4);
-        
-        &::placeholder {
-          text-decoration: line-through;
-        }
-        
-        &:focus {
-          border-color: rgba($echo-blue, 0.2);
-          box-shadow: none;
-        }
-      }
-    }
-    
-    .invalidText {
+    &::before {
+      content: '';
       position: absolute;
-      right: 3rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: rgba($echo-gray, 0.5);
-      font-style: italic;
-      font-size: 0.9em;
-      pointer-events: none;
-      white-space: nowrap;
-    }
-  }
-
-  .messageItem {
-    opacity: 0;
-    animation: messageAppear 0.3s ease-out forwards;
-    font-family: monospace;
-    letter-spacing: 0.5px;
-    padding: 0.5rem;
-    border-radius: 2px;
-    background: rgba($background-dark, 0.1);
-    border: 1px solid rgba($echo-blue, 0.05);
-    transition: all 0.3s ease;
-
-    &:hover {
-      background: rgba($background-dark, 0.15);
-      border-color: rgba($echo-blue, 0.1);
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, 
+        transparent 0%,
+        rgba($echo-blue, 0.1) 25%,
+        rgba($echo-blue, 0.2) 50%,
+        rgba($echo-blue, 0.1) 75%,
+        transparent 100%
+      );
+      animation: scanlineGlow 4s infinite ease-in-out;
     }
 
-    p {
-      color: lighten($text-color, 15%);
-      margin: 0;
-      font-size: 1rem;
-      line-height: 1.5;
-      text-shadow: 0 0 10px rgba($echo-blue, 0.1);
-    }
+    .chatHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 0 0.5rem;
+      border-bottom: 1px solid rgba($echo-blue, 0.2);
 
-    &.message p {
-      color: lighten($text-color, 15%);
-      text-shadow: 0 0 10px rgba($text-color, 0.3);
-    }
+      .roomSelector {
+        position: relative;
 
-    &.message .system {
-      color: lighten($echo-purple, 10%);
-      text-shadow: 0 0 10px rgba($echo-purple, 0.4);
-      font-weight: 600;
-    }
-
-    &.alert {
-      background: rgba($echo-orange, 0.05);
-      border-color: rgba($echo-orange, 0.1);
-
-      p {
-        color: lighten($text-color, 20%);
-        font-weight: 600;
-        text-shadow: 0 0 10px rgba($text-color, 0.3);
-      }
-
-      .system {
-        color: lighten($echo-orange, 10%);
-        text-shadow: 0 0 10px rgba($echo-orange, 0.4);
-      }
-    }
-
-    &.critical {
-      background: rgba($echo-red, 0.05);
-      border-color: rgba($echo-red, 0.1);
-
-      .system {
-        color: lighten($echo-red, 10%);
-        text-shadow: 0 0 10px rgba($echo-red, 0.4);
-        font-weight: 700;
-      }
-    }
-
-    &.update {
-      background: rgba($echo-green, 0.05);
-      border-color: rgba($echo-green, 0.1);
-
-      p {
-        color: $text-color;
-        text-shadow: 0 0 10px rgba($text-color, 0.3);
-      }
-
-      .system {
-        color: lighten($echo-green, 10%);
-        text-shadow: 0 0 10px rgba($echo-green, 0.4);
-      }
-    }
-
-    &.user {
-      background: rgba($echo-blue, 0.05);
-      border-color: rgba($echo-blue, 0.1);
-      text-align: right;
-
-      p {
-        color: lighten($echo-blue, 20%);
-        text-shadow: 0 0 10px rgba($echo-blue, 0.3);
-        font-style: italic;
-      }
-    }
-
-    .actionButton {
-      background: rgba($echo-blue, 0.1);
-      border: 1px solid rgba($echo-blue, 0.2);
-      color: lighten($echo-blue, 10%);
-      padding: 0.8rem 1.5rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-weight: 600;
-      width: auto;
-      display: inline-block;
-      position: relative;
-      overflow: hidden;
-      font-family: monospace;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        width: calc(100% + 4px);
-        height: calc(100% + 4px);
-        background: linear-gradient(45deg,
-          transparent 0%,
-          rgba($echo-blue, 0.1) 50%,
-          transparent 100%
-        );
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-
-      &:hover {
-        background: rgba($echo-blue, 0.15);
-        color: lighten($echo-blue, 20%);
-        text-shadow: 0 0 8px rgba($echo-blue, 0.5);
-        border-color: rgba($echo-blue, 0.4);
-
-        &::before {
-          opacity: 1;
-        }
-      }
-
-      &:active {
-        transform: translateY(1px);
-      }
-    }
-  }
-
-  .chatHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding: 0 0.5rem;
-
-    .roomSelector {
-      position: relative;
-
-      .dropdownButton {
-        background: none;
-        border: none;
-        color: lighten($echo-blue, 15%);
-        font-family: monospace;
-        font-size: 1rem;
-        cursor: pointer;
-        padding: 0.25rem 0.5rem;
-        transition: all 0.3s ease;
-
-        &:hover {
-          color: lighten($echo-blue, 25%);
-          text-shadow: 0 0 8px rgba($echo-blue, 0.5);
-        }
-      }
-
-      .dropdownContent {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        background: rgba($background-dark, 0.95);
-        border: 1px solid rgba($echo-blue, 0.2);
-        border-radius: 2px;
-        padding: 0.5rem;
-        z-index: 1006;
-        min-width: 150px;
-
-        .roomOption {
-          display: block;
-          width: 100%;
-          padding: 0.5rem;
+        .dropdownButton {
           background: none;
           border: none;
-          color: lighten($echo-blue, 15%);
-          font-family: monospace;
-          font-size: 0.9rem;
-          text-align: left;
+          color: $echo-blue;
+          font-family: $batman-font;
+          font-size: 1rem;
+          cursor: pointer;
+          padding: 0.25rem 0.5rem;
+          transition: all 0.3s ease;
+
+          &:hover {
+            text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+          }
+        }
+
+        .dropdownContent {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          background: rgba($background-dark, 0.95);
+          border: 1px solid rgba($echo-blue, 0.2);
+          padding: 0.5rem;
+          z-index: 1006;
+          min-width: 150px;
+
+          .roomOption {
+            display: block;
+            width: 100%;
+            padding: 0.5rem;
+            background: none;
+            border: none;
+            color: $echo-blue;
+            font-family: $batman-font;
+            font-size: 0.9rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+
+            &:hover:not(.disabled) {
+              background: rgba($echo-blue, 0.1);
+            }
+
+            &.disabled {
+              color: $echo-gray;
+              cursor: not-allowed;
+            }
+          }
+        }
+      }
+
+      .controls {
+        display: flex;
+        gap: 1rem;
+
+        .toggleButton {
+          background: none;
+          border: none;
+          color: $echo-blue;
+          font-family: $batman-font;
+          font-size: 1rem;
+          cursor: pointer;
+          padding: 0.25rem 0.5rem;
+          transition: all 0.3s ease;
+
+          &:hover {
+            text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+          }
+        }
+      }
+    }
+
+    .messageList {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      overflow-y: auto;
+      margin-bottom: 0.5rem;
+      padding: 0 0.5rem;
+      min-height: 0;
+      max-height: calc(100% - 7rem);
+
+      &::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: rgba($echo-gray, 0.1);
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: rgba($echo-blue, 0.3);
+        border-radius: 2px;
+      }
+
+      .messageItem {
+        padding: 0.5rem;
+        background: rgba($background-dark, 0.1);
+        border-left: 2px solid rgba($echo-blue, 0.1);
+        text-align: left;
+
+        p {
+          margin: 0;
+          color: $text-color;
+          font-family: $batman-font;
+          line-height: 1.5;
+        }
+
+        &.message {
+          .system {
+            color: $echo-blue;
+            font-weight: bold;
+          }
+        }
+
+        &.alert {
+          border-left-color: rgba($echo-orange, 0.3);
+          .system {
+            color: $echo-orange;
+            font-weight: bold;
+          }
+        }
+
+        &.critical {
+          border-left-color: rgba($echo-red, 0.3);
+          .system {
+            color: $echo-red;
+            font-weight: bold;
+          }
+        }
+
+        &.update {
+          border-left-color: rgba($echo-green, 0.3);
+          .system {
+            color: $echo-green;
+            font-weight: bold;
+          }
+        }
+
+        &.user {
+          text-align: right;
+          border-left: none;
+          border-right: 2px solid rgba($echo-blue, 0.3);
+          background: rgba($echo-blue, 0.05);
+          
+          p {
+            color: $text-color;
+            font-style: italic;
+          }
+        }
+
+        .actionButton {
+          width: 100%;
+          padding: 0.8rem 1.5rem;
+          background: rgba($background-dark, 0.2);
+          border: 1px solid rgba($echo-blue, 0.3);
+          color: $echo-blue;
+          font-family: $batman-font;
+          text-transform: uppercase;
+          letter-spacing: 1px;
           cursor: pointer;
           transition: all 0.3s ease;
 
-          &:hover:not(.disabled) {
+          &:hover {
             background: rgba($echo-blue, 0.1);
-            color: lighten($echo-blue, 25%);
-          }
-
-          &.disabled {
-            color: $echo-gray;
-            cursor: not-allowed;
+            text-shadow: 0 0 8px rgba($echo-blue, 0.5);
           }
         }
       }
     }
 
-    .controls {
-      display: flex;
-      gap: 1rem;
-
-      .toggleButton {
-        background: none;
-        border: none;
-        color: lighten($echo-blue, 15%);
-        font-family: monospace;
+    .inputContainer {
+      position: relative;
+      width: 100%;
+      margin-top: auto;
+      border-top: 1px solid rgba($echo-blue, 0.1);
+      padding: 0.5rem 0;
+      min-height: 3.5rem;
+      
+      input {
+        width: calc(100% - 2rem);
+        margin: 0 1rem;
+        background: rgba($background-dark, 0.2);
+        border: 1px solid rgba($echo-blue, 0.2);
+        color: $echo-blue;
+        padding: 0.5rem 1rem;
+        font-family: $batman-font;
         font-size: 1rem;
-        cursor: pointer;
-        padding: 0.25rem 0.5rem;
+        outline: none;
         transition: all 0.3s ease;
 
-        &:hover {
-          color: lighten($echo-blue, 25%);
-          text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+        &:disabled {
+          cursor: not-allowed;
+          opacity: 0.7;
+          background: rgba($background-dark, 0.4);
+          
+          &::placeholder {
+            color: rgba($echo-gray, 0.5);
+            text-decoration: line-through;
+          }
         }
       }
+      
+      .invalidText {
+        position: absolute;
+        right: 3rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba($echo-red, 0.7);
+        font-style: italic;
+        font-size: 0.9em;
+      }
     }
-  }
-}
-
-@keyframes messageAppear {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scanline {
-  0% {
-    transform: translateY(0);
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 0.3;
-  }
-  100% {
-    transform: translateY(100%);
-    opacity: 0.5;
   }
 }
 
 .collapsedButton {
-  position: fixed;
+  position: absolute;
   z-index: 1005;
-  bottom: 2rem;
-  left: 2rem;
+  bottom: 1rem;
+  left: 1rem;
   background: rgba($background-dark, 0.2);
   border: 1px solid rgba($echo-blue, 0.2);
-  color: lighten($echo-blue, 15%);
+  color: $echo-blue;
   padding: 0.5rem 1rem;
+  font-family: $batman-font;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-family: monospace;
-  font-size: 1rem;
 
   &:hover {
-    background: rgba($echo-blue, 0.15);
-    border-color: rgba($echo-blue, 0.4);
-    color: lighten($echo-blue, 20%);
+    background: rgba($echo-blue, 0.1);
     text-shadow: 0 0 8px rgba($echo-blue, 0.5);
   }
 
   &.withEcho {
+    position: fixed;
     bottom: 4rem;
-    left: 6rem;
+    left: 5rem;
+    z-index: 1006;
+    background: rgba($background-dark, 0.4);
+    backdrop-filter: blur(2px);
+    border: 1px solid rgba($echo-blue, 0.3);
+    padding: 0.5rem 1.5rem;
   }
 
   &.hasNotification::after {
@@ -486,16 +370,20 @@ $text-color: #c8c8d0;
     right: -4px;
     width: 8px;
     height: 8px;
-    background: rgba(255, 236, 179, 0.9);
+    background: $echo-blue;
     border-radius: 50%;
-    border: 1px solid rgba($background-dark, 0.3);
-    box-shadow: 0 0 8px rgba(255, 236, 179, 0.8);
-    animation: pulseNotification 2s infinite ease-in-out;
+    box-shadow: 0 0 10px rgba($echo-blue, 0.8);
+    animation: glowPulse 2s infinite;
   }
 }
 
-@keyframes pulseNotification {
-  0% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(1); opacity: 0.8; }
+@keyframes glowPulse {
+  0% { text-shadow: 0 0 5px rgba($echo-blue, 0.5); }
+  50% { text-shadow: 0 0 15px rgba($echo-blue, 0.8); }
+  100% { text-shadow: 0 0 5px rgba($echo-blue, 0.5); }
+}
+
+@keyframes scanlineGlow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 } 
