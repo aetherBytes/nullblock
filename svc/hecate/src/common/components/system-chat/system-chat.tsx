@@ -82,15 +82,17 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
 
   const formatMessage = (text: string, type: ChatMessage['type']) => {
     const parts = text.split(': ');
-    if (parts.length >= 2 && parts[0].startsWith('System')) {
+    if (parts.length >= 2) {
       const prefix = parts[0];
       const content = parts.slice(1).join(': ');
-      return (
-        <p>
-          <span className={styles.system}>{prefix}: </span>
-          {content}
-        </p>
-      );
+      if (prefix.startsWith('System') || prefix === 'Error') {
+        return (
+          <p>
+            <span className={styles.system}>{prefix}: </span>
+            {content}
+          </p>
+        );
+      }
     }
     return <p>{text}</p>;
   };
