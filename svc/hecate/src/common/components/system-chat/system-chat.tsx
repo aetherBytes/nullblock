@@ -21,7 +21,6 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState('/logs');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [hasSeenEcho, setHasSeenEcho] = useState(false);
   const [lastSeenMessageId, setLastSeenMessageId] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -40,18 +39,10 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
   useEffect(() => {
     // Load last state from localStorage
     const lastCollapsedState = localStorage.getItem('chatCollapsedState');
-    const lastSeenEcho = localStorage.getItem('hasSeenEcho');
-    
-    if (isEchoActive && !lastSeenEcho) {
-      // First time seeing ECHO, force collapse
-      setIsCollapsed(true);
-      setHasSeenEcho(true);
-      localStorage.setItem('hasSeenEcho', 'true');
-    } else if (lastCollapsedState) {
-      // Use last saved state
+    if (lastCollapsedState) {
       setIsCollapsed(lastCollapsedState === 'true');
     }
-  }, [isEchoActive]);
+  }, []);
 
   // Save collapsed state when it changes
   useEffect(() => {
@@ -109,78 +100,80 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
       className={`${styles.collapsedButton} ${isEchoActive ? styles.withEcho : ''} ${hasNewActionMessages ? styles.hasNotification : ''}`}
       onClick={handleChatOpen}
     >
-      [ CHAT ]
+      [ TERMINAL ]
     </button>
   ) : (
     <div className={`${styles.chatContainer} ${isEchoActive ? styles.withEcho : ''} ${isFullScreen ? styles.fullScreen : ''}`}>
-      <div className={styles.chatHeader}>
-        <div className={styles.roomSelector}>
-          <button 
-            className={styles.dropdownButton}
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          >
-            [ {selectedRoom} ]
-          </button>
-          {isDropdownOpen && (
-            <div className={styles.dropdownContent}>
-              {chatRooms.map(room => (
-                <button
-                  key={room.id}
-                  className={`${styles.roomOption} ${!room.available ? styles.disabled : ''}`}
-                  onClick={() => handleRoomSelect(room.id)}
-                >
-                  {room.name} {!room.available && '(locked)'}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className={styles.controls}>
-          <button 
-            className={styles.toggleButton}
-            onClick={() => setIsCollapsed(true)}
-          >
-            [ Collapse ]
-          </button>
-          <button 
-            className={styles.toggleButton}
-            onClick={() => setIsFullScreen(!isFullScreen)}
-          >
-            {isFullScreen ? '[ Minimize ]' : '[ Expand ]'}
-          </button>
-        </div>
-      </div>
-      <div className={styles.messageList}>
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`${styles.messageItem} ${styles[message.type]}`}
-          >
-            {message.type === 'action' ? (
-              <button 
-                onClick={message.action}
-                className={styles.actionButton}
-              >
-                {message.actionText || message.text}
-              </button>
-            ) : (
-              formatMessage(message.text, message.type)
+      <div className={styles.hudWindow}>
+        <div className={styles.chatHeader}>
+          <div className={styles.roomSelector}>
+            <button 
+              className={styles.dropdownButton}
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            >
+              [ {selectedRoom} ]
+            </button>
+            {isDropdownOpen && (
+              <div className={styles.dropdownContent}>
+                {chatRooms.map(room => (
+                  <button
+                    key={room.id}
+                    className={`${styles.roomOption} ${!room.available ? styles.disabled : ''}`}
+                    onClick={() => handleRoomSelect(room.id)}
+                  >
+                    {room.name} {!room.available && '(locked)'}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-      <div className={styles.inputContainer}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleInputSubmit}
-          placeholder="Enter command..."
-          spellCheck={false}
-          disabled={true}
-        />
-        <span className={styles.invalidText}>translation matrix invalid</span>
+          <div className={styles.controls}>
+            <button 
+              className={styles.toggleButton}
+              onClick={() => setIsCollapsed(true)}
+            >
+              [ Collapse ]
+            </button>
+            <button 
+              className={styles.toggleButton}
+              onClick={() => setIsFullScreen(!isFullScreen)}
+            >
+              {isFullScreen ? '[ Minimize ]' : '[ Expand ]'}
+            </button>
+          </div>
+        </div>
+        <div className={styles.messageList}>
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`${styles.messageItem} ${styles[message.type]}`}
+            >
+              {message.type === 'action' ? (
+                <button 
+                  onClick={message.action}
+                  className={styles.actionButton}
+                >
+                  {message.actionText || message.text}
+                </button>
+              ) : (
+                formatMessage(message.text, message.type)
+              )}
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+        <div className={styles.inputContainer}>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleInputSubmit}
+            placeholder="Enter command..."
+            spellCheck={false}
+            disabled={true}
+          />
+          <span className={styles.invalidText}>translation matrix invalid</span>
+        </div>
       </div>
     </div>
   );
