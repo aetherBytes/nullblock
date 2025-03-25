@@ -22,6 +22,7 @@ const Home: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageIndex, setMessageIndex] = useState<number>(0);
   const [hasPhantom, setHasPhantom] = useState<boolean>(false);
+  const [currentRoom, setCurrentRoom] = useState<string>('/logs');
 
   const automaticResponses = [
     {
@@ -59,92 +60,84 @@ const Home: React.FC = () => {
     setMessages(prev => [...prev, message]);
   };
 
-  const handleUserInput = (input: string) => {
+  const handleUserInput = async (input: string) => {
     addMessage({
       id: messages.length + 1,
       text: input,
       type: 'user'
     });
 
-    const command = input.toLowerCase();
-
-    if (command === '/clear') {
-      setMessages([{
-        id: 1,
-        text: "System: Chat log cleared.",
-        type: 'message' as MessageType
-      }]);
-      return;
-    }
-
-    if (command === '/status') {
-      const statusMessages: ChatMessage[] = [
-        {
-          id: messages.length + 2,
-          text: "System: Running system diagnostics...",
-          type: 'message'
+    try {
+      const response = await fetch('http://localhost:8000/api/command', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          id: messages.length + 3,
-          text: "System Update: Neural interface status: " + (walletConnected ? 'ACTIVE' : 'INACTIVE'),
-          type: 'update' as MessageType
-        }
-      ];
+        body: JSON.stringify({ 
+          command: input,
+          room: currentRoom 
+        }),
+      });
 
-      if (walletConnected && publicKey) {
-        statusMessages.push({
-          id: messages.length + 4,
-          text: `System: Connected to neural node ${publicKey.slice(0, 6)}...${publicKey.slice(-4)}`,
-          type: 'message'
-        });
-        if (showEcho) {
-          statusMessages.push({
-            id: messages.length + 5,
-            text: "System: ECHO interface engaged and operational",
-            type: 'message'
-          });
-        }
-      } else {
-        statusMessages.push({
-          id: messages.length + 4,
-          text: "System Alert: No active neural connection detected",
-          type: 'alert'
-        });
+      if (!response.ok) {
+        throw new Error('Failed to process command');
       }
 
-      statusMessages.forEach((msg, index) => {
+      const data = await response.json();
+      
+      // Special handling for /clear command
+      if (input.toLowerCase() === '/clear') {
+        setMessages([]);
+        return;
+      }
+
+      // Add each message from the response with a delay
+      data.messages.forEach((msg: any, index: number) => {
         setTimeout(() => {
-          addMessage(msg);
+          if (msg.type === 'action') {
+            if (msg.action === 'connect_wallet') {
+              addMessage({
+                id: messages.length + 2 + index,
+                text: msg.text,
+                type: msg.type,
+                action: manualConnect,
+                actionText: "Connect"
+              });
+            } else if (msg.action === 'disconnect_wallet') {
+              addMessage({
+                id: messages.length + 2 + index,
+                text: msg.text,
+                type: msg.type,
+                action: handleDisconnect,
+                actionText: "Disconnect"
+              });
+            }
+          } else {
+            addMessage({
+              id: messages.length + 2 + index,
+              text: msg.text,
+              type: msg.type as MessageType
+            });
+          }
         }, 500 * (index + 1));
       });
-      return;
-    }
-
-    if (command === '/help') {
+    } catch (error) {
+      console.error('Error processing command:', error);
       addMessage({
         id: messages.length + 2,
-        text: "System: Available commands: /help - Display available commands, /status - Check system status, /clear - Clear chat log",
-        type: 'message'
+        text: 'Error: Command processing failed',
+        type: 'critical'
       });
-    } else {
-      const response = getRandomResponse();
-      
-      setTimeout(() => {
-        addMessage({
-          id: messages.length + 2,
-          text: response.alert,
-          type: 'alert'
-        });
-      }, 500);
-
-      setTimeout(() => {
-        addMessage({
-          id: messages.length + 3,
-          text: response.message,
-          type: 'message'
-        });
-      }, 1500);
     }
+  };
+
+  const handleRoomChange = (room: string) => {
+    setCurrentRoom(room);
+    addMessage({
+      id: messages.length + 1,
+      text: `System: Switched to ${room}`,
+      type: 'update'
+    });
   };
 
   useEffect(() => {
@@ -367,6 +360,8 @@ const Home: React.FC = () => {
         messages={messages} 
         isEchoActive={showEcho} 
         onUserInput={handleUserInput}
+        currentRoom={currentRoom}
+        onRoomChange={handleRoomChange}
       />
       {showEcho && <Echo publicKey={publicKey} onDisconnect={handleDisconnect} />}
     </>

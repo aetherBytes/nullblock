@@ -4,25 +4,62 @@ import styles from './system-chat.module.scss';
 interface ChatMessage {
   id: number;
   text: string;
-  type: 'message' | 'alert' | 'critical' | 'update' | 'action' | 'user';
+  type: 'message' | 'alert' | 'critical' | 'update' | 'action' | 'user' | 'assistant';
   action?: () => void;
   actionText?: string;
+  metadata?: {
+    memoryCard?: {
+      behavior?: Record<string, any>;
+      features?: string[];
+    };
+    walletHealth?: {
+      riskScore?: number;
+      activeTokens?: string[];
+    };
+  };
 }
 
 interface SystemChatProps {
   messages: ChatMessage[];
   isEchoActive?: boolean;
   onUserInput?: (input: string) => void;
+  currentRoom?: string;
+  onRoomChange?: (room: string) => void;
+  memoryCard?: {
+    userBehavior: Record<string, any>;
+    features: string[];
+    eventLog: any[];
+  };
+  walletHealth?: {
+    balance: number;
+    riskScore: number;
+    activeTokens: string[];
+  };
 }
 
-const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false, onUserInput }) => {
+const SystemChat: React.FC<SystemChatProps> = ({ 
+  messages, 
+  isEchoActive = false, 
+  onUserInput,
+  currentRoom = '/logs',
+  onRoomChange,
+  memoryCard,
+  walletHealth 
+}) => {
   const [input, setInput] = useState('');
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const [selectedRoom, setSelectedRoom] = useState('/logs');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [lastSeenMessageId, setLastSeenMessageId] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const chatRooms = [
+    { id: 'logs', name: '/logs', available: true },
+    { id: 'memory', name: '/memory', available: false },
+    { id: 'health', name: '/health', available: false },
+    { id: 'reality', name: '/reality', available: false }
+  ];
 
   // Check if there are any new pending action messages
   const hasNewActionMessages = messages.some(msg => 
@@ -49,20 +86,14 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
     localStorage.setItem('chatCollapsedState', isCollapsed.toString());
   }, [isCollapsed]);
 
-  const chatRooms = [
-    { id: 'logs', name: '/logs', available: true },
-    { id: 'agents', name: '/agents', available: false },
-    { id: 'camp', name: '/camp', available: false },
-    { id: 'reality', name: '/reality', available: false }
-  ];
-
   const handleRoomSelect = (roomId: string) => {
     setIsDropdownOpen(false);
     if (roomId !== 'logs') {
-      onUserInput?.('Error: Access restricted.');
+      onUserInput?.('Error: Access restricted. Translation matrix required.');
       return;
     }
-    setSelectedRoom(`/${roomId}`);
+    const newRoom = `/${roomId}`;
+    onRoomChange?.(newRoom);
   };
 
   const scrollToBottom = () => {
@@ -73,14 +104,28 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
     scrollToBottom();
   }, [messages]);
 
-  const handleInputSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleInputSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && input.trim()) {
-      onUserInput?.(input.trim());
-      setInput('');
+      setIsProcessing(true);
+      try {
+        await onUserInput?.(input.trim());
+      } finally {
+        setIsProcessing(false);
+        setInput('');
+      }
     }
   };
 
-  const formatMessage = (text: string, type: ChatMessage['type']) => {
+  const formatMessage = (text: string, type: ChatMessage['type'], metadata?: ChatMessage['metadata']) => {
+    if (type === 'assistant') {
+      return <p className={styles.assistant}>{text}</p>;
+    }
+
+    // For formatted messages (those containing our ASCII art boxes), preserve formatting
+    if (text.includes('╭') || text.includes('╰')) {
+      return <pre className={styles.formattedOutput}>{text}</pre>;
+    }
+
     const parts = text.split(': ');
     if (parts.length >= 2) {
       const prefix = parts[0];
@@ -90,6 +135,7 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
           <p>
             <span className={styles.system}>{prefix}: </span>
             {content}
+            {metadata && renderMetadata(metadata)}
           </p>
         );
       }
@@ -97,12 +143,47 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
     return <p>{text}</p>;
   };
 
+  const renderMetadata = (metadata: NonNullable<ChatMessage['metadata']>) => {
+    const elements = [];
+    
+    if (metadata.memoryCard) {
+      elements.push(
+        <div key="memory" className={styles.metadata}>
+          <span className={styles.label}>Memory:</span>
+          {metadata.memoryCard.features?.map(f => (
+            <span key={f} className={styles.tag}>{f}</span>
+          ))}
+        </div>
+      );
+    }
+
+    if (metadata.walletHealth) {
+      elements.push(
+        <div key="health" className={styles.metadata}>
+          <span className={styles.label}>Risk Score:</span>
+          <span className={`${styles.score} ${getRiskClass(metadata.walletHealth.riskScore)}`}>
+            {metadata.walletHealth.riskScore}
+          </span>
+        </div>
+      );
+    }
+
+    return elements.length ? <div className={styles.metadataContainer}>{elements}</div> : null;
+  };
+
+  const getRiskClass = (score?: number) => {
+    if (!score) return '';
+    if (score < 0.3) return styles.low;
+    if (score < 0.7) return styles.medium;
+    return styles.high;
+  };
+
   return isCollapsed ? (
     <button 
       className={`${styles.collapsedButton} ${isEchoActive ? styles.withEcho : ''} ${hasNewActionMessages ? styles.hasNotification : ''}`}
       onClick={handleChatOpen}
     >
-      [ TERMINAL ]
+      [ ECHO ]
     </button>
   ) : (
     <div className={`${styles.chatContainer} ${isEchoActive ? styles.withEcho : ''} ${isFullScreen ? styles.fullScreen : ''}`}>
@@ -113,7 +194,7 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
               className={styles.dropdownButton}
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             >
-              [ {selectedRoom} ]
+              [ {currentRoom} ]
             </button>
             {isDropdownOpen && (
               <div className={styles.dropdownContent}>
@@ -158,7 +239,7 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
                   {message.actionText || message.text}
                 </button>
               ) : (
-                formatMessage(message.text, message.type)
+                formatMessage(message.text, message.type, message.metadata)
               )}
             </div>
           ))}
@@ -170,9 +251,9 @@ const SystemChat: React.FC<SystemChatProps> = ({ messages, isEchoActive = false,
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleInputSubmit}
-            placeholder="Enter command..."
+            placeholder={isProcessing ? "Processing..." : "Enter command..."}
             spellCheck={false}
-            disabled={true}
+            disabled={isProcessing}
           />
           <span className={styles.invalidText}>translation matrix invalid</span>
         </div>

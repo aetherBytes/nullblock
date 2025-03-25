@@ -226,6 +226,16 @@ $text-color: #c8c8d0;
           line-height: 1.5;
         }
 
+        .formattedOutput {
+          margin: 0;
+          color: $text-color;
+          font-family: monospace;
+          line-height: 1.2;
+          white-space: pre;
+          overflow-x: auto;
+          font-size: 0.9em;
+        }
+
         &.message {
           .system {
             color: $echo-blue;
