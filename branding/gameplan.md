@@ -16,60 +16,104 @@ Nullblock is an MCP-driven platform on Solana, featuring:
 - **Erebus (Contracts)**: Rust, Solana Rust SDK, gRPC
 - **Storage**: Solana blockchain (Memory Cards as mutable NFTs via Metaplex)
 
-## Phase 1: MVP Core (6-8 weeks)
-### Helios MCP Server
-- **Tools**: `swapTokens`, `getWalletHealth`, `updateMemoryCard`
-- **Logic**:  
-  - Swap SOL/USDC on Raydium (via Erebus).  
-  - Analyze wallet health (balance, risk) via Helius API.  
-  - Update Memory Cards with user state (behaviors, events).  
-- **On-Chain**:  
-  - Blockchain data (trades, balances) fetched via Helius.  
-  - Memory Cards store user-specific state (e.g., trade prefs).  
-- **Agent Task**: "Code Helios with FastAPI, integrate Raydium swaps, update Memory Cards via Erebus, test 5 swaps + 5 health checks."
+## Development Phases
 
-### Hecate Frontend Service (ECHO Interface)
-- **UI**: ECHO chat box (LLM), balance/risk display  
-- **Logic**:  
-  - Parse commands (e.g., “Swap 0.1 SOL”) via Claude.  
-  - Fetch Memory Cards from Phantom via `@solana/web3.js`.  
-  - Display blockchain data from Helios.  
-- **Phantom**: Connects via `window.solana`, signs TXs.  
-- **Agent Task**: "Build Hecate extension with ECHO UI, wire LLM to Helios calls, read Memory Cards."
+### Phase 1: Core Infrastructure (2-3 weeks)
+- **Helios**:  
+  - Basic command processing (/help, /status, /clear) ✓
+  - Random response system for invalid commands ✓
+  - Wallet data endpoints (mock data for now) ✓
+  - Memory Card data structure ✓
+- **Hecate**:  
+  - ECHO chat interface with cyberpunk styling ✓
+  - Locked features (all except /logs) ✓
+  - "Translation matrix invalid" state ✓
+  - Phantom wallet connection
+- **Erebus**:  
+  - Memory Card program structure ✓
+  - Basic instruction handling ✓
 
-### Erebus Contract Server
-- **Role**: Execute swaps, mint/update Memory Cards.  
-- **Contracts**:  
-  - Swap program (Raydium integration).  
-  - Memory Card program (mint mutable NFTs, update metadata).  
+### Phase 2: LLM Integration (2-3 weeks)
+- **Helios**:  
+  - Claude API integration
+  - Command parsing and routing
+  - Context management
+- **Hecate**:  
+  - Unlock translation matrix
+  - Enable memory and health views
+  - Add LLM response formatting
 - **Memory Cards**:  
-  - Mutable NFTs bought by users (e.g., 0.1 SOL).  
-  - Store: `userBehavior` (e.g., trade prefs), `eventLog` (e.g., actions), `features` (e.g., unlocked tools).  
-- **Agent Task**: "Write Rust contracts for swaps and Memory Card minting/updates, deploy to Solana devnet, link to Helios via gRPC."
+  - Implement minting flow
+  - Store conversation history
+  - Track user preferences
 
-### Deliverables
-- Helios on AWS, Hecate on GitHub, Erebus on Solana devnet, demo video.
+### Phase 3: Wallet Features (2-3 weeks)
+- **Helios**:  
+  - Helius API integration
+  - Real wallet health analysis
+  - Token swap implementation
+- **Erebus**:  
+  - Raydium integration
+  - Swap program
+  - Transaction handling
+- **Hecate**:  
+  - Wallet status display
+  - Transaction history
+  - Risk analysis visualization
 
-## Phase 2: Early Growth (4-6 weeks)
-- **Helios**: Add `scheduleTask`, expand health (e.g., TX history via Erebus).  
-- **Hecate (ECHO)**: Add scheduler commands (e.g., “Swap tomorrow”), display TX trends.  
-- **Erebus**: Deploy scheduled task contract, update Memory Cards with scheduler state.  
-- **Release**: X post: "Nullblock MVP: Chat with your Phantom wallet!" | Goal: 200 users.
+### Phase 4: Reality System (3-4 weeks)
+- **Concept**: Virtual environment where users can interact with their Memory Cards
+- **Features**:  
+  - Reality interface unlocking
+  - Memory Card upgrades
+  - User achievements
+  - Social features
 
-## Phase 3: Expansion (3-6 months)
-- **Helios**: Add Skill Marketplace, Swarm Simulator, realities / missions that motivate agents involved?.  
-- **Hecate (ECHO)**: Add Debate Viewer, skill UI, swarm commands.  
-- **Erebus**: Optimize contracts, expand Memory Card features.  
-- **Monetization**: SOL fees for premium tools (e.g., scheduled swaps).
+## Command System
+### Global Commands (Available in all rooms)
+- `/help` - Display available commands ✓
+- `/status` - Check system status ✓
+- `/clear` - Clear chat log ✓
+- `/connect` - Connect Phantom wallet
+- `/disconnect` - Disconnect wallet
+- `/version` - Display system version
 
-## On-Chain Design
-- **Data**: All on Solana.  
-- **Memory Cards**: Mutable NFTs in Phantom wallets, storing user state (behaviors, events, features).  
-- **Blockchain Data**: Trades, balances fetched by Helios via Helius RPC, not stored in Memory Cards.  
-- **Access**: ECHO reads Memory Cards; Helios updates them via Erebus.
+### Room: /logs (Default Room)
+- `/trace <tx>` - Analyze transaction
+- `/history` - Show recent transactions
+- `/balance` - Show wallet balance
+- `/tokens` - List owned tokens
+
+### Room: /memory (Locked)
+- `/mint` - Create new Memory Card
+- `/upgrade` - Enhance Memory Card
+- `/features` - List available features
+- `/behavior` - View behavior analysis
+
+### Room: /health (Locked)
+- `/risk` - Calculate wallet risk score
+- `/audit` - Deep wallet analysis
+- `/monitor` - Set up monitoring
+- `/alerts` - Configure health alerts
+
+### Room: /reality (Locked)
+- `/spawn` - Enter reality interface
+- `/enhance` - Upgrade environment
+- `/interact` - Engage with Memory Card
+- `/sync` - Synchronize state
+
+## Development Progress
+### Phase 1: Core Infrastructure
+- [x] Basic command processing (/help, /status, /clear)
+- [x] Random response system for invalid commands
+- [x] Pretty-printed command output
+- [x] Room-based command structure
+- [x] Global vs room-specific commands
+- [x] Wallet connection commands
+- [ ] Transaction analysis tools
 
 ## Notes
-- **Helios**: MCP backbone, fetches blockchain data, updates Memory Cards.  
-- **Hecate**: Hosts ECHO, the sole user interface (Phantom + LLM).  
-- **Erebus**: Performance layer, all Solana contracts.  
-- **Agents**: Follow tasks, test endpoints, suggest features.
+- All features except basic logging are locked until LLM integration
+- Memory Cards will be central to feature unlocking
+- Focus on cyberpunk aesthetic and mysterious UI elements
+- Keep error messages cryptic but helpful
