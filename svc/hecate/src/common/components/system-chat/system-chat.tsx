@@ -35,6 +35,9 @@ interface SystemChatProps {
     riskScore: number;
     activeTokens: string[];
   };
+  isCollapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
+  isDigitizing?: boolean;
 }
 
 const SystemChat: React.FC<SystemChatProps> = ({ 
@@ -44,11 +47,13 @@ const SystemChat: React.FC<SystemChatProps> = ({
   currentRoom = '/logs',
   onRoomChange,
   memoryCard,
-  walletHealth 
+  walletHealth,
+  isCollapsed = true,
+  onCollapsedChange,
+  isDigitizing = false
 }) => {
   const [input, setInput] = useState('');
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(true);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [lastSeenMessageId, setLastSeenMessageId] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -61,6 +66,13 @@ const SystemChat: React.FC<SystemChatProps> = ({
     { id: 'reality', name: '/reality', available: false }
   ];
 
+  // Update collapsed state when prop changes
+  useEffect(() => {
+    if (onCollapsedChange) {
+      onCollapsedChange(isCollapsed);
+    }
+  }, [isCollapsed]);
+
   // Check if there are any new pending action messages
   const hasNewActionMessages = messages.some(msg => 
     msg.type === 'action' && msg.id > lastSeenMessageId
@@ -68,23 +80,12 @@ const SystemChat: React.FC<SystemChatProps> = ({
 
   // Update last seen message when chat is opened
   const handleChatOpen = () => {
-    setIsCollapsed(false);
+    if (onCollapsedChange) {
+      onCollapsedChange(false);
+    }
     const maxId = Math.max(...messages.map(msg => msg.id), 0);
     setLastSeenMessageId(maxId);
   };
-
-  useEffect(() => {
-    // Load last state from localStorage
-    const lastCollapsedState = localStorage.getItem('chatCollapsedState');
-    if (lastCollapsedState) {
-      setIsCollapsed(lastCollapsedState === 'true');
-    }
-  }, []);
-
-  // Save collapsed state when it changes
-  useEffect(() => {
-    localStorage.setItem('chatCollapsedState', isCollapsed.toString());
-  }, [isCollapsed]);
 
   const handleRoomSelect = (roomId: string) => {
     setIsDropdownOpen(false);
@@ -213,7 +214,7 @@ const SystemChat: React.FC<SystemChatProps> = ({
           <div className={styles.controls}>
             <button 
               className={styles.toggleButton}
-              onClick={() => setIsCollapsed(true)}
+              onClick={() => onCollapsedChange?.(true)}
             >
               [ Collapse ]
             </button>
@@ -229,7 +230,7 @@ const SystemChat: React.FC<SystemChatProps> = ({
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`${styles.messageItem} ${styles[message.type]}`}
+              className={`${styles.messageItem} ${styles[message.type]} ${isDigitizing ? styles.digitizing : ''}`}
             >
               {message.type === 'action' ? (
                 <button 

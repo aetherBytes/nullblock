@@ -4,6 +4,7 @@ import styles from './index.module.scss';
 import StarsCanvas from '@components/stars/stars';
 import Echo from '@components/echo/echo';
 import SystemChat from '@components/system-chat/system-chat';
+import DigitizingText from '../../components/digitizing-text';
 
 type MessageType = 'message' | 'alert' | 'critical' | 'update' | 'action' | 'user';
 
@@ -23,6 +24,10 @@ const Home: React.FC = () => {
   const [messageIndex, setMessageIndex] = useState<number>(0);
   const [hasPhantom, setHasPhantom] = useState<boolean>(false);
   const [currentRoom, setCurrentRoom] = useState<string>('/logs');
+  const [chatCollapsed, setChatCollapsed] = useState<boolean>(true);
+  const [isDigitizing, setIsDigitizing] = useState<boolean>(false);
+  const [showWelcomeText, setShowWelcomeText] = useState<boolean>(true);
+  const [echoScreenSelected, setEchoScreenSelected] = useState<boolean>(false);
 
   const automaticResponses = [
     {
@@ -133,6 +138,10 @@ const Home: React.FC = () => {
 
   const handleRoomChange = (room: string) => {
     setCurrentRoom(room);
+    if (room.startsWith('/echo')) {
+      setEchoScreenSelected(true);
+      setShowWelcomeText(false);
+    }
     addMessage({
       id: messages.length + 1,
       text: `System: Switched to ${room}`,
@@ -280,20 +289,20 @@ const Home: React.FC = () => {
       const provider = (window as any).phantom?.solana;
       if (provider) {
         try {
-          // First try to connect
           const resp = await provider.connect();
           const walletPubKey = resp.publicKey.toString();
           
-          // Request signature for new connections
           await requestSignature(provider, walletPubKey);
           
-          // If we get here, both connection and signature were successful
           setPublicKey(walletPubKey);
           setWalletConnected(true);
           setShowEcho(true);
+          setChatCollapsed(true);
           localStorage.setItem('walletPublickey', walletPubKey);
           localStorage.setItem('chatCollapsedState', 'true');
           updateAuthTime();
+          
+          setShowWelcomeText(false);
           
           addMessage({
             id: messages.length + 1,
@@ -349,6 +358,97 @@ const Home: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    const handleExpandChat = () => {
+      setChatCollapsed(false);
+      
+      // Start digitizing animation
+      setIsDigitizing(true);
+      
+      // Add digitizing welcome message
+      addMessage({
+        id: messages.length + 1,
+        text: "INITIALIZING DIGITAL INTERFACE...",
+        type: "alert"
+      });
+      
+      // Add digitizing effect messages with delays
+      setTimeout(() => {
+        addMessage({
+          id: messages.length + 2,
+          text: "LOADING NEURAL NETWORK...",
+          type: "message"
+        });
+      }, 1000);
+      
+      setTimeout(() => {
+        addMessage({
+          id: messages.length + 3,
+          text: "CALIBRATING QUANTUM MATRIX...",
+          type: "message"
+        });
+      }, 2000);
+      
+      setTimeout(() => {
+        addMessage({
+          id: messages.length + 4,
+          text: "ESTABLISHING SECURE CONNECTION...",
+          type: "message"
+        });
+      }, 3000);
+      
+      setTimeout(() => {
+        addMessage({
+          id: messages.length + 5,
+          text: "ECHO INTERFACE READY",
+          type: "update"
+        });
+        setIsDigitizing(false);
+      }, 4000);
+      
+      // Add welcome message if no matrix is found
+      if (!localStorage.getItem('hasMatrix')) {
+        setTimeout(() => {
+          addMessage({
+            id: messages.length + 6,
+            text: "SYSTEM ALERT: Matrix Integration Required",
+            type: "alert"
+          });
+          addMessage({
+            id: messages.length + 7,
+            text: "Welcome to Nullblock! Your journey into advanced trading begins with the Matrix NFT.",
+            type: "message"
+          });
+          addMessage({
+            id: messages.length + 8,
+            text: "The Matrix NFT is your key to unlocking enhanced features:",
+            type: "message"
+          });
+          addMessage({
+            id: messages.length + 9,
+            text: "• Advanced trading algorithms\n• Real-time market analysis\n• Custom strategy deployment\n• Priority access to new features\n• Enhanced security protocols",
+            type: "message"
+          });
+          addMessage({
+            id: messages.length + 10,
+            text: "Matrix NFTs come in different rarity tiers, each providing unique benefits and capabilities.",
+            type: "message"
+          });
+          addMessage({
+            id: messages.length + 11,
+            text: "MARKETPLACE",
+            type: "action",
+            action: () => window.dispatchEvent(new CustomEvent('navigateToMarket')),
+            actionText: "[ ACQUIRE MATRIX NFT ]"
+          });
+        }, 4500);
+      }
+    };
+
+    window.addEventListener('expandSystemChat', handleExpandChat);
+    return () => window.removeEventListener('expandSystemChat', handleExpandChat);
+  }, [messages]);
+
   return (
     <>
       <div className={styles.backgroundImage} />
@@ -356,14 +456,31 @@ const Home: React.FC = () => {
       <div className={styles.scene}>
         <div className={styles.fire}></div>
       </div>
+      {showWelcomeText && (
+        <DigitizingText 
+          text="Welcome to Nullblock. Interfaces for the new world." 
+          duration={0}
+          theme="cyberpunk"
+        />
+      )}
       <SystemChat 
         messages={messages} 
         isEchoActive={showEcho} 
         onUserInput={handleUserInput}
         currentRoom={currentRoom}
         onRoomChange={handleRoomChange}
+        isCollapsed={chatCollapsed}
+        onCollapsedChange={setChatCollapsed}
+        isDigitizing={isDigitizing}
       />
-      {showEcho && <Echo publicKey={publicKey} onDisconnect={handleDisconnect} />}
+      {showEcho && <Echo 
+        publicKey={publicKey} 
+        onDisconnect={handleDisconnect}
+        onExpandChat={() => {
+          window.dispatchEvent(new CustomEvent('expandSystemChat'));
+          setChatCollapsed(false);
+        }}
+      />}
     </>
   );
 };

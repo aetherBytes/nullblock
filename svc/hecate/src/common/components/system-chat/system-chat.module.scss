@@ -214,26 +214,22 @@ $text-color: #c8c8d0;
       }
 
       .messageItem {
-        padding: 0.5rem;
-        background: rgba($background-dark, 0.1);
-        border-left: 2px solid rgba($echo-blue, 0.1);
-        text-align: left;
+        padding: 8px;
+        margin: 4px 0;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        line-height: 1.4;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+        transition: all 0.3s ease;
 
-        p {
-          margin: 0;
-          color: $text-color;
-          font-family: $batman-font;
-          line-height: 1.5;
-        }
-
-        .formattedOutput {
-          margin: 0;
-          color: $text-color;
-          font-family: monospace;
-          line-height: 1.2;
-          white-space: pre;
-          overflow-x: auto;
-          font-size: 0.9em;
+        &.digitizing {
+          animation: digitize 0.5s ease-in-out;
+          text-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
+          color: #00ff00;
+          font-weight: bold;
+          letter-spacing: 1px;
         }
 
         &.message {
@@ -399,4 +395,22 @@ $text-color: #c8c8d0;
 @keyframes scanlineGlow {
   0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }
+}
+
+@keyframes digitize {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(5px);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translateY(5px);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
 } 

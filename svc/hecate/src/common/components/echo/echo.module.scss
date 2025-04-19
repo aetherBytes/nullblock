@@ -1,5 +1,15 @@
 @import '../../../pages/home/index.module.scss';
 
+// Color Variables
+$background-dark: #0a0a0a;
+$echo-blue: #00a8ff;
+$echo-purple: #b967ff;
+$echo-red: #ff3333;
+$echo-orange: #ff7f00;
+$echo-green: #00ff9d;
+$echo-gray: #808080;
+$text-color: #c8c8d0;
+
 .echoContainer {
   position: fixed;
   z-index: 1002;
@@ -365,7 +375,132 @@
     flex-direction: column;
     min-height: 0;
     position: relative;
-    padding: 2rem;
+    padding: 1rem 2rem;
+
+    .hudTitle {
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+    }
+
+    .campGrid {
+      display: grid;
+      grid-template-columns: 30% auto 70%;
+      gap: 2rem;
+      margin-top: 1rem;
+
+      .campAnalysis, .campStatus {
+        h3 {
+          color: lighten($echo-blue, 10%);
+          font-size: 1.1em;
+          margin-bottom: 1rem;
+          text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+          letter-spacing: 2px;
+          position: relative;
+          padding-bottom: 0.5rem;
+
+          &::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg,
+              rgba($echo-blue, 0.4) 0%,
+              rgba($echo-blue, 0.1) 50%,
+              transparent 100%
+            );
+          }
+        }
+
+        ul {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+
+          li {
+            margin: 0.5rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.9em;
+            color: rgba($echo-gray, 0.9);
+
+            .alertCount {
+              background: rgba($echo-red, 0.2);
+              color: $echo-red;
+              padding: 0.2rem 0.6rem;
+              border-radius: 12px;
+              font-size: 0.9em;
+              min-width: 24px;
+              text-align: center;
+              animation: pulse 2s infinite;
+              cursor: pointer;
+              transition: all 0.3s ease;
+
+              &:hover {
+                background: rgba($echo-red, 0.3);
+                transform: translateY(-1px);
+                box-shadow: 0 0 10px rgba($echo-red, 0.3);
+              }
+            }
+          }
+        }
+      }
+
+      .campAnalysis {
+        li {
+          transition: all 0.3s ease;
+          
+          &.locked {
+            filter: blur(3px);
+            opacity: 0.5;
+            color: rgba($echo-gray, 0.4);
+            cursor: not-allowed;
+            
+            &:hover {
+              filter: blur(2px);
+              opacity: 0.6;
+            }
+          }
+        }
+      }
+
+      .matrixPrompt {
+        margin-top: 2rem;
+        text-align: center;
+
+        .marketButton {
+          padding: 0.8rem 1.5rem;
+          background: rgba($echo-blue, 0.1);
+          border: 1px solid rgba($echo-blue, 0.3);
+          color: $echo-blue;
+          font-family: $batman-font;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          letter-spacing: 1px;
+
+          &:hover {
+            background: rgba($echo-blue, 0.2);
+            border-color: rgba($echo-blue, 0.4);
+            transform: translateY(-1px);
+          }
+        }
+      }
+
+      .divider {
+        width: 1px;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          transparent 0%,
+          rgba($echo-blue, 0.2) 20%,
+          rgba($echo-blue, 0.2) 80%,
+          transparent 100%
+        );
+      }
+    }
 
     .campContent, .inventorySection, .realityContent, .marketContent, .interfaceContent {
       margin-top: 1.5rem;
@@ -453,6 +588,11 @@
       font-style: italic;
       margin: 0.5rem 0;
     }
+
+    .inactive {
+      color: rgba($echo-gray, 0.5);
+      text-shadow: none;
+    }
   }
 
   .settingsScreen {
@@ -471,6 +611,91 @@
         background-color: rgba($echo-blue, 0.2);
         color: $echo-blue;
       }
+    }
+  }
+
+  .userProfile {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 2rem;
+    margin: 0.5rem 0;
+    background: rgba($background-dark, 0.2);
+    border: 1px solid rgba($echo-blue, 0.1);
+    backdrop-filter: blur(2px);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba($echo-blue, 0.05) 50%,
+        transparent 100%
+      );
+      animation: shimmer 2s infinite;
+    }
+
+    .profileItem {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      position: relative;
+      z-index: 1;
+
+      .label {
+        font-size: 0.8em;
+        color: rgba($echo-gray, 0.7);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .value {
+        font-size: 1.2em;
+        color: $echo-blue;
+        text-shadow: 0 0 8px rgba($echo-blue, 0.3);
+        font-weight: bold;
+
+        &.common {
+          color: $echo-gray;
+        }
+
+        &.uncommon {
+          color: $echo-green;
+        }
+
+        &.rare {
+          color: $echo-blue;
+        }
+
+        &.epic {
+          color: $echo-purple;
+        }
+
+        &.legendary {
+          color: $echo-orange;
+        }
+      }
+    }
+  }
+
+  .matrix {
+    &.none {
+      color: rgba($echo-gray, 0.6) !important;
+      font-style: italic;
+      font-size: 0.9em !important;
+    }
+  }
+
+  .collapsedButton {
+    &.withEcho {
+      transform: scale(1.15);
     }
   }
 }
@@ -532,5 +757,22 @@
   p {
     margin: 0.5rem 0;
     font-style: italic;
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba($echo-red, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba($echo-red, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba($echo-red, 0);
   }
 }

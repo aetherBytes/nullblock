@@ -1,0 +1,250 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+// Import theme colors from the home module
+$background-dark: #0a0a0a;
+$echo-blue: #4a90e2;
+$echo-green: #00ff9d;
+$echo-orange: #ff7f00;
+$echo-gray: #b0b0b0;
+$echo-border: #3a3a3a;
+$text-color: #b0b0b0;
+$alert-color: #ff4500;
+
+// Cyberpunk theme colors
+$cyberpunk-primary: #00f7ff;
+$cyberpunk-secondary: #ff00a0;
+$cyberpunk-accent: #ffd700;
+
+// Base styles
+.digitizingText {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 2.5rem;
+  text-align: center;
+  z-index: 10;
+  opacity: 1;
+  transition: opacity 1.5s ease-out;
+  max-width: 80%;
+  line-height: 1.4;
+  letter-spacing: 1px;
+  animation: glitch 0.3s infinite;
+  animation-play-state: paused;
+  
+  &.complete {
+    animation-play-state: running;
+  }
+}
+
+.cursor {
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 2px;
+  animation: blink 1s step-end infinite;
+}
+
+// Theme variations
+.blue {
+  color: $echo-blue;
+  text-shadow: 0 0 10px rgba($echo-blue, 0.7);
+  
+  .cursor {
+    background-color: $echo-blue;
+  }
+}
+
+.green {
+  color: $echo-green;
+  text-shadow: 0 0 10px rgba($echo-green, 0.7);
+  
+  .cursor {
+    background-color: $echo-green;
+  }
+}
+
+.orange {
+  color: $echo-orange;
+  text-shadow: 0 0 10px rgba($echo-orange, 0.7);
+  
+  .cursor {
+    background-color: $echo-orange;
+  }
+}
+
+.cyberpunk {
+  color: $cyberpunk-primary;
+  text-shadow: 0 0 10px rgba($cyberpunk-primary, 0.7);
+  
+  .cursor {
+    background-color: $cyberpunk-primary;
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+// Glitch animations for each theme
+.blue {
+  @keyframes glitch {
+    0% {
+      text-shadow: 0.05em 0 0 rgba($echo-orange, 0.75),
+                  -0.025em -0.05em 0 rgba($echo-green, 0.75),
+                  0.025em 0.05em 0 rgba($echo-blue, 0.75);
+    }
+    14% {
+      text-shadow: 0.05em 0 0 rgba($echo-orange, 0.75),
+                  -0.025em -0.05em 0 rgba($echo-green, 0.75),
+                  0.025em 0.05em 0 rgba($echo-blue, 0.75);
+    }
+    15% {
+      text-shadow: -0.05em -0.025em 0 rgba($echo-orange, 0.75),
+                  0.025em 0.025em 0 rgba($echo-green, 0.75),
+                  -0.05em -0.05em 0 rgba($echo-blue, 0.75);
+    }
+    49% {
+      text-shadow: -0.05em -0.025em 0 rgba($echo-orange, 0.75),
+                  0.025em 0.025em 0 rgba($echo-green, 0.75),
+                  -0.05em -0.05em 0 rgba($echo-blue, 0.75);
+    }
+    50% {
+      text-shadow: 0.025em 0.05em 0 rgba($echo-orange, 0.75),
+                  0.05em 0 0 rgba($echo-green, 0.75),
+                  0 -0.05em 0 rgba($echo-blue, 0.75);
+    }
+    99% {
+      text-shadow: 0.025em 0.05em 0 rgba($echo-orange, 0.75),
+                  0.05em 0 0 rgba($echo-green, 0.75),
+                  0 -0.05em 0 rgba($echo-blue, 0.75);
+    }
+    100% {
+      text-shadow: -0.025em 0 0 rgba($echo-orange, 0.75),
+                  -0.025em -0.025em 0 rgba($echo-green, 0.75),
+                  -0.025em -0.05em 0 rgba($echo-blue, 0.75);
+    }
+  }
+}
+
+.green {
+  @keyframes glitch {
+    0% {
+      text-shadow: 0.05em 0 0 rgba($echo-blue, 0.75),
+                  -0.025em -0.05em 0 rgba($echo-orange, 0.75),
+                  0.025em 0.05em 0 rgba($echo-green, 0.75);
+    }
+    14% {
+      text-shadow: 0.05em 0 0 rgba($echo-blue, 0.75),
+                  -0.025em -0.05em 0 rgba($echo-orange, 0.75),
+                  0.025em 0.05em 0 rgba($echo-green, 0.75);
+    }
+    15% {
+      text-shadow: -0.05em -0.025em 0 rgba($echo-blue, 0.75),
+                  0.025em 0.025em 0 rgba($echo-orange, 0.75),
+                  -0.05em -0.05em 0 rgba($echo-green, 0.75);
+    }
+    49% {
+      text-shadow: -0.05em -0.025em 0 rgba($echo-blue, 0.75),
+                  0.025em 0.025em 0 rgba($echo-orange, 0.75),
+                  -0.05em -0.05em 0 rgba($echo-green, 0.75);
+    }
+    50% {
+      text-shadow: 0.025em 0.05em 0 rgba($echo-blue, 0.75),
+                  0.05em 0 0 rgba($echo-orange, 0.75),
+                  0 -0.05em 0 rgba($echo-green, 0.75);
+    }
+    99% {
+      text-shadow: 0.025em 0.05em 0 rgba($echo-blue, 0.75),
+                  0.05em 0 0 rgba($echo-orange, 0.75),
+                  0 -0.05em 0 rgba($echo-green, 0.75);
+    }
+    100% {
+      text-shadow: -0.025em 0 0 rgba($echo-blue, 0.75),
+                  -0.025em -0.025em 0 rgba($echo-orange, 0.75),
+                  -0.025em -0.05em 0 rgba($echo-green, 0.75);
+    }
+  }
+}
+
+.orange {
+  @keyframes glitch {
+    0% {
+      text-shadow: 0.05em 0 0 rgba($echo-green, 0.75),
+                  -0.025em -0.05em 0 rgba($echo-blue, 0.75),
+                  0.025em 0.05em 0 rgba($echo-orange, 0.75);
+    }
+    14% {
+      text-shadow: 0.05em 0 0 rgba($echo-green, 0.75),
+                  -0.025em -0.05em 0 rgba($echo-blue, 0.75),
+                  0.025em 0.05em 0 rgba($echo-orange, 0.75);
+    }
+    15% {
+      text-shadow: -0.05em -0.025em 0 rgba($echo-green, 0.75),
+                  0.025em 0.025em 0 rgba($echo-blue, 0.75),
+                  -0.05em -0.05em 0 rgba($echo-orange, 0.75);
+    }
+    49% {
+      text-shadow: -0.05em -0.025em 0 rgba($echo-green, 0.75),
+                  0.025em 0.025em 0 rgba($echo-blue, 0.75),
+                  -0.05em -0.05em 0 rgba($echo-orange, 0.75);
+    }
+    50% {
+      text-shadow: 0.025em 0.05em 0 rgba($echo-green, 0.75),
+                  0.05em 0 0 rgba($echo-blue, 0.75),
+                  0 -0.05em 0 rgba($echo-orange, 0.75);
+    }
+    99% {
+      text-shadow: 0.025em 0.05em 0 rgba($echo-green, 0.75),
+                  0.05em 0 0 rgba($echo-blue, 0.75),
+                  0 -0.05em 0 rgba($echo-orange, 0.75);
+    }
+    100% {
+      text-shadow: -0.025em 0 0 rgba($echo-green, 0.75),
+                  -0.025em -0.025em 0 rgba($echo-blue, 0.75),
+                  -0.025em -0.05em 0 rgba($echo-orange, 0.75);
+    }
+  }
+}
+
+.cyberpunk {
+  @keyframes glitch {
+    0% {
+      text-shadow: 0.05em 0 0 rgba($cyberpunk-secondary, 0.75),
+                  -0.025em -0.05em 0 rgba($cyberpunk-accent, 0.75),
+                  0.025em 0.05em 0 rgba($cyberpunk-primary, 0.75);
+    }
+    14% {
+      text-shadow: 0.05em 0 0 rgba($cyberpunk-secondary, 0.75),
+                  -0.025em -0.05em 0 rgba($cyberpunk-accent, 0.75),
+                  0.025em 0.05em 0 rgba($cyberpunk-primary, 0.75);
+    }
+    15% {
+      text-shadow: -0.05em -0.025em 0 rgba($cyberpunk-secondary, 0.75),
+                  0.025em 0.025em 0 rgba($cyberpunk-accent, 0.75),
+                  -0.05em -0.05em 0 rgba($cyberpunk-primary, 0.75);
+    }
+    49% {
+      text-shadow: -0.05em -0.025em 0 rgba($cyberpunk-secondary, 0.75),
+                  0.025em 0.025em 0 rgba($cyberpunk-accent, 0.75),
+                  -0.05em -0.05em 0 rgba($cyberpunk-primary, 0.75);
+    }
+    50% {
+      text-shadow: 0.025em 0.05em 0 rgba($cyberpunk-secondary, 0.75),
+                  0.05em 0 0 rgba($cyberpunk-accent, 0.75),
+                  0 -0.05em 0 rgba($cyberpunk-primary, 0.75);
+    }
+    99% {
+      text-shadow: 0.025em 0.05em 0 rgba($cyberpunk-secondary, 0.75),
+                  0.05em 0 0 rgba($cyberpunk-accent, 0.75),
+                  0 -0.05em 0 rgba($cyberpunk-primary, 0.75);
+    }
+    100% {
+      text-shadow: -0.025em 0 0 rgba($cyberpunk-secondary, 0.75),
+                  -0.025em -0.025em 0 rgba($cyberpunk-accent, 0.75),
+                  -0.025em -0.05em 0 rgba($cyberpunk-primary, 0.75);
+    }
+  }
+} 
