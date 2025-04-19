@@ -7,14 +7,59 @@ type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
 interface EchoProps {
   publicKey: string | null;
   onDisconnect: () => void;
+  onExpandChat: () => void;
 }
 
-const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
+interface UserProfile {
+  id: string;
+  ascent: number;
+  nectar: number;
+  memories: number;
+  matrix: {
+    level: string;
+    rarity: string;
+    status: string;
+  };
+}
+
+interface SystemAnalysis {
+  name: string;
+  status: string;
+  locked: boolean;
+}
+
+const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat }) => {
   const [screen, setScreen] = useState<Screen>('camp');
   const [walletData, setWalletData] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    id: publicKey ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol` : '',
+    ascent: 1,
+    nectar: 0,
+    memories: 0,
+    matrix: {
+      level: 'NONE',
+      rarity: 'NONE',
+      status: 'NO MATRIX FOUND'
+    }
+  });
+  const [alerts, setAlerts] = useState<number>(3); // Default to 3 alerts for demo
+  const [showAlerts, setShowAlerts] = useState<boolean>(false);
 
   // Define which screens are unlocked
   const unlockedScreens = ['camp'];
+
+  const systemAnalysisItems: SystemAnalysis[] = [
+    { name: "Neural Link", status: "SCANNING", locked: false },
+    { name: "Wallet Health", status: "OPTIMAL", locked: false },
+    { name: "Token Analysis", status: "IN PROGRESS", locked: false },
+    { name: "Risk Assessment", status: "LOW", locked: false },
+    { name: "Memory Integrity", status: "CHECKING", locked: true },
+    { name: "Network Status", status: "CONNECTED", locked: true },
+    { name: "Matrix Sync", status: "OFFLINE", locked: true },
+    { name: "Reality Engine", status: "DORMANT", locked: true },
+    { name: "Core Systems", status: "LOCKED", locked: true },
+    { name: "Neural Cache", status: "UNAVAILABLE", locked: true }
+  ];
 
   const handleScreenChange = (newScreen: Screen) => {
     if (unlockedScreens.includes(newScreen)) {
@@ -28,6 +73,11 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
         try {
           const data = await fetchWalletData(publicKey);
           setWalletData(data);
+          // Update user profile with wallet data
+          setUserProfile(prev => ({
+            ...prev,
+            nectar: data.balance || 0
+          }));
         } catch (error) {
           console.error('Failed to fetch wallet data:', error);
         }
@@ -55,6 +105,12 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
         }
       }
     }
+  };
+
+  const handleAlertClick = () => {
+    setShowAlerts(true);
+    // This will be handled by the parent component to expand chat
+    onExpandChat();
   };
 
   const renderControlScreen = () => (
@@ -89,6 +145,33 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
     </nav>
   );
 
+  const renderUserProfile = () => (
+    <div className={styles.userProfile}>
+      <div className={styles.profileItem}>
+        <span className={styles.label}>ID:</span>
+        <span className={styles.value}>{userProfile.id}</span>
+      </div>
+      <div className={styles.profileItem}>
+        <span className={styles.label}>ASCENT:</span>
+        <span className={styles.value}>{userProfile.ascent}</span>
+      </div>
+      <div className={styles.profileItem}>
+        <span className={styles.label}>NECTAR:</span>
+        <span className={styles.value}>₦ {userProfile.nectar.toFixed(2)}</span>
+      </div>
+      <div className={styles.profileItem}>
+        <span className={styles.label}>MEMORIES:</span>
+        <span className={styles.value}>{userProfile.memories}</span>
+      </div>
+      <div className={styles.profileItem}>
+        <span className={styles.label}>MATRIX:</span>
+        <span className={`${styles.value} ${styles.matrix} ${styles[userProfile.matrix.rarity.toLowerCase()]}`}>
+          {userProfile.matrix.status}
+        </span>
+      </div>
+    </div>
+  );
+
   const renderLockedScreen = () => (
     <div className={styles.hudScreen}>
       <h2 className={styles.hudTitle}>ACCESS RESTRICTED</h2>
@@ -101,18 +184,43 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
 
   const renderCampScreen = () => (
     <div className={styles.hudScreen}>
-      <h2 className={styles.hudTitle}>BASE CAMP</h2>
-      <div className={styles.walletInfo}>
-        <p><strong>ID:</strong> <span>{publicKey?.slice(0, 6)}...{publicKey?.slice(-4)}</span></p>
-        <p><strong>Balance:</strong> <span>{walletData?.balance || '0'} SOL</span></p>
-      </div>
+      <h2 className={styles.hudTitle}>CAMP</h2>
+      {renderUserProfile()}
       <div className={styles.campContent}>
-        <p>Camp Status:</p>
-        <ul>
-          <li>Perimeter: <span className={styles.active}>SECURE</span></li>
-          <li>Systems: <span className={styles.pending}>SCANNING</span></li>
-          <li>Defense: <span className={styles.stable}>ACTIVE</span></li>
-        </ul>
+        <div className={styles.campGrid}>
+          <div className={styles.campAnalysis}>
+            <h3>SYSTEM ANALYSIS</h3>
+            <ul>
+              {systemAnalysisItems.map((item, index) => (
+                <li key={index} className={item.locked ? styles.locked : ''}>
+                  {item.name}: <span className={getStatusClass(item.status)}>{item.status}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className={styles.divider}></div>
+          <div className={styles.campStatus}>
+            <h3>CAMP STATUS</h3>
+            <ul>
+              <li>
+                Alerts: <span className={`${styles.alertCount} ${styles.active}`} onClick={handleAlertClick}>{alerts}</span>
+              </li>
+              <li>Perimeter: <span className={styles.active}>SECURE</span></li>
+              <li>Systems: <span className={styles.pending}>SCANNING</span></li>
+              <li>Defense: <span className={styles.stable}>ACTIVE</span></li>
+              <li>Uplink: <span className={styles.active}>STABLE</span></li>
+              <li>Matrix Core: <span className={styles.pending}>INITIALIZING</span></li>
+              <li>Reality Engine: <span className={styles.stable}>STANDBY</span></li>
+            </ul>
+            {!userProfile.matrix.level || userProfile.matrix.level === 'NONE' ? (
+              <div className={styles.matrixPrompt}>
+                <button className={styles.marketButton} onClick={() => handleScreenChange('inventory')}>
+                  VISIT MARKETPLACE
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -172,6 +280,27 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect }) => {
       </div>
     </div>
   );
+
+  const getStatusClass = (status: string): string => {
+    switch (status.toLowerCase()) {
+      case 'optimal':
+      case 'connected':
+      case 'secure':
+      case 'active':
+        return styles.active;
+      case 'scanning':
+      case 'in progress':
+      case 'checking':
+      case 'initializing':
+        return styles.pending;
+      case 'low':
+      case 'standby':
+      case 'stable':
+        return styles.stable;
+      default:
+        return styles.inactive;
+    }
+  };
 
   const renderScreen = () => {
     if (!unlockedScreens.includes(screen)) {

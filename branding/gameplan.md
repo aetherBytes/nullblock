@@ -11,7 +11,11 @@ Nullblock is an MCP-driven platform on Solana, featuring:
 **Objective**: Launch MVP: A MCP Server and Client Interface with minimal features. Basic wallet analysis, swap mechanics, and easy to implement tooling on the MCP side. H.U.D like experience via a conversational LLM interface, with user-specific state stored in mutable **Memory Cards** (NFTs). The user only needs a Phantom wallet to use the platform. All user related data is stored in the user's wallet / blockchain or within the memory card NFTs.
 
 ## Tech Stack
-- **Helios (MCP Server)**: Python, FastAPI, `solana-py`, Helius RPC
+- **Helios**: Multi-service backend system:
+  - **helios-mcp**: Python, FastAPI - Dedicated MCP server for agent-based operations
+  - **helios-api**: Python, FastAPI - Standard API server for direct operations
+  - **helios-core**: Python - Shared core logic and utilities
+  - Dependencies: `solana-py`, Helius RPC
 - **Hecate (Frontend)**: TypeScript, React, Vite, SCSS, Tailwind, `@solana/web3.js`, Claude API, Any other LLM provider as well as a cheaper option.
 - **Erebus (Contracts)**: Rust, Solana Rust SDK, gRPC
 - **Storage**: Solana blockchain (Memory Cards as mutable NFTs via Metaplex)
@@ -24,6 +28,11 @@ Nullblock is an MCP-driven platform on Solana, featuring:
   - Random response system for invalid commands ✓
   - Wallet data endpoints (mock data for now) ✓
   - Memory Card data structure ✓
+  - Service Architecture:
+    - Split into MCP, API, and Core packages
+    - Shared utilities in helios-core
+    - API endpoints for system analysis
+    - MCP server for complex operations
 - **Hecate**:  
   - ECHO chat interface with cyberpunk styling ✓
   - Locked features (all except /logs) ✓
@@ -42,6 +51,18 @@ Nullblock is an MCP-driven platform on Solana, featuring:
   - Unlock translation matrix
   - Enable memory and health views
   - Add LLM response formatting
+  - ECHO Interface Updates:
+    - Base Camp Page:
+      - User Profile Banner:
+        - ID: Wallet address/name display (e.g. sage.sol)
+        - Ascent: User level system (Solo Leveling inspired)
+        - Nectar: Total resource value (SOL, tokens, NFTs)
+        - Memories: Active Memory Card count
+        - Matrix: User's translation matrix level/rarity
+      - Matrix System:
+        - Base Model: Basic LLM access
+        - Rarity Tiers: Enhanced features and benefits
+        - NFT-based progression system
 - **Memory Cards**:  
   - Implement minting flow
   - Store conversation history
