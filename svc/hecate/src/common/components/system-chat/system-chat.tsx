@@ -38,6 +38,7 @@ interface SystemChatProps {
   isCollapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
   isDigitizing?: boolean;
+  theme?: 'null' | 'light';
 }
 
 const SystemChat: React.FC<SystemChatProps> = ({ 
@@ -50,14 +51,16 @@ const SystemChat: React.FC<SystemChatProps> = ({
   walletHealth,
   isCollapsed = true,
   onCollapsedChange,
-  isDigitizing = false
+  isDigitizing = false,
+  theme = 'null'
 }) => {
   const [input, setInput] = useState('');
-  const [isFullScreen, setIsFullScreen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<'room' | 'theme' | null>(null);
   const [lastSeenMessageId, setLastSeenMessageId] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const chatRooms = [
     { id: 'logs', name: '/logs', available: true },
@@ -66,12 +69,29 @@ const SystemChat: React.FC<SystemChatProps> = ({
     { id: 'reality', name: '/reality', available: false }
   ];
 
+  const themes = [
+    { id: 'null', name: 'NULL', description: 'Minimalist dark interface', available: true },
+    { id: 'light', name: 'NULL-LIGHT', description: 'Minimalist light interface', available: true }
+  ];
+
   // Update collapsed state when prop changes
   useEffect(() => {
     if (onCollapsedChange) {
       onCollapsedChange(isCollapsed);
     }
   }, [isCollapsed]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Check if there are any new pending action messages
   const hasNewActionMessages = messages.some(msg => 
@@ -85,6 +105,14 @@ const SystemChat: React.FC<SystemChatProps> = ({
     }
     const maxId = Math.max(...messages.map(msg => msg.id), 0);
     setLastSeenMessageId(maxId);
+  };
+
+  const handleRoomClick = () => {
+    setActiveDropdown(activeDropdown === 'room' ? null : 'room');
+  };
+
+  const handleThemeClick = () => {
+    setActiveDropdown(activeDropdown === 'theme' ? null : 'theme');
   };
 
   const handleRoomSelect = (roomId: string) => {
@@ -122,8 +150,46 @@ const SystemChat: React.FC<SystemChatProps> = ({
       return <p className={styles.assistant}>{text}</p>;
     }
 
-    // For formatted messages (those containing our ASCII art boxes), preserve formatting
+    // For formatted messages (those containing our ASCII art boxes), convert to a themed list
     if (text.includes('╭') || text.includes('╰')) {
+      // Extract the content between the box lines
+      const lines = text.split('\n');
+      const contentLines = lines.filter(line => {
+        const trimmed = line.trim();
+        return trimmed && 
+               !trimmed.includes('╭') && 
+               !trimmed.includes('╮') && 
+               !trimmed.includes('╯') && 
+               !trimmed.includes('╰') && 
+               !trimmed.includes('─') &&
+               trimmed.includes('│');
+      });
+      
+      // If we have content, render it as a list
+      if (contentLines.length > 0) {
+        return (
+          <div className={styles.statusList}>
+            {contentLines.map((line, index) => {
+              // Split by the vertical bar and clean up
+              const parts = line.split('│').filter(part => part.trim());
+              if (parts.length < 2) return null;
+              
+              const label = parts[0].trim();
+              const value = parts[1].trim();
+              
+              if (!label) return null;
+              return (
+                <div key={index} className={styles.statusItem}>
+                  <span className={styles.statusLabel}>{label}</span>
+                  <span className={styles.statusValue}>{value}</span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+      
+      // If no content was found, fall back to the original text
       return <pre className={styles.formattedOutput}>{text}</pre>;
     }
 
@@ -179,35 +245,78 @@ const SystemChat: React.FC<SystemChatProps> = ({
     return styles.high;
   };
 
+  const handleThemeSelect = (themeId: string) => {
+    const selectedTheme = themes.find(t => t.id === themeId);
+    if (selectedTheme && selectedTheme.available) {
+      if (onRoomChange) {
+        onRoomChange(`/theme/${themeId}`);
+      }
+    }
+  };
+
   return isCollapsed ? (
     <button 
-      className={`${styles.collapsedButton} ${isEchoActive ? styles.withEcho : ''} ${hasNewActionMessages ? styles.hasNotification : ''}`}
+      className={`${styles.collapsedButton} ${styles[theme]} ${isEchoActive ? styles.withEcho : ''} ${hasNewActionMessages ? styles.hasNotification : ''}`}
       onClick={handleChatOpen}
     >
-      [ ECHO ]
+      E.C.H.O
     </button>
   ) : (
-    <div className={`${styles.chatContainer} ${isEchoActive ? styles.withEcho : ''} ${isFullScreen ? styles.fullScreen : ''}`}>
+    <div className={`${styles.chatContainer} ${styles[theme]} ${isEchoActive ? styles.withEcho : ''}`}>
       <div className={styles.hudWindow}>
         <div className={styles.chatHeader}>
-          <div className={styles.roomSelector}>
+          <div className={styles.roomSelector} ref={dropdownRef}>
             <button 
-              className={styles.dropdownButton}
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className={styles.roomButton}
+              onClick={handleRoomClick}
             >
               [ {currentRoom} ]
             </button>
-            {isDropdownOpen && (
+            {activeDropdown === 'room' && (
               <div className={styles.dropdownContent}>
-                {chatRooms.map(room => (
-                  <button
-                    key={room.id}
-                    className={`${styles.roomOption} ${!room.available ? styles.disabled : ''}`}
-                    onClick={() => handleRoomSelect(room.id)}
-                  >
-                    {room.name} {!room.available && '(locked)'}
-                  </button>
-                ))}
+                <div className={styles.dropdownSection}>
+                  <div className={styles.sectionTitle}>Rooms</div>
+                  {chatRooms.map(room => (
+                    <button
+                      key={room.id}
+                      className={`${styles.roomOption} ${!room.available ? styles.disabled : ''}`}
+                      onClick={() => {
+                        handleRoomSelect(room.id);
+                        setActiveDropdown(null);
+                      }}
+                      disabled={!room.available}
+                    >
+                      {room.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <button 
+              className={styles.themeButton}
+              onClick={handleThemeClick}
+            >
+              [ /{theme} ]
+            </button>
+            {activeDropdown === 'theme' && (
+              <div className={styles.dropdownContent}>
+                <div className={styles.dropdownSection}>
+                  <div className={styles.sectionTitle}>Themes</div>
+                  {themes.map(t => (
+                    <button
+                      key={t.id}
+                      className={`${styles.themeOption} ${t.id === theme ? styles.active : ''} ${!t.available ? styles.disabled : ''}`}
+                      onClick={() => {
+                        handleThemeSelect(t.id);
+                        setActiveDropdown(null);
+                      }}
+                      disabled={!t.available}
+                    >
+                      {t.name}
+                      <span className={styles.themeDescription}>{t.description}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -217,12 +326,6 @@ const SystemChat: React.FC<SystemChatProps> = ({
               onClick={() => onCollapsedChange?.(true)}
             >
               [ Collapse ]
-            </button>
-            <button 
-              className={styles.toggleButton}
-              onClick={() => setIsFullScreen(!isFullScreen)}
-            >
-              {isFullScreen ? '[ Minimize ]' : '[ Expand ]'}
             </button>
           </div>
         </div>
@@ -256,7 +359,7 @@ const SystemChat: React.FC<SystemChatProps> = ({
             spellCheck={false}
             disabled={isProcessing}
           />
-          <span className={styles.invalidText}>translation matrix invalid</span>
+          <span className={styles.invalidText}>matrix invalid</span>
         </div>
       </div>
     </div>

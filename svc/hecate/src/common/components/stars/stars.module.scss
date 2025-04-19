@@ -7,3 +7,20 @@
   z-index: 1;
 }
 
+// Theme-specific styles
+.null {
+  // Default theme - no additional styles needed
+}
+
+.matrix {
+  filter: hue-rotate(90deg) brightness(1.2);
+}
+
+.cyber {
+  filter: hue-rotate(180deg) brightness(1.2);
+}
+
+.light {
+  filter: brightness(1.5) contrast(0.8);
+}
+

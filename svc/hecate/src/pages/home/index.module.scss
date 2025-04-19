@@ -22,6 +22,13 @@ $alert-color: #ff4500; /* Orange for "System Notification" */
 $black-glow: rgba(0, 0, 0, 0.8);
 $flame-glow: rgba(40, 10, 0, 0.25); /* Darkest, most muted orange-brown yet */
 
+/* Theme variables */
+$null-bg: #000;
+$null-text: #0f0;
+$light-bg: #fff;
+$light-text: #000;
+$light-accent: #2a4a6a; /* Darker blue for light theme */
+
 html, body {
   height: 100%;
   margin: 0;
@@ -116,23 +123,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .fire {
-  position: absolute;
-  bottom: -50px;
-  right: 10%;
-  width: 800px;
-  height: 600px;
-  background-image: url('/fire.webm');
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: contain;
-  opacity: 0.8;
-  mix-blend-mode: screen;
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Campfire with orange flicker */
-.fire {
   position: fixed;
   bottom: 10px;
   right: 15%;
@@ -144,6 +134,8 @@ h1, h2, h3, h4, h5, h6 {
   animation: campfireFlicker 1s steps(8) infinite, campfireGlow 1.5s ease-in-out infinite alternate;
   animation-timing-function: step-end;
   overflow: hidden;
+  mix-blend-mode: screen;
+  z-index: 2;
 }
 
 @keyframes campfireFlicker {
@@ -207,3 +199,90 @@ h1, h2, h3, h4, h5, h6 {
 .robot, .trader1, .trader2, .trader3 {
   filter: brightness(0.6);
 }
+
+// Theme styles
+.appContainer {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.theme-null {
+  background: $null-bg;
+  color: $null-text;
+}
+
+.theme-light {
+  .backgroundImage {
+    background-color: #f0f0f0;
+    
+    &::after {
+      background: linear-gradient(to bottom,
+        transparent,
+        rgba(0, 0, 0, 0.05) 20%,
+        rgba(0, 0, 0, 0.05) 80%,
+        transparent
+      );
+    }
+    
+    &::before {
+      background: radial-gradient(ellipse at center, rgba(42, 74, 106, 0.15) 0%, transparent 70%);
+    }
+  }
+  
+  .scene {
+    .fire {
+      /* Reset all previous styles */
+      all: unset;
+      
+      /* Basic positioning */
+      position: fixed;
+      bottom: 10px;
+      right: 15%;
+      transform: translateX(-50%);
+      width: 128px;
+      height: 240px;
+      z-index: 10;
+      
+      /* Fire sprite sheet */
+      background-image: url('../../assets/images/campfire-sheet.png');
+      background-size: 1024px 256px;
+      background-repeat: no-repeat;
+      background-position: 0px 0px;
+      
+      /* Animation */
+      animation: lightFireFlicker 1s steps(8) infinite;
+      
+      /* Add a container for the glow effect */
+      &::after {
+        content: '';
+        position: absolute;
+        top: -20px;
+        left: -20px;
+        right: -20px;
+        bottom: -20px;
+        background: radial-gradient(ellipse at center, rgba(255, 165, 0, 0.4) 0%, transparent 70%);
+        z-index: -1;
+        animation: lightFireGlow 2s ease-in-out infinite alternate;
+      }
+    }
+  }
+}
+
+@keyframes lightFireFlicker {
+  0%, 12.49% { background-position: 0px 0px; }
+  12.5%, 24.99% { background-position: -128px 0px; }
+  25%, 37.49% { background-position: -256px 0px; }
+  37.5%, 49.99% { background-position: -384px 0px; }
+  50%, 62.49% { background-position: -512px 0px; }
+  62.5%, 74.99% { background-position: -640px 0px; }
+  75%, 87.49% { background-position: -768px 0px; }
+  87.5%, 100% { background-position: -896px 0px; }
+}
+
+@keyframes lightFireGlow {
+  0% { opacity: 0.3; transform: scale(0.95); }
+  100% { opacity: 0.6; transform: scale(1.05); }
+}
+
