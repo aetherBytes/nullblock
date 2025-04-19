@@ -32,7 +32,7 @@ interface SystemAnalysis {
   locked: boolean;
 }
 
-const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, theme = 'null', onClose, onThemeChange }) => {
+const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, theme = 'light', onClose, onThemeChange }) => {
   const [screen, setScreen] = useState<Screen>('camp');
   const [walletData, setWalletData] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile>({

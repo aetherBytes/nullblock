@@ -9,7 +9,7 @@ interface StarsProps {
   theme?: 'null' | 'matrix' | 'cyber' | 'light';
 }
 
-const Stars = ({ theme = 'null' }: StarsProps) => {
+const Stars = ({ theme = 'light' }: StarsProps) => {
   const ref = useRef<ThreePoints>(null);
   const [sphere] = useState<Float32Array>(() => {
     const positions = new Float32Array(5000);
@@ -56,7 +56,7 @@ interface StarsCanvasProps {
   theme?: 'null' | 'matrix' | 'cyber' | 'light';
 }
 
-const StarsCanvas = ({ theme = 'null' }: StarsCanvasProps) => {
+const StarsCanvas = ({ theme = 'light' }: StarsCanvasProps) => {
   return (
     <div className={`${styles.starsCanvas} ${styles[theme]}`}>
       <Canvas camera={{ position: [0, 0, 1] }}>

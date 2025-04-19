@@ -7,14 +7,14 @@ interface DigitizingTextProps {
   text: string;
   duration?: number; // Duration in milliseconds before the text fades away (0 means no auto-fade)
   onComplete?: () => void;
-  theme?: DigitizingTheme | 'null' | 'light';
+  theme?: DigitizingTheme | 'light';
 }
 
 const DigitizingText: React.FC<DigitizingTextProps> = ({ 
   text, 
   duration = 10000, // Default 10 seconds
   onComplete,
-  theme = 'cyberpunk' // Default to cyberpunk theme
+  theme = 'light' // Default to light theme
 }) => {
   const [displayText, setDisplayText] = useState<string>('');
   const [isVisible, setIsVisible] = useState<boolean>(true);
@@ -57,8 +57,6 @@ const DigitizingText: React.FC<DigitizingTextProps> = ({
   // Map app themes to digitizing themes
   const getDigitizingTheme = () => {
     switch (theme) {
-      case 'null':
-        return 'blue';
       case 'light':
         return 'light';
       default:

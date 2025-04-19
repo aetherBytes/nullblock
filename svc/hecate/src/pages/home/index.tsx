@@ -28,7 +28,7 @@ const Home: React.FC = () => {
   const [isDigitizing, setIsDigitizing] = useState<boolean>(false);
   const [showWelcomeText, setShowWelcomeText] = useState<boolean>(true);
   const [echoScreenSelected, setEchoScreenSelected] = useState<boolean>(false);
-  const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('null');
+  const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('light');
 
   const automaticResponses = [
     {
