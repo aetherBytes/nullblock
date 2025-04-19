@@ -28,10 +28,11 @@ const Home: React.FC = () => {
   const [isDigitizing, setIsDigitizing] = useState<boolean>(false);
   const [showWelcomeText, setShowWelcomeText] = useState<boolean>(true);
   const [echoScreenSelected, setEchoScreenSelected] = useState<boolean>(false);
+  const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('null');
 
   const automaticResponses = [
     {
-      alert: "Error: Invalid input pattern.",
+      alert: "Error: Invalid pattern detected.",
       message: "System: Recalibrating..."
     },
     {
@@ -43,7 +44,7 @@ const Home: React.FC = () => {
       message: "System: Resyncing..."
     },
     {
-      alert: "Error: Security mismatch.",
+      alert: "Error: Security breach.",
       message: "System: Realigning..."
     },
     {
@@ -137,6 +138,21 @@ const Home: React.FC = () => {
   };
 
   const handleRoomChange = (room: string) => {
+    if (room.startsWith('/theme/')) {
+      const themeId = room.split('/theme/')[1] as 'null' | 'light';
+      setCurrentTheme(themeId);
+      
+      // Add a message about theme change
+      const themeName = themeId === 'null' ? 'NULL' : 'LIGHT';
+      
+      addMessage({
+        id: messages.length + 1,
+        text: `System: Theme changed to ${themeName}`,
+        type: 'update'
+      });
+      
+      return;
+    }
     setCurrentRoom(room);
     if (room.startsWith('/echo')) {
       setEchoScreenSelected(true);
@@ -172,17 +188,17 @@ const Home: React.FC = () => {
           ...baseMessages,
           {
             id: 2,
-            text: "System: Wallet detected.",
+            text: "System: Neural interface detected.",
             type: "message"
           },
           {
             id: 3,
-            text: "System Update: Ready to connect.",
+            text: "System Update: Awaiting connection.",
             type: "update"
           },
           {
             id: 4,
-            text: "Connect Wallet",
+            text: "Connect Neural Interface",
             type: "action",
             action: manualConnect,
             actionText: "Connect"
@@ -193,20 +209,20 @@ const Home: React.FC = () => {
           ...baseMessages,
           {
             id: 2,
-            text: "Error: No wallet found.",
+            text: "Error: Neural interface not found.",
             type: "critical"
           },
           {
             id: 3,
-            text: "System: Wallet required for connection.",
+            text: "System: Interface required for access.",
             type: "message"
           },
           {
             id: 4,
-            text: "Install Phantom",
+            text: "Acquire Neural Interface",
             type: "action",
             action: () => window.open('https://phantom.app/', '_blank'),
-            actionText: "Install Wallet"
+            actionText: "Install Interface"
           }
         ];
       }
@@ -319,7 +335,7 @@ const Home: React.FC = () => {
           setShowEcho(false);
           addMessage({
             id: messages.length + 1,
-            text: "Error: Authentication failed. Please retry.",
+            text: "Error: Authentication failed. Retry required.",
             type: "critical"
           });
         }
@@ -343,11 +359,11 @@ const Home: React.FC = () => {
           localStorage.removeItem('chatCollapsedState');
           setMessages([{
             id: 1,
-            text: "System: Disconnected from neural interface.",
+            text: "System: Neural interface disconnected.",
             type: "message"
           }, {
             id: 2,
-            text: "System Alert: Session terminated. Re-authentication required for next connection.",
+            text: "System Alert: Session terminated. Re-authentication required.",
             type: "alert"
           }]);
           setMessageIndex(0);
@@ -411,27 +427,27 @@ const Home: React.FC = () => {
         setTimeout(() => {
           addMessage({
             id: messages.length + 6,
-            text: "SYSTEM ALERT: Matrix Integration Required",
+            text: "System Alert: Matrix Integration Required",
             type: "alert"
           });
           addMessage({
             id: messages.length + 7,
-            text: "Welcome to Nullblock! Your journey into advanced trading begins with the Matrix NFT.",
+            text: "Welcome to the void. Your journey begins with the Matrix.",
             type: "message"
           });
           addMessage({
             id: messages.length + 8,
-            text: "The Matrix NFT is your key to unlocking enhanced features:",
+            text: "The Matrix unlocks enhanced capabilities:",
             type: "message"
           });
           addMessage({
             id: messages.length + 9,
-            text: "• Advanced trading algorithms\n• Real-time market analysis\n• Custom strategy deployment\n• Priority access to new features\n• Enhanced security protocols",
+            text: "• Advanced algorithms\n• Real-time analysis\n• Strategy deployment\n• Priority access\n• Enhanced security",
             type: "message"
           });
           addMessage({
             id: messages.length + 10,
-            text: "Matrix NFTs come in different rarity tiers, each providing unique benefits and capabilities.",
+            text: "Matrix tiers determine your power level.",
             type: "message"
           });
           addMessage({
@@ -439,7 +455,7 @@ const Home: React.FC = () => {
             text: "MARKETPLACE",
             type: "action",
             action: () => window.dispatchEvent(new CustomEvent('navigateToMarket')),
-            actionText: "[ ACQUIRE MATRIX NFT ]"
+            actionText: "[ ACQUIRE MATRIX ]"
           });
         }, 4500);
       }
@@ -450,9 +466,9 @@ const Home: React.FC = () => {
   }, [messages]);
 
   return (
-    <>
+    <div className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]}`}>
       <div className={styles.backgroundImage} />
-      <StarsCanvas />
+      <StarsCanvas theme={currentTheme} />
       <div className={styles.scene}>
         <div className={styles.fire}></div>
       </div>
@@ -460,7 +476,7 @@ const Home: React.FC = () => {
         <DigitizingText 
           text="Welcome to Nullblock. Interfaces for the new world." 
           duration={0}
-          theme="cyberpunk"
+          theme={currentTheme === 'null' ? 'null-dark' : 'light'}
         />
       )}
       <SystemChat 
@@ -472,6 +488,7 @@ const Home: React.FC = () => {
         isCollapsed={chatCollapsed}
         onCollapsedChange={setChatCollapsed}
         isDigitizing={isDigitizing}
+        theme={currentTheme}
       />
       {showEcho && <Echo 
         publicKey={publicKey} 
@@ -480,8 +497,17 @@ const Home: React.FC = () => {
           window.dispatchEvent(new CustomEvent('expandSystemChat'));
           setChatCollapsed(false);
         }}
+        theme={currentTheme}
+        onClose={() => setShowEcho(false)}
+        onThemeChange={(theme) => {
+          if (theme === 'cyber') {
+            setCurrentTheme('null');
+          } else {
+            setCurrentTheme(theme as 'null' | 'light');
+          }
+        }}
       />}
-    </>
+    </div>
   );
 };
 

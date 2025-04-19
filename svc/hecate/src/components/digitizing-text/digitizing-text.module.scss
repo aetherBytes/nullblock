@@ -10,10 +10,11 @@ $echo-border: #3a3a3a;
 $text-color: #b0b0b0;
 $alert-color: #ff4500;
 
-// Cyberpunk theme colors
-$cyberpunk-primary: #00f7ff;
-$cyberpunk-secondary: #ff00a0;
-$cyberpunk-accent: #ffd700;
+// Theme colors for light theme
+$light-blue: #2a4a6a; // Darker blue for light theme
+$light-accent: #2a4a6a; // Darker blue for light theme
+$light-text: #333333;
+$light-bg: #ffffff;
 
 // Base styles
 .digitizingText {
@@ -56,30 +57,13 @@ $cyberpunk-accent: #ffd700;
   }
 }
 
-.green {
-  color: $echo-green;
-  text-shadow: 0 0 10px rgba($echo-green, 0.7);
+// Add light theme variation
+.light {
+  color: $light-blue;
+  text-shadow: 0 0 10px rgba($light-blue, 0.7);
   
   .cursor {
-    background-color: $echo-green;
-  }
-}
-
-.orange {
-  color: $echo-orange;
-  text-shadow: 0 0 10px rgba($echo-orange, 0.7);
-  
-  .cursor {
-    background-color: $echo-orange;
-  }
-}
-
-.cyberpunk {
-  color: $cyberpunk-primary;
-  text-shadow: 0 0 10px rgba($cyberpunk-primary, 0.7);
-  
-  .cursor {
-    background-color: $cyberpunk-primary;
+    background-color: $light-blue;
   }
 }
 
@@ -129,122 +113,43 @@ $cyberpunk-accent: #ffd700;
   }
 }
 
-.green {
+// Add glitch animation for light theme
+.light {
   @keyframes glitch {
     0% {
-      text-shadow: 0.05em 0 0 rgba($echo-blue, 0.75),
-                  -0.025em -0.05em 0 rgba($echo-orange, 0.75),
-                  0.025em 0.05em 0 rgba($echo-green, 0.75);
+      text-shadow: 0.05em 0 0 rgba($light-blue, 0.75),
+                  -0.025em -0.05em 0 rgba($echo-green, 0.75),
+                  0.025em 0.05em 0 rgba($light-blue, 0.75);
     }
     14% {
-      text-shadow: 0.05em 0 0 rgba($echo-blue, 0.75),
-                  -0.025em -0.05em 0 rgba($echo-orange, 0.75),
-                  0.025em 0.05em 0 rgba($echo-green, 0.75);
+      text-shadow: 0.05em 0 0 rgba($light-blue, 0.75),
+                  -0.025em -0.05em 0 rgba($echo-green, 0.75),
+                  0.025em 0.05em 0 rgba($light-blue, 0.75);
     }
     15% {
-      text-shadow: -0.05em -0.025em 0 rgba($echo-blue, 0.75),
-                  0.025em 0.025em 0 rgba($echo-orange, 0.75),
-                  -0.05em -0.05em 0 rgba($echo-green, 0.75);
+      text-shadow: -0.05em -0.025em 0 rgba($light-blue, 0.75),
+                  0.025em 0.025em 0 rgba($echo-green, 0.75),
+                  -0.05em -0.05em 0 rgba($light-blue, 0.75);
     }
     49% {
-      text-shadow: -0.05em -0.025em 0 rgba($echo-blue, 0.75),
-                  0.025em 0.025em 0 rgba($echo-orange, 0.75),
-                  -0.05em -0.05em 0 rgba($echo-green, 0.75);
+      text-shadow: -0.05em -0.025em 0 rgba($light-blue, 0.75),
+                  0.025em 0.025em 0 rgba($echo-green, 0.75),
+                  -0.05em -0.05em 0 rgba($light-blue, 0.75);
     }
     50% {
-      text-shadow: 0.025em 0.05em 0 rgba($echo-blue, 0.75),
-                  0.05em 0 0 rgba($echo-orange, 0.75),
-                  0 -0.05em 0 rgba($echo-green, 0.75);
+      text-shadow: 0.025em 0.05em 0 rgba($light-blue, 0.75),
+                  0.05em 0 0 rgba($echo-green, 0.75),
+                  0 -0.05em 0 rgba($light-blue, 0.75);
     }
     99% {
-      text-shadow: 0.025em 0.05em 0 rgba($echo-blue, 0.75),
-                  0.05em 0 0 rgba($echo-orange, 0.75),
-                  0 -0.05em 0 rgba($echo-green, 0.75);
+      text-shadow: 0.025em 0.05em 0 rgba($light-blue, 0.75),
+                  0.05em 0 0 rgba($echo-green, 0.75),
+                  0 -0.05em 0 rgba($light-blue, 0.75);
     }
     100% {
-      text-shadow: -0.025em 0 0 rgba($echo-blue, 0.75),
-                  -0.025em -0.025em 0 rgba($echo-orange, 0.75),
-                  -0.025em -0.05em 0 rgba($echo-green, 0.75);
+      text-shadow: -0.025em 0 0 rgba($light-blue, 0.75),
+                  -0.025em -0.025em 0 rgba($echo-green, 0.75),
+                  -0.025em -0.05em 0 rgba($light-blue, 0.75);
     }
   }
 }
-
-.orange {
-  @keyframes glitch {
-    0% {
-      text-shadow: 0.05em 0 0 rgba($echo-green, 0.75),
-                  -0.025em -0.05em 0 rgba($echo-blue, 0.75),
-                  0.025em 0.05em 0 rgba($echo-orange, 0.75);
-    }
-    14% {
-      text-shadow: 0.05em 0 0 rgba($echo-green, 0.75),
-                  -0.025em -0.05em 0 rgba($echo-blue, 0.75),
-                  0.025em 0.05em 0 rgba($echo-orange, 0.75);
-    }
-    15% {
-      text-shadow: -0.05em -0.025em 0 rgba($echo-green, 0.75),
-                  0.025em 0.025em 0 rgba($echo-blue, 0.75),
-                  -0.05em -0.05em 0 rgba($echo-orange, 0.75);
-    }
-    49% {
-      text-shadow: -0.05em -0.025em 0 rgba($echo-green, 0.75),
-                  0.025em 0.025em 0 rgba($echo-blue, 0.75),
-                  -0.05em -0.05em 0 rgba($echo-orange, 0.75);
-    }
-    50% {
-      text-shadow: 0.025em 0.05em 0 rgba($echo-green, 0.75),
-                  0.05em 0 0 rgba($echo-blue, 0.75),
-                  0 -0.05em 0 rgba($echo-orange, 0.75);
-    }
-    99% {
-      text-shadow: 0.025em 0.05em 0 rgba($echo-green, 0.75),
-                  0.05em 0 0 rgba($echo-blue, 0.75),
-                  0 -0.05em 0 rgba($echo-orange, 0.75);
-    }
-    100% {
-      text-shadow: -0.025em 0 0 rgba($echo-green, 0.75),
-                  -0.025em -0.025em 0 rgba($echo-blue, 0.75),
-                  -0.025em -0.05em 0 rgba($echo-orange, 0.75);
-    }
-  }
-}
-
-.cyberpunk {
-  @keyframes glitch {
-    0% {
-      text-shadow: 0.05em 0 0 rgba($cyberpunk-secondary, 0.75),
-                  -0.025em -0.05em 0 rgba($cyberpunk-accent, 0.75),
-                  0.025em 0.05em 0 rgba($cyberpunk-primary, 0.75);
-    }
-    14% {
-      text-shadow: 0.05em 0 0 rgba($cyberpunk-secondary, 0.75),
-                  -0.025em -0.05em 0 rgba($cyberpunk-accent, 0.75),
-                  0.025em 0.05em 0 rgba($cyberpunk-primary, 0.75);
-    }
-    15% {
-      text-shadow: -0.05em -0.025em 0 rgba($cyberpunk-secondary, 0.75),
-                  0.025em 0.025em 0 rgba($cyberpunk-accent, 0.75),
-                  -0.05em -0.05em 0 rgba($cyberpunk-primary, 0.75);
-    }
-    49% {
-      text-shadow: -0.05em -0.025em 0 rgba($cyberpunk-secondary, 0.75),
-                  0.025em 0.025em 0 rgba($cyberpunk-accent, 0.75),
-                  -0.05em -0.05em 0 rgba($cyberpunk-primary, 0.75);
-    }
-    50% {
-      text-shadow: 0.025em 0.05em 0 rgba($cyberpunk-secondary, 0.75),
-                  0.05em 0 0 rgba($cyberpunk-accent, 0.75),
-                  0 -0.05em 0 rgba($cyberpunk-primary, 0.75);
-    }
-    99% {
-      text-shadow: 0.025em 0.05em 0 rgba($cyberpunk-secondary, 0.75),
-                  0.05em 0 0 rgba($cyberpunk-accent, 0.75),
-                  0 -0.05em 0 rgba($cyberpunk-primary, 0.75);
-    }
-    100% {
-      text-shadow: -0.025em 0 0 rgba($cyberpunk-secondary, 0.75),
-                  -0.025em -0.025em 0 rgba($cyberpunk-accent, 0.75),
-                  -0.025em -0.05em 0 rgba($cyberpunk-primary, 0.75);
-    }
-  }
-} 

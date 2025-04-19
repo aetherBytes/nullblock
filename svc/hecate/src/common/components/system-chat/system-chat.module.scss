@@ -2,71 +2,516 @@
 
 // Color Variables
 $background-dark: #0a0a0a;
-$echo-blue: #00a8ff;
+$echo-blue: #2a4a6a;
 $echo-purple: #b967ff;
 $echo-red: #ff3333;
 $echo-orange: #ff7f00;
 $echo-green: #00ff9d;
 $echo-gray: #808080;
 $text-color: #c8c8d0;
+$echo-cyan: #00ffff;
 
-.chatContainer {
-  position: fixed;
-  z-index: 1005;
-  bottom: 25vh;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 85%;
-   height: 50vh;
+// Theme Variables
+$null-dark-bg: rgba(18, 18, 20, 0.95);
+$null-dark-border: #444;
+$null-dark-text: #e0e0e0;
+$null-dark-accent: #4a90e2;
+$null-dark-hover: rgba(74, 144, 226, 0.15);
+$null-dark-disabled: #666;
+$null-dark-shadow: rgba(0, 0, 0, 0.2);
+
+$null-bg: rgba(255, 255, 255, 0.95);
+$null-border: #666;
+$null-text: #333;
+$null-accent: #4a90e2;
+$null-hover: rgba(74, 144, 226, 0.1);
+$null-disabled: #999;
+$null-shadow: rgba(0, 0, 0, 0.1);
+
+$light-bg: rgba(255, 255, 255, 0.95);
+$light-border: #666;
+$light-text: #333;
+$light-accent: #2a4a6a;
+$light-hover: rgba(42, 74, 106, 0.1);
+$light-disabled: #999;
+$light-shadow: rgba(0, 0, 0, 0.1);
+
+// Theme Mixins
+@mixin theme-colors($bg, $border, $text, $accent: $border, $hover: rgba($border, 0.1), $disabled: rgba($text, 0.5), $shadow: rgba(0, 0, 0, 0.3)) {
+  background: $bg;
+  border-color: $border;
+  color: $text;
+  box-shadow: 0 0 10px $shadow;
   
-  &.withEcho {
-    bottom: 8rem;
-    height: 20vh;
-    min-height: 200px;
-    max-height: calc(100vh - 45vh);
-    padding: 0;
+  .hudWindow {
+    background-color: rgba($bg, 0.06);
+    border-color: rgba($border, 0.1);
+    color: $text;
+  }
+  
+  .chatHeader {
+    border-bottom-color: rgba($border, 0.2);
+  }
+  
+  .dropdownButton, .toggleButton {
+    color: $accent;
     
-    .hudWindow {
-      padding: 0.5rem 1rem;
-      background-color: rgba($background-dark, 0.85);
+    &:hover {
+      text-shadow: 0 0 8px rgba($accent, 0.5);
+    }
+  }
+  
+  .messageItem {
+    &.message .system {
+      color: $accent;
+    }
+    
+    &.alert .system {
+      color: $echo-orange;
+    }
+    
+    &.critical .system, &.error .system {
+      color: $echo-red;
+    }
+    
+    &.update .system {
+      color: $echo-green;
+    }
+    
+    &.user {
+      border-right-color: rgba($accent, 0.3);
+      background: rgba($accent, 0.05);
       
-      .chatHeader {
-        padding: 0 0.25rem;
+      p {
+        color: $text;
       }
+    }
+    
+    .actionButton {
+      background: rgba($bg, 0.2);
+      border-color: rgba($accent, 0.3);
+      color: $accent;
       
-      .messageList {
-        padding: 0 0.25rem;
-      }
-      
-      .inputContainer {
-        input {
-          width: calc(100% - 1rem);
-          margin: 0 0.5rem;
-        }
+      &:hover {
+        background: $hover;
+        text-shadow: 0 0 8px rgba($accent, 0.5);
       }
     }
   }
+  
+  .statusList {
+    background: rgba($bg, 0.3);
+    border-color: rgba($border, 0.2);
+    
+    .statusLabel {
+      color: $accent;
+    }
+    
+    .statusValue {
+      color: $text;
+      background: rgba($bg, 0.2);
+    }
+  }
 
-  &.fullScreen {
-    position: fixed;
-    top: 8rem;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 85%;
-    max-width: 1200px;
-    height: calc(100vh - 12rem);
-    margin: 0;
-    z-index: 1005;
-
-    &.withEcho {
-      height: calc(100vh - 12rem);
-      max-height: calc(100vh - 12rem);
-      top: 8rem;
+  .inputContainer {
+    border-top-color: rgba($border, 0.1);
+    
+    input {
+      background: rgba($bg, 0.2);
+      border-color: rgba($accent, 0.2);
+      color: $text;
       
-      .hudWindow {
-        background-color: rgba($background-dark, 0.85);
-        backdrop-filter: blur(10px);
+      &:disabled {
+        background: rgba($bg, 0.4);
+        
+        &::placeholder {
+          color: $disabled;
+        }
       }
+    }
+    
+    .invalidText {
+      color: rgba($echo-red, 0.7);
+    }
+  }
+
+  .dropdownContent {
+    background: rgba($bg, 0.95);
+    border-color: rgba($border, 0.2);
+    
+    .sectionTitle {
+      color: $accent;
+    }
+    
+    .roomOption {
+      color: $accent;
+      
+      &:hover:not(.disabled) {
+        background: $hover;
+      }
+      
+      &.disabled {
+        color: $disabled;
+      }
+    }
+    
+    .themeOption {
+      color: $accent;
+      
+      &:hover {
+        background: $hover;
+      }
+      
+      &.active {
+        background: $hover;
+        font-weight: bold;
+      }
+      
+      .themeDescription {
+        color: $text;
+      }
+    }
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba($bg, 0.1);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba($accent, 0.3);
+  }
+}
+
+.chatContainer {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: auto;
+  min-width: 400px;
+  max-width: 800px;
+  height: 500px;
+  max-height: 80vh;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid $echo-blue;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px rgba($echo-blue, 0.3);
+
+  &.withEcho {
+    border-color: $echo-red;
+    box-shadow: 0 0 10px rgba($echo-red, 0.3);
+  }
+
+  &.null-dark {
+    @include theme-colors($null-dark-bg, $null-dark-border, $null-dark-text, $null-dark-accent, $null-dark-hover, $null-dark-disabled, $null-dark-shadow);
+    
+    .hudWindow {
+      background-color: $null-dark-bg;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 20px 20px;
+      border-color: rgba(255, 255, 255, 0.1);
+      color: $null-dark-text;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2),
+                  0 0 40px rgba(0, 0, 0, 0.2);
+      
+      &::before {
+        background: linear-gradient(90deg, 
+          transparent 0%,
+          rgba(74, 144, 226, 0.05) 25%,
+          rgba(74, 144, 226, 0.1) 50%,
+          rgba(74, 144, 226, 0.05) 75%,
+          transparent 100%
+        );
+      }
+    }
+    
+    .chatHeader {
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .messageItem {
+      &.message .system {
+        color: $null-dark-accent;
+      }
+      
+      &.alert .system {
+        color: $echo-cyan;
+      }
+      
+      &.critical .system, &.error .system {
+        color: $echo-red;
+      }
+      
+      &.update .system {
+        color: $echo-green;
+      }
+      
+      &.user {
+        border-right-color: rgba($null-dark-accent, 0.3);
+        background: rgba($null-dark-accent, 0.1);
+        
+        p {
+          color: $null-dark-text;
+        }
+      }
+      
+      .actionButton {
+        background: rgba($null-dark-accent, 0.15);
+        border-color: rgba($null-dark-accent, 0.5);
+        color: $null-dark-accent;
+        font-weight: 600;
+        
+        &:hover {
+          background: rgba($null-dark-accent, 0.2);
+          border-color: $null-dark-accent;
+          text-shadow: 0 0 8px rgba($null-dark-accent, 0.5);
+        }
+      }
+    }
+    
+    .statusList {
+      background: rgba(0, 0, 0, 0.3);
+      border-color: rgba(255, 255, 255, 0.1);
+      
+      .statusLabel {
+        color: $null-dark-accent;
+      }
+      
+      .statusValue {
+        color: $null-dark-text;
+        background: rgba(0, 0, 0, 0.2);
+      }
+    }
+
+    .inputContainer {
+      border-top-color: rgba(255, 255, 255, 0.1);
+      
+      input {
+        background: rgba(0, 0, 0, 0.3);
+        border-color: rgba($null-dark-accent, 0.2);
+        color: $null-dark-text;
+        
+        &:disabled {
+          background: rgba(0, 0, 0, 0.2);
+          
+          &::placeholder {
+            color: $null-dark-disabled;
+          }
+        }
+      }
+      
+      .invalidText {
+        color: rgba($echo-red, 0.8);
+      }
+    }
+
+    .dropdownContent {
+      background: $null-dark-bg;
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      
+      .sectionTitle {
+        color: $null-dark-accent;
+      }
+      
+      .roomOption {
+        color: $null-dark-accent;
+        
+        &:hover:not(.disabled) {
+          background: $null-dark-hover;
+        }
+        
+        &.disabled {
+          color: $null-dark-disabled;
+        }
+      }
+      
+      .themeOption {
+        color: $null-dark-accent;
+        
+        &:hover {
+          background: $null-dark-hover;
+        }
+        
+        &.active {
+          background: $null-dark-hover;
+          font-weight: bold;
+        }
+        
+        .themeDescription {
+          color: $null-dark-text;
+        }
+      }
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba($null-dark-accent, 0.3);
+      
+      &:hover {
+        background: rgba($null-dark-accent, 0.4);
+      }
+    }
+  }
+  
+
+  &.light {
+    @include theme-colors($light-bg, $light-border, $light-text, $light-accent, $light-hover, $light-disabled, $light-shadow);
+    
+    .hudWindow {
+      background-color: rgba(255, 255, 255, 0.95);
+      background-image: 
+        linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+      background-size: 20px 20px;
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #333;
+      box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.05),
+                  0 0 30px rgba(255, 255, 255, 0.1);
+      
+      &::before {
+        background: linear-gradient(90deg, 
+          transparent 0%,
+          rgba(42, 74, 106, 0.1) 25%,
+          rgba(42, 74, 106, 0.2) 50%,
+          rgba(42, 74, 106, 0.1) 75%,
+          transparent 100%
+        );
+      }
+    }
+    
+    .chatHeader {
+      border-bottom-color: rgba(0, 0, 0, 0.1);
+    }
+    
+    .messageItem {
+      &.message .system {
+        color: $light-accent;
+      }
+      
+      &.alert .system {
+        color: $light-accent;
+      }
+      
+      &.critical .system, &.error .system {
+        color: $echo-red;
+      }
+      
+      &.update .system {
+        color: $echo-green;
+      }
+      
+      &.user {
+        border-right-color: rgba($light-accent, 0.3);
+        background: rgba($light-accent, 0.05);
+        
+        p {
+          color: #333;
+        }
+      }
+      
+      .actionButton {
+        background: rgba($light-accent, 0.15);
+        border-color: rgba($light-accent, 0.5);
+        color: $light-accent;
+        font-weight: 600;
+        
+        &:hover {
+          background: rgba($light-accent, 0.2);
+          border-color: $light-accent;
+          text-shadow: 0 0 8px rgba($light-accent, 0.5);
+        }
+      }
+    }
+    
+    .statusList {
+      background: rgba(255, 255, 255, 0.7);
+      border-color: rgba(0, 0, 0, 0.1);
+      
+      .statusLabel {
+        color: $light-accent;
+      }
+      
+      .statusValue {
+        color: #333;
+        background: rgba(255, 255, 255, 0.8);
+      }
+    }
+
+    .inputContainer {
+      border-top-color: rgba(0, 0, 0, 0.1);
+      
+      input {
+        background: rgba(255, 255, 255, 0.8);
+        border-color: rgba($light-accent, 0.2);
+        color: #333;
+        
+        &:disabled {
+          background: rgba(255, 255, 255, 0.6);
+          
+          &::placeholder {
+            color: $light-disabled;
+          }
+        }
+      }
+      
+      .invalidText {
+        color: rgba($echo-red, 0.7);
+      }
+    }
+
+    .dropdownContent {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: rgba(0, 0, 0, 0.1);
+      
+      .sectionTitle {
+        color: $light-accent;
+      }
+      
+      .roomOption {
+        color: $light-accent;
+        
+        &:hover:not(.disabled) {
+          background: $light-hover;
+        }
+        
+        &.disabled {
+          color: $light-disabled;
+        }
+      }
+      
+      .themeOption {
+        color: $light-accent;
+        
+        &:hover {
+          background: $light-hover;
+        }
+        
+        &.active {
+          background: $light-hover;
+          font-weight: bold;
+        }
+        
+        .themeDescription {
+          color: #333;
+        }
+      }
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba($light-accent, 0.3);
     }
   }
 
@@ -75,37 +520,56 @@ $text-color: #c8c8d0;
     height: 100%;
     display: flex;
     flex-direction: column;
-    background-color: rgba($background-dark, 0.06);
-    background-image: linear-gradient(rgba($echo-gray, 0.006) 2px, transparent 2px),
-                    linear-gradient(90deg, rgba($echo-gray, 0.006) 2px, transparent 2px),
-                    radial-gradient(circle at 50% 50%, rgba(70, 35, 20, 0.015) 0%, transparent 70%);
-    background-size: 100% 6px, 6px 100%, 120% 120%;
-    background-position: center;
-    border: 1px solid rgba($echo-border, 0.1);
-    color: $echo-gray;
+    background-color: rgba($background-dark, 0.95);
+    border: 1px solid rgba($echo-cyan, 0.3);
+    color: $echo-cyan;
     padding: 1rem 2rem;
-    box-shadow: inset 0 0 15px rgba($echo-gray, 0.03),
-                0 0 30px rgba($background-dark, 0.1);
-    font-family: $batman-font;
-    animation: softEcho 20s infinite ease-in-out;
+    box-shadow: 
+      inset 0 0 15px rgba($echo-cyan, 0.1),
+      0 0 30px rgba($echo-cyan, 0.2);
+    font-family: 'Courier New', monospace;
     overflow: hidden;
 
+    // CRT scanline effect
     &::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, 
-        transparent 0%,
-        rgba($echo-blue, 0.1) 25%,
-        rgba($echo-blue, 0.2) 50%,
-        rgba($echo-blue, 0.1) 75%,
-        transparent 100%
+      bottom: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
       );
-      animation: scanlineGlow 4s infinite ease-in-out;
+      pointer-events: none;
+      z-index: 2;
     }
+
+    // CRT screen glow
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(
+        circle at center,
+        rgba($echo-cyan, 0.1) 0%,
+        transparent 70%
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    // Grid background
+    background-image: 
+      linear-gradient(rgba($echo-cyan, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba($echo-cyan, 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
 
     .chatHeader {
       display: flex;
@@ -113,74 +577,54 @@ $text-color: #c8c8d0;
       align-items: center;
       margin-bottom: 1rem;
       padding: 0 0.5rem;
-      border-bottom: 1px solid rgba($echo-blue, 0.2);
+      border-bottom: 1px solid rgba($echo-blue, 0.4);
 
       .roomSelector {
+        display: flex;
+        gap: 16px;
+        align-items: center;
         position: relative;
+        padding: 0 16px;
+      }
 
-        .dropdownButton {
-          background: none;
-          border: none;
-          color: $echo-blue;
-          font-family: $batman-font;
-          font-size: 1rem;
-          cursor: pointer;
-          padding: 0.25rem 0.5rem;
-          transition: all 0.3s ease;
+      .roomButton, .themeButton {
+        background: none;
+        border: none;
+        color: $echo-blue;
+        padding: 8px 16px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: monospace;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        min-width: 100px;
+        text-align: center;
 
-          &:hover {
-            text-shadow: 0 0 8px rgba($echo-blue, 0.5);
-          }
+        &:hover {
+          text-shadow: 0 0 8px rgba($echo-blue, 0.5);
         }
 
-        .dropdownContent {
-          position: absolute;
-          top: 100%;
-          left: 0;
-          background: rgba($background-dark, 0.95);
-          border: 1px solid rgba($echo-blue, 0.2);
-          padding: 0.5rem;
-          z-index: 1006;
-          min-width: 150px;
-
-          .roomOption {
-            display: block;
-            width: 100%;
-            padding: 0.5rem;
-            background: none;
-            border: none;
-            color: $echo-blue;
-            font-family: $batman-font;
-            font-size: 0.9rem;
-            text-align: left;
-            cursor: pointer;
-            transition: all 0.3s ease;
-
-            &:hover:not(.disabled) {
-              background: rgba($echo-blue, 0.1);
-            }
-
-            &.disabled {
-              color: $echo-gray;
-              cursor: not-allowed;
-            }
-          }
+        &:active {
+          transform: scale(0.98);
         }
       }
 
       .controls {
         display: flex;
         gap: 1rem;
+        align-items: center;
 
         .toggleButton {
           background: none;
           border: none;
           color: $echo-blue;
           font-family: $batman-font;
-          font-size: 1rem;
+          font-size: 0.9rem;
           cursor: pointer;
-          padding: 0.25rem 0.5rem;
+          padding: 8px 16px;
           transition: all 0.3s ease;
+          letter-spacing: 1px;
 
           &:hover {
             text-shadow: 0 0 8px rgba($echo-blue, 0.5);
@@ -195,21 +639,23 @@ $text-color: #c8c8d0;
       flex-direction: column;
       gap: 0.8rem;
       overflow-y: auto;
+      overflow-x: hidden;
       margin-bottom: 0.5rem;
       padding: 0 0.5rem;
       min-height: 0;
-      max-height: calc(100% - 7rem);
+      height: calc(100% - 7rem);
 
       &::-webkit-scrollbar {
         width: 4px;
+        height: 4px;
       }
 
       &::-webkit-scrollbar-track {
-        background: rgba($echo-gray, 0.1);
+        background: rgba($echo-cyan, 0.1);
       }
 
       &::-webkit-scrollbar-thumb {
-        background: rgba($echo-blue, 0.3);
+        background: rgba($echo-cyan, 0.3);
         border-radius: 2px;
       }
 
@@ -223,6 +669,9 @@ $text-color: #c8c8d0;
         word-wrap: break-word;
         white-space: pre-wrap;
         transition: all 0.3s ease;
+        text-align: left;
+        width: 100%;
+        box-sizing: border-box;
 
         &.digitizing {
           animation: digitize 0.5s ease-in-out;
@@ -235,15 +684,15 @@ $text-color: #c8c8d0;
         &.message {
           .system {
             color: $echo-blue;
-            font-weight: bold;
+            text-shadow: 0 0 5px rgba($echo-blue, 0.5);
           }
         }
 
         &.alert {
-          border-left-color: rgba($echo-orange, 0.3);
+          border-left-color: rgba($echo-cyan, 0.3);
           .system {
-            color: $echo-orange;
-            font-weight: bold;
+            color: $echo-cyan;
+            text-shadow: 0 0 8px rgba($echo-cyan, 0.7);
           }
         }
 
@@ -251,7 +700,7 @@ $text-color: #c8c8d0;
           border-left-color: rgba($echo-red, 0.3);
           .system {
             color: $echo-red;
-            font-weight: bold;
+            text-shadow: 0 0 8px rgba($echo-red, 0.7);
           }
         }
 
@@ -259,36 +708,41 @@ $text-color: #c8c8d0;
           border-left-color: rgba($echo-green, 0.3);
           .system {
             color: $echo-green;
-            font-weight: bold;
+            text-shadow: 0 0 8px rgba($echo-green, 0.7);
           }
         }
 
         &.user {
           text-align: right;
           border-left: none;
-          border-right: 2px solid rgba($echo-blue, 0.3);
+          border-right: 2px solid rgba($echo-blue, 0.4);
           background: rgba($echo-blue, 0.05);
           
           p {
-            color: $text-color;
-            font-style: italic;
+            color: $echo-blue;
+            text-shadow: 0 0 5px rgba($echo-blue, 0.3);
           }
         }
 
         .actionButton {
           width: 100%;
           padding: 0.8rem 1.5rem;
-          background: rgba($background-dark, 0.2);
-          border: 1px solid rgba($echo-blue, 0.3);
+          background: rgba($echo-blue, 0.1);
+          border: 1px solid rgba($echo-blue, 0.4);
           color: $echo-blue;
           font-family: $batman-font;
           text-transform: uppercase;
           letter-spacing: 1px;
           cursor: pointer;
           transition: all 0.3s ease;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-weight: 600;
 
           &:hover {
-            background: rgba($echo-blue, 0.1);
+            background: rgba($echo-blue, 0.15);
+            border-color: $echo-blue;
             text-shadow: 0 0 8px rgba($echo-blue, 0.5);
           }
         }
@@ -299,9 +753,9 @@ $text-color: #c8c8d0;
       position: relative;
       width: 100%;
       margin-top: auto;
-      border-top: 1px solid rgba($echo-blue, 0.1);
+      border-top: 1px solid rgba($echo-blue, 0.4);
       padding: 0.5rem 0;
-      min-height: 3.5rem;
+      height: 3.5rem;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -309,24 +763,21 @@ $text-color: #c8c8d0;
       input {
         width: calc(100% - 4rem);
         margin: 0 auto;
-        background: rgba($background-dark, 0.2);
-        border: 1px solid rgba($echo-blue, 0.2);
+        background: rgba(0, 0, 0, 0.3);
+        border-color: rgba($echo-blue, 0.4);
         color: $echo-blue;
         padding: 0.5rem 1rem;
-        font-family: $batman-font;
+        font-family: 'Courier New', monospace;
         font-size: 1rem;
         outline: none;
         transition: all 0.3s ease;
 
-        &:disabled {
-          cursor: not-allowed;
-          opacity: 0.7;
-          background: rgba($background-dark, 0.4);
-          
-          &::placeholder {
-            color: rgba($echo-gray, 0.5);
-            text-decoration: line-through;
-          }
+        &::placeholder {
+          color: rgba($echo-blue, 0.5);
+        }
+        
+        &:focus {
+          box-shadow: 0 0 10px rgba($echo-blue, 0.3);
         }
       }
       
@@ -344,52 +795,99 @@ $text-color: #c8c8d0;
 }
 
 .collapsedButton {
-  position: absolute;
-  z-index: 1005;
-  bottom: 1rem;
-  left: 1rem;
-  background: rgba($background-dark, 0.2);
-  border: 1px solid rgba($echo-blue, 0.2);
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  padding: 8px 16px;
+  background: rgba($echo-blue, 0.1);
+  border: 1px solid rgba($echo-blue, 0.4);
   color: $echo-blue;
-  padding: 0.5rem 1rem;
-  font-family: $batman-font;
   cursor: pointer;
+  font-family: 'Courier New', monospace;
   transition: all 0.3s ease;
+  z-index: 1000;
+  font-weight: 600;
+  letter-spacing: 1px;
 
   &:hover {
-    background: rgba($echo-blue, 0.1);
+    background: rgba($echo-blue, 0.15);
+    border-color: $echo-blue;
     text-shadow: 0 0 8px rgba($echo-blue, 0.5);
   }
 
   &.withEcho {
-    position: fixed;
-    bottom: 4rem;
-    left: 5rem;
-    z-index: 1006;
-    background: rgba($background-dark, 0.4);
-    backdrop-filter: blur(2px);
-    border: 1px solid rgba($echo-blue, 0.3);
-    padding: 0.5rem 1.5rem;
+    background: rgba($echo-red, 0.1);
+    border-color: rgba($echo-red, 0.4);
+    color: $echo-red;
+
+    &:hover {
+      background: rgba($echo-red, 0.15);
+      border-color: $echo-red;
+      text-shadow: 0 0 8px rgba($echo-red, 0.5);
+    }
   }
 
-  &.hasNotification::after {
-    content: '';
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    width: 8px;
-    height: 8px;
-    background: $echo-blue;
-    border-radius: 50%;
-    box-shadow: 0 0 10px rgba($echo-blue, 0.8);
-    animation: glowPulse 2s infinite;
+  &.hasNotification {
+    animation: pulse 2s infinite;
+  }
+
+  &.null-dark {
+    background: rgba($null-dark-accent, 0.15);
+    border-color: rgba($null-dark-accent, 0.5);
+    color: $null-dark-accent;
+    
+    &:hover {
+      background: rgba($null-dark-accent, 0.2);
+      border-color: $null-dark-accent;
+    }
+  }
+  
+  &.null {
+    background: $null-bg;
+    border-color: $null-accent;
+    color: $null-accent;
+    box-shadow: 0 0 10px $null-shadow;
+    
+    &:hover {
+      background: $null-hover;
+    }
+    
+    &.withEcho {
+      border-color: $echo-red;
+      color: $echo-red;
+      
+      &:hover {
+        background: rgba($echo-red, 0.1);
+      }
+    }
+  }
+  
+  
+  &.light {
+    background: rgba($light-accent, 0.15);
+    border-color: rgba($light-accent, 0.5);
+    color: $light-accent;
+    
+    &:hover {
+      background: rgba($light-accent, 0.2);
+      border-color: $light-accent;
+    }
+    
+    &.withEcho {
+      border-color: $echo-red;
+      color: $echo-red;
+      
+      &:hover {
+        background: rgba($echo-red, 0.1);
+      }
+    }
   }
 }
 
 @keyframes glowPulse {
-  0% { text-shadow: 0 0 5px rgba($echo-blue, 0.5); }
-  50% { text-shadow: 0 0 15px rgba($echo-blue, 0.8); }
-  100% { text-shadow: 0 0 5px rgba($echo-blue, 0.5); }
+  0% { text-shadow: 0 0 5px rgba($echo-cyan, 0.5); }
+  50% { text-shadow: 0 0 15px rgba($echo-cyan, 0.8); }
+  100% { text-shadow: 0 0 5px rgba($echo-cyan, 0.5); }
 }
 
 @keyframes scanlineGlow {
@@ -412,5 +910,142 @@ $text-color: #c8c8d0;
     opacity: 1;
     transform: translateY(0);
     filter: blur(0);
+  }
+}
+
+.statusList {
+  background: rgba($background-dark, 0.3);
+  border: 1px solid rgba($echo-cyan, 0.2);
+  border-radius: 4px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  font-family: $batman-font;
+
+  .statusItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba($echo-cyan, 0.1);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .statusLabel {
+      color: $echo-cyan;
+      font-size: 0.9em;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .statusValue {
+      color: $echo-gray;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+      padding: 0.2rem 0.5rem;
+      background: rgba($background-dark, 0.2);
+      border-radius: 2px;
+    }
+  }
+}
+
+// Dropdown Sections
+.dropdownSection {
+  padding: 8px 0;
+  
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+.sectionTitle {
+  padding: 4px 12px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.roomOption, .themeOption {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: monospace;
+
+  &:hover:not(.disabled) {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &.disabled {
+    color: rgba(255, 255, 255, 0.3);
+    cursor: not-allowed;
+  }
+
+  &.active {
+    background: rgba(255, 255, 255, 0.15);
+    font-weight: bold;
+  }
+}
+
+.themeDescription {
+  display: block;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+}
+
+.dropdownContent {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  margin-top: 8px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+// Theme-specific button styles
+.null-dark {
+  .roomButton, .themeButton, .toggleButton {
+    color: $null-dark-accent;
+    background: none;
+    border: none;
+    
+    &:hover {
+      text-shadow: 0 0 8px rgba($null-dark-accent, 0.5);
+    }
+  }
+}
+
+.null {
+  .roomButton, .themeButton, .toggleButton {
+    color: $echo-blue;
+    
+    &:hover {
+      text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+    }
+  }
+}
+
+.light {
+  .roomButton, .themeButton, .toggleButton {
+    color: $light-accent;
+    background: none;
+    border: none;
+    
+    &:hover {
+      text-shadow: 0 0 8px rgba($light-accent, 0.5);
+    }
   }
 } 

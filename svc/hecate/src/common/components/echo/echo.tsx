@@ -3,11 +3,15 @@ import styles from './echo.module.scss';
 import { fetchWalletData } from '@services/api';
 
 type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
+type Theme = 'null' | 'light';
 
 interface EchoProps {
   publicKey: string | null;
   onDisconnect: () => void;
   onExpandChat: () => void;
+  theme?: Theme;
+  onClose: () => void;
+  onThemeChange: (theme: 'null' | 'cyber' | 'light') => void;
 }
 
 interface UserProfile {
@@ -28,7 +32,7 @@ interface SystemAnalysis {
   locked: boolean;
 }
 
-const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat }) => {
+const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, theme = 'null', onClose, onThemeChange }) => {
   const [screen, setScreen] = useState<Screen>('camp');
   const [walletData, setWalletData] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile>({
@@ -322,7 +326,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat }) =>
   };
 
   return (
-    <div className={styles.echoContainer}>
+    <div className={`${styles.echoContainer} ${styles[theme]}`}>
       {renderControlScreen()}
       <div className={styles.hudWindow}>
         {renderScreen()}

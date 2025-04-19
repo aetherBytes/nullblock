@@ -3,12 +3,19 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Points, PointMaterial, Preload } from "@react-three/drei";
 import * as random from "maath/random";
 import styles from './stars.module.scss';
+import { Group, Points as ThreePoints } from 'three';
 
-const Stars = (props) => {
-  const ref = useRef();
-  const [sphere] = useState(() =>
-    random.inSphere(new Float32Array(5000), { radius: 1.2 })
-  );
+interface StarsProps {
+  theme?: 'null' | 'matrix' | 'cyber' | 'light';
+}
+
+const Stars = ({ theme = 'null' }: StarsProps) => {
+  const ref = useRef<ThreePoints>(null);
+  const [sphere] = useState<Float32Array>(() => {
+    const positions = new Float32Array(5000);
+    random.inSphere(positions, { radius: 1.2 });
+    return positions;
+  });
 
   useFrame((state, delta) => {
     if (ref.current) {
@@ -17,13 +24,26 @@ const Stars = (props) => {
     }
   });
 
+  const getStarColor = () => {
+    switch (theme) {
+      case 'light':
+        return '#000000';
+      case 'matrix':
+        return '#00ff00';
+      case 'cyber':
+        return '#00ffff';
+      default:
+        return '#f272c8';
+    }
+  };
+
   return (
     <group rotation={[0, 0, Math.PI / 4]}>
-      <Points ref={ref} positions={sphere} stride={3} frustumCulled {...props}>
+      <Points ref={ref} positions={sphere} stride={3} frustumCulled>
         <PointMaterial
           transparent
-          color="#f272c8"
-          size={0.002}
+          color={getStarColor()}
+          size={theme === 'light' ? 0.003 : 0.002}
           sizeAttenuation={true}
           depthWrite={false}
         />
@@ -32,12 +52,16 @@ const Stars = (props) => {
   );
 };
 
-const StarsCanvas = () => {
+interface StarsCanvasProps {
+  theme?: 'null' | 'matrix' | 'cyber' | 'light';
+}
+
+const StarsCanvas = ({ theme = 'null' }: StarsCanvasProps) => {
   return (
-    <div className={styles.starsCanvas}>
+    <div className={`${styles.starsCanvas} ${styles[theme]}`}>
       <Canvas camera={{ position: [0, 0, 1] }}>
         <Suspense fallback={null}>
-          <Stars />
+          <Stars theme={theme} />
         </Suspense>
         <Preload all />
       </Canvas>
