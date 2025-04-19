@@ -52,7 +52,7 @@ const SystemChat: React.FC<SystemChatProps> = ({
   isCollapsed = true,
   onCollapsedChange,
   isDigitizing = false,
-  theme = 'null'
+  theme = 'light'
 }) => {
   const [input, setInput] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
