@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './digitizing-text.module.scss';
 
-export type DigitizingTheme = 'null-dark' | 'null-light' | 'null-metal' | 'light';
+export type DigitizingTheme = 'null-dark' | 'null-light' | 'null-metal' | 'light' | 'blue';
 
 interface DigitizingTextProps {
   text: string;
@@ -57,8 +57,12 @@ const DigitizingText: React.FC<DigitizingTextProps> = ({
   // Map app themes to digitizing themes
   const getDigitizingTheme = () => {
     switch (theme) {
+      case 'null-dark':
+        return 'null-dark';
       case 'light':
         return 'light';
+      case 'blue':
+        return 'blue';
       default:
         return theme;
     }
