@@ -415,6 +415,14 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         text-shadow: 0 0 12px rgba($null-dark-accent, 0.9);
       }
     }
+
+    .envelopeIcon {
+      filter: invert(1);
+      
+      &:hover {
+        filter: invert(1) drop-shadow(0 0 3px rgba($echo-blue, 0.7));
+      }
+    }
   }
   
 
@@ -648,40 +656,28 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       // Create a container for all buttons to ensure equal spacing
       .buttonContainer {
         display: flex;
-        gap: 16px;
         align-items: center;
-        width: 100%;
-        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
 
-        // Media query for portrait phone screens
-        @media (max-width: 480px) and (orientation: portrait) {
-          gap: 8px;
-        }
+      .envelopeContainer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 5px;
+      }
 
-        .toggleButton {
-          background: none;
-          border: none;
-          color: $echo-blue;
-          font-family: monospace;
-          font-size: 12px;
-          cursor: pointer;
-          padding: 8px 16px;
-          transition: all 0.2s ease;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          min-width: 100px;
-          text-align: center;
-
-          // Media query for portrait phone screens
-          @media (max-width: 480px) and (orientation: portrait) {
-            padding: 6px 10px;
-            font-size: 10px;
-            min-width: 80px;
-          }
-
-          &:hover {
-            text-shadow: 0 0 8px rgba($echo-blue, 0.5);
-          }
+      .envelopeIcon {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+        filter: brightness(1.2);
+        
+        &:hover {
+          transform: scale(1.1);
+          filter: brightness(1.5) drop-shadow(0 0 3px rgba($echo-blue, 0.7));
         }
       }
 
@@ -699,7 +695,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         }
       }
 
-      .roomButton, .themeButton {
+      .roomButton, .themeButton, .toggleButton {
         background: none;
         border: none;
         color: $echo-blue;
@@ -1065,6 +1061,14 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         text-shadow: 0 0 12px rgba($echo-orange, 0.9);
       }
     }
+
+    .envelopeIcon {
+      filter: invert(1);
+      
+      &:hover {
+        filter: invert(1) drop-shadow(0 0 3px rgba($echo-blue, 0.7));
+      }
+    }
   }
   
   
@@ -1271,11 +1275,17 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 }
 
 .null {
-  .roomButton, .themeButton, .toggleButton {
-    color: $echo-blue;
-    
-    &:hover {
-      text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+  @include theme-colors($null-dark-bg, $null-dark-border, $null-dark-text);
+
+  .hudWindow {
+    .chatHeader {
+      .envelopeIcon {
+        filter: invert(1);
+        
+        &:hover {
+          filter: invert(1) drop-shadow(0 0 3px rgba($echo-blue, 0.7));
+        }
+      }
     }
   }
 }
