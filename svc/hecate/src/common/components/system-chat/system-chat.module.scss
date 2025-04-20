@@ -196,7 +196,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   border-radius: 4px;
   display: flex;
   flex-direction: column;
-  z-index: 1000;
+  z-index: 10000;
   transition: all 0.3s ease;
   box-shadow: 0 0 10px rgba($echo-blue, 0.3);
 
@@ -934,7 +934,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   cursor: pointer;
   font-family: 'Courier New', monospace;
   transition: all 0.3s ease;
-  z-index: 1000;
+  z-index: 10000;
   font-weight: 600;
   letter-spacing: 1px;
   min-width: 120px;
@@ -960,13 +960,13 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
   &.withEcho {
     background: rgba($background-dark, 0.8);
-    border-color: rgba($echo-red, 0.3);
-    color: $echo-red;
+    border-color: rgba($echo-blue, 0.3);
+    color: $echo-blue;
 
     &:hover {
       background: rgba($background-dark, 0.9);
-      border-color: $echo-red;
-      text-shadow: 0 0 8px rgba($echo-red, 0.5);
+      border-color: $echo-blue;
+      text-shadow: 0 0 8px rgba($echo-blue, 0.5);
     }
   }
 
@@ -997,13 +997,13 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     }
     
     &.withEcho {
-      border-color: rgba($echo-orange, 0.3);
-      color: $echo-orange;
+      border-color: rgba($null-dark-accent, 0.3);
+      color: $null-dark-accent;
       
       &:hover {
         background: rgba($background-dark, 0.9);
-        border-color: $echo-orange;
-        text-shadow: 0 0 8px rgba($echo-orange, 0.5);
+        border-color: $null-dark-accent;
+        text-shadow: 0 0 8px rgba($null-dark-accent, 0.5);
       }
     }
     
@@ -1033,13 +1033,13 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     }
     
     &.withEcho {
-      border-color: rgba($echo-orange, 0.3);
-      color: $echo-orange;
+      border-color: rgba($null-accent, 0.3);
+      color: $null-accent;
       
       &:hover {
         background: rgba($background-dark, 0.9);
-        border-color: $echo-orange;
-        text-shadow: 0 0 8px rgba($echo-orange, 0.5);
+        border-color: $null-accent;
+        text-shadow: 0 0 8px rgba($null-accent, 0.5);
       }
     }
     
@@ -1068,11 +1068,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     }
     
     &.withEcho {
-      border-color: $echo-red;
-      color: $echo-red;
+      border-color: rgba($light-accent, 0.5);
+      color: $light-accent;
       
       &:hover {
-        background: rgba($echo-red, 0.1);
+        background: rgba($light-accent, 0.2);
+        border-color: $light-accent;
       }
     }
   }
@@ -1226,7 +1227,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   margin-top: 8px;
-  z-index: 1000;
+  z-index: 10001;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 
   // Media query for portrait phone screens
