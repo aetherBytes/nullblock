@@ -22,13 +22,15 @@ $light-bg: #ffffff;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 2.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: 24px;
   text-align: center;
-  z-index: 10;
+  z-index: 1000;
+  max-width: 80vw;
+  white-space: pre-wrap;
+  word-break: break-word;
   opacity: 1;
   transition: opacity 1.5s ease-out;
-  max-width: 80%;
   line-height: 1.4;
   letter-spacing: 1px;
   animation: glitch 0.3s infinite;
@@ -151,5 +153,11 @@ $light-bg: #ffffff;
                   -0.025em -0.025em 0 rgba($echo-green, 0.75),
                   -0.025em -0.05em 0 rgba($light-blue, 0.75);
     }
+  }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+  .digitizingText {
+    font-size: 16px;
   }
 }
