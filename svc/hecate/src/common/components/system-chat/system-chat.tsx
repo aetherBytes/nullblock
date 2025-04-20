@@ -265,67 +265,67 @@ const SystemChat: React.FC<SystemChatProps> = ({
     <div className={`${styles.chatContainer} ${styles[theme]} ${isEchoActive ? styles.withEcho : ''}`}>
       <div className={styles.hudWindow}>
         <div className={styles.chatHeader}>
-          <div className={styles.roomSelector} ref={dropdownRef}>
-            <button 
-              className={styles.roomButton}
-              onClick={handleRoomClick}
-            >
-              [ {currentRoom} ]
-            </button>
-            {activeDropdown === 'room' && (
-              <div className={styles.dropdownContent}>
-                <div className={styles.dropdownSection}>
-                  <div className={styles.sectionTitle}>Rooms</div>
-                  {chatRooms.map(room => (
-                    <button
-                      key={room.id}
-                      className={`${styles.roomOption} ${!room.available ? styles.disabled : ''}`}
-                      onClick={() => {
-                        handleRoomSelect(room.id);
-                        setActiveDropdown(null);
-                      }}
-                      disabled={!room.available}
-                    >
-                      {room.name}
-                    </button>
-                  ))}
+          <div className={styles.buttonContainer}>
+            <div className={styles.roomSelector} ref={dropdownRef}>
+              <button 
+                className={styles.roomButton}
+                onClick={handleRoomClick}
+              >
+                [ {currentRoom} ]
+              </button>
+              {activeDropdown === 'room' && (
+                <div className={styles.dropdownContent}>
+                  <div className={styles.dropdownSection}>
+                    <div className={styles.sectionTitle}>Rooms</div>
+                    {chatRooms.map(room => (
+                      <button
+                        key={room.id}
+                        className={`${styles.roomOption} ${!room.available ? styles.disabled : ''}`}
+                        onClick={() => {
+                          handleRoomSelect(room.id);
+                          setActiveDropdown(null);
+                        }}
+                        disabled={!room.available}
+                      >
+                        {room.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-            <button 
-              className={styles.themeButton}
-              onClick={handleThemeClick}
-            >
-              [ /{theme} ]
-            </button>
-            {activeDropdown === 'theme' && (
-              <div className={styles.dropdownContent}>
-                <div className={styles.dropdownSection}>
-                  <div className={styles.sectionTitle}>Themes</div>
-                  {themes.map(t => (
-                    <button
-                      key={t.id}
-                      className={`${styles.themeOption} ${t.id === theme ? styles.active : ''} ${!t.available ? styles.disabled : ''}`}
-                      onClick={() => {
-                        handleThemeSelect(t.id);
-                        setActiveDropdown(null);
-                      }}
-                      disabled={!t.available}
-                    >
-                      {t.name}
-                      <span className={styles.themeDescription}>{t.description}</span>
-                    </button>
-                  ))}
+              )}
+              <button 
+                className={styles.themeButton}
+                onClick={handleThemeClick}
+              >
+                [ /{theme} ]
+              </button>
+              {activeDropdown === 'theme' && (
+                <div className={styles.dropdownContent}>
+                  <div className={styles.dropdownSection}>
+                    <div className={styles.sectionTitle}>Themes</div>
+                    {themes.map(t => (
+                      <button
+                        key={t.id}
+                        className={`${styles.themeOption} ${t.id === theme ? styles.active : ''} ${!t.available ? styles.disabled : ''}`}
+                        onClick={() => {
+                          handleThemeSelect(t.id);
+                          setActiveDropdown(null);
+                        }}
+                        disabled={!t.available}
+                      >
+                        {t.name}
+                        <span className={styles.themeDescription}>{t.description}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-          <div className={styles.controls}>
+              )}
+            </div>
             <button 
               className={styles.toggleButton}
               onClick={() => onCollapsedChange?.(true)}
             >
-              [ Collapse ]
+              [ /COLLAPSE ]
             </button>
           </div>
         </div>

@@ -200,6 +200,27 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   box-shadow: 0 0 10px rgba($echo-blue, 0.3);
 
+  // Media query for portrait phone screens
+  @media (max-width: 480px) and (orientation: portrait) {
+    position: fixed;
+    top: 50px;
+    right: 15px;
+    bottom: 50px;
+    left: 15px;
+    width: auto;
+    min-width: unset;
+    max-width: unset;
+    height: auto;
+    max-height: unset;
+    border-radius: 8px;
+    padding: 0;
+  }
+
+  // Media query for landscape mode on phones
+  @media (max-width: 768px) and (orientation: landscape) {
+
+  }
+
   &.withEcho {
     border-color: $echo-red;
     box-shadow: 0 0 10px rgba($echo-red, 0.3);
@@ -530,6 +551,11 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     font-family: 'Courier New', monospace;
     overflow: hidden;
 
+    // Media query for portrait phone screens
+    @media (max-width: 480px) and (orientation: portrait) {
+      padding: 0.75rem 1rem;
+    }
+
     // CRT scanline effect
     &::before {
       content: '';
@@ -579,12 +605,64 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       padding: 0 0.5rem;
       border-bottom: 1px solid rgba($echo-blue, 0.4);
 
+      // Media query for portrait phone screens
+      @media (max-width: 480px) and (orientation: portrait) {
+        margin-bottom: 0.75rem;
+        padding: 0 0.25rem;
+      }
+
+      // Create a container for all buttons to ensure equal spacing
+      .buttonContainer {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        width: 100%;
+        justify-content: space-between;
+
+        // Media query for portrait phone screens
+        @media (max-width: 480px) and (orientation: portrait) {
+          gap: 8px;
+        }
+
+        .toggleButton {
+          background: none;
+          border: none;
+          color: $echo-blue;
+          font-family: monospace;
+          font-size: 12px;
+          cursor: pointer;
+          padding: 8px 16px;
+          transition: all 0.2s ease;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          min-width: 100px;
+          text-align: center;
+
+          // Media query for portrait phone screens
+          @media (max-width: 480px) and (orientation: portrait) {
+            padding: 6px 10px;
+            font-size: 10px;
+            min-width: 80px;
+          }
+
+          &:hover {
+            text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+          }
+        }
+      }
+
       .roomSelector {
         display: flex;
         gap: 16px;
         align-items: center;
         position: relative;
         padding: 0 16px;
+
+        // Media query for portrait phone screens
+        @media (max-width: 480px) and (orientation: portrait) {
+          gap: 8px;
+          padding: 0 8px;
+        }
       }
 
       .roomButton, .themeButton {
@@ -601,34 +679,19 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         min-width: 100px;
         text-align: center;
 
+        // Media query for portrait phone screens
+        @media (max-width: 480px) and (orientation: portrait) {
+          padding: 6px 10px;
+          font-size: 10px;
+          min-width: 80px;
+        }
+
         &:hover {
           text-shadow: 0 0 8px rgba($echo-blue, 0.5);
         }
 
         &:active {
           transform: scale(0.98);
-        }
-      }
-
-      .controls {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-
-        .toggleButton {
-          background: none;
-          border: none;
-          color: $echo-blue;
-          font-family: $batman-font;
-          font-size: 0.9rem;
-          cursor: pointer;
-          padding: 8px 16px;
-          transition: all 0.3s ease;
-          letter-spacing: 1px;
-
-          &:hover {
-            text-shadow: 0 0 8px rgba($echo-blue, 0.5);
-          }
         }
       }
     }
@@ -644,6 +707,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       padding: 0 0.5rem;
       min-height: 0;
       height: calc(100% - 7rem);
+
+      // Media query for portrait phone screens
+      @media (max-width: 480px) and (orientation: portrait) {
+        height: calc(100% - 6rem);
+        gap: 0.6rem;
+      }
 
       &::-webkit-scrollbar {
         width: 4px;
@@ -672,6 +741,14 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         text-align: left;
         width: 100%;
         box-sizing: border-box;
+
+        // Media query for portrait phone screens
+        @media (max-width: 480px) and (orientation: portrait) {
+          padding: 6px;
+          margin: 3px 0;
+          font-size: 12px;
+          line-height: 1.3;
+        }
 
         &.digitizing {
           animation: digitize 0.5s ease-in-out;
@@ -740,6 +817,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
           text-overflow: ellipsis;
           font-weight: 600;
 
+          // Media query for portrait phone screens
+          @media (max-width: 480px) and (orientation: portrait) {
+            padding: 0.6rem 1rem;
+            font-size: 11px;
+          }
+
           &:hover {
             background: rgba($echo-blue, 0.15);
             border-color: $echo-blue;
@@ -760,6 +843,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       justify-content: center;
       align-items: center;
       
+      // Media query for portrait phone screens
+      @media (max-width: 480px) and (orientation: portrait) {
+        height: 3rem;
+        padding: 0.25rem 0;
+      }
+      
       input {
         width: calc(100% - 4rem);
         margin: 0 auto;
@@ -771,6 +860,13 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         font-size: 1rem;
         outline: none;
         transition: all 0.3s ease;
+
+        // Media query for portrait phone screens
+        @media (max-width: 480px) and (orientation: portrait) {
+          width: calc(100% - 2rem);
+          padding: 0.4rem 0.75rem;
+          font-size: 0.9rem;
+        }
 
         &::placeholder {
           color: rgba($echo-blue, 0.5);
@@ -789,6 +885,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         color: rgba($echo-red, 0.7);
         font-style: italic;
         font-size: 0.9em;
+
+        // Media query for portrait phone screens
+        @media (max-width: 480px) and (orientation: portrait) {
+          right: 1.5rem;
+          font-size: 0.8em;
+        }
       }
     }
   }
@@ -808,6 +910,19 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   z-index: 1000;
   font-weight: 600;
   letter-spacing: 1px;
+  min-width: 120px;
+  text-align: center;
+
+  // Media query for portrait phone screens
+  @media (max-width: 480px) and (orientation: portrait) {
+    bottom: 10px;
+    left: 20%;
+    transform: translateX(-50%);
+    width: auto;
+    min-width: 100px;
+    max-width: 200px;
+    text-align: center;
+  }
 
   &:hover {
     background: rgba($echo-blue, 0.15);
@@ -921,6 +1036,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   margin: 0.5rem 0;
   font-family: $batman-font;
 
+  // Media query for portrait phone screens
+  @media (max-width: 480px) and (orientation: portrait) {
+    padding: 0.75rem;
+    margin: 0.4rem 0;
+  }
+
   .statusItem {
     display: flex;
     justify-content: space-between;
@@ -1013,6 +1134,21 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   margin-top: 8px;
   z-index: 1000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  // Media query for portrait phone screens
+  @media (max-width: 480px) and (orientation: portrait) {
+    position: absolute;
+    top: 100%;
+    bottom: auto;
+    left: 0;
+    right: auto;
+    min-width: 200px;
+    width: auto;
+    margin-top: 8px;
+    border-radius: 4px;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
 }
 
 // Theme-specific button styles
