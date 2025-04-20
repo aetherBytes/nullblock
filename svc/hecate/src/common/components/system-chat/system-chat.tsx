@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './system-chat.module.scss';
+import envelopeIcon from '../../../assets/images/tiny-envelope_17541.png';
 
 interface ChatMessage {
   id: number;
@@ -266,6 +267,9 @@ const SystemChat: React.FC<SystemChatProps> = ({
       <div className={styles.hudWindow}>
         <div className={styles.chatHeader}>
           <div className={styles.buttonContainer}>
+            <div className={styles.envelopeContainer}>
+              <img src={envelopeIcon} alt="Messages" className={styles.envelopeIcon} />
+            </div>
             <div className={styles.roomSelector} ref={dropdownRef}>
               <button 
                 className={styles.roomButton}
