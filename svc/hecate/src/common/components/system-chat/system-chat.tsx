@@ -60,6 +60,7 @@ const SystemChat: React.FC<SystemChatProps> = ({
   const [activeDropdown, setActiveDropdown] = useState<'room' | 'theme' | null>(null);
   const [lastSeenMessageId, setLastSeenMessageId] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showInbox, setShowInbox] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -255,6 +256,14 @@ const SystemChat: React.FC<SystemChatProps> = ({
     }
   };
 
+  const handleEnvelopeClick = () => {
+    setShowInbox(true);
+  };
+
+  const handleInboxClose = () => {
+    setShowInbox(false);
+  };
+
   return isCollapsed ? (
     <button 
       className={`${styles.collapsedButton} ${styles[theme]} ${isEchoActive ? styles.withEcho : ''} ${hasNewActionMessages ? styles.hasNotification : ''}`}
@@ -268,7 +277,12 @@ const SystemChat: React.FC<SystemChatProps> = ({
         <div className={styles.chatHeader}>
           <div className={styles.buttonContainer}>
             <div className={styles.envelopeContainer}>
-              <img src={envelopeIcon} alt="Messages" className={styles.envelopeIcon} />
+              <img 
+                src={envelopeIcon} 
+                alt="Messages" 
+                className={styles.envelopeIcon} 
+                onClick={handleEnvelopeClick}
+              />
             </div>
             <div className={styles.roomSelector} ref={dropdownRef}>
               <button 
@@ -366,6 +380,30 @@ const SystemChat: React.FC<SystemChatProps> = ({
           <span className={styles.invalidText}>matrix invalid</span>
         </div>
       </div>
+      {showInbox && (
+        <div className={styles.inboxContainer}>
+          <div className={styles.inboxHeader}>
+            <h3>Messages</h3>
+            <button className={styles.closeButton} onClick={handleInboxClose}>×</button>
+          </div>
+          <div className={styles.inboxMessageList}>
+            <div className={`${styles.inboxMessageItem} ${styles.unread}`}>
+              <div className={styles.messageHeader}>
+                <h4 className={styles.messageTitle}>System Update</h4>
+                <span className={styles.messageTime}>{new Date().toLocaleTimeString()}</span>
+              </div>
+              <p className={styles.messagePreview}>New features have been added to the interface.</p>
+            </div>
+            <div className={styles.inboxMessageItem}>
+              <div className={styles.messageHeader}>
+                <h4 className={styles.messageTitle}>Connection Status</h4>
+                <span className={styles.messageTime}>{new Date(Date.now() - 3600000).toLocaleTimeString()}</span>
+              </div>
+              <p className={styles.messagePreview}>Your connection to the network is stable.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
