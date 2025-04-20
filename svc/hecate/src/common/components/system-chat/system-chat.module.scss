@@ -222,7 +222,6 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 
   &.withEcho {
-    border-color: $echo-red;
     box-shadow: 0 0 10px rgba($echo-red, 0.3);
   }
 
@@ -401,6 +400,18 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       letter-spacing: 1px;
       
       &:hover {
+        text-shadow: 0 0 12px rgba($null-dark-accent, 0.9);
+      }
+    }
+
+    &.hasNotification {
+      border-color: rgba($null-dark-accent, 0.7);
+      box-shadow: 0 0 15px rgba($null-dark-accent, 0.5);
+      color: lighten($null-dark-accent, 15%);
+      text-shadow: 0 0 8px rgba($null-dark-accent, 0.8);
+      
+      &:hover {
+        box-shadow: 0 0 20px rgba($null-dark-accent, 0.7);
         text-shadow: 0 0 12px rgba($null-dark-accent, 0.9);
       }
     }
@@ -1008,14 +1019,14 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     }
     
     &.hasNotification {
-      border-color: rgba($echo-orange, 0.7);
-      box-shadow: 0 0 15px rgba($echo-orange, 0.5);
-      color: lighten($echo-orange, 15%);
-      text-shadow: 0 0 8px rgba($echo-orange, 0.8);
+      border-color: rgba($null-dark-accent, 0.7);
+      box-shadow: 0 0 15px rgba($null-dark-accent, 0.5);
+      color: lighten($null-dark-accent, 15%);
+      text-shadow: 0 0 8px rgba($null-dark-accent, 0.8);
       
       &:hover {
-        box-shadow: 0 0 20px rgba($echo-orange, 0.7);
-        text-shadow: 0 0 12px rgba($echo-orange, 0.9);
+        box-shadow: 0 0 20px rgba($null-dark-accent, 0.7);
+        text-shadow: 0 0 12px rgba($null-dark-accent, 0.9);
       }
     }
   }
