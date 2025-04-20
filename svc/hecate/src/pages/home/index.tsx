@@ -30,6 +30,13 @@ const Home: React.FC = () => {
   const [echoScreenSelected, setEchoScreenSelected] = useState<boolean>(false);
   const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('light');
 
+  // Hide welcome text when ECHO screen is open
+  useEffect(() => {
+    if (showEcho) {
+      setShowWelcomeText(false);
+    }
+  }, [showEcho]);
+
   const automaticResponses = [
     {
       alert: "Error: Invalid pattern detected.",
@@ -378,6 +385,11 @@ const Home: React.FC = () => {
     const handleExpandChat = () => {
       setChatCollapsed(false);
       
+      // Don't start digitizing animation if ECHO is shown
+      if (showEcho) {
+        return;
+      }
+      
       // Start digitizing animation
       setIsDigitizing(true);
       
@@ -463,7 +475,7 @@ const Home: React.FC = () => {
 
     window.addEventListener('expandSystemChat', handleExpandChat);
     return () => window.removeEventListener('expandSystemChat', handleExpandChat);
-  }, [messages]);
+  }, [messages, showEcho]);
 
   return (
     <div className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]}`}>
@@ -472,7 +484,7 @@ const Home: React.FC = () => {
       <div className={styles.scene}>
         <div className={styles.fire}></div>
       </div>
-      {showWelcomeText && (
+      {showWelcomeText && !showEcho && (
         <DigitizingText 
           text="Welcome to Nullblock. Interfaces for the new world." 
           duration={0}
