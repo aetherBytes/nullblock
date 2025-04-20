@@ -205,24 +205,44 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
           <div className={styles.divider}></div>
           <div className={styles.campStatus}>
             <h3>CAMP STATUS</h3>
-            <ul>
-              <li>
-                Alerts: <span className={`${styles.alertCount} ${styles.active}`} onClick={handleAlertClick}>{alerts}</span>
-              </li>
-              <li>Perimeter: <span className={styles.active}>SECURE</span></li>
-              <li>Systems: <span className={styles.pending}>SCANNING</span></li>
-              <li>Defense: <span className={styles.stable}>ACTIVE</span></li>
-              <li>Uplink: <span className={styles.active}>STABLE</span></li>
-              <li>Matrix Core: <span className={styles.pending}>INITIALIZING</span></li>
-              <li>Reality Engine: <span className={styles.stable}>STANDBY</span></li>
-            </ul>
-            {!userProfile.matrix.level || userProfile.matrix.level === 'NONE' ? (
-              <div className={styles.matrixPrompt}>
-                <button className={styles.marketButton} onClick={() => handleScreenChange('inventory')}>
-                  VISIT MARKETPLACE
-                </button>
+            <div className={styles.statusGrid}>
+              <div className={styles.statusCard}>
+                <div className={styles.statusHeader}>PERIMETER</div>
+                <div className={styles.statusValue}>
+                  <span className={styles.active}>SECURE</span>
+                </div>
               </div>
-            ) : null}
+              <div className={styles.statusCard}>
+                <div className={styles.statusHeader}>SYSTEMS</div>
+                <div className={styles.statusValue}>
+                  <span className={styles.pending}>SCANNING</span>
+                </div>
+              </div>
+              <div className={styles.statusCard}>
+                <div className={styles.statusHeader}>DEFENSE</div>
+                <div className={styles.statusValue}>
+                  <span className={styles.stable}>ACTIVE</span>
+                </div>
+              </div>
+              <div className={styles.statusCard}>
+                <div className={styles.statusHeader}>UPLINK</div>
+                <div className={styles.statusValue}>
+                  <span className={styles.active}>STABLE</span>
+                </div>
+              </div>
+              <div className={styles.statusCard}>
+                <div className={styles.statusHeader}>MATRIX CORE</div>
+                <div className={styles.statusValue}>
+                  <span className={styles.pending}>INITIALIZING</span>
+                </div>
+              </div>
+              <div className={styles.statusCard}>
+                <div className={styles.statusHeader}>REALITY ENGINE</div>
+                <div className={styles.statusValue}>
+                  <span className={styles.stable}>STANDBY</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
