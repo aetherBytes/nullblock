@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './echo.module.scss';
-import { fetchWalletData } from '@services/api';
+import { fetchWalletData, fetchUserProfile, fetchAscentLevel } from '@services/api';
 
 type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
@@ -26,6 +26,14 @@ interface UserProfile {
   };
 }
 
+interface AscentLevel {
+  level: number;
+  name: string;
+  description: string;
+  progress: number;
+  accolades: string[];
+}
+
 interface SystemAnalysis {
   name: string;
   status: string;
@@ -46,6 +54,8 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
       status: 'NO MATRIX FOUND'
     }
   });
+  const [ascentLevel, setAscentLevel] = useState<AscentLevel | null>(null);
+  const [showAscentDetails, setShowAscentDetails] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<number>(3); // Default to 3 alerts for demo
   const [showAlerts, setShowAlerts] = useState<boolean>(false);
 
@@ -75,13 +85,45 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
     const loadWalletData = async () => {
       if (publicKey) {
         try {
+          // Fetch basic wallet data
           const data = await fetchWalletData(publicKey);
           setWalletData(data);
-          // Update user profile with wallet data
-          setUserProfile(prev => ({
-            ...prev,
-            nectar: data.balance || 0
-          }));
+          
+          // Fetch user profile data including username if available
+          try {
+            const profileData = await fetchUserProfile(publicKey);
+            
+            // Update user profile with wallet data and username if available
+            setUserProfile(prev => ({
+              ...prev,
+              nectar: data.balance || 0,
+              id: profileData.username ? `@${profileData.username}` : `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol`
+            }));
+            
+            // Log the profile data to debug
+            console.log('Profile data received:', profileData);
+            console.log('Username:', profileData.username);
+          } catch (profileError) {
+            console.error('Failed to fetch user profile:', profileError);
+            // Fallback to just updating with wallet data
+            setUserProfile(prev => ({
+              ...prev,
+              nectar: data.balance || 0
+            }));
+          }
+          
+          // Fetch ascent level data
+          try {
+            const ascentData = await fetchAscentLevel(publicKey);
+            setAscentLevel(ascentData);
+            // Update the ascent value in userProfile
+            setUserProfile(prev => ({
+              ...prev,
+              ascent: ascentData.level
+            }));
+          } catch (ascentError) {
+            console.error('Failed to fetch ascent level:', ascentError);
+          }
         } catch (error) {
           console.error('Failed to fetch wallet data:', error);
         }
@@ -155,9 +197,42 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
         <span className={styles.label}>ID:</span>
         <span className={styles.value}>{userProfile.id}</span>
       </div>
-      <div className={styles.profileItem}>
+      <div 
+        className={styles.profileItem}
+        onMouseEnter={() => setShowAscentDetails(true)}
+        onMouseLeave={() => setShowAscentDetails(false)}
+      >
         <span className={styles.label}>ASCENT:</span>
-        <span className={styles.value}>{userProfile.ascent}</span>
+        <div className={styles.ascentContainer}>
+          <span className={styles.value}>Net Dweller: 1</span>
+          <div className={styles.progressBar}>
+            <div 
+              className={styles.progressFill} 
+              style={{ width: `${35}%` }}
+            ></div>
+          </div>
+        </div>
+        {showAscentDetails && (
+          <div className={styles.ascentDetails}>
+            <div className={styles.ascentDescription}>A digital lurker extraordinaire! You've mastered the art of watching from the shadows, observing the chaos without ever dipping your toes in. Like a cat watching a laser pointer, you're fascinated but paralyzed by indecision. At least you're not the one getting your digital assets rekt!</div>
+            <div className={styles.progressText}>
+              35% to next level
+            </div>
+            <div className={styles.accoladesContainer}>
+              <div className={styles.accoladesTitle}>ACCOLADES</div>
+              <ul className={styles.accoladesList}>
+                <li className={styles.visible}>First Connection</li>
+                <li className={styles.visible}>Wallet Initiated</li>
+                <li className={styles.visible}>Basic Navigation</li>
+                <li className={styles.blurred}>Token Discovery</li>
+                <li className={styles.blurred}>Transaction Initiate</li>
+                <li className={styles.blurred}>Network Explorer</li>
+                <li className={styles.blurred}>Data Collector</li>
+                <li className={styles.blurred}>Interface Familiar</li>
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
       <div className={styles.profileItem}>
         <span className={styles.label}>NECTAR:</span>

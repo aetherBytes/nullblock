@@ -30,6 +30,32 @@ const Home: React.FC = () => {
   const [echoScreenSelected, setEchoScreenSelected] = useState<boolean>(false);
   const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('light');
 
+  // Initialize state from localStorage on component mount
+  useEffect(() => {
+    // Check if we have a saved wallet connection
+    const savedPublicKey = localStorage.getItem('walletPublickey');
+    const lastAuth = localStorage.getItem('lastAuthTime');
+    const hasSeenEcho = localStorage.getItem('hasSeenEcho');
+    const savedChatCollapsed = localStorage.getItem('chatCollapsedState');
+    const savedTheme = localStorage.getItem('currentTheme');
+    
+    // Set initial states based on localStorage
+    if (savedPublicKey && lastAuth && isSessionValid()) {
+      setPublicKey(savedPublicKey);
+      setWalletConnected(true);
+      setShowEcho(true);
+      setShowWelcomeText(false);
+    }
+    
+    if (savedChatCollapsed) {
+      setChatCollapsed(savedChatCollapsed === 'true');
+    }
+    
+    if (savedTheme) {
+      setCurrentTheme(savedTheme as 'null' | 'light');
+    }
+  }, []);
+
   // Hide welcome text when ECHO screen is open
   useEffect(() => {
     if (showEcho) {
@@ -290,6 +316,7 @@ const Home: React.FC = () => {
             setPublicKey(savedPublicKey);
             setWalletConnected(true);
             setShowEcho(true);
+            setShowWelcomeText(false);
             return; // Exit early on successful reconnection
           } catch (error) {
             console.log('Auto-reconnect failed:', error);
@@ -323,6 +350,7 @@ const Home: React.FC = () => {
           setChatCollapsed(true);
           localStorage.setItem('walletPublickey', walletPubKey);
           localStorage.setItem('chatCollapsedState', 'true');
+          localStorage.setItem('hasSeenEcho', 'true');
           updateAuthTime();
           
           setShowWelcomeText(false);
@@ -337,6 +365,7 @@ const Home: React.FC = () => {
           // Clear all session data on failure
           localStorage.removeItem('walletPublickey');
           localStorage.removeItem('lastAuthTime');
+          localStorage.removeItem('hasSeenEcho');
           setWalletConnected(false);
           setPublicKey(null);
           setShowEcho(false);
