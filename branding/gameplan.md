@@ -10,6 +10,10 @@ Nullblock is an MCP-driven platform on Solana, featuring:
 
 **Objective**: Launch MVP: A MCP Server and Client Interface with minimal features. Basic wallet analysis, swap mechanics, and easy to implement tooling on the MCP side. H.U.D like experience via a conversational LLM interface, with user-specific state stored in mutable **Memory Cards** (NFTs). The user only needs a Phantom wallet to use the platform. All user related data is stored in the user's wallet / blockchain or within the memory card NFTs.
 
+**First Impression** (Landing Screen):
+The Nullblock landing screen immerses users in a eerie void a flickering digital campfire pulses at the center, casting neon embers into an endless abyss. Subtle cosmic elements (distant stars, faint planetary silhouettes, or swirling dust) drift in the background, creating an intoxicating, almost hypnotic atmosphere. A single, understated blip—the E.C.H.O menu button—glows in the bottom left, pulsing faintly like a beacon. Clicking it reveals a minimalistic H.U.D. overlay, sleek and futuristic, hinting at the platform’s depth. Users are prompted to connect their Web3 wallet (Phantom) or Solana ID, initiating their journey into Nullblock’s Matrix—a seamless entry to a personalized, MCP-driven Web3 experience.
+
+
 ## Tech Stack
 - **Helios**: Multi-service backend system:
   - **helios-mcp**: Python, FastAPI - Dedicated MCP server for agent-based operations
