@@ -1313,6 +1313,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   box-shadow: 0 0 10px rgba($echo-blue, 0.3);
   z-index: 1000;
   overflow: hidden;
+  
+  .light & {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid $light-accent;
+    box-shadow: 0 0 10px rgba($light-accent, 0.2);
+  }
 }
 
 .inboxHeader {
@@ -1322,6 +1328,23 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   padding: 12px;
   border-bottom: 1px solid rgba($echo-blue, 0.3);
   background: rgba($background-dark, 0.8);
+  
+  .light & {
+    border-bottom: 1px solid rgba($light-accent, 0.3);
+    background: rgba(240, 240, 240, 0.9);
+    
+    h3 {
+      color: $light-text;
+    }
+    
+    .closeButton {
+      color: $light-text;
+      
+      &:hover {
+        color: $light-accent;
+      }
+    }
+  }
 
   h3 {
     margin: 0;
@@ -1349,6 +1372,10 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   max-height: 400px;
   overflow-y: auto;
   padding: 8px;
+  
+  .light & {
+    background: rgba(255, 255, 255, 0.7);
+  }
 }
 
 .inboxMessageItem {
@@ -1359,6 +1386,33 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: all 0.2s ease;
   background: rgba($background-dark, 0.6);
+  
+  .light & {
+    border: 1px solid rgba($light-accent, 0.2);
+    background: rgba(240, 240, 240, 0.8);
+    
+    &:hover {
+      border-color: $light-accent;
+      background: rgba($light-accent, 0.05);
+    }
+    
+    &.unread {
+      border-left: 3px solid $light-accent;
+      background: rgba($light-accent, 0.05);
+    }
+    
+    .messageTitle {
+      color: $light-text;
+    }
+    
+    .messageTime {
+      color: rgba($light-text, 0.6);
+    }
+    
+    .messagePreview {
+      color: rgba($light-text, 0.8);
+    }
+  }
 
   &:hover {
     border-color: $echo-blue;

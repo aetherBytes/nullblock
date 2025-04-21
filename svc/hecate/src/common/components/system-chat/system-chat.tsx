@@ -389,17 +389,10 @@ const SystemChat: React.FC<SystemChatProps> = ({
           <div className={styles.inboxMessageList}>
             <div className={`${styles.inboxMessageItem} ${styles.unread}`}>
               <div className={styles.messageHeader}>
-                <h4 className={styles.messageTitle}>System Update</h4>
+                <h4 className={styles.messageTitle}>Test Message</h4>
                 <span className={styles.messageTime}>{new Date().toLocaleTimeString()}</span>
               </div>
-              <p className={styles.messagePreview}>New features have been added to the interface.</p>
-            </div>
-            <div className={styles.inboxMessageItem}>
-              <div className={styles.messageHeader}>
-                <h4 className={styles.messageTitle}>Connection Status</h4>
-                <span className={styles.messageTime}>{new Date(Date.now() - 3600000).toLocaleTimeString()}</span>
-              </div>
-              <p className={styles.messagePreview}>Your connection to the network is stable.</p>
+              <p className={styles.messagePreview}>This is a test message with some filler text to demonstrate the inbox functionality. The system is running normally and all operations are proceeding as expected.</p>
             </div>
           </div>
         </div>
