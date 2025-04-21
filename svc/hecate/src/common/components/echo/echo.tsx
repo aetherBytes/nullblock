@@ -178,7 +178,11 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
 
   const renderLockedScreen = () => (
     <div className={styles.hudScreen}>
-      <h2 className={styles.hudTitle}>ACCESS RESTRICTED</h2>
+      <div className={styles.headerContainer}>
+        <h2 className={styles.hudTitle}>ACCESS RESTRICTED</h2>
+        <div className={styles.headerDivider}></div>
+        {renderUserProfile()}
+      </div>
       <div className={styles.lockedContent}>
         <p>This feature is currently locked.</p>
         <p>Return to camp and await further instructions.</p>
@@ -188,8 +192,11 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
 
   const renderCampScreen = () => (
     <div className={styles.hudScreen}>
-      <h2 className={styles.hudTitle}>CAMP</h2>
-      {renderUserProfile()}
+      <div className={styles.headerContainer}>
+        <h2 className={styles.hudTitle}>CAMP</h2>
+        <div className={styles.headerDivider}></div>
+        {renderUserProfile()}
+      </div>
       <div className={styles.campContent}>
         <div className={styles.campGrid}>
           <div className={styles.campAnalysis}>
@@ -251,7 +258,11 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
 
   const renderInventoryScreen = () => (
     <div className={styles.hudScreen}>
-      <h2 className={styles.hudTitle}>CACHE</h2>
+      <div className={styles.headerContainer}>
+        <h2 className={styles.hudTitle}>CACHE</h2>
+        <div className={styles.headerDivider}></div>
+        {renderUserProfile()}
+      </div>
       <div className={styles.inventorySection}>
         <h3>WEAPONS</h3>
         <div className={styles.emptyState}>
@@ -271,7 +282,11 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
 
   const renderCampaignScreen = () => (
     <div className={styles.hudScreen}>
-      <h2 className={styles.hudTitle}>CAMPAIGN</h2>
+      <div className={styles.headerContainer}>
+        <h2 className={styles.hudTitle}>CAMPAIGN</h2>
+        <div className={styles.headerDivider}></div>
+        {renderUserProfile()}
+      </div>
       <div className={styles.realityContent}>
         <div className={styles.realityStatus}>
           <h3>PROGRESS</h3>
@@ -289,7 +304,11 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
 
   const renderLabScreen = () => (
     <div className={styles.hudScreen}>
-      <h2 className={styles.hudTitle}>LAB</h2>
+      <div className={styles.headerContainer}>
+        <h2 className={styles.hudTitle}>LAB</h2>
+        <div className={styles.headerDivider}></div>
+        {renderUserProfile()}
+      </div>
       <div className={styles.interfaceContent}>
         <div className={styles.interfaceSection}>
           <h3>SYSTEMS</h3>
