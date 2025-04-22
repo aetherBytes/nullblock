@@ -839,6 +839,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         letter-spacing: 1px;
         font-weight: 600;
         text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
+        margin-right: 16px;
       }
 
       .value {
@@ -846,6 +847,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         color: $echo-blue-dark;
         text-shadow: 0 0 8px rgba($echo-blue, 0.3);
         font-weight: bold;
+        margin-right: 16px;
 
         &.common {
           color: $echo-gray;
@@ -865,6 +867,34 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
         &.legendary {
           color: $echo-orange;
+        }
+      }
+
+      .infoButton {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: rgba($echo-blue, 0.2);
+        color: $echo-blue;
+        font-size: 0.7em;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: 1px solid rgba($echo-blue, 0.3);
+        transition: all 0.2s ease;
+        padding: 0;
+        line-height: 1;
+        z-index: 2;
+        margin-left: 8px;
+
+        &:hover {
+          background: rgba($echo-blue, 0.4);
+          transform: scale(1.1);
         }
       }
     }
@@ -1114,6 +1144,11 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   margin-top: 0.5rem;
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
   pointer-events: auto;
+
+  &.rightAligned {
+    left: auto;
+    right: 0;
+  }
 
   &::before {
     content: '';

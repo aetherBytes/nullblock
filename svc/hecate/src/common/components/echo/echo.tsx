@@ -17,7 +17,8 @@ interface EchoProps {
 interface UserProfile {
   id: string;
   ascent: number;
-  nectar: number;
+  nectar: number | null;
+  cacheValue: number;
   memories: number;
   matrix: {
     level: string;
@@ -46,18 +47,23 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
   const [userProfile, setUserProfile] = useState<UserProfile>({
     id: publicKey ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol` : '',
     ascent: 1,
-    nectar: 0,
+    nectar: null,
+    cacheValue: 0,
     memories: 0,
     matrix: {
       level: 'NONE',
       rarity: 'NONE',
-      status: 'NO MATRIX FOUND'
+      status: 'NO E.C. FOUND'
     }
   });
   const [ascentLevel, setAscentLevel] = useState<AscentLevel | null>(null);
   const [showAscentDetails, setShowAscentDetails] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<number>(3); // Default to 3 alerts for demo
   const [showAlerts, setShowAlerts] = useState<boolean>(false);
+  const [showNectarDetails, setShowNectarDetails] = useState<boolean>(false);
+  const [showCacheValueDetails, setShowCacheValueDetails] = useState<boolean>(false);
+  const [showEmberConduitDetails, setShowEmberConduitDetails] = useState<boolean>(false);
+  const [showMemoriesDetails, setShowMemoriesDetails] = useState<boolean>(false);
 
   // Define which screens are unlocked
   const unlockedScreens = ['camp'];
@@ -93,10 +99,14 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
           try {
             const profileData = await fetchUserProfile(publicKey);
             
+            // Check if the wallet has Nectar tokens
+            const hasNectarToken = profileData.active_tokens.includes("NECTAR");
+            
             // Update user profile with wallet data and username if available
             setUserProfile(prev => ({
               ...prev,
-              nectar: data.balance || 0,
+              nectar: hasNectarToken ? data.balance : null,
+              cacheValue: data.balance || 0, // Set cache value to wallet balance
               id: profileData.username ? `@${profileData.username}` : `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol`
             }));
             
@@ -108,7 +118,8 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
             // Fallback to just updating with wallet data
             setUserProfile(prev => ({
               ...prev,
-              nectar: data.balance || 0
+              nectar: null, // Set to null if we can't determine if Nectar exists
+              cacheValue: data.balance || 0 // Set cache value to wallet balance
             }));
           }
           
@@ -197,11 +208,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
         <span className={styles.label}>ID:</span>
         <span className={styles.value}>{userProfile.id}</span>
       </div>
-      <div 
-        className={styles.profileItem}
-        onMouseEnter={() => setShowAscentDetails(true)}
-        onMouseLeave={() => setShowAscentDetails(false)}
-      >
+      <div className={styles.profileItem}>
         <span className={styles.label}>ASCENT:</span>
         <div className={styles.ascentContainer}>
           <span className={styles.value}>Net Dweller: 1</span>
@@ -212,6 +219,12 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
             ></div>
           </div>
         </div>
+        <button 
+          className={styles.infoButton}
+          onClick={() => setShowAscentDetails(!showAscentDetails)}
+        >
+          ?
+        </button>
         {showAscentDetails && (
           <div className={styles.ascentDetails}>
             <div className={styles.ascentDescription}>A digital lurker extraordinaire! You've mastered the art of watching from the shadows, observing the chaos without ever dipping your toes in. Like a cat watching a laser pointer, you're fascinated but paralyzed by indecision. At least you're not the one getting your digital assets rekt!</div>
@@ -236,17 +249,71 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
       </div>
       <div className={styles.profileItem}>
         <span className={styles.label}>NECTAR:</span>
-        <span className={styles.value}>₦ {userProfile.nectar.toFixed(2)}</span>
+        <span className={styles.value}>₦ {userProfile.nectar?.toFixed(2) || 'N/A'}</span>
+        <button 
+          className={styles.infoButton}
+          onClick={() => setShowNectarDetails(!showNectarDetails)}
+        >
+          ?
+        </button>
+        {showNectarDetails && (
+          <div className={styles.ascentDetails}>
+            <div className={styles.ascentDescription}>
+              Nectar: The divine currency that flows through Nullblock like blood through veins. This ain't your grandma's pocket change - it's the sweet nectar of the divine that powers everything from upgrades to acquisitions. Earn it through missions, achievements, or by making the right friends in high places. Warning: Highly addictive, side effects may include increased power and status.
+            </div>
+          </div>
+        )}
+      </div>
+      <div className={styles.profileItem}>
+        <span className={styles.label}>cache value:</span>
+        <span className={styles.value}>₦ N/A</span>
+        <button 
+          className={styles.infoButton}
+          onClick={() => setShowCacheValueDetails(!showCacheValueDetails)}
+        >
+          ?
+        </button>
+        {showCacheValueDetails && (
+          <div className={styles.ascentDetails}>
+            <div className={styles.ascentDescription}>
+              Cache Value: Your digital treasure trove, evaluated by our ever-watchful procurement agents. This is the total worth of all valuable assets in your wallet - coins, tokens, and other digital goodies that caught our eye. Coming soon: Categories for services, participant offerings, biological enhancements, and agent capabilities. Think of it as your personal inventory of everything worth something in the Nullblock universe. Don't spend it all in one place!
+            </div>
+          </div>
+        )}
       </div>
       <div className={styles.profileItem}>
         <span className={styles.label}>MEMORIES:</span>
         <span className={styles.value}>{userProfile.memories}</span>
+        <button 
+          className={styles.infoButton}
+          onClick={() => setShowMemoriesDetails(!showMemoriesDetails)}
+        >
+          ?
+        </button>
+        {showMemoriesDetails && (
+          <div className={styles.ascentDetails}>
+            <div className={styles.ascentDescription}>
+              Oh no, no memories found? Wait... who are you? Where am I? *checks digital wallet* Ah, right - another poor...soul. You need to collect the artifacts that tell your story in the Nullblock universe. Each memory is a unique representation of your achievements, collectibles, and digital identity. Collect them all to unlock the secret of why you're here... or don't, I'm not your digital conscience.
+            </div>
+          </div>
+        )}
       </div>
       <div className={styles.profileItem}>
-        <span className={styles.label}>MATRIX:</span>
-        <span className={`${styles.value} ${styles.matrix} ${styles[userProfile.matrix.rarity.toLowerCase()]}`}>
-          {userProfile.matrix.status}
-        </span>
+        <span className={styles.label}>E.C:</span>
+        <span className={styles.value}>{userProfile.matrix.status}</span>
+        <button 
+          className={styles.infoButton}
+          onClick={() => setShowEmberConduitDetails(!showEmberConduitDetails)}
+        >
+          ?
+        </button>
+        {showEmberConduitDetails && (
+          <div className={`${styles.ascentDetails} ${styles.rightAligned}`}>
+            <div className={styles.ascentDescription}>
+              Ember Conduit: A medium to speak into flame. This ancient technology allows direct communication with the primordial forces of the Nullblock universe. Through an Ember Conduit, users can channel energy, access forbidden knowledge, and potentially reshape reality itself. Warning: Unauthorized use may result in spontaneous combustion or worse.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
