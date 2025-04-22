@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+// API base URL
+const API_BASE_URL = 'http://localhost:8000';
+
 interface WalletData {
   balance: number;
   address: string;
@@ -23,6 +26,15 @@ interface AscentLevelData {
   description: string;
   progress: number;
   accolades: string[];
+}
+
+export interface MissionData {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  reward: string;
+  x_url: string;
 }
 
 const fetchWalletData = async (publicKey: string): Promise<WalletData> => {
@@ -99,6 +111,27 @@ const fetchAscentLevel = async (publicKey: string): Promise<AscentLevelData> => 
   } catch (error) {
     console.error('Failed to fetch ascent level:', error);
     throw error;
+  }
+};
+
+export const fetchActiveMission = async (publicKey: string): Promise<MissionData> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/missions/${publicKey}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch active mission');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching active mission:', error);
+    // Return a default mission if the API call fails
+    return {
+      id: "mission_001",
+      title: "Share on X",
+      description: "Share your experience with Nullblock on X to earn rewards.",
+      status: "active",
+      reward: "10 NECTAR",
+      x_url: "https://x.com/Nullblock_io"
+    };
   }
 };
 

@@ -53,6 +53,15 @@ class MemoryCardData(BaseModel):
     last_updated: datetime
 
 
+class MissionData(BaseModel):
+    id: str
+    title: str
+    description: str
+    status: str
+    reward: str
+    x_url: str
+
+
 class SwapRequest(BaseModel):
     from_token: str
     to_token: str
@@ -390,3 +399,22 @@ async def status() -> str:
     $$ |  $$ |$$ |_____ $$ |_____  _$$ |_ $$ \__$$ |/  \__$$ |      /  \__$$ |$$ |_____ $$ |  $$ |  $$ $$/   $$ |_____ $$ |  $$ |
     $$ |  $$ |$$       |$$       |/ $$   |$$    $$/ $$    $$/       $$    $$/ $$       |$$ |  $$ |   $$$/    $$       |$$ |  $$ |
     $$/   $$/ $$$$$$$$/ $$$$$$$$/ $$$$$$/  $$$$$$/   $$$$$$/         $$$$$$/  $$$$$$$$/ $$/   $$/     $/     $$$$$$$$/ $$/   $$/"""
+
+
+@app.get("/api/missions/{public_key}", response_model=MissionData)
+async def get_active_mission(public_key: str) -> MissionData:
+    """
+    Get the active mission for a user.
+    For now, returns a default mission to share on X.
+    """
+    logwc.info(f"Getting active mission for {public_key}")
+    
+    # Default mission for now
+    return MissionData(
+        id="mission_001",
+        title="Share on X",
+        description="Share your experience with Nullblock on X to earn rewards.",
+        status="active",
+        reward="10 NECTAR",
+        x_url="https://x.com/Nullblock_io"
+    )

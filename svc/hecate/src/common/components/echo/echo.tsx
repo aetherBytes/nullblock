@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styles from './echo.module.scss';
-import { fetchWalletData, fetchUserProfile, fetchAscentLevel } from '@services/api';
+import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '@services/api';
 import flameGuySheet from "../../../assets/images/flame_guy_sheet.png";
 
 type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
@@ -65,6 +65,11 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
   const [showCacheValueDetails, setShowCacheValueDetails] = useState<boolean>(false);
   const [showEmberConduitDetails, setShowEmberConduitDetails] = useState<boolean>(false);
   const [showMemoriesDetails, setShowMemoriesDetails] = useState<boolean>(false);
+  const [activeMission, setActiveMission] = useState<MissionData | null>(null);
+  const [showMissionDropdown, setShowMissionDropdown] = useState(false);
+  const [showMissionBrief, setShowMissionBrief] = useState(false);
+  const missionDropdownRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // Define which screens are unlocked
   const unlockedScreens = ['camp'];
@@ -139,6 +144,14 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
           } catch (ascentError) {
             console.error('Failed to fetch ascent level:', ascentError);
           }
+          
+          // Fetch active mission
+          try {
+            const missionData = await fetchActiveMission(publicKey);
+            setActiveMission(missionData);
+          } catch (missionError) {
+            console.error('Failed to fetch active mission:', missionError);
+          }
         } catch (error) {
           console.error('Failed to fetch wallet data:', error);
         }
@@ -147,6 +160,23 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
 
     loadWalletData();
   }, [publicKey]);
+
+  // Add click outside handler for mission dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        missionDropdownRef.current && 
+        !missionDropdownRef.current.contains(event.target as Node) &&
+        cardRef.current &&
+        !cardRef.current.contains(event.target as Node)
+      ) {
+        setShowMissionDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleDisconnect = async () => {
     if ('phantom' in window) {
@@ -371,39 +401,139 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
           </div>
           <div className={styles.divider}></div>
           <div className={styles.campStatus}>
-            <h3>CAMP STATUS</h3>
+            <h3>Camp Status</h3>
             <div className={styles.statusGrid}>
-              <div className={styles.statusCard}>
-                <div className={styles.statusHeader}>PERIMETER</div>
+              <div 
+                ref={cardRef}
+                className={`${styles.statusCard} ${showMissionDropdown || showMissionBrief ? styles.expanded : ''}`}
+              >
+                <div className={styles.statusHeader}>MISSIONS</div>
                 <div className={styles.statusValue}>
-                  <span className={styles.active}>SECURE</span>
+                  <div className={styles.active}>
+                    <span className={styles.missionLabel}>ACTIVE:</span>
+                    <span className={styles.missionTitle}>{activeMission?.title || "Share on X"}</span>
+                  </div>
+                  <div className={styles.missionButtons}>
+                    <button 
+                      className={styles.missionButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMissionBrief(!showMissionBrief);
+                        setShowMissionDropdown(false);
+                      }}
+                    >
+                      BRIEF
+                    </button>
+                    <button 
+                      className={styles.missionButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMissionDropdown(!showMissionDropdown);
+                        setShowMissionBrief(false);
+                      }}
+                    >
+                      SELECT MISSION
+                    </button>
+                  </div>
                 </div>
+                {showMissionBrief && (
+                  <div className={styles.missionDropdown} ref={missionDropdownRef}>
+                    <div className={styles.missionDescription}>
+                      <h4>MISSION BRIEF</h4>
+                      <p className={styles.missionText}>
+                        "Welcome to your first mission in the Nullblock universe! Your creativity is your greatest asset here. 
+                        Show the digital realm what makes your camp unique. The more engaging and imaginative your post, 
+                        the more Nectar you'll receive. Think outside the box - your airdrop reward will be based on the 
+                        engagement your post generates. Let's see what you can create!"
+                      </p>
+                      <div className={styles.missionInstructions}>
+                        <h4>QUALIFICATION REQUIREMENTS</h4>
+                        <ul>
+                          <li>Create a tweet tagging <span className={styles.highlight}>@Nullblock_io</span></li>
+                          <li>Include the cashtag <span className={styles.highlight}>$NECTAR</span></li>
+                          <li>Add the official CA: <span className={styles.highlight}>TBD</span></li>
+                        </ul>
+                        <p className={styles.missionNote}>
+                          Airdrop amount will be determined by post engagement and creativity.
+                        </p>
+                      </div>
+                      <div className={styles.missionReward}>
+                        <span className={styles.rewardLabel}>REWARD:</span>
+                        <span className={styles.rewardValue}>TBD NECTAR AIRDROP</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {showMissionDropdown && (
+                  <div className={styles.missionDropdown} ref={missionDropdownRef}>
+                    <div className={styles.availableMissions}>
+                      <h4>AVAILABLE MISSIONS</h4>
+                      <div className={styles.missionList}>
+                        <div className={`${styles.missionItem} ${styles.active}`}>
+                          <div className={styles.missionItemContent}>
+                            <span className={styles.missionTitle}>Share on X</span>
+                            <span className={styles.missionStatus}>ACTIVE</span>
+                          </div>
+                          <span className={styles.missionReward}>TBD NECTAR AIRDROP</span>
+                        </div>
+                        <div className={`${styles.missionItem} ${styles.blurred}`}>
+                          <div className={styles.missionItemContent}>
+                            <span className={styles.missionTitle}>Mission 2</span>
+                            <span className={styles.missionStatus}>LOCKED</span>
+                          </div>
+                          <span className={`${styles.missionReward} ${styles.blurred}`}>??? NECTAR</span>
+                        </div>
+                        <div className={`${styles.missionItem} ${styles.blurred}`}>
+                          <div className={styles.missionItemContent}>
+                            <span className={styles.missionTitle}>Mission 3</span>
+                            <span className={styles.missionStatus}>LOCKED</span>
+                          </div>
+                          <span className={`${styles.missionReward} ${styles.blurred}`}>??? NECTAR</span>
+                        </div>
+                        <div className={`${styles.missionItem} ${styles.blurred}`}>
+                          <div className={styles.missionItemContent}>
+                            <span className={styles.missionTitle}>Mission 4</span>
+                            <span className={styles.missionStatus}>LOCKED</span>
+                          </div>
+                          <span className={`${styles.missionReward} ${styles.blurred}`}>??? NECTAR</span>
+                        </div>
+                        <div className={`${styles.missionItem} ${styles.blurred}`}>
+                          <div className={styles.missionItemContent}>
+                            <span className={styles.missionTitle}>Mission 5</span>
+                            <span className={styles.missionStatus}>LOCKED</span>
+                          </div>
+                          <span className={`${styles.missionReward} ${styles.blurred}`}>??? NECTAR</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className={styles.statusCard}>
+              <div className={`${styles.statusCard} ${styles.blurred}`}>
                 <div className={styles.statusHeader}>SYSTEMS</div>
                 <div className={styles.statusValue}>
                   <span className={styles.pending}>SCANNING</span>
                 </div>
               </div>
-              <div className={styles.statusCard}>
+              <div className={`${styles.statusCard} ${styles.blurred}`}>
                 <div className={styles.statusHeader}>DEFENSE</div>
                 <div className={styles.statusValue}>
                   <span className={styles.stable}>ACTIVE</span>
                 </div>
               </div>
-              <div className={styles.statusCard}>
+              <div className={`${styles.statusCard} ${styles.blurred}`}>
                 <div className={styles.statusHeader}>UPLINK</div>
                 <div className={styles.statusValue}>
                   <span className={styles.active}>STABLE</span>
                 </div>
               </div>
-              <div className={styles.statusCard}>
+              <div className={`${styles.statusCard} ${styles.blurred}`}>
                 <div className={styles.statusHeader}>MATRIX CORE</div>
                 <div className={styles.statusValue}>
                   <span className={styles.pending}>INITIALIZING</span>
                 </div>
               </div>
-              <div className={styles.statusCard}>
+              <div className={`${styles.statusCard} ${styles.blurred}`}>
                 <div className={styles.statusHeader}>REALITY ENGINE</div>
                 <div className={styles.statusValue}>
                   <span className={styles.stable}>STANDBY</span>
