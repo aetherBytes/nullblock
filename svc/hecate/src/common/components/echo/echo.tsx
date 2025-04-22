@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './echo.module.scss';
 import { fetchWalletData, fetchUserProfile, fetchAscentLevel } from '@services/api';
+import flameGuySheet from "../../../assets/images/flame_guy_sheet.png";
 
 type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
@@ -72,13 +73,16 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
     { name: "Neural Link", status: "SCANNING", locked: false },
     { name: "Wallet Health", status: "OPTIMAL", locked: false },
     { name: "Token Analysis", status: "IN PROGRESS", locked: false },
-    { name: "Risk Assessment", status: "LOW", locked: false },
+    { name: "Risk Assessment", status: "LOW", locked: true },
     { name: "Memory Integrity", status: "CHECKING", locked: true },
     { name: "Network Status", status: "CONNECTED", locked: true },
     { name: "Matrix Sync", status: "OFFLINE", locked: true },
     { name: "Reality Engine", status: "DORMANT", locked: true },
     { name: "Core Systems", status: "LOCKED", locked: true },
-    { name: "Neural Cache", status: "UNAVAILABLE", locked: true }
+    { name: "Neural Cache", status: "UNAVAILABLE", locked: true },
+    { name: "Quantum Resonance", status: "UNKNOWN", locked: true },
+    { name: "Bio-Interface", status: "DISABLED", locked: true },
+    { name: "Temporal Alignment", status: "DESYNCED", locked: true }
   ];
 
   const handleScreenChange = (newScreen: Screen) => {
@@ -342,14 +346,25 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
       <div className={styles.campContent}>
         <div className={styles.campGrid}>
           <div className={styles.campAnalysis}>
-            <h3>SYSTEM ANALYSIS</h3>
-            <ul>
-              {systemAnalysisItems.map((item, index) => (
-                <li key={index} className={item.locked ? styles.locked : ''}>
-                  {item.name}: <span className={getStatusClass(item.status)}>{item.status}</span>
-                </li>
-              ))}
-            </ul>
+            <h3>CAMPER DIAGNOSTICS</h3>
+            <div className={styles.diagnosticsContainer}>
+              <ul>
+                {systemAnalysisItems.map((item, index) => (
+                  <li key={index} className={item.locked ? styles.locked : ''}>
+                    {item.name}: <span className={getStatusClass(item.status)}>{item.status}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className={styles.diagSpriteContainer}>
+                <div 
+                  className={styles.diagSprite}
+                  style={{ 
+                    backgroundImage: `url(${flameGuySheet})`,
+                    backgroundPosition: '0 0'
+                  }}
+                />
+              </div>
+            </div>
           </div>
           <div className={styles.divider}></div>
           <div className={styles.campStatus}>
