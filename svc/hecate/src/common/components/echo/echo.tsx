@@ -349,8 +349,11 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
             <h3>CAMPER DIAGNOSTICS</h3>
             <div className={styles.diagnosticsContainer}>
               <ul>
-                {systemAnalysisItems.map((item, index) => (
-                  <li key={index} className={item.locked ? styles.locked : ''}>
+                <li>
+                  Ember Link: <span className={styles.scanning}>Scanning<span className={styles.scanningDots}></span></span>
+                </li>
+                {systemAnalysisItems.slice(1).map((item, index) => (
+                  <li key={index} className={styles.blurred}>
                     {item.name}: <span className={getStatusClass(item.status)}>{item.status}</span>
                   </li>
                 ))}
