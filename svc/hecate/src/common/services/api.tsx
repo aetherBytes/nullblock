@@ -120,17 +120,18 @@ export const fetchActiveMission = async (publicKey: string): Promise<MissionData
     if (!response.ok) {
       throw new Error('Failed to fetch active mission');
     }
-    return await response.json();
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error('Error fetching active mission:', error);
     // Return a default mission if the API call fails
     return {
-      id: "mission_001",
-      title: "Share on X",
-      description: "Share your experience with Nullblock on X to earn rewards.",
-      status: "active",
-      reward: "10 NECTAR",
-      x_url: "https://x.com/Nullblock_io"
+      id: '1',
+      title: 'Share on X',
+      description: 'Share your Base Camp on X to earn GLIMMER',
+      status: 'active',
+      reward: 'TBD GLIMMER AIRDROP',
+      x_url: 'https://twitter.com/intent/tweet?text=Check%20out%20my%20Base%20Camp%20in%20the%20Nullblock%20universe!%20%40Nullblock_io%20%24GLIMMER'
     };
   }
 };
