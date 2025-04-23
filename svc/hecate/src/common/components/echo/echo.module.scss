@@ -1428,32 +1428,36 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       );
       animation: shimmer 2s infinite;
     }
-
+    
     .profileItem {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 0.15rem;
+      align-items: flex-start;
       position: relative;
+      padding: 8px 12px;
+      background-color: transparent;
+      border-radius: 4px;
+      margin-bottom: 5px;
+      width: 100%;
       z-index: 1;
-      padding: 0 0.25rem;
-
+      
       .label {
+        color: $echo-blue;
         font-size: 0.7em;
-        color: rgba(0, 0, 0, 0.8);
         text-transform: uppercase;
         letter-spacing: 1px;
         font-weight: 600;
-        text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
-        margin-right: 8px;
+        text-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
+        margin-bottom: 2px;
+        display: flex;
+        align-items: center;
       }
-
+      
       .value {
+        color: $text-color;
         font-size: 0.9em;
-        color: $echo-blue-dark;
-        text-shadow: 0 0 8px rgba($echo-blue, 0.3);
+        text-shadow: 0 0 8px rgba($echo-blue, 0.5);
         font-weight: bold;
-        margin-right: 8px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1479,31 +1483,27 @@ $light-shadow: rgba(0, 0, 0, 0.1);
           color: $echo-orange;
         }
       }
-
+      
       .infoButton {
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: rgba($echo-blue, 0.2);
-        color: $echo-blue;
-        font-size: 0.65em;
-        font-weight: bold;
-        display: flex;
+        position: relative;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: rgba($echo-blue, 0.2);
+        color: $echo-blue;
         border: 1px solid rgba($echo-blue, 0.3);
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: bold;
         transition: all 0.2s ease;
-        padding: 0;
-        line-height: 1;
         z-index: 2;
         margin-left: 4px;
-
+        
         &:hover {
-          background: rgba($echo-blue, 0.4);
+          background-color: rgba($echo-blue, 0.3);
           transform: scale(1.1);
         }
       }
@@ -1610,5 +1610,88 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   &-light {
     background-color: #fff;
     color: #000;
+  }
+}
+
+.ascentDetails {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 300px;
+  background-color: rgba($background-dark, 0.95);
+  border: 1px solid rgba($echo-blue, 0.3);
+  border-radius: 4px;
+  padding: 15px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  margin-top: 5px;
+  backdrop-filter: blur(5px);
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 10px;
+    width: 15px;
+    height: 15px;
+    background-color: rgba($background-dark, 0.95);
+    border-left: 1px solid rgba($echo-blue, 0.3);
+    border-bottom: 1px solid rgba($echo-blue, 0.3);
+    transform: rotate(45deg);
+  }
+  
+  &.rightAligned {
+    left: auto;
+    right: 0;
+    
+    &::before {
+      left: auto;
+      right: 10px;
+    }
+  }
+  
+  .ascentDescription {
+    color: $text-color;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+  
+  .progressText {
+    color: $echo-blue;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+  }
+  
+  .accoladesContainer {
+    margin-top: 10px;
+    
+    .accoladesTitle {
+      color: $echo-blue;
+      font-size: 0.9rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .accoladesList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      
+      li {
+        color: $text-color;
+        font-size: 0.85rem;
+        margin-bottom: 3px;
+        
+        &.visible {
+          color: $echo-green;
+        }
+        
+        &.blurred {
+          color: rgba($text-color, 0.4);
+          filter: blur(1px);
+        }
+      }
+    }
   }
 }
