@@ -118,6 +118,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   gap: 2px;
+  max-height: 95vh;
+  overflow: hidden;
   
   &.null {
     @include theme-colors($null-bg, $null-border, $null-text);
@@ -170,6 +172,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
                 0 0 30px rgba($background-dark, 0.1);
     font-family: $batman-font;
     animation: softEcho 20s infinite ease-in-out, corePulse 4s infinite alternate;
+    overflow: hidden;
+    max-height: 90vh;
 
     &::before {
       content: '';
@@ -381,23 +385,25 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     border: 1px solid rgba($echo-blue, 0.05);
     box-shadow: inset 0 0 20px rgba($echo-blue, 0.015);
     backdrop-filter: blur(1px);
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: repeating-linear-gradient(
-        0deg,
-        rgba($echo-gray, 0.015) 0px,
-        rgba($echo-gray, 0.015) 1px,
-        transparent 1px,
-        transparent 2px
-      );
-      pointer-events: none;
-      animation: scanline 10s linear infinite;
+    overflow-y: auto;
+    max-height: 100%;
+    
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 255, 0, 0.3);
+      border-radius: 4px;
+      
+      &:hover {
+        background: rgba(0, 255, 0, 0.5);
+      }
     }
 
     .walletInfo {
@@ -510,13 +516,34 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     flex-direction: column;
     min-height: 0;
     position: relative;
-    padding: 1rem 2rem;
+    padding: 0.75rem 1.5rem;
+    overflow: hidden;
+    max-height: 100%;
+    
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 255, 0, 0.3);
+      border-radius: 4px;
+      
+      &:hover {
+        background: rgba(0, 255, 0, 0.5);
+      }
+    }
 
     .headerContainer {
       display: flex;
       align-items: center;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.5rem;
       width: 100%;
+      flex-shrink: 0;
     }
 
     .headerDivider {
@@ -529,71 +556,133 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         rgba($echo-blue, 0.3) 80%,
         transparent 100%
       );
-      margin: 0 1.5rem;
+      margin: 0 1rem;
     }
 
     .hudTitle {
       margin-bottom: 0;
-      padding-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      font-size: 1.8em;
     }
 
     .campGrid {
       display: grid;
-      grid-template-columns: minmax(200px, 30%) 1px minmax(250px, 70%);
+      grid-template-columns: 25% 1px 75%;
       gap: 1rem;
-      margin-top: 1rem;
-      width: 100%;
+      height: 100%;
       overflow: hidden;
+      margin-top: 0.5rem;
+      
+      .divider {
+        width: 1px;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          transparent 0%,
+          rgba($echo-blue, 0.2) 20%,
+          rgba($echo-blue, 0.2) 80%,
+          transparent 100%
+        );
+        margin: 0 auto;
+      }
 
-      .campAnalysis, .campStatus {
-        min-width: 0;
-        width: 100%;
+      .matrixPrompt {
+        margin-top: 1rem;
+        text-align: center;
 
-        h3 {
-          color: $echo-blue-dark;
-          font-size: 1.1em;
-          margin-bottom: 1rem;
-          text-shadow: 0 0 10px rgba($echo-blue, 0.3);
-          letter-spacing: 2px;
-          position: relative;
-          padding-bottom: 0.5rem;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          text-align: left;
-          background: rgba(0, 0, 0, 0.2);
-          padding: 0.3rem 0.8rem;
-          border-radius: 3px;
-          box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+        .marketButton {
+          padding: 0.8rem 1.5rem;
+          background: rgba($echo-blue, 0.1);
+          border: 1px solid rgba($echo-blue, 0.3);
+          color: $echo-blue;
+          font-family: $batman-font;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          letter-spacing: 1px;
 
-          &::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 1px;
-            background: linear-gradient(90deg,
-              rgba($echo-blue, 0.4) 0%,
-              rgba($echo-blue, 0.1) 50%,
-              transparent 100%
-            );
+          &:hover {
+            background: rgba($echo-blue, 0.2);
+            border-color: rgba($echo-blue, 0.4);
+            transform: translateY(-1px);
           }
         }
+      }
+    }
 
+    .campAnalysis {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      
+      h3 {
+        color: $echo-blue-dark;
+        font-size: 1.1em;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+        letter-spacing: 2px;
+        position: relative;
+        padding-bottom: 0.5rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: left;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 0.3rem 0.8rem;
+        border-radius: 3px;
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+        flex-shrink: 0;
+        text-transform: uppercase;
+
+        &::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 1px;
+          background: linear-gradient(90deg,
+            rgba($echo-blue, 0.4) 0%,
+            rgba($echo-blue, 0.1) 50%,
+            transparent 100%
+          );
+        }
+      }
+      
+      .diagnosticsContainer {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+        
+        &::-webkit-scrollbar {
+          width: 4px;
+        }
+        
+        &::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.3);
+        }
+        
+        &::-webkit-scrollbar-thumb {
+          background: rgba(0, 255, 0, 0.3);
+          border-radius: 2px;
+        }
+        
         ul {
           list-style: none;
           padding: 0;
-          margin: 1rem 0;
+          margin: 0.5rem 0;
 
           li {
-            margin: 0.5rem 0;
+            margin: 0.25rem 0;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: $echo-gray;
             transition: all 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
 
             &.locked {
               opacity: 0.3;
@@ -628,138 +717,665 @@ $light-shadow: rgba(0, 0, 0, 0.1);
           }
         }
       }
+    }
+  }
 
-      .divider {
-        width: 1px;
-        height: 100%;
-        background: linear-gradient(
-          to bottom,
-          transparent 0%,
-          rgba($echo-blue, 0.2) 20%,
-          rgba($echo-blue, 0.2) 80%,
+  .campContent {
+    margin-top: 1rem;
+    height: calc(100vh - 250px);
+    overflow: hidden;
+    
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 255, 0, 0.3);
+      border-radius: 4px;
+      
+      &:hover {
+        background: rgba(0, 255, 0, 0.5);
+      }
+    }
+
+    h3 {
+      color: $echo-blue-dark;
+      font-size: 1.2em;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+      letter-spacing: 2px;
+      text-align: left;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 0.3rem 0.8rem;
+      border-radius: 3px;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0;
+
+      li {
+        margin: 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        span {
+          &.active {
+            color: lighten($echo-green, 10%);
+            text-shadow: 0 0 8px rgba($echo-green, 0.4);
+          }
+          &.pending {
+            color: lighten($echo-orange, 10%);
+            text-shadow: 0 0 8px rgba($echo-orange, 0.4);
+          }
+          &.stable {
+            color: lighten($echo-blue, 10%);
+            text-shadow: 0 0 8px rgba($echo-blue, 0.4);
+          }
+          &.connected {
+            color: lighten($echo-green, 10%);
+            text-shadow: 0 0 8px rgba($echo-green, 0.4);
+          }
+          &.initializing {
+            color: lighten($echo-orange, 10%);
+            text-shadow: 0 0 8px rgba($echo-orange, 0.4);
+          }
+        }
+      }
+    }
+  }
+
+  .campGrid {
+    display: grid;
+    grid-template-columns: 25% 1px 75%;
+    gap: 1rem;
+    height: 100%;
+    overflow: hidden;
+    margin-top: 0.5rem;
+    
+    .divider {
+      width: 1px;
+      height: 100%;
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba($echo-blue, 0.2) 20%,
+        rgba($echo-blue, 0.2) 80%,
+        transparent 100%
+      );
+      margin: 0 auto;
+    }
+  }
+
+  .campAnalysis {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    
+    h3 {
+      color: $echo-blue-dark;
+      font-size: 1.1em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+      letter-spacing: 2px;
+      position: relative;
+      padding-bottom: 0.5rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: left;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 0.3rem 0.8rem;
+      border-radius: 3px;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+      flex-shrink: 0;
+      text-transform: uppercase;
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 1px;
+        background: linear-gradient(90deg,
+          rgba($echo-blue, 0.4) 0%,
+          rgba($echo-blue, 0.1) 50%,
           transparent 100%
         );
-        margin: 0 auto;
-      }
-
-      .matrixPrompt {
-        margin-top: 2rem;
-        text-align: center;
-
-        .marketButton {
-          padding: 0.8rem 1.5rem;
-          background: rgba($echo-blue, 0.1);
-          border: 1px solid rgba($echo-blue, 0.3);
-          color: $echo-blue;
-          font-family: $batman-font;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          letter-spacing: 1px;
-
-          &:hover {
-            background: rgba($echo-blue, 0.2);
-            border-color: rgba($echo-blue, 0.4);
-            transform: translateY(-1px);
-          }
-        }
       }
     }
-
-    .campContent, .inventorySection, .realityContent, .marketContent, .interfaceContent {
-      margin-top: 1rem;
+    
+    .diagnosticsContainer {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 0.5rem;
       
-      h3 {
-        color: $echo-blue-dark;
-        font-size: 1.2em;
-        margin-bottom: 1rem;
-        text-shadow: 0 0 10px rgba($echo-blue, 0.3);
-        letter-spacing: 2px;
-        text-align: left;
-        background: rgba(0, 0, 0, 0.2);
-        padding: 0.3rem 0.8rem;
-        border-radius: 3px;
-        box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+      &::-webkit-scrollbar {
+        width: 4px;
+      }
+      
+      &::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+      }
+      
+      &::-webkit-scrollbar-thumb {
+        background: rgba(0, 255, 0, 0.3);
+        border-radius: 2px;
+      }
+    }
+  }
+
+  .campStatus {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .statusCard {
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(0, 255, 0, 0.3);
+    border-radius: 4px;
+    padding: 0.75rem;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .statusHeaderContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+    padding-bottom: 0.5rem;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    
+    h3 {
+      margin-bottom: 0;
+      flex-shrink: 0;
+    }
+    
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  .statusTabs {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    max-width: 100%;
+    overflow-x: auto;  
+    &::-webkit-scrollbar {
+      height: 4px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 2px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 255, 0, 0.3);
+      border-radius: 2px;
+      &:hover {
+        background: rgba(0, 255, 0, 0.5);
+      }
+    }
+  }
+
+  .statusTab {
+    background: transparent;
+    border: 1px solid rgba(0, 255, 0, 0.3);
+    color: rgba(0, 255, 0, 0.7);
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    
+    &:hover {
+      background: rgba(0, 255, 0, 0.1);
+      color: #00ff00;
+    }
+    
+    &.activeTab {
+      background: rgba(0, 255, 0, 0.2);
+      color: #00ff00;
+      border-color: #00ff00;
+    }
+    
+    &.blurred {
+      opacity: 0.5;
+      filter: blur(1px);
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+  }
+
+  .missionsTab, .systemsTab, .defenseTab, .uplinkTab {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+    
+    .statusTabs {
+      margin-top: 0;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+  }
+
+  .tabContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: calc(100% - 40px); /* Account for the tabs height */
+    width: 100%;
+  }
+
+  .missionHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.25rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+    flex-shrink: 0;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .missionContent {
+    display: grid;
+    grid-template-columns: minmax(250px, 300px) 1fr;
+    gap: 1rem;
+    padding: 0.5rem;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    margin: 0 auto;
+    box-sizing: border-box;
+    max-width: 100%;
+
+    .availableMissions {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(0, 255, 0, 0.2);
+      border-radius: 4px;
+      padding: 0.75rem;
+      overflow-y: auto;
+      height: 100%;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      
+      &::-webkit-scrollbar {
+        width: 4px;
+      }
+      
+      &::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+      }
+      
+      &::-webkit-scrollbar-thumb {
+        background: rgba(0, 255, 0, 0.3);
+        border-radius: 2px;
       }
 
-      ul {
-        list-style: none;
-        padding: 0;
-        margin: 1rem 0;
+      h4 {
+        color: #00ff00;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+      }
 
-        li {
-          margin: 0.5rem 0;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
+      .missionList {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      
+      .missionItem {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(0, 255, 0, 0.2);
+        border-radius: 3px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        box-sizing: border-box;
+        
+        &.active {
+          background: rgba(0, 255, 0, 0.1);
+          border-color: rgba(0, 255, 0, 0.4);
+        }
+        
+        &.blurred {
+          opacity: 0.5;
+          filter: blur(1px);
+        }
+        
+        &:hover:not(.blurred) {
+          background: rgba(0, 255, 0, 0.15);
+          transform: translateY(-1px);
+        }
+      }
+      
+      .missionItemContent {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        overflow: hidden;
+        max-width: 70%;
+      }
+      
+      .missionTitle {
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: bold;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      
+      .missionStatus {
+        font-size: 0.75rem;
+        color: #00ff00;
+      }
+      
+      .missionReward {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.7);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        
+        &.blurred {
+          opacity: 0.5;
+          filter: blur(1px);
+        }
+      }
+    }
 
-          span {
-            &.active {
-              color: lighten($echo-green, 10%);
-              text-shadow: 0 0 8px rgba($echo-green, 0.4);
-            }
-            &.pending {
-              color: lighten($echo-orange, 10%);
-              text-shadow: 0 0 8px rgba($echo-orange, 0.4);
-            }
-            &.stable {
-              color: lighten($echo-blue, 10%);
-              text-shadow: 0 0 8px rgba($echo-blue, 0.4);
-            }
-            &.connected {
-              color: lighten($echo-green, 10%);
-              text-shadow: 0 0 8px rgba($echo-green, 0.4);
-            }
-            &.initializing {
-              color: lighten($echo-orange, 10%);
-              text-shadow: 0 0 8px rgba($echo-orange, 0.4);
-            }
+    .missionDescription {
+      width: calc(100% - 4rem);
+      max-width: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(0, 255, 0, 0.2);
+      border-radius: 4px;
+      padding: 0.75rem;
+      overflow-y: auto;
+      overflow-x: hidden;
+      height: 100%;
+      box-sizing: border-box;
+      
+      &::-webkit-scrollbar {
+        width: 4px;
+      }
+      
+      &::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+      }
+      
+      &::-webkit-scrollbar-thumb {
+        background: rgba(0, 255, 0, 0.3);
+        border-radius: 2px;
+      }
+
+      h4 {
+        color: #00ff00;
+        margin-bottom: 0.25rem;
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
+
+      .missionText {
+        color: rgba(255, 255, 255, 0.9);
+        font-style: italic;
+        margin-bottom: 0.5rem;
+        line-height: 1.3;
+        font-size: 0.85rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
+      }
+
+      .missionInstructions {
+        margin-top: 1rem;
+        margin-bottom: 1.5rem;
+        max-width: 100%;
+
+        h4 {
+          color: #00ff00;
+          margin-bottom: 0.5rem;
+          font-size: 0.9rem;
+          letter-spacing: 1px;
+          max-width: 100%;
+        }
+        
+        ul {
+          list-style-type: none;
+          padding-left: 0;
+          margin-bottom: 0.5rem;
+          max-width: 100%;
+
+          li {
+            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+          }
+
+          .highlight {
+            color: #00ff00;
+            font-weight: bold;
           }
         }
       }
-    }
 
-    .inventorySection, .marketSection, .interfaceSection {
-      background: rgba($background-dark, 0.2);
-      border: 1px solid rgba($echo-blue, 0.1);
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      backdrop-filter: blur(2px);
-
-      .emptyState {
-        text-align: center;
-        padding: 2rem;
-        color: rgba($echo-gray, 0.7);
+      .missionNote {
         font-style: italic;
-
-        p {
-          margin: 0.5rem 0;
-        }
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
       }
-    }
-
-    .realityStatus {
-      margin-bottom: 2rem;
-
-      p {
-        margin: 0.5rem 0;
+      
+      .missionReward, .missionExpiration {
+        display: flex;
+        align-items: flex-start;
+        margin-top: 0.75rem;
+        max-width: 100%;
         
-        span {
-          color: lighten($echo-blue, 10%);
-          text-shadow: 0 0 8px rgba($echo-blue, 0.4);
-          margin-left: 0.5rem;
+        .rewardLabel, .expirationLabel {
+          color: #00ff00;
+          margin-right: 0.5rem;
+          font-weight: bold;
+          font-size: 0.9rem;
+          flex-shrink: 0;
+        }
+        
+        .rewardValue, .expirationValue {
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 0.9rem;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          max-width: calc(100% - 100px); /* Account for label width */
         }
       }
     }
+  }
 
-    .placeholder {
-      color: rgba($echo-gray, 0.7);
-      font-style: italic;
-      margin: 0.5rem 0;
+  .activeMissionDetails {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(0, 255, 0, 0.2);
+    border-radius: 4px;
+    padding: 0.75rem;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: 100%;
+    
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.3);
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 255, 0, 0.3);
+      border-radius: 2px;
+    }
+  }
+
+  .systemsTab, .defenseTab, .uplinkTab {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .systemsContent, .defenseContent, .uplinkContent {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.3);
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba(0, 255, 0, 0.3);
+      border-radius: 2px;
+    }
+    
+    h4 {
+      color: #00ff00;
+      margin-bottom: 0.25rem;
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      flex-shrink: 0;
+    }
+  }
+
+  .systemsList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+  }
+
+  .systemItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(0, 255, 0, 0.2);
+    border-radius: 3px;
+  }
+
+  .systemName {
+    color: rgba(0, 255, 0, 0.8);
+    font-size: 0.85rem;
+  }
+
+  .defenseStatus, .uplinkStatus {
+    font-size: 1.1rem;
+    margin: 0.25rem 0;
+    color: #00ff00;
+  }
+
+  .defenseDescription, .uplinkDescription {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.85rem;
+    line-height: 1.3;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba($echo-blue, 0.3) transparent;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
     }
 
-    .inactive {
-      color: rgba($echo-gray, 0.5);
-      text-shadow: none;
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba($echo-blue, 0.3);
+      border-radius: 2px;
+    }
+
+    .tab {
+      padding: 0.25rem 0.75rem;
+      background: transparent;
+      border: 1px solid rgba($echo-blue, 0.1);
+      color: $echo-gray;
+      font-size: 0.85em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      min-width: fit-content;
+      border-radius: 3px;
+
+      &:hover {
+        background: rgba($echo-blue, 0.1);
+        color: $echo-blue;
+      }
+
+      &.active {
+        background: rgba($echo-blue, 0.2);
+        color: $echo-blue;
+        border-color: rgba($echo-blue, 0.3);
+      }
     }
   }
 
@@ -786,7 +1402,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 1.5rem;
+    padding: 0.25rem 1rem;
     margin: 0;
     background: rgba($background-dark, 0.2);
     border: 1px solid rgba($echo-blue, 0.1);
@@ -795,6 +1411,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     overflow: visible;
     flex: 1;
     z-index: 10;
+    max-height: 60px;
+    min-height: 50px;
 
     &::before {
       content: '';
@@ -815,27 +1433,31 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.25rem;
+      gap: 0.15rem;
       position: relative;
       z-index: 1;
-      padding: 0 0.5rem;
+      padding: 0 0.25rem;
 
       .label {
-        font-size: 0.75em;
+        font-size: 0.7em;
         color: rgba(0, 0, 0, 0.8);
         text-transform: uppercase;
         letter-spacing: 1px;
         font-weight: 600;
         text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
-        margin-right: 16px;
+        margin-right: 8px;
       }
 
       .value {
-        font-size: 1em;
+        font-size: 0.9em;
         color: $echo-blue-dark;
         text-shadow: 0 0 8px rgba($echo-blue, 0.3);
         font-weight: bold;
-        margin-right: 16px;
+        margin-right: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 120px;
 
         &.common {
           color: $echo-gray;
@@ -862,12 +1484,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         position: absolute;
         top: 0;
         right: 0;
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
         background: rgba($echo-blue, 0.2);
         color: $echo-blue;
-        font-size: 0.7em;
+        font-size: 0.65em;
         font-weight: bold;
         display: flex;
         align-items: center;
@@ -878,7 +1500,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         padding: 0;
         line-height: 1;
         z-index: 2;
-        margin-left: 8px;
+        margin-left: 4px;
 
         &:hover {
           background: rgba($echo-blue, 0.4);
@@ -989,524 +1611,4 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     background-color: #fff;
     color: #000;
   }
-}
-
-.campStatus {
-  position: relative;
-  width: 100%;
-  
-  .statusGrid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    margin-bottom: 1rem;
-    position: relative;
-  }
-}
-
-.statusCard {
-  background: rgba(0, 0, 0, 0.8);
-  border: 1px solid rgba(0, 255, 157, 0.1);
-  border-radius: 4px;
-  padding: 1rem;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  
-  &.expanded {
-    z-index: 100;
-    box-shadow: 0 0 15px rgba(0, 255, 157, 0.2);
-  }
-  
-  .statusHeader {
-    color: #000000;
-    font-size: 0.9rem;
-    margin-bottom: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    font-weight: bold;
-    text-shadow: 
-      0 0 10px rgba(255, 255, 255, 0.8),
-      0 0 20px rgba(255, 255, 255, 0.6),
-      0 0 30px rgba(255, 255, 255, 0.4);
-  }
-  
-  .statusValue {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    
-    .active {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      
-      .missionLabel {
-        color: #00ff9d;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-      
-      .missionTitle {
-        color: #ffffff;
-        font-size: 1rem;
-        font-weight: bold;
-        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-      }
-    }
-
-    .missionButtons {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 0.5rem;
-    }
-
-    .missionButton {
-      flex: 1;
-      background: rgba(0, 255, 157, 0.1);
-      border: 1px solid rgba(0, 255, 157, 0.3);
-      color: #00ff9d;
-      padding: 0.5rem 1rem;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      border-radius: 3px;
-      text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
-      
-      &:hover {
-        background: rgba(0, 255, 157, 0.2);
-        border-color: rgba(0, 255, 157, 0.5);
-        transform: translateY(-1px);
-      }
-      
-      &:active {
-        transform: translateY(0);
-      }
-    }
-  }
-}
-
-.missionDropdown {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  left: 0;
-  width: 100%;
-  background: rgba(0, 0, 0, 0.95);
-  border: 1px solid rgba(0, 255, 157, 0.2);
-  border-radius: 4px;
-  padding: 1.5rem;
-  z-index: 1000;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-  max-height: 300px;
-  overflow-y: auto;
-  pointer-events: auto;
-  
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 3px;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: rgba(0, 255, 157, 0.3);
-    border-radius: 3px;
-    
-    &:hover {
-      background: rgba(0, 255, 157, 0.5);
-    }
-  }
-  
-  .missionDescription {
-    margin-bottom: 2rem;
-    
-    h4 {
-      color: #00ff9d;
-      font-size: 0.9rem;
-      margin-bottom: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
-    }
-    
-    .missionText {
-      color: #e0e0e0;
-      font-size: 0.85rem;
-      line-height: 1.4;
-      font-style: italic;
-      margin-bottom: 1.5rem;
-    }
-    
-    .missionInstructions {
-      background: rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(0, 255, 157, 0.1);
-      border-radius: 3px;
-      padding: 1rem;
-      margin-bottom: 1.5rem;
-      
-      h4 {
-        margin-bottom: 1rem;
-      }
-      
-      ul {
-        list-style: none;
-        padding: 0;
-        margin: 0 0 1rem 0;
-        
-        li {
-          color: #e0e0e0;
-          font-size: 0.8rem;
-          margin-bottom: 0.75rem;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          
-          &:before {
-            content: "•";
-            color: #00ff9d;
-          }
-          
-          .highlight {
-            color: #00ff9d;
-            font-weight: bold;
-          }
-        }
-      }
-      
-      .missionNote {
-        color: #e0e0e0;
-        font-size: 0.8rem;
-        font-style: italic;
-        margin: 0;
-        padding-top: 0.75rem;
-        border-top: 1px solid rgba(0, 255, 157, 0.1);
-      }
-    }
-    
-    .missionReward {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      
-      .rewardLabel {
-        color: #00ff9d;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-      
-      .rewardValue {
-        color: #e0e0e0;
-        font-size: 0.9rem;
-        font-weight: bold;
-      }
-    }
-  }
-}
-
-.availableMissions {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(0, 255, 157, 0.1);
-  
-  h4 {
-    color: #00ff9d;
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
-  }
-  
-  .missionList {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    max-height: 200px;
-    overflow-y: auto;
-    padding-right: 0.5rem;
-    
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-    
-    &::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.3);
-    }
-    
-    &::-webkit-scrollbar-thumb {
-      background: rgba(0, 255, 157, 0.3);
-      border-radius: 2px;
-    }
-    
-    .missionItem {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.75rem;
-      background: rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(0, 255, 157, 0.1);
-      border-radius: 3px;
-      transition: all 0.3s ease;
-      
-      &.active {
-        background: rgba(0, 255, 157, 0.1);
-        border-color: rgba(0, 255, 157, 0.3);
-      }
-      
-      &.blurred {
-        opacity: 0.5;
-        filter: blur(1px);
-      }
-      
-      .missionItemContent {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-        
-        .missionTitle {
-          color: #e0e0e0;
-          font-size: 0.85rem;
-        }
-        
-        .missionStatus {
-          color: #00ff9d;
-          font-size: 0.7rem;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-      }
-      
-      .missionReward {
-        color: #e0e0e0;
-        font-size: 0.8rem;
-        
-        &.blurred {
-          opacity: 0.5;
-        }
-      }
-    }
-  }
-}
-
-.divider {
-  width: 1px;
-  background: linear-gradient(to bottom, transparent, rgba($echo-blue, 0.3), transparent);
-  margin: 0 1rem;
-}
-
-.ascentContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  position: relative;
-}
-
-.ascentLevelInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-left: 0.5rem;
-}
-
-.ascentName {
-  font-size: 0.8rem;
-  color: #e0e0e0;
-  text-shadow: 0 0 5px rgba(224, 224, 224, 0.5);
-}
-
-.progressBar {
-  width: 100px;
-  height: 4px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(224, 224, 224, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.progressFill {
-  height: 100%;
-  background: linear-gradient(90deg, #e0e0e0, #c0c0c0);
-  transition: width 0.3s ease;
-}
-
-.ascentDetails {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 300px;
-  background: rgba(0, 0, 0, 0.9);
-  border: 1px solid rgba(224, 224, 224, 0.3);
-  padding: 1rem;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease;
-  margin-top: 0.5rem;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-  pointer-events: auto;
-
-  &.rightAligned {
-    left: auto;
-    right: 0;
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: -5px;
-    left: 20px;
-    width: 10px;
-    height: 10px;
-    background: rgba(0, 0, 0, 0.9);
-    border-left: 1px solid rgba(224, 224, 224, 0.3);
-    border-top: 1px solid rgba(224, 224, 224, 0.3);
-    transform: rotate(45deg);
-  }
-}
-
-.ascentDescription {
-  font-size: 0.8rem;
-  color: #fff;
-  margin-bottom: 0.5rem;
-  line-height: 1.4;
-}
-
-.progressText {
-  font-size: 0.7rem;
-  color: #e0e0e0;
-  margin-bottom: 1rem;
-}
-
-.accoladesContainer {
-  border-top: 1px solid rgba(224, 224, 224, 0.2);
-  padding-top: 0.5rem;
-}
-
-.accoladesTitle {
-  font-size: 0.7rem;
-  color: #e0e0e0;
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-}
-
-.accoladesList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  max-height: 150px;
-  overflow-y: auto;
-
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.3);
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(0, 255, 0, 0.3);
-  }
-}
-
-.accoladesList li {
-  font-size: 0.7rem;
-  color: #fff;
-  padding: 0.25rem 0;
-  transition: all 0.3s ease;
-
-  &.visible {
-    opacity: 1;
-    filter: blur(0);
-  }
-
-  &.blurred {
-    opacity: 0.3;
-    filter: blur(5px);
-    text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.campContent {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  position: relative;
-}
-
-.diagnosticsContainer {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  width: 100%;
-}
-
-.diagSpriteContainer {
-  width: 125px;
-  height: 125px;
-  margin-left: 1rem;
-  padding: 1.5rem;
-  overflow: hidden;
- }
-
-.diagSprite {
-  width: 1440px;
-  height: 144px;
-  background-size: 1440px 144px;
-  background-repeat: no-repeat;
-  animation: spriteAnimation 6s steps(10) infinite;
-  will-change: background-position;
-}
-
-@keyframes spriteAnimation {
-  from { background-position: 0 0; }
-  to { background-position: -1440px 0; }
-}
-
-.scanning {
-  color: #00a8ff;
-  text-shadow: 0 0 8px rgba(0, 168, 255, 0.4);
-}
-
-.scanningDots {
-  display: inline-block;
-  position: relative;
-  width: 24px;
-  height: 10px;
-  
-  &::after {
-    content: '...';
-    position: absolute;
-    left: 0;
-    animation: scanningDots 1.5s infinite;
-  }
-}
-
-@keyframes scanningDots {
-  0% { content: '.'; }
-  33% { content: '..'; }
-  66% { content: '...'; }
-  100% { content: '.'; }
-}
-
-.blurred {
-  opacity: 0.3;
-  filter: blur(2px);
-  color: rgba(192, 192, 192, 0.5);
-  text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
 }

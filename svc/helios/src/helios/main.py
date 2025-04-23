@@ -402,19 +402,19 @@ async def status() -> str:
 
 
 @app.get("/api/missions/{public_key}", response_model=MissionData)
-async def get_active_mission(public_key: str) -> MissionData:
-    """
-    Get the active mission for a user.
-    For now, returns a default mission to share on X.
-    """
-    logwc.info(f"Getting active mission for {public_key}")
-    
-    # Default mission for now
-    return MissionData(
-        id="mission_001",
-        title="Share on X",
-        description="Share your experience with Nullblock on X to earn rewards.",
-        status="active",
-        reward="10 NECTAR",
-        x_url="https://x.com/Nullblock_io"
+async def get_active_mission(public_key: str):
+    logwc(
+        level="info",
+        message=f"Fetching active mission for wallet: {public_key}",
+        logger=logging.getLogger(__name__),
+        context={"wallet": public_key},
     )
+    # For now, return a default mission
+    return {
+        "id": "1",
+        "title": "Share on X",
+        "description": "Share your Base Camp on X to earn GLIMMER",
+        "status": "active",
+        "reward": "TBD GLIMMER AIRDROP",
+        "x_url": "https://twitter.com/intent/tweet?text=Check%20out%20my%20Base%20Camp%20in%20the%20Nullblock%20universe!%20%40Nullblock_io%20%24GLIMMER"
+    }

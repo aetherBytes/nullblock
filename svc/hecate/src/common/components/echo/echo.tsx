@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './echo.module.scss';
 import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '@services/api';
-import flameGuySheet from "../../../assets/images/flame_guy_sheet.png";
 
 type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
+type TabType = 'missions' | 'systems' | 'defense' | 'uplink' | 'echo';
 
 interface EchoProps {
   publicKey: string | null;
@@ -18,7 +18,7 @@ interface EchoProps {
 interface UserProfile {
   id: string;
   ascent: number;
-  nectar: number | null;
+  glimmer: number | null;
   cacheValue: number;
   memories: number;
   matrix: {
@@ -48,7 +48,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
   const [userProfile, setUserProfile] = useState<UserProfile>({
     id: publicKey ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol` : '',
     ascent: 1,
-    nectar: null,
+    glimmer: null,
     cacheValue: 0,
     memories: 0,
     matrix: {
@@ -70,6 +70,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
   const [showMissionBrief, setShowMissionBrief] = useState(false);
   const missionDropdownRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('missions');
 
   // Define which screens are unlocked
   const unlockedScreens = ['camp'];
@@ -114,7 +115,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
             // Update user profile with wallet data and username if available
             setUserProfile(prev => ({
               ...prev,
-              nectar: hasNectarToken ? data.balance : null,
+              glimmer: hasNectarToken ? data.balance : null,
               cacheValue: data.balance || 0, // Set cache value to wallet balance
               id: profileData.username ? `@${profileData.username}` : `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol`
             }));
@@ -127,7 +128,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
             // Fallback to just updating with wallet data
             setUserProfile(prev => ({
               ...prev,
-              nectar: null, // Set to null if we can't determine if Nectar exists
+              glimmer: null, // Set to null if we can't determine if Nectar exists
               cacheValue: data.balance || 0 // Set cache value to wallet balance
             }));
           }
@@ -202,6 +203,10 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
     setShowAlerts(true);
     // This will be handled by the parent component to expand chat
     onExpandChat();
+  };
+
+  const handleNectarClick = () => {
+    setShowNectarDetails(!showNectarDetails);
   };
 
   const renderControlScreen = () => (
@@ -282,8 +287,8 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
         )}
       </div>
       <div className={styles.profileItem}>
-        <span className={styles.label}>NECTAR:</span>
-        <span className={styles.value}>₦ {userProfile.nectar?.toFixed(2) || 'N/A'}</span>
+        <span className={styles.label}>GLIMMER:</span>
+        <span className={styles.value}>₦ {userProfile.glimmer?.toFixed(2) || 'N/A'}</span>
         <button 
           className={styles.infoButton}
           onClick={() => setShowNectarDetails(!showNectarDetails)}
@@ -293,7 +298,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
         {showNectarDetails && (
           <div className={styles.ascentDetails}>
             <div className={styles.ascentDescription}>
-              Nectar: The divine currency that flows through Nullblock like blood through veins. This ain't your grandma's pocket change - it's the sweet nectar of the divine that powers everything from upgrades to acquisitions. Earn it through missions, achievements, or by making the right friends in high places. Warning: Highly addictive, side effects may include increased power and status.
+              Glimmer: The divine currency that flows through Nullblock like blood through veins. This ain't your grandma's pocket change - it's the sweet nectar of the divine that powers everything from upgrades to acquisitions. Earn it through missions, achievements, or by making the right friends in high places. Warning: Highly addictive, side effects may include increased power and status.
             </div>
           </div>
         )}
@@ -376,7 +381,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
       <div className={styles.campContent}>
         <div className={styles.campGrid}>
           <div className={styles.campAnalysis}>
-            <h3>CAMPER DIAGNOSTICS</h3>
+            <h3>INSTANCE DIAGNOSTICS</h3>
             <div className={styles.diagnosticsContainer}>
               <ul>
                 <li>
@@ -388,157 +393,221 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
                   </li>
                 ))}
               </ul>
-              <div className={styles.diagSpriteContainer}>
-                <div 
-                  className={styles.diagSprite}
-                  style={{ 
-                    backgroundImage: `url(${flameGuySheet})`,
-                    backgroundPosition: '0 0'
-                  }}
-                />
-              </div>
             </div>
           </div>
           <div className={styles.divider}></div>
           <div className={styles.campStatus}>
-            <h3>Camp Status</h3>
-            <div className={styles.statusGrid}>
-              <div 
-                ref={cardRef}
-                className={`${styles.statusCard} ${showMissionDropdown || showMissionBrief ? styles.expanded : ''}`}
-              >
-                <div className={styles.statusHeader}>MISSIONS</div>
-                <div className={styles.statusValue}>
-                  <div className={styles.active}>
-                    <span className={styles.missionLabel}>ACTIVE:</span>
-                    <span className={styles.missionTitle}>{activeMission?.title || "Share on X"}</span>
-                  </div>
-                  <div className={styles.missionButtons}>
+            <div className={styles.statusHeaderContainer}>
+              <h3>ARCHITECT VIEW</h3>
+            </div>
+            
+            <div className={styles.statusCard}>
+              {activeTab === 'missions' && (
+                <div className={styles.missionsTab}>
+                  <div className={styles.statusTabs}>
                     <button 
-                      className={styles.missionButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowMissionBrief(!showMissionBrief);
-                        setShowMissionDropdown(false);
-                      }}
+                      className={`${styles.statusTab} ${activeTab === ('echo' as TabType) ? styles.activeTab : ''}`}
+                      onClick={() => setActiveTab('echo' as TabType)}
                     >
-                      BRIEF
+                      E.C.H.O
                     </button>
                     <button 
-                      className={styles.missionButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowMissionDropdown(!showMissionDropdown);
-                        setShowMissionBrief(false);
-                      }}
+                      className={`${styles.statusTab} ${styles.blurred}`}
+                      disabled
                     >
-                      SELECT MISSION
+                      HECATE
+                    </button>
+                    <button 
+                      className={`${styles.statusTab} ${styles.blurred}`}
+                      disabled
+                    >
+                      LEGION
+                    </button>
+                    <button 
+                      className={`${styles.statusTab} ${activeTab === ('missions' as TabType) ? styles.activeTab : ''}`}
+                      onClick={() => setActiveTab('missions' as TabType)}
+                    >
+                      MISSIONS
                     </button>
                   </div>
-                </div>
-                {showMissionBrief && (
-                  <div className={styles.missionDropdown} ref={missionDropdownRef}>
-                    <div className={styles.missionDescription}>
-                      <h4>MISSION BRIEF</h4>
-                      <p className={styles.missionText}>
-                        "Welcome to your first mission in the Nullblock universe! Your creativity is your greatest asset here. 
-                        Show the digital realm what makes your camp unique. The more engaging and imaginative your post, 
-                        the more Nectar you'll receive. Think outside the box - your airdrop reward will be based on the 
-                        engagement your post generates. Let's see what you can create!"
-                      </p>
-                      <div className={styles.missionInstructions}>
-                        <h4>QUALIFICATION REQUIREMENTS</h4>
-                        <ul>
-                          <li>Create a tweet tagging <span className={styles.highlight}>@Nullblock_io</span></li>
-                          <li>Include the cashtag <span className={styles.highlight}>$NECTAR</span></li>
-                          <li>Add the official CA: <span className={styles.highlight}>TBD</span></li>
-                        </ul>
-                        <p className={styles.missionNote}>
-                          Airdrop amount will be determined by post engagement and creativity.
+                  <div className={styles.tabContent}>
+                    <div className={styles.missionHeader}>
+                      <div className={styles.active}>
+                        <span className={styles.missionLabel}>ACTIVE:</span>
+                        <span className={styles.missionTitle}>{activeMission?.title || "Share on X"}</span>
+                      </div>
+                    </div>
+                    
+                    <div className={styles.missionContent}>
+                      <div className={styles.availableMissions}>
+                        <h4>AVAILABLE MISSIONS</h4>
+                        <div className={styles.missionList}>
+                          <div className={`${styles.missionItem} ${styles.active}`}>
+                            <div className={styles.missionItemContent}>
+                              <span className={styles.missionTitle}>Share on X</span>
+                              <span className={styles.missionStatus}>ACTIVE</span>
+                            </div>
+                            <span className={styles.missionReward}>TBD GLIMMER AIRDROP</span>
+                          </div>
+                          <div className={`${styles.missionItem} ${styles.blurred}`}>
+                            <div className={styles.missionItemContent}>
+                              <span className={styles.missionTitle}>Mission 2</span>
+                              <span className={styles.missionStatus}>LOCKED</span>
+                            </div>
+                            <span className={`${styles.missionReward} ${styles.blurred}`}>??? GLIMMER</span>
+                          </div>
+                          <div className={`${styles.missionItem} ${styles.blurred}`}>
+                            <div className={styles.missionItemContent}>
+                              <span className={styles.missionTitle}>Mission 3</span>
+                              <span className={styles.missionStatus}>LOCKED</span>
+                            </div>
+                            <span className={`${styles.missionReward} ${styles.blurred}`}>??? GLIMMER</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className={styles.missionDescription}>
+                        <h4>MISSION BRIEF</h4>
+                        <p className={styles.missionText}>
+                          "Welcome, Camper, to your first trial. Tend the flame carefully.
+                          Share your Base Camp on X—let its glow haunt the realm.
+                          More souls drawn, more Glimmer gained. Don't let it fade."
                         </p>
-                      </div>
-                      <div className={styles.missionReward}>
-                        <span className={styles.rewardLabel}>REWARD:</span>
-                        <span className={styles.rewardValue}>TBD NECTAR AIRDROP</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {showMissionDropdown && (
-                  <div className={styles.missionDropdown} ref={missionDropdownRef}>
-                    <div className={styles.availableMissions}>
-                      <h4>AVAILABLE MISSIONS</h4>
-                      <div className={styles.missionList}>
-                        <div className={`${styles.missionItem} ${styles.active}`}>
-                          <div className={styles.missionItemContent}>
-                            <span className={styles.missionTitle}>Share on X</span>
-                            <span className={styles.missionStatus}>ACTIVE</span>
-                          </div>
-                          <span className={styles.missionReward}>TBD NECTAR AIRDROP</span>
+                        <div className={styles.missionInstructions}>
+                          <h4>QUALIFICATION REQUIREMENTS</h4>
+                          <ul>
+                            <li>Follow<span className={styles.highlight}>@Nullblock_io</span></li>
+                            <li>Tweet out the cashtag <span className={styles.highlight}>$GLIMMER</span></li>
+                            <li>Include the official CA: <span className={styles.highlight}>TBD</span></li>
+                          </ul>
+                          <p className={styles.missionNote}>
+                            Airdrop amount will be determined by post engagement and creativity.
+                          </p>
                         </div>
-                        <div className={`${styles.missionItem} ${styles.blurred}`}>
-                          <div className={styles.missionItemContent}>
-                            <span className={styles.missionTitle}>Mission 2</span>
-                            <span className={styles.missionStatus}>LOCKED</span>
-                          </div>
-                          <span className={`${styles.missionReward} ${styles.blurred}`}>??? NECTAR</span>
+                        <div className={styles.missionReward}>
+                          <span className={styles.rewardLabel}>REWARD:</span>
+                          <span className={styles.rewardValue}>TBD GLIMMER AIRDROP</span>
                         </div>
-                        <div className={`${styles.missionItem} ${styles.blurred}`}>
-                          <div className={styles.missionItemContent}>
-                            <span className={styles.missionTitle}>Mission 3</span>
-                            <span className={styles.missionStatus}>LOCKED</span>
-                          </div>
-                          <span className={`${styles.missionReward} ${styles.blurred}`}>??? NECTAR</span>
-                        </div>
-                        <div className={`${styles.missionItem} ${styles.blurred}`}>
-                          <div className={styles.missionItemContent}>
-                            <span className={styles.missionTitle}>Mission 4</span>
-                            <span className={styles.missionStatus}>LOCKED</span>
-                          </div>
-                          <span className={`${styles.missionReward} ${styles.blurred}`}>??? NECTAR</span>
-                        </div>
-                        <div className={`${styles.missionItem} ${styles.blurred}`}>
-                          <div className={styles.missionItemContent}>
-                            <span className={styles.missionTitle}>Mission 5</span>
-                            <span className={styles.missionStatus}>LOCKED</span>
-                          </div>
-                          <span className={`${styles.missionReward} ${styles.blurred}`}>??? NECTAR</span>
+                        <div className={styles.missionExpiration}>
+                          <span className={styles.expirationLabel}>EXPIRES:</span>
+                          <span className={styles.expirationValue}>TBD</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
-              <div className={`${styles.statusCard} ${styles.blurred}`}>
-                <div className={styles.statusHeader}>SYSTEMS</div>
-                <div className={styles.statusValue}>
-                  <span className={styles.pending}>SCANNING</span>
                 </div>
-              </div>
-              <div className={`${styles.statusCard} ${styles.blurred}`}>
-                <div className={styles.statusHeader}>DEFENSE</div>
-                <div className={styles.statusValue}>
-                  <span className={styles.stable}>ACTIVE</span>
+              )}
+              
+              {activeTab === 'echo' && (
+                <div className={styles.systemsTab}>
+                  <div className={styles.statusTabs}>
+                    <button 
+                      className={`${styles.statusTab} ${activeTab === ('echo' as TabType) ? styles.activeTab : ''}`}
+                      onClick={() => setActiveTab('echo' as TabType)}
+                    >
+                      E.C.H.O
+                    </button>
+                    <button 
+                      className={`${styles.statusTab} ${styles.blurred}`}
+                      disabled
+                    >
+                      HECATE
+                    </button>
+                    <button 
+                      className={`${styles.statusTab} ${styles.blurred}`}
+                      disabled
+                    >
+                      LEGION
+                    </button>
+                    <button 
+                      className={`${styles.statusTab} ${activeTab === ('missions' as TabType) ? styles.activeTab : ''}`}
+                      onClick={() => setActiveTab('missions' as TabType)}
+                    >
+                      MISSIONS
+                    </button>
+                  </div>
+                  <div className={styles.tabContent}>
+                    <div className={styles.lockedContent}>
+                      <p>E.C.H.O system is now active.</p>
+                      <p>Welcome to the E.C.H.O interface.</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className={`${styles.statusCard} ${styles.blurred}`}>
-                <div className={styles.statusHeader}>UPLINK</div>
-                <div className={styles.statusValue}>
-                  <span className={styles.active}>STABLE</span>
+              )}
+              
+              {activeTab === 'defense' && (
+                <div className={styles.defenseTab}>
+                  <div className={styles.statusTabs}>
+                    <button 
+                      className={`${styles.statusTab} ${activeTab === ('echo' as TabType) ? styles.activeTab : ''}`}
+                      onClick={() => setActiveTab('echo' as TabType)}
+                    >
+                      E.C.H.O
+                    </button>
+                    <button 
+                      className={`${styles.statusTab} ${styles.blurred}`}
+                      disabled
+                    >
+                      HECATE
+                    </button>
+                    <button 
+                      className={`${styles.statusTab} ${styles.blurred}`}
+                      disabled
+                    >
+                      LEGION
+                    </button>
+                    <button 
+                      className={`${styles.statusTab} ${activeTab === ('missions' as TabType) ? styles.activeTab : ''}`}
+                      onClick={() => setActiveTab('missions' as TabType)}
+                    >
+                      MISSIONS
+                    </button>
+                  </div>
+                  <div className={styles.tabContent}>
+                    <div className={styles.lockedContent}>
+                      <p>This feature is currently locked.</p>
+                      <p>Return to missions and await further instructions.</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className={`${styles.statusCard} ${styles.blurred}`}>
-                <div className={styles.statusHeader}>MATRIX CORE</div>
-                <div className={styles.statusValue}>
-                  <span className={styles.pending}>INITIALIZING</span>
+              )}
+              
+              {activeTab === 'uplink' && (
+                <div className={styles.uplinkTab}>
+                  <div className={styles.statusTabs}>
+                    <button 
+                      className={`${styles.statusTab} ${activeTab === ('echo' as TabType) ? styles.activeTab : ''}`}
+                      onClick={() => setActiveTab('echo' as TabType)}
+                    >
+                      E.C.H.O
+                    </button>
+                    <button 
+                      className={`${styles.statusTab} ${styles.blurred}`}
+                      disabled
+                    >
+                      HECATE
+                    </button>
+                    <button 
+                      className={`${styles.statusTab} ${styles.blurred}`}
+                      disabled
+                    >
+                      LEGION
+                    </button>
+                    <button 
+                      className={`${styles.statusTab} ${activeTab === ('missions' as TabType) ? styles.activeTab : ''}`}
+                      onClick={() => setActiveTab('missions' as TabType)}
+                    >
+                      MISSIONS
+                    </button>
+                  </div>
+                  <div className={styles.tabContent}>
+                    <div className={styles.lockedContent}>
+                      <p>This feature is currently locked.</p>
+                      <p>Return to missions and await further instructions.</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className={`${styles.statusCard} ${styles.blurred}`}>
-                <div className={styles.statusHeader}>REALITY ENGINE</div>
-                <div className={styles.statusValue}>
-                  <span className={styles.stable}>STANDBY</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
