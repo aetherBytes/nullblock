@@ -8,6 +8,8 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 import random
+from fastapi import WebSocket, WebSocketDisconnect
+from typing import Dict, Set
 
 
 from typing import Literal
@@ -418,3 +420,128 @@ async def get_active_mission(public_key: str):
         "reward": "TBD GLIMMER AIRDROP",
         "x_url": "https://twitter.com/intent/tweet?text=Check%20out%20my%20Base%20Camp%20in%20the%20Nullblock%20universe!%20%40Nullblock_io%20%24GLIMMER"
     }
+
+# WebSocket connection manager for Ember Link
+class EmberLinkManager:
+    def __init__(self):
+        # Store active connections
+        self.active_connections: Dict[str, WebSocket] = {}
+        # Store browser extension connections
+        self.extension_connections: Set[WebSocket] = set()
+        
+    async def connect_client(self, websocket: WebSocket, client_id: str):
+        await websocket.accept()
+        self.active_connections[client_id] = websocket
+        logwc(
+            level="info",
+            message=f"Client connected: {client_id}",
+            logger=logging.getLogger(__name__),
+            context={"client_id": client_id},
+        )
+        
+    async def connect_extension(self, websocket: WebSocket):
+        await websocket.accept()
+        self.extension_connections.add(websocket)
+        logwc(
+            level="info",
+            message="Browser extension connected",
+            logger=logging.getLogger(__name__),
+        )
+        
+    def disconnect_client(self, client_id: str):
+        if client_id in self.active_connections:
+            del self.active_connections[client_id]
+            logwc(
+                level="info",
+                message=f"Client disconnected: {client_id}",
+                logger=logging.getLogger(__name__),
+                context={"client_id": client_id},
+            )
+            
+    def disconnect_extension(self, websocket: WebSocket):
+        if websocket in self.extension_connections:
+            self.extension_connections.remove(websocket)
+            logwc(
+                level="info",
+                message="Browser extension disconnected",
+                logger=logging.getLogger(__name__),
+            )
+            
+    async def broadcast_to_clients(self, message: dict):
+        """Broadcast a message to all connected clients"""
+        for client_id, connection in self.active_connections.items():
+            try:
+                await connection.send_json(message)
+            except Exception as e:
+                logwc(
+                    level="error",
+                    message=f"Error sending to client {client_id}: {str(e)}",
+                    logger=logging.getLogger(__name__),
+                    context={"client_id": client_id, "error": str(e)},
+                )
+                
+    async def send_to_extension(self, message: dict):
+        """Send a message to all connected browser extensions"""
+        for connection in self.extension_connections:
+            try:
+                await connection.send_json(message)
+            except Exception as e:
+                logwc(
+                    level="error",
+                    message=f"Error sending to extension: {str(e)}",
+                    logger=logging.getLogger(__name__),
+                    context={"error": str(e)},
+                )
+
+# Initialize the connection manager
+ember_link_manager = EmberLinkManager()
+
+# WebSocket endpoint for Ember Link client connections
+@app.websocket("/ws/ember-link/{client_id}")
+async def websocket_ember_link(websocket: WebSocket, client_id: str):
+    await ember_link_manager.connect_client(websocket, client_id)
+    try:
+        while True:
+            # Keep the connection alive
+            data = await websocket.receive_text()
+            # Process any incoming messages from the client
+            # For now, just echo back
+            await websocket.send_text(f"Message received: {data}")
+    except WebSocketDisconnect:
+        ember_link_manager.disconnect_client(client_id)
+
+# WebSocket endpoint for Aether browser extension
+@app.websocket("/ws/aether")
+async def websocket_aether(websocket: WebSocket):
+    await ember_link_manager.connect_extension(websocket)
+    try:
+        while True:
+            # Receive data from the browser extension
+            data = await websocket.receive_json()
+            
+            # Process the data from the browser extension
+            # This will include browser info, active tab data, etc.
+            
+            # Example of processing browser data
+            browser_info = {
+                "connected": True,
+                "lastSeen": datetime.now().isoformat(),
+                "browserInfo": data.get("browserInfo", {}),
+                "activeTab": data.get("activeTab", {})
+            }
+            
+            # Broadcast the updated status to all connected clients
+            await ember_link_manager.broadcast_to_clients(browser_info)
+            
+            # Acknowledge receipt
+            await websocket.send_json({"status": "received"})
+    except WebSocketDisconnect:
+        ember_link_manager.disconnect_extension(websocket)
+    except Exception as e:
+        logwc(
+            level="error",
+            message=f"Error in Aether WebSocket: {str(e)}",
+            logger=logging.getLogger(__name__),
+            context={"error": str(e)},
+        )
+        ember_link_manager.disconnect_extension(websocket)

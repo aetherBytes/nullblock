@@ -57,6 +57,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       
       &.disabled {
         color: $disabled;
+        cursor: not-allowed;
       }
     }
   }
@@ -687,6 +688,20 @@ $light-shadow: rgba(0, 0, 0, 0.1);
             &.locked {
               opacity: 0.3;
               filter: blur(1px);
+              color: rgba($echo-gray, 0.5);
+              text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+              pointer-events: none;
+            }
+
+            .diagnosticKey {
+              color: #000;
+              font-weight: 600;
+              text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+            }
+
+            &.blurred {
+              opacity: 0.12;
+              filter: blur(1.5px);
               color: rgba($echo-gray, 0.5);
               text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
               pointer-events: none;
@@ -1693,5 +1708,171 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         }
       }
     }
+  }
+}
+
+.inactive {
+  color: $echo-red !important;
+  text-shadow: 0 0 8px rgba($echo-red, 0.4) !important;
+}
+
+.statusContainer {
+  display: flex;
+  align-items: center;
+  margin: 0.25rem 0;
+  font-size: 0.85em;
+  color: $echo-gray;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+  .statusLabel {
+    color: #000;
+    font-weight: 600;
+    text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+    margin-right: 1rem;
+  }
+  
+  &.blurred {
+    opacity: 0.2;
+    filter: blur(2px);
+    color: rgba($echo-gray, 0.3);
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
+    pointer-events: none;
+  }
+}
+
+.echoContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: calc(100% - 5rem);
+  max-width: 100%;
+  padding: 1rem;
+  overflow-y: auto;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 0, 0.3);
+    border-radius: 2px;
+  }
+  
+  .statusTabs {
+    padding-bottom: 2rem;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+    overflow-y: visible;
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+}
+
+.echoStatus {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 255, 0, 0.2);
+  border-radius: 4px;
+}
+
+.browserInfo {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  
+  .browserLabel {
+    color: rgba(255, 255, 255, 0.7);
+    margin-right: 0.5rem;
+  }
+  
+  .browserValue {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.echoMessage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  
+  p {
+    margin: 0.5rem 0;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1rem;
+  }
+}
+
+.disconnectedContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+  overflow-y: auto;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 0, 0.3);
+    border-radius: 2px;
+  }
+}
+
+.extensionPrompt {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  border-radius: 4px;
+  text-align: center;
+  
+  h4 {
+    color: $echo-red;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    letter-spacing: 1px;
+  }
+  
+  p {
+    margin: 0.5rem 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+  }
+}
+
+.extensionLinks {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.extensionButton {
+  padding: 0.5rem 1rem;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 0, 0, 0.4);
+  color: $echo-red;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 0, 0, 0.1);
+    transform: translateY(-2px);
   }
 }

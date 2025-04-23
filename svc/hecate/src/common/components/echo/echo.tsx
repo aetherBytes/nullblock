@@ -42,6 +42,17 @@ interface SystemAnalysis {
   locked: boolean;
 }
 
+// Add Ember Link status interface
+interface EmberLinkStatus {
+  connected: boolean;
+  lastSeen: Date | null;
+  browserInfo: {
+    browser: string;
+    version: string;
+    platform: string;
+  } | null;
+}
+
 const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, theme = 'light', onClose, onThemeChange }) => {
   const [screen, setScreen] = useState<Screen>('camp');
   const [walletData, setWalletData] = useState<any>(null);
@@ -71,6 +82,12 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
   const missionDropdownRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<TabType>('missions');
+  // Add Ember Link status state
+  const [emberLinkStatus, setEmberLinkStatus] = useState<EmberLinkStatus>({
+    connected: false,
+    lastSeen: null,
+    browserInfo: null
+  });
 
   // Define which screens are unlocked
   const unlockedScreens = ['camp'];
@@ -180,6 +197,47 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
 
     loadWalletData();
   }, [publicKey]);
+
+  // Add useEffect for Ember Link status updates
+  useEffect(() => {
+    // TODO: Implement WebSocket connection to receive Ember Link status updates
+    // This will be connected to the Aether browser extension
+    
+    // Placeholder for WebSocket connection
+    const setupEmberLinkConnection = () => {
+      // TODO: Connect to WebSocket server for Ember Link status
+      // Example:
+      // const ws = new WebSocket('ws://localhost:8000/ws/ember-link');
+      // ws.onmessage = (event) => {
+      //   const data = JSON.parse(event.data);
+      //   setEmberLinkStatus(data);
+      // };
+      
+      // For now, simulate connection status
+      const mockEmberLinkStatus = {
+        connected: true,
+        lastSeen: new Date(),
+        browserInfo: {
+          browser: 'Chrome',
+          version: '120.0.0',
+          platform: 'Linux'
+        }
+      };
+      
+      // Simulate periodic updates
+      const interval = setInterval(() => {
+        setEmberLinkStatus(prev => ({
+          ...prev,
+          lastSeen: new Date()
+        }));
+      }, 30000); // Update every 30 seconds
+      
+      return () => clearInterval(interval);
+    };
+    
+    const cleanup = setupEmberLinkConnection();
+    return cleanup;
+  }, []);
 
   // Add click outside handler for mission dropdown
   useEffect(() => {
@@ -400,6 +458,101 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
     </div>
   );
 
+  // Update the Ember Link status display in the diagnostics section
+  const renderEmberLinkStatus = (status: EmberLinkStatus) => {
+    const statusClass = status.connected ? styles.active : styles.inactive;
+    return (
+      <div className={styles.statusContainer}>
+        <span className={styles.statusLabel}>Ember Link:</span>
+        <span className={statusClass}>{status.connected ? 'Connected' : 'Disconnected'}</span>
+      </div>
+    );
+  };
+
+  const renderEchoTab = () => {
+    return (
+      <div className={styles.echoContent}>
+        <div className={styles.statusTabs}>
+          <button 
+            className={`${styles.statusTab} ${activeTab === ('echo' as TabType) ? styles.activeTab : ''}`}
+            onClick={() => setActiveTab('echo' as TabType)}
+          >
+            E.C.H.O
+          </button>
+          <button 
+            className={`${styles.statusTab} ${styles.blurred}`}
+            disabled
+          >
+            HECATE
+          </button>
+          <button 
+            className={`${styles.statusTab} ${styles.blurred}`}
+            disabled
+          >
+            LEGION
+          </button>
+          <button 
+            className={`${styles.statusTab} ${activeTab === ('missions' as TabType) ? styles.activeTab : ''}`}
+            onClick={() => setActiveTab('missions' as TabType)}
+          >
+            MISSIONS
+          </button>
+        </div>
+        
+        {emberLinkStatus.connected ? (
+          <>
+            <div className={styles.echoStatus}>
+              <div className={styles.statusContainer}>
+                <span className={styles.statusLabel}>Ember Link Status:</span>
+                <span className={styles.active}>Connected</span>
+              </div>
+              <div className={styles.browserInfo}>
+                <span className={styles.browserLabel}>Browser:</span>
+                <span className={styles.browserValue}>{emberLinkStatus.browserInfo?.browser} {emberLinkStatus.browserInfo?.version} ({emberLinkStatus.browserInfo?.platform})</span>
+              </div>
+            </div>
+            <div className={styles.echoMessage}>
+              <p>E.C.H.O system is active and operational.</p>
+              <p>Welcome to the interface, agent.</p>
+            </div>
+          </>
+        ) : (
+          <div className={styles.disconnectedContent}>
+            <div className={styles.echoStatus}>
+              <div className={styles.statusContainer}>
+                <span className={styles.statusLabel}>Ember Link Status:</span>
+                <span className={styles.inactive}>Disconnected</span>
+              </div>
+            </div>
+            <div className={styles.extensionPrompt}>
+              <h4>Browser Extension Required</h4>
+              <p>To establish a secure connection, you need to install the Aether browser extension.</p>
+              <p>Choose your browser to download the extension:</p>
+              <div className={styles.extensionLinks}>
+                <a
+                  href="https://chrome.google.com/webstore/detail/aether"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.extensionButton}
+                >
+                  Chrome Extension
+                </a>
+                <a
+                  href="https://addons.mozilla.org/en-US/firefox/addon/aether"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.extensionButton}
+                >
+                  Firefox Extension
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderCampScreen = () => (
     <div className={styles.hudScreen}>
       <div className={styles.headerContainer}>
@@ -413,12 +566,10 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
             <h3>INSTANCE DIAGNOSTICS</h3>
             <div className={styles.diagnosticsContainer}>
               <ul>
-                <li>
-                  Ember Link: <span className={styles.scanning}>Scanning<span className={styles.scanningDots}></span></span>
-                </li>
+                {renderEmberLinkStatus(emberLinkStatus)}
                 {systemAnalysisItems.slice(1).map((item, index) => (
-                  <li key={index} className={styles.blurred}>
-                    {item.name}: <span className={getStatusClass(item.status)}>{item.status}</span>
+                  <li key={index} className={`${styles.statusContainer} ${styles.blurred}`}>
+                    <span className={styles.statusLabel}>{item.name}:</span> <span className={getStatusClass(item.status)}>{item.status}</span>
                   </li>
                 ))}
               </ul>
@@ -527,42 +678,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
                 </div>
               )}
               
-              {activeTab === 'echo' && (
-                <div className={styles.systemsTab}>
-                  <div className={styles.statusTabs}>
-                    <button 
-                      className={`${styles.statusTab} ${activeTab === ('echo' as TabType) ? styles.activeTab : ''}`}
-                      onClick={() => setActiveTab('echo' as TabType)}
-                    >
-                      E.C.H.O
-                    </button>
-                    <button 
-                      className={`${styles.statusTab} ${styles.blurred}`}
-                      disabled
-                    >
-                      HECATE
-                    </button>
-                    <button 
-                      className={`${styles.statusTab} ${styles.blurred}`}
-                      disabled
-                    >
-                      LEGION
-                    </button>
-                    <button 
-                      className={`${styles.statusTab} ${activeTab === ('missions' as TabType) ? styles.activeTab : ''}`}
-                      onClick={() => setActiveTab('missions' as TabType)}
-                    >
-                      MISSIONS
-                    </button>
-                  </div>
-                  <div className={styles.tabContent}>
-                    <div className={styles.lockedContent}>
-                      <p>E.C.H.O system is now active.</p>
-                      <p>Welcome to the E.C.H.O interface.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {activeTab === 'echo' && renderEchoTab()}
               
               {activeTab === 'defense' && (
                 <div className={styles.defenseTab}>
