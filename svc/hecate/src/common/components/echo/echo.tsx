@@ -18,7 +18,7 @@ interface EchoProps {
 interface UserProfile {
   id: string;
   ascent: number;
-  glimmer: number | null;
+  nether: number | null;
   cacheValue: number;
   memories: number;
   matrix: {
@@ -48,7 +48,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
   const [userProfile, setUserProfile] = useState<UserProfile>({
     id: publicKey ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol` : '',
     ascent: 1,
-    glimmer: null,
+    nether: null,
     cacheValue: 0,
     memories: 0,
     matrix: {
@@ -74,6 +74,25 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
 
   // Define which screens are unlocked
   const unlockedScreens = ['camp'];
+
+  const getStatusClass = (status: string): string => {
+    switch (status.toLowerCase()) {
+      case 'scanning':
+      case 'in progress':
+      case 'checking':
+        return styles.scanning;
+      case 'optimal':
+      case 'connected':
+      case 'secure':
+        return styles.active;
+      case 'low':
+      case 'standby':
+      case 'stable':
+        return styles.stable;
+      default:
+        return styles.inactive;
+    }
+  };
 
   const systemAnalysisItems: SystemAnalysis[] = [
     { name: "Neural Link", status: "SCANNING", locked: false },
@@ -115,7 +134,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
             // Update user profile with wallet data and username if available
             setUserProfile(prev => ({
               ...prev,
-              glimmer: hasNectarToken ? data.balance : null,
+              nether: hasNectarToken ? data.balance : null,
               cacheValue: data.balance || 0, // Set cache value to wallet balance
               id: profileData.username ? `@${profileData.username}` : `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol`
             }));
@@ -128,7 +147,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
             // Fallback to just updating with wallet data
             setUserProfile(prev => ({
               ...prev,
-              glimmer: null, // Set to null if we can't determine if Nectar exists
+              nether: null, // Set to null if we can't determine if Nectar exists
               cacheValue: data.balance || 0 // Set cache value to wallet balance
             }));
           }
@@ -248,7 +267,15 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
         <span className={styles.value}>{userProfile.id}</span>
       </div>
       <div className={styles.profileItem}>
-        <span className={styles.label}>ASCENT:</span>
+        <span className={styles.label}>
+          ASCENT:
+          <button 
+            className={styles.infoButton}
+            onClick={() => setShowAscentDetails(!showAscentDetails)}
+          >
+            ?
+          </button>
+        </span>
         <div className={styles.ascentContainer}>
           <span className={styles.value}>Net Dweller: 1</span>
           <div className={styles.progressBar}>
@@ -258,12 +285,6 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
             ></div>
           </div>
         </div>
-        <button 
-          className={styles.infoButton}
-          onClick={() => setShowAscentDetails(!showAscentDetails)}
-        >
-          ?
-        </button>
         {showAscentDetails && (
           <div className={styles.ascentDetails}>
             <div className={styles.ascentDescription}>A digital lurker extraordinaire! You've mastered the art of watching from the shadows, observing the chaos without ever dipping your toes in. Like a cat watching a laser pointer, you're fascinated but paralyzed by indecision. At least you're not the one getting your digital assets rekt!</div>
@@ -287,31 +308,35 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
         )}
       </div>
       <div className={styles.profileItem}>
-        <span className={styles.label}>GLIMMER:</span>
-        <span className={styles.value}>₦ {userProfile.glimmer?.toFixed(2) || 'N/A'}</span>
-        <button 
-          className={styles.infoButton}
-          onClick={() => setShowNectarDetails(!showNectarDetails)}
-        >
-          ?
-        </button>
+        <span className={styles.label}>
+          NETHER:
+          <button 
+            className={styles.infoButton}
+            onClick={() => setShowNectarDetails(!showNectarDetails)}
+          >
+            ?
+          </button>
+        </span>
+        <span className={styles.value}>₦ {userProfile.nether?.toFixed(2) || 'N/A'}</span>
         {showNectarDetails && (
           <div className={styles.ascentDetails}>
             <div className={styles.ascentDescription}>
-              Glimmer: The divine currency that flows through Nullblock like blood through veins. This ain't your grandma's pocket change - it's the sweet nectar of the divine that powers everything from upgrades to acquisitions. Earn it through missions, achievements, or by making the right friends in high places. Warning: Highly addictive, side effects may include increased power and status.
+              NETHER: Magic internet money from the void. Born from nothing, worth everything, and somehow gaining value by the second. The integration has passed the event horizon - good luck trying to spend it. Warning: Prolonged exposure may cause reality distortion and an irresistible urge to dive deeper into the code.
             </div>
           </div>
         )}
       </div>
       <div className={styles.profileItem}>
-        <span className={styles.label}>cache value:</span>
+        <span className={styles.label}>
+          cache value:
+          <button 
+            className={styles.infoButton}
+            onClick={() => setShowCacheValueDetails(!showCacheValueDetails)}
+          >
+            ?
+          </button>
+        </span>
         <span className={styles.value}>₦ N/A</span>
-        <button 
-          className={styles.infoButton}
-          onClick={() => setShowCacheValueDetails(!showCacheValueDetails)}
-        >
-          ?
-        </button>
         {showCacheValueDetails && (
           <div className={styles.ascentDetails}>
             <div className={styles.ascentDescription}>
@@ -321,14 +346,16 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
         )}
       </div>
       <div className={styles.profileItem}>
-        <span className={styles.label}>MEMORIES:</span>
+        <span className={styles.label}>
+          MEMORIES:
+          <button 
+            className={styles.infoButton}
+            onClick={() => setShowMemoriesDetails(!showMemoriesDetails)}
+          >
+            ?
+          </button>
+        </span>
         <span className={styles.value}>{userProfile.memories}</span>
-        <button 
-          className={styles.infoButton}
-          onClick={() => setShowMemoriesDetails(!showMemoriesDetails)}
-        >
-          ?
-        </button>
         {showMemoriesDetails && (
           <div className={styles.ascentDetails}>
             <div className={styles.ascentDescription}>
@@ -338,14 +365,16 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
         )}
       </div>
       <div className={styles.profileItem}>
-        <span className={styles.label}>E.C:</span>
+        <span className={styles.label}>
+          E.C:
+          <button 
+            className={styles.infoButton}
+            onClick={() => setShowEmberConduitDetails(!showEmberConduitDetails)}
+          >
+            ?
+          </button>
+        </span>
         <span className={styles.value}>{userProfile.matrix.status}</span>
-        <button 
-          className={styles.infoButton}
-          onClick={() => setShowEmberConduitDetails(!showEmberConduitDetails)}
-        >
-          ?
-        </button>
         {showEmberConduitDetails && (
           <div className={`${styles.ascentDetails} ${styles.rightAligned}`}>
             <div className={styles.ascentDescription}>
@@ -447,21 +476,21 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
                               <span className={styles.missionTitle}>Share on X</span>
                               <span className={styles.missionStatus}>ACTIVE</span>
                             </div>
-                            <span className={styles.missionReward}>TBD GLIMMER AIRDROP</span>
+                            <span className={styles.missionReward}>TBD NETHER AIRDROP</span>
                           </div>
                           <div className={`${styles.missionItem} ${styles.blurred}`}>
                             <div className={styles.missionItemContent}>
                               <span className={styles.missionTitle}>Mission 2</span>
                               <span className={styles.missionStatus}>LOCKED</span>
                             </div>
-                            <span className={`${styles.missionReward} ${styles.blurred}`}>??? GLIMMER</span>
+                            <span className={`${styles.missionReward} ${styles.blurred}`}>??? NETHER</span>
                           </div>
                           <div className={`${styles.missionItem} ${styles.blurred}`}>
                             <div className={styles.missionItemContent}>
                               <span className={styles.missionTitle}>Mission 3</span>
                               <span className={styles.missionStatus}>LOCKED</span>
                             </div>
-                            <span className={`${styles.missionReward} ${styles.blurred}`}>??? GLIMMER</span>
+                            <span className={`${styles.missionReward} ${styles.blurred}`}>??? NETHER</span>
                           </div>
                         </div>
                       </div>
@@ -471,13 +500,13 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
                         <p className={styles.missionText}>
                           "Welcome, Camper, to your first trial. Tend the flame carefully.
                           Share your Base Camp on X—let its glow haunt the realm.
-                          More souls drawn, more Glimmer gained. Don't let it fade."
+                          More souls drawn, more NETHER gained. Don't let it fade."
                         </p>
                         <div className={styles.missionInstructions}>
                           <h4>QUALIFICATION REQUIREMENTS</h4>
                           <ul>
                             <li>Follow<span className={styles.highlight}>@Nullblock_io</span></li>
-                            <li>Tweet out the cashtag <span className={styles.highlight}>$GLIMMER</span></li>
+                            <li>Tweet out the cashtag <span className={styles.highlight}>$NETHER</span></li>
                             <li>Include the official CA: <span className={styles.highlight}>TBD</span></li>
                           </ul>
                           <p className={styles.missionNote}>
@@ -486,7 +515,7 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
                         </div>
                         <div className={styles.missionReward}>
                           <span className={styles.rewardLabel}>REWARD:</span>
-                          <span className={styles.rewardValue}>TBD GLIMMER AIRDROP</span>
+                          <span className={styles.rewardValue}>TBD NETHER AIRDROP</span>
                         </div>
                         <div className={styles.missionExpiration}>
                           <span className={styles.expirationLabel}>EXPIRES:</span>
@@ -682,27 +711,6 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
       </div>
     </div>
   );
-
-  const getStatusClass = (status: string): string => {
-    switch (status.toLowerCase()) {
-      case 'optimal':
-      case 'connected':
-      case 'secure':
-      case 'active':
-        return styles.active;
-      case 'scanning':
-      case 'in progress':
-      case 'checking':
-      case 'initializing':
-        return styles.pending;
-      case 'low':
-      case 'standby':
-      case 'stable':
-        return styles.stable;
-      default:
-        return styles.inactive;
-    }
-  };
 
   const renderScreen = () => {
     if (!unlockedScreens.includes(screen)) {
