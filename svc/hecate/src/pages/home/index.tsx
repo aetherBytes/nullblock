@@ -4,6 +4,9 @@ import styles from './index.module.scss';
 import StarsCanvas from '@components/stars/stars';
 import Echo from '@components/echo/echo';
 import DigitizingText from '../../components/digitizing-text';
+import powerOn from '@assets/images/echo_bot_night.png';
+import powerOff from '@assets/images/echo_bot_white.png';
+import nyxImage from '@assets/images/night_wolf_1.png';
 
 type MessageType = 'message' | 'alert' | 'critical' | 'update' | 'action' | 'user';
 
@@ -450,6 +453,7 @@ const Home: React.FC = () => {
       <StarsCanvas theme={currentTheme} />
       <div className={styles.scene}>
         <div className={styles.fire}></div>
+        <div className={styles.nyx}></div>
       </div>
       {showWelcomeText && !showEcho && (
         <DigitizingText 
