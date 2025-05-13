@@ -729,29 +729,165 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       padding: 0.75rem;
       
       .diagnosticsContainer {
-        flex: 1;
-        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba($echo-blue, 0.1);
+        border-radius: 4px;
+        padding: 0.75rem;
+        width: 100%;
+        box-sizing: border-box;
         
-        &::-webkit-scrollbar {
-          width: 3px;
+        .containerTitle {
+          color: $echo-blue;
+          font-size: 1.2rem;
+          text-transform: uppercase;
+          letter-spacing: 2px;
+          margin: 0 0 1rem 0;
+          padding-bottom: 0.5rem;
+          border-bottom: 1px solid rgba($echo-blue, 0.2);
+          text-align: center;
+          text-shadow: 0 0 10px rgba($echo-blue, 0.3);
         }
         
-        &::-webkit-scrollbar-track {
-          background: rgba(0, 0, 0, 0.3);
+        .diagnosticsHeader {
+          flex-shrink: 0;
+          padding-bottom: 0.75rem;
+          width: 100%;
+          
+          h3 {
+            color: $echo-blue;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+          }
         }
         
-        &::-webkit-scrollbar-thumb {
-          background: rgba($echo-blue, 0.3);
-          border-radius: 2px;
+        .diagnosticsContent {
+          flex: 1;
+          overflow-y: auto;
+          padding: 0.75rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+          width: 100%;
+          box-sizing: border-box;
+          
+          &::-webkit-scrollbar {
+            width: 3px;
+          }
+          
+          &::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+          }
+          
+          &::-webkit-scrollbar-thumb {
+            background: rgba($echo-blue, 0.3);
+            border-radius: 2px;
+            
+            &:hover {
+              background: rgba($echo-blue, 0.5);
+            }
+          }
         }
         
-        ul {
-          list-style: none;
-          padding: 0;
-          margin: 0;
+        .diagnosticsList {
           display: flex;
           flex-direction: column;
           gap: 0.5rem;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        
+        .diagnosticsItem {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.75rem 1rem;
+          background: rgba($background-dark, 0.4);
+          border: 1px solid rgba($echo-blue, 0.2);
+          color: $echo-gray;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+          min-height: 40px;
+          width: 100%;
+          box-sizing: border-box;
+
+          &::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            width: calc(100% + 4px);
+            height: calc(100% + 4px);
+            background: linear-gradient(45deg,
+              transparent 0%,
+              rgba($echo-blue, 0.1) 50%,
+              transparent 100%
+            );
+            opacity: 0;
+            transition: opacity 0.3s ease;
+          }
+
+          &:hover {
+            background: rgba($echo-blue, 0.15);
+            color: lighten($echo-blue, 20%);
+            text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+            border-color: rgba($echo-blue, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 0 15px rgba($echo-blue, 0.3);
+
+            &::before {
+              opacity: 1;
+            }
+
+            .itemLabel {
+              color: lighten($echo-blue, 20%);
+            }
+
+            .itemValue {
+              color: rgba(255, 255, 255, 0.95);
+              text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+            }
+          }
+
+          &:active {
+            transform: translateY(1px);
+          }
+
+          .itemLabel {
+            color: $echo-blue;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            white-space: nowrap;
+            margin-right: 1rem;
+            transition: color 0.3s ease;
+            flex-shrink: 0;
+          }
+
+          .itemValue {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-shadow: 0 0 8px rgba($echo-blue, 0.3);
+            text-align: right;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+          }
         }
       }
     }
@@ -829,6 +965,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     gap: 10px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 10px;
+    margin-bottom: 1rem;
   }
 
   .statusTab {
@@ -841,6 +978,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     font-weight: 500;
     transition: all 0.3s ease;
     position: relative;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     
     &:hover {
       color: rgba(255, 255, 255, 0.9);
@@ -856,8 +995,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         left: 0;
         width: 100%;
         height: 2px;
-        background: #00ff9d;
-        box-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+        background: $echo-blue;
+        box-shadow: 0 0 10px rgba($echo-blue, 0.5);
       }
     }
   }
@@ -867,6 +1006,26 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba($echo-blue, 0.1);
+    border-radius: 8px;
+    padding: 1.5rem;
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, 
+        transparent 0%,
+        rgba($echo-blue, 0.5) 50%,
+        transparent 100%
+      );
+      animation: scanline 2s linear infinite;
+    }
   }
 
   .statusContent {
@@ -874,134 +1033,311 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba($echo-blue, 0.1);
+    border-radius: 8px;
+    padding: 1.5rem;
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, 
+        transparent 0%,
+        rgba($echo-blue, 0.5) 50%,
+        transparent 100%
+      );
+      animation: scanline 2s linear infinite;
+    }
   }
 
   .vitalsContainer {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    padding: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem;
     overflow-y: auto;
     flex: 1;
     
     &::-webkit-scrollbar {
-      width: 8px;
+      width: 4px;
     }
     
     &::-webkit-scrollbar-track {
       background: rgba(0, 0, 0, 0.2);
-      border-radius: 4px;
+      border-radius: 2px;
     }
     
     &::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 4px;
+      background: rgba($echo-blue, 0.3);
+      border-radius: 2px;
       
       &:hover {
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba($echo-blue, 0.5);
       }
     }
   }
 
   .vitalItem {
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba($echo-blue, 0.15);
     border-radius: 8px;
-    padding: 16px;
+    padding: 1.25rem;
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(45deg,
+        transparent 0%,
+        rgba($echo-blue, 0.05) 50%,
+        transparent 100%
+      );
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
     
     &:hover {
-      background: rgba(0, 0, 0, 0.6);
-      border-color: rgba(255, 255, 255, 0.2);
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      border-color: rgba($echo-blue, 0.3);
+      box-shadow: 0 0 20px rgba($echo-blue, 0.1);
+      
+      &::before {
+        opacity: 1;
+      }
+      
+      .vitalValue {
+        text-shadow: 0 0 15px rgba($echo-blue, 0.5);
+      }
     }
   }
 
   .vitalLabel {
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 14px;
-    margin-bottom: 8px;
+    gap: 0.75rem;
+    color: rgba($echo-blue, 0.8);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg,
+        rgba($echo-blue, 0.3) 0%,
+        transparent 100%
+      );
+    }
   }
 
   .vitalValue {
     color: #fff;
-    font-size: 24px;
-    font-weight: 600;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+    transition: all 0.3s ease;
+    font-family: 'Rajdhani', sans-serif;
+    letter-spacing: 1px;
+    
+    &.matrix {
+      color: $echo-blue;
+      font-size: 1.5rem;
+      text-transform: uppercase;
+    }
   }
 
   .infoButton {
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.6);
-    width: 20px;
-    height: 20px;
+    background: rgba($echo-blue, 0.1);
+    border: 1px solid rgba($echo-blue, 0.3);
+    color: $echo-blue;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 0.75rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      border-radius: 50%;
+      background: rgba($echo-blue, 0.1);
+      animation: pulse 2s infinite;
+    }
     
     &:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba($echo-blue, 0.2);
+      transform: scale(1.1);
+      box-shadow: 0 0 15px rgba($echo-blue, 0.3);
     }
   }
 
   .ascentDetails {
-    margin-top: 12px;
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.3);
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba($echo-blue, 0.1);
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(45deg,
+        transparent 0%,
+        rgba($echo-blue, 0.05) 50%,
+        transparent 100%
+      );
+      animation: shimmer 2s infinite;
+    }
   }
 
   .ascentDescription {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 13px;
-    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
   }
 
-  .progressText {
-    color: $echo-blue;
-    font-size: 0.85rem;
-    margin-bottom: 10px;
+  .progressBar {
+    height: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba($echo-blue, 0.3) 50%,
+        transparent 100%
+      );
+      animation: scanline 2s linear infinite;
+    }
+  }
+
+  .progressFill {
+    height: 100%;
+    background: linear-gradient(90deg,
+      $echo-blue 0%,
+      lighten($echo-blue, 20%) 100%
+    );
+    border-radius: 2px;
+    transition: width 0.5s ease;
+    position: relative;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.2) 50%,
+        transparent 100%
+      );
+      animation: shimmer 2s infinite;
+    }
   }
 
   .accoladesContainer {
-    margin-top: 10px;
+    margin-top: 1.5rem;
     
     .accoladesTitle {
       color: $echo-blue;
       font-size: 0.9rem;
-      font-weight: bold;
-      margin-bottom: 5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      
+      &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg,
+          rgba($echo-blue, 0.3) 0%,
+          transparent 100%
+        );
+      }
     }
     
     .accoladesList {
       list-style: none;
       padding: 0;
       margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
       
       li {
-        color: $text-color;
+        padding: 0.5rem 0.75rem;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba($echo-blue, 0.1);
+        border-radius: 4px;
         font-size: 0.85rem;
-        margin-bottom: 3px;
+        transition: all 0.3s ease;
         
         &.visible {
           color: $echo-green;
+          border-color: rgba($echo-green, 0.3);
+          
+          &::before {
+            content: '✓';
+            margin-right: 0.5rem;
+            color: $echo-green;
+          }
         }
         
         &.blurred {
-          color: rgba($text-color, 0.4);
+          color: rgba(255, 255, 255, 0.3);
           filter: blur(1px);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        &:hover:not(.blurred) {
+          transform: translateX(4px);
+          border-color: rgba($echo-blue, 0.3);
+          background: rgba($echo-blue, 0.1);
         }
       }
     }
@@ -1586,15 +1922,10 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
 @keyframes scanline {
   0% {
-    transform: translateY(0);
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 0.3;
+    transform: translateX(-100%);
   }
   100% {
-    transform: translateY(100%);
-    opacity: 0.5;
+    transform: translateX(100%);
   }
 }
 
@@ -1614,19 +1945,26 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba($echo-red, 0.4);
+    transform: scale(1);
+    opacity: 0.5;
   }
-  70% {
-    box-shadow: 0 0 0 6px rgba($echo-red, 0);
+  50% {
+    transform: scale(1.1);
+    opacity: 0.3;
   }
   100% {
-    box-shadow: 0 0 0 0 rgba($echo-red, 0);
+    transform: scale(1);
+    opacity: 0.5;
   }
 }
 
@@ -2165,5 +2503,65 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   
   &:hover {
     animation-play-state: paused;
+  }
+}
+
+.vitalsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.addLinkButton {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba($background-dark, 0.4);
+  border: 1px solid rgba($echo-blue, 0.2);
+  color: $echo-blue;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  margin-top: auto;
+  box-sizing: border-box;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+    background: linear-gradient(45deg,
+      transparent 0%,
+      rgba($echo-blue, 0.1) 50%,
+      transparent 100%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover {
+    background: rgba($echo-blue, 0.15);
+    color: lighten($echo-blue, 20%);
+    text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+    border-color: rgba($echo-blue, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 0 15px rgba($echo-blue, 0.3);
+
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  &:active {
+    transform: translateY(1px);
   }
 }
