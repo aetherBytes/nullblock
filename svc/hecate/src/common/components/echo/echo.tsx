@@ -1,18 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './echo.module.scss';
 import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '@services/api';
+import SystemChat from '@components/system-chat/system-chat';
 
 type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
-type TabType = 'missions' | 'systems' | 'defense' | 'uplink' | 'echo';
+type TabType = 'missions' | 'systems' | 'defense' | 'uplink' | 'echo' | 'status';
+type MessageType = 'message' | 'alert' | 'critical' | 'update' | 'action' | 'user';
+
+interface ChatMessage {
+  id: number;
+  text: string;
+  type: MessageType;
+  action?: () => void;
+  actionText?: string;
+}
 
 interface EchoProps {
   publicKey: string | null;
   onDisconnect: () => void;
-  onExpandChat: () => void;
   theme?: Theme;
   onClose: () => void;
   onThemeChange: (theme: 'null' | 'cyber' | 'light') => void;
+  messages?: ChatMessage[];
+  onUserInput?: (input: string) => void;
+  currentRoom?: string;
+  onRoomChange?: (room: string) => void;
 }
 
 interface UserProfile {
@@ -53,7 +66,17 @@ interface EmberLinkStatus {
   } | null;
 }
 
-const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, theme = 'light', onClose, onThemeChange }) => {
+const Echo: React.FC<EchoProps> = ({ 
+  publicKey, 
+  onDisconnect, 
+  theme = 'light', 
+  onClose, 
+  onThemeChange,
+  messages = [],
+  onUserInput,
+  currentRoom = '/logs',
+  onRoomChange
+}) => {
   const [screen, setScreen] = useState<Screen>('camp');
   const [walletData, setWalletData] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile>({
@@ -81,13 +104,15 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
   const [showMissionBrief, setShowMissionBrief] = useState(false);
   const missionDropdownRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('missions');
+  const [activeTab, setActiveTab] = useState<TabType>('status');
   // Add Ember Link status state
   const [emberLinkStatus, setEmberLinkStatus] = useState<EmberLinkStatus>({
     connected: false,
     lastSeen: null,
     browserInfo: null
   });
+  const [chatCollapsed, setChatCollapsed] = useState<boolean>(true);
+  const [isDigitizing, setIsDigitizing] = useState<boolean>(false);
 
   // Define which screens are unlocked
   const unlockedScreens = ['camp'];
@@ -279,11 +304,15 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
   const handleAlertClick = () => {
     setShowAlerts(true);
     // This will be handled by the parent component to expand chat
-    onExpandChat();
   };
 
   const handleNectarClick = () => {
     setShowNectarDetails(!showNectarDetails);
+  };
+
+  // Handle chat collapse state
+  const handleChatCollapse = (collapsed: boolean) => {
+    setChatCollapsed(collapsed);
   };
 
   const renderControlScreen = () => (
@@ -469,36 +498,136 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
     );
   };
 
+  const renderStatusTab = () => {
+    return (
+      <div className={styles.statusContent}>
+        <div className={styles.vitalsContainer}>
+          <div className={styles.vitalItem}>
+            <div className={styles.vitalLabel}>
+              ID
+              <button className={styles.infoButton} onClick={() => setShowAscentDetails(!showAscentDetails)}>
+                i
+              </button>
+            </div>
+            <div className={styles.vitalValue}>ECHO-{userProfile.id || '0000'}</div>
+            {showAscentDetails && (
+              <div className={styles.ascentDetails}>
+                <p className={styles.ascentDescription}>
+                  Your unique identifier within the E.C.H.O system. This ID is used to track your progress, achievements, and system interactions.
+                </p>
+              </div>
+            )}
+          </div>
+          <div className={styles.vitalItem}>
+            <div className={styles.vitalLabel}>
+              ASCENT
+              <button className={styles.infoButton} onClick={() => setShowAscentDetails(!showAscentDetails)}>
+                i
+              </button>
+            </div>
+            <div className={styles.ascentContainer}>
+              <span className={styles.vitalValue}>Net Dweller: 1</span>
+              <div className={styles.progressBar}>
+                <div 
+                  className={styles.progressFill} 
+                  style={{ width: `${35}%` }}
+                ></div>
+              </div>
+            </div>
+            {showAscentDetails && (
+              <div className={styles.ascentDetails}>
+                <div className={styles.ascentDescription}>A digital lurker extraordinaire! You've mastered the art of watching from the shadows, observing the chaos without ever dipping your toes in. Like a cat watching a laser pointer, you're fascinated but paralyzed by indecision. At least you're not the one getting your digital assets rekt!</div>
+                <div className={styles.progressText}>
+                  35% to next level
+                </div>
+                <div className={styles.accoladesContainer}>
+                  <div className={styles.accoladesTitle}>ACCOLADES</div>
+                  <ul className={styles.accoladesList}>
+                    <li className={styles.visible}>First Connection</li>
+                    <li className={styles.visible}>Wallet Initiated</li>
+                    <li className={styles.visible}>Basic Navigation</li>
+                    <li className={styles.blurred}>Token Discovery</li>
+                    <li className={styles.blurred}>Transaction Initiate</li>
+                    <li className={styles.blurred}>Network Explorer</li>
+                    <li className={styles.blurred}>Data Collector</li>
+                    <li className={styles.blurred}>Interface Familiar</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className={styles.vitalItem}>
+            <div className={styles.vitalLabel}>
+              NETHER
+              <button className={styles.infoButton} onClick={() => setShowNectarDetails(!showNectarDetails)}>
+                i
+              </button>
+            </div>
+            <div className={styles.vitalValue}>₦ {userProfile.nether?.toFixed(2) || 'N/A'}</div>
+            {showNectarDetails && (
+              <div className={styles.ascentDetails}>
+                <div className={styles.ascentDescription}>
+                  NETHER: Magic internet money from the void. Born from nothing, worth everything, and somehow gaining value by the second. The integration has passed the event horizon - good luck trying to spend it. Warning: Prolonged exposure may cause reality distortion and an irresistible urge to dive deeper into the code.
+                </div>
+              </div>
+            )}
+          </div>
+          <div className={styles.vitalItem}>
+            <div className={styles.vitalLabel}>
+              CACHE VALUE
+              <button className={styles.infoButton} onClick={() => setShowCacheValueDetails(!showCacheValueDetails)}>
+                i
+              </button>
+            </div>
+            <div className={styles.vitalValue}>₦ N/A</div>
+            {showCacheValueDetails && (
+              <div className={styles.ascentDetails}>
+                <div className={styles.ascentDescription}>
+                  Cache Value: Your digital treasure trove, evaluated by our ever-watchful procurement agents. This is the total worth of all valuable assets in your wallet - coins, tokens, and other digital goodies that caught our eye. Coming soon: Categories for services, participant offerings, biological enhancements, and agent capabilities. Think of it as your personal inventory of everything worth something in the Nullblock universe. Don't spend it all in one place!
+                </div>
+              </div>
+            )}
+          </div>
+          <div className={styles.vitalItem}>
+            <div className={styles.vitalLabel}>
+              MEMORIES
+              <button className={styles.infoButton} onClick={() => setShowMemoriesDetails(!showMemoriesDetails)}>
+                i
+              </button>
+            </div>
+            <div className={styles.vitalValue}>{userProfile.memories}</div>
+            {showMemoriesDetails && (
+              <div className={styles.ascentDetails}>
+                <div className={styles.ascentDescription}>
+                  Oh no, no memories found? Wait... who are you? Where am I? *checks digital wallet* Ah, right - another poor...soul. You need to collect the artifacts that tell your story in the Nullblock universe. Each memory is a unique representation of your achievements, collectibles, and digital identity. Collect them all to unlock the secret of why you're here... or don't, I'm not your digital conscience.
+                </div>
+              </div>
+            )}
+          </div>
+          <div className={styles.vitalItem}>
+            <div className={styles.vitalLabel}>
+              E.C
+              <button className={styles.infoButton} onClick={() => setShowEmberConduitDetails(!showEmberConduitDetails)}>
+                i
+              </button>
+            </div>
+            <div className={styles.vitalValue}>{userProfile.matrix.status}</div>
+            {showEmberConduitDetails && (
+              <div className={`${styles.ascentDetails} ${styles.rightAligned}`}>
+                <div className={styles.ascentDescription}>
+                  Ember Conduit: A medium to speak into flame. This ancient technology allows direct communication with the primordial forces of the Nullblock universe. Through an Ember Conduit, users can channel energy, access forbidden knowledge, and potentially reshape reality itself. Warning: Unauthorized use may result in spontaneous combustion or worse.
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderEchoTab = () => {
     return (
       <div className={styles.echoContent}>
-        <div className={styles.statusTabs}>
-          <button 
-            className={`${styles.statusTab} ${activeTab === ('echo' as TabType) ? styles.activeTab : ''}`}
-            onClick={() => setActiveTab('echo' as TabType)}
-          >
-            E.C.H.O
-          </button>
-          <button 
-            className={`${styles.statusTab} ${styles.blurred}`}
-            disabled
-          >
-            HECATE
-          </button>
-          <button 
-            className={`${styles.statusTab} ${styles.blurred}`}
-            disabled
-          >
-            LEGION
-          </button>
-          <button 
-            className={`${styles.statusTab} ${activeTab === ('missions' as TabType) ? styles.activeTab : ''}`}
-            onClick={() => setActiveTab('missions' as TabType)}
-          >
-            MISSIONS
-          </button>
-        </div>
-        
         {emberLinkStatus.connected ? (
           <>
             <div className={styles.echoStatus}>
@@ -558,7 +687,6 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
       <div className={styles.headerContainer}>
         <h2 className={styles.hudTitle}>CAMP</h2>
         <div className={styles.headerDivider}></div>
-        {renderUserProfile()}
       </div>
       <div className={styles.campContent}>
         <div className={styles.campGrid}>
@@ -582,35 +710,59 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
             </div>
             
             <div className={styles.statusCard}>
-              {activeTab === 'missions' && (
-                <div className={styles.missionsTab}>
-                  <div className={styles.statusTabs}>
-                    <button 
-                      className={`${styles.statusTab} ${activeTab === ('echo' as TabType) ? styles.activeTab : ''}`}
-                      onClick={() => setActiveTab('echo' as TabType)}
-                    >
-                      E.C.H.O
-                    </button>
-                    <button 
-                      className={`${styles.statusTab} ${styles.blurred}`}
-                      disabled
-                    >
-                      HECATE
-                    </button>
-                    <button 
-                      className={`${styles.statusTab} ${styles.blurred}`}
-                      disabled
-                    >
-                      LEGION
-                    </button>
-                    <button 
-                      className={`${styles.statusTab} ${activeTab === ('missions' as TabType) ? styles.activeTab : ''}`}
-                      onClick={() => setActiveTab('missions' as TabType)}
-                    >
-                      MISSIONS
-                    </button>
+              <div className={styles.statusTabs}>
+                <button 
+                  className={`${styles.statusTab} ${activeTab === 'status' ? styles.activeTab : ''}`}
+                  onClick={() => setActiveTab('status')}
+                >
+                  STATUS
+                </button>
+                <button 
+                  className={`${styles.statusTab} ${activeTab === 'echo' ? styles.activeTab : ''}`}
+                  onClick={() => setActiveTab('echo')}
+                >
+                  E.C.H.O
+                </button>
+                <button 
+                  className={`${styles.statusTab} ${activeTab === 'systems' ? styles.activeTab : ''}`}
+                  onClick={() => setActiveTab('systems')}
+                >
+                  HECATE
+                </button>
+                <button 
+                  className={`${styles.statusTab} ${activeTab === 'defense' ? styles.activeTab : ''}`}
+                  onClick={() => setActiveTab('defense')}
+                >
+                  LEGION
+                </button>
+                <button 
+                  className={`${styles.statusTab} ${activeTab === 'missions' ? styles.activeTab : ''}`}
+                  onClick={() => setActiveTab('missions')}
+                >
+                  MISSIONS
+                </button>
+              </div>
+              <div className={styles.tabContent}>
+                {activeTab === 'status' && renderStatusTab()}
+                {activeTab === 'echo' && renderEchoTab()}
+                {activeTab === 'systems' && (
+                  <div className={styles.systemsTab}>
+                    <div className={styles.lockedContent}>
+                      <p>This feature is currently locked.</p>
+                      <p>Return to camp and await further instructions.</p>
+                    </div>
                   </div>
-                  <div className={styles.tabContent}>
+                )}
+                {activeTab === 'defense' && (
+                  <div className={styles.defenseTab}>
+                    <div className={styles.lockedContent}>
+                      <p>This feature is currently locked.</p>
+                      <p>Return to camp and await further instructions.</p>
+                    </div>
+                  </div>
+                )}
+                {activeTab === 'missions' && (
+                  <div className={styles.missionsTab}>
                     <div className={styles.missionHeader}>
                       <div className={styles.active}>
                         <span className={styles.missionLabel}>ACTIVE:</span>
@@ -675,88 +827,23 @@ const Echo: React.FC<EchoProps> = ({ publicKey, onDisconnect, onExpandChat, them
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-              
-              {activeTab === 'echo' && renderEchoTab()}
-              
-              {activeTab === 'defense' && (
-                <div className={styles.defenseTab}>
-                  <div className={styles.statusTabs}>
-                    <button 
-                      className={`${styles.statusTab} ${activeTab === ('echo' as TabType) ? styles.activeTab : ''}`}
-                      onClick={() => setActiveTab('echo' as TabType)}
-                    >
-                      E.C.H.O
-                    </button>
-                    <button 
-                      className={`${styles.statusTab} ${styles.blurred}`}
-                      disabled
-                    >
-                      HECATE
-                    </button>
-                    <button 
-                      className={`${styles.statusTab} ${styles.blurred}`}
-                      disabled
-                    >
-                      LEGION
-                    </button>
-                    <button 
-                      className={`${styles.statusTab} ${activeTab === ('missions' as TabType) ? styles.activeTab : ''}`}
-                      onClick={() => setActiveTab('missions' as TabType)}
-                    >
-                      MISSIONS
-                    </button>
-                  </div>
-                  <div className={styles.tabContent}>
-                    <div className={styles.lockedContent}>
-                      <p>This feature is currently locked.</p>
-                      <p>Return to missions and await further instructions.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {activeTab === 'uplink' && (
-                <div className={styles.uplinkTab}>
-                  <div className={styles.statusTabs}>
-                    <button 
-                      className={`${styles.statusTab} ${activeTab === ('echo' as TabType) ? styles.activeTab : ''}`}
-                      onClick={() => setActiveTab('echo' as TabType)}
-                    >
-                      E.C.H.O
-                    </button>
-                    <button 
-                      className={`${styles.statusTab} ${styles.blurred}`}
-                      disabled
-                    >
-                      HECATE
-                    </button>
-                    <button 
-                      className={`${styles.statusTab} ${styles.blurred}`}
-                      disabled
-                    >
-                      LEGION
-                    </button>
-                    <button 
-                      className={`${styles.statusTab} ${activeTab === ('missions' as TabType) ? styles.activeTab : ''}`}
-                      onClick={() => setActiveTab('missions' as TabType)}
-                    >
-                      MISSIONS
-                    </button>
-                  </div>
-                  <div className={styles.tabContent}>
-                    <div className={styles.lockedContent}>
-                      <p>This feature is currently locked.</p>
-                      <p>Return to missions and await further instructions.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
+      <SystemChat 
+        messages={messages} 
+        isEchoActive={true} 
+        onUserInput={onUserInput}
+        currentRoom={currentRoom}
+        onRoomChange={onRoomChange}
+        isCollapsed={chatCollapsed}
+        onCollapsedChange={handleChatCollapse}
+        isDigitizing={isDigitizing}
+        theme={theme}
+      />
     </div>
   );
 
