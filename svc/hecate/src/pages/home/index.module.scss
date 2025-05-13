@@ -120,20 +120,21 @@ h1, h2, h3, h4, h5, h6 {
   height: 100%;
   z-index: 1;
   pointer-events: none;
+  overflow: visible;
 }
 
 .fire {
   position: fixed;
-  bottom: 10px;
-  right: 15%;
-  transform: translateX(-50%);
+  bottom: -30px;
+  right: 20%;
   width: 128px;
   height: 240px;
   background-image: url('../../assets/images/campfire-sheet.png');
   background-size: 1024px 256px;
+  background-repeat: no-repeat;
+  background-position: 0px 0px;
   animation: campfireFlicker 1s steps(8) infinite, campfireGlow 1.5s ease-in-out infinite alternate;
   animation-timing-function: step-end;
-  overflow: hidden;
   mix-blend-mode: screen;
   z-index: 2;
 }
@@ -157,42 +158,28 @@ h1, h2, h3, h4, h5, h6 {
 /* Nyxrael with flicker */
 .nyx {
   position: fixed;
-  bottom: 10px;
-  right: -1%;
-  width: 385px;
-  height: 425px;
-  z-index: 101;
-  background-image: url('../../assets/images/fallen-angel/Fallen_Angels_1/PNG/PNG Sequences/Idle/sprite_sheet.png');
-  background-size: 1540px 2000px;
+  bottom: -80px;
+  right: 2%;
+  width: 450px;
+  height: 550px;
+  background-image: url('../../assets/images/night_wolf_1.png');
+  background-size: contain;
   background-repeat: no-repeat;
-  animation: nyxIdleCycle 3s steps(16) infinite, nyxFlicker 1.5s ease-in-out infinite alternate;
-  animation-timing-function: step-end;
-  transform: scaleX(-1);
-  overflow: hidden;
+  background-position: center;
+  mix-blend-mode: screen;
+  z-index: 2;
+  opacity: 0.8;
+  filter: brightness(1.2) contrast(1.1);
+  animation: nyxGlow 3s ease-in-out infinite alternate;
 }
 
-@keyframes nyxIdleCycle {
-  0%, 6.25% { background-position: 0px 0px; }
-  6.26%, 12.50% { background-position: -385px 0px; }
-  12.51%, 18.75% { background-position: -770px 0px; }
-  18.76%, 25.00% { background-position: -1155px 0px; }
-  25.01%, 31.25% { background-position: 0px -500px; }
-  31.26%, 37.50% { background-position: -385px -500px; }
-  37.51%, 43.75% { background-position: -770px -500px; }
-  43.76%, 50.00% { background-position: -1155px -500px; }
-  50.01%, 56.25% { background-position: 0px -1000px; }
-  56.26%, 62.50% { background-position: -385px -1000px; }
-  62.51%, 68.75% { background-position: -770px -1000px; }
-  68.76%, 75.00% { background-position: -1155px -1000px; }
-  75.01%, 81.25% { background-position: 0px -1500px; }
-  81.26%, 87.50% { background-position: -385px -1500px; }
-  87.51%, 93.75% { background-position: -770px -1500px; }
-  93.76%, 100% { background-position: -1155px -1500px; }
-}
-
-@keyframes nyxFlicker {
-  0% { filter: brightness(0.7); }
-  100% { filter: brightness(1.0); }
+@keyframes nyxGlow {
+  0% {
+    filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
+  }
+  100% {
+    filter: brightness(1.4) contrast(1.2) drop-shadow(0 0 15px rgba(255, 255, 255, 0.5));
+  }
 }
 
 /* Dim other characters */
@@ -233,28 +220,18 @@ h1, h2, h3, h4, h5, h6 {
   
   .scene {
     .fire {
-      /* Reset all previous styles */
-      all: unset;
-      
-      /* Basic positioning */
       position: fixed;
-      bottom: 10px;
-      right: 15%;
-      transform: translateX(-50%);
+      bottom: -50px;
+      right: 22%;
       width: 128px;
       height: 240px;
-      z-index: 10;
-      
-      /* Fire sprite sheet */
       background-image: url('../../assets/images/campfire-sheet.png');
       background-size: 1024px 256px;
       background-repeat: no-repeat;
       background-position: 0px 0px;
-      
-      /* Animation */
       animation: lightFireFlicker 1s steps(8) infinite;
+      z-index: 10;
       
-      /* Add a container for the glow effect */
       &::after {
         content: '';
         position: absolute;
