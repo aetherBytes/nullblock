@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './echo.module.scss';
 import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '@services/api';
+import xLogo from '../../../assets/images/X_logo_black.png';
 
 type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
@@ -113,7 +114,7 @@ const Echo: React.FC<EchoProps> = ({
     matrix: {
       level: 'NONE',
       rarity: 'NONE',
-      status: 'NO E.C. FOUND'
+      status: 'N/A'
     }
   });
   const [ascentLevel, setAscentLevel] = useState<AscentLevel | null>(null);
@@ -627,6 +628,15 @@ const Echo: React.FC<EchoProps> = ({
 
   const renderControlScreen = () => (
     <nav className={styles.verticalNavbar}>
+      <a 
+        href="https://x.com/Nullblock_io" 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        className={styles.socialButton}
+      >
+        <img src={xLogo} alt="X" className={styles.socialIcon} />
+      </a>
+      <div className={styles.navDivider}></div>
       <button onClick={() => handleScreenChange('camp')} className={styles.navButton}>
         CAMP
       </button>
@@ -1030,7 +1040,7 @@ const Echo: React.FC<EchoProps> = ({
                     id: 'ascent',
                     name: 'ASCENT',
                     status: 'active',
-                    icon: '📈',
+                    icon: '↗️',
                     details: {
                       description: 'A digital lurker extraordinaire! You\'ve mastered the art of watching from the shadows, observing the chaos without ever dipping your toes in. Like a cat watching a laser pointer, you\'re fascinated but paralyzed by indecision. At least you\'re not the one getting your digital assets rekt!',
                       stats: [
@@ -1045,14 +1055,14 @@ const Echo: React.FC<EchoProps> = ({
                       ]
                     }
                   })}>
-                    <span className={styles.itemLabel}>📈 ASCENT</span>
+                    <span className={styles.itemLabel}><span className={styles.ascentLine}></span> ASCENT</span>
                     <span className={styles.itemValue}>Net Dweller: 1</span>
                   </div>
                   <div className={styles.diagnosticsItem} onClick={() => setSelectedUplink({
                     id: 'nether',
                     name: 'NETHER',
                     status: 'active',
-                    icon: '💎',
+                    icon: '₦',
                     details: {
                       description: 'NETHER: Magic internet money from the void. Born from nothing, worth everything, and somehow gaining value by the second. The integration has passed the event horizon - good luck trying to spend it. Warning: Prolonged exposure may cause reality distortion and an irresistible urge to dive deeper into the code.',
                       stats: [
@@ -1067,7 +1077,7 @@ const Echo: React.FC<EchoProps> = ({
                       ]
                     }
                   })}>
-                    <span className={styles.itemLabel}>💎 NETHER</span>
+                    <span className={styles.itemLabel}>₦ NETHER</span>
                     <span className={styles.itemValue}>₦ {userProfile.nether?.toFixed(2) || 'N/A'}</span>
                   </div>
                   <div className={styles.diagnosticsItem} onClick={() => setSelectedUplink({
@@ -1116,7 +1126,7 @@ const Echo: React.FC<EchoProps> = ({
                   </div>
                   <div className={styles.diagnosticsItem} onClick={() => setSelectedUplink({
                     id: 'ec',
-                    name: 'E.C',
+                    name: 'EMBER CONDUIT',
                     status: 'active',
                     icon: '🔥',
                     details: {
@@ -1133,7 +1143,7 @@ const Echo: React.FC<EchoProps> = ({
                       ]
                     }
                   })}>
-                    <span className={styles.itemLabel}>🔥 E.C</span>
+                    <span className={styles.itemLabel}>🔥 EMBER CONDUIT</span>
                     <span className={styles.itemValue}>{userProfile.matrix.status}</span>
                   </div>
                 </div>
