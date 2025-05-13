@@ -1,20 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './echo.module.scss';
 import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '@services/api';
-import SystemChat from '@components/system-chat/system-chat';
 
 type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
 type TabType = 'missions' | 'systems' | 'defense' | 'uplink' | 'echo' | 'status';
-type MessageType = 'message' | 'alert' | 'critical' | 'update' | 'action' | 'user';
-
-interface ChatMessage {
-  id: number;
-  text: string;
-  type: MessageType;
-  action?: () => void;
-  actionText?: string;
-}
 
 interface EchoProps {
   publicKey: string | null;
@@ -22,10 +12,6 @@ interface EchoProps {
   theme?: Theme;
   onClose: () => void;
   onThemeChange: (theme: 'null' | 'cyber' | 'light') => void;
-  messages?: ChatMessage[];
-  onUserInput?: (input: string) => void;
-  currentRoom?: string;
-  onRoomChange?: (room: string) => void;
 }
 
 interface UserProfile {
@@ -43,9 +29,12 @@ interface UserProfile {
 
 interface AscentLevel {
   level: number;
-  name: string;
+  title: string;
   description: string;
   progress: number;
+  nextLevel: number;
+  nextTitle: string;
+  nextDescription: string;
   accolades: string[];
 }
 
@@ -60,7 +49,7 @@ interface EmberLinkStatus {
   connected: boolean;
   lastSeen: Date | null;
   browserInfo: {
-    browser: string;
+    name: string;
     version: string;
     platform: string;
   } | null;
@@ -70,15 +59,15 @@ interface EmberLinkStatus {
 interface Uplink {
   id: string;
   name: string;
-  status: 'active' | 'inactive' | 'pending';
+  status: 'active' | 'inactive' | 'error';
   icon: string;
   details: {
     description: string;
-    stats: {
+    stats: Array<{
       label: string;
       value: string | number;
-      status?: 'active' | 'inactive' | 'pending';
-    }[];
+      status?: string;
+    }>;
   };
 }
 
@@ -97,16 +86,21 @@ interface LeaderboardEntry {
   };
 }
 
+// Add AscentLevelData interface
+interface AscentLevelData {
+  level: number;
+  name: string;
+  description: string;
+  progress: number;
+  accolades: string[];
+}
+
 const Echo: React.FC<EchoProps> = ({ 
   publicKey, 
   onDisconnect, 
   theme = 'light', 
   onClose, 
-  onThemeChange,
-  messages = [],
-  onUserInput,
-  currentRoom = '/logs',
-  onRoomChange
+  onThemeChange
 }) => {
   const [screen, setScreen] = useState<Screen>('camp');
   const [walletData, setWalletData] = useState<any>(null);
@@ -124,7 +118,7 @@ const Echo: React.FC<EchoProps> = ({
   });
   const [ascentLevel, setAscentLevel] = useState<AscentLevel | null>(null);
   const [showAscentDetails, setShowAscentDetails] = useState<boolean>(false);
-  const [alerts, setAlerts] = useState<number>(3); // Default to 3 alerts for demo
+  const [alerts, setAlerts] = useState<number>(3);
   const [showAlerts, setShowAlerts] = useState<boolean>(false);
   const [showNectarDetails, setShowNectarDetails] = useState<boolean>(false);
   const [showCacheValueDetails, setShowCacheValueDetails] = useState<boolean>(false);
@@ -136,13 +130,11 @@ const Echo: React.FC<EchoProps> = ({
   const missionDropdownRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<TabType>('echo');
-  // Add Ember Link status state
   const [emberLinkStatus, setEmberLinkStatus] = useState<EmberLinkStatus>({
     connected: false,
     lastSeen: null,
     browserInfo: null
   });
-  const [chatCollapsed, setChatCollapsed] = useState<boolean>(true);
   const [isDigitizing, setIsDigitizing] = useState<boolean>(false);
   const [selectedUplink, setSelectedUplink] = useState<Uplink | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
@@ -171,7 +163,7 @@ const Echo: React.FC<EchoProps> = ({
           },
           {
             label: 'Browser',
-            value: emberLinkStatus.browserInfo ? `${emberLinkStatus.browserInfo.browser} ${emberLinkStatus.browserInfo.version}` : 'Unknown'
+            value: emberLinkStatus.browserInfo ? `${emberLinkStatus.browserInfo.name} ${emberLinkStatus.browserInfo.version}` : 'Unknown'
           },
           {
             label: 'Platform',
@@ -494,7 +486,17 @@ const Echo: React.FC<EchoProps> = ({
           // Fetch ascent level data
           try {
             const ascentData = await fetchAscentLevel(publicKey);
-            setAscentLevel(ascentData);
+            // Convert AscentLevelData to AscentLevel
+            setAscentLevel({
+              level: ascentData.level,
+              title: ascentData.name,
+              description: ascentData.description,
+              progress: ascentData.progress,
+              nextLevel: ascentData.level + 1,
+              nextTitle: `Level ${ascentData.level + 1}`,
+              nextDescription: 'Next level description will be available soon.',
+              accolades: ascentData.accolades
+            });
             // Update the ascent value in userProfile
             setUserProfile(prev => ({
               ...prev,
@@ -540,7 +542,7 @@ const Echo: React.FC<EchoProps> = ({
         connected: true,
         lastSeen: new Date(),
         browserInfo: {
-          browser: 'Chrome',
+          name: 'Chrome',
           version: '120.0.0',
           platform: 'Linux'
         }
@@ -605,11 +607,6 @@ const Echo: React.FC<EchoProps> = ({
 
   const handleNectarClick = () => {
     setShowNectarDetails(!showNectarDetails);
-  };
-
-  // Handle chat collapse state
-  const handleChatCollapse = (collapsed: boolean) => {
-    setChatCollapsed(collapsed);
   };
 
   const handleUplinkClick = (uplink: Uplink) => {
@@ -823,7 +820,7 @@ const Echo: React.FC<EchoProps> = ({
               </div>
               <div className={styles.browserInfo}>
                 <span className={styles.browserLabel}>Browser:</span>
-                <span className={styles.browserValue}>{emberLinkStatus.browserInfo?.browser} {emberLinkStatus.browserInfo?.version} ({emberLinkStatus.browserInfo?.platform})</span>
+                <span className={styles.browserValue}>{emberLinkStatus.browserInfo?.name} {emberLinkStatus.browserInfo?.version} ({emberLinkStatus.browserInfo?.platform})</span>
               </div>
             </div>
             <div className={styles.echoMessage}>
@@ -1352,17 +1349,6 @@ const Echo: React.FC<EchoProps> = ({
           </div>
         </>
       )}
-      <SystemChat 
-        messages={messages} 
-        isEchoActive={true} 
-        onUserInput={onUserInput}
-        currentRoom={currentRoom}
-        onRoomChange={onRoomChange}
-        isCollapsed={chatCollapsed}
-        onCollapsedChange={handleChatCollapse}
-        isDigitizing={isDigitizing}
-        theme={theme}
-      />
     </div>
   );
 
