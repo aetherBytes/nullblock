@@ -36,13 +36,6 @@
       "isPreload": true
     },
     {
-      "url": "/assets/nyx_head-h4za-lDt.png",
-      "weight": 3,
-      "type": "image",
-      "isNested": false,
-      "isPreload": true
-    },
-    {
       "url": "/assets/campfire-sheet-LOaxp005.png",
       "weight": 3,
       "type": "image",
@@ -54,6 +47,13 @@
       "weight": 3,
       "type": "image",
       "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/nyx_head-h4za-lDt.png",
+      "weight": 3,
+      "type": "image",
+      "isNested": true,
       "isPreload": true
     }
   ],
@@ -97,6 +97,13 @@
       "url": "/assets/axios-upsvKRUO.js",
       "weight": 2,
       "type": "script",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/nyx_head-h4za-lDt.png",
+      "weight": 3,
+      "type": "image",
       "isNested": true,
       "isPreload": true
     }
@@ -150,6 +157,13 @@
       "type": "script",
       "isNested": true,
       "isPreload": true
+    },
+    {
+      "url": "/assets/nyx_head-h4za-lDt.png",
+      "weight": 3,
+      "type": "image",
+      "isNested": true,
+      "isPreload": true
     }
   ],
   "0-2": [
@@ -185,6 +199,13 @@
       "url": "/assets/index-f9Su0Zrz.js",
       "weight": 2,
       "type": "script",
+      "isNested": true,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/nyx_head-h4za-lDt.png",
+      "weight": 3,
+      "type": "image",
       "isNested": true,
       "isPreload": true
     }
@@ -224,6 +245,13 @@
       "type": "script",
       "isNested": true,
       "isPreload": true
+    },
+    {
+      "url": "/assets/nyx_head-h4za-lDt.png",
+      "weight": 3,
+      "type": "image",
+      "isNested": true,
+      "isPreload": true
     }
   ],
   "0-4": [
@@ -246,6 +274,13 @@
       "weight": 2,
       "type": "script",
       "isNested": false,
+      "isPreload": true
+    },
+    {
+      "url": "/assets/nyx_head-h4za-lDt.png",
+      "weight": 3,
+      "type": "image",
+      "isNested": true,
       "isPreload": true
     }
   ]
