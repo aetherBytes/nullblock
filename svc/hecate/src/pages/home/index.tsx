@@ -3,7 +3,6 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import styles from './index.module.scss';
 import StarsCanvas from '@components/stars/stars';
 import Echo from '@components/echo/echo';
-import SystemChat from '@components/system-chat/system-chat';
 import DigitizingText from '../../components/digitizing-text';
 
 type MessageType = 'message' | 'alert' | 'critical' | 'update' | 'action' | 'user';
@@ -24,11 +23,12 @@ const Home: React.FC = () => {
   const [messageIndex, setMessageIndex] = useState<number>(0);
   const [hasPhantom, setHasPhantom] = useState<boolean>(false);
   const [currentRoom, setCurrentRoom] = useState<string>('/logs');
-  const [chatCollapsed, setChatCollapsed] = useState<boolean>(true);
   const [isDigitizing, setIsDigitizing] = useState<boolean>(false);
   const [showWelcomeText, setShowWelcomeText] = useState<boolean>(true);
   const [echoScreenSelected, setEchoScreenSelected] = useState<boolean>(false);
   const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('light');
+  const [showConnectButton, setShowConnectButton] = useState<boolean>(false);
+  const [textComplete, setTextComplete] = useState<boolean>(false);
 
   // Initialize state from localStorage on component mount
   useEffect(() => {
@@ -36,7 +36,6 @@ const Home: React.FC = () => {
     const savedPublicKey = localStorage.getItem('walletPublickey');
     const lastAuth = localStorage.getItem('lastAuthTime');
     const hasSeenEcho = localStorage.getItem('hasSeenEcho');
-    const savedChatCollapsed = localStorage.getItem('chatCollapsedState');
     const savedTheme = localStorage.getItem('currentTheme');
     
     // Set initial states based on localStorage
@@ -45,10 +44,11 @@ const Home: React.FC = () => {
       setWalletConnected(true);
       setShowEcho(true);
       setShowWelcomeText(false);
-    }
-    
-    if (savedChatCollapsed) {
-      setChatCollapsed(savedChatCollapsed === 'true');
+    } else {
+      // Ensure welcome text is shown for new users
+      setShowWelcomeText(true);
+      setWalletConnected(false);
+      setShowEcho(false);
     }
     
     if (savedTheme) {
@@ -62,6 +62,27 @@ const Home: React.FC = () => {
       setShowWelcomeText(false);
     }
   }, [showEcho]);
+
+  // Show connect button when digitized text is complete
+  useEffect(() => {
+    console.log('Text complete effect triggered:', { textComplete, walletConnected, showEcho });
+    if (textComplete && !walletConnected && !showEcho) {
+      console.log('Setting showConnectButton to true');
+      setShowConnectButton(true);
+    }
+  }, [textComplete, walletConnected, showEcho]);
+
+  // Add a fallback timer to show the connect button after a reasonable time
+  useEffect(() => {
+    if (!walletConnected && !showEcho && showWelcomeText) {
+      const fallbackTimer = setTimeout(() => {
+        console.log('Fallback timer triggered - showing connect button');
+        setShowConnectButton(true);
+      }, 5000); // 5 seconds fallback
+      
+      return () => clearTimeout(fallbackTimer);
+    }
+  }, [walletConnected, showEcho, showWelcomeText]);
 
   const automaticResponses = [
     {
@@ -221,7 +242,7 @@ const Home: React.FC = () => {
           ...baseMessages,
           {
             id: 2,
-            text: "System: Neural interface detected.",
+            text: "System: Interface detected.",
             type: "message"
           },
           {
@@ -231,7 +252,7 @@ const Home: React.FC = () => {
           },
           {
             id: 4,
-            text: "Connect Neural Interface",
+            text: "Connect",
             type: "action",
             action: manualConnect,
             actionText: "Connect"
@@ -242,7 +263,7 @@ const Home: React.FC = () => {
           ...baseMessages,
           {
             id: 2,
-            text: "Error: Neural interface not found.",
+            text: "Error: Interface not found.",
             type: "critical"
           },
           {
@@ -252,7 +273,7 @@ const Home: React.FC = () => {
           },
           {
             id: 4,
-            text: "Acquire Neural Interface",
+            text: "Acquire Interface",
             type: "action",
             action: () => window.open('https://phantom.app/', '_blank'),
             actionText: "Install Interface"
@@ -347,9 +368,7 @@ const Home: React.FC = () => {
           setPublicKey(walletPubKey);
           setWalletConnected(true);
           setShowEcho(true);
-          setChatCollapsed(true);
           localStorage.setItem('walletPublickey', walletPubKey);
-          localStorage.setItem('chatCollapsedState', 'true');
           localStorage.setItem('hasSeenEcho', 'true');
           updateAuthTime();
           
@@ -392,10 +411,9 @@ const Home: React.FC = () => {
           localStorage.removeItem('walletPublickey');
           localStorage.removeItem('lastAuthTime');
           localStorage.removeItem('hasSeenEcho');
-          localStorage.removeItem('chatCollapsedState');
           setMessages([{
             id: 1,
-            text: "System: Neural interface disconnected.",
+            text: "System: Interface disconnected.",
             type: "message"
           }, {
             id: 2,
@@ -403,6 +421,11 @@ const Home: React.FC = () => {
             type: "alert"
           }]);
           setMessageIndex(0);
+          
+          // Show welcome text and reset text completion state
+          setShowWelcomeText(true);
+          setTextComplete(false);
+          setShowConnectButton(false);
         } catch (error) {
           console.error('Error disconnecting from Phantom:', error);
         }
@@ -410,101 +433,16 @@ const Home: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const handleExpandChat = () => {
-      setChatCollapsed(false);
-      
-      // Don't start digitizing animation if ECHO is shown
-      if (showEcho) {
-        return;
-      }
-      
-      // Start digitizing animation
-      setIsDigitizing(true);
-      
-      // Add digitizing welcome message
-      addMessage({
-        id: messages.length + 1,
-        text: "INITIALIZING DIGITAL INTERFACE...",
-        type: "alert"
-      });
-      
-      // Add digitizing effect messages with delays
-      setTimeout(() => {
-        addMessage({
-          id: messages.length + 2,
-          text: "LOADING NEURAL NETWORK...",
-          type: "message"
-        });
-      }, 1000);
-      
-      setTimeout(() => {
-        addMessage({
-          id: messages.length + 3,
-          text: "CALIBRATING QUANTUM MATRIX...",
-          type: "message"
-        });
-      }, 2000);
-      
-      setTimeout(() => {
-        addMessage({
-          id: messages.length + 4,
-          text: "ESTABLISHING SECURE CONNECTION...",
-          type: "message"
-        });
-      }, 3000);
-      
-      setTimeout(() => {
-        addMessage({
-          id: messages.length + 5,
-          text: "ECHO INTERFACE READY",
-          type: "update"
-        });
-        setIsDigitizing(false);
-      }, 4000);
-      
-      // Add welcome message if no matrix is found
-      if (!localStorage.getItem('hasMatrix')) {
-        setTimeout(() => {
-          addMessage({
-            id: messages.length + 6,
-            text: "System Alert: Matrix Integration Required",
-            type: "alert"
-          });
-          addMessage({
-            id: messages.length + 7,
-            text: "Welcome to the void. Your journey begins with the Matrix.",
-            type: "message"
-          });
-          addMessage({
-            id: messages.length + 8,
-            text: "The Matrix unlocks enhanced capabilities:",
-            type: "message"
-          });
-          addMessage({
-            id: messages.length + 9,
-            text: "• Advanced algorithms\n• Real-time analysis\n• Strategy deployment\n• Priority access\n• Enhanced security",
-            type: "message"
-          });
-          addMessage({
-            id: messages.length + 10,
-            text: "Matrix tiers determine your power level.",
-            type: "message"
-          });
-          addMessage({
-            id: messages.length + 11,
-            text: "MARKETPLACE",
-            type: "action",
-            action: () => window.dispatchEvent(new CustomEvent('navigateToMarket')),
-            actionText: "[ ACQUIRE MATRIX ]"
-          });
-        }, 4500);
-      }
-    };
-
-    window.addEventListener('expandSystemChat', handleExpandChat);
-    return () => window.removeEventListener('expandSystemChat', handleExpandChat);
-  }, [messages, showEcho]);
+  // Handle digitized text completion
+  const handleTextComplete = () => {
+    console.log('Text complete callback triggered');
+    setTextComplete(true);
+    // Directly set showConnectButton to true if conditions are met
+    if (!walletConnected && !showEcho) {
+      console.log('Setting showConnectButton to true directly from callback');
+      setShowConnectButton(true);
+    }
+  };
 
   return (
     <div className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]}`}>
@@ -515,31 +453,34 @@ const Home: React.FC = () => {
       </div>
       {showWelcomeText && !showEcho && (
         <DigitizingText 
-          text="Welcome to Nullblock. Interfaces for the new world." 
+          text="Welcome to Nullblock." 
           duration={0}
           theme={currentTheme === 'null' ? 'null-dark' : 'light'}
+          onComplete={handleTextComplete}
         />
       )}
-      <SystemChat 
-        messages={messages} 
-        isEchoActive={showEcho} 
-        onUserInput={handleUserInput}
-        currentRoom={currentRoom}
-        onRoomChange={handleRoomChange}
-        isCollapsed={chatCollapsed}
-        onCollapsedChange={setChatCollapsed}
-        isDigitizing={isDigitizing}
-        theme={currentTheme}
-      />
+      {showConnectButton && !walletConnected && !showEcho && (
+        <div className={styles.connectButtonContainer}>
+          <button 
+            className={`${styles.connectButton} ${styles[`theme-${currentTheme}`]}`}
+            onClick={manualConnect}
+          >
+            Connect
+          </button>
+        </div>
+      )}
       {showEcho && <Echo 
         publicKey={publicKey} 
         onDisconnect={handleDisconnect}
-        onExpandChat={() => {
-          window.dispatchEvent(new CustomEvent('expandSystemChat'));
-          setChatCollapsed(false);
-        }}
         theme={currentTheme}
-        onClose={() => setShowEcho(false)}
+        onClose={() => {
+          setShowEcho(false);
+          // Don't reset wallet connection when just closing the Echo component
+          // Only reset the welcome text and connect button state
+          setShowWelcomeText(true);
+          setTextComplete(false);
+          setShowConnectButton(false);
+        }}
         onThemeChange={(theme) => {
           if (theme === 'cyber') {
             setCurrentTheme('null');
@@ -547,6 +488,10 @@ const Home: React.FC = () => {
             setCurrentTheme(theme as 'null' | 'light');
           }
         }}
+        messages={messages}
+        onUserInput={handleUserInput}
+        currentRoom={currentRoom}
+        onRoomChange={handleRoomChange}
       />}
     </div>
   );

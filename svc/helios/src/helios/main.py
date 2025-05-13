@@ -251,10 +251,10 @@ async def process_command(request: CommandRequest) -> CommandResponse:
             "type": "message",
             "text": """System: ECHO Interface Version
 
-╭───────────────[ VERSION ]───────────────╮
+╭───────────────[ VERSION ]──────────────╮
 │                                        │
 │  ECHO Interface  │  v0.1.0-alpha       │
-│  Neural Core    │  v0.0.2             │
+│  Neural Core    │  v0.0.2              │
 │  Memory System  │  NOT INSTALLED       │
 │  Reality Engine │  NOT INSTALLED       │
 │                                        │
@@ -273,14 +273,14 @@ async def process_command(request: CommandRequest) -> CommandResponse:
                 "type": "update",
                 "text": """System Update: System Status
 
-╭───────────────[ STATUS ]────────────────╮
-│                                        │
-│  Neural Interface  │  INACTIVE         │
-│  Translation Matrix│  NOT FOUND        │
+╭───────────────[ STATUS ]──────────────╮
+│                                       |
+│  Neural Interface  │  INACTIVE        │
+│  Translation Matrix│  NOT FOUND       │
 │  Memory Cards     │  OFFLINE          │
 │  Reality Engine   │  DORMANT          │
-│                                        │
-╰────────────────────────────────────────╯"""
+│                                       │
+╰───────────────────────────────────────╯"""
             }
         ])
     
@@ -290,7 +290,7 @@ async def process_command(request: CommandRequest) -> CommandResponse:
             "type": "message",
             "text": """System: Clearing chat log...
 
-╭────────────────[ CLEAR ]────────────────╮
+╭────────────────[ CLEAR ]───────────────╮
 │                                        │
 │           Chat log cleared             │
 │                                        │
@@ -321,15 +321,15 @@ async def process_command(request: CommandRequest) -> CommandResponse:
                 "type": "message",
                 "text": """System: Retrieving balance...
 
-╭────────────────[ BALANCE ]───────────────╮
-│                                         │
+╭────────────────[ BALANCE ]─────────────╮
+│                                        │
 │  SOL Balance     │  0.000 SOL          │
 │  USDC Balance    │  0.00 USDC          │
 │  Other Tokens    │  None               │
-│                                         │
+│                                        │
 │  Last Updated    │  Just now           │
-│                                         │
-╰─────────────────────────────────────────╯"""
+│                                        │
+╰────────────────────────────────────────╯"""
             }])
         
         if command == "/tokens":
@@ -338,7 +338,7 @@ async def process_command(request: CommandRequest) -> CommandResponse:
                 "type": "message",
                 "text": """System: Scanning wallet...
 
-╭─────────────────[ TOKENS ]───────────────╮
+╭─────────────────[ TOKENS ]──────────────╮
 │                                         │
 │  No tokens found in connected wallet    │
 │                                         │
@@ -353,7 +353,7 @@ async def process_command(request: CommandRequest) -> CommandResponse:
                 "type": "message",
                 "text": """System: Loading transaction history...
 
-╭────────────────[ HISTORY ]───────────────╮
+╭────────────────[ HISTORY ]──────────────╮
 │                                         │
 │  No recent transactions found           │
 │                                         │

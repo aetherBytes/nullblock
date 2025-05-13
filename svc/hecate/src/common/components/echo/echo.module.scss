@@ -700,10 +700,10 @@ $light-shadow: rgba(0, 0, 0, 0.1);
             }
 
             &.blurred {
-              opacity: 0.12;
-              filter: blur(1.5px);
-              color: rgba($echo-gray, 0.5);
-              text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+              opacity: 0.15;
+              filter: blur(3px);
+              color: rgba($echo-gray, 0.2);
+              text-shadow: 0 0 12px rgba(0, 0, 0, 0.9);
               pointer-events: none;
             }
 
@@ -898,15 +898,15 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 
   .statusCard {
-    background: rgba(0, 0, 0, 0.7);
-    border: 1px solid rgba(0, 255, 0, 0.3);
-    border-radius: 4px;
-    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 8px;
+    padding: 20px;
     height: 100%;
-    width: 100%;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
+    gap: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .statusHeaderContainer {
@@ -914,7 +914,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
     flex-shrink: 0;
     flex-wrap: wrap;
@@ -933,54 +933,184 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
   .statusTabs {
     display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    max-width: 100%;
-    overflow-x: auto;  
-    &::-webkit-scrollbar {
-      height: 4px;
-    }
-    
-    &::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 2px;
-    }
-    
-    &::-webkit-scrollbar-thumb {
-      background: rgba(0, 255, 0, 0.3);
-      border-radius: 2px;
-      &:hover {
-        background: rgba(0, 255, 0, 0.5);
-      }
-    }
+    gap: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 10px;
   }
 
   .statusTab {
     background: transparent;
-    border: 1px solid rgba(0, 255, 0, 0.3);
-    color: rgba(0, 255, 0, 0.7);
-    padding: 0.25rem 0.75rem;
-    font-size: 0.8rem;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 8px 16px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
     
     &:hover {
-      background: rgba(0, 255, 0, 0.1);
-      color: #00ff00;
+      color: rgba(255, 255, 255, 0.9);
     }
     
     &.activeTab {
-      background: rgba(0, 255, 0, 0.2);
-      color: #00ff00;
-      border-color: #00ff00;
+      color: #fff;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -11px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: #00ff9d;
+        box-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+      }
+    }
+  }
+
+  .tabContent {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .statusContent {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .vitalsContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    
+    &::-webkit-scrollbar {
+      width: 8px;
     }
     
-    &.blurred {
-      opacity: 0.5;
-      filter: blur(1px);
-      cursor: not-allowed;
-      pointer-events: none;
+    &::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+
+  .vitalItem {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: rgba(0, 0, 0, 0.6);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  .vitalLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  .vitalValue {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 600;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  }
+
+  .infoButton {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.6);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  .ascentDetails {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .ascentDescription {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .progressText {
+    color: $echo-blue;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+  }
+
+  .accoladesContainer {
+    margin-top: 10px;
+    
+    .accoladesTitle {
+      color: $echo-blue;
+      font-size: 0.9rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .accoladesList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      
+      li {
+        color: $text-color;
+        font-size: 0.85rem;
+        margin-bottom: 3px;
+        
+        &.visible {
+          color: $echo-green;
+        }
+        
+        &.blurred {
+          color: rgba($text-color, 0.4);
+          filter: blur(1px);
+        }
+      }
     }
   }
 
@@ -998,22 +1128,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     }
   }
 
-  .tabContent {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    height: calc(100% - 40px); /* Account for the tabs height */
-    width: 100%;
-  }
-
   .missionHeader {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
     margin-bottom: 0.25rem;
     padding-bottom: 0.25rem;
-    border-bottom: 1px solid rgba(0, 255, 0, 0.2);
     flex-shrink: 0;
     width: 100%;
     overflow: hidden;
@@ -1628,89 +1748,6 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
-.ascentDetails {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 300px;
-  background-color: rgba($background-dark, 0.95);
-  border: 1px solid rgba($echo-blue, 0.3);
-  border-radius: 4px;
-  padding: 15px;
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  margin-top: 5px;
-  backdrop-filter: blur(5px);
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: 10px;
-    width: 15px;
-    height: 15px;
-    background-color: rgba($background-dark, 0.95);
-    border-left: 1px solid rgba($echo-blue, 0.3);
-    border-bottom: 1px solid rgba($echo-blue, 0.3);
-    transform: rotate(45deg);
-  }
-  
-  &.rightAligned {
-    left: auto;
-    right: 0;
-    
-    &::before {
-      left: auto;
-      right: 10px;
-    }
-  }
-  
-  .ascentDescription {
-    color: $text-color;
-    font-size: 0.9rem;
-    line-height: 1.4;
-    margin-bottom: 10px;
-  }
-  
-  .progressText {
-    color: $echo-blue;
-    font-size: 0.85rem;
-    margin-bottom: 10px;
-  }
-  
-  .accoladesContainer {
-    margin-top: 10px;
-    
-    .accoladesTitle {
-      color: $echo-blue;
-      font-size: 0.9rem;
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-    
-    .accoladesList {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      
-      li {
-        color: $text-color;
-        font-size: 0.85rem;
-        margin-bottom: 3px;
-        
-        &.visible {
-          color: $echo-green;
-        }
-        
-        &.blurred {
-          color: rgba($text-color, 0.4);
-          filter: blur(1px);
-        }
-      }
-    }
-  }
-}
-
 .inactive {
   color: $echo-red !important;
   text-shadow: 0 0 8px rgba($echo-red, 0.4) !important;
@@ -1735,10 +1772,10 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
   
   &.blurred {
-    opacity: 0.2;
-    filter: blur(2px);
-    color: rgba($echo-gray, 0.3);
-    text-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
+    opacity: 0.15;
+    filter: blur(3px);
+    color: rgba($echo-gray, 0.2);
+    text-shadow: 0 0 12px rgba(0, 0, 0, 0.9);
     pointer-events: none;
   }
 }
