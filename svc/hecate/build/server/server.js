@@ -24,8 +24,6 @@ const AppLayout = () => /* @__PURE__ */ jsxs("div", { children: [
   /* @__PURE__ */ jsx(ScrollToTop, {}),
   /* @__PURE__ */ jsx("main", { className: "main", children: /* @__PURE__ */ jsx(Outlet, {}) })
 ] });
-const IS_PROD = true;
-const API_GATEWAY = "https://randomuser.me/api";
 const manager = new Manager({
   routes: {
     home: {
@@ -69,8 +67,8 @@ const NotFound = () => {
   }
   return /* @__PURE__ */ jsxs(Fragment, { children: [
     /* @__PURE__ */ jsx("div", { children: "Something went wrong." }),
-    !IS_PROD,
-    !IS_PROD,
+    false,
+    false,
     /* @__PURE__ */ jsx("div", { className: "mr20", children: /* @__PURE__ */ jsx(Link, { to: manager.makeURL("home"), children: "Go home" }) })
   ] });
 };
@@ -100,11 +98,11 @@ const NotLazy = () => /* @__PURE__ */ jsxs(Fragment, { children: [
 const detailsRoutes = [
   {
     index: true,
-    lazy: n(() => import("./assets/index-iuHIxk7-.js"), "@pages/details/index")
+    lazy: n(() => import("./assets/index-ZwTx3GSx.js"), "@pages/details/index")
   },
   {
     path: manager.path("details.user"),
-    lazy: n(() => import("./assets/index-CAyabwVt.js"), "@pages/details/user")
+    lazy: n(() => import("./assets/index-DxcDCneE.js"), "@pages/details/user")
   }
 ];
 const routes = [
@@ -114,7 +112,7 @@ const routes = [
     children: [
       {
         index: true,
-        lazy: n(() => import("./assets/index-BF63P8Aq.js"), "@pages/home")
+        lazy: n(() => import("./assets/index-D8didD_x.js"), "@pages/home")
       },
       {
         path: manager.path("details"),
@@ -122,11 +120,11 @@ const routes = [
       },
       {
         path: manager.path("errorBoundary"),
-        lazy: n(() => import("./assets/index-BavhgPqO.js"), "@pages/error-boundary")
+        lazy: n(() => import("./assets/index-C09GgAkU.js"), "@pages/error-boundary")
       },
       {
         path: manager.path("nestedSuspense"),
-        lazy: n(() => import("./assets/index-DmMLY2qT.js"), "@pages/nested-suspense")
+        lazy: n(() => import("./assets/index-Ctv0L7vw.js"), "@pages/nested-suspense")
       },
       {
         path: manager.path("redirect"),
@@ -242,7 +240,6 @@ const server = entryServer(AppStrict, routes, {
   })
 });
 export {
-  API_GATEWAY as A,
   Fallback as F,
   server as default,
   manager as m

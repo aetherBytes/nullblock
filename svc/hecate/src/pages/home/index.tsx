@@ -451,7 +451,7 @@ const Home: React.FC = () => {
     <div className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]}`}>
       <div className={styles.backgroundImage} />
       <StarsCanvas theme={currentTheme} />
-      <div className={styles.scene}>
+      <div className={`${styles.scene} ${showEcho ? styles.echoActive : ''}`}>
         <div className={styles.fire}></div>
         <div className={styles.nyx}></div>
       </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './echo.module.scss';
 import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '@services/api';
 import xLogo from '../../../assets/images/X_logo_black.png';
+import nyxImage from '@assets/images/nyx_head.png';
 
 type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
@@ -628,6 +629,12 @@ const Echo: React.FC<EchoProps> = ({
 
   const renderControlScreen = () => (
     <nav className={styles.verticalNavbar}>
+      <button 
+        onClick={() => setActiveTab('systems')} 
+        className={styles.homeButton}
+      >
+        <img src={nyxImage} alt="Home" className={styles.homeIcon} />
+      </button>
       <a 
         href="https://x.com/Nullblock_io" 
         target="_blank" 
@@ -1170,7 +1177,7 @@ const Echo: React.FC<EchoProps> = ({
                   className={`${styles.statusTab} ${activeTab === 'systems' ? styles.activeTab : ''}`}
                   onClick={() => setActiveTab('systems')}
                 >
-                  HECATE
+                  NYX
                 </button>
                 <button 
                   className={`${styles.statusTab} ${activeTab === 'defense' ? styles.activeTab : ''}`}
