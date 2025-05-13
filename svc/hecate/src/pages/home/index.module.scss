@@ -121,6 +121,16 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 1;
   pointer-events: none;
   overflow: visible;
+
+  &.echoActive {
+    .fire {
+      opacity: 0.2;
+    }
+
+    .nyx {
+      opacity: 0.2;
+    }
+  }
 }
 
 .fire {
@@ -137,6 +147,7 @@ h1, h2, h3, h4, h5, h6 {
   animation-timing-function: step-end;
   mix-blend-mode: screen;
   z-index: 2;
+  transition: opacity 0.3s ease;
 }
 
 @keyframes campfireFlicker {
@@ -171,6 +182,7 @@ h1, h2, h3, h4, h5, h6 {
   opacity: 0.8;
   filter: brightness(1.2) contrast(1.1);
   animation: nyxGlow 3s ease-in-out infinite alternate;
+  transition: opacity 0.3s ease;
 }
 
 @keyframes nyxGlow {
