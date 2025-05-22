@@ -169,11 +169,10 @@ h1, h2, h3, h4, h5, h6 {
   &:hover {
     opacity: 1;
     filter: brightness(1.2) drop-shadow(0 0 15px $flame-glow);
-    transform: scale(1.02);
   }
 
   &:active {
-    transform: scale(0.98);
+    opacity: 0.8;
   }
 }
 
@@ -216,11 +215,10 @@ h1, h2, h3, h4, h5, h6 {
   &:hover {
     opacity: 1;
     filter: brightness(1.4) contrast(1.2) drop-shadow(0 0 20px rgba(255, 255, 255, 0.7));
-    transform: scaleX(-1) scale(1.02);
   }
 
   &:active {
-    transform: scaleX(-1) scale(0.98);
+    opacity: 0.8;
   }
 }
 

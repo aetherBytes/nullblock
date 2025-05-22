@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This rule is helpful whenever buidling features with the Base SDK / for base token. 

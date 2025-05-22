@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@coinbase/onchainkit": "^0.38.13",
+    "@types/node": "^22.15.21",
+    "@types/react": "^19.1.5",
+    "viem": "^2.30.0"
+  }
+}
