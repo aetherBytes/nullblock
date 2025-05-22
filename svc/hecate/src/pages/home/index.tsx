@@ -8,7 +8,7 @@ import powerOn from '@assets/images/echo_bot_night.png';
 import powerOff from '@assets/images/echo_bot_white.png';
 import nyxImage from '@assets/images/night_wolf_1.png';
 
-type MessageType = 'message' | 'alert' | 'critical' | 'update' | 'action' | 'user';
+type MessageType = 'message' | 'alert' | 'critical' | 'update' | 'action' | 'user' | 'welcome' | 'system';
 
 interface ChatMessage {
   id: number;
@@ -32,6 +32,8 @@ const Home: React.FC = () => {
   const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('light');
   const [showConnectButton, setShowConnectButton] = useState<boolean>(false);
   const [textComplete, setTextComplete] = useState<boolean>(false);
+  const [showNyxPopup, setShowNyxPopup] = useState<boolean>(false);
+  const [nyxMessages, setNyxMessages] = useState<ChatMessage[]>([]);
 
   // Initialize state from localStorage on component mount
   useEffect(() => {
@@ -440,6 +442,10 @@ const Home: React.FC = () => {
   const handleTextComplete = () => {
     console.log('Text complete callback triggered');
     setTextComplete(true);
+    // Hide the welcome text after animation completes
+    setTimeout(() => {
+      setShowWelcomeText(false);
+    }, 3000);
     // Directly set showConnectButton to true if conditions are met
     if (!walletConnected && !showEcho) {
       console.log('Setting showConnectButton to true directly from callback');
@@ -447,19 +453,62 @@ const Home: React.FC = () => {
     }
   };
 
+  // Add this after other useEffect hooks
+  useEffect(() => {
+    // Initialize Nyx messages
+    const initialNyxMessages: ChatMessage[] = [
+      {
+        id: 1,
+        text: "Welcome to Nullblock. The digital void awaits your presence.",
+        type: "welcome"
+      },
+      {
+        id: 2,
+        text: "System: Nyx interface initialized. Echo chamber active.",
+        type: "system"
+      },
+      {
+        id: 3,
+        text: "This is a read-only view of the system's communication history. Connect your wallet to access full functionality.",
+        type: "message"
+      },
+      {
+        id: 4,
+        text: "Alert: Translation matrix inactive. Core systems locked.",
+        type: "alert"
+      },
+      {
+        id: 5,
+        text: "System: Memory Card storage unavailable. Connect wallet to enable persistent data storage.",
+        type: "system"
+      }
+    ];
+    setNyxMessages(initialNyxMessages);
+  }, []);
+
+  const handleNyxClick = () => {
+    setShowNyxPopup(true);
+  };
+
+  const handleCloseNyxPopup = () => {
+    setShowNyxPopup(false);
+  };
+
   return (
     <div className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]}`}>
       <div className={styles.backgroundImage} />
       <StarsCanvas theme={currentTheme} />
+      <a href="https://twitter.com/nullblock_io" target="_blank" rel="noopener noreferrer" className={styles.socialLink} />
       <div className={`${styles.scene} ${showEcho ? styles.echoActive : ''}`}>
         <div className={styles.fire} onClick={manualConnect}></div>
         <div className={styles.campParts}></div>
+        <div className={styles.nyx} onClick={handleNyxClick}></div>
         <div className={styles.campForeTree}></div>
       </div>
       {showWelcomeText && !showEcho && (
         <DigitizingText 
           text="Welcome to Nullblock." 
-          duration={0}
+          duration={3000}
           theme={currentTheme === 'null' ? 'null-dark' : 'light'}
           onComplete={handleTextComplete}
         />
@@ -488,6 +537,32 @@ const Home: React.FC = () => {
         currentRoom={currentRoom}
         onRoomChange={handleRoomChange}
       />}
+
+      {showNyxPopup && (
+        <>
+          <div className={styles.nyxPopupOverlay} onClick={handleCloseNyxPopup} />
+          <div className={styles.nyxPopup}>
+            <div className={styles.nyxPopupHeader}>
+              <h2>Nyx Echo Chamber</h2>
+              <button className={styles.closeButton} onClick={handleCloseNyxPopup}>×</button>
+            </div>
+            <div className={styles.nyxPopupContent}>
+              {nyxMessages.map((message) => (
+                <div 
+                  key={message.id} 
+                  className={`${styles.nyxMessage} ${
+                    message.type === 'alert' ? styles.alert : 
+                    message.type === 'system' ? styles.system :
+                    message.type === 'welcome' ? styles.welcome : ''
+                  }`}
+                >
+                  {message.text}
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
