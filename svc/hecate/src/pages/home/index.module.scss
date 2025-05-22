@@ -121,22 +121,35 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 1;
   pointer-events: none;
   overflow: visible;
+  transition: all 0.3s ease;
 
   &.echoActive {
     .fire {
       opacity: 0.2;
+      filter: blur(8px);
     }
 
     .nyx {
       opacity: 0.2;
+      filter: blur(8px);
+    }
+
+    .campParts {
+      opacity: 0.15;
+      filter: blur(12px);
+    }
+
+    .campForeTree {
+      opacity: 0.1;
+      filter: blur(12px);
     }
   }
 }
 
 .fire {
   position: fixed;
-  bottom: -30px;
-  right: 20%;
+  bottom: 0;
+  right: 0;
   width: 128px;
   height: 240px;
   background-image: url('../../assets/images/campfire-sheet.png');
@@ -147,7 +160,20 @@ h1, h2, h3, h4, h5, h6 {
   animation-timing-function: step-end;
   mix-blend-mode: screen;
   z-index: 2;
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
+  opacity: 0.45;
+  cursor: pointer;
+  pointer-events: auto;
+
+  &:hover {
+    opacity: 1;
+    filter: brightness(1.2) drop-shadow(0 0 20px $flame-glow);
+    transform: scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
 }
 
 @keyframes campfireFlicker {
@@ -233,8 +259,8 @@ h1, h2, h3, h4, h5, h6 {
   .scene {
     .fire {
       position: fixed;
-      bottom: -50px;
-      right: 22%;
+      bottom: 0;
+      right: 0;
       width: 128px;
       height: 240px;
       background-image: url('../../assets/images/campfire-sheet.png');
@@ -344,5 +370,45 @@ h1, h2, h3, h4, h5, h6 {
     opacity: 1;
     transform: translate(-50%, 0);
   }
+}
+
+.campParts {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background-image: url('../../assets/images/camp_parts_dark.png');
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.30;
+}
+
+.campForeTree {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background-image: url('../../assets/images/camp_fore_tree.png');
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  z-index: 3; // Higher z-index to be above campParts
+  pointer-events: none;
+  opacity: .1;
+}
+
+.digitizingText {
+  position: fixed;
+  top: 1%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  text-align: center;
+  pointer-events: none;
 }
 

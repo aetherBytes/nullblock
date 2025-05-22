@@ -452,8 +452,9 @@ const Home: React.FC = () => {
       <div className={styles.backgroundImage} />
       <StarsCanvas theme={currentTheme} />
       <div className={`${styles.scene} ${showEcho ? styles.echoActive : ''}`}>
-        <div className={styles.fire}></div>
-        <div className={styles.nyx}></div>
+        <div className={styles.fire} onClick={manualConnect}></div>
+        <div className={styles.campParts}></div>
+        <div className={styles.campForeTree}></div>
       </div>
       {showWelcomeText && !showEcho && (
         <DigitizingText 
@@ -462,16 +463,6 @@ const Home: React.FC = () => {
           theme={currentTheme === 'null' ? 'null-dark' : 'light'}
           onComplete={handleTextComplete}
         />
-      )}
-      {showConnectButton && !walletConnected && !showEcho && (
-        <div className={styles.connectButtonContainer}>
-          <button 
-            className={`${styles.connectButton} ${styles[`theme-${currentTheme}`]}`}
-            onClick={manualConnect}
-          >
-            Connect
-          </button>
-        </div>
       )}
       {showEcho && <Echo 
         publicKey={publicKey} 
