@@ -34,6 +34,7 @@ const Home: React.FC = () => {
   const [textComplete, setTextComplete] = useState<boolean>(false);
   const [showNyxPopup, setShowNyxPopup] = useState<boolean>(false);
   const [nyxMessages, setNyxMessages] = useState<ChatMessage[]>([]);
+  const [showRestText, setShowRestText] = useState<boolean>(false);
 
   // Initialize state from localStorage on component mount
   useEffect(() => {
@@ -88,6 +89,22 @@ const Home: React.FC = () => {
       return () => clearTimeout(fallbackTimer);
     }
   }, [walletConnected, showEcho, showWelcomeText]);
+
+  // Add timer effect for rest text
+  useEffect(() => {
+    if (!walletConnected && !showEcho) {
+      const timer = setTimeout(() => {
+        setShowRestText(true);
+      }, 10000); // 10 seconds
+
+      return () => {
+        clearTimeout(timer);
+        setShowRestText(false);
+      };
+    } else {
+      setShowRestText(false);
+    }
+  }, [walletConnected, showEcho]);
 
   const automaticResponses = [
     {
@@ -512,6 +529,9 @@ const Home: React.FC = () => {
           theme={currentTheme === 'null' ? 'null-dark' : 'light'}
           onComplete={handleTextComplete}
         />
+      )}
+      {showRestText && !showEcho && !walletConnected && (
+        <div className={styles.restText}>rest at camp</div>
       )}
       {showEcho && <Echo 
         publicKey={publicKey} 

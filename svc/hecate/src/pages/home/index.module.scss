@@ -797,3 +797,52 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+.restText {
+  position: fixed;
+  bottom: 10px;
+  right: 160px;
+  color: $echo-blue;
+  font-size: 24px;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba($echo-blue, 0.5);
+  opacity: 0;
+  animation: fadeIn 1s ease-in-out forwards;
+  pointer-events: none;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &::after {
+    content: '→';
+    font-size: 32px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: translateX(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateX(10px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 0.5;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
