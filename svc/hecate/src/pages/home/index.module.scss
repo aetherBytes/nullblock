@@ -21,6 +21,7 @@ $button-text: #d0d0d0;
 $alert-color: #ff4500; /* Orange for "System Notification" */
 $black-glow: rgba(0, 0, 0, 0.8);
 $flame-glow: rgba(40, 10, 0, 0.25); /* Darkest, most muted orange-brown yet */
+$echo-red: #ff3333; /* Adding the missing echo-red variable */
 
 /* Theme variables */
 $null-bg: #000;
@@ -167,12 +168,12 @@ h1, h2, h3, h4, h5, h6 {
 
   &:hover {
     opacity: 1;
-    filter: brightness(1.2) drop-shadow(0 0 20px $flame-glow);
-    transform: scale(1.05);
+    filter: brightness(1.2) drop-shadow(0 0 15px $flame-glow);
+    transform: scale(1.02);
   }
 
   &:active {
-    transform: scale(0.95);
+    transform: scale(0.98);
   }
 }
 
@@ -196,7 +197,7 @@ h1, h2, h3, h4, h5, h6 {
 .nyx {
   position: fixed;
   bottom: -80px;
-  right: 2%;
+  left: 0;
   width: 450px;
   height: 550px;
   background-image: url('../../assets/images/night_wolf_1.png');
@@ -204,11 +205,23 @@ h1, h2, h3, h4, h5, h6 {
   background-repeat: no-repeat;
   background-position: center;
   mix-blend-mode: screen;
-  z-index: 2;
-  opacity: 0.8;
+  z-index: 40000000000;
   filter: brightness(1.2) contrast(1.1);
-  animation: nyxGlow 3s ease-in-out infinite alternate;
-  transition: opacity 0.3s ease;
+  transform: scaleX(-1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 0.45;
+
+  &:hover {
+    opacity: 1;
+    filter: brightness(1.4) contrast(1.2) drop-shadow(0 0 20px rgba(255, 255, 255, 0.7));
+    transform: scaleX(-1) scale(1.02);
+  }
+
+  &:active {
+    transform: scaleX(-1) scale(0.98);
+  }
 }
 
 @keyframes nyxGlow {
@@ -384,7 +397,7 @@ h1, h2, h3, h4, h5, h6 {
   background-repeat: no-repeat;
   z-index: 2;
   pointer-events: none;
-  opacity: 0.30;
+  opacity: 0.10;
 }
 
 .campForeTree {
@@ -399,16 +412,388 @@ h1, h2, h3, h4, h5, h6 {
   background-repeat: no-repeat;
   z-index: 3; // Higher z-index to be above campParts
   pointer-events: none;
-  opacity: .1;
+  opacity: .12;
 }
 
 .digitizingText {
   position: fixed;
-  top: 1%;
+  top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 100;
   text-align: center;
   pointer-events: none;
+  color: #00ff9d;
+  font-size: 24px;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+  opacity: 1;
+  animation: digitize 2s steps(10) infinite, fadeOut 5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0s, 3s;
+}
+
+@keyframes digitize {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(0, 255, 157, 0.8);
+  }
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+    filter: blur(0px);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translate(-50%, -55%);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -60%);
+    filter: blur(8px);
+  }
+}
+
+.nyxPopup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  max-width: 1200px;
+  height: 80vh;
+  background: rgba(0, 0, 0, 0.95);
+  background-image: linear-gradient(rgba($echo-blue, 0.006) 2px, transparent 2px),
+                    linear-gradient(90deg, rgba($echo-blue, 0.006) 2px, transparent 2px),
+                    radial-gradient(circle at 50% 50%, rgba(70, 35, 20, 0.015) 0%, transparent 70%),
+                    url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAAXNSR0IArs4c6QAAACFJREFUKFNjZGBg+P///38GBoaHh4eHh4fHx8fHx8fHx8fGxsYAdOIBB73MBtAAAAAASUVORK5CYII=');
+  background-size: 100% 6px, 6px 100%, 120% 120%, 8px 8px;
+  border: 1px solid rgba($echo-blue, 0.2);
+  border-radius: 8px;
+  z-index: 50000000000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba($echo-blue, 0.2);
+  backdrop-filter: blur(10px);
+  animation: softEcho 20s infinite ease-in-out, corePulse 4s infinite alternate;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba($echo-blue, 0.5) 50%,
+      transparent 100%
+    );
+    animation: scanline 2s linear infinite;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom,
+      rgba($echo-blue, 0.005) 1%,
+      transparent 1%,
+      transparent 99%,
+      rgba($echo-blue, 0.005) 99%
+    );
+    background-size: 100% 120px;
+    animation: scanlineWaver 10s infinite ease-in-out;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+  }
+}
+
+.nyxPopupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid rgba($echo-blue, 0.2);
+  background: rgba(0, 0, 0, 0.5);
+  position: relative;
+  z-index: 1;
+
+  h2 {
+    color: $echo-blue;
+    margin: 0;
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 15px rgba($echo-blue, 0.3);
+    position: relative;
+    padding-bottom: 0.5rem;
+
+    &::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg,
+        rgba($echo-blue, 0.4) 0%,
+        rgba($echo-blue, 0.1) 50%,
+        transparent 100%
+      );
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 0;
+      width: 50px;
+      height: 1px;
+      background: rgba($echo-blue, 0.4);
+      box-shadow: 0 0 10px rgba($echo-blue, 0.3);
+    }
+  }
+
+  .closeButton {
+    background: none;
+    border: none;
+    color: $echo-blue;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: all 0.3s ease;
+    text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+
+    &:hover {
+      color: #fff;
+      transform: scale(1.1);
+      text-shadow: 0 0 15px rgba($echo-blue, 0.5);
+    }
+  }
+}
+
+.nyxPopupContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.3);
+    border-radius: 2px;
+
+    &:hover {
+      background: rgba($echo-blue, 0.5);
+    }
+  }
+}
+
+.nyxMessage {
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba($echo-blue, 0.1);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  animation: fadeIn 0.3s ease-out;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg,
+      transparent 0%,
+      rgba($echo-blue, 0.05) 50%,
+      transparent 100%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover::before {
+    opacity: 1;
+  }
+
+  &.system {
+    color: $echo-blue;
+    border-color: rgba($echo-blue, 0.2);
+    text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+  }
+
+  &.alert {
+    color: $echo-red;
+    border-color: rgba($echo-red, 0.2);
+    text-shadow: 0 0 10px rgba($echo-red, 0.3);
+  }
+
+  &.welcome {
+    color: $echo-blue;
+    border-color: rgba($echo-blue, 0.3);
+    background: rgba($echo-blue, 0.05);
+    text-shadow: 0 0 15px rgba($echo-blue, 0.4);
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+}
+
+.nyxPopupOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 49999999999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes scanlineWaver {
+  0% { background-position: 0 0; opacity: 0.75; }
+  15% { background-position: 0 3%; opacity: 0.8; }
+  20% { background-position: 0 4%; opacity: 0.77; }
+  22% { background-position: 0 2%; opacity: 0.75; }
+  40% { background-position: 0 6%; opacity: 0.8; }
+  60% { background-position: 0 8%; opacity: 0.75; }
+  65% { background-position: 0 9%; opacity: 0.78; }
+  67% { background-position: 0 7%; opacity: 0.75; }
+  85% { background-position: 0 10%; opacity: 0.8; }
+  100% { background-position: 0 12%; opacity: 0.75; }
+}
+
+@keyframes softEcho {
+  0% { filter: brightness(1) contrast(1) saturate(1); opacity: 0.75; }
+  45% { filter: brightness(0.998) contrast(1.002) saturate(1.02); opacity: 0.72; }
+  50% { filter: brightness(0.995) contrast(1.005) saturate(1.05); opacity: 0.7; }
+  55% { filter: brightness(0.998) contrast(1.002) saturate(1.02); opacity: 0.72; }
+  100% { filter: brightness(1) contrast(1) saturate(1); opacity: 0.75; }
+}
+
+@keyframes corePulse {
+  0% { background-position: center, center, 50% 50%, center; }
+  100% { background-position: center, center, 55% 55%, center; }
+}
+
+.socialLink {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: radial-gradient(circle at 50% 50%, rgba($echo-blue, 0.25) 0%, rgba($echo-blue, 0.10) 40%, rgba(0,0,0,0.0) 80%);
+  background-color: transparent;
+  z-index: 100;
+  opacity: 0.45;
+  box-shadow: 0 0 15px rgba($echo-blue, 0.3);
+  border-radius: 50%;
+  background-image: url('../../assets/images/X_logo_black.png');
+  background-size: 80%;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: none;
+
+  &::after {
+    content: 'X';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 15px rgba($echo-blue, 0.8);
+    opacity: 0.9;
+    font-family: Arial, sans-serif;
+    letter-spacing: -2px;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('../../assets/images/X_logo_black.png');
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center;
+    filter: invert(1) brightness(1.2);
+    opacity: 1;
+    z-index: 1;
+    border-radius: 50%;
+  }
+
+  &:hover {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.02);
+    box-shadow: 0 0 20px rgba($echo-blue, 0.5);
+    background-color: rgba(0, 0, 0, 0.5);
+    &::after {
+      text-shadow: 0 0 25px rgba($echo-blue, 1);
+    }
+  }
+
+  &:active {
+    transform: translateX(-50%) scale(0.98);
+  }
 }
 
