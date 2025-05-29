@@ -639,6 +639,7 @@ const Echo: React.FC<EchoProps> = ({
 
   const renderControlScreen = () => (
     <nav className={styles.verticalNavbar}>
+      <div className={styles.nullblockTitle}>NULLBLOCK</div>
       <div
         className={`${styles.screenLabel} ${screen === 'chambers' ? styles.centeredLabel : ''}`}
       >
