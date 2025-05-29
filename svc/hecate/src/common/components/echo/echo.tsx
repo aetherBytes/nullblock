@@ -4,6 +4,7 @@ import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission
 import xLogo from '../../../assets/images/X_logo_black.png';
 import nullLogo from '../../../assets/images/null_logo.png';
 import echoBatWhite from '../../../assets/images/echo_bat_white.png';
+import echoBatBlack from '../../../assets/images/echo_bat_black.png';
 
 type Screen = 'chambers' | 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
@@ -1421,6 +1422,9 @@ const Echo: React.FC<EchoProps> = ({
           <h3>Welcome to the ECHO Chambers</h3>
           <p>This is the default screen. Connect your wallet to unlock CAMP and other features.</p>
         </div>
+      </div>
+      <div className={styles.echoBatChamberLogoWrapper}>
+        <img src={echoBatBlack} alt="ECHO Bat" className={styles.echoBatChamberLogo} />
       </div>
     </div>
   );

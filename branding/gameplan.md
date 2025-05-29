@@ -7,6 +7,7 @@ Nullblock is a cutting-edge, MCP-driven platform built on Solana, designed to de
 
 - **Helios**: Multi-service backend for MCP operations, wallet health tools, and browser data processing.
 - **Hecate**: Frontend service featuring the **ECHO** interface (Electronic Communication Hub and Omnitool), a sleek H.U.D.-like UI for user interaction.
+- **ECHO Chamber**: The landing screen and default experience, providing a read-only summary of system activity, agent logs, and updates. The ECHO Chamber is visually anchored by the ECHO device (bat logo) at the bottom center, which serves as the main entry point and "home" button for the interface.
 - **Erebus**: Solana contract server for performance-critical logic, including token swaps and Memory Card operations.
 - **Aether**: Browser extension that captures live browser data (e.g., active tab URL, page title) and syncs it with the platform for real-time display and LLM-driven insights.
 
@@ -15,9 +16,10 @@ Nullblock is a cutting-edge, MCP-driven platform built on Solana, designed to de
 - A conversational LLM interface with a cyberpunk H.U.D.-like experience, accessible via a Phantom wallet.
 - User-specific state stored in mutable **Memory Cards** (NFTs) on the Solana blockchain, including conversation history and browser data.
 - A browser extension (**Aether**) that captures and sends live browser data to the platform, enabling contextual LLM responses and enhanced user engagement.
+- A visually immersive ECHO Chamber landing screen, with the ECHO device (bat logo) as the main navigation entry point.
 
 **First Impression (Landing Screen)**:
-The Nullblock landing screen immerses users in a haunting digital void. A flickering neon campfire pulses at the center, casting vibrant embers into an infinite abyss. Subtle cosmic elements—distant stars, faint planetary silhouettes, and swirling dust clouds—drift in the background, creating a hypnotic, otherworldly atmosphere. A single, understated **E.C.H.O** button glows in the bottom left, pulsing like a beacon in the darkness. Clicking it unveils a futuristic H.U.D. overlay, minimal yet brimming with potential, inviting users to connect their Phantom wallet or Solana ID. This seamless entry point sets the stage for a personalized, MCP-driven Web3 journey, amplified by real-time browser context from **Aether**.
+The Nullblock landing screen immerses users in a haunting digital void. A flickering neon campfire pulses at the center, casting vibrant embers into an infinite abyss. Subtle cosmic elements—distant stars, faint planetary silhouettes, and swirling dust clouds—drift in the background, creating a hypnotic, otherworldly atmosphere. A single, understated **ECHO device** (bat logo) glows at the bottom center, pulsing like a beacon in the darkness. Clicking it (or the Null logo) always returns the user to the ECHO Chamber, a read-only summary of system logs, agent status, and updates. The navigation is minimal: ECHO device (bat logo), Null logo, and social (X) button. This seamless entry point sets the stage for a personalized, MCP-driven Web3 journey, amplified by real-time browser context from **Aether**.
 
 ## Tech Stack
 - **Helios (Backend)**:
@@ -81,8 +83,8 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
   - Implement caching for LLM responses to reduce API costs.
 - **Hecate**:
   - Unlock translation matrix, enabling /memory and /health rooms.
-  - Display browser data in ECHO interface (e.g., “Active Tab: raydium.io – DeFi”).
-  - Format LLM responses to incorporate browser context (e.g., “You’re on a DeFi site, want to check your wallet?”).
+  - Display browser data in ECHO interface (e.g., "Active Tab: raydium.io – DeFi").
+  - Format LLM responses to incorporate browser context (e.g., "You're on a DeFi site, want to check your wallet?").
   - Update Base Camp Page:
     - **User Profile Banner**:
       - ID: Wallet address or Solana name (e.g., sage.sol).
@@ -118,15 +120,15 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
   - Add endpoints for transaction history and risk analysis.
 - **Hecate**:
   - Display wallet status (e.g., SOL balance, token holdings).
-  - Show transaction history with browser context (e.g., “Swap initiated from raydium.io”).
-  - Visualize risk analysis (e.g., “High-risk token detected”).
-  - Add browser-driven alerts (e.g., “Warning: Unverified DeFi site”).
+  - Show transaction history with browser context (e.g., "Swap initiated from raydium.io").
+  - Visualize risk analysis (e.g., "High-risk token detected").
+  - Add browser-driven alerts (e.g., "Warning: Unverified DeFi site").
 - **Erebus**:
   - Deploy Raydium integration for token swaps.
   - Implement swap program and transaction handling with retry mechanisms.
   - Optimize Memory Card updates for gas efficiency.
 - **Aether**:
-  - Add interaction button in extension UI (e.g., “Trace Site” to trigger /trace command).
+  - Add interaction button in extension UI (e.g., "Trace Site" to trigger /trace command).
   - Apply cyberpunk styling to extension popup (neon borders, glitch effects).
   - Test cross-browser compatibility (Chrome, Firefox) and submit to Chrome Web Store/Firefox Add-ons.
 - **Deliverables**:
@@ -140,7 +142,7 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
   - Add social feature endpoints (e.g., user achievements, leaderboards).
 - **Hecate**:
   - Unlock Reality interface for Memory Card visualization and upgrades.
-  - Display browser-driven achievements (e.g., “DeFi Explorer” for frequent DeFi visits).
+  - Display browser-driven achievements (e.g., "DeFi Explorer" for frequent DeFi visits).
   - Add social features (e.g., share Memory Card upgrades).
 - **Erebus**:
   - Optimize Memory Card programs for scalability.
@@ -176,11 +178,11 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
 - `/context` – Display recent browser data stored in Memory Card.
 
 ### Room: /logs (Default Room)
-- `/trace <tx>` – Analyze transaction with browser context (e.g., “Transaction from raydium.io”).
+- `/trace <tx>` – Analyze transaction with browser context (e.g., "Transaction from raydium.io").
 - `/history` – Show recent transactions with site data.
 - `/balance` – Display wallet balance.
 - `/tokens` – List owned tokens.
-- `/site` – Analyze current site’s relevance to wallet (e.g., DeFi, NFT marketplace).
+- `/site` – Analyze current site's relevance to wallet (e.g., DeFi, NFT marketplace).
 
 ### Room: /memory (Locked)
 - `/mint` – Create new Memory Card.
@@ -248,7 +250,11 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
   - Implement WebSocket heartbeat to maintain **Aether**-**Helios** connection.
   - Optimize **Erebus** contracts for gas efficiency using Anchor.
 - **User Experience**:
-  - Maintain cryptic, cyberpunk error messages (e.g., “Matrix misalignment detected”) while ensuring they guide users.
+  - The ECHO Chamber is the default landing screen, providing a read-only summary of system activity, agent logs, and updates.
+  - The ECHO device (bat logo) is the main entry point and "home" button, always returning the user to the ECHO Chamber.
+  - Navigation is minimal and consistent: ECHO device (bat logo), Null logo, and social (X) button.
+  - All previous main buttons have been removed for a cleaner, more focused interface.
+  - Maintain cryptic, cyberpunk error messages (e.g., "Matrix misalignment detected") while ensuring they guide users.
   - Provide a setup guide for **Aether** installation in the landing screen.
   - Add tooltips in **Hecate** to explain locked features and browser data usage.
 - **Community**:
@@ -271,9 +277,6 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
   - Maintain < 5% downtime for **Helios**, **Erebus**, and **Aether**.
   - Ensure **Aether** crash rate < 1% on Chrome/Firefox.
   - Achieve > 99% WebSocket uptime for **Aether**-**Helios** communication.
-
-
-
 
 ## DD on similar products / features
 - ****

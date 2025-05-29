@@ -2752,3 +2752,41 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     transform: translateY(1px);
   }
 }
+
+.echoBatChamberLogoWrapper {
+  position: absolute;
+  left: 50%;
+  bottom: -20vh;
+  transform: translateX(-50%);
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.echoBatChamberLogo {
+  width: 400%;
+  max-width: 1800px;
+  min-width: 600px;
+  height: auto;
+  max-height: 90vh;
+  opacity: 1;
+  display: block;
+  filter: drop-shadow(0 0 32px rgba($echo-blue, 0.35)) drop-shadow(0 0 12px rgba($echo-blue, 0.30));
+  z-index: 2;
+  object-fit: contain;
+  pointer-events: none;
+  animation: echoBatFade 6s cubic-bezier(0.4, 0, 0.1, 1) forwards;
+}
+
+@keyframes echoBatFade {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.12;
+  }
+}
