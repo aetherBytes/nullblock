@@ -3,6 +3,7 @@ import styles from './echo.module.scss';
 import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '@services/api';
 import xLogo from '../../../assets/images/X_logo_black.png';
 import nullLogo from '../../../assets/images/null_logo.png';
+import echoBatWhite from '../../../assets/images/echo_bat_white.png';
 
 type Screen = 'chambers' | 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
@@ -629,7 +630,10 @@ const Echo: React.FC<EchoProps> = ({
 
   const renderControlScreen = () => (
     <nav className={styles.verticalNavbar}>
-      <button className={styles.nullLogoButton}>
+      <button className={styles.batLogoButton} onClick={() => setScreen('chambers')}>
+        <img src={echoBatWhite} alt="Bat Logo" className={styles.batLogoIcon} />
+      </button>
+      <button className={styles.nullLogoButton} onClick={() => setScreen('chambers')}>
         <img src={nullLogo} alt="Null Logo" className={styles.nullLogoIcon} />
       </button>
       <a 
@@ -640,34 +644,6 @@ const Echo: React.FC<EchoProps> = ({
       >
         <img src={xLogo} alt="X" className={styles.socialIcon} />
       </a>
-      <div className={styles.navDivider}></div>
-      <button onClick={() => handleScreenChange('camp')} className={styles.navButton}>
-        CAMP
-      </button>
-      <button 
-        onClick={() => handleScreenChange('inventory')} 
-        className={`${styles.navButton} ${!unlockedScreens.includes('inventory') ? styles.locked : ''}`}
-        disabled={!unlockedScreens.includes('inventory')}
-      >
-        CACHE <span className={styles.lockIcon}>[LOCKED]</span>
-      </button>
-      <button 
-        onClick={() => handleScreenChange('campaign')} 
-        className={`${styles.navButton} ${!unlockedScreens.includes('campaign') ? styles.locked : ''}`}
-        disabled={!unlockedScreens.includes('campaign')}
-      >
-        CAMPAIGN <span className={styles.lockIcon}>[LOCKED]</span>
-      </button>
-      <button 
-        onClick={() => handleScreenChange('lab')} 
-        className={`${styles.navButton} ${!unlockedScreens.includes('lab') ? styles.locked : ''}`}
-        disabled={!unlockedScreens.includes('lab')}
-      >
-        LAB <span className={styles.lockIcon}>[LOCKED]</span>
-      </button>
-      <button onClick={handleDisconnect} className={styles.navButton}>
-        DISCONNECT
-      </button>
     </nav>
   );
 

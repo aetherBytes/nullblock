@@ -354,17 +354,54 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       }
     }
 
+    .batLogoButton {
+      height: 64px;
+      width: 64px;
+      min-width: 64px;
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-right: 0;
+      padding: 0;
+      position: relative;
+      background: transparent;
+      box-shadow: 0 0 15px rgba($echo-blue, 0.3);
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, rgba($echo-blue, 0.25) 0%, rgba($echo-blue, 0.10) 40%, rgba(0,0,0,0.0) 80%);
+      opacity: 0.85;
+
+      &:hover {
+        opacity: 1;
+        transform: scale(1.04);
+        box-shadow: 0 0 24px rgba($echo-blue, 0.5);
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
+    }
+
+    .batLogoIcon {
+      width: 59px;
+      height: 59px;
+      max-width: 59px;
+      max-height: 59px;
+      min-width: 59px;
+      min-height: 59px;
+      object-fit: contain;
+      display: block;
+      margin: auto;
+      filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 8px $echo-blue);
+      opacity: 0.95;
+    }
+
     .navDivider {
-      width: 1px;
-      height: 40px;
-      background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        rgba($echo-blue, 0.3) 20%,
-        rgba($echo-blue, 0.3) 80%,
-        transparent 100%
-      );
-      margin-right: 15px;
+      display: none;
     }
 
     &::after {
