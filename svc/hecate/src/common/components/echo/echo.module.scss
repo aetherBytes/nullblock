@@ -2802,7 +2802,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .echoBatChamberLogoWrapper {
   position: absolute;
   left: 50%;
-  bottom: -20vh;
+  bottom: -12vh; // bring logo fully onto the screen
   transform: translateX(-50%);
   width: 100vw;
   height: 100vh;
@@ -2814,11 +2814,9 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 }
 
 .echoBatChamberLogo {
-  width: 400%;
-  max-width: 1800px;
-  min-width: 600px;
-  height: auto;
-  max-height: 90vh;
+  max-width: 480px;
+  min-width: 180px;
+  max-height: 90vh; // restore proper scaling
   opacity: 1;
   display: block;
   filter: drop-shadow(0 0 32px rgba($echo-blue, 0.35)) drop-shadow(0 0 12px rgba($echo-blue, 0.30));
