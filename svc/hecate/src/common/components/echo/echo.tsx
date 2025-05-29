@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './echo.module.scss';
 import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '@services/api';
 import xLogo from '../../../assets/images/X_logo_black.png';
+import nullLogo from '../../../assets/images/null_logo.png';
 
-type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
+type Screen = 'chambers' | 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
 type TabType = 'missions' | 'systems' | 'defense' | 'uplink' | 'echo' | 'status';
 
@@ -103,7 +104,7 @@ const Echo: React.FC<EchoProps> = ({
   onClose, 
   onThemeChange
 }) => {
-  const [screen, setScreen] = useState<Screen>('camp');
+  const [screen, setScreen] = useState<Screen>('chambers');
   const [walletData, setWalletData] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile>({
     id: publicKey ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol` : '',
@@ -140,8 +141,8 @@ const Echo: React.FC<EchoProps> = ({
   const [selectedUplink, setSelectedUplink] = useState<Uplink | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
 
-  // Define which screens are unlocked
-  const unlockedScreens = ['camp'];
+  // Only unlock 'chambers' by default, unlock others if logged in
+  const unlockedScreens = publicKey ? ['chambers', 'camp'] : ['chambers'];
 
   // Define uplinks
   const uplinks: Uplink[] = [
@@ -628,11 +629,8 @@ const Echo: React.FC<EchoProps> = ({
 
   const renderControlScreen = () => (
     <nav className={styles.verticalNavbar}>
-      <button 
-        onClick={() => setActiveTab('systems')} 
-        className={styles.homeButton}
-      >
-        <img src={xLogo} alt="Home" className={styles.homeIcon} />
+      <button className={styles.nullLogoButton}>
+        <img src={nullLogo} alt="Null Logo" className={styles.nullLogoIcon} />
       </button>
       <a 
         href="https://x.com/Nullblock_io" 
@@ -1436,12 +1434,28 @@ const Echo: React.FC<EchoProps> = ({
     </div>
   );
 
+  const renderChambersScreen = () => (
+    <div className={styles.hudScreen}>
+      <div className={styles.headerContainer}>
+        <h2 className={styles.hudTitle}>ECHO CHAMBERS</h2>
+        <div className={styles.headerDivider}></div>
+      </div>
+      <div className={styles.campContent}>
+        <div style={{textAlign: 'center', marginTop: '2rem'}}>
+          <h3>Welcome to the ECHO Chambers</h3>
+          <p>This is the default screen. Connect your wallet to unlock CAMP and other features.</p>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderScreen = () => {
     if (!unlockedScreens.includes(screen)) {
       return renderLockedScreen();
     }
-
     switch (screen) {
+      case 'chambers':
+        return renderChambersScreen();
       case 'camp':
         return renderCampScreen();
       case 'inventory':

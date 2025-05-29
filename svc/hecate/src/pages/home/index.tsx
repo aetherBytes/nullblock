@@ -19,7 +19,7 @@ interface ChatMessage {
 const Home: React.FC = () => {
   const [walletConnected, setWalletConnected] = useState<boolean>(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
-  const [showEcho, setShowEcho] = useState<boolean>(false);
+  const [showEcho, setShowEcho] = useState<boolean>(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageIndex, setMessageIndex] = useState<number>(0);
   const [hasPhantom, setHasPhantom] = useState<boolean>(false);
@@ -42,10 +42,9 @@ const Home: React.FC = () => {
     if (savedPublicKey && lastAuth && isSessionValid()) {
       setPublicKey(savedPublicKey);
       setWalletConnected(true);
-      setShowEcho(true);
     } else {
       setWalletConnected(false);
-      setShowEcho(false);
+      setPublicKey(null);
     }
     
     if (savedTheme) {
@@ -325,7 +324,6 @@ const Home: React.FC = () => {
             // If we get here, connection was successful
             setPublicKey(savedPublicKey);
             setWalletConnected(true);
-            setShowEcho(true);
             localStorage.setItem('walletPublickey', savedPublicKey);
             localStorage.setItem('hasSeenEcho', 'true');
             updateAuthTime();
@@ -346,7 +344,6 @@ const Home: React.FC = () => {
         localStorage.removeItem('hasSeenEcho');
         setWalletConnected(false);
         setPublicKey(null);
-        setShowEcho(false);
       }
     }
   };
@@ -363,7 +360,6 @@ const Home: React.FC = () => {
           
           setPublicKey(walletPubKey);
           setWalletConnected(true);
-          setShowEcho(true);
           localStorage.setItem('walletPublickey', walletPubKey);
           localStorage.setItem('hasSeenEcho', 'true');
           updateAuthTime();
@@ -381,7 +377,6 @@ const Home: React.FC = () => {
           localStorage.removeItem('hasSeenEcho');
           setWalletConnected(false);
           setPublicKey(null);
-          setShowEcho(false);
           addMessage({
             id: messages.length + 1,
             text: "Error: Authentication failed. Retry required.",
@@ -400,7 +395,6 @@ const Home: React.FC = () => {
           await provider.disconnect();
           setWalletConnected(false);
           setPublicKey(null);
-          setShowEcho(false);
           // Clear all session data
           localStorage.removeItem('walletPublickey');
           localStorage.removeItem('lastAuthTime');
@@ -441,10 +435,6 @@ const Home: React.FC = () => {
     <div className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]}`}>
       <div className={styles.backgroundImage} />
       <StarsCanvas theme={currentTheme} />
-      <div className={styles.socialLinks}>
-        <a href="https://twitter.com/nullblock_io" target="_blank" rel="noopener noreferrer" className={styles.socialLink} />
-        <button className={styles.nullButton} />
-      </div>
       <div className={`${styles.scene} ${showEcho ? styles.echoActive : ''}`}>
       </div>
       {showEcho && <Echo 

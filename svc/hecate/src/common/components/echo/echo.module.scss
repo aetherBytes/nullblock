@@ -112,14 +112,14 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .echoContainer {
   position: fixed;
   z-index: 1002;
-  top: 2.5vh;
-  left: 2.5vw;
-  right: 2.5vw;
-  bottom: 2.5vh;
+  top: 10px;
+  left: 1vw;
+  right: 1vw;
+  bottom: 1vh;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 95vh;
+  max-height: calc(98vh - 10px);
   overflow: hidden;
   
   &.null {
@@ -322,52 +322,35 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       }
     }
 
-    .socialButton {
-      height: 40px;
-      width: 40px;
+    .nullLogoButton, .socialButton {
+      height: 64px;
+      width: 64px;
+      min-width: 64px;
+      min-height: 64px;
       display: flex;
       align-items: center;
       justify-content: center;
       border: none;
       cursor: pointer;
       transition: all 0.3s ease;
-      margin-right: 15px;
-      padding: 4px;
+      margin-right: 0;
+      padding: 0;
       position: relative;
       background: transparent;
+      box-shadow: 0 0 15px rgba($echo-blue, 0.3);
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, rgba($echo-blue, 0.25) 0%, rgba($echo-blue, 0.10) 40%, rgba(0,0,0,0.0) 80%);
+      opacity: 0.85;
 
       &:hover {
-        transform: translateY(-1px);
-
-        &::after {
-          opacity: 1;
-          text-shadow: 0 0 15px rgba($echo-blue, 0.8);
-        }
+        opacity: 1;
+        transform: scale(1.04);
+        box-shadow: 0 0 24px rgba($echo-blue, 0.5);
+        background-color: rgba(0, 0, 0, 0.5);
       }
 
-      .socialIcon {
-        width: 90%;
-        height: 90%;
-        object-fit: contain;
-        filter: invert(1);
-        opacity: 0.7;
-      }
-
-      &::after {
-        content: 'X';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 42px;
-        font-weight: 900;
-        color: white;
-        text-shadow: 0 0 15px rgba($echo-blue, 0.6);
-        opacity: 0.9;
-        transition: all 0.3s ease;
-        pointer-events: none;
-        font-family: Arial, sans-serif;
-        letter-spacing: -2px;
+      &:active {
+        transform: scale(0.98);
       }
     }
 
@@ -461,6 +444,51 @@ $light-shadow: rgba(0, 0, 0, 0.1);
           margin-left: 0.5rem;
         }
       }
+    }
+
+    .nullLogoIcon, .socialIcon {
+      width: 59px;
+      height: 59px;
+      max-width: 59px;
+      max-height: 59px;
+      min-width: 59px;
+      min-height: 59px;
+      object-fit: contain;
+      display: block;
+      margin: auto;
+    }
+
+    .nullLogoIcon {
+      filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 8px $echo-blue);
+      opacity: 0.95;
+    }
+
+    .socialIcon {
+      filter: invert(1);
+      opacity: 0.7;
+    }
+
+    .socialButton::after {
+      content: 'X';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 59px;
+      font-weight: 900;
+      color: white;
+      text-shadow: 0 0 15px rgba($echo-blue, 0.6);
+      opacity: 0.9;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      font-family: Arial, sans-serif;
+      letter-spacing: -2px;
+      line-height: 1;
+      height: 59px;
+      width: 59px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
   }
 
