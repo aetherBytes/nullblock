@@ -99,6 +99,14 @@ interface AscentLevelData {
   accolades: string[];
 }
 
+const SCREEN_LABELS: Record<Screen, string> = {
+  chambers: 'E.C.H.O CHAMBERS',
+  camp: 'CAMP',
+  inventory: 'CACHE',
+  campaign: 'CAMPAIGN',
+  lab: 'LAB',
+};
+
 const Echo: React.FC<EchoProps> = ({ 
   publicKey, 
   onDisconnect, 
@@ -631,20 +639,27 @@ const Echo: React.FC<EchoProps> = ({
 
   const renderControlScreen = () => (
     <nav className={styles.verticalNavbar}>
-      <button className={styles.batLogoButton} onClick={() => setScreen('chambers')}>
-        <img src={echoBatWhite} alt="Bat Logo" className={styles.batLogoIcon} />
-      </button>
-      <button className={styles.nullLogoButton} onClick={() => setScreen('chambers')}>
-        <img src={nullLogo} alt="Null Logo" className={styles.nullLogoIcon} />
-      </button>
-      <a 
-        href="https://x.com/Nullblock_io" 
-        target="_blank" 
-        rel="noopener noreferrer" 
-        className={styles.socialButton}
+      <div
+        className={`${styles.screenLabel} ${screen === 'chambers' ? styles.centeredLabel : ''}`}
       >
-        <img src={xLogo} alt="X" className={styles.socialIcon} />
-      </a>
+        {SCREEN_LABELS[screen]}
+      </div>
+      <div className={styles.navbarButtons}>
+        <button className={styles.batLogoButton} onClick={() => setScreen('chambers')}>
+          <img src={echoBatWhite} alt="Bat Logo" className={styles.batLogoIcon} />
+        </button>
+        <button className={styles.nullLogoButton} onClick={() => setScreen('chambers')}>
+          <img src={nullLogo} alt="Null Logo" className={styles.nullLogoIcon} />
+        </button>
+        <a 
+          href="https://x.com/Nullblock_io" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className={styles.socialButton}
+        >
+          <img src={xLogo} alt="X" className={styles.socialIcon} />
+        </a>
+      </div>
     </nav>
   );
 

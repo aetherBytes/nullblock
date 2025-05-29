@@ -289,244 +289,290 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     width: 100%;
     min-height: 60px;
     display: flex;
-    justify-content: center;
-    gap: 1px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
     background: rgba($background-dark, 0.1);
-    padding: 5px;
+    padding: 5px 0;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 
-    .homeButton {
-      height: 60px;
-      width: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: none;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-right: 15px;
-      padding: 4px;
-      position: absolute;
-      left: 15px;
-      background: transparent;
-
-      &:hover {
-        transform: translateY(-1px);
-      }
-
-      .homeIcon {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        opacity: 0.7;
-      }
+    .screenLabel {
+      margin-left: 1.5rem;
+      margin-right: 1.5rem;
+      z-index: 20;
+      align-self: center;
+      flex: none;
+      order: 0;
     }
 
-    .nullLogoButton, .socialButton {
-      height: 64px;
-      width: 64px;
-      min-width: 64px;
-      min-height: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: none;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-right: 0;
-      padding: 0;
-      position: relative;
-      background: transparent;
-      box-shadow: 0 0 15px rgba($echo-blue, 0.3);
-      border-radius: 50%;
-      background: radial-gradient(circle at 50% 50%, rgba($echo-blue, 0.25) 0%, rgba($echo-blue, 0.10) 40%, rgba(0,0,0,0.0) 80%);
-      opacity: 0.85;
-
-      &:hover {
-        opacity: 1;
-        transform: scale(1.04);
-        box-shadow: 0 0 24px rgba($echo-blue, 0.5);
-        background-color: rgba(0, 0, 0, 0.5);
-      }
-
-      &:active {
-        transform: scale(0.98);
-      }
+    .navbarDivider {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba($echo-blue, 0.3) 20%,
+        rgba($echo-blue, 0.3) 80%,
+        transparent 100%
+      );
+      margin: 0 1.5rem;
+      align-self: center;
+      order: 1;
     }
 
-    .batLogoButton {
-      height: 64px;
-      width: 64px;
-      min-width: 64px;
-      min-height: 64px;
+    .navbarButtons {
       display: flex;
+      flex-direction: row;
+      justify-content: flex-end;
       align-items: center;
-      justify-content: center;
-      border: none;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-right: 0;
-      padding: 0;
-      position: relative;
-      background: transparent;
-      box-shadow: 0 0 15px rgba($echo-blue, 0.3);
-      border-radius: 50%;
-      background: radial-gradient(circle at 50% 50%, rgba($echo-blue, 0.25) 0%, rgba($echo-blue, 0.10) 40%, rgba(0,0,0,0.0) 80%);
-      opacity: 0.85;
-
-      &:hover {
-        opacity: 1;
-        transform: scale(1.04);
-        box-shadow: 0 0 24px rgba($echo-blue, 0.5);
-        background-color: rgba(0, 0, 0, 0.5);
-      }
-
-      &:active {
-        transform: scale(0.98);
-      }
+      gap: 1.5rem;
+      order: 2;
+      width: 100%;
+      padding-right: 6rem;
     }
 
-    .batLogoIcon {
-      width: 59px;
-      height: 59px;
-      max-width: 59px;
-      max-height: 59px;
-      min-width: 59px;
-      min-height: 59px;
+    .homeButton,
+    .nullLogoButton,
+    .batLogoButton,
+    .socialButton {
+      margin: 0;
+    }
+  }
+
+  .homeButton,
+  .nullLogoButton,
+  .batLogoButton,
+  .socialButton {
+    height: 60px;
+    width: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-right: 15px;
+    padding: 4px;
+    position: absolute;
+    left: 15px;
+    background: transparent;
+
+    &:hover {
+      transform: translateY(-1px);
+    }
+
+    .homeIcon {
+      width: 100%;
+      height: 100%;
       object-fit: contain;
-      display: block;
-      margin: auto;
-      filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 8px $echo-blue);
-      opacity: 0.95;
+      opacity: 0.7;
+    }
+  }
+
+  .nullLogoButton, .socialButton {
+    height: 64px;
+    width: 64px;
+    min-width: 64px;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-right: 0;
+    padding: 0;
+    position: relative;
+    background: transparent;
+    box-shadow: 0 0 15px rgba($echo-blue, 0.3);
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, rgba($echo-blue, 0.25) 0%, rgba($echo-blue, 0.10) 40%, rgba(0,0,0,0.0) 80%);
+    opacity: 0.85;
+
+    &:hover {
+      opacity: 1;
+      transform: scale(1.04);
+      box-shadow: 0 0 24px rgba($echo-blue, 0.5);
+      background-color: rgba(0, 0, 0, 0.5);
     }
 
-    .navDivider {
-      display: none;
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  .batLogoButton {
+    height: 64px;
+    width: 64px;
+    min-width: 64px;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-right: 0;
+    padding: 0;
+    position: relative;
+    background: transparent;
+    box-shadow: 0 0 15px rgba($echo-blue, 0.3);
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, rgba($echo-blue, 0.25) 0%, rgba($echo-blue, 0.10) 40%, rgba(0,0,0,0.0) 80%);
+    opacity: 0.85;
+
+    &:hover {
+      opacity: 1;
+      transform: scale(1.04);
+      box-shadow: 0 0 24px rgba($echo-blue, 0.5);
+      background-color: rgba(0, 0, 0, 0.5);
     }
 
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  .batLogoIcon {
+    width: 59px;
+    height: 59px;
+    max-width: 59px;
+    max-height: 59px;
+    min-width: 59px;
+    min-height: 59px;
+    object-fit: contain;
+    display: block;
+    margin: auto;
+    filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 8px $echo-blue);
+    opacity: 0.95;
+  }
+
+  .navDivider {
+    display: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba($echo-blue, 0.15) 50%,
+      transparent 100%
+    );
+  }
+
+  .navButton {
+    height: 50px;
+    color: rgba(0, 0, 0, 0.8);
+    background: rgba($background-dark, 0.12);
+    border: none;
+    font-size: 16px;
+    text-align: center;
+    padding: 0 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+    max-width: 150px;
+    position: relative;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    backdrop-filter: blur(2px);
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
+    
     &::after {
       content: '';
       position: absolute;
-      bottom: -2px;
-      left: 0;
-      width: 100%;
-      height: 1px;
-      background: linear-gradient(90deg,
-        transparent 0%,
-        rgba($echo-blue, 0.15) 50%,
-        transparent 100%
-      );
+      bottom: 0;
+      left: 50%;
+      width: 0;
+      height: 2px;
+      background: rgba($echo-blue, 0.5);
+      transition: all 0.3s ease;
+      transform: translateX(-50%);
     }
 
-    .navButton {
-      height: 50px;
-      color: rgba(0, 0, 0, 0.8);
-      background: rgba($background-dark, 0.12);
-      border: none;
-      font-size: 16px;
-      text-align: center;
-      padding: 0 25px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      min-width: 120px;
-      max-width: 150px;
-      position: relative;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-weight: 600;
-      backdrop-filter: blur(2px);
-      text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
-      
+    &:hover {
+      background: rgba($echo-blue, 0.1);
+      color: lighten($echo-blue, 20%);
+      text-shadow: 0 0 8px rgba($echo-blue, 0.3);
+
       &::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        width: 0;
-        height: 2px;
-        background: rgba($echo-blue, 0.5);
-        transition: all 0.3s ease;
-        transform: translateX(-50%);
+        width: 80%;
       }
+    }
+
+    &:active {
+      transform: translateY(1px);
+    }
+
+    &.locked {
+      opacity: 0.5;
+      cursor: not-allowed;
+      color: rgba($echo-gray, 0.7);
+      border-color: rgba($echo-gray, 0.3);
 
       &:hover {
-        background: rgba($echo-blue, 0.1);
-        color: lighten($echo-blue, 20%);
-        text-shadow: 0 0 8px rgba($echo-blue, 0.3);
-
-        &::after {
-          width: 80%;
-        }
-      }
-
-      &:active {
-        transform: translateY(1px);
-      }
-
-      &.locked {
-        opacity: 0.5;
-        cursor: not-allowed;
+        background: none;
         color: rgba($echo-gray, 0.7);
-        border-color: rgba($echo-gray, 0.3);
+        text-shadow: none;
+      }
 
-        &:hover {
-          background: none;
-          color: rgba($echo-gray, 0.7);
-          text-shadow: none;
-        }
-
-        .lockIcon {
-          font-size: 0.8em;
-          opacity: 0.7;
-          margin-left: 0.5rem;
-        }
+      .lockIcon {
+        font-size: 0.8em;
+        opacity: 0.7;
+        margin-left: 0.5rem;
       }
     }
+  }
 
-    .nullLogoIcon, .socialIcon {
-      width: 59px;
-      height: 59px;
-      max-width: 59px;
-      max-height: 59px;
-      min-width: 59px;
-      min-height: 59px;
-      object-fit: contain;
-      display: block;
-      margin: auto;
-    }
+  .nullLogoIcon, .socialIcon {
+    width: 59px;
+    height: 59px;
+    max-width: 59px;
+    max-height: 59px;
+    min-width: 59px;
+    min-height: 59px;
+    object-fit: contain;
+    display: block;
+    margin: auto;
+  }
 
-    .nullLogoIcon {
-      filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 8px $echo-blue);
-      opacity: 0.95;
-    }
+  .nullLogoIcon {
+    filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 8px $echo-blue);
+    opacity: 0.95;
+  }
 
-    .socialIcon {
-      filter: invert(1);
-      opacity: 0.7;
-    }
+  .socialIcon {
+    filter: invert(1);
+    opacity: 0.7;
+  }
 
-    .socialButton::after {
-      content: 'X';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 59px;
-      font-weight: 900;
-      color: white;
-      text-shadow: 0 0 15px rgba($echo-blue, 0.6);
-      opacity: 0.9;
-      transition: all 0.3s ease;
-      pointer-events: none;
-      font-family: Arial, sans-serif;
-      letter-spacing: -2px;
-      line-height: 1;
-      height: 59px;
-      width: 59px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+  .socialButton::after {
+    content: 'X';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 59px;
+    font-weight: 900;
+    color: white;
+    text-shadow: 0 0 15px rgba($echo-blue, 0.6);
+    opacity: 0.9;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    font-family: Arial, sans-serif;
+    letter-spacing: -2px;
+    line-height: 1;
+    height: 59px;
+    width: 59px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .nexus, .hudScreen, .settingsScreen {
@@ -2779,7 +2825,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   z-index: 2;
   object-fit: contain;
   pointer-events: none;
-  animation: echoBatFade 6s cubic-bezier(0.4, 0, 0.1, 1) forwards;
+  animation: echoBatFade 5s cubic-bezier(0.4, 0, 0.01, 1) forwards;
 }
 
 @keyframes echoBatFade {
@@ -2790,3 +2836,51 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     opacity: 0.12;
   }
 }
+.screenLabel {
+  position: absolute;
+  left: 1.5rem;
+  top: 0.7rem;
+  font-family: 'Share Tech Mono', 'Fira Mono', 'Consolas', 'monospace';
+  font-size: 1.18rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  opacity: 0.92;
+  z-index: 20;
+  padding: 0 1.2rem;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(90deg, rgba($echo-blue, 0) 0%, rgba($echo-blue, 0.22) 50%, rgba($echo-blue, 0) 100%);
+  border-radius: 8px;
+  box-shadow: 0 0 4px rgba($echo-blue, 0.06);
+  border: none;
+  pointer-events: none;
+
+  /* Only apply gradient to the text, not the whole label */
+  color: #d6d7e0;
+  /* Gradient text: light in center, dark at edges */
+  background-clip: padding-box;
+  position: relative;
+
+  & > span, & {
+    background: linear-gradient(90deg, #23242a 0%, #f8fafd 50%, #23242a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+  }
+}
+
+.verticalNavbar {
+  position: relative;
+}
+
+.centeredLabel {
+  left: 50%;
+  top: 45%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  width: max-content;
+}
+
