@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './echo.module.scss';
 import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '@services/api';
 import xLogo from '../../../assets/images/X_logo_black.png';
-import nyxImage from '@assets/images/nyx_head.png';
 
 type Screen = 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
@@ -633,7 +632,7 @@ const Echo: React.FC<EchoProps> = ({
         onClick={() => setActiveTab('systems')} 
         className={styles.homeButton}
       >
-        <img src={nyxImage} alt="Home" className={styles.homeIcon} />
+        <img src={xLogo} alt="Home" className={styles.homeIcon} />
       </button>
       <a 
         href="https://x.com/Nullblock_io" 
