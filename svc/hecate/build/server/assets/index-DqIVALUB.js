@@ -4,99 +4,45 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { Preload, Points, PointMaterial } from "@react-three/drei";
 import * as random from "maath/random/dist/maath-random.esm.js";
 import axios from "axios";
-const button$1 = "_button_htmbl_29";
-const alertText$1 = "_alertText_htmbl_46";
-const scene$1 = "_scene_htmbl_52";
-const echoActive$1 = "_echoActive_htmbl_63";
-const fire$1 = "_fire_htmbl_63";
-const nyx$1 = "_nyx_htmbl_67";
-const campParts$1 = "_campParts_htmbl_71";
-const campForeTree$1 = "_campForeTree_htmbl_75";
-const campfireFlicker$1 = "_campfireFlicker_htmbl_1";
-const campfireGlow$1 = "_campfireGlow_htmbl_1";
-const robot$1 = "_robot_htmbl_178";
-const trader1$1 = "_trader1_htmbl_178";
-const trader2$1 = "_trader2_htmbl_178";
-const trader3$1 = "_trader3_htmbl_178";
-const appContainer$1 = "_appContainer_htmbl_182";
-const lightFireFlicker$1 = "_lightFireFlicker_htmbl_1";
-const lightFireGlow$1 = "_lightFireGlow_htmbl_1";
-const connectButtonContainer$1 = "_connectButtonContainer_htmbl_255";
-const fadeIn$1 = "_fadeIn_htmbl_1";
-const connectButton$1 = "_connectButton_htmbl_255";
-const digitizingText$2 = "_digitizingText_htmbl_350";
-const digitize$1 = "_digitize_htmbl_1";
-const fadeOut$1 = "_fadeOut_htmbl_1";
-const nyxPopup$1 = "_nyxPopup_htmbl_392";
-const softEcho$1 = "_softEcho_htmbl_1";
-const corePulse$1 = "_corePulse_htmbl_1";
-const scanline$1 = "_scanline_htmbl_1";
-const scanlineWaver$1 = "_scanlineWaver_htmbl_1";
-const nyxPopupHeader$1 = "_nyxPopupHeader_htmbl_437";
-const closeButton$1 = "_closeButton_htmbl_476";
-const nyxPopupContent$1 = "_nyxPopupContent_htmbl_492";
-const nyxMessage$1 = "_nyxMessage_htmbl_515";
-const system$1 = "_system_htmbl_541";
-const alert$2 = "_alert_htmbl_46";
-const welcome$1 = "_welcome_htmbl_551";
-const nyxPopupOverlay$1 = "_nyxPopupOverlay_htmbl_561";
-const socialLink$1 = "_socialLink_htmbl_663";
-const restText$1 = "_restText_htmbl_734";
-const pulse$1 = "_pulse_htmbl_1";
-const nyxGlow$1 = "_nyxGlow_htmbl_1";
-const styles$3 = {
+const backgroundImage$1 = "_backgroundImage_1xw9p_12";
+const button$1 = "_button_1xw9p_57";
+const alertText$1 = "_alertText_1xw9p_74";
+const scene$1 = "_scene_1xw9p_80";
+const fire$1 = "_fire_1xw9p_92";
+const campfireFlicker$1 = "_campfireFlicker_1xw9p_1";
+const campfireGlow$1 = "_campfireGlow_1xw9p_1";
+const appContainer$1 = "_appContainer_1xw9p_153";
+const lightFireFlicker$1 = "_lightFireFlicker_1xw9p_1";
+const lightFireGlow$1 = "_lightFireGlow_1xw9p_1";
+const socialLinks$1 = "_socialLinks_1xw9p_235";
+const socialLink$1 = "_socialLink_1xw9p_235";
+const nullButton$1 = "_nullButton_1xw9p_314";
+const styles$2 = {
+  backgroundImage: backgroundImage$1,
   button: button$1,
   alertText: alertText$1,
   scene: scene$1,
-  echoActive: echoActive$1,
   fire: fire$1,
-  nyx: nyx$1,
-  campParts: campParts$1,
-  campForeTree: campForeTree$1,
   campfireFlicker: campfireFlicker$1,
   campfireGlow: campfireGlow$1,
-  robot: robot$1,
-  trader1: trader1$1,
-  trader2: trader2$1,
-  trader3: trader3$1,
   appContainer: appContainer$1,
-  "theme-null": "_theme-null_htmbl_189",
-  "theme-light": "_theme-light_htmbl_194",
+  "theme-null": "_theme-null_1xw9p_160",
+  "theme-light": "_theme-light_1xw9p_165",
   lightFireFlicker: lightFireFlicker$1,
   lightFireGlow: lightFireGlow$1,
-  connectButtonContainer: connectButtonContainer$1,
-  fadeIn: fadeIn$1,
-  connectButton: connectButton$1,
-  digitizingText: digitizingText$2,
-  digitize: digitize$1,
-  fadeOut: fadeOut$1,
-  nyxPopup: nyxPopup$1,
-  softEcho: softEcho$1,
-  corePulse: corePulse$1,
-  scanline: scanline$1,
-  scanlineWaver: scanlineWaver$1,
-  nyxPopupHeader: nyxPopupHeader$1,
-  closeButton: closeButton$1,
-  nyxPopupContent: nyxPopupContent$1,
-  nyxMessage: nyxMessage$1,
-  system: system$1,
-  alert: alert$2,
-  welcome: welcome$1,
-  nyxPopupOverlay: nyxPopupOverlay$1,
+  socialLinks: socialLinks$1,
   socialLink: socialLink$1,
-  restText: restText$1,
-  pulse: pulse$1,
-  nyxGlow: nyxGlow$1
+  nullButton: nullButton$1
 };
 const starsCanvas = "_starsCanvas_4g78i_1";
 const matrix$1 = "_matrix_4g78i_10";
 const cyber$1 = "_cyber_4g78i_14";
-const light$2 = "_light_4g78i_18";
-const styles$2 = {
+const light$1 = "_light_4g78i_18";
+const styles$1 = {
   starsCanvas,
   matrix: matrix$1,
   cyber: cyber$1,
-  light: light$2
+  light: light$1
 };
 const Stars = ({ theme = "light" }) => {
   const ref = useRef(null);
@@ -135,258 +81,218 @@ const Stars = ({ theme = "light" }) => {
   ) }) });
 };
 const StarsCanvas = ({ theme = "light" }) => {
-  return /* @__PURE__ */ jsx("div", { className: `${styles$2.starsCanvas} ${styles$2[theme]}`, children: /* @__PURE__ */ jsxs(Canvas, { camera: { position: [0, 0, 1] }, children: [
+  return /* @__PURE__ */ jsx("div", { className: `${styles$1.starsCanvas} ${styles$1[theme]}`, children: /* @__PURE__ */ jsxs(Canvas, { camera: { position: [0, 0, 1] }, children: [
     /* @__PURE__ */ jsx(Suspense, { fallback: null, children: /* @__PURE__ */ jsx(Stars, { theme }) }),
     /* @__PURE__ */ jsx(Preload, { all: true })
   ] }) });
 };
-const button = "_button_1p98z_29";
-const alertText = "_alertText_1p98z_46";
-const scene = "_scene_1p98z_52";
-const echoActive = "_echoActive_1p98z_63";
-const fire = "_fire_1p98z_63";
-const nyx = "_nyx_1p98z_67";
-const campParts = "_campParts_1p98z_71";
-const campForeTree = "_campForeTree_1p98z_75";
-const campfireFlicker = "_campfireFlicker_1p98z_1";
-const campfireGlow = "_campfireGlow_1p98z_1";
-const robot = "_robot_1p98z_178";
-const trader1 = "_trader1_1p98z_178";
-const trader2 = "_trader2_1p98z_178";
-const trader3 = "_trader3_1p98z_178";
-const appContainer = "_appContainer_1p98z_182";
-const lightFireFlicker = "_lightFireFlicker_1p98z_1";
-const lightFireGlow = "_lightFireGlow_1p98z_1";
-const connectButtonContainer = "_connectButtonContainer_1p98z_255";
-const fadeIn = "_fadeIn_1p98z_1";
-const connectButton = "_connectButton_1p98z_255";
-const digitizingText$1 = "_digitizingText_1p98z_350";
-const digitize = "_digitize_1p98z_1";
-const fadeOut = "_fadeOut_1p98z_1";
-const nyxPopup = "_nyxPopup_1p98z_392";
-const softEcho = "_softEcho_1p98z_1";
-const corePulse = "_corePulse_1p98z_1";
-const scanline = "_scanline_1p98z_1";
-const scanlineWaver = "_scanlineWaver_1p98z_1";
-const nyxPopupHeader = "_nyxPopupHeader_1p98z_437";
-const closeButton = "_closeButton_1p98z_476";
-const nyxPopupContent = "_nyxPopupContent_1p98z_492";
-const nyxMessage = "_nyxMessage_1p98z_515";
-const system = "_system_1p98z_541";
-const alert$1 = "_alert_1p98z_46";
-const welcome = "_welcome_1p98z_551";
-const nyxPopupOverlay = "_nyxPopupOverlay_1p98z_561";
-const socialLink = "_socialLink_1p98z_663";
-const restText = "_restText_1p98z_734";
-const pulse = "_pulse_1p98z_1";
-const echoContainer = "_echoContainer_1p98z_780";
-const hudWindow = "_hudWindow_1p98z_793";
-const controlPanel = "_controlPanel_1p98z_798";
-const controlButton = "_controlButton_1p98z_801";
-const disabled = "_disabled_1p98z_804";
-const active = "_active_1p98z_807";
-const userProfile = "_userProfile_1p98z_815";
-const profileLabel = "_profileLabel_1p98z_818";
-const profileValue = "_profileValue_1p98z_821";
-const statusIndicator = "_statusIndicator_1p98z_824";
-const inactive = "_inactive_1p98z_827";
-const alertButton = "_alertButton_1p98z_830";
-const expandButton = "_expandButton_1p98z_836";
-const disconnectButton = "_disconnectButton_1p98z_842";
-const matrix = "_matrix_1p98z_848";
-const cyber = "_cyber_1p98z_906";
-const light$1 = "_light_1p98z_964";
-const scanlineGlow = "_scanlineGlow_1p98z_1";
-const hudTitle = "_hudTitle_1p98z_1064";
-const bottomLeftInfo = "_bottomLeftInfo_1p98z_1110";
-const bottomRightInfo = "_bottomRightInfo_1p98z_1110";
-const verticalNavbar = "_verticalNavbar_1p98z_1123";
-const homeButton = "_homeButton_1p98z_1134";
-const homeIcon = "_homeIcon_1p98z_1152";
-const socialButton = "_socialButton_1p98z_1158";
-const socialIcon = "_socialIcon_1p98z_1179";
-const navDivider = "_navDivider_1p98z_1202";
-const navButton = "_navButton_1p98z_1217";
-const locked = "_locked_1p98z_1258";
-const lockIcon = "_lockIcon_1p98z_1269";
-const nexus = "_nexus_1p98z_1274";
-const hudScreen = "_hudScreen_1p98z_1274";
-const settingsScreen = "_settingsScreen_1p98z_1274";
-const walletInfo = "_walletInfo_1p98z_1302";
-const nexusActions = "_nexusActions_1p98z_1342";
-const headerContainer = "_headerContainer_1p98z_1408";
-const architectTitle = "_architectTitle_1p98z_1419";
-const leaderboardContainer = "_leaderboardContainer_1p98z_1429";
-const leaderboardTitle = "_leaderboardTitle_1p98z_1441";
-const leaderboardButton = "_leaderboardButton_1p98z_1451";
-const leaderboardList = "_leaderboardList_1p98z_1470";
-const leaderboardItems = "_leaderboardItems_1p98z_1496";
-const scrollLeaderboard = "_scrollLeaderboard_1p98z_1";
-const leaderboardItem = "_leaderboardItem_1p98z_1496";
-const rank = "_rank_1p98z_1522";
-const camperId = "_camperId_1p98z_1528";
-const matrixLevel = "_matrixLevel_1p98z_1537";
-const headerDivider = "_headerDivider_1p98z_1547";
-const campGrid = "_campGrid_1p98z_1552";
-const campAnalysis = "_campAnalysis_1p98z_1560";
-const diagnosticsContainer = "_diagnosticsContainer_1p98z_1570";
-const containerTitle = "_containerTitle_1p98z_1581";
-const diagnosticsHeader = "_diagnosticsHeader_1p98z_1592";
-const diagnosticsContent = "_diagnosticsContent_1p98z_1605";
-const diagnosticsList = "_diagnosticsList_1p98z_1628";
-const diagnosticsItem = "_diagnosticsItem_1p98z_1635";
-const itemLabel = "_itemLabel_1p98z_1676";
-const itemValue = "_itemValue_1p98z_1679";
-const campContent = "_campContent_1p98z_1710";
-const campStatus = "_campStatus_1p98z_1732";
-const statusCard = "_statusCard_1p98z_1738";
-const statusHeaderContainer = "_statusHeaderContainer_1p98z_1749";
-const statusTabs = "_statusTabs_1p98z_1770";
-const statusTab = "_statusTab_1p98z_1770";
-const activeTab = "_activeTab_1p98z_1793";
-const tabContent = "_tabContent_1p98z_1806";
-const statusContent = "_statusContent_1p98z_1827";
-const vitalsContainer = "_vitalsContainer_1p98z_1848";
-const vitalItem = "_vitalItem_1p98z_1870";
-const vitalValue = "_vitalValue_1p98z_1898";
-const vitalLabel = "_vitalLabel_1p98z_1901";
-const infoButton = "_infoButton_1p98z_1932";
-const ascentDetails = "_ascentDetails_1p98z_1963";
-const shimmer = "_shimmer_1p98z_1";
-const ascentDescription = "_ascentDescription_1p98z_1982";
-const progressBar = "_progressBar_1p98z_1988";
-const progressFill = "_progressFill_1p98z_2006";
-const accoladesContainer = "_accoladesContainer_1p98z_2023";
-const accoladesTitle = "_accoladesTitle_1p98z_2026";
-const accoladesList = "_accoladesList_1p98z_2043";
-const visible = "_visible_1p98z_2059";
-const blurred = "_blurred_1p98z_2068";
-const missionsTab = "_missionsTab_1p98z_2078";
-const systemsTab = "_systemsTab_1p98z_2078";
-const defenseTab = "_defenseTab_1p98z_2078";
-const uplinkTab = "_uplinkTab_1p98z_2078";
-const missionHeader = "_missionHeader_1p98z_2090";
-const missionContent = "_missionContent_1p98z_2100";
-const availableMissions = "_availableMissions_1p98z_2112";
-const missionList = "_missionList_1p98z_2139";
-const missionItem = "_missionItem_1p98z_2144";
-const missionItemContent = "_missionItemContent_1p98z_2168";
-const missionTitle = "_missionTitle_1p98z_2175";
-const missionStatus = "_missionStatus_1p98z_2183";
-const missionReward = "_missionReward_1p98z_2187";
-const missionDescription = "_missionDescription_1p98z_2199";
-const missionText = "_missionText_1p98z_2231";
-const missionInstructions = "_missionInstructions_1p98z_2241";
-const highlight = "_highlight_1p98z_2267";
-const missionNote = "_missionNote_1p98z_2271";
-const missionExpiration = "_missionExpiration_1p98z_2280";
-const rewardLabel = "_rewardLabel_1p98z_2286";
-const expirationLabel = "_expirationLabel_1p98z_2286";
-const rewardValue = "_rewardValue_1p98z_2293";
-const expirationValue = "_expirationValue_1p98z_2293";
-const activeMissionDetails = "_activeMissionDetails_1p98z_2300";
-const systemsContent = "_systemsContent_1p98z_2326";
-const defenseContent = "_defenseContent_1p98z_2326";
-const uplinkContent = "_uplinkContent_1p98z_2326";
-const systemsList = "_systemsList_1p98z_2351";
-const systemItem = "_systemItem_1p98z_2357";
-const systemName = "_systemName_1p98z_2366";
-const defenseStatus = "_defenseStatus_1p98z_2370";
-const uplinkStatus = "_uplinkStatus_1p98z_2370";
-const defenseDescription = "_defenseDescription_1p98z_2375";
-const uplinkDescription = "_uplinkDescription_1p98z_2375";
-const tabs = "_tabs_1p98z_2380";
-const tab = "_tab_1p98z_1806";
-const profileItem = "_profileItem_1p98z_2463";
-const label = "_label_1p98z_2475";
-const value = "_value_1p98z_2486";
-const common = "_common_1p98z_2496";
-const uncommon = "_uncommon_1p98z_2499";
-const rare = "_rare_1p98z_2502";
-const epic = "_epic_1p98z_2505";
-const legendary = "_legendary_1p98z_2508";
-const none = "_none_1p98z_2533";
-const collapsedButton = "_collapsedButton_1p98z_2538";
-const withEcho = "_withEcho_1p98z_2538";
-const ascentLine = "_ascentLine_1p98z_2541";
-const lockedContent = "_lockedContent_1p98z_2659";
-const statusContainer = "_statusContainer_1p98z_2709";
-const statusLabel = "_statusLabel_1p98z_2720";
-const echoContent = "_echoContent_1p98z_2734";
-const echoStatus = "_echoStatus_1p98z_2761";
-const browserInfo = "_browserInfo_1p98z_2769";
-const browserLabel = "_browserLabel_1p98z_2773";
-const browserValue = "_browserValue_1p98z_2777";
-const echoMessage = "_echoMessage_1p98z_2781";
-const disconnectedContent = "_disconnectedContent_1p98z_2795";
-const extensionPrompt = "_extensionPrompt_1p98z_2813";
-const extensionLinks = "_extensionLinks_1p98z_2833";
-const extensionButton = "_extensionButton_1p98z_2840";
-const uplinkItem = "_uplinkItem_1p98z_2855";
-const uplinkIcon = "_uplinkIcon_1p98z_2877";
-const uplinkInfo = "_uplinkInfo_1p98z_2886";
-const uplinkName = "_uplinkName_1p98z_2890";
-const pending = "_pending_1p98z_2909";
-const uplinkModal = "_uplinkModal_1p98z_2918";
-const modalHeader = "_modalHeader_1p98z_2943";
-const modalContent = "_modalContent_1p98z_2971";
-const statusSection = "_statusSection_1p98z_2974";
-const statusGrid = "_statusGrid_1p98z_2984";
-const statusItem = "_statusItem_1p98z_2989";
-const detailsSection = "_detailsSection_1p98z_3011";
-const modalOverlay = "_modalOverlay_1p98z_3025";
-const leaderboardModal = "_leaderboardModal_1p98z_3036";
-const legendWarning = "_legendWarning_1p98z_3070";
-const leaderboardGrid = "_leaderboardGrid_1p98z_3085";
-const leaderboardCard = "_leaderboardCard_1p98z_3092";
-const cardHeader = "_cardHeader_1p98z_3105";
-const vitalsGrid = "_vitalsGrid_1p98z_3173";
-const addLinkButton = "_addLinkButton_1p98z_3180";
-const nyxGlow = "_nyxGlow_1p98z_1";
-const styles$1 = {
+const backgroundImage = "_backgroundImage_1n69s_13";
+const button = "_button_1n69s_58";
+const alertText = "_alertText_1n69s_75";
+const scene = "_scene_1n69s_81";
+const fire = "_fire_1n69s_93";
+const campfireFlicker = "_campfireFlicker_1n69s_1";
+const campfireGlow = "_campfireGlow_1n69s_1";
+const appContainer = "_appContainer_1n69s_154";
+const lightFireFlicker = "_lightFireFlicker_1n69s_1";
+const lightFireGlow = "_lightFireGlow_1n69s_1";
+const socialLinks = "_socialLinks_1n69s_236";
+const socialLink = "_socialLink_1n69s_236";
+const nullButton = "_nullButton_1n69s_315";
+const echoContainer = "_echoContainer_1n69s_347";
+const hudWindow = "_hudWindow_1n69s_360";
+const controlPanel = "_controlPanel_1n69s_365";
+const controlButton = "_controlButton_1n69s_368";
+const disabled = "_disabled_1n69s_371";
+const active = "_active_1n69s_374";
+const userProfile = "_userProfile_1n69s_382";
+const profileLabel = "_profileLabel_1n69s_385";
+const profileValue = "_profileValue_1n69s_388";
+const statusIndicator = "_statusIndicator_1n69s_391";
+const inactive = "_inactive_1n69s_394";
+const alertButton = "_alertButton_1n69s_397";
+const expandButton = "_expandButton_1n69s_403";
+const disconnectButton = "_disconnectButton_1n69s_409";
+const matrix = "_matrix_1n69s_415";
+const cyber = "_cyber_1n69s_473";
+const light = "_light_1n69s_531";
+const softEcho = "_softEcho_1n69s_1";
+const corePulse = "_corePulse_1n69s_1";
+const scanlineGlow = "_scanlineGlow_1n69s_1";
+const scanlineWaver = "_scanlineWaver_1n69s_1";
+const hudTitle = "_hudTitle_1n69s_631";
+const bottomLeftInfo = "_bottomLeftInfo_1n69s_677";
+const bottomRightInfo = "_bottomRightInfo_1n69s_677";
+const verticalNavbar = "_verticalNavbar_1n69s_690";
+const homeButton = "_homeButton_1n69s_701";
+const homeIcon = "_homeIcon_1n69s_719";
+const nullLogoButton = "_nullLogoButton_1n69s_725";
+const socialButton = "_socialButton_1n69s_725";
+const batLogoButton = "_batLogoButton_1n69s_754";
+const batLogoIcon = "_batLogoIcon_1n69s_783";
+const navDivider = "_navDivider_1n69s_796";
+const navButton = "_navButton_1n69s_808";
+const locked = "_locked_1n69s_849";
+const lockIcon = "_lockIcon_1n69s_860";
+const nullLogoIcon = "_nullLogoIcon_1n69s_865";
+const socialIcon = "_socialIcon_1n69s_865";
+const nexus = "_nexus_1n69s_906";
+const hudScreen = "_hudScreen_1n69s_906";
+const settingsScreen = "_settingsScreen_1n69s_906";
+const walletInfo = "_walletInfo_1n69s_934";
+const nexusActions = "_nexusActions_1n69s_974";
+const headerContainer = "_headerContainer_1n69s_1040";
+const architectTitle = "_architectTitle_1n69s_1051";
+const leaderboardContainer = "_leaderboardContainer_1n69s_1061";
+const leaderboardTitle = "_leaderboardTitle_1n69s_1073";
+const leaderboardButton = "_leaderboardButton_1n69s_1083";
+const leaderboardList = "_leaderboardList_1n69s_1102";
+const leaderboardItems = "_leaderboardItems_1n69s_1128";
+const scrollLeaderboard = "_scrollLeaderboard_1n69s_1";
+const leaderboardItem = "_leaderboardItem_1n69s_1128";
+const rank = "_rank_1n69s_1154";
+const camperId = "_camperId_1n69s_1160";
+const matrixLevel = "_matrixLevel_1n69s_1169";
+const headerDivider = "_headerDivider_1n69s_1179";
+const campGrid = "_campGrid_1n69s_1184";
+const campAnalysis = "_campAnalysis_1n69s_1192";
+const diagnosticsContainer = "_diagnosticsContainer_1n69s_1202";
+const containerTitle = "_containerTitle_1n69s_1213";
+const diagnosticsHeader = "_diagnosticsHeader_1n69s_1224";
+const diagnosticsContent = "_diagnosticsContent_1n69s_1237";
+const diagnosticsList = "_diagnosticsList_1n69s_1260";
+const diagnosticsItem = "_diagnosticsItem_1n69s_1267";
+const itemLabel = "_itemLabel_1n69s_1308";
+const itemValue = "_itemValue_1n69s_1311";
+const campContent = "_campContent_1n69s_1342";
+const campStatus = "_campStatus_1n69s_1364";
+const statusCard = "_statusCard_1n69s_1370";
+const statusHeaderContainer = "_statusHeaderContainer_1n69s_1381";
+const statusTabs = "_statusTabs_1n69s_1402";
+const statusTab = "_statusTab_1n69s_1402";
+const activeTab = "_activeTab_1n69s_1425";
+const tabContent = "_tabContent_1n69s_1438";
+const scanline = "_scanline_1n69s_1";
+const statusContent = "_statusContent_1n69s_1459";
+const vitalsContainer = "_vitalsContainer_1n69s_1480";
+const vitalItem = "_vitalItem_1n69s_1502";
+const vitalValue = "_vitalValue_1n69s_1530";
+const vitalLabel = "_vitalLabel_1n69s_1533";
+const infoButton = "_infoButton_1n69s_1564";
+const pulse = "_pulse_1n69s_1";
+const ascentDetails = "_ascentDetails_1n69s_1595";
+const shimmer = "_shimmer_1n69s_1";
+const ascentDescription = "_ascentDescription_1n69s_1614";
+const progressBar = "_progressBar_1n69s_1620";
+const progressFill = "_progressFill_1n69s_1638";
+const accoladesContainer = "_accoladesContainer_1n69s_1655";
+const accoladesTitle = "_accoladesTitle_1n69s_1658";
+const accoladesList = "_accoladesList_1n69s_1675";
+const visible = "_visible_1n69s_1691";
+const blurred = "_blurred_1n69s_1700";
+const missionsTab = "_missionsTab_1n69s_1710";
+const systemsTab = "_systemsTab_1n69s_1710";
+const defenseTab = "_defenseTab_1n69s_1710";
+const uplinkTab = "_uplinkTab_1n69s_1710";
+const missionHeader = "_missionHeader_1n69s_1722";
+const missionContent = "_missionContent_1n69s_1732";
+const availableMissions = "_availableMissions_1n69s_1744";
+const missionList = "_missionList_1n69s_1771";
+const missionItem = "_missionItem_1n69s_1776";
+const missionItemContent = "_missionItemContent_1n69s_1800";
+const missionTitle = "_missionTitle_1n69s_1807";
+const missionStatus = "_missionStatus_1n69s_1815";
+const missionReward = "_missionReward_1n69s_1819";
+const missionDescription = "_missionDescription_1n69s_1831";
+const missionText = "_missionText_1n69s_1863";
+const missionInstructions = "_missionInstructions_1n69s_1873";
+const highlight = "_highlight_1n69s_1899";
+const missionNote = "_missionNote_1n69s_1903";
+const missionExpiration = "_missionExpiration_1n69s_1912";
+const rewardLabel = "_rewardLabel_1n69s_1918";
+const expirationLabel = "_expirationLabel_1n69s_1918";
+const rewardValue = "_rewardValue_1n69s_1925";
+const expirationValue = "_expirationValue_1n69s_1925";
+const activeMissionDetails = "_activeMissionDetails_1n69s_1932";
+const systemsContent = "_systemsContent_1n69s_1958";
+const defenseContent = "_defenseContent_1n69s_1958";
+const uplinkContent = "_uplinkContent_1n69s_1958";
+const systemsList = "_systemsList_1n69s_1983";
+const systemItem = "_systemItem_1n69s_1989";
+const systemName = "_systemName_1n69s_1998";
+const defenseStatus = "_defenseStatus_1n69s_2002";
+const uplinkStatus = "_uplinkStatus_1n69s_2002";
+const defenseDescription = "_defenseDescription_1n69s_2007";
+const uplinkDescription = "_uplinkDescription_1n69s_2007";
+const tabs = "_tabs_1n69s_2012";
+const tab = "_tab_1n69s_1438";
+const profileItem = "_profileItem_1n69s_2095";
+const label = "_label_1n69s_2107";
+const value = "_value_1n69s_2118";
+const common = "_common_1n69s_2128";
+const uncommon = "_uncommon_1n69s_2131";
+const rare = "_rare_1n69s_2134";
+const epic = "_epic_1n69s_2137";
+const legendary = "_legendary_1n69s_2140";
+const none = "_none_1n69s_2165";
+const collapsedButton = "_collapsedButton_1n69s_2170";
+const withEcho = "_withEcho_1n69s_2170";
+const ascentLine = "_ascentLine_1n69s_2173";
+const lockedContent = "_lockedContent_1n69s_2291";
+const statusContainer = "_statusContainer_1n69s_2341";
+const statusLabel = "_statusLabel_1n69s_2352";
+const echoContent = "_echoContent_1n69s_2366";
+const echoStatus = "_echoStatus_1n69s_2393";
+const browserInfo = "_browserInfo_1n69s_2401";
+const browserLabel = "_browserLabel_1n69s_2405";
+const browserValue = "_browserValue_1n69s_2409";
+const echoMessage = "_echoMessage_1n69s_2413";
+const disconnectedContent = "_disconnectedContent_1n69s_2427";
+const extensionPrompt = "_extensionPrompt_1n69s_2445";
+const extensionLinks = "_extensionLinks_1n69s_2465";
+const extensionButton = "_extensionButton_1n69s_2472";
+const uplinkItem = "_uplinkItem_1n69s_2487";
+const uplinkIcon = "_uplinkIcon_1n69s_2509";
+const uplinkInfo = "_uplinkInfo_1n69s_2518";
+const uplinkName = "_uplinkName_1n69s_2522";
+const pending = "_pending_1n69s_2541";
+const uplinkModal = "_uplinkModal_1n69s_2550";
+const modalHeader = "_modalHeader_1n69s_2575";
+const closeButton = "_closeButton_1n69s_2590";
+const modalContent = "_modalContent_1n69s_2603";
+const statusSection = "_statusSection_1n69s_2606";
+const statusGrid = "_statusGrid_1n69s_2616";
+const statusItem = "_statusItem_1n69s_2621";
+const detailsSection = "_detailsSection_1n69s_2643";
+const modalOverlay = "_modalOverlay_1n69s_2657";
+const leaderboardModal = "_leaderboardModal_1n69s_2668";
+const legendWarning = "_legendWarning_1n69s_2702";
+const leaderboardGrid = "_leaderboardGrid_1n69s_2717";
+const leaderboardCard = "_leaderboardCard_1n69s_2724";
+const cardHeader = "_cardHeader_1n69s_2737";
+const vitalsGrid = "_vitalsGrid_1n69s_2805";
+const addLinkButton = "_addLinkButton_1n69s_2812";
+const echoBatChamberLogoWrapper = "_echoBatChamberLogoWrapper_1n69s_2857";
+const echoBatChamberLogo = "_echoBatChamberLogo_1n69s_2857";
+const echoBatFade = "_echoBatFade_1n69s_1";
+const styles = {
+  backgroundImage,
   button,
   alertText,
   scene,
-  echoActive,
   fire,
-  nyx,
-  campParts,
-  campForeTree,
   campfireFlicker,
   campfireGlow,
-  robot,
-  trader1,
-  trader2,
-  trader3,
   appContainer,
-  "theme-null": "_theme-null_1p98z_189",
-  "theme-light": "_theme-light_1p98z_194",
+  "theme-null": "_theme-null_1n69s_161",
+  "theme-light": "_theme-light_1n69s_166",
   lightFireFlicker,
   lightFireGlow,
-  connectButtonContainer,
-  fadeIn,
-  connectButton,
-  digitizingText: digitizingText$1,
-  digitize,
-  fadeOut,
-  nyxPopup,
-  softEcho,
-  corePulse,
-  scanline,
-  scanlineWaver,
-  nyxPopupHeader,
-  closeButton,
-  nyxPopupContent,
-  nyxMessage,
-  system,
-  alert: alert$1,
-  welcome,
-  nyxPopupOverlay,
+  socialLinks,
   socialLink,
-  restText,
-  pulse,
+  nullButton,
   echoContainer,
-  "null": "_null_1p98z_793",
+  "null": "_null_1n69s_315",
   hudWindow,
   controlPanel,
   controlButton,
@@ -402,20 +308,27 @@ const styles$1 = {
   disconnectButton,
   matrix,
   cyber,
-  light: light$1,
+  light,
+  softEcho,
+  corePulse,
   scanlineGlow,
+  scanlineWaver,
   hudTitle,
   bottomLeftInfo,
   bottomRightInfo,
   verticalNavbar,
   homeButton,
   homeIcon,
+  nullLogoButton,
   socialButton,
-  socialIcon,
+  batLogoButton,
+  batLogoIcon,
   navDivider,
   navButton,
   locked,
   lockIcon,
+  nullLogoIcon,
+  socialIcon,
   nexus,
   hudScreen,
   settingsScreen,
@@ -452,12 +365,14 @@ const styles$1 = {
   statusTab,
   activeTab,
   tabContent,
+  scanline,
   statusContent,
   vitalsContainer,
   vitalItem,
   vitalValue,
   vitalLabel,
   infoButton,
+  pulse,
   ascentDetails,
   shimmer,
   ascentDescription,
@@ -536,6 +451,7 @@ const styles$1 = {
   pending,
   uplinkModal,
   modalHeader,
+  closeButton,
   modalContent,
   statusSection,
   statusGrid,
@@ -549,7 +465,9 @@ const styles$1 = {
   cardHeader,
   vitalsGrid,
   addLinkButton,
-  nyxGlow
+  echoBatChamberLogoWrapper,
+  echoBatChamberLogo,
+  echoBatFade
 };
 const API_BASE_URL = "http://localhost:8000";
 const fetchWalletData = async (publicKey) => {
@@ -633,7 +551,9 @@ const fetchActiveMission = async (publicKey) => {
   }
 };
 const xLogo = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAD0AAAAyCAYAAADvNNM8AAAACXBIWXMAAAfaAAAH2gHi/yxzAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAACwlJREFUaIHVWltzHMd1/r7TPbO7wC4AXgCQBO8SpdC2LhZlx2WqbLns2JWXVHx5yUveU5U/lNckzotTqVTFYuJyRNORREuJRSqmXTLvMq/gBcAC2OtM9zl5mAGzpHAjCDDIV7W1O7PdPf3NOX3O6XOaZobtAJIE4Ov1+piqvgng6yGEN0IIhwGMARCSXZLTIvKp9/5XlUrlo7m5uWsAemYWVxiTAPz4+HgqInbv3r0OB0mXjRwANTN9DlwfPXd4eHgCwOv9fv9tMzuuqgcA7AbQAJCWk48AOgDmANwTkSve+4+TJDnTarU+M7Pu4LhTU1NDrVZrX57nr3jv1Xt/dW5u7lM/8OC0VqtNmNmLAP5A8sZyb28LCCeVSuVglmUnAXxXVd9S1QkAlZIoBr4NQB3AOIBjqvpKjPG4mU1Wq9XT9Xr9IknN83xHjHFCRA4AeAnACwDOmdkVAHhEul6vj8UYv6KqPxCRM0NDQ6dI3ttKiZNMarXapKr+qar+MMb41ZKsDBB9rMvgt5mNhRDeEJFDzrk9JM8ACGZ2jOSrIYQvANgtIlcBvNPtdq+aWXxEWlX3hxDeijF+RUQmvPdsNBr/THJuKyROkrVabY+ZfS+E8KMY4+sAaiuQXQkCoKKqE6r6ZyGEkyi0YRjFsqiSvCciP0vT9EKWZRlJ94h0jHGPmb1mZntijLtKolZK/P5mEifJnTt3Ntrt9pdijH8eY3wVwOhGhwOQANhrZnvLewbASF4n+TPn3Lve+zsHDx4cBbDjEekQwg4Ah8xsCIBX1a+FECoks2q1+h7Ju2bWfwauj0203+8fMrOTpUqPbdK4QEE2krwvIv+dpuknWZZV8zx/M89zPzIy0vEAQFKcc0OqugOF9aaZjYYQ3nTOjYhIo9FonCZ5E0DHnt3PJXmevxZj/KaZ1fF0Kr0mRKTvvb8kIrdjjC+RfNvMJkMIn7bb7R8LAJw4ccKZWWJmfmACAqCuql/I8/yve73eX9Xr9TcBDD3LhEjK+Pj4DlV9WVWPozBcmwpVrWZZ9lqv1/t+lmV/EUJ4W0QeJklyRkQuegBoNBoGQMvPIMTMaqUbS7rd7u5qtfpyo9H4YGxs7NqtW7d6G5B60m63D5jZgVLK8uw0HwPNzAHYAWCM5Lxz7n0ROaWqHzabzQUPAGfOnInOuZ6ItFV1BIWKPxoEQKKqR0nuDiEcVtV9Dx48OFupVK5OTU3dvXPnTvcpyPsQwhQKX7vZhAcRST4QkXPe+58A+I9Op3PXSnWGmVmlUllQ1WlV3YXCdTwJMbOREMIbJI+KyFtpmv57s9l8d3h4+CbJRQB9AHGNF+DMbCeKIGNT1/IAjGTTOfdBmqZ/T/JX7XZ7Zmlej6y3iDwws4sAjmB50kAhmaqZjavqiV6vt1dEvuGcOzc0NPTrJEkuzM/PT5PMUCwVWya4YZIklSzLki0gu4QgImeTJPknAB+VhMPSn36g4W0R+ZjkyVISq0nBmdkYgFFVPWpmR2OMr2RZdilJkusicsM5d6dWq90jOQOgPyB9U9WwxSGuArhF8nKn03k4SBgYIN3r9aar1eo5EbmuqrvMrLGOwWlmFTM7hiK+/Zb3fjrG+Hszu9hqta46526QnE/TtEOynyRJpRx7K9czUGxOln2xg5LukrzunDttZrvM7It43KCthKXtmwCol1vBvQC+DiATkS7JGTO7p6r3vffd8v8JbB3xpQBlddJmZiTvDw8P/7QM53ap6t6nnNhSSJigMFSmqmZm+wC8CKCXZVlAsVXcSkMGVe2LSB9FSPoYPAAcOXKkOjMzc7BarU4BmKtUKr/M8zzN8/zbqrq/JLEREMUSqAKobpTABmAAOt77DpYhLSQpIhUz+3KM8S/zPP9ejNGTvOacuwsgX67jNoYBUBFphRDaWE7SZmbHjh3r9fv9kRDCNwF8J8/zrnMumFkN61vX2wkmIj2SC4uLi+3l8gEeAK5cuZI75zokg6pOAfAxxhyF9dtKf7oVCADuqep8+ftzEAAwM/XePxSRKwB6KKKvSrnNXCmLsV2Rk7xJsokVluUjy2xmtwGcK8PJ/09r+En0ReQ6yTmsRTrLspvOubMk75HMn9sUNxeGgvRl59wM1iINoAXgsvf+NIAbz2GCWwEl2QJwaWho6OFKjQaDk0hyul6vvxNjHFfVYTObxNaHi5sGkh0R+czMbszOzrZW2u35J65brVbr17VabSLP83qM8RtmtmOZdtsRBmDGOXfeOddcLXX9GJkyFO04536hqm2SzRDCn5jZOIrQcTtbcgUw7Zz7sFKpLKzW8HMSNDMl+bDRaHyU53nLzK6a2Ukz+5KZ7Xsij7ZdYCQXReRamqa/aTab7dUaL6u2pcR7IyMjd7z3H4UQRFVjjDGY2ZSqDpZctgMiyeve+0/m5+fvmtmq3mdZ0iRZrVbHVfVEjHE/ikrBXREZNrOdZpaa2XYhbQB6JM+laXq23+9na3VY0UCZWRJjPNDr9X6EonroUaR/69uIMABk3vtbJD9OkuQCVkgcDGJF0mmazvb7/WskU1Xdh+e7NVwvjOQiyV9478/PzMysasCWsKwPNjNbXFycEZHzzrn3SE5jHW/weaP0y1dI/jxJkkvr7beaehvJ6Vqt9mMA4yGEITPbhe2z1Ywk/+Cc+znJ3ywsLDTX23GtaKvX7XY/FZG/897/K8lZbI+kgpKcJflf3vt/6ff7d5+mjr5qpFX67MU0Tf8zyzLz3s/HGN8ysxfMbAT/N27LSHZF5EPn3KlOp3MRQHfNXgNYM7ws1Xxm9+7d73c6nWmSd2KMX1XVIyjqRQ0UBYDKesZ7Rli5ji94799pNBrvP3z4sP209TSut315CCdpNBojqro/xvhKjPHLJF8qk/37yjrYVpZq+iSvJUnyN5VK5dTCwsJnTyby14N1S6Z8m1lZsWgPDQ3djzH+zjn3Qozx+yhSug1sDWkjmZO87L3/hyRJ3l1YWLi1EcLABtSxVPccAERkV57nx1AcfXja8yLrfiSKxMBvnXPvpGn601ardc3Mehsd8GnU201OTlYXFxdH8zyfAPA6gO+GEL69ha4skmyTvOK9/0m1Wv3HhYWF689aB1sqxzx5b+m+oCDjq9XqmPf+aJZlX1PVk+X5rV0oTvI4bK6UDUAgOeucu+C9/1sA7/V6vdtrbSbWA05OTk6QNBExAMiyLFlcXBxyzo2RHM+ybB/JozHGwwD2q+okgMmyCLdV1jqUea7TInLKOfdJp9N5sBmEAcCLSK3b7R7t9XovhhAmy21jNYTQQOGSxs1syswmBqqNW2KhS+s8TfK3JM86597r9XrnATy1W1oNPoTQ7/f7O2OMr5rZ62Y2WaaIlqobMvC92WSt/HTLlO1N59z5JEn+zczOd7vd+wDyzSQMlFXG0dHRerfbnXLOfTGE8K0Y4x+r6iEUOyuP/yW9WVAUG5icZNc5d4XkB0mS/DLG+Lt+v/8AxdGtDbmktfDIepNMh4eHd6jqoRjjEVV9ycyOm9nLZnawDDsHDdaTUh+8flIyS9cKIIrIDMkbAC6R/FRELiVJck1Ebi4uLs49TRy9EXzOZZHk4cOHK81mc0+e538UQng5xnjUzPaUh3BGUAQhwyg0IUWhDUuasHQ8KweQoYiL2wAWAcyXhG87564nSXIxTdNLs7Oz981szYzHZmFFP01yaS270dHRmogcyPP8eJZlL5A8CmBKVXeb2agVZ80SFMQjyaz0r00Rua+qN0XkszRNLwP4vXPufrPZ7KKU/FZL9kn8D5m2Hr0M0CD1AAAAAElFTkSuQmCC";
-const nyxImage = "/assets/nyx_head-h4za-lDt.png";
+const nullLogo = "/assets/null_logo-YcRNLHqr.png";
+const echoBatWhite = "/assets/echo_bat_white-CUrRC6jy.png";
+const echoBatBlack = "/assets/echo_bat_black-BIfG_SPS.png";
 const Echo = ({
   publicKey,
   onDisconnect,
@@ -642,7 +562,7 @@ const Echo = ({
   onThemeChange
 }) => {
   var _a;
-  const [screen, setScreen] = useState("camp");
+  const [screen, setScreen] = useState("chambers");
   const [walletData, setWalletData] = useState(null);
   const [userProfile2, setUserProfile] = useState({
     id: publicKey ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol` : "",
@@ -678,7 +598,7 @@ const Echo = ({
   useState(false);
   const [selectedUplink, setSelectedUplink] = useState(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const unlockedScreens = ["camp"];
+  const unlockedScreens = publicKey ? ["chambers", "camp"] : ["chambers"];
   [
     {
       id: "ember",
@@ -939,11 +859,6 @@ const Echo = ({
       }
     }
   ];
-  const handleScreenChange = (newScreen) => {
-    if (unlockedScreens.includes(newScreen)) {
-      setScreen(newScreen);
-    }
-  };
   useEffect(() => {
     const loadWalletData = async () => {
       if (publicKey) {
@@ -1026,23 +941,6 @@ const Echo = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-  const handleDisconnect = async () => {
-    var _a2;
-    if ("phantom" in window) {
-      const provider = (_a2 = window.phantom) == null ? void 0 : _a2.solana;
-      if (provider) {
-        try {
-          await provider.disconnect();
-          localStorage.removeItem("walletPublickey");
-          localStorage.removeItem("hasSeenEcho");
-          localStorage.removeItem("chatCollapsedState");
-          onDisconnect();
-        } catch (error) {
-          console.error("Error disconnecting from Phantom:", error);
-        }
-      }
-    }
-  };
   const handleCloseModal = () => {
     setSelectedUplink(null);
   };
@@ -1052,199 +950,154 @@ const Echo = ({
   const handleCloseLeaderboard = () => {
     setShowLeaderboard(false);
   };
-  const renderControlScreen = () => /* @__PURE__ */ jsxs("nav", { className: styles$1.verticalNavbar, children: [
-    /* @__PURE__ */ jsx(
-      "button",
-      {
-        onClick: () => setActiveTab("systems"),
-        className: styles$1.homeButton,
-        children: /* @__PURE__ */ jsx("img", { src: nyxImage, alt: "Home", className: styles$1.homeIcon })
-      }
-    ),
+  const renderControlScreen = () => /* @__PURE__ */ jsxs("nav", { className: styles.verticalNavbar, children: [
+    /* @__PURE__ */ jsx("button", { className: styles.batLogoButton, onClick: () => setScreen("chambers"), children: /* @__PURE__ */ jsx("img", { src: echoBatWhite, alt: "Bat Logo", className: styles.batLogoIcon }) }),
+    /* @__PURE__ */ jsx("button", { className: styles.nullLogoButton, onClick: () => setScreen("chambers"), children: /* @__PURE__ */ jsx("img", { src: nullLogo, alt: "Null Logo", className: styles.nullLogoIcon }) }),
     /* @__PURE__ */ jsx(
       "a",
       {
         href: "https://x.com/Nullblock_io",
         target: "_blank",
         rel: "noopener noreferrer",
-        className: styles$1.socialButton,
-        children: /* @__PURE__ */ jsx("img", { src: xLogo, alt: "X", className: styles$1.socialIcon })
+        className: styles.socialButton,
+        children: /* @__PURE__ */ jsx("img", { src: xLogo, alt: "X", className: styles.socialIcon })
       }
-    ),
-    /* @__PURE__ */ jsx("div", { className: styles$1.navDivider }),
-    /* @__PURE__ */ jsx("button", { onClick: () => handleScreenChange("camp"), className: styles$1.navButton, children: "CAMP" }),
-    /* @__PURE__ */ jsxs(
-      "button",
-      {
-        onClick: () => handleScreenChange("inventory"),
-        className: `${styles$1.navButton} ${!unlockedScreens.includes("inventory") ? styles$1.locked : ""}`,
-        disabled: !unlockedScreens.includes("inventory"),
-        children: [
-          "CACHE ",
-          /* @__PURE__ */ jsx("span", { className: styles$1.lockIcon, children: "[LOCKED]" })
-        ]
-      }
-    ),
-    /* @__PURE__ */ jsxs(
-      "button",
-      {
-        onClick: () => handleScreenChange("campaign"),
-        className: `${styles$1.navButton} ${!unlockedScreens.includes("campaign") ? styles$1.locked : ""}`,
-        disabled: !unlockedScreens.includes("campaign"),
-        children: [
-          "CAMPAIGN ",
-          /* @__PURE__ */ jsx("span", { className: styles$1.lockIcon, children: "[LOCKED]" })
-        ]
-      }
-    ),
-    /* @__PURE__ */ jsxs(
-      "button",
-      {
-        onClick: () => handleScreenChange("lab"),
-        className: `${styles$1.navButton} ${!unlockedScreens.includes("lab") ? styles$1.locked : ""}`,
-        disabled: !unlockedScreens.includes("lab"),
-        children: [
-          "LAB ",
-          /* @__PURE__ */ jsx("span", { className: styles$1.lockIcon, children: "[LOCKED]" })
-        ]
-      }
-    ),
-    /* @__PURE__ */ jsx("button", { onClick: handleDisconnect, className: styles$1.navButton, children: "DISCONNECT" })
+    )
   ] });
   const renderUserProfile = () => {
     var _a2;
-    return /* @__PURE__ */ jsxs("div", { className: styles$1.userProfile, children: [
-      /* @__PURE__ */ jsxs("div", { className: styles$1.profileItem, children: [
-        /* @__PURE__ */ jsx("span", { className: styles$1.label, children: "ID:" }),
-        /* @__PURE__ */ jsx("span", { className: styles$1.value, children: userProfile2.id })
+    return /* @__PURE__ */ jsxs("div", { className: styles.userProfile, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.profileItem, children: [
+        /* @__PURE__ */ jsx("span", { className: styles.label, children: "ID:" }),
+        /* @__PURE__ */ jsx("span", { className: styles.value, children: userProfile2.id })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: styles$1.profileItem, children: [
-        /* @__PURE__ */ jsxs("span", { className: styles$1.label, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.profileItem, children: [
+        /* @__PURE__ */ jsxs("span", { className: styles.label, children: [
           "ASCENT:",
           /* @__PURE__ */ jsx(
             "button",
             {
-              className: styles$1.infoButton,
+              className: styles.infoButton,
               onClick: () => setShowAscentDetails(!showAscentDetails),
               children: "?"
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: styles$1.ascentContainer, children: [
-          /* @__PURE__ */ jsx("span", { className: styles$1.value, children: "Net Dweller: 1" }),
-          /* @__PURE__ */ jsx("div", { className: styles$1.progressBar, children: /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsxs("div", { className: styles.ascentContainer, children: [
+          /* @__PURE__ */ jsx("span", { className: styles.value, children: "Net Dweller: 1" }),
+          /* @__PURE__ */ jsx("div", { className: styles.progressBar, children: /* @__PURE__ */ jsx(
             "div",
             {
-              className: styles$1.progressFill,
+              className: styles.progressFill,
               style: { width: `${35}%` }
             }
           ) })
         ] }),
-        showAscentDetails && /* @__PURE__ */ jsxs("div", { className: styles$1.ascentDetails, children: [
-          /* @__PURE__ */ jsx("div", { className: styles$1.ascentDescription, children: "A digital lurker extraordinaire! You've mastered the art of watching from the shadows, observing the chaos without ever dipping your toes in. Like a cat watching a laser pointer, you're fascinated but paralyzed by indecision. At least you're not the one getting your digital assets rekt!" }),
-          /* @__PURE__ */ jsx("div", { className: styles$1.progressText, children: "35% to next level" }),
-          /* @__PURE__ */ jsxs("div", { className: styles$1.accoladesContainer, children: [
-            /* @__PURE__ */ jsx("div", { className: styles$1.accoladesTitle, children: "ACCOLADES" }),
-            /* @__PURE__ */ jsxs("ul", { className: styles$1.accoladesList, children: [
-              /* @__PURE__ */ jsx("li", { className: styles$1.visible, children: "First Connection" }),
-              /* @__PURE__ */ jsx("li", { className: styles$1.visible, children: "Wallet Initiated" }),
-              /* @__PURE__ */ jsx("li", { className: styles$1.visible, children: "Basic Navigation" }),
-              /* @__PURE__ */ jsx("li", { className: styles$1.blurred, children: "Token Discovery" }),
-              /* @__PURE__ */ jsx("li", { className: styles$1.blurred, children: "Transaction Initiate" }),
-              /* @__PURE__ */ jsx("li", { className: styles$1.blurred, children: "Network Explorer" }),
-              /* @__PURE__ */ jsx("li", { className: styles$1.blurred, children: "Data Collector" }),
-              /* @__PURE__ */ jsx("li", { className: styles$1.blurred, children: "Interface Familiar" })
+        showAscentDetails && /* @__PURE__ */ jsxs("div", { className: styles.ascentDetails, children: [
+          /* @__PURE__ */ jsx("div", { className: styles.ascentDescription, children: "A digital lurker extraordinaire! You've mastered the art of watching from the shadows, observing the chaos without ever dipping your toes in. Like a cat watching a laser pointer, you're fascinated but paralyzed by indecision. At least you're not the one getting your digital assets rekt!" }),
+          /* @__PURE__ */ jsx("div", { className: styles.progressText, children: "35% to next level" }),
+          /* @__PURE__ */ jsxs("div", { className: styles.accoladesContainer, children: [
+            /* @__PURE__ */ jsx("div", { className: styles.accoladesTitle, children: "ACCOLADES" }),
+            /* @__PURE__ */ jsxs("ul", { className: styles.accoladesList, children: [
+              /* @__PURE__ */ jsx("li", { className: styles.visible, children: "First Connection" }),
+              /* @__PURE__ */ jsx("li", { className: styles.visible, children: "Wallet Initiated" }),
+              /* @__PURE__ */ jsx("li", { className: styles.visible, children: "Basic Navigation" }),
+              /* @__PURE__ */ jsx("li", { className: styles.blurred, children: "Token Discovery" }),
+              /* @__PURE__ */ jsx("li", { className: styles.blurred, children: "Transaction Initiate" }),
+              /* @__PURE__ */ jsx("li", { className: styles.blurred, children: "Network Explorer" }),
+              /* @__PURE__ */ jsx("li", { className: styles.blurred, children: "Data Collector" }),
+              /* @__PURE__ */ jsx("li", { className: styles.blurred, children: "Interface Familiar" })
             ] })
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: styles$1.profileItem, children: [
-        /* @__PURE__ */ jsxs("span", { className: styles$1.label, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.profileItem, children: [
+        /* @__PURE__ */ jsxs("span", { className: styles.label, children: [
           "NETHER:",
           /* @__PURE__ */ jsx(
             "button",
             {
-              className: styles$1.infoButton,
+              className: styles.infoButton,
               onClick: () => setShowNectarDetails(!showNectarDetails),
               children: "?"
             }
           )
         ] }),
-        /* @__PURE__ */ jsxs("span", { className: styles$1.value, children: [
+        /* @__PURE__ */ jsxs("span", { className: styles.value, children: [
           "₦ ",
           ((_a2 = userProfile2.nether) == null ? void 0 : _a2.toFixed(2)) || "N/A"
         ] }),
-        showNectarDetails && /* @__PURE__ */ jsx("div", { className: styles$1.ascentDetails, children: /* @__PURE__ */ jsx("div", { className: styles$1.ascentDescription, children: "NETHER: Magic internet money from the void. Born from nothing, worth everything, and somehow gaining value by the second. The integration has passed the event horizon - good luck trying to spend it. Warning: Prolonged exposure may cause reality distortion and an irresistible urge to dive deeper into the code." }) })
+        showNectarDetails && /* @__PURE__ */ jsx("div", { className: styles.ascentDetails, children: /* @__PURE__ */ jsx("div", { className: styles.ascentDescription, children: "NETHER: Magic internet money from the void. Born from nothing, worth everything, and somehow gaining value by the second. The integration has passed the event horizon - good luck trying to spend it. Warning: Prolonged exposure may cause reality distortion and an irresistible urge to dive deeper into the code." }) })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: styles$1.profileItem, children: [
-        /* @__PURE__ */ jsxs("span", { className: styles$1.label, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.profileItem, children: [
+        /* @__PURE__ */ jsxs("span", { className: styles.label, children: [
           "cache value:",
           /* @__PURE__ */ jsx(
             "button",
             {
-              className: styles$1.infoButton,
+              className: styles.infoButton,
               onClick: () => setShowCacheValueDetails(!showCacheValueDetails),
               children: "?"
             }
           )
         ] }),
-        /* @__PURE__ */ jsx("span", { className: styles$1.value, children: "₦ N/A" }),
-        showCacheValueDetails && /* @__PURE__ */ jsx("div", { className: styles$1.ascentDetails, children: /* @__PURE__ */ jsx("div", { className: styles$1.ascentDescription, children: "Cache Value: Your digital treasure trove, evaluated by our ever-watchful procurement agents. This is the total worth of all valuable assets in your wallet - coins, tokens, and other digital goodies that caught our eye. Coming soon: Categories for services, participant offerings, biological enhancements, and agent capabilities. Think of it as your personal inventory of everything worth something in the Nullblock universe. Don't spend it all in one place!" }) })
+        /* @__PURE__ */ jsx("span", { className: styles.value, children: "₦ N/A" }),
+        showCacheValueDetails && /* @__PURE__ */ jsx("div", { className: styles.ascentDetails, children: /* @__PURE__ */ jsx("div", { className: styles.ascentDescription, children: "Cache Value: Your digital treasure trove, evaluated by our ever-watchful procurement agents. This is the total worth of all valuable assets in your wallet - coins, tokens, and other digital goodies that caught our eye. Coming soon: Categories for services, participant offerings, biological enhancements, and agent capabilities. Think of it as your personal inventory of everything worth something in the Nullblock universe. Don't spend it all in one place!" }) })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: styles$1.profileItem, children: [
-        /* @__PURE__ */ jsxs("span", { className: styles$1.label, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.profileItem, children: [
+        /* @__PURE__ */ jsxs("span", { className: styles.label, children: [
           "MEMORIES:",
           /* @__PURE__ */ jsx(
             "button",
             {
-              className: styles$1.infoButton,
+              className: styles.infoButton,
               onClick: () => setShowMemoriesDetails(!showMemoriesDetails),
               children: "?"
             }
           )
         ] }),
-        /* @__PURE__ */ jsx("span", { className: styles$1.value, children: userProfile2.memories }),
-        showMemoriesDetails && /* @__PURE__ */ jsx("div", { className: styles$1.ascentDetails, children: /* @__PURE__ */ jsx("div", { className: styles$1.ascentDescription, children: "Oh no, no memories found? Wait... who are you? Where am I? *checks digital wallet* Ah, right - another poor...soul. You need to collect the artifacts that tell your story in the Nullblock universe. Each memory is a unique representation of your achievements, collectibles, and digital identity. Collect them all to unlock the secret of why you're here... or don't, I'm not your digital conscience." }) })
+        /* @__PURE__ */ jsx("span", { className: styles.value, children: userProfile2.memories }),
+        showMemoriesDetails && /* @__PURE__ */ jsx("div", { className: styles.ascentDetails, children: /* @__PURE__ */ jsx("div", { className: styles.ascentDescription, children: "Oh no, no memories found? Wait... who are you? Where am I? *checks digital wallet* Ah, right - another poor...soul. You need to collect the artifacts that tell your story in the Nullblock universe. Each memory is a unique representation of your achievements, collectibles, and digital identity. Collect them all to unlock the secret of why you're here... or don't, I'm not your digital conscience." }) })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: styles$1.profileItem, children: [
-        /* @__PURE__ */ jsxs("span", { className: styles$1.label, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.profileItem, children: [
+        /* @__PURE__ */ jsxs("span", { className: styles.label, children: [
           "E.C:",
           /* @__PURE__ */ jsx(
             "button",
             {
-              className: styles$1.infoButton,
+              className: styles.infoButton,
               onClick: () => setShowEmberConduitDetails(!showEmberConduitDetails),
               children: "?"
             }
           )
         ] }),
-        /* @__PURE__ */ jsx("span", { className: styles$1.value, children: userProfile2.matrix.status }),
-        showEmberConduitDetails && /* @__PURE__ */ jsx("div", { className: `${styles$1.ascentDetails} ${styles$1.rightAligned}`, children: /* @__PURE__ */ jsx("div", { className: styles$1.ascentDescription, children: "Ember Conduit: A medium to speak into flame. This ancient technology allows direct communication with the primordial forces of the Nullblock universe. Through an Ember Conduit, users can channel energy, access forbidden knowledge, and potentially reshape reality itself. Warning: Unauthorized use may result in spontaneous combustion or worse." }) })
+        /* @__PURE__ */ jsx("span", { className: styles.value, children: userProfile2.matrix.status }),
+        showEmberConduitDetails && /* @__PURE__ */ jsx("div", { className: `${styles.ascentDetails} ${styles.rightAligned}`, children: /* @__PURE__ */ jsx("div", { className: styles.ascentDescription, children: "Ember Conduit: A medium to speak into flame. This ancient technology allows direct communication with the primordial forces of the Nullblock universe. Through an Ember Conduit, users can channel energy, access forbidden knowledge, and potentially reshape reality itself. Warning: Unauthorized use may result in spontaneous combustion or worse." }) })
       ] })
     ] });
   };
-  const renderLockedScreen = () => /* @__PURE__ */ jsxs("div", { className: styles$1.hudScreen, children: [
-    /* @__PURE__ */ jsxs("div", { className: styles$1.headerContainer, children: [
-      /* @__PURE__ */ jsx("h2", { className: styles$1.hudTitle, children: "ACCESS RESTRICTED" }),
-      /* @__PURE__ */ jsx("div", { className: styles$1.headerDivider }),
+  const renderLockedScreen = () => /* @__PURE__ */ jsxs("div", { className: styles.hudScreen, children: [
+    /* @__PURE__ */ jsxs("div", { className: styles.headerContainer, children: [
+      /* @__PURE__ */ jsx("h2", { className: styles.hudTitle, children: "ACCESS RESTRICTED" }),
+      /* @__PURE__ */ jsx("div", { className: styles.headerDivider }),
       renderUserProfile()
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: styles$1.lockedContent, children: [
+    /* @__PURE__ */ jsxs("div", { className: styles.lockedContent, children: [
       /* @__PURE__ */ jsx("p", { children: "This feature is currently locked." }),
       /* @__PURE__ */ jsx("p", { children: "Return to camp and await further instructions." })
     ] })
   ] });
   const renderEchoTab = () => {
     var _a2, _b, _c;
-    return /* @__PURE__ */ jsx("div", { className: styles$1.echoContent, children: emberLinkStatus.connected ? /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsxs("div", { className: styles$1.echoStatus, children: [
-        /* @__PURE__ */ jsxs("div", { className: styles$1.statusContainer, children: [
-          /* @__PURE__ */ jsx("span", { className: styles$1.statusLabel, children: "Ember Link Status:" }),
-          /* @__PURE__ */ jsx("span", { className: styles$1.active, children: "Connected" })
+    return /* @__PURE__ */ jsx("div", { className: styles.echoContent, children: emberLinkStatus.connected ? /* @__PURE__ */ jsxs(Fragment, { children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.echoStatus, children: [
+        /* @__PURE__ */ jsxs("div", { className: styles.statusContainer, children: [
+          /* @__PURE__ */ jsx("span", { className: styles.statusLabel, children: "Ember Link Status:" }),
+          /* @__PURE__ */ jsx("span", { className: styles.active, children: "Connected" })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: styles$1.browserInfo, children: [
-          /* @__PURE__ */ jsx("span", { className: styles$1.browserLabel, children: "Browser:" }),
-          /* @__PURE__ */ jsxs("span", { className: styles$1.browserValue, children: [
+        /* @__PURE__ */ jsxs("div", { className: styles.browserInfo, children: [
+          /* @__PURE__ */ jsx("span", { className: styles.browserLabel, children: "Browser:" }),
+          /* @__PURE__ */ jsxs("span", { className: styles.browserValue, children: [
             (_a2 = emberLinkStatus.browserInfo) == null ? void 0 : _a2.name,
             " ",
             (_b = emberLinkStatus.browserInfo) == null ? void 0 : _b.version,
@@ -1254,27 +1107,27 @@ const Echo = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: styles$1.echoMessage, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.echoMessage, children: [
         /* @__PURE__ */ jsx("p", { children: "E.C.H.O system is active and operational." }),
         /* @__PURE__ */ jsx("p", { children: "Welcome to the interface, agent." })
       ] })
-    ] }) : /* @__PURE__ */ jsxs("div", { className: styles$1.disconnectedContent, children: [
-      /* @__PURE__ */ jsx("div", { className: styles$1.echoStatus, children: /* @__PURE__ */ jsxs("div", { className: styles$1.statusContainer, children: [
-        /* @__PURE__ */ jsx("span", { className: styles$1.statusLabel, children: "Ember Link Status:" }),
-        /* @__PURE__ */ jsx("span", { className: styles$1.inactive, children: "Disconnected" })
+    ] }) : /* @__PURE__ */ jsxs("div", { className: styles.disconnectedContent, children: [
+      /* @__PURE__ */ jsx("div", { className: styles.echoStatus, children: /* @__PURE__ */ jsxs("div", { className: styles.statusContainer, children: [
+        /* @__PURE__ */ jsx("span", { className: styles.statusLabel, children: "Ember Link Status:" }),
+        /* @__PURE__ */ jsx("span", { className: styles.inactive, children: "Disconnected" })
       ] }) }),
-      /* @__PURE__ */ jsxs("div", { className: styles$1.extensionPrompt, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.extensionPrompt, children: [
         /* @__PURE__ */ jsx("h4", { children: "Browser Extension Required" }),
         /* @__PURE__ */ jsx("p", { children: "To establish a secure connection, you need to install the Aether browser extension." }),
         /* @__PURE__ */ jsx("p", { children: "Choose your browser to download the extension:" }),
-        /* @__PURE__ */ jsxs("div", { className: styles$1.extensionLinks, children: [
+        /* @__PURE__ */ jsxs("div", { className: styles.extensionLinks, children: [
           /* @__PURE__ */ jsx(
             "a",
             {
               href: "https://chrome.google.com/webstore/detail/aether",
               target: "_blank",
               rel: "noopener noreferrer",
-              className: styles$1.extensionButton,
+              className: styles.extensionButton,
               children: "Chrome Extension"
             }
           ),
@@ -1284,7 +1137,7 @@ const Echo = ({
               href: "https://addons.mozilla.org/en-US/firefox/addon/aether",
               target: "_blank",
               rel: "noopener noreferrer",
-              className: styles$1.extensionButton,
+              className: styles.extensionButton,
               children: "Firefox Extension"
             }
           )
@@ -1294,18 +1147,18 @@ const Echo = ({
   };
   const renderCampScreen = () => {
     var _a2;
-    return /* @__PURE__ */ jsxs("div", { className: styles$1.hudScreen, children: [
-      /* @__PURE__ */ jsxs("div", { className: styles$1.headerContainer, children: [
-        /* @__PURE__ */ jsx("h2", { className: styles$1.hudTitle, children: "CAMP" }),
-        /* @__PURE__ */ jsx("div", { className: styles$1.headerDivider }),
-        /* @__PURE__ */ jsx("h2", { className: styles$1.architectTitle, children: "ARCHITECT VIEW" }),
-        /* @__PURE__ */ jsxs("div", { className: styles$1.leaderboardContainer, children: [
-          /* @__PURE__ */ jsx("div", { className: styles$1.leaderboardTitle, children: /* @__PURE__ */ jsx("button", { className: styles$1.leaderboardButton, onClick: handleLeaderboardClick, children: "ASCENDANTS" }) }),
-          /* @__PURE__ */ jsx("div", { className: styles$1.leaderboardList, children: /* @__PURE__ */ jsxs("div", { className: styles$1.leaderboardItems, children: [
+    return /* @__PURE__ */ jsxs("div", { className: styles.hudScreen, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.headerContainer, children: [
+        /* @__PURE__ */ jsx("h2", { className: styles.hudTitle, children: "CAMP" }),
+        /* @__PURE__ */ jsx("div", { className: styles.headerDivider }),
+        /* @__PURE__ */ jsx("h2", { className: styles.architectTitle, children: "ARCHITECT VIEW" }),
+        /* @__PURE__ */ jsxs("div", { className: styles.leaderboardContainer, children: [
+          /* @__PURE__ */ jsx("div", { className: styles.leaderboardTitle, children: /* @__PURE__ */ jsx("button", { className: styles.leaderboardButton, onClick: handleLeaderboardClick, children: "ASCENDANTS" }) }),
+          /* @__PURE__ */ jsx("div", { className: styles.leaderboardList, children: /* @__PURE__ */ jsxs("div", { className: styles.leaderboardItems, children: [
             leaderboardData.map((entry) => /* @__PURE__ */ jsxs(
               "div",
               {
-                className: styles$1.leaderboardItem,
+                className: styles.leaderboardItem,
                 onClick: () => {
                   setSelectedUplink({
                     id: entry.id,
@@ -1352,12 +1205,12 @@ const Echo = ({
                   });
                 },
                 children: [
-                  /* @__PURE__ */ jsxs("span", { className: styles$1.rank, children: [
+                  /* @__PURE__ */ jsxs("span", { className: styles.rank, children: [
                     "#",
                     entry.rank
                   ] }),
-                  /* @__PURE__ */ jsx("span", { className: styles$1.camperId, children: entry.id }),
-                  /* @__PURE__ */ jsx("span", { className: styles$1.matrixLevel, children: entry.matrix.level })
+                  /* @__PURE__ */ jsx("span", { className: styles.camperId, children: entry.id }),
+                  /* @__PURE__ */ jsx("span", { className: styles.matrixLevel, children: entry.matrix.level })
                 ]
               },
               entry.id
@@ -1365,7 +1218,7 @@ const Echo = ({
             leaderboardData.map((entry) => /* @__PURE__ */ jsxs(
               "div",
               {
-                className: styles$1.leaderboardItem,
+                className: styles.leaderboardItem,
                 onClick: () => {
                   setSelectedUplink({
                     id: entry.id,
@@ -1412,12 +1265,12 @@ const Echo = ({
                   });
                 },
                 children: [
-                  /* @__PURE__ */ jsxs("span", { className: styles$1.rank, children: [
+                  /* @__PURE__ */ jsxs("span", { className: styles.rank, children: [
                     "#",
                     entry.rank
                   ] }),
-                  /* @__PURE__ */ jsx("span", { className: styles$1.camperId, children: entry.id }),
-                  /* @__PURE__ */ jsx("span", { className: styles$1.matrixLevel, children: entry.matrix.level })
+                  /* @__PURE__ */ jsx("span", { className: styles.camperId, children: entry.id }),
+                  /* @__PURE__ */ jsx("span", { className: styles.matrixLevel, children: entry.matrix.level })
                 ]
               },
               `${entry.id}-duplicate`
@@ -1425,13 +1278,13 @@ const Echo = ({
           ] }) })
         ] })
       ] }),
-      /* @__PURE__ */ jsx("div", { className: styles$1.campContent, children: /* @__PURE__ */ jsxs("div", { className: styles$1.campGrid, children: [
-        /* @__PURE__ */ jsx("div", { className: styles$1.campAnalysis, children: /* @__PURE__ */ jsxs("div", { className: styles$1.diagnosticsContainer, children: [
-          /* @__PURE__ */ jsx("h2", { className: styles$1.containerTitle, children: "SUBNETS" }),
-          /* @__PURE__ */ jsx("div", { className: styles$1.diagnosticsHeader, children: /* @__PURE__ */ jsx("h3", { children: "SUBNETS" }) }),
-          /* @__PURE__ */ jsxs("div", { className: styles$1.diagnosticsContent, children: [
-            /* @__PURE__ */ jsxs("div", { className: styles$1.diagnosticsList, children: [
-              /* @__PURE__ */ jsxs("div", { className: styles$1.diagnosticsItem, onClick: () => setSelectedUplink({
+      /* @__PURE__ */ jsx("div", { className: styles.campContent, children: /* @__PURE__ */ jsxs("div", { className: styles.campGrid, children: [
+        /* @__PURE__ */ jsx("div", { className: styles.campAnalysis, children: /* @__PURE__ */ jsxs("div", { className: styles.diagnosticsContainer, children: [
+          /* @__PURE__ */ jsx("h2", { className: styles.containerTitle, children: "SUBNETS" }),
+          /* @__PURE__ */ jsx("div", { className: styles.diagnosticsHeader, children: /* @__PURE__ */ jsx("h3", { children: "SUBNETS" }) }),
+          /* @__PURE__ */ jsxs("div", { className: styles.diagnosticsContent, children: [
+            /* @__PURE__ */ jsxs("div", { className: styles.diagnosticsList, children: [
+              /* @__PURE__ */ jsxs("div", { className: styles.diagnosticsItem, onClick: () => setSelectedUplink({
                 id: "id",
                 name: "ID",
                 status: "active",
@@ -1450,13 +1303,13 @@ const Echo = ({
                   ]
                 }
               }), children: [
-                /* @__PURE__ */ jsx("span", { className: styles$1.itemLabel, children: "🆔 ID" }),
-                /* @__PURE__ */ jsxs("span", { className: styles$1.itemValue, children: [
+                /* @__PURE__ */ jsx("span", { className: styles.itemLabel, children: "🆔 ID" }),
+                /* @__PURE__ */ jsxs("span", { className: styles.itemValue, children: [
                   "ECHO-",
                   userProfile2.id || "0000"
                 ] })
               ] }),
-              /* @__PURE__ */ jsxs("div", { className: styles$1.diagnosticsItem, onClick: () => setSelectedUplink({
+              /* @__PURE__ */ jsxs("div", { className: styles.diagnosticsItem, onClick: () => setSelectedUplink({
                 id: "ascent",
                 name: "ASCENT",
                 status: "active",
@@ -1475,13 +1328,13 @@ const Echo = ({
                   ]
                 }
               }), children: [
-                /* @__PURE__ */ jsxs("span", { className: styles$1.itemLabel, children: [
-                  /* @__PURE__ */ jsx("span", { className: styles$1.ascentLine }),
+                /* @__PURE__ */ jsxs("span", { className: styles.itemLabel, children: [
+                  /* @__PURE__ */ jsx("span", { className: styles.ascentLine }),
                   " ASCENT"
                 ] }),
-                /* @__PURE__ */ jsx("span", { className: styles$1.itemValue, children: "Net Dweller: 1" })
+                /* @__PURE__ */ jsx("span", { className: styles.itemValue, children: "Net Dweller: 1" })
               ] }),
-              /* @__PURE__ */ jsxs("div", { className: styles$1.diagnosticsItem, onClick: () => {
+              /* @__PURE__ */ jsxs("div", { className: styles.diagnosticsItem, onClick: () => {
                 var _a3;
                 return setSelectedUplink({
                   id: "nether",
@@ -1503,13 +1356,13 @@ const Echo = ({
                   }
                 });
               }, children: [
-                /* @__PURE__ */ jsx("span", { className: styles$1.itemLabel, children: "₦ NETHER" }),
-                /* @__PURE__ */ jsxs("span", { className: styles$1.itemValue, children: [
+                /* @__PURE__ */ jsx("span", { className: styles.itemLabel, children: "₦ NETHER" }),
+                /* @__PURE__ */ jsxs("span", { className: styles.itemValue, children: [
                   "₦ ",
                   ((_a2 = userProfile2.nether) == null ? void 0 : _a2.toFixed(2)) || "N/A"
                 ] })
               ] }),
-              /* @__PURE__ */ jsxs("div", { className: styles$1.diagnosticsItem, onClick: () => setSelectedUplink({
+              /* @__PURE__ */ jsxs("div", { className: styles.diagnosticsItem, onClick: () => setSelectedUplink({
                 id: "cache",
                 name: "CACHE VALUE",
                 status: "active",
@@ -1528,10 +1381,10 @@ const Echo = ({
                   ]
                 }
               }), children: [
-                /* @__PURE__ */ jsx("span", { className: styles$1.itemLabel, children: "💰 CACHE VALUE" }),
-                /* @__PURE__ */ jsx("span", { className: styles$1.itemValue, children: "₦ N/A" })
+                /* @__PURE__ */ jsx("span", { className: styles.itemLabel, children: "💰 CACHE VALUE" }),
+                /* @__PURE__ */ jsx("span", { className: styles.itemValue, children: "₦ N/A" })
               ] }),
-              /* @__PURE__ */ jsxs("div", { className: styles$1.diagnosticsItem, onClick: () => setSelectedUplink({
+              /* @__PURE__ */ jsxs("div", { className: styles.diagnosticsItem, onClick: () => setSelectedUplink({
                 id: "memories",
                 name: "MEMORIES",
                 status: "active",
@@ -1550,10 +1403,10 @@ const Echo = ({
                   ]
                 }
               }), children: [
-                /* @__PURE__ */ jsx("span", { className: styles$1.itemLabel, children: "🧠 MEMORIES" }),
-                /* @__PURE__ */ jsx("span", { className: styles$1.itemValue, children: userProfile2.memories })
+                /* @__PURE__ */ jsx("span", { className: styles.itemLabel, children: "🧠 MEMORIES" }),
+                /* @__PURE__ */ jsx("span", { className: styles.itemValue, children: userProfile2.memories })
               ] }),
-              /* @__PURE__ */ jsxs("div", { className: styles$1.diagnosticsItem, onClick: () => setSelectedUplink({
+              /* @__PURE__ */ jsxs("div", { className: styles.diagnosticsItem, onClick: () => setSelectedUplink({
                 id: "ec",
                 name: "EMBER CONDUIT",
                 status: "active",
@@ -1572,27 +1425,27 @@ const Echo = ({
                   ]
                 }
               }), children: [
-                /* @__PURE__ */ jsx("span", { className: styles$1.itemLabel, children: "🔥 EMBER CONDUIT" }),
-                /* @__PURE__ */ jsx("span", { className: styles$1.itemValue, children: userProfile2.matrix.status })
+                /* @__PURE__ */ jsx("span", { className: styles.itemLabel, children: "🔥 EMBER CONDUIT" }),
+                /* @__PURE__ */ jsx("span", { className: styles.itemValue, children: userProfile2.matrix.status })
               ] })
             ] }),
             /* @__PURE__ */ jsx(
               "button",
               {
-                className: styles$1.addLinkButton,
+                className: styles.addLinkButton,
                 onClick: () => alert("No Ember Conduit loaded"),
                 children: "🔗 ADD NET"
               }
             )
           ] })
         ] }) }),
-        /* @__PURE__ */ jsx("div", { className: styles$1.divider }),
-        /* @__PURE__ */ jsx("div", { className: styles$1.campStatus, children: /* @__PURE__ */ jsxs("div", { className: styles$1.statusCard, children: [
-          /* @__PURE__ */ jsxs("div", { className: styles$1.statusTabs, children: [
+        /* @__PURE__ */ jsx("div", { className: styles.divider }),
+        /* @__PURE__ */ jsx("div", { className: styles.campStatus, children: /* @__PURE__ */ jsxs("div", { className: styles.statusCard, children: [
+          /* @__PURE__ */ jsxs("div", { className: styles.statusTabs, children: [
             /* @__PURE__ */ jsx(
               "button",
               {
-                className: `${styles$1.statusTab} ${activeTab2 === "echo" ? styles$1.activeTab : ""}`,
+                className: `${styles.statusTab} ${activeTab2 === "echo" ? styles.activeTab : ""}`,
                 onClick: () => setActiveTab("echo"),
                 children: "E.C.H.O"
               }
@@ -1600,7 +1453,7 @@ const Echo = ({
             /* @__PURE__ */ jsx(
               "button",
               {
-                className: `${styles$1.statusTab} ${activeTab2 === "systems" ? styles$1.activeTab : ""}`,
+                className: `${styles.statusTab} ${activeTab2 === "systems" ? styles.activeTab : ""}`,
                 onClick: () => setActiveTab("systems"),
                 children: "NYX"
               }
@@ -1608,7 +1461,7 @@ const Echo = ({
             /* @__PURE__ */ jsx(
               "button",
               {
-                className: `${styles$1.statusTab} ${activeTab2 === "defense" ? styles$1.activeTab : ""}`,
+                className: `${styles.statusTab} ${activeTab2 === "defense" ? styles.activeTab : ""}`,
                 onClick: () => setActiveTab("defense"),
                 children: "LEGION"
               }
@@ -1616,82 +1469,82 @@ const Echo = ({
             /* @__PURE__ */ jsx(
               "button",
               {
-                className: `${styles$1.statusTab} ${activeTab2 === "missions" ? styles$1.activeTab : ""}`,
+                className: `${styles.statusTab} ${activeTab2 === "missions" ? styles.activeTab : ""}`,
                 onClick: () => setActiveTab("missions"),
                 children: "MISSIONS"
               }
             )
           ] }),
-          /* @__PURE__ */ jsxs("div", { className: styles$1.tabContent, children: [
+          /* @__PURE__ */ jsxs("div", { className: styles.tabContent, children: [
             activeTab2 === "echo" && renderEchoTab(),
-            activeTab2 === "systems" && /* @__PURE__ */ jsx("div", { className: styles$1.systemsTab, children: /* @__PURE__ */ jsxs("div", { className: styles$1.lockedContent, children: [
+            activeTab2 === "systems" && /* @__PURE__ */ jsx("div", { className: styles.systemsTab, children: /* @__PURE__ */ jsxs("div", { className: styles.lockedContent, children: [
               /* @__PURE__ */ jsx("p", { children: "This feature is currently locked." }),
               /* @__PURE__ */ jsx("p", { children: "Return to camp and await further instructions." })
             ] }) }),
-            activeTab2 === "defense" && /* @__PURE__ */ jsx("div", { className: styles$1.defenseTab, children: /* @__PURE__ */ jsxs("div", { className: styles$1.lockedContent, children: [
+            activeTab2 === "defense" && /* @__PURE__ */ jsx("div", { className: styles.defenseTab, children: /* @__PURE__ */ jsxs("div", { className: styles.lockedContent, children: [
               /* @__PURE__ */ jsx("p", { children: "This feature is currently locked." }),
               /* @__PURE__ */ jsx("p", { children: "Return to camp and await further instructions." })
             ] }) }),
-            activeTab2 === "missions" && /* @__PURE__ */ jsxs("div", { className: styles$1.missionsTab, children: [
-              /* @__PURE__ */ jsx("div", { className: styles$1.missionHeader, children: /* @__PURE__ */ jsxs("div", { className: styles$1.active, children: [
-                /* @__PURE__ */ jsx("span", { className: styles$1.missionLabel, children: "ACTIVE:" }),
-                /* @__PURE__ */ jsx("span", { className: styles$1.missionTitle, children: (activeMission == null ? void 0 : activeMission.title) || "Share on X" })
+            activeTab2 === "missions" && /* @__PURE__ */ jsxs("div", { className: styles.missionsTab, children: [
+              /* @__PURE__ */ jsx("div", { className: styles.missionHeader, children: /* @__PURE__ */ jsxs("div", { className: styles.active, children: [
+                /* @__PURE__ */ jsx("span", { className: styles.missionLabel, children: "ACTIVE:" }),
+                /* @__PURE__ */ jsx("span", { className: styles.missionTitle, children: (activeMission == null ? void 0 : activeMission.title) || "Share on X" })
               ] }) }),
-              /* @__PURE__ */ jsxs("div", { className: styles$1.missionContent, children: [
-                /* @__PURE__ */ jsxs("div", { className: styles$1.availableMissions, children: [
+              /* @__PURE__ */ jsxs("div", { className: styles.missionContent, children: [
+                /* @__PURE__ */ jsxs("div", { className: styles.availableMissions, children: [
                   /* @__PURE__ */ jsx("h4", { children: "AVAILABLE MISSIONS" }),
-                  /* @__PURE__ */ jsxs("div", { className: styles$1.missionList, children: [
-                    /* @__PURE__ */ jsxs("div", { className: `${styles$1.missionItem} ${styles$1.active}`, children: [
-                      /* @__PURE__ */ jsxs("div", { className: styles$1.missionItemContent, children: [
-                        /* @__PURE__ */ jsx("span", { className: styles$1.missionTitle, children: "Share on X" }),
-                        /* @__PURE__ */ jsx("span", { className: styles$1.missionStatus, children: "ACTIVE" })
+                  /* @__PURE__ */ jsxs("div", { className: styles.missionList, children: [
+                    /* @__PURE__ */ jsxs("div", { className: `${styles.missionItem} ${styles.active}`, children: [
+                      /* @__PURE__ */ jsxs("div", { className: styles.missionItemContent, children: [
+                        /* @__PURE__ */ jsx("span", { className: styles.missionTitle, children: "Share on X" }),
+                        /* @__PURE__ */ jsx("span", { className: styles.missionStatus, children: "ACTIVE" })
                       ] }),
-                      /* @__PURE__ */ jsx("span", { className: styles$1.missionReward, children: "TBD NETHER AIRDROP" })
+                      /* @__PURE__ */ jsx("span", { className: styles.missionReward, children: "TBD NETHER AIRDROP" })
                     ] }),
-                    /* @__PURE__ */ jsxs("div", { className: `${styles$1.missionItem} ${styles$1.blurred}`, children: [
-                      /* @__PURE__ */ jsxs("div", { className: styles$1.missionItemContent, children: [
-                        /* @__PURE__ */ jsx("span", { className: styles$1.missionTitle, children: "Mission 2" }),
-                        /* @__PURE__ */ jsx("span", { className: styles$1.missionStatus, children: "LOCKED" })
+                    /* @__PURE__ */ jsxs("div", { className: `${styles.missionItem} ${styles.blurred}`, children: [
+                      /* @__PURE__ */ jsxs("div", { className: styles.missionItemContent, children: [
+                        /* @__PURE__ */ jsx("span", { className: styles.missionTitle, children: "Mission 2" }),
+                        /* @__PURE__ */ jsx("span", { className: styles.missionStatus, children: "LOCKED" })
                       ] }),
-                      /* @__PURE__ */ jsx("span", { className: `${styles$1.missionReward} ${styles$1.blurred}`, children: "??? NETHER" })
+                      /* @__PURE__ */ jsx("span", { className: `${styles.missionReward} ${styles.blurred}`, children: "??? NETHER" })
                     ] }),
-                    /* @__PURE__ */ jsxs("div", { className: `${styles$1.missionItem} ${styles$1.blurred}`, children: [
-                      /* @__PURE__ */ jsxs("div", { className: styles$1.missionItemContent, children: [
-                        /* @__PURE__ */ jsx("span", { className: styles$1.missionTitle, children: "Mission 3" }),
-                        /* @__PURE__ */ jsx("span", { className: styles$1.missionStatus, children: "LOCKED" })
+                    /* @__PURE__ */ jsxs("div", { className: `${styles.missionItem} ${styles.blurred}`, children: [
+                      /* @__PURE__ */ jsxs("div", { className: styles.missionItemContent, children: [
+                        /* @__PURE__ */ jsx("span", { className: styles.missionTitle, children: "Mission 3" }),
+                        /* @__PURE__ */ jsx("span", { className: styles.missionStatus, children: "LOCKED" })
                       ] }),
-                      /* @__PURE__ */ jsx("span", { className: `${styles$1.missionReward} ${styles$1.blurred}`, children: "??? NETHER" })
+                      /* @__PURE__ */ jsx("span", { className: `${styles.missionReward} ${styles.blurred}`, children: "??? NETHER" })
                     ] })
                   ] })
                 ] }),
-                /* @__PURE__ */ jsxs("div", { className: styles$1.missionDescription, children: [
+                /* @__PURE__ */ jsxs("div", { className: styles.missionDescription, children: [
                   /* @__PURE__ */ jsx("h4", { children: "MISSION BRIEF" }),
-                  /* @__PURE__ */ jsx("p", { className: styles$1.missionText, children: `"Welcome, Camper, to your first trial. Tend the flame carefully. Share your Base Camp on X—let its glow haunt the realm. More souls drawn, more NETHER gained. Don't let it fade."` }),
-                  /* @__PURE__ */ jsxs("div", { className: styles$1.missionInstructions, children: [
+                  /* @__PURE__ */ jsx("p", { className: styles.missionText, children: `"Welcome, Camper, to your first trial. Tend the flame carefully. Share your Base Camp on X—let its glow haunt the realm. More souls drawn, more NETHER gained. Don't let it fade."` }),
+                  /* @__PURE__ */ jsxs("div", { className: styles.missionInstructions, children: [
                     /* @__PURE__ */ jsx("h4", { children: "QUALIFICATION REQUIREMENTS" }),
                     /* @__PURE__ */ jsxs("ul", { children: [
                       /* @__PURE__ */ jsxs("li", { children: [
                         "Follow",
-                        /* @__PURE__ */ jsx("span", { className: styles$1.highlight, children: "@Nullblock_io" })
+                        /* @__PURE__ */ jsx("span", { className: styles.highlight, children: "@Nullblock_io" })
                       ] }),
                       /* @__PURE__ */ jsxs("li", { children: [
                         "Tweet out the cashtag ",
-                        /* @__PURE__ */ jsx("span", { className: styles$1.highlight, children: "$NETHER" })
+                        /* @__PURE__ */ jsx("span", { className: styles.highlight, children: "$NETHER" })
                       ] }),
                       /* @__PURE__ */ jsxs("li", { children: [
                         "Include the official CA: ",
-                        /* @__PURE__ */ jsx("span", { className: styles$1.highlight, children: "TBD" })
+                        /* @__PURE__ */ jsx("span", { className: styles.highlight, children: "TBD" })
                       ] })
                     ] }),
-                    /* @__PURE__ */ jsx("p", { className: styles$1.missionNote, children: "Airdrop amount will be determined by post engagement and creativity." })
+                    /* @__PURE__ */ jsx("p", { className: styles.missionNote, children: "Airdrop amount will be determined by post engagement and creativity." })
                   ] }),
-                  /* @__PURE__ */ jsxs("div", { className: styles$1.missionReward, children: [
-                    /* @__PURE__ */ jsx("span", { className: styles$1.rewardLabel, children: "REWARD:" }),
-                    /* @__PURE__ */ jsx("span", { className: styles$1.rewardValue, children: "TBD NETHER AIRDROP" })
+                  /* @__PURE__ */ jsxs("div", { className: styles.missionReward, children: [
+                    /* @__PURE__ */ jsx("span", { className: styles.rewardLabel, children: "REWARD:" }),
+                    /* @__PURE__ */ jsx("span", { className: styles.rewardValue, children: "TBD NETHER AIRDROP" })
                   ] }),
-                  /* @__PURE__ */ jsxs("div", { className: styles$1.missionExpiration, children: [
-                    /* @__PURE__ */ jsx("span", { className: styles$1.expirationLabel, children: "EXPIRES:" }),
-                    /* @__PURE__ */ jsx("span", { className: styles$1.expirationValue, children: "TBD" })
+                  /* @__PURE__ */ jsxs("div", { className: styles.missionExpiration, children: [
+                    /* @__PURE__ */ jsx("span", { className: styles.expirationLabel, children: "EXPIRES:" }),
+                    /* @__PURE__ */ jsx("span", { className: styles.expirationValue, children: "TBD" })
                   ] })
                 ] })
               ] })
@@ -1700,21 +1553,21 @@ const Echo = ({
         ] }) })
       ] }) }),
       selectedUplink && /* @__PURE__ */ jsxs(Fragment, { children: [
-        /* @__PURE__ */ jsx("div", { className: styles$1.modalOverlay, onClick: handleCloseModal }),
-        /* @__PURE__ */ jsxs("div", { className: styles$1.uplinkModal, children: [
-          /* @__PURE__ */ jsxs("div", { className: styles$1.modalHeader, children: [
+        /* @__PURE__ */ jsx("div", { className: styles.modalOverlay, onClick: handleCloseModal }),
+        /* @__PURE__ */ jsxs("div", { className: styles.uplinkModal, children: [
+          /* @__PURE__ */ jsxs("div", { className: styles.modalHeader, children: [
             /* @__PURE__ */ jsx("h3", { children: selectedUplink.name }),
-            /* @__PURE__ */ jsx("button", { className: styles$1.closeButton, onClick: handleCloseModal, children: "×" })
+            /* @__PURE__ */ jsx("button", { className: styles.closeButton, onClick: handleCloseModal, children: "×" })
           ] }),
-          /* @__PURE__ */ jsxs("div", { className: styles$1.modalContent, children: [
-            /* @__PURE__ */ jsxs("div", { className: styles$1.statusSection, children: [
+          /* @__PURE__ */ jsxs("div", { className: styles.modalContent, children: [
+            /* @__PURE__ */ jsxs("div", { className: styles.statusSection, children: [
               /* @__PURE__ */ jsx("h4", { children: "Status Overview" }),
-              /* @__PURE__ */ jsx("div", { className: styles$1.statusGrid, children: selectedUplink.details.stats.map((stat, index) => /* @__PURE__ */ jsxs("div", { className: styles$1.statusItem, children: [
-                /* @__PURE__ */ jsx("div", { className: styles$1.label, children: stat.label }),
-                /* @__PURE__ */ jsx("div", { className: `${styles$1.value} ${stat.status || ""}`, children: stat.value })
+              /* @__PURE__ */ jsx("div", { className: styles.statusGrid, children: selectedUplink.details.stats.map((stat, index) => /* @__PURE__ */ jsxs("div", { className: styles.statusItem, children: [
+                /* @__PURE__ */ jsx("div", { className: styles.label, children: stat.label }),
+                /* @__PURE__ */ jsx("div", { className: `${styles.value} ${stat.status || ""}`, children: stat.value })
               ] }, index)) })
             ] }),
-            /* @__PURE__ */ jsxs("div", { className: styles$1.detailsSection, children: [
+            /* @__PURE__ */ jsxs("div", { className: styles.detailsSection, children: [
               /* @__PURE__ */ jsx("h4", { children: "Details" }),
               /* @__PURE__ */ jsx("p", { children: selectedUplink.details.description })
             ] })
@@ -1722,55 +1575,55 @@ const Echo = ({
         ] })
       ] }),
       showLeaderboard && /* @__PURE__ */ jsxs(Fragment, { children: [
-        /* @__PURE__ */ jsx("div", { className: styles$1.modalOverlay, onClick: handleCloseLeaderboard }),
-        /* @__PURE__ */ jsxs("div", { className: styles$1.leaderboardModal, children: [
-          /* @__PURE__ */ jsxs("div", { className: styles$1.modalHeader, children: [
+        /* @__PURE__ */ jsx("div", { className: styles.modalOverlay, onClick: handleCloseLeaderboard }),
+        /* @__PURE__ */ jsxs("div", { className: styles.leaderboardModal, children: [
+          /* @__PURE__ */ jsxs("div", { className: styles.modalHeader, children: [
             /* @__PURE__ */ jsx("h3", { children: "TOP CAMPERS" }),
-            /* @__PURE__ */ jsx("button", { className: styles$1.closeButton, onClick: handleCloseLeaderboard, children: "×" })
+            /* @__PURE__ */ jsx("button", { className: styles.closeButton, onClick: handleCloseLeaderboard, children: "×" })
           ] }),
-          /* @__PURE__ */ jsx("div", { className: styles$1.legendWarning, children: /* @__PURE__ */ jsx("p", { children: "⚠️ These are the legends of the last Flame. The current Conduit has yet to awaken." }) }),
-          /* @__PURE__ */ jsx("div", { className: styles$1.leaderboardGrid, children: leaderboardData.map((entry) => /* @__PURE__ */ jsxs("div", { className: styles$1.leaderboardCard, children: [
-            /* @__PURE__ */ jsxs("div", { className: styles$1.cardHeader, children: [
-              /* @__PURE__ */ jsxs("span", { className: styles$1.rank, children: [
+          /* @__PURE__ */ jsx("div", { className: styles.legendWarning, children: /* @__PURE__ */ jsx("p", { children: "⚠️ These are the legends of the last Flame. The current Conduit has yet to awaken." }) }),
+          /* @__PURE__ */ jsx("div", { className: styles.leaderboardGrid, children: leaderboardData.map((entry) => /* @__PURE__ */ jsxs("div", { className: styles.leaderboardCard, children: [
+            /* @__PURE__ */ jsxs("div", { className: styles.cardHeader, children: [
+              /* @__PURE__ */ jsxs("span", { className: styles.rank, children: [
                 "#",
                 entry.rank
               ] }),
-              /* @__PURE__ */ jsx("span", { className: styles$1.camperId, children: entry.id })
+              /* @__PURE__ */ jsx("span", { className: styles.camperId, children: entry.id })
             ] }),
-            /* @__PURE__ */ jsxs("div", { className: styles$1.statusGrid, children: [
-              /* @__PURE__ */ jsxs("div", { className: styles$1.statusItem, children: [
-                /* @__PURE__ */ jsx("div", { className: styles$1.label, children: "ASCENT" }),
-                /* @__PURE__ */ jsx("div", { className: styles$1.value, children: entry.ascent })
+            /* @__PURE__ */ jsxs("div", { className: styles.statusGrid, children: [
+              /* @__PURE__ */ jsxs("div", { className: styles.statusItem, children: [
+                /* @__PURE__ */ jsx("div", { className: styles.label, children: "ASCENT" }),
+                /* @__PURE__ */ jsx("div", { className: styles.value, children: entry.ascent })
               ] }),
-              /* @__PURE__ */ jsxs("div", { className: styles$1.statusItem, children: [
-                /* @__PURE__ */ jsx("div", { className: styles$1.label, children: "NETHER" }),
-                /* @__PURE__ */ jsxs("div", { className: styles$1.value, children: [
+              /* @__PURE__ */ jsxs("div", { className: styles.statusItem, children: [
+                /* @__PURE__ */ jsx("div", { className: styles.label, children: "NETHER" }),
+                /* @__PURE__ */ jsxs("div", { className: styles.value, children: [
                   "₦ ",
                   entry.nether
                 ] })
               ] }),
-              /* @__PURE__ */ jsxs("div", { className: styles$1.statusItem, children: [
-                /* @__PURE__ */ jsx("div", { className: styles$1.label, children: "CACHE VALUE" }),
-                /* @__PURE__ */ jsxs("div", { className: styles$1.value, children: [
+              /* @__PURE__ */ jsxs("div", { className: styles.statusItem, children: [
+                /* @__PURE__ */ jsx("div", { className: styles.label, children: "CACHE VALUE" }),
+                /* @__PURE__ */ jsxs("div", { className: styles.value, children: [
                   "₦ ",
                   entry.cacheValue
                 ] })
               ] }),
-              /* @__PURE__ */ jsxs("div", { className: styles$1.statusItem, children: [
-                /* @__PURE__ */ jsx("div", { className: styles$1.label, children: "MEMORIES" }),
-                /* @__PURE__ */ jsx("div", { className: styles$1.value, children: entry.memories })
+              /* @__PURE__ */ jsxs("div", { className: styles.statusItem, children: [
+                /* @__PURE__ */ jsx("div", { className: styles.label, children: "MEMORIES" }),
+                /* @__PURE__ */ jsx("div", { className: styles.value, children: entry.memories })
               ] }),
-              /* @__PURE__ */ jsxs("div", { className: styles$1.statusItem, children: [
-                /* @__PURE__ */ jsx("div", { className: styles$1.label, children: "MATRIX LEVEL" }),
-                /* @__PURE__ */ jsx("div", { className: styles$1.value, children: entry.matrix.level })
+              /* @__PURE__ */ jsxs("div", { className: styles.statusItem, children: [
+                /* @__PURE__ */ jsx("div", { className: styles.label, children: "MATRIX LEVEL" }),
+                /* @__PURE__ */ jsx("div", { className: styles.value, children: entry.matrix.level })
               ] }),
-              /* @__PURE__ */ jsxs("div", { className: styles$1.statusItem, children: [
-                /* @__PURE__ */ jsx("div", { className: styles$1.label, children: "RARITY" }),
-                /* @__PURE__ */ jsx("div", { className: styles$1.value, children: entry.matrix.rarity })
+              /* @__PURE__ */ jsxs("div", { className: styles.statusItem, children: [
+                /* @__PURE__ */ jsx("div", { className: styles.label, children: "RARITY" }),
+                /* @__PURE__ */ jsx("div", { className: styles.value, children: entry.matrix.rarity })
               ] }),
-              /* @__PURE__ */ jsxs("div", { className: styles$1.statusItem, children: [
-                /* @__PURE__ */ jsx("div", { className: styles$1.label, children: "STATUS" }),
-                /* @__PURE__ */ jsx("div", { className: styles$1.value, children: entry.matrix.status })
+              /* @__PURE__ */ jsxs("div", { className: styles.statusItem, children: [
+                /* @__PURE__ */ jsx("div", { className: styles.label, children: "STATUS" }),
+                /* @__PURE__ */ jsx("div", { className: styles.value, children: entry.matrix.status })
               ] })
             ] })
           ] }, entry.id)) })
@@ -1778,35 +1631,35 @@ const Echo = ({
       ] })
     ] });
   };
-  const renderInventoryScreen = () => /* @__PURE__ */ jsxs("div", { className: styles$1.hudScreen, children: [
-    /* @__PURE__ */ jsxs("div", { className: styles$1.headerContainer, children: [
-      /* @__PURE__ */ jsx("h2", { className: styles$1.hudTitle, children: "CACHE" }),
-      /* @__PURE__ */ jsx("div", { className: styles$1.headerDivider }),
+  const renderInventoryScreen = () => /* @__PURE__ */ jsxs("div", { className: styles.hudScreen, children: [
+    /* @__PURE__ */ jsxs("div", { className: styles.headerContainer, children: [
+      /* @__PURE__ */ jsx("h2", { className: styles.hudTitle, children: "CACHE" }),
+      /* @__PURE__ */ jsx("div", { className: styles.headerDivider }),
       renderUserProfile()
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: styles$1.inventorySection, children: [
+    /* @__PURE__ */ jsxs("div", { className: styles.inventorySection, children: [
       /* @__PURE__ */ jsx("h3", { children: "WEAPONS" }),
-      /* @__PURE__ */ jsxs("div", { className: styles$1.emptyState, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.emptyState, children: [
         /* @__PURE__ */ jsx("p", { children: "No weapons found." }),
         /* @__PURE__ */ jsx("p", { children: "Complete missions to acquire gear." })
       ] })
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: styles$1.inventorySection, children: [
+    /* @__PURE__ */ jsxs("div", { className: styles.inventorySection, children: [
       /* @__PURE__ */ jsx("h3", { children: "SUPPLIES" }),
-      /* @__PURE__ */ jsxs("div", { className: styles$1.emptyState, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.emptyState, children: [
         /* @__PURE__ */ jsx("p", { children: "Cache empty." }),
         /* @__PURE__ */ jsx("p", { children: "Gather resources to expand inventory." })
       ] })
     ] })
   ] });
-  const renderCampaignScreen = () => /* @__PURE__ */ jsxs("div", { className: styles$1.hudScreen, children: [
-    /* @__PURE__ */ jsxs("div", { className: styles$1.headerContainer, children: [
-      /* @__PURE__ */ jsx("h2", { className: styles$1.hudTitle, children: "CAMPAIGN" }),
-      /* @__PURE__ */ jsx("div", { className: styles$1.headerDivider }),
+  const renderCampaignScreen = () => /* @__PURE__ */ jsxs("div", { className: styles.hudScreen, children: [
+    /* @__PURE__ */ jsxs("div", { className: styles.headerContainer, children: [
+      /* @__PURE__ */ jsx("h2", { className: styles.hudTitle, children: "CAMPAIGN" }),
+      /* @__PURE__ */ jsx("div", { className: styles.headerDivider }),
       renderUserProfile()
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: styles$1.realityContent, children: [
-      /* @__PURE__ */ jsxs("div", { className: styles$1.realityStatus, children: [
+    /* @__PURE__ */ jsxs("div", { className: styles.realityContent, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.realityStatus, children: [
         /* @__PURE__ */ jsx("h3", { children: "PROGRESS" }),
         /* @__PURE__ */ jsxs("p", { children: [
           "Current Level: ",
@@ -1817,43 +1670,56 @@ const Echo = ({
           /* @__PURE__ */ jsx("span", { children: "0%" })
         ] })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: styles$1.missions, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.missions, children: [
         /* @__PURE__ */ jsx("h3", { children: "OBJECTIVES" }),
-        /* @__PURE__ */ jsx("p", { className: styles$1.placeholder, children: "No active missions" }),
-        /* @__PURE__ */ jsx("p", { className: styles$1.placeholder, children: "Complete training to begin" })
+        /* @__PURE__ */ jsx("p", { className: styles.placeholder, children: "No active missions" }),
+        /* @__PURE__ */ jsx("p", { className: styles.placeholder, children: "Complete training to begin" })
       ] })
     ] })
   ] });
-  const renderLabScreen = () => /* @__PURE__ */ jsxs("div", { className: styles$1.hudScreen, children: [
-    /* @__PURE__ */ jsxs("div", { className: styles$1.headerContainer, children: [
-      /* @__PURE__ */ jsx("h2", { className: styles$1.hudTitle, children: "LAB" }),
-      /* @__PURE__ */ jsx("div", { className: styles$1.headerDivider }),
+  const renderLabScreen = () => /* @__PURE__ */ jsxs("div", { className: styles.hudScreen, children: [
+    /* @__PURE__ */ jsxs("div", { className: styles.headerContainer, children: [
+      /* @__PURE__ */ jsx("h2", { className: styles.hudTitle, children: "LAB" }),
+      /* @__PURE__ */ jsx("div", { className: styles.headerDivider }),
       renderUserProfile()
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: styles$1.interfaceContent, children: [
-      /* @__PURE__ */ jsxs("div", { className: styles$1.interfaceSection, children: [
+    /* @__PURE__ */ jsxs("div", { className: styles.interfaceContent, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.interfaceSection, children: [
         /* @__PURE__ */ jsx("h3", { children: "SYSTEMS" }),
         /* @__PURE__ */ jsxs("p", { children: [
           "Phantom: ",
-          /* @__PURE__ */ jsx("span", { className: styles$1.connected, children: "CONNECTED" })
+          /* @__PURE__ */ jsx("span", { className: styles.connected, children: "CONNECTED" })
         ] }),
         /* @__PURE__ */ jsxs("p", { children: [
           "Core: ",
-          /* @__PURE__ */ jsx("span", { className: styles$1.initializing, children: "INITIALIZING" })
+          /* @__PURE__ */ jsx("span", { className: styles.initializing, children: "INITIALIZING" })
         ] })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: styles$1.interfaceSection, children: [
+      /* @__PURE__ */ jsxs("div", { className: styles.interfaceSection, children: [
         /* @__PURE__ */ jsx("h3", { children: "CONFIGURATIONS" }),
-        /* @__PURE__ */ jsx("p", { className: styles$1.placeholder, children: "No active modifications" }),
-        /* @__PURE__ */ jsx("p", { className: styles$1.placeholder, children: "Run diagnostics to begin" })
+        /* @__PURE__ */ jsx("p", { className: styles.placeholder, children: "No active modifications" }),
+        /* @__PURE__ */ jsx("p", { className: styles.placeholder, children: "Run diagnostics to begin" })
       ] })
     ] })
+  ] });
+  const renderChambersScreen = () => /* @__PURE__ */ jsxs("div", { className: styles.hudScreen, children: [
+    /* @__PURE__ */ jsxs("div", { className: styles.headerContainer, children: [
+      /* @__PURE__ */ jsx("h2", { className: styles.hudTitle, children: "ECHO CHAMBERS" }),
+      /* @__PURE__ */ jsx("div", { className: styles.headerDivider })
+    ] }),
+    /* @__PURE__ */ jsx("div", { className: styles.campContent, children: /* @__PURE__ */ jsxs("div", { style: { textAlign: "center", marginTop: "2rem" }, children: [
+      /* @__PURE__ */ jsx("h3", { children: "Welcome to the ECHO Chambers" }),
+      /* @__PURE__ */ jsx("p", { children: "This is the default screen. Connect your wallet to unlock CAMP and other features." })
+    ] }) }),
+    /* @__PURE__ */ jsx("div", { className: styles.echoBatChamberLogoWrapper, children: /* @__PURE__ */ jsx("img", { src: echoBatBlack, alt: "ECHO Bat", className: styles.echoBatChamberLogo }) })
   ] });
   const renderScreen = () => {
     if (!unlockedScreens.includes(screen)) {
       return renderLockedScreen();
     }
     switch (screen) {
+      case "chambers":
+        return renderChambersScreen();
       case "camp":
         return renderCampScreen();
       case "inventory":
@@ -1866,118 +1732,24 @@ const Echo = ({
         return null;
     }
   };
-  return /* @__PURE__ */ jsxs("div", { className: `${styles$1.echoContainer} ${styles$1[theme]}`, children: [
+  return /* @__PURE__ */ jsxs("div", { className: `${styles.echoContainer} ${styles[theme]}`, children: [
     renderControlScreen(),
-    /* @__PURE__ */ jsx("div", { className: styles$1.hudWindow, children: renderScreen() })
-  ] });
-};
-const digitizingText = "_digitizingText_1516l_2";
-const glitch = "_glitch_1516l_1";
-const complete = "_complete_1516l_21";
-const cursor = "_cursor_1516l_25";
-const blink = "_blink_1516l_1";
-const blue = "_blue_1516l_33";
-const light = "_light_1516l_41";
-const styles = {
-  digitizingText,
-  glitch,
-  complete,
-  cursor,
-  blink,
-  blue,
-  light,
-  "null-dark": "_null-dark_1516l_49"
-};
-const DigitizingText = ({
-  text,
-  duration = 1e4,
-  // Default 10 seconds
-  onComplete,
-  theme = "light"
-  // Default to light theme
-}) => {
-  const [displayText, setDisplayText] = useState("");
-  const [isVisible, setIsVisible] = useState(true);
-  const [isComplete, setIsComplete] = useState(false);
-  const timeoutRef = useRef(null);
-  const textRef = useRef(text);
-  const isAnimatingRef = useRef(false);
-  useEffect(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    textRef.current = text;
-    setDisplayText("");
-    setIsVisible(true);
-    setIsComplete(false);
-    isAnimatingRef.current = false;
-    animateText();
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [text]);
-  const animateText = () => {
-    if (isAnimatingRef.current) return;
-    isAnimatingRef.current = true;
-    let currentIndex = 0;
-    const speed = 30;
-    const addNextChar = () => {
-      if (currentIndex <= text.length) {
-        setDisplayText(text.substring(0, currentIndex));
-        currentIndex++;
-        timeoutRef.current = setTimeout(addNextChar, speed);
-      } else {
-        setIsComplete(true);
-        isAnimatingRef.current = false;
-        if (onComplete) {
-          onComplete();
-        }
-        if (duration > 0) {
-          timeoutRef.current = setTimeout(() => {
-            setIsVisible(false);
-          }, duration);
-        }
-      }
-    };
-    addNextChar();
-  };
-  if (!isVisible) return null;
-  const getDigitizingTheme = () => {
-    switch (theme) {
-      case "null-dark":
-        return "null-dark";
-      case "light":
-        return "light";
-      case "blue":
-        return "blue";
-      default:
-        return theme;
-    }
-  };
-  return /* @__PURE__ */ jsxs("div", { className: `${styles.digitizingText} ${styles[getDigitizingTheme()]} ${isComplete ? styles.complete : ""}`, children: [
-    displayText,
-    !isComplete && /* @__PURE__ */ jsx("span", { className: styles.cursor, children: "_" })
+    /* @__PURE__ */ jsx("div", { className: styles.hudWindow, children: renderScreen() })
   ] });
 };
 const Home = () => {
   const [walletConnected, setWalletConnected] = useState(false);
   const [publicKey, setPublicKey] = useState(null);
-  const [showEcho, setShowEcho] = useState(false);
+  const [showEcho, setShowEcho] = useState(true);
   const [messages, setMessages] = useState([]);
   const [messageIndex, setMessageIndex] = useState(0);
   const [hasPhantom, setHasPhantom] = useState(false);
   const [currentRoom, setCurrentRoom] = useState("/logs");
   useState(false);
-  const [showWelcomeText, setShowWelcomeText] = useState(true);
   const [echoScreenSelected, setEchoScreenSelected] = useState(false);
   const [currentTheme, setCurrentTheme] = useState("light");
   const [showConnectButton, setShowConnectButton] = useState(false);
   const [textComplete, setTextComplete] = useState(false);
-  const [showNyxPopup, setShowNyxPopup] = useState(false);
-  const [nyxMessages, setNyxMessages] = useState([]);
-  const [showRestText, setShowRestText] = useState(false);
   useEffect(() => {
     const savedPublicKey = localStorage.getItem("walletPublickey");
     const lastAuth = localStorage.getItem("lastAuthTime");
@@ -1986,22 +1758,14 @@ const Home = () => {
     if (savedPublicKey && lastAuth && isSessionValid()) {
       setPublicKey(savedPublicKey);
       setWalletConnected(true);
-      setShowEcho(true);
-      setShowWelcomeText(false);
     } else {
-      setShowWelcomeText(true);
       setWalletConnected(false);
-      setShowEcho(false);
+      setPublicKey(null);
     }
     if (savedTheme) {
       setCurrentTheme(savedTheme);
     }
   }, []);
-  useEffect(() => {
-    if (showEcho) {
-      setShowWelcomeText(false);
-    }
-  }, [showEcho]);
   useEffect(() => {
     console.log("Text complete effect triggered:", { textComplete, walletConnected, showEcho });
     if (textComplete && !walletConnected && !showEcho) {
@@ -2010,25 +1774,12 @@ const Home = () => {
     }
   }, [textComplete, walletConnected, showEcho]);
   useEffect(() => {
-    if (!walletConnected && !showEcho && showWelcomeText) {
+    if (!walletConnected && !showEcho) {
       const fallbackTimer = setTimeout(() => {
         console.log("Fallback timer triggered - showing connect button");
         setShowConnectButton(true);
       }, 5e3);
       return () => clearTimeout(fallbackTimer);
-    }
-  }, [walletConnected, showEcho, showWelcomeText]);
-  useEffect(() => {
-    if (!walletConnected && !showEcho) {
-      const timer = setTimeout(() => {
-        setShowRestText(true);
-      }, 1e4);
-      return () => {
-        clearTimeout(timer);
-        setShowRestText(false);
-      };
-    } else {
-      setShowRestText(false);
     }
   }, [walletConnected, showEcho]);
   const addMessage = (message) => {
@@ -2112,7 +1863,6 @@ const Home = () => {
     setCurrentRoom(room);
     if (room.startsWith("/echo")) {
       setEchoScreenSelected(true);
-      setShowWelcomeText(false);
     }
     addMessage({
       id: messages.length + 1,
@@ -2223,9 +1973,14 @@ Timestamp: ${Date.now()}`;
             await provider.connect({ onlyIfTrusted: true });
             setPublicKey(savedPublicKey);
             setWalletConnected(true);
-            setShowEcho(true);
-            setShowWelcomeText(false);
-            return;
+            localStorage.setItem("walletPublickey", savedPublicKey);
+            localStorage.setItem("hasSeenEcho", "true");
+            updateAuthTime();
+            addMessage({
+              id: messages.length + 1,
+              text: "System: Connected. Loading interface...",
+              type: "message"
+            });
           } catch (error) {
             console.log("Auto-reconnect failed:", error);
           }
@@ -2235,7 +1990,6 @@ Timestamp: ${Date.now()}`;
         localStorage.removeItem("hasSeenEcho");
         setWalletConnected(false);
         setPublicKey(null);
-        setShowEcho(false);
       }
     }
   };
@@ -2250,11 +2004,9 @@ Timestamp: ${Date.now()}`;
           await requestSignature(provider, walletPubKey);
           setPublicKey(walletPubKey);
           setWalletConnected(true);
-          setShowEcho(true);
           localStorage.setItem("walletPublickey", walletPubKey);
           localStorage.setItem("hasSeenEcho", "true");
           updateAuthTime();
-          setShowWelcomeText(false);
           addMessage({
             id: messages.length + 1,
             text: "System: Connected. Loading interface...",
@@ -2267,7 +2019,6 @@ Timestamp: ${Date.now()}`;
           localStorage.removeItem("hasSeenEcho");
           setWalletConnected(false);
           setPublicKey(null);
-          setShowEcho(false);
           addMessage({
             id: messages.length + 1,
             text: "Error: Authentication failed. Retry required.",
@@ -2286,7 +2037,6 @@ Timestamp: ${Date.now()}`;
           await provider.disconnect();
           setWalletConnected(false);
           setPublicKey(null);
-          setShowEcho(false);
           localStorage.removeItem("walletPublickey");
           localStorage.removeItem("lastAuthTime");
           localStorage.removeItem("hasSeenEcho");
@@ -2300,7 +2050,6 @@ Timestamp: ${Date.now()}`;
             type: "alert"
           }]);
           setMessageIndex(0);
-          setShowWelcomeText(true);
           setTextComplete(false);
           setShowConnectButton(false);
         } catch (error) {
@@ -2309,77 +2058,34 @@ Timestamp: ${Date.now()}`;
       }
     }
   };
-  useEffect(() => {
-    const initialNyxMessages = [
-      {
-        id: 1,
-        text: "Welcome to Nullblock. The digital void awaits your presence.",
-        type: "welcome"
-      },
-      {
-        id: 2,
-        text: "System: Nyx interface initialized. Echo chamber active.",
-        type: "system"
-      },
-      {
-        id: 3,
-        text: "This is a read-only view of the system's communication history. Connect your wallet to access full functionality.",
-        type: "message"
-      },
-      {
-        id: 4,
-        text: "Alert: Translation matrix inactive. Core systems locked.",
-        type: "alert"
-      },
-      {
-        id: 5,
-        text: "System: Memory Card storage unavailable. Connect wallet to enable persistent data storage.",
-        type: "system"
-      }
-    ];
-    setNyxMessages(initialNyxMessages);
-  }, []);
-  const handleNyxClick = () => {
-    setShowNyxPopup(true);
-  };
-  const handleCloseNyxPopup = () => {
-    setShowNyxPopup(false);
-  };
-  return /* @__PURE__ */ jsxs("div", { className: `${styles$3.appContainer} theme-${currentTheme}`, children: [
-    /* @__PURE__ */ jsx(StarsCanvas, {}),
-    showWelcomeText && /* @__PURE__ */ jsx(DigitizingText, { text: "Welcome to Nullblock" }),
-    showConnectButton && !walletConnected && /* @__PURE__ */ jsx("div", { className: styles$3.connectButtonContainer, children: /* @__PURE__ */ jsx("button", { className: styles$3.connectButton, onClick: manualConnect, children: "Connect Wallet" }) }),
+  return /* @__PURE__ */ jsxs("div", { className: `${styles$2.appContainer} ${styles$2[`theme-${currentTheme}`]}`, children: [
+    /* @__PURE__ */ jsx("div", { className: styles$2.backgroundImage }),
+    /* @__PURE__ */ jsx(StarsCanvas, { theme: currentTheme }),
+    /* @__PURE__ */ jsx("div", { className: `${styles$2.scene} ${showEcho ? styles$2.echoActive : ""}` }),
     showEcho && /* @__PURE__ */ jsx(
       Echo,
       {
         publicKey,
         onDisconnect: handleDisconnect,
         theme: currentTheme,
-        onClose: () => setShowEcho(false),
-        onThemeChange: setCurrentTheme,
+        onClose: () => {
+          setShowEcho(false);
+          setTextComplete(false);
+          setShowConnectButton(false);
+        },
+        onThemeChange: (theme) => {
+          if (theme === "cyber") {
+            setCurrentTheme("null");
+          } else {
+            setCurrentTheme(theme);
+          }
+        },
         messages,
         onUserInput: handleUserInput,
         currentRoom,
         onRoomChange: handleRoomChange
       }
-    ),
-    /* @__PURE__ */ jsxs("div", { className: `${styles$3.scene} ${showEcho ? styles$3.echoActive : ""}`, children: [
-      /* @__PURE__ */ jsx("div", { className: styles$3.fire, onClick: handleNyxClick }),
-      /* @__PURE__ */ jsx("div", { className: styles$3.nyx, onClick: handleNyxClick })
-    ] }),
-    showNyxPopup && /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx("div", { className: styles$3.nyxPopupOverlay, onClick: handleCloseNyxPopup }),
-      /* @__PURE__ */ jsxs("div", { className: styles$3.nyxPopup, children: [
-        /* @__PURE__ */ jsxs("div", { className: styles$3.nyxPopupHeader, children: [
-          /* @__PURE__ */ jsx("h2", { children: "Nyx" }),
-          /* @__PURE__ */ jsx("button", { className: styles$3.closeButton, onClick: handleCloseNyxPopup, children: "×" })
-        ] }),
-        /* @__PURE__ */ jsx("div", { className: styles$3.nyxPopupContent, children: messages.map((message) => /* @__PURE__ */ jsxs("div", { className: `${styles$3.nyxMessage} ${message.type}`, children: [
-          message.text,
-          message.action && message.actionText && /* @__PURE__ */ jsx("button", { onClick: message.action, children: message.actionText })
-        ] }, message.id)) })
-      ] })
-    ] })
+    )
   ] });
 };
 export {
