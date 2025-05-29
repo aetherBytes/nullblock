@@ -3,10 +3,8 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import styles from './index.module.scss';
 import StarsCanvas from '@components/stars/stars';
 import Echo from '@components/echo/echo';
-import DigitizingText from '../../components/digitizing-text';
 import powerOn from '@assets/images/echo_bot_night.png';
 import powerOff from '@assets/images/echo_bot_white.png';
-import nyxImage from '@assets/images/night_wolf_1.png';
 
 type MessageType = 'message' | 'alert' | 'critical' | 'update' | 'action' | 'user' | 'welcome' | 'system';
 
@@ -27,14 +25,10 @@ const Home: React.FC = () => {
   const [hasPhantom, setHasPhantom] = useState<boolean>(false);
   const [currentRoom, setCurrentRoom] = useState<string>('/logs');
   const [isDigitizing, setIsDigitizing] = useState<boolean>(false);
-  const [showWelcomeText, setShowWelcomeText] = useState<boolean>(true);
   const [echoScreenSelected, setEchoScreenSelected] = useState<boolean>(false);
   const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('light');
   const [showConnectButton, setShowConnectButton] = useState<boolean>(false);
   const [textComplete, setTextComplete] = useState<boolean>(false);
-  const [showNyxPopup, setShowNyxPopup] = useState<boolean>(false);
-  const [nyxMessages, setNyxMessages] = useState<ChatMessage[]>([]);
-  const [showRestText, setShowRestText] = useState<boolean>(false);
 
   // Initialize state from localStorage on component mount
   useEffect(() => {
@@ -49,10 +43,7 @@ const Home: React.FC = () => {
       setPublicKey(savedPublicKey);
       setWalletConnected(true);
       setShowEcho(true);
-      setShowWelcomeText(false);
     } else {
-      // Ensure welcome text is shown for new users
-      setShowWelcomeText(true);
       setWalletConnected(false);
       setShowEcho(false);
     }
@@ -61,13 +52,6 @@ const Home: React.FC = () => {
       setCurrentTheme(savedTheme as 'null' | 'light');
     }
   }, []);
-
-  // Hide welcome text when ECHO screen is open
-  useEffect(() => {
-    if (showEcho) {
-      setShowWelcomeText(false);
-    }
-  }, [showEcho]);
 
   // Show connect button when digitized text is complete
   useEffect(() => {
@@ -80,29 +64,13 @@ const Home: React.FC = () => {
 
   // Add a fallback timer to show the connect button after a reasonable time
   useEffect(() => {
-    if (!walletConnected && !showEcho && showWelcomeText) {
+    if (!walletConnected && !showEcho) {
       const fallbackTimer = setTimeout(() => {
         console.log('Fallback timer triggered - showing connect button');
         setShowConnectButton(true);
       }, 5000); // 5 seconds fallback
       
       return () => clearTimeout(fallbackTimer);
-    }
-  }, [walletConnected, showEcho, showWelcomeText]);
-
-  // Add timer effect for rest text
-  useEffect(() => {
-    if (!walletConnected && !showEcho) {
-      const timer = setTimeout(() => {
-        setShowRestText(true);
-      }, 10000); // 10 seconds
-
-      return () => {
-        clearTimeout(timer);
-        setShowRestText(false);
-      };
-    } else {
-      setShowRestText(false);
     }
   }, [walletConnected, showEcho]);
 
@@ -232,7 +200,6 @@ const Home: React.FC = () => {
     setCurrentRoom(room);
     if (room.startsWith('/echo')) {
       setEchoScreenSelected(true);
-      setShowWelcomeText(false);
     }
     addMessage({
       id: messages.length + 1,
@@ -359,8 +326,15 @@ const Home: React.FC = () => {
             setPublicKey(savedPublicKey);
             setWalletConnected(true);
             setShowEcho(true);
-            setShowWelcomeText(false);
-            return; // Exit early on successful reconnection
+            localStorage.setItem('walletPublickey', savedPublicKey);
+            localStorage.setItem('hasSeenEcho', 'true');
+            updateAuthTime();
+            
+            addMessage({
+              id: messages.length + 1,
+              text: "System: Connected. Loading interface...",
+              type: "message"
+            });
           } catch (error) {
             console.log('Auto-reconnect failed:', error);
           }
@@ -393,8 +367,6 @@ const Home: React.FC = () => {
           localStorage.setItem('walletPublickey', walletPubKey);
           localStorage.setItem('hasSeenEcho', 'true');
           updateAuthTime();
-          
-          setShowWelcomeText(false);
           
           addMessage({
             id: messages.length + 1,
@@ -445,7 +417,6 @@ const Home: React.FC = () => {
           setMessageIndex(0);
           
           // Show welcome text and reset text completion state
-          setShowWelcomeText(true);
           setTextComplete(false);
           setShowConnectButton(false);
         } catch (error) {
@@ -459,10 +430,6 @@ const Home: React.FC = () => {
   const handleTextComplete = () => {
     console.log('Text complete callback triggered');
     setTextComplete(true);
-    // Hide the welcome text after animation completes
-    setTimeout(() => {
-      setShowWelcomeText(false);
-    }, 3000);
     // Directly set showConnectButton to true if conditions are met
     if (!walletConnected && !showEcho) {
       console.log('Setting showConnectButton to true directly from callback');
@@ -470,78 +437,22 @@ const Home: React.FC = () => {
     }
   };
 
-  // Add this after other useEffect hooks
-  useEffect(() => {
-    // Initialize Nyx messages
-    const initialNyxMessages: ChatMessage[] = [
-      {
-        id: 1,
-        text: "Welcome to Nullblock. The digital void awaits your presence.",
-        type: "welcome"
-      },
-      {
-        id: 2,
-        text: "System: Nyx interface initialized. Echo chamber active.",
-        type: "system"
-      },
-      {
-        id: 3,
-        text: "This is a read-only view of the system's communication history. Connect your wallet to access full functionality.",
-        type: "message"
-      },
-      {
-        id: 4,
-        text: "Alert: Translation matrix inactive. Core systems locked.",
-        type: "alert"
-      },
-      {
-        id: 5,
-        text: "System: Memory Card storage unavailable. Connect wallet to enable persistent data storage.",
-        type: "system"
-      }
-    ];
-    setNyxMessages(initialNyxMessages);
-  }, []);
-
-  const handleNyxClick = () => {
-    setShowNyxPopup(true);
-  };
-
-  const handleCloseNyxPopup = () => {
-    setShowNyxPopup(false);
-  };
-
   return (
     <div className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]}`}>
       <div className={styles.backgroundImage} />
       <StarsCanvas theme={currentTheme} />
-      <a href="https://twitter.com/nullblock_io" target="_blank" rel="noopener noreferrer" className={styles.socialLink} />
-      <div className={`${styles.scene} ${showEcho ? styles.echoActive : ''}`}>
-        <div className={styles.fire} onClick={manualConnect}></div>
-        <div className={styles.campParts}></div>
-        <div className={styles.nyx} onClick={handleNyxClick}></div>
-        <div className={styles.campForeTree}></div>
+      <div className={styles.socialLinks}>
+        <a href="https://twitter.com/nullblock_io" target="_blank" rel="noopener noreferrer" className={styles.socialLink} />
+        <button className={styles.nullButton} />
       </div>
-      {showWelcomeText && !showEcho && (
-        <DigitizingText 
-          text="Welcome to Nullblock." 
-          duration={3000}
-          theme={currentTheme === 'null' ? 'null-dark' : 'light'}
-          onComplete={handleTextComplete}
-        />
-      )}
-      {showRestText && !showEcho && !walletConnected && (
-        <div className={styles.restText}>rest at camp</div>
-      )}
+      <div className={`${styles.scene} ${showEcho ? styles.echoActive : ''}`}>
+      </div>
       {showEcho && <Echo 
         publicKey={publicKey} 
         onDisconnect={handleDisconnect}
         theme={currentTheme}
         onClose={() => {
           setShowEcho(false);
-          // Don't reset wallet connection when just closing the Echo component
-          // Only reset the welcome text and connect button state
-          setShowWelcomeText(true);
           setTextComplete(false);
           setShowConnectButton(false);
         }}
@@ -557,32 +468,6 @@ const Home: React.FC = () => {
         currentRoom={currentRoom}
         onRoomChange={handleRoomChange}
       />}
-
-      {showNyxPopup && (
-        <>
-          <div className={styles.nyxPopupOverlay} onClick={handleCloseNyxPopup} />
-          <div className={styles.nyxPopup}>
-            <div className={styles.nyxPopupHeader}>
-              <h2>Nyx Echo Chamber</h2>
-              <button className={styles.closeButton} onClick={handleCloseNyxPopup}>×</button>
-            </div>
-            <div className={styles.nyxPopupContent}>
-              {nyxMessages.map((message) => (
-                <div 
-                  key={message.id} 
-                  className={`${styles.nyxMessage} ${
-                    message.type === 'alert' ? styles.alert : 
-                    message.type === 'system' ? styles.system :
-                    message.type === 'welcome' ? styles.welcome : ''
-                  }`}
-                >
-                  {message.text}
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 };
