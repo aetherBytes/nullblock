@@ -2884,3 +2884,22 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   width: max-content;
 }
 
+.nullblockTitle {
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'Share Tech Mono', 'Fira Mono', 'Consolas', 'monospace';
+  font-size: 1.1rem;
+  font-weight: bold;
+  letter-spacing: 0.18em;
+  color: #00a8ff;
+  z-index: 30;
+  /* background: rgba(0,0,0,0.18); */
+  padding: 0.2rem 1.1rem 0.2rem 0.7rem;
+  border-radius: 8px;
+  box-shadow: 0 0 4px rgba(0,168,255,0.08);
+  pointer-events: none;
+  user-select: none;
+}
+
