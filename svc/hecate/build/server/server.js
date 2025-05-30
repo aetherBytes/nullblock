@@ -112,7 +112,7 @@ const routes = [
     children: [
       {
         index: true,
-        lazy: n(() => import("./assets/index-DqIVALUB.js"), "@pages/home")
+        lazy: n(() => import("./assets/index-e5iWQnGa.js"), "@pages/home")
       },
       {
         path: manager.path("details"),

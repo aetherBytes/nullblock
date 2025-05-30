@@ -86,195 +86,200 @@ const StarsCanvas = ({ theme = "light" }) => {
     /* @__PURE__ */ jsx(Preload, { all: true })
   ] }) });
 };
-const backgroundImage = "_backgroundImage_1n69s_13";
-const button = "_button_1n69s_58";
-const alertText = "_alertText_1n69s_75";
-const scene = "_scene_1n69s_81";
-const fire = "_fire_1n69s_93";
-const campfireFlicker = "_campfireFlicker_1n69s_1";
-const campfireGlow = "_campfireGlow_1n69s_1";
-const appContainer = "_appContainer_1n69s_154";
-const lightFireFlicker = "_lightFireFlicker_1n69s_1";
-const lightFireGlow = "_lightFireGlow_1n69s_1";
-const socialLinks = "_socialLinks_1n69s_236";
-const socialLink = "_socialLink_1n69s_236";
-const nullButton = "_nullButton_1n69s_315";
-const echoContainer = "_echoContainer_1n69s_347";
-const hudWindow = "_hudWindow_1n69s_360";
-const controlPanel = "_controlPanel_1n69s_365";
-const controlButton = "_controlButton_1n69s_368";
-const disabled = "_disabled_1n69s_371";
-const active = "_active_1n69s_374";
-const userProfile = "_userProfile_1n69s_382";
-const profileLabel = "_profileLabel_1n69s_385";
-const profileValue = "_profileValue_1n69s_388";
-const statusIndicator = "_statusIndicator_1n69s_391";
-const inactive = "_inactive_1n69s_394";
-const alertButton = "_alertButton_1n69s_397";
-const expandButton = "_expandButton_1n69s_403";
-const disconnectButton = "_disconnectButton_1n69s_409";
-const matrix = "_matrix_1n69s_415";
-const cyber = "_cyber_1n69s_473";
-const light = "_light_1n69s_531";
-const softEcho = "_softEcho_1n69s_1";
-const corePulse = "_corePulse_1n69s_1";
-const scanlineGlow = "_scanlineGlow_1n69s_1";
-const scanlineWaver = "_scanlineWaver_1n69s_1";
-const hudTitle = "_hudTitle_1n69s_631";
-const bottomLeftInfo = "_bottomLeftInfo_1n69s_677";
-const bottomRightInfo = "_bottomRightInfo_1n69s_677";
-const verticalNavbar = "_verticalNavbar_1n69s_690";
-const homeButton = "_homeButton_1n69s_701";
-const homeIcon = "_homeIcon_1n69s_719";
-const nullLogoButton = "_nullLogoButton_1n69s_725";
-const socialButton = "_socialButton_1n69s_725";
-const batLogoButton = "_batLogoButton_1n69s_754";
-const batLogoIcon = "_batLogoIcon_1n69s_783";
-const navDivider = "_navDivider_1n69s_796";
-const navButton = "_navButton_1n69s_808";
-const locked = "_locked_1n69s_849";
-const lockIcon = "_lockIcon_1n69s_860";
-const nullLogoIcon = "_nullLogoIcon_1n69s_865";
-const socialIcon = "_socialIcon_1n69s_865";
-const nexus = "_nexus_1n69s_906";
-const hudScreen = "_hudScreen_1n69s_906";
-const settingsScreen = "_settingsScreen_1n69s_906";
-const walletInfo = "_walletInfo_1n69s_934";
-const nexusActions = "_nexusActions_1n69s_974";
-const headerContainer = "_headerContainer_1n69s_1040";
-const architectTitle = "_architectTitle_1n69s_1051";
-const leaderboardContainer = "_leaderboardContainer_1n69s_1061";
-const leaderboardTitle = "_leaderboardTitle_1n69s_1073";
-const leaderboardButton = "_leaderboardButton_1n69s_1083";
-const leaderboardList = "_leaderboardList_1n69s_1102";
-const leaderboardItems = "_leaderboardItems_1n69s_1128";
-const scrollLeaderboard = "_scrollLeaderboard_1n69s_1";
-const leaderboardItem = "_leaderboardItem_1n69s_1128";
-const rank = "_rank_1n69s_1154";
-const camperId = "_camperId_1n69s_1160";
-const matrixLevel = "_matrixLevel_1n69s_1169";
-const headerDivider = "_headerDivider_1n69s_1179";
-const campGrid = "_campGrid_1n69s_1184";
-const campAnalysis = "_campAnalysis_1n69s_1192";
-const diagnosticsContainer = "_diagnosticsContainer_1n69s_1202";
-const containerTitle = "_containerTitle_1n69s_1213";
-const diagnosticsHeader = "_diagnosticsHeader_1n69s_1224";
-const diagnosticsContent = "_diagnosticsContent_1n69s_1237";
-const diagnosticsList = "_diagnosticsList_1n69s_1260";
-const diagnosticsItem = "_diagnosticsItem_1n69s_1267";
-const itemLabel = "_itemLabel_1n69s_1308";
-const itemValue = "_itemValue_1n69s_1311";
-const campContent = "_campContent_1n69s_1342";
-const campStatus = "_campStatus_1n69s_1364";
-const statusCard = "_statusCard_1n69s_1370";
-const statusHeaderContainer = "_statusHeaderContainer_1n69s_1381";
-const statusTabs = "_statusTabs_1n69s_1402";
-const statusTab = "_statusTab_1n69s_1402";
-const activeTab = "_activeTab_1n69s_1425";
-const tabContent = "_tabContent_1n69s_1438";
-const scanline = "_scanline_1n69s_1";
-const statusContent = "_statusContent_1n69s_1459";
-const vitalsContainer = "_vitalsContainer_1n69s_1480";
-const vitalItem = "_vitalItem_1n69s_1502";
-const vitalValue = "_vitalValue_1n69s_1530";
-const vitalLabel = "_vitalLabel_1n69s_1533";
-const infoButton = "_infoButton_1n69s_1564";
-const pulse = "_pulse_1n69s_1";
-const ascentDetails = "_ascentDetails_1n69s_1595";
-const shimmer = "_shimmer_1n69s_1";
-const ascentDescription = "_ascentDescription_1n69s_1614";
-const progressBar = "_progressBar_1n69s_1620";
-const progressFill = "_progressFill_1n69s_1638";
-const accoladesContainer = "_accoladesContainer_1n69s_1655";
-const accoladesTitle = "_accoladesTitle_1n69s_1658";
-const accoladesList = "_accoladesList_1n69s_1675";
-const visible = "_visible_1n69s_1691";
-const blurred = "_blurred_1n69s_1700";
-const missionsTab = "_missionsTab_1n69s_1710";
-const systemsTab = "_systemsTab_1n69s_1710";
-const defenseTab = "_defenseTab_1n69s_1710";
-const uplinkTab = "_uplinkTab_1n69s_1710";
-const missionHeader = "_missionHeader_1n69s_1722";
-const missionContent = "_missionContent_1n69s_1732";
-const availableMissions = "_availableMissions_1n69s_1744";
-const missionList = "_missionList_1n69s_1771";
-const missionItem = "_missionItem_1n69s_1776";
-const missionItemContent = "_missionItemContent_1n69s_1800";
-const missionTitle = "_missionTitle_1n69s_1807";
-const missionStatus = "_missionStatus_1n69s_1815";
-const missionReward = "_missionReward_1n69s_1819";
-const missionDescription = "_missionDescription_1n69s_1831";
-const missionText = "_missionText_1n69s_1863";
-const missionInstructions = "_missionInstructions_1n69s_1873";
-const highlight = "_highlight_1n69s_1899";
-const missionNote = "_missionNote_1n69s_1903";
-const missionExpiration = "_missionExpiration_1n69s_1912";
-const rewardLabel = "_rewardLabel_1n69s_1918";
-const expirationLabel = "_expirationLabel_1n69s_1918";
-const rewardValue = "_rewardValue_1n69s_1925";
-const expirationValue = "_expirationValue_1n69s_1925";
-const activeMissionDetails = "_activeMissionDetails_1n69s_1932";
-const systemsContent = "_systemsContent_1n69s_1958";
-const defenseContent = "_defenseContent_1n69s_1958";
-const uplinkContent = "_uplinkContent_1n69s_1958";
-const systemsList = "_systemsList_1n69s_1983";
-const systemItem = "_systemItem_1n69s_1989";
-const systemName = "_systemName_1n69s_1998";
-const defenseStatus = "_defenseStatus_1n69s_2002";
-const uplinkStatus = "_uplinkStatus_1n69s_2002";
-const defenseDescription = "_defenseDescription_1n69s_2007";
-const uplinkDescription = "_uplinkDescription_1n69s_2007";
-const tabs = "_tabs_1n69s_2012";
-const tab = "_tab_1n69s_1438";
-const profileItem = "_profileItem_1n69s_2095";
-const label = "_label_1n69s_2107";
-const value = "_value_1n69s_2118";
-const common = "_common_1n69s_2128";
-const uncommon = "_uncommon_1n69s_2131";
-const rare = "_rare_1n69s_2134";
-const epic = "_epic_1n69s_2137";
-const legendary = "_legendary_1n69s_2140";
-const none = "_none_1n69s_2165";
-const collapsedButton = "_collapsedButton_1n69s_2170";
-const withEcho = "_withEcho_1n69s_2170";
-const ascentLine = "_ascentLine_1n69s_2173";
-const lockedContent = "_lockedContent_1n69s_2291";
-const statusContainer = "_statusContainer_1n69s_2341";
-const statusLabel = "_statusLabel_1n69s_2352";
-const echoContent = "_echoContent_1n69s_2366";
-const echoStatus = "_echoStatus_1n69s_2393";
-const browserInfo = "_browserInfo_1n69s_2401";
-const browserLabel = "_browserLabel_1n69s_2405";
-const browserValue = "_browserValue_1n69s_2409";
-const echoMessage = "_echoMessage_1n69s_2413";
-const disconnectedContent = "_disconnectedContent_1n69s_2427";
-const extensionPrompt = "_extensionPrompt_1n69s_2445";
-const extensionLinks = "_extensionLinks_1n69s_2465";
-const extensionButton = "_extensionButton_1n69s_2472";
-const uplinkItem = "_uplinkItem_1n69s_2487";
-const uplinkIcon = "_uplinkIcon_1n69s_2509";
-const uplinkInfo = "_uplinkInfo_1n69s_2518";
-const uplinkName = "_uplinkName_1n69s_2522";
-const pending = "_pending_1n69s_2541";
-const uplinkModal = "_uplinkModal_1n69s_2550";
-const modalHeader = "_modalHeader_1n69s_2575";
-const closeButton = "_closeButton_1n69s_2590";
-const modalContent = "_modalContent_1n69s_2603";
-const statusSection = "_statusSection_1n69s_2606";
-const statusGrid = "_statusGrid_1n69s_2616";
-const statusItem = "_statusItem_1n69s_2621";
-const detailsSection = "_detailsSection_1n69s_2643";
-const modalOverlay = "_modalOverlay_1n69s_2657";
-const leaderboardModal = "_leaderboardModal_1n69s_2668";
-const legendWarning = "_legendWarning_1n69s_2702";
-const leaderboardGrid = "_leaderboardGrid_1n69s_2717";
-const leaderboardCard = "_leaderboardCard_1n69s_2724";
-const cardHeader = "_cardHeader_1n69s_2737";
-const vitalsGrid = "_vitalsGrid_1n69s_2805";
-const addLinkButton = "_addLinkButton_1n69s_2812";
-const echoBatChamberLogoWrapper = "_echoBatChamberLogoWrapper_1n69s_2857";
-const echoBatChamberLogo = "_echoBatChamberLogo_1n69s_2857";
-const echoBatFade = "_echoBatFade_1n69s_1";
+const backgroundImage = "_backgroundImage_epeip_13";
+const button = "_button_epeip_58";
+const alertText = "_alertText_epeip_75";
+const scene = "_scene_epeip_81";
+const fire = "_fire_epeip_93";
+const campfireFlicker = "_campfireFlicker_epeip_1";
+const campfireGlow = "_campfireGlow_epeip_1";
+const appContainer = "_appContainer_epeip_154";
+const lightFireFlicker = "_lightFireFlicker_epeip_1";
+const lightFireGlow = "_lightFireGlow_epeip_1";
+const socialLinks = "_socialLinks_epeip_236";
+const socialLink = "_socialLink_epeip_236";
+const nullButton = "_nullButton_epeip_315";
+const echoContainer = "_echoContainer_epeip_347";
+const hudWindow = "_hudWindow_epeip_360";
+const controlPanel = "_controlPanel_epeip_365";
+const controlButton = "_controlButton_epeip_368";
+const disabled = "_disabled_epeip_371";
+const active = "_active_epeip_374";
+const userProfile = "_userProfile_epeip_382";
+const profileLabel = "_profileLabel_epeip_385";
+const profileValue = "_profileValue_epeip_388";
+const statusIndicator = "_statusIndicator_epeip_391";
+const inactive = "_inactive_epeip_394";
+const alertButton = "_alertButton_epeip_397";
+const expandButton = "_expandButton_epeip_403";
+const disconnectButton = "_disconnectButton_epeip_409";
+const matrix = "_matrix_epeip_415";
+const cyber = "_cyber_epeip_473";
+const light = "_light_epeip_531";
+const softEcho = "_softEcho_epeip_1";
+const corePulse = "_corePulse_epeip_1";
+const scanlineGlow = "_scanlineGlow_epeip_1";
+const scanlineWaver = "_scanlineWaver_epeip_1";
+const hudTitle = "_hudTitle_epeip_631";
+const bottomLeftInfo = "_bottomLeftInfo_epeip_677";
+const bottomRightInfo = "_bottomRightInfo_epeip_677";
+const verticalNavbar = "_verticalNavbar_epeip_690";
+const screenLabel = "_screenLabel_epeip_702";
+const navbarDivider = "_navbarDivider_epeip_710";
+const navbarButtons = "_navbarButtons_epeip_718";
+const homeButton = "_homeButton_epeip_728";
+const nullLogoButton = "_nullLogoButton_epeip_729";
+const batLogoButton = "_batLogoButton_epeip_730";
+const socialButton = "_socialButton_epeip_731";
+const homeIcon = "_homeIcon_epeip_758";
+const batLogoIcon = "_batLogoIcon_epeip_825";
+const navDivider = "_navDivider_epeip_838";
+const navButton = "_navButton_epeip_850";
+const locked = "_locked_epeip_891";
+const lockIcon = "_lockIcon_epeip_902";
+const nullLogoIcon = "_nullLogoIcon_epeip_907";
+const socialIcon = "_socialIcon_epeip_907";
+const nexus = "_nexus_epeip_948";
+const hudScreen = "_hudScreen_epeip_948";
+const settingsScreen = "_settingsScreen_epeip_948";
+const walletInfo = "_walletInfo_epeip_976";
+const nexusActions = "_nexusActions_epeip_1016";
+const headerContainer = "_headerContainer_epeip_1082";
+const architectTitle = "_architectTitle_epeip_1093";
+const leaderboardContainer = "_leaderboardContainer_epeip_1103";
+const leaderboardTitle = "_leaderboardTitle_epeip_1115";
+const leaderboardButton = "_leaderboardButton_epeip_1125";
+const leaderboardList = "_leaderboardList_epeip_1144";
+const leaderboardItems = "_leaderboardItems_epeip_1170";
+const scrollLeaderboard = "_scrollLeaderboard_epeip_1";
+const leaderboardItem = "_leaderboardItem_epeip_1170";
+const rank = "_rank_epeip_1196";
+const camperId = "_camperId_epeip_1202";
+const matrixLevel = "_matrixLevel_epeip_1211";
+const headerDivider = "_headerDivider_epeip_1221";
+const campGrid = "_campGrid_epeip_1226";
+const campAnalysis = "_campAnalysis_epeip_1234";
+const diagnosticsContainer = "_diagnosticsContainer_epeip_1244";
+const containerTitle = "_containerTitle_epeip_1255";
+const diagnosticsHeader = "_diagnosticsHeader_epeip_1266";
+const diagnosticsContent = "_diagnosticsContent_epeip_1279";
+const diagnosticsList = "_diagnosticsList_epeip_1302";
+const diagnosticsItem = "_diagnosticsItem_epeip_1309";
+const itemLabel = "_itemLabel_epeip_1350";
+const itemValue = "_itemValue_epeip_1353";
+const campContent = "_campContent_epeip_1384";
+const campStatus = "_campStatus_epeip_1406";
+const statusCard = "_statusCard_epeip_1412";
+const statusHeaderContainer = "_statusHeaderContainer_epeip_1423";
+const statusTabs = "_statusTabs_epeip_1444";
+const statusTab = "_statusTab_epeip_1444";
+const activeTab = "_activeTab_epeip_1467";
+const tabContent = "_tabContent_epeip_1480";
+const scanline = "_scanline_epeip_1";
+const statusContent = "_statusContent_epeip_1501";
+const vitalsContainer = "_vitalsContainer_epeip_1522";
+const vitalItem = "_vitalItem_epeip_1544";
+const vitalValue = "_vitalValue_epeip_1572";
+const vitalLabel = "_vitalLabel_epeip_1575";
+const infoButton = "_infoButton_epeip_1606";
+const pulse = "_pulse_epeip_1";
+const ascentDetails = "_ascentDetails_epeip_1637";
+const shimmer = "_shimmer_epeip_1";
+const ascentDescription = "_ascentDescription_epeip_1656";
+const progressBar = "_progressBar_epeip_1662";
+const progressFill = "_progressFill_epeip_1680";
+const accoladesContainer = "_accoladesContainer_epeip_1697";
+const accoladesTitle = "_accoladesTitle_epeip_1700";
+const accoladesList = "_accoladesList_epeip_1717";
+const visible = "_visible_epeip_1733";
+const blurred = "_blurred_epeip_1742";
+const missionsTab = "_missionsTab_epeip_1752";
+const systemsTab = "_systemsTab_epeip_1752";
+const defenseTab = "_defenseTab_epeip_1752";
+const uplinkTab = "_uplinkTab_epeip_1752";
+const missionHeader = "_missionHeader_epeip_1764";
+const missionContent = "_missionContent_epeip_1774";
+const availableMissions = "_availableMissions_epeip_1786";
+const missionList = "_missionList_epeip_1813";
+const missionItem = "_missionItem_epeip_1818";
+const missionItemContent = "_missionItemContent_epeip_1842";
+const missionTitle = "_missionTitle_epeip_1849";
+const missionStatus = "_missionStatus_epeip_1857";
+const missionReward = "_missionReward_epeip_1861";
+const missionDescription = "_missionDescription_epeip_1873";
+const missionText = "_missionText_epeip_1905";
+const missionInstructions = "_missionInstructions_epeip_1915";
+const highlight = "_highlight_epeip_1941";
+const missionNote = "_missionNote_epeip_1945";
+const missionExpiration = "_missionExpiration_epeip_1954";
+const rewardLabel = "_rewardLabel_epeip_1960";
+const expirationLabel = "_expirationLabel_epeip_1960";
+const rewardValue = "_rewardValue_epeip_1967";
+const expirationValue = "_expirationValue_epeip_1967";
+const activeMissionDetails = "_activeMissionDetails_epeip_1974";
+const systemsContent = "_systemsContent_epeip_2000";
+const defenseContent = "_defenseContent_epeip_2000";
+const uplinkContent = "_uplinkContent_epeip_2000";
+const systemsList = "_systemsList_epeip_2025";
+const systemItem = "_systemItem_epeip_2031";
+const systemName = "_systemName_epeip_2040";
+const defenseStatus = "_defenseStatus_epeip_2044";
+const uplinkStatus = "_uplinkStatus_epeip_2044";
+const defenseDescription = "_defenseDescription_epeip_2049";
+const uplinkDescription = "_uplinkDescription_epeip_2049";
+const tabs = "_tabs_epeip_2054";
+const tab = "_tab_epeip_1480";
+const profileItem = "_profileItem_epeip_2137";
+const label = "_label_epeip_2149";
+const value = "_value_epeip_2160";
+const common = "_common_epeip_2170";
+const uncommon = "_uncommon_epeip_2173";
+const rare = "_rare_epeip_2176";
+const epic = "_epic_epeip_2179";
+const legendary = "_legendary_epeip_2182";
+const none = "_none_epeip_2207";
+const collapsedButton = "_collapsedButton_epeip_2212";
+const withEcho = "_withEcho_epeip_2212";
+const ascentLine = "_ascentLine_epeip_2215";
+const lockedContent = "_lockedContent_epeip_2333";
+const statusContainer = "_statusContainer_epeip_2383";
+const statusLabel = "_statusLabel_epeip_2394";
+const echoContent = "_echoContent_epeip_2408";
+const echoStatus = "_echoStatus_epeip_2435";
+const browserInfo = "_browserInfo_epeip_2443";
+const browserLabel = "_browserLabel_epeip_2447";
+const browserValue = "_browserValue_epeip_2451";
+const echoMessage = "_echoMessage_epeip_2455";
+const disconnectedContent = "_disconnectedContent_epeip_2469";
+const extensionPrompt = "_extensionPrompt_epeip_2487";
+const extensionLinks = "_extensionLinks_epeip_2507";
+const extensionButton = "_extensionButton_epeip_2514";
+const uplinkItem = "_uplinkItem_epeip_2529";
+const uplinkIcon = "_uplinkIcon_epeip_2551";
+const uplinkInfo = "_uplinkInfo_epeip_2560";
+const uplinkName = "_uplinkName_epeip_2564";
+const pending = "_pending_epeip_2583";
+const uplinkModal = "_uplinkModal_epeip_2592";
+const modalHeader = "_modalHeader_epeip_2617";
+const closeButton = "_closeButton_epeip_2632";
+const modalContent = "_modalContent_epeip_2645";
+const statusSection = "_statusSection_epeip_2648";
+const statusGrid = "_statusGrid_epeip_2658";
+const statusItem = "_statusItem_epeip_2663";
+const detailsSection = "_detailsSection_epeip_2685";
+const modalOverlay = "_modalOverlay_epeip_2699";
+const leaderboardModal = "_leaderboardModal_epeip_2710";
+const legendWarning = "_legendWarning_epeip_2744";
+const leaderboardGrid = "_leaderboardGrid_epeip_2759";
+const leaderboardCard = "_leaderboardCard_epeip_2766";
+const cardHeader = "_cardHeader_epeip_2779";
+const vitalsGrid = "_vitalsGrid_epeip_2847";
+const addLinkButton = "_addLinkButton_epeip_2854";
+const echoBatChamberLogoWrapper = "_echoBatChamberLogoWrapper_epeip_2899";
+const echoBatChamberLogo = "_echoBatChamberLogo_epeip_2899";
+const echoBatFade = "_echoBatFade_epeip_1";
+const centeredLabel = "_centeredLabel_epeip_2972";
+const nullblockTitle = "_nullblockTitle_epeip_2980";
 const styles = {
   backgroundImage,
   button,
@@ -284,15 +289,15 @@ const styles = {
   campfireFlicker,
   campfireGlow,
   appContainer,
-  "theme-null": "_theme-null_1n69s_161",
-  "theme-light": "_theme-light_1n69s_166",
+  "theme-null": "_theme-null_epeip_161",
+  "theme-light": "_theme-light_epeip_166",
   lightFireFlicker,
   lightFireGlow,
   socialLinks,
   socialLink,
   nullButton,
   echoContainer,
-  "null": "_null_1n69s_315",
+  "null": "_null_epeip_315",
   hudWindow,
   controlPanel,
   controlButton,
@@ -317,11 +322,14 @@ const styles = {
   bottomLeftInfo,
   bottomRightInfo,
   verticalNavbar,
+  screenLabel,
+  navbarDivider,
+  navbarButtons,
   homeButton,
-  homeIcon,
   nullLogoButton,
-  socialButton,
   batLogoButton,
+  socialButton,
+  homeIcon,
   batLogoIcon,
   navDivider,
   navButton,
@@ -467,7 +475,9 @@ const styles = {
   addLinkButton,
   echoBatChamberLogoWrapper,
   echoBatChamberLogo,
-  echoBatFade
+  echoBatFade,
+  centeredLabel,
+  nullblockTitle
 };
 const API_BASE_URL = "http://localhost:8000";
 const fetchWalletData = async (publicKey) => {
@@ -554,6 +564,13 @@ const xLogo = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAD0AAAAyCAYAAADvNNM
 const nullLogo = "/assets/null_logo-YcRNLHqr.png";
 const echoBatWhite = "/assets/echo_bat_white-CUrRC6jy.png";
 const echoBatBlack = "/assets/echo_bat_black-BIfG_SPS.png";
+const SCREEN_LABELS = {
+  chambers: "E.C.H.O CHAMBERS",
+  camp: "CAMP",
+  inventory: "CACHE",
+  campaign: "CAMPAIGN",
+  lab: "LAB"
+};
 const Echo = ({
   publicKey,
   onDisconnect,
@@ -951,18 +968,28 @@ const Echo = ({
     setShowLeaderboard(false);
   };
   const renderControlScreen = () => /* @__PURE__ */ jsxs("nav", { className: styles.verticalNavbar, children: [
-    /* @__PURE__ */ jsx("button", { className: styles.batLogoButton, onClick: () => setScreen("chambers"), children: /* @__PURE__ */ jsx("img", { src: echoBatWhite, alt: "Bat Logo", className: styles.batLogoIcon }) }),
-    /* @__PURE__ */ jsx("button", { className: styles.nullLogoButton, onClick: () => setScreen("chambers"), children: /* @__PURE__ */ jsx("img", { src: nullLogo, alt: "Null Logo", className: styles.nullLogoIcon }) }),
+    /* @__PURE__ */ jsx("div", { className: styles.nullblockTitle, children: "NULLBLOCK" }),
     /* @__PURE__ */ jsx(
-      "a",
+      "div",
       {
-        href: "https://x.com/Nullblock_io",
-        target: "_blank",
-        rel: "noopener noreferrer",
-        className: styles.socialButton,
-        children: /* @__PURE__ */ jsx("img", { src: xLogo, alt: "X", className: styles.socialIcon })
+        className: `${styles.screenLabel} ${screen === "chambers" ? styles.centeredLabel : ""}`,
+        children: SCREEN_LABELS[screen]
       }
-    )
+    ),
+    /* @__PURE__ */ jsxs("div", { className: styles.navbarButtons, children: [
+      /* @__PURE__ */ jsx("button", { className: styles.batLogoButton, onClick: () => setScreen("chambers"), children: /* @__PURE__ */ jsx("img", { src: echoBatWhite, alt: "Bat Logo", className: styles.batLogoIcon }) }),
+      /* @__PURE__ */ jsx("button", { className: styles.nullLogoButton, onClick: () => setScreen("chambers"), children: /* @__PURE__ */ jsx("img", { src: nullLogo, alt: "Null Logo", className: styles.nullLogoIcon }) }),
+      /* @__PURE__ */ jsx(
+        "a",
+        {
+          href: "https://x.com/Nullblock_io",
+          target: "_blank",
+          rel: "noopener noreferrer",
+          className: styles.socialButton,
+          children: /* @__PURE__ */ jsx("img", { src: xLogo, alt: "X", className: styles.socialIcon })
+        }
+      )
+    ] })
   ] });
   const renderUserProfile = () => {
     var _a2;
