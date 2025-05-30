@@ -1439,9 +1439,6 @@ const Echo: React.FC<EchoProps> = ({
           <p>This is the default screen. Connect your wallet to unlock CAMP and other features.</p>
         </div>
       </div>
-      <div className={styles.echoBatChamberLogoWrapper}>
-        <img src={echoBatBlack} alt="ECHO Bat" className={styles.echoBatChamberLogo} />
-      </div>
     </div>
   );
 
