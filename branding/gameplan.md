@@ -1,8 +1,11 @@
+### AGENT CREATED AND MAINTAINED FILE
+
 # Nullblock - MCP/Client Interface Platform on Solana
 
 **Start Date**: March 22, 2025 | **Target MVP**: June 27, 2025
 
 ## Overview
+
 Nullblock is a cutting-edge, MCP-driven platform built on Solana, designed to deliver a seamless Web3 experience through a conversational LLM interface and a cyberpunk-inspired aesthetic. The platform empowers users with wallet analysis, token swap mechanics, and personalized state management via mutable **Memory Cards** (NFTs). A new browser extension, **Aether**, enhances the experience by capturing live browser data and feeding it to the platform for contextual interactions. Key components include:
 
 - **Helios**: Multi-service backend for MCP operations, wallet health tools, and browser data processing.
@@ -12,6 +15,7 @@ Nullblock is a cutting-edge, MCP-driven platform built on Solana, designed to de
 - **Aether**: Browser extension that captures live browser data (e.g., active tab URL, page title) and syncs it with the platform for real-time display and LLM-driven insights.
 
 **Objective**: Launch an MVP by June 27, 2025, featuring:
+
 - A minimal MCP server and client interface with basic wallet analysis, token swap mechanics, and easy-to-implement tooling.
 - A conversational LLM interface with a cyberpunk H.U.D.-like experience, accessible via a Phantom wallet.
 - User-specific state stored in mutable **Memory Cards** (NFTs) on the Solana blockchain, including conversation history and browser data.
@@ -22,6 +26,7 @@ Nullblock is a cutting-edge, MCP-driven platform built on Solana, designed to de
 The Nullblock landing screen immerses users in a haunting digital void. A flickering neon campfire pulses at the center, casting vibrant embers into an infinite abyss. Subtle cosmic elements—distant stars, faint planetary silhouettes, and swirling dust clouds—drift in the background, creating a hypnotic, otherworldly atmosphere. A single, understated **ECHO device** (bat logo) glows at the bottom center, pulsing like a beacon in the darkness. Clicking it (or the Null logo) always returns the user to the ECHO Chamber, a read-only summary of system logs, agent status, and updates. The navigation is minimal: ECHO device (bat logo), Null logo, and social (X) button. This seamless entry point sets the stage for a personalized, MCP-driven Web3 journey, amplified by real-time browser context from **Aether**.
 
 ## Tech Stack
+
 - **Helios (Backend)**:
   - **helios-mcp**: Python, FastAPI – Dedicated MCP server for agent-based operations and browser data processing.
   - **helios-api**: Python, FastAPI – REST and WebSocket endpoints for direct operations and real-time browser data ingestion.
@@ -43,7 +48,9 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
 ## Development Phases
 
 ### Phase 1: Core Infrastructure (3 weeks, March 22 - April 11, 2025)
+
 **Goal**: Establish the foundational backend, frontend, contract, and browser extension infrastructure to support MVP functionality.
+
 - **Helios**:
   - Implement basic command processing (/help, /status, /clear). ✓
   - Develop a random response system for invalid commands. ✓
@@ -75,7 +82,9 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
   - Backend architecture with WebSocket support and mock wallet endpoints.
 
 ### Phase 2: LLM & Browser Integration (3 weeks, April 12 - May 2, 2025)
+
 **Goal**: Integrate the LLM for conversational interactions and enable browser data to enhance contextual responses and Memory Card functionality.
+
 - **Helios**:
   - Integrate Claude API for command parsing, response generation, and browser data contextualization.
   - Develop logic to process browser data (e.g., categorize URLs as DeFi, NFT, or other).
@@ -112,7 +121,9 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
   - Memory Cards storing conversation and browser data.
 
 ### Phase 3: Wallet & Extension Features (3 weeks, May 3 - May 23, 2025)
+
 **Goal**: Add core wallet functionality and enhance browser extension features to support real-time wallet and site interactions.
+
 - **Helios**:
   - Integrate Helius API for real-time wallet health analysis (e.g., token balances, risk scores).
   - Implement token swap logic using Raydium SDK.
@@ -136,7 +147,9 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
   - Polished **Aether** extension with basic user interaction.
 
 ### Phase 4: Reality System & Extension Polish (3 weeks, May 24 - June 13, 2025)
+
 **Goal**: Introduce the Reality System as a virtual environment for Memory Card interaction and finalize the browser extension for broader compatibility.
+
 - **Helios**:
   - Enhance browser data processing for Reality System (e.g., virtual environment reflects browsing habits, like DeFi-themed rooms).
   - Add social feature endpoints (e.g., user achievements, leaderboards).
@@ -156,7 +169,9 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
   - Reality System as a stretch goal (deprioritized if timeline is tight).
 
 ### Phase 5: Testing & Launch (2 weeks, June 14 - June 27, 2025)
+
 **Goal**: Conduct end-to-end testing, polish the platform, and launch the MVP to beta users.
+
 - End-to-end testing of **Helios**, **Hecate**, **Erebus**, and **Aether**.
 - Security audit for **Erebus** contracts (via OtterSec or Sec3) and **Aether** data handling.
 - UI/UX refinements based on internal testing feedback.
@@ -167,7 +182,9 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
   - Beta-ready **Aether** extension with documented setup process.
 
 ## Command System
+
 ### Global Commands (Available in all rooms)
+
 - `/help` – Display available commands. ✓
 - `/status` – Check system status (including **Aether** connection). ✓
 - `/clear` – Clear chat log. ✓
@@ -178,6 +195,7 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
 - `/context` – Display recent browser data stored in Memory Card.
 
 ### Room: /logs (Default Room)
+
 - `/trace <tx>` – Analyze transaction with browser context (e.g., "Transaction from raydium.io").
 - `/history` – Show recent transactions with site data.
 - `/balance` – Display wallet balance.
@@ -185,6 +203,7 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
 - `/site` – Analyze current site's relevance to wallet (e.g., DeFi, NFT marketplace).
 
 ### Room: /memory (Locked)
+
 - `/mint` – Create new Memory Card.
 - `/upgrade` – Enhance Memory Card features.
 - `/features` – List available Memory Card features.
@@ -193,19 +212,23 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
 - `/recall` – View stored browser history from Memory Card.
 
 ### Room: /health (Locked)
+
 - `/risk` – Calculate wallet risk score (enhanced with browser context).
 - `/audit` – Perform deep wallet analysis.
 - `/monitor` – Set up wallet monitoring.
 - `/alerts` – Configure health alerts (e.g., risky site warnings).
 
 ### Room: /reality (Locked)
+
 - `/spawn` – Enter Reality interface.
 - `/enhance` – Upgrade virtual environment.
 - `/interact` – Engage with Memory Card in Reality.
 - `/sync` – Synchronize Reality state with browser data.
 
 ## Development Progress
+
 ### Phase 1: Core Infrastructure
+
 - [x] Basic command processing (/help, /status, /clear).
 - [x] Random response system for invalid commands.
 - [x] Pretty-printed command output.
@@ -218,6 +241,7 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
 - [ ] Redis setup for browser data caching.
 
 ### Phase 2: LLM & Browser Integration
+
 - [ ] Claude API integration.
 - [ ] Browser data processing and storage in Memory Cards.
 - [ ] Unlock translation matrix and /memory room.
@@ -225,22 +249,26 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
 - [ ] **Aether** data capture refinement (metadata, privacy toggle).
 
 ### Phase 3: Wallet & Extension Features
+
 - [ ] Helius API integration.
 - [ ] Raydium swap implementation.
 - [ ] Wallet status and risk visualization.
 - [ ] **Aether** interaction button and store submission.
 
 ### Phase 4: Reality System & Extension Polish
+
 - [ ] Reality interface implementation.
 - [ ] Browser-driven achievements.
 - [ ] **Aether** Edge support and polish.
 
 ### Phase 5: Testing & Launch
+
 - [ ] End-to-end testing.
 - [ ] Security audits.
 - [ ] Beta launch with 500 users.
 
 ## Notes
+
 - **Privacy & Security**:
   - **Aether** collects only active tab URL and page title for MVP, with opt-in consent and clear privacy messaging.
   - Browser data is stored on-chain in **Memory Cards** (encrypted if needed) to minimize server-side risks.
@@ -265,6 +293,7 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
   - Defer Reality System and advanced **Aether** features (e.g., page content analysis) to post-MVP.
 
 ## Metrics for Success
+
 - **Development**:
   - Complete Phase 1 by April 11, 2025.
   - Achieve < 500ms latency for ECHO responses and < 1s for browser data display.
@@ -279,4 +308,5 @@ The Nullblock landing screen immerses users in a haunting digital void. A flicke
   - Achieve > 99% WebSocket uptime for **Aether**-**Helios** communication.
 
 ## DD on similar products / features
-- ****
+
+- ***
