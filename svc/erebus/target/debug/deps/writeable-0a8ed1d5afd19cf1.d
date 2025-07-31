@@ -1,0 +1,12 @@
+/Users/sage/nullblock/svc/erebus/target/debug/deps/writeable-0a8ed1d5afd19cf1.d: /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/lib.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/cmp.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/impls.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/ops.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/parts_write_adapter.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/testing.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/to_string_or_borrow.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/try_writeable.rs
+
+/Users/sage/nullblock/svc/erebus/target/debug/deps/libwriteable-0a8ed1d5afd19cf1.rmeta: /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/lib.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/cmp.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/impls.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/ops.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/parts_write_adapter.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/testing.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/to_string_or_borrow.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/try_writeable.rs
+
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/lib.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/cmp.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/impls.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/ops.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/parts_write_adapter.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/testing.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/to_string_or_borrow.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/writeable-0.6.1/src/try_writeable.rs:

@@ -1,0 +1,12 @@
+/Users/sage/nullblock/svc/erebus/target/debug/deps/libc-d2f45a32ec17542e.d: /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/lib.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/macros.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/primitives.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/mod.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/bsd/mod.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/bsd/apple/mod.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/bsd/apple/b64/mod.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/bsd/apple/b64/aarch64/mod.rs
+
+/Users/sage/nullblock/svc/erebus/target/debug/deps/liblibc-d2f45a32ec17542e.rmeta: /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/lib.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/macros.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/primitives.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/mod.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/bsd/mod.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/bsd/apple/mod.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/bsd/apple/b64/mod.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/bsd/apple/b64/aarch64/mod.rs
+
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/lib.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/macros.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/primitives.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/mod.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/bsd/mod.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/bsd/apple/mod.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/bsd/apple/b64/mod.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.174/src/unix/bsd/apple/b64/aarch64/mod.rs:
