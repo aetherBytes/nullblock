@@ -1,41 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Connection, PublicKey } from '@solana/web3.js';
 import styles from './index.module.scss';
 import StarsCanvas from '@components/stars/stars';
-import Echo from '@components/echo/echo';
-import powerOn from '@assets/images/echo_bot_night.png';
-import powerOff from '@assets/images/echo_bot_white.png';
-
-type MessageType = 'message' | 'alert' | 'critical' | 'update' | 'action' | 'user' | 'welcome' | 'system';
-
-interface ChatMessage {
-  id: number;
-  text: string;
-  type: MessageType;
-  action?: () => void;
-  actionText?: string;
-}
+import HUD from '../../components/hud/hud';
 
 const Home: React.FC = () => {
-  const [walletConnected, setWalletConnected] = useState<boolean>(false);
+  const [, setWalletConnected] = useState<boolean>(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
-  const [showEcho, setShowEcho] = useState<boolean>(true);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [messageIndex, setMessageIndex] = useState<number>(0);
-  const [hasPhantom, setHasPhantom] = useState<boolean>(false);
-  const [currentRoom, setCurrentRoom] = useState<string>('/logs');
-  const [isDigitizing, setIsDigitizing] = useState<boolean>(false);
-  const [echoScreenSelected, setEchoScreenSelected] = useState<boolean>(false);
+  const [showHUD, setShowHUD] = useState<boolean>(true);
   const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('light');
-  const [showConnectButton, setShowConnectButton] = useState<boolean>(false);
-  const [textComplete, setTextComplete] = useState<boolean>(false);
 
   // Initialize state from localStorage on component mount
   useEffect(() => {
     // Check if we have a saved wallet connection
     const savedPublicKey = localStorage.getItem('walletPublickey');
     const lastAuth = localStorage.getItem('lastAuthTime');
-    const hasSeenEcho = localStorage.getItem('hasSeenEcho');
     const savedTheme = localStorage.getItem('currentTheme');
     
     // Set initial states based on localStorage
@@ -52,248 +30,14 @@ const Home: React.FC = () => {
     }
   }, []);
 
-  // Show connect button when digitized text is complete
-  useEffect(() => {
-    console.log('Text complete effect triggered:', { textComplete, walletConnected, showEcho });
-    if (textComplete && !walletConnected && !showEcho) {
-      console.log('Setting showConnectButton to true');
-      setShowConnectButton(true);
-    }
-  }, [textComplete, walletConnected, showEcho]);
-
-  // Add a fallback timer to show the connect button after a reasonable time
-  useEffect(() => {
-    if (!walletConnected && !showEcho) {
-      const fallbackTimer = setTimeout(() => {
-        console.log('Fallback timer triggered - showing connect button');
-        setShowConnectButton(true);
-      }, 5000); // 5 seconds fallback
-      
-      return () => clearTimeout(fallbackTimer);
-    }
-  }, [walletConnected, showEcho]);
-
-  const automaticResponses = [
-    {
-      alert: "Error: Invalid pattern detected.",
-      message: "System: Recalibrating..."
-    },
-    {
-      alert: "Error: Protocol mismatch.",
-      message: "System: Searching alternatives..."
-    },
-    {
-      alert: "Error: Connection unstable.",
-      message: "System: Resyncing..."
-    },
-    {
-      alert: "Error: Security breach.",
-      message: "System: Realigning..."
-    },
-    {
-      alert: "Error: Process failure.",
-      message: "System: Rerouting..."
-    },
-    {
-      alert: "Error: Parse failure.",
-      message: "System: Recovering..."
-    }
-  ];
-
-  const getRandomResponse = () => {
-    const index = Math.floor(Math.random() * automaticResponses.length);
-    return automaticResponses[index];
-  };
-
-  const addMessage = (message: ChatMessage) => {
-    setMessages(prev => [...prev, message]);
-  };
-
-  const handleUserInput = async (input: string) => {
-    addMessage({
-      id: messages.length + 1,
-      text: input,
-      type: 'user'
-    });
-
-    try {
-      const response = await fetch('http://localhost:8000/api/command', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          command: input,
-          room: currentRoom 
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to process command');
-      }
-
-      const data = await response.json();
-      
-      // Special handling for /clear command
-      if (input.toLowerCase() === '/clear') {
-        setMessages([]);
-        return;
-      }
-
-      // Add each message from the response with a delay
-      data.messages.forEach((msg: any, index: number) => {
-        setTimeout(() => {
-          if (msg.type === 'action') {
-            if (msg.action === 'connect_wallet') {
-              addMessage({
-                id: messages.length + 2 + index,
-                text: msg.text,
-                type: msg.type,
-                action: manualConnect,
-                actionText: "Connect"
-              });
-            } else if (msg.action === 'disconnect_wallet') {
-              addMessage({
-                id: messages.length + 2 + index,
-                text: msg.text,
-                type: msg.type,
-                action: handleDisconnect,
-                actionText: "Disconnect"
-              });
-            }
-          } else {
-            addMessage({
-              id: messages.length + 2 + index,
-              text: msg.text,
-              type: msg.type as MessageType
-            });
-          }
-        }, 500 * (index + 1));
-      });
-    } catch (error) {
-      console.error('Error processing command:', error);
-      addMessage({
-        id: messages.length + 2,
-        text: 'Error: Command processing failed',
-        type: 'critical'
-      });
-    }
-  };
-
-  const handleRoomChange = (room: string) => {
-    if (room.startsWith('/theme/')) {
-      const themeId = room.split('/theme/')[1] as 'null' | 'light';
-      setCurrentTheme(themeId);
-      
-      // Add a message about theme change
-      const themeName = themeId === 'null' ? 'NULL' : 'LIGHT';
-      
-      addMessage({
-        id: messages.length + 1,
-        text: `System: Theme changed to ${themeName}`,
-        type: 'update'
-      });
-      
-      return;
-    }
-    setCurrentRoom(room);
-    if (room.startsWith('/echo')) {
-      setEchoScreenSelected(true);
-    }
-    addMessage({
-      id: messages.length + 1,
-      text: `System: Switched to ${room}`,
-      type: 'update'
-    });
-  };
-
   useEffect(() => {
     const phantomExists = 'phantom' in window && (window as any).phantom?.solana;
-    setHasPhantom(!!phantomExists);
 
     // Check wallet connection on mount
     if (phantomExists) {
       checkWalletConnection();
     }
-
-    const getInitialMessages = (): ChatMessage[] => {
-      const baseMessages: ChatMessage[] = [
-        {
-          id: 1,
-          text: "System: Initializing...",
-          type: "message"
-        }
-      ];
-
-      if (phantomExists) {
-        return [
-          ...baseMessages,
-          {
-            id: 2,
-            text: "System: Interface detected.",
-            type: "message"
-          },
-          {
-            id: 3,
-            text: "System Update: Awaiting connection.",
-            type: "update"
-          },
-          {
-            id: 4,
-            text: "Connect",
-            type: "action",
-            action: manualConnect,
-            actionText: "Connect"
-          }
-        ];
-      } else {
-        return [
-          ...baseMessages,
-          {
-            id: 2,
-            text: "Error: Interface not found.",
-            type: "critical"
-          },
-          {
-            id: 3,
-            text: "System: Interface required for access.",
-            type: "message"
-          },
-          {
-            id: 4,
-            text: "Acquire Interface",
-            type: "action",
-            action: () => window.open('https://phantom.app/', '_blank'),
-            actionText: "Install Interface"
-          }
-        ];
-      }
-    };
-
-    const initialMessages = getInitialMessages();
-
-    const displayNextMessage = () => {
-      if (messageIndex < initialMessages.length) {
-        addMessage(initialMessages[messageIndex]);
-        setMessageIndex(prev => prev + 1);
-      }
-    };
-
-    if (!walletConnected && messageIndex < initialMessages.length) {
-      const timer = setTimeout(displayNextMessage, messageIndex * 400);
-      return () => clearTimeout(timer);
-    }
-  }, [messageIndex, walletConnected]);
-
-  const requestSignature = async (provider: any, publicKey: string) => {
-    try {
-      const message = `Authenticate ECHO Interface\nTimestamp: ${Date.now()}`;
-      const encodedMessage = new TextEncoder().encode(message);
-      await provider.signMessage(encodedMessage, "utf8");
-    } catch (error) {
-      throw new Error('Authentication failed');
-    }
-  };
+  }, []);
 
   const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
 
@@ -325,14 +69,8 @@ const Home: React.FC = () => {
             setPublicKey(savedPublicKey);
             setWalletConnected(true);
             localStorage.setItem('walletPublickey', savedPublicKey);
-            localStorage.setItem('hasSeenEcho', 'true');
+            localStorage.setItem('hasSeenHUD', 'true');
             updateAuthTime();
-            
-            addMessage({
-              id: messages.length + 1,
-              text: "System: Connected. Loading interface...",
-              type: "message"
-            });
           } catch (error) {
             console.log('Auto-reconnect failed:', error);
           }
@@ -341,48 +79,9 @@ const Home: React.FC = () => {
         // Clear session data if we get here (either expired or failed)
         localStorage.removeItem('walletPublickey');
         localStorage.removeItem('lastAuthTime');
-        localStorage.removeItem('hasSeenEcho');
+        localStorage.removeItem('hasSeenHUD');
         setWalletConnected(false);
         setPublicKey(null);
-      }
-    }
-  };
-
-  const manualConnect = async () => {
-    if ('phantom' in window) {
-      const provider = (window as any).phantom?.solana;
-      if (provider) {
-        try {
-          const resp = await provider.connect();
-          const walletPubKey = resp.publicKey.toString();
-          
-          await requestSignature(provider, walletPubKey);
-          
-          setPublicKey(walletPubKey);
-          setWalletConnected(true);
-          localStorage.setItem('walletPublickey', walletPubKey);
-          localStorage.setItem('hasSeenEcho', 'true');
-          updateAuthTime();
-          
-          addMessage({
-            id: messages.length + 1,
-            text: "System: Connected. Loading interface...",
-            type: "message"
-          });
-        } catch (error) {
-          console.error('Connection error:', error);
-          // Clear all session data on failure
-          localStorage.removeItem('walletPublickey');
-          localStorage.removeItem('lastAuthTime');
-          localStorage.removeItem('hasSeenEcho');
-          setWalletConnected(false);
-          setPublicKey(null);
-          addMessage({
-            id: messages.length + 1,
-            text: "Error: Authentication failed. Retry required.",
-            type: "critical"
-          });
-        }
       }
     }
   };
@@ -398,21 +97,7 @@ const Home: React.FC = () => {
           // Clear all session data
           localStorage.removeItem('walletPublickey');
           localStorage.removeItem('lastAuthTime');
-          localStorage.removeItem('hasSeenEcho');
-          setMessages([{
-            id: 1,
-            text: "System: Interface disconnected.",
-            type: "message"
-          }, {
-            id: 2,
-            text: "System Alert: Session terminated. Re-authentication required.",
-            type: "alert"
-          }]);
-          setMessageIndex(0);
-          
-          // Show welcome text and reset text completion state
-          setTextComplete(false);
-          setShowConnectButton(false);
+          localStorage.removeItem('hasSeenHUD');
         } catch (error) {
           console.error('Error disconnecting from Phantom:', error);
         }
@@ -420,31 +105,18 @@ const Home: React.FC = () => {
     }
   };
 
-  // Handle digitized text completion
-  const handleTextComplete = () => {
-    console.log('Text complete callback triggered');
-    setTextComplete(true);
-    // Directly set showConnectButton to true if conditions are met
-    if (!walletConnected && !showEcho) {
-      console.log('Setting showConnectButton to true directly from callback');
-      setShowConnectButton(true);
-    }
-  };
-
   return (
     <div className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]}`}>
       <div className={styles.backgroundImage} />
       <StarsCanvas theme={currentTheme} />
-      <div className={`${styles.scene} ${showEcho ? styles.echoActive : ''}`}>
+      <div className={`${styles.scene} ${showHUD ? styles.echoActive : ''}`}>
       </div>
-      {showEcho && <Echo 
+      {showHUD && <HUD 
         publicKey={publicKey} 
         onDisconnect={handleDisconnect}
         theme={currentTheme}
         onClose={() => {
-          setShowEcho(false);
-          setTextComplete(false);
-          setShowConnectButton(false);
+          setShowHUD(false);
         }}
         onThemeChange={(theme) => {
           if (theme === 'cyber') {
@@ -453,10 +125,6 @@ const Home: React.FC = () => {
             setCurrentTheme(theme as 'null' | 'light');
           }
         }}
-        messages={messages}
-        onUserInput={handleUserInput}
-        currentRoom={currentRoom}
-        onRoomChange={handleRoomChange}
       />}
     </div>
   );
