@@ -51,7 +51,7 @@ async fn mcp_handler(Json(request): Json<McpRequest>) -> Json<McpResponse> {
 async fn main() {
     let app = Router::new()
         .route("/health", get(health_check))
-        .route("/mcp", post(mcp_handler));
+        .route("/mcp", post(mcp_handler)); // Update this to match server basic functionality
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     println!("Erebus server listening on {}", addr);
