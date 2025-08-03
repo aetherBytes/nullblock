@@ -1,80 +1,61 @@
-use solana_program::{
-    account_info::AccountInfo,
-    entrypoint,
-    entrypoint::ProgramResult,
-    msg,
-    program_error::ProgramError,
-    pubkey::Pubkey,
+use axum::{
+    response::Json,
+    routing::{get, post},
+    Router,
 };
-use borsh::{BorshDeserialize, BorshSerialize};
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+use tokio;
 
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct MemoryCard {
-    pub owner: Pubkey,
-    pub user_behavior: String, // JSON string of behavior data
-    pub event_log: String,    // JSON string of events
-    pub features: Vec<String>,
-    pub last_updated: i64,    // Unix timestamp
+#[derive(Serialize)]
+struct StatusResponse {
+    status: String,
+    service: String,
+    version: String,
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub enum MemoryCardInstruction {
-    Initialize,
-    Update {
-        user_behavior: String,
-        event_log: String,
-        features: Vec<String>,
-    },
+#[derive(Deserialize)]
+struct McpRequest {
+    method: String,
+    params: Option<serde_json::Value>,
 }
 
-// Program entrypoint
-entrypoint!(process_instruction);
+#[derive(Serialize)]
+struct McpResponse {
+    result: Option<serde_json::Value>,
+    error: Option<String>,
+}
 
-// Program logic
-pub fn process_instruction(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    instruction_data: &[u8],
-) -> ProgramResult {
-    msg!("Memory Card program entrypoint");
+async fn health_check() -> Json<StatusResponse> {
+    Json(StatusResponse {
+        status: "healthy".to_string(),
+        service: "erebus".to_string(),
+        version: "0.1.0".to_string(),
+    })
+}
 
-    let instruction = MemoryCardInstruction::try_from_slice(instruction_data)
-        .map_err(|_| ProgramError::InvalidInstructionData)?;
-
-    match instruction {
-        MemoryCardInstruction::Initialize => {
-            msg!("Instruction: Initialize");
-            // TODO: Initialize new Memory Card
-            Ok(())
-        }
-        MemoryCardInstruction::Update { user_behavior, event_log, features } => {
-            msg!("Instruction: Update");
-            // TODO: Update existing Memory Card
-            Ok(())
-        }
+async fn mcp_handler(Json(request): Json<McpRequest>) -> Json<McpResponse> {
+    match request.method.as_str() {
+        "ping" => Json(McpResponse {
+            result: Some(serde_json::json!({"message": "pong"})),
+            error: None,
+        }),
+        _ => Json(McpResponse {
+            result: None,
+            error: Some("Method not implemented".to_string()),
+        }),
     }
 }
 
-// Client-side functionality for testing
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[tokio::main]
+async fn main() {
+    let app = Router::new()
+        .route("/health", get(health_check))
+        .route("/mcp", post(mcp_handler));
 
-    #[test]
-    fn test_initialize() {
-        // TODO: Add initialization test
-    }
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    println!("Erebus server listening on {}", addr);
 
-    #[test]
-    fn test_update() {
-        // TODO: Add update test
-    }
-}
-
-// Main function for local testing/development
-fn main() {
-    println!("Erebus - Solana Contract Server");
-    println!("Supported operations:");
-    println!("1. Memory Card Management");
-    println!("2. Raydium Swap Integration (TODO)");
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
