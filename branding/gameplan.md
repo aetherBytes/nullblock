@@ -1,5 +1,63 @@
 ### AGENT CREATED AND MAINTAINED FILE
 
+Pedro Sage Dev meet 08032025
+
+Core
+
+** MCP / Some type of protocol for agents. **
+
+- Security / ease of use for Web 3 agents.
+
+- Use cases that we build to showcase the platform
+  - agents
+  - hosts
+  - clients
+
+- Visualization / HUD for all
+- see below.
+
+- Super Users:
+  - Pedro Sage (Founder, Lead Dev)
+  - Sage (AI Agent, MCP)
+  - Null (AI Agent, MCP)
+  - Builders Agent /Bot builders
+    - MCP Features for bot / agent users (Security etc...), simple way to visualize their interaction with the chain.
+
+- Everyone else in the gold rush
+  - non tech folk who are building anyway.
+  - maybe focus audience?
+  - simple tools catagory
+  - basic auth / security / db protection
+  - A little more than catagor above, super users.
+    - Visualtion into tasks ocurring...
+    - Basic skeleton tools for building on {insert platform here}
+
+- Everyone else
+  - Focus on visualization and ease of use.
+  - Getting individuals who do not understand the basics, a UI into the basics.
+
+- Basic walet interaction:
+  - MCP - Making wallet / oracle access agnostic.
+  - Metamask - Start
+
+- client / usecas- simple simple trading bot....
+  - one set of trading logic... you can interact with any web3 wallet / oracle / major dex.
+
+Action Items:
+
+- Basic wallet interaction and tie into MCP server.
+  - MCP server should have CURL / HTTP access / Agentic access via MCP.
+    - Server should be to read from wallet / expose holdings / stats
+    -
+
+- Client / Agent:
+  - Target a MCP server and query basic features. (ONLY wallet holdings reads)
+  - Run against X api for agent feedback / alerts. (Proves a agent only use case)
+    - One task to compare holdings against X / known alerts / flags.
+    - {INSERT MOCK / DUMMY / BAD TASK} X10
+
+- Basic HUD on existing web app, that shows the above.
+
 # Nullblock - MCP/Client Interface Platform on Solana
 
 **Start Date**: March 22, 2025 | **Target MVP**: June 27, 2025
