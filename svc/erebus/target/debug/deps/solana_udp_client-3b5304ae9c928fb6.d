@@ -1,0 +1,10 @@
+/Users/sage/nullblock/svc/erebus/target/debug/deps/solana_udp_client-3b5304ae9c928fb6.d: /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/lib.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/nonblocking/mod.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/nonblocking/udp_client.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/udp_client.rs
+
+/Users/sage/nullblock/svc/erebus/target/debug/deps/libsolana_udp_client-3b5304ae9c928fb6.rlib: /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/lib.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/nonblocking/mod.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/nonblocking/udp_client.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/udp_client.rs
+
+/Users/sage/nullblock/svc/erebus/target/debug/deps/libsolana_udp_client-3b5304ae9c928fb6.rmeta: /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/lib.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/nonblocking/mod.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/nonblocking/udp_client.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/udp_client.rs
+
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/lib.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/nonblocking/mod.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/nonblocking/udp_client.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/solana-udp-client-2.3.6/src/udp_client.rs:

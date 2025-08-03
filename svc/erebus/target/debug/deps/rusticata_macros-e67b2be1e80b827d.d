@@ -1,0 +1,11 @@
+/Users/sage/nullblock/svc/erebus/target/debug/deps/rusticata_macros-e67b2be1e80b827d.d: /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/lib.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/combinator.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/debug.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/macros.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/traits.rs
+
+/Users/sage/nullblock/svc/erebus/target/debug/deps/librusticata_macros-e67b2be1e80b827d.rlib: /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/lib.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/combinator.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/debug.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/macros.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/traits.rs
+
+/Users/sage/nullblock/svc/erebus/target/debug/deps/librusticata_macros-e67b2be1e80b827d.rmeta: /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/lib.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/combinator.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/debug.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/macros.rs /Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/traits.rs
+
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/lib.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/combinator.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/debug.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/macros.rs:
+/Users/sage/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rusticata-macros-4.1.0/src/traits.rs:
