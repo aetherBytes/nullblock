@@ -47,7 +47,8 @@ windows:
           - npm run develop
         - 
           - echo "Frontend logs will appear here..."
-          - sleep 5
+          - echo "Monitoring frontend logs..."
+          - tail -f /dev/null
 
 on_project_start: |
   if [ ! -f .env.dev ]; then
