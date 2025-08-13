@@ -559,3 +559,59 @@ class WorkflowOrchestrator:
             "started_at": workflow.started_at,
             "completed_at": workflow.completed_at
         }
+    
+    def create_workflow(self, name: str, description: str, goal_description: str, 
+                       target_metric: str, target_value: float, user_id: str) -> str:
+        """Create a new workflow from parameters"""
+        goal = Goal(
+            description=goal_description,
+            target_metric=target_metric,
+            target_value=target_value
+        )
+        
+        workflow = Workflow(
+            name=name,
+            description=description,
+            goal=goal,
+            user_id=user_id
+        )
+        
+        self.active_workflows[workflow.id] = workflow
+        return workflow.id
+    
+    def start_workflow(self, workflow_id: str) -> bool:
+        """Start a workflow by ID"""
+        workflow = self.active_workflows.get(workflow_id)
+        if not workflow:
+            return False
+        
+        workflow.status = WorkflowStatus.RUNNING
+        workflow.started_at = datetime.now()
+        
+        # In a full implementation, this would start the async task processing
+        # For now, we just update the status
+        return True
+    
+    def start(self):
+        """Start the workflow engine"""
+        self.logger.info("Starting Nullblock Orchestration Engine...")
+        
+        # Start the task processing loop
+        asyncio.create_task(self._process_tasks())
+        
+        # Start the scheduled workflow processor
+        asyncio.create_task(self._process_scheduled_workflows())
+        
+        self.logger.info("Nullblock Orchestration Engine started successfully")
+        
+        # Keep the engine running
+        try:
+            asyncio.get_event_loop().run_forever()
+        except KeyboardInterrupt:
+            self.logger.info("Shutting down Nullblock Orchestration Engine...")
+            self.stop()
+    
+    def stop(self):
+        """Stop the workflow engine"""
+        self.logger.info("Stopping Nullblock Orchestration Engine...")
+        self.running = False

@@ -1,0 +1,3 @@
+#!/bin/bash
+# Quick start command for Nullblock MVP
+./scripts/start-nullblock.sh start

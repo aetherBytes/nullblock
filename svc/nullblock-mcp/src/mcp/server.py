@@ -386,10 +386,10 @@ class MCPServer:
     def run(self, host: str = "0.0.0.0", port: int = 8000, debug: bool = False):
         """Run the MCP server"""
         uvicorn.run(
-            self.app,
+            "mcp.server:app",
             host=host,
             port=port,
-            debug=debug,
+            reload=debug,
             log_level="info"
         )
 
@@ -416,6 +416,9 @@ def create_server() -> MCPServer:
         enable_mev_protection=enable_mev_protection
     )
 
+
+# Create module-level app for uvicorn
+app = create_server().app
 
 if __name__ == "__main__":
     server = create_server()

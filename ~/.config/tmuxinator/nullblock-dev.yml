@@ -1,0 +1,132 @@
+name: nullblock-dev
+root: ~/nullblock
+startup_window: infrastructure
+
+windows:
+  - infrastructure:
+      layout: even-horizontal
+      panes:
+        - commands:
+          - echo "Starting PostgreSQL..."
+          - brew services start postgresql@15
+          - echo "PostgreSQL started"
+        - commands:
+          - echo "Starting Redis..."
+          - brew services start redis
+          - echo "Redis started"
+        - commands:
+          - echo "Starting IPFS..."
+          - ipfs daemon --enable-gc
+
+  - backend:
+      layout: even-horizontal
+      panes:
+        - commands:
+          - echo "Starting MCP Server..."
+          - cd svc/nullblock-mcp
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - python3.12 -m mcp.server
+        - commands:
+          - echo "Starting Orchestration..."
+          - cd svc/nullblock-orchestration
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - python3.12 -m orchestration.server
+        - commands:
+          - echo "Starting Agents..."
+          - cd svc/nullblock-agents
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - python3.12 -m agents.server
+
+  - rust:
+      layout: even-horizontal
+      panes:
+        - commands:
+          - echo "Starting Erebus Rust Server..."
+          - cd svc/erebus
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - cargo run
+        - commands:
+          - echo "Building Erebus..."
+          - cd svc/erebus
+          - cargo build --release
+          - echo "Erebus build complete"
+
+  - frontend:
+      layout: even-horizontal
+      panes:
+        - commands:
+          - echo "Starting Frontend..."
+          - cd svc/hecate
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - npm run develop
+        - commands:
+          - echo "Frontend logs will appear here..."
+          - sleep 5
+
+  - monitoring:
+      layout: even-horizontal
+      panes:
+        - commands:
+          - echo "Health Check - Services:"
+          - echo "MCP: http://localhost:8000/health"
+          - echo "Orchestration: http://localhost:8001/health"
+          - echo "Agents: http://localhost:8002/health"
+          - echo "Erebus: http://localhost:8003/health"
+          - echo "Frontend: http://localhost:5173"
+          - echo "Use 'just health' for manual checks"
+        - commands:
+          - echo "Service logs will appear here..."
+          - sleep 5
+
+  - tools:
+      layout: even-horizontal
+      panes:
+        - commands:
+          - echo "Git status..."
+          - git status
+          - echo "Ready for development"
+        - commands:
+          - echo "Development shell ready..."
+          - echo "Useful commands:"
+          - echo "just test      - Test setup"
+          - echo "just status    - Check services"
+          - echo "just health    - Health check"
+          - echo "just logs      - View logs"
+
+pre_window: |
+  if [ -f .env.dev ]; then
+    export $(cat .env.dev | xargs)
+  fi
+
+on_project_start: |
+  if ! command -v tmuxinator &> /dev/null; then
+    echo "Installing tmuxinator..."
+    gem install tmuxinator
+  fi
+
+  if [ ! -f .env.dev ]; then
+    echo "Creating .env.dev file..."
+    echo "# Nullblock Development Environment" > .env.dev
+    echo "ETHEREUM_RPC_URL=https://eth-sepolia.alchemyapi.io/v2/your-key" >> .env.dev
+    echo "POLYGON_RPC_URL=https://polygon-mumbai.alchemyapi.io/v2/your-key" >> .env.dev
+    echo "WEB3_RPC_URL=https://eth-sepolia.alchemyapi.io/v2/your-key" >> .env.dev
+    echo "FLASHBOTS_RPC_URL=https://relay-goerli.flashbots.net" >> .env.dev
+    echo "BITTENSOR_NETWORK=test" >> .env.dev
+    echo "DATABASE_URL=postgresql://nullblock:nullblock_secure_pass@localhost:5432/nullblock" >> .env.dev
+    echo "REDIS_URL=redis://localhost:6379" >> .env.dev
+    echo "IPFS_API_URL=http://localhost:5001" >> .env.dev
+    echo "SOLANA_RPC_URL=https://api.devnet.solana.com" >> .env.dev
+    echo "VITE_MCP_API_URL=http://localhost:8000" >> .env.dev
+    echo "VITE_ORCHESTRATION_API_URL=http://localhost:8001" >> .env.dev
+    echo "VITE_AGENTS_API_URL=http://localhost:8002" >> .env.dev
+    echo "Please edit .env.dev with your actual API keys"
+  fi
+
+  echo "Development environment ready!"
+
+on_project_stop: |
+  echo "Stopping development services..."
+  brew services stop postgresql@15 2>/dev/null || true
+  brew services stop redis 2>/dev/null || true
+  pkill -f "ipfs daemon" 2>/dev/null || true
+  echo "Development session ended"

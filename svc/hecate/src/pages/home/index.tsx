@@ -8,6 +8,15 @@ const Home: React.FC = () => {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [showHUD, setShowHUD] = useState<boolean>(true);
   const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('light');
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [systemStatus, setSystemStatus] = useState({
+    hud: false,
+    mcp: false,
+    orchestration: false,
+    agents: false,
+    hecate: true, // Frontend is running
+    erebus: true  // Contracts are running
+  });
 
   // Initialize state from localStorage on component mount
   useEffect(() => {
@@ -28,7 +37,32 @@ const Home: React.FC = () => {
     if (savedTheme) {
       setCurrentTheme(savedTheme as 'null' | 'light');
     }
+    
+    // Set initialization flag with slight delay for smooth startup
+    setTimeout(() => {
+      setIsInitialized(true);
+      // Simulate system startup sequence
+      startSystemSequence();
+    }, 500);
   }, []);
+
+  const startSystemSequence = () => {
+    const sequence = [
+      { key: 'hud', delay: 800 },
+      { key: 'mcp', delay: 1200 },
+      { key: 'orchestration', delay: 1600 },
+      { key: 'agents', delay: 2000 }
+    ];
+
+    sequence.forEach(({ key, delay }) => {
+      setTimeout(() => {
+        setSystemStatus(prev => ({
+          ...prev,
+          [key]: true
+        }));
+      }, delay);
+    });
+  };
 
   useEffect(() => {
     const phantomExists = 'phantom' in window && (window as any).phantom?.solana;
@@ -106,12 +140,53 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]}`}>
+    <div className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]} ${isInitialized ? styles.initialized : ''}`}>
       <div className={styles.backgroundImage} />
       <StarsCanvas theme={currentTheme} />
-      <div className={`${styles.scene} ${showHUD ? styles.echoActive : ''}`}>
+      <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`}>
+        {isInitialized && (
+          <div className={styles.statusIndicator}>
+            <div className={styles.systemStatusPanel}>
+              <div className={styles.statusHeader}>
+                <span className={styles.statusTitle}>NULLBLOCK SYSTEMS</span>
+              </div>
+              <div className={styles.statusGrid}>
+                <div className={styles.statusItem}>
+                  <span className={`${styles.statusDot} ${systemStatus.hecate ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>HECATE</span>
+                  <span className={styles.statusValue}>{systemStatus.hecate ? 'ONLINE' : 'OFFLINE'}</span>
+                </div>
+                <div className={styles.statusItem}>
+                  <span className={`${styles.statusDot} ${systemStatus.erebus ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>EREBUS</span>
+                  <span className={styles.statusValue}>{systemStatus.erebus ? 'ONLINE' : 'OFFLINE'}</span>
+                </div>
+                <div className={styles.statusItem}>
+                  <span className={`${styles.statusDot} ${systemStatus.hud ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>HUD</span>
+                  <span className={styles.statusValue}>{systemStatus.hud ? 'OPERATIONAL' : 'INITIALIZING'}</span>
+                </div>
+                <div className={styles.statusItem}>
+                  <span className={`${styles.statusDot} ${systemStatus.mcp ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>MCP</span>
+                  <span className={styles.statusValue}>{systemStatus.mcp ? 'ACTIVE' : 'STARTING'}</span>
+                </div>
+                <div className={styles.statusItem}>
+                  <span className={`${styles.statusDot} ${systemStatus.orchestration ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>ORCHESTRATION</span>
+                  <span className={styles.statusValue}>{systemStatus.orchestration ? 'READY' : 'LOADING'}</span>
+                </div>
+                <div className={styles.statusItem}>
+                  <span className={`${styles.statusDot} ${systemStatus.agents ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>AGENTS</span>
+                  <span className={styles.statusValue}>{systemStatus.agents ? 'DEPLOYED' : 'SPAWNING'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-      {showHUD && <HUD 
+      {showHUD && isInitialized && <HUD 
         publicKey={publicKey} 
         onDisconnect={handleDisconnect}
         theme={currentTheme}
@@ -121,8 +196,10 @@ const Home: React.FC = () => {
         onThemeChange={(theme) => {
           if (theme === 'cyber') {
             setCurrentTheme('null');
+            localStorage.setItem('currentTheme', 'null');
           } else {
             setCurrentTheme(theme as 'null' | 'light');
+            localStorage.setItem('currentTheme', theme);
           }
         }}
       />}
