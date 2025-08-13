@@ -1,0 +1,214 @@
+# Nullblock Development Environment - Tmuxinator Configuration
+# 
+# This is an example tmuxinator config for the Nullblock development environment.
+# It provides a comprehensive multi-pane setup for all core services.
+#
+# Setup Instructions:
+# 1. Install tmuxinator: gem install tmuxinator
+# 2. Copy this file to ~/.config/tmuxinator/nullblock-dev.yml
+# 3. Edit the 'root' path below to match your nullblock repo location
+# 4. Run: tmuxinator start nullblock-dev
+#
+# Quick Start:
+# cp tmuxinator-config-example.yml ~/.config/tmuxinator/nullblock-dev.yml
+# tmuxinator start nullblock-dev
+
+name: nullblock-dev
+root: ~/nullblock  # Edit this path to match your nullblock repository location
+startup_window: infrastructure
+
+windows:
+  - infrastructure:
+      layout: even-horizontal
+      panes:
+        - 
+          - echo "🗄️  Starting PostgreSQL..."
+          - brew services start postgresql@15
+          - echo "✅ PostgreSQL started"
+        - 
+          - echo "📡 Starting Redis..."
+          - brew services start redis
+          - echo "✅ Redis started"
+        - 
+          - echo "🌐 Starting IPFS..."
+          - ipfs daemon --enable-gc
+
+  - backend:
+      layout: even-horizontal
+      panes:
+        - 
+          - echo "🔌 Starting MCP Server..."
+          - cd svc/nullblock-mcp
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - python3.12 -m mcp.server
+        - 
+          - echo "🎭 Starting Orchestration..."
+          - cd svc/nullblock-orchestration
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - python3.12 -m orchestration.server
+        - 
+          - echo "🤖 Starting Agents..."
+          - cd svc/nullblock-agents
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - python3.12 -m agents.server
+
+  - rust:
+      layout: even-horizontal
+      panes:
+        - 
+          - echo "⚡ Starting Erebus Rust Server..."
+          - cd svc/erebus
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - cargo run
+        - 
+          - echo "🔨 Building Erebus (Release)..."
+          - cd svc/erebus
+          - cargo build --release
+          - echo "✅ Erebus build complete"
+
+  - frontend:
+      layout: even-horizontal
+      panes:
+        - 
+          - echo "🌐 Starting Frontend (Hecate)..."
+          - cd svc/hecate
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - npm run develop
+        - 
+          - echo "📊 Frontend logs will appear here..."
+          - echo "Frontend will be available at http://localhost:5173"
+          - sleep 5
+
+  - monitoring:
+      layout: even-horizontal
+      panes:
+        - 
+          - echo "🔍 Health Check - Services:"
+          - echo "MCP: http://localhost:8000/health"
+          - echo "Orchestration: http://localhost:8001/health" 
+          - echo "Agents: http://localhost:8002/health"
+          - echo "Erebus: http://localhost:8003/health"
+          - echo "Frontend: http://localhost:5173"
+          - echo ""
+          - echo "💡 Use 'just health' for manual checks"
+        - 
+          - echo "📈 Service logs and monitoring..."
+          - echo "Use this pane to run monitoring commands"
+          - sleep 5
+
+  - tools:
+      layout: even-horizontal
+      panes:
+        - 
+          - echo "📋 Git Status:"
+          - git status
+          - echo ""
+          - echo "✅ Ready for development"
+        - 
+          - echo "🛠️  Development Shell Ready"
+          - echo ""
+          - echo "Useful commands:"
+          - echo "  just test      - Run test setup"
+          - echo "  just status    - Check service status"
+          - echo "  just health    - Comprehensive health check"
+          - echo "  just logs      - View service logs"
+          - echo "  just restart   - Restart services"
+          - echo "  just stop      - Stop all services"
+          - echo ""
+          - echo "MCP Commands:"
+          - echo "  cd svc/nullblock-mcp && python -m mcp.server"
+          - echo "  cd svc/nullblock-orchestration && python -m orchestration.server"
+          - echo "  cd svc/nullblock-agents && python -m agents.server"
+
+# Run before starting the project
+on_project_start: |
+  echo "🚀 Initializing Nullblock Development Environment..."
+  
+  # Check if tmuxinator is installed
+  if ! command -v tmuxinator &> /dev/null; then
+    echo "📦 Installing tmuxinator..."
+    gem install tmuxinator
+  fi
+
+  # Create .env.dev if it doesn't exist
+  if [ ! -f .env.dev ]; then
+    echo "📝 Creating .env.dev file..."
+    echo "# Nullblock Development Environment" > .env.dev
+    echo "ETHEREUM_RPC_URL=https://eth-sepolia.alchemyapi.io/v2/your-key" >> .env.dev
+    echo "POLYGON_RPC_URL=https://polygon-mumbai.alchemyapi.io/v2/your-key" >> .env.dev
+    echo "WEB3_RPC_URL=https://eth-sepolia.alchemyapi.io/v2/your-key" >> .env.dev
+    echo "FLASHBOTS_RPC_URL=https://relay-goerli.flashbots.net" >> .env.dev
+    echo "BITTENSOR_NETWORK=test" >> .env.dev
+    echo "DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@localhost:5432/nullblock" >> .env.dev
+    echo "REDIS_URL=redis://localhost:6379" >> .env.dev
+    echo "IPFS_API_URL=http://localhost:5001" >> .env.dev
+    echo "SOLANA_RPC_URL=https://api.devnet.solana.com" >> .env.dev
+    echo "VITE_MCP_API_URL=http://localhost:8000" >> .env.dev
+    echo "VITE_ORCHESTRATION_API_URL=http://localhost:8001" >> .env.dev
+    echo "VITE_AGENTS_API_URL=http://localhost:8002" >> .env.dev
+    echo ""
+    echo "⚠️  Please edit .env.dev with your actual API keys"
+  fi
+
+  # Check for required tools
+  echo "🔍 Checking prerequisites..."
+  
+  # Check Python
+  if command -v python3.12 &> /dev/null; then
+    echo "✅ Python 3.12 found"
+  else
+    echo "❌ Python 3.12 not found - install it first"
+  fi
+  
+  # Check Node.js
+  if command -v npm &> /dev/null; then
+    echo "✅ Node.js/npm found"
+  else
+    echo "❌ Node.js/npm not found - install it first"
+  fi
+  
+  # Check Rust
+  if command -v cargo &> /dev/null; then
+    echo "✅ Rust/Cargo found"
+  else
+    echo "❌ Rust/Cargo not found - install it first"
+  fi
+  
+  # Check Just
+  if command -v just &> /dev/null; then
+    echo "✅ Just found"
+  else
+    echo "❌ Just not found - install it with: cargo install just"
+  fi
+
+  echo ""
+  echo "🎯 Development environment ready!"
+  echo "Services will start in separate panes..."
+
+# Run when stopping the project
+on_project_stop: |
+  echo "🛑 Stopping Nullblock development services..."
+  
+  # Stop infrastructure services
+  brew services stop postgresql@15 2>/dev/null || true
+  brew services stop redis 2>/dev/null || true
+  pkill -f "ipfs daemon" 2>/dev/null || true
+  
+  # Stop any remaining Python processes
+  pkill -f "python.*mcp.server" 2>/dev/null || true
+  pkill -f "python.*orchestration.server" 2>/dev/null || true
+  pkill -f "python.*agents.server" 2>/dev/null || true
+  
+  # Stop Rust processes
+  pkill -f "cargo run" 2>/dev/null || true
+  
+  # Stop frontend
+  pkill -f "npm run develop" 2>/dev/null || true
+  
+  echo "✅ Development session ended cleanly"
+
+# Set environment variables for all windows
+pre_window: |
+  if [ -f .env.dev ]; then
+    export $(cat .env.dev | xargs)
+  fi

@@ -364,3 +364,231 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+// HUD Active State
+.hudActive {
+  .scene {
+    // Enhanced visibility when HUD is active
+    opacity: 1;
+    z-index: 2;
+    
+    .fire {
+      // Intensify the flame when HUD is active
+      filter: brightness(1.2) saturate(1.1);
+      opacity: 0.9;
+    }
+  }
+}
+
+// Status Indicator
+.statusIndicator {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.8s ease;
+  pointer-events: auto;
+}
+
+.systemStatusPanel {
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid $echo-blue;
+  border-radius: 6px;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 0 20px rgba($echo-blue, 0.4);
+  min-width: 280px;
+}
+
+.statusHeader {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba($echo-blue, 0.3);
+  background: rgba($echo-blue, 0.1);
+}
+
+.statusTitle {
+  color: $echo-blue;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 5px rgba($echo-blue, 0.3);
+}
+
+.statusGrid {
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.statusItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba($echo-blue, 0.05);
+  }
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  
+  &.online {
+    background: $echo-green;
+    animation: pulse 2s infinite;
+    box-shadow: 0 0 4px rgba($echo-green, 0.6);
+  }
+  
+  &.offline {
+    background: $echo-orange;
+    animation: pulseOrange 2s infinite;
+    box-shadow: 0 0 4px rgba($echo-orange, 0.6);
+  }
+}
+
+.statusLabel {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.statusValue {
+  color: $echo-blue;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: right;
+  text-shadow: 0 0 3px rgba($echo-blue, 0.3);
+}
+
+// Initialization animations
+.initialized {
+  .statusIndicator {
+    opacity: 1;
+    transform: translateY(0);
+    animation: statusFadeIn 1s ease 0.5s both;
+    pointer-events: auto;
+  }
+  
+  .appContainer {
+    animation: systemBoot 2s ease both;
+  }
+}
+
+// Keyframe animations
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes pulseOrange {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes statusFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes systemBoot {
+  0% {
+    filter: brightness(0.8) contrast(1.2);
+  }
+  50% {
+    filter: brightness(1.1) contrast(0.9);
+  }
+  100% {
+    filter: brightness(1) contrast(1);
+  }
+}
+
+// Theme variations for consistency
+.theme-null {
+  .appContainer {
+    background-color: $null-bg;
+    color: $null-text;
+  }
+  
+  .hudActive {
+    .fire {
+      filter: brightness(1.3) saturate(1.2) hue-rotate(120deg);
+    }
+  }
+  
+  .statusDot {
+    background: $null-text;
+    box-shadow: 0 0 5px rgba($null-text, 0.5);
+  }
+  
+  .statusText {
+    color: $null-text;
+    text-shadow: 0 0 5px rgba($null-text, 0.3);
+  }
+  
+  .systemStatus {
+    border-color: $null-text;
+    box-shadow: 0 0 15px rgba($null-text, 0.3);
+  }
+}
+
+.theme-light {
+  .appContainer {
+    background-color: $light-bg;
+    color: $light-text;
+  }
+  
+  .hudActive {
+    .fire {
+      filter: brightness(0.9) saturate(0.8);
+    }
+  }
+  
+  .statusDot {
+    background: $light-accent;
+    box-shadow: 0 0 5px rgba($light-accent, 0.5);
+  }
+  
+  .statusText {
+    color: $light-accent;
+    text-shadow: 0 0 5px rgba($light-accent, 0.3);
+  }
+  
+  .systemStatus {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: $light-accent;
+    box-shadow: 0 0 15px rgba($light-accent, 0.3);
+  }
+}
+

@@ -461,3 +461,36 @@ class PriceAgent:
             summary["best_opportunity"] = opportunities[0].model_dump()
         
         return summary
+    
+    def start(self):
+        """Start the price monitoring agent"""
+        logger.info("Starting Nullblock Price Agent...")
+        
+        try:
+            # Start the monitoring loop
+            asyncio.run(self._monitor_prices())
+        except KeyboardInterrupt:
+            logger.info("Shutting down Price Agent...")
+        except Exception as e:
+            logger.error(f"Price Agent error: {e}")
+    
+    async def _monitor_prices(self):
+        """Main monitoring loop"""
+        logger.info("Price monitoring started")
+        
+        while True:
+            try:
+                # Find arbitrage opportunities
+                opportunities = self.find_arbitrage_opportunities()
+                
+                if opportunities:
+                    logger.info(f"Found {len(opportunities)} arbitrage opportunities")
+                    for opp in opportunities[:3]:  # Log top 3
+                        logger.info(f"Opportunity: {opp.token_pair} - {opp.profit_percentage:.2f}% profit")
+                
+                # Wait before next check
+                await asyncio.sleep(30)  # Check every 30 seconds
+                
+            except Exception as e:
+                logger.error(f"Error in price monitoring: {e}")
+                await asyncio.sleep(60)  # Wait longer on error

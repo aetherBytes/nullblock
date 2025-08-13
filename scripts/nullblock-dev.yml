@@ -1,0 +1,70 @@
+name: nullblock-dev
+root: ~/nullblock
+startup_window: infrastructure
+
+windows:
+  - infrastructure:
+      layout: even-horizontal
+      panes:
+        - 
+          - echo "Starting PostgreSQL..."
+          - brew services start postgresql@17
+          - echo "PostgreSQL started"
+        - 
+          - echo "Starting Redis..."  
+          - brew services start redis
+          - echo "Redis started"
+        - 
+          - echo "Starting IPFS..."
+          - ipfs daemon --enable-gc
+
+  - backend:
+      layout: even-horizontal
+      panes:
+        - 
+          - echo "Starting MCP Server..."
+          - cd svc/nullblock-mcp
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - python3 -m mcp.server
+        - 
+          - echo "Starting Orchestration..."
+          - cd svc/nullblock-orchestration
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - python3 -m orchestration.server
+        - 
+          - echo "Starting Agents..."
+          - cd svc/nullblock-agents
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - python3 -m agents.server
+
+  - frontend:
+      layout: even-horizontal
+      panes:
+        - 
+          - echo "Starting Frontend..."
+          - cd svc/hecate
+          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+          - npm run develop
+        - 
+          - echo "Frontend logs will appear here..."
+          - sleep 5
+
+on_project_start: |
+  if [ ! -f .env.dev ]; then
+    echo "Creating .env.dev file..."
+    echo "# Nullblock Development Environment" > .env.dev
+    echo "ETHEREUM_RPC_URL=https://eth-sepolia.alchemyapi.io/v2/your-key" >> .env.dev
+    echo "Please edit .env.dev with your actual API keys"
+  fi
+  echo "Development environment ready!"
+
+on_project_stop: |
+  echo "Stopping development services..."
+  brew services stop postgresql@17 2>/dev/null || true
+  brew services stop redis 2>/dev/null || true
+  pkill -f "ipfs daemon" 2>/dev/null || true
+
+pre_window: |
+  if [ -f .env.dev ]; then
+    export $(cat .env.dev | xargs)
+  fi
