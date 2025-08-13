@@ -197,7 +197,7 @@ Iterate via DAO proposals.
 
 Phase 4: Domination - Sustainable LeadershipNetwork Effects: MCP and Bittensor subnets drive $NULL/
 
-MVP Strategy: Skeleton Implementations for All NichesWe’ll build minimal but functional agent workflows for each niche, ensuring Nullblock.mcp and Nullblock.orchestration provide reusable services. Each niche will have a Price/Data Agent, Strategy/Analysis Agent, Execution Agent, and Reporting Agent, integrated with MCP and Bittensor.1. Nullblock.mcp - Blanket Tooling LayerPurpose: Provide secure, reusable infrastructure for all niches.
+MVP Strategy: Skeleton Implementations for All Niches. We’ll build minimal but functional agent workflows for each niche, ensuring Nullblock.mcp and Nullblock.orchestration provide reusable services. Each niche will have a Price/Data Agent, Strategy/Analysis Agent, Execution Agent, and Reporting Agent, integrated with MCP and Bittensor.1. Nullblock.mcp - Blanket Tooling LayerPurpose: Provide secure, reusable infrastructure for all niches.
 Features:Wallet Authentication: Supports MetaMask, WalletConnect on Polygon (Ethereum layer-2 for low gas fees).
 Context Storage: Stores user preferences (e.g., arbitrage profit thresholds, DeFi risk profiles, NFT bidding limits, DAO voting rules) on IPFS.
 Flashbots Integration: Uses Flashbots RPC for MEV protection in arbitrage/DeFi/NFT trades, preventing front-running.
@@ -228,7 +228,7 @@ Smart Contract Execution: Uses Gelato for task automation.
 Monetization:Task Fees: $0.05 per automated task.
 Subscriptions: $100-$1000/month for DAOs/protocols.
 
-Tech Stack:LangChain for orchestration logic.
+Tech Stack:LangChain for orchestration logic. # revisit if this is best stack fit.
 Bittensor Python SDK for subnet integration.
 Gelato for smart contract automation.
 Akash for decentralized compute.
@@ -322,7 +322,3 @@ Skeleton Agents: Basic functionality for arbitrage, DeFi, NFTs, DAOs, extensible
 Bittensor Synergy: Subnets drive task innovation, rewarding impactful contributions.
 Best Practices: Flashbots, prompt protection, gas optimization ensure security/efficiency.
 Profitability: Fees, subscriptions, and licensing offset overhead ASAP.
-
-What’s your first step in coding the Nullblock.mcp SDK (e.g., wallet authentication, Flashbots) or Nullblock.orchestration with Bittensor? Want to start with a specific niche (e.g., arbitrage) or focus on a core MCP feature (e.g., prompt protection)? I can provide code snippets or help design the Bittensor subnet. Let me know how to support your tooling vision!
-
-Think Harder
