@@ -1,0 +1,3 @@
+#!/bin/bash
+# Quick status command for Nullblock MVP
+./scripts/start-nullblock.sh status

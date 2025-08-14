@@ -6,22 +6,86 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Nullblock is a decentralized Web3 platform for deploying and monetizing agentic workflows, built on the Model Context Protocol (MCP) architecture. The platform consists of four core components in a monorepo structure:
 
-- **Nullblock.mcp**: MCP-based tooling layer with secure wallet interactions, Flashbots MEV protection, and prompt injection defenses
-- **Nullblock.orchestration**: Goal-driven engine integrating Bittensor subnets for coordinating automated workflows  
-- **Nullblock.agents**: Modular agentic army delivering niche-specific services (arbitrage bots, yield optimizers, NFT traders, DAO governance tools)
-- **Nullblock.platform**: dApp and marketplace for deploying, customizing, and monetizing workflows
+## 🎯 **MVP STATUS: CORE INFRASTRUCTURE COMPLETED** ✅
 
-### Current Implementation Structure
+### **Production-Ready Components**
 
-- **Helios**: Python FastAPI backend with WebSocket support (evolving toward MCP server)
-- **Hecate**: React TypeScript frontend with SSR using @lomray/vite-ssr-boost (will become Nullblock.platform UI)
-- **Erebus**: Rust Solana contracts for blockchain operations (foundation for on-chain agents)
+- ✅ **Nullblock.mcp** (`/svc/nullblock-mcp/`): Complete MCP server with wallet authentication, IPFS context storage, Flashbots MEV protection, and ML-based security
+- ✅ **Nullblock.orchestration** (`/svc/nullblock-orchestration/`): Goal-driven workflow engine with Bittensor subnet integration and template system  
+- ✅ **Nullblock.agents** (`/svc/nullblock-agents/`): Full arbitrage agent suite (Price, Strategy, Execution, Reporting) with MEV protection
+- 🔄 **Nullblock.platform**: dApp marketplace (pending - requires frontend development)
 
-The platform currently features an ECHO interface (chat-like UI) with room-based commands and plans for a browser extension called Aether. This will evolve into a comprehensive MCP-powered agentic workflow platform.
+### **Legacy Implementation Structure** (Transitioning)
+
+- **Helios** (`/svc/helios/`): Original FastAPI backend → **Replaced by Nullblock.mcp**
+- **Hecate** (`/svc/hecate/`): React frontend with SSR → **Evolving to Nullblock.platform UI**
+- **Erebus** (`/svc/erebus/`): Rust Solana contracts → **Foundation for on-chain integration**
+
+### **Current Capabilities**
+
+✅ **Full Arbitrage Trading Pipeline**: From price monitoring to MEV-protected execution with comprehensive reporting  
+✅ **Secure Wallet Operations**: Multi-wallet support (MetaMask, WalletConnect, Phantom) with challenge-response auth  
+✅ **Bittensor Task Marketplace**: Decentralized task submission with $NULL token rewards  
+✅ **Advanced Security**: Prompt injection protection, encrypted context storage, anomaly detection  
+✅ **Goal-Driven Automation**: Template-based workflows for arbitrage, DeFi, NFT, and DAO operations
 
 ## Common Development Commands
 
-### Helios Backend (`svc/helios/`)
+### **New MCP Infrastructure** 🆕
+
+#### Nullblock.mcp (`svc/nullblock-mcp/`)
+```bash
+# Install dependencies
+pip install -e .
+
+# Development server
+python -m mcp.server
+# OR with uvicorn
+uvicorn mcp.server:create_server --host 0.0.0.0 --port 8000 --reload
+
+# Code quality
+ruff format . && ruff check . --fix && mypy .
+
+# Testing
+pytest -v src/tests/
+
+# Environment setup
+cp .env.example .env
+# Edit: ETHEREUM_RPC_URL, FLASHBOTS_PRIVATE_KEY, IPFS_API
+```
+
+#### Nullblock.orchestration (`svc/nullblock-orchestration/`)
+```bash
+# Install dependencies  
+pip install -e .
+
+# Development
+python -m orchestration.workflow.engine
+
+# Code quality
+ruff format . && ruff check . --fix && mypy .
+
+# Testing
+pytest -v src/tests/
+```
+
+#### Nullblock.agents (`svc/nullblock-agents/`)
+```bash
+# Install dependencies
+pip install -e .
+
+# Run arbitrage agents
+python -m agents.arbitrage.price_agent
+python -m agents.arbitrage.strategy_agent
+
+# Code quality
+ruff format . && ruff check . --fix && mypy .
+
+# Testing
+pytest -v src/tests/
+```
+
+### **Legacy Backend** (Helios - `svc/helios/`)
 ```bash
 # Development server
 just run
@@ -133,16 +197,34 @@ Nullblock implements a Model Context Protocol-first architecture for secure, agn
 - **Wallet Integration**: @solana/web3.js with Phantom wallet support
 - **Future Integration**: OnchainKit for broader Web3 functionality
 
-### Current Backend Architecture (Helios → Nullblock.mcp)  
+### **Production MCP Architecture** ✅ (Nullblock.mcp)
+- **Web Framework**: FastAPI with uvicorn ASGI server
+- **Authentication**: Challenge-response wallet verification with session management
+- **Context Storage**: IPFS-based encrypted storage with local caching
+- **MEV Protection**: Flashbots client with bundle simulation and submission
+- **Security**: ML-based prompt injection detection with anomaly detection
+- **Multi-Wallet**: MetaMask, WalletConnect, Phantom support
+- **API Structure**: RESTful MCP endpoints with comprehensive security middleware
+
+### **MCP Server Endpoints** (Production)
+- `/health` - System health check with service status
+- `/auth/challenge` - Create wallet authentication challenge
+- `/auth/verify` - Verify signed challenge and create session
+- `/context` - Get user context and preferences (authenticated)
+- `/context/update` - Update user context (authenticated)
+- `/trading/command` - Execute trading commands with security validation
+- `/wallet/balance` - Get wallet balance (authenticated)
+
+### **Legacy Backend Architecture** (Helios - Transitioning)  
 - **Web Framework**: FastAPI with uvicorn ASGI server
 - **WebSocket Support**: Built-in for real-time communication with browser extension
 - **API Structure**: RESTful endpoints + WebSocket endpoints for live data
 - **Blockchain**: solana-py for Solana RPC interactions
 - **Logging**: Custom logging with python-json-logger
 - **Code Quality**: Ruff (linting/formatting) + MyPy (type checking)
-- **Evolving Toward**: MCP server implementation with secure agentic workflows
+- **Status**: Legacy system being replaced by Nullblock.mcp
 
-### Key Backend Endpoints (Current)
+### **Legacy Endpoints** (Helios - For Reference)
 - `/api/wallet/{public_key}` - Wallet data retrieval
 - `/api/wallet/health/{public_key}` - Wallet health analysis  
 - `/api/memory-card/{public_key}` - Memory Card NFT data (mutable)
@@ -181,8 +263,13 @@ The ECHO interface uses a room-based command structure that will evolve into MCP
 - `/health` (locked): `/risk`, `/audit`, `/monitor`, `/alerts`
 - `/reality` (locked): `/spawn`, `/enhance`, `/interact`, `/sync`
 
-**Future MCP Commands** (planned):
-- Arbitrage workflows: `/arbitrage/start`, `/arbitrage/strategy`, `/arbitrage/monitor`
+**✅ MCP Commands** (Implemented):
+- Arbitrage workflows: `/arbitrage` - Execute arbitrage with MEV protection and risk assessment
+- Trading commands: `/swap`, `/trade` - Execute trades with security validation  
+- Portfolio management: `/rebalance` - Rebalance portfolio based on user preferences
+- Settings: `/set`, `/update` - Update user context and trading preferences
+
+**🔄 Future MCP Commands** (Planned):
 - DeFi automation: `/defi/yield`, `/defi/rebalance`, `/defi/risk`
 - NFT operations: `/nft/trade`, `/nft/bid`, `/nft/analyze`
 - DAO governance: `/dao/proposals`, `/dao/vote`, `/dao/delegate`

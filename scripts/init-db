@@ -1,0 +1,3 @@
+#!/bin/bash
+# Quick database initialization command
+./scripts/init-databases.sh

@@ -1,21 +1,18 @@
 FROM node:18.13.0-alpine
 
-ARG RUN_TYPE=ssr
-ARG ENV_MODE=production
-ARG WEB_PATH=/var/www
+WORKDIR /app
 
-ENV NODE_ENV=${ENV_MODE}
-ENV TYPE=${RUN_TYPE}
+# Copy package files first for better caching
+COPY package.json package-lock.json ./
 
-RUN mkdir -p $WEB_PATH
+# Install dependencies
+RUN npm ci
 
-WORKDIR $WEB_PATH
+# Copy source code
+COPY . .
 
-COPY svc/hecate/build $WEB_PATH/build
-COPY svc/hecate/package.json $WEB_PATH/package.json
-COPY svc/hecate/package-lock.json $WEB_PATH/package-lock.json
+# Expose development port
+EXPOSE 5173
 
-
-RUN npm ci --omit=dev
-
-CMD npm run start:${TYPE} -- --host
+# Start development server
+CMD ["npm", "run", "develop"]
