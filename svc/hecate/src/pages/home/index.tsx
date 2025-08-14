@@ -9,7 +9,7 @@ const Home: React.FC = () => {
   const [showHUD, setShowHUD] = useState<boolean>(true);
   const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('light');
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const [statusPanelCollapsed, setStatusPanelCollapsed] = useState<boolean>(false);
+  const [statusPanelCollapsed, setStatusPanelCollapsed] = useState<boolean>(true);
   const [systemStatus, setSystemStatus] = useState({
     hud: false,
     mcp: false,

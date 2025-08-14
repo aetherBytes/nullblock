@@ -3640,3 +3640,187 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     max-width: 250px;
   }
 }
+
+// Clickable NULLBLOCK title button
+.nullblockTitleButton {
+  background: none;
+  border: none;
+  color: $echo-blue;
+  font-size: 1.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+  
+  &:hover {
+    color: $echo-blue-dark;
+    text-shadow: 0 0 15px rgba($echo-blue, 0.5);
+    transform: scale(1.02);
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+// Home screen content styles
+.homeContent {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+}
+
+.loginPrompt {
+  max-width: 500px;
+  
+  h3 {
+    color: $echo-blue;
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+  }
+  
+  p {
+    color: $text-color;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+}
+
+.loginOptions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.connectWalletButton {
+  background: linear-gradient(135deg, $echo-blue, $echo-blue-dark);
+  border: none;
+  color: white;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 15px rgba($echo-blue, 0.3);
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba($echo-blue, 0.4);
+    background: linear-gradient(135deg, $echo-blue-dark, $echo-blue);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.walletNote {
+  color: $echo-gray;
+  font-size: 0.9rem;
+  
+  a {
+    color: $echo-blue;
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.welcomeMessage {
+  max-width: 600px;
+  
+  h3 {
+    color: $echo-blue;
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+  }
+}
+
+.walletInfo {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid $echo-blue-dark;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  
+  p {
+    margin: 0.5rem 0;
+    color: $text-color;
+  }
+  
+  strong {
+    color: $echo-blue;
+  }
+}
+
+.walletAddress {
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: $echo-green;
+  word-break: break-all;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba($echo-green, 0.3);
+}
+
+.walletUsername {
+  color: $echo-blue;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.quickActions {
+  p {
+    color: $text-color;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+}
+
+.actionButtons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  background: rgba($echo-blue, 0.1);
+  border: 1px solid $echo-blue;
+  color: $echo-blue;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  
+  &:hover {
+    background: rgba($echo-blue, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba($echo-blue, 0.2);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
