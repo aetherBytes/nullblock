@@ -8,7 +8,7 @@ import nullLogo from '../../assets/images/null_logo.png';
 import echoBatWhite from '../../assets/images/echo_bat_white.png';
 import echoBatBlack from '../../assets/images/echo_bat_black.png';
 
-type Screen = 'chambers' | 'camp' | 'inventory' | 'campaign' | 'lab';
+type Screen = 'home' | 'overview' | 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
 type TabType = 'missions' | 'systems' | 'defense' | 'uplink' | 'hud' | 'status' | 'arbitrage' | 'social' | 'portfolio' | 'defi';
 
@@ -118,7 +118,8 @@ interface AscentLevelData {
 }
 
 const SCREEN_LABELS: Record<Screen, string> = {
-  chambers: 'H.U.D CHAMBERS',
+  home: '',
+  overview: 'OVERVIEW',
   camp: 'CAMP',
   inventory: 'CACHE',
   campaign: 'CAMPAIGN',
@@ -135,7 +136,7 @@ const HUD: React.FC<HUDProps> = ({
   statusPanelCollapsed,
   setStatusPanelCollapsed
 }) => {
-  const [screen, setScreen] = useState<Screen>('chambers');
+  const [screen, setScreen] = useState<Screen>('home');
   const [walletData, setWalletData] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile>({
     id: publicKey ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol` : '',
@@ -175,8 +176,8 @@ const HUD: React.FC<HUDProps> = ({
   const [mcpAuthenticated, setMcpAuthenticated] = useState<boolean>(false);
   const [mcpHealthStatus, setMcpHealthStatus] = useState<any>(null);
 
-  // Only unlock 'chambers' by default, unlock others if logged in
-  const unlockedScreens = publicKey ? ['chambers', 'camp'] : ['chambers'];
+  // Only unlock 'home' and 'overview' by default, unlock others if logged in
+  const unlockedScreens = publicKey ? ['home', 'overview', 'camp'] : ['home', 'overview'];
 
   // Define uplinks
   const uplinks: Uplink[] = [
@@ -724,19 +725,18 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderControlScreen = () => (
     <nav className={styles.verticalNavbar}>
-      <div className={styles.nullblockTitle}>NULLBLOCK</div>
+      <button 
+        className={styles.nullblockTitleButton}
+        onClick={() => setScreen('home')}
+      >
+        NULLBLOCK
+      </button>
       <div
-        className={`${styles.screenLabel} ${screen === 'chambers' ? styles.centeredLabel : ''}`}
+        className={`${styles.screenLabel} ${screen === 'home' ? styles.centeredLabel : ''}`}
       >
         {SCREEN_LABELS[screen]}
       </div>
       <div className={styles.navbarButtons}>
-        <button className={styles.batLogoButton} onClick={() => setScreen('chambers')}>
-          <img src={echoBatWhite} alt="Bat Logo" className={styles.batLogoIcon} />
-        </button>
-        <button className={styles.nullLogoButton} onClick={() => setScreen('chambers')}>
-          <img src={nullLogo} alt="Null Logo" className={styles.nullLogoIcon} />
-        </button>
         <a 
           href="https://x.com/Nullblock_io" 
           target="_blank" 
@@ -2000,7 +2000,148 @@ const HUD: React.FC<HUDProps> = ({
     </div>
   );
 
-  const renderChambersScreen = () => (
+  const renderHomeScreen = () => (
+    <div className={styles.hudScreen}>
+      {/* System Status Panel - positioned in inner HUD */}
+      <div className={styles.statusIndicator}>
+        <div className={`${styles.systemStatusPanel} ${statusPanelCollapsed ? styles.collapsed : ''}`}>
+          <div className={styles.statusHeader} onClick={() => setStatusPanelCollapsed(!statusPanelCollapsed)}>
+            <div className={styles.headerContent}>
+              <span className={styles.statusTitle}>SYSTEM CONTROL</span>
+              <div className={styles.headerRight}>
+                {systemStatus.portfolio && systemStatus.defi && !statusPanelCollapsed && (
+                  <span className={styles.newFeaturesLabel}>✨ NEW</span>
+                )}
+                <span className={styles.toggleIcon}>{statusPanelCollapsed ? '▼' : '▲'}</span>
+              </div>
+            </div>
+          </div>
+          
+          {!statusPanelCollapsed && (
+            <div className={styles.statusContent}>
+              {/* Core Systems */}
+              <div className={styles.systemGroup}>
+                <div className={styles.groupLabel}>CORE</div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.hecate ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>HECATE</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.erebus ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>EREBUS</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.hud ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>HUD</span>
+                </div>
+              </div>
+              
+              {/* MCP & Orchestration */}
+              <div className={styles.systemGroup}>
+                <div className={styles.groupLabel}>MCP</div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.mcp ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>SERVER</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.orchestration ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>ORCHESTRATION</span>
+                </div>
+              </div>
+              
+              {/* Trading Agents */}
+              <div className={styles.systemGroup}>
+                <div className={styles.groupLabel}>AGENTS</div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.arbitrage ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>ARBITRAGE</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.social ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>SOCIAL</span>
+                </div>
+                <div className={`${styles.statusRow} ${systemStatus.portfolio ? styles.newFeature : ''}`}>
+                  <span className={`${styles.statusDot} ${systemStatus.portfolio ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>PORTFOLIO</span>
+                  {systemStatus.portfolio && <span className={styles.newBadge}>NEW</span>}
+                </div>
+                <div className={`${styles.statusRow} ${systemStatus.defi ? styles.newFeature : ''}`}>
+                  <span className={`${styles.statusDot} ${systemStatus.defi ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>DEFI</span>
+                  {systemStatus.defi && <span className={styles.newBadge}>NEW</span>}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      <div className={styles.homeContent}>
+        {!publicKey ? (
+          <div className={styles.loginPrompt}>
+            <h3>Welcome to Nullblock</h3>
+            <p>Connect your Web3 wallet to access the full HUD interface and trading agents.</p>
+            <div className={styles.loginOptions}>
+              <button 
+                className={styles.connectWalletButton}
+                onClick={async () => {
+                  if ('phantom' in window) {
+                    const provider = (window as any).phantom?.solana;
+                    if (provider) {
+                      try {
+                        const response = await provider.connect();
+                        // This will be handled by the parent component
+                        window.location.reload();
+                      } catch (error) {
+                        console.error('Failed to connect wallet:', error);
+                      }
+                    }
+                  } else {
+                    window.open('https://phantom.app/', '_blank');
+                  }
+                }}
+              >
+                Connect Phantom Wallet
+              </button>
+              <p className={styles.walletNote}>
+                Don't have a wallet? <a href="https://phantom.app/" target="_blank" rel="noopener noreferrer">Install Phantom</a>
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.welcomeMessage}>
+            <h3>Welcome back, Agent</h3>
+            <div className={styles.walletInfo}>
+              <p><strong>Connected Wallet:</strong></p>
+              <p className={styles.walletAddress}>{publicKey}</p>
+              {userProfile.id && userProfile.id !== `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol` && (
+                <p className={styles.walletUsername}>{userProfile.id}</p>
+              )}
+            </div>
+            <div className={styles.quickActions}>
+              <p>Access trading systems and agents through the SYSTEM CONTROL panel, or navigate to CAMP for advanced features.</p>
+              <div className={styles.actionButtons}>
+                <button 
+                  className={styles.actionButton}
+                  onClick={() => setScreen('camp')}
+                >
+                  Enter Camp
+                </button>
+                <button 
+                  className={styles.actionButton}
+                  onClick={() => setScreen('overview')}
+                >
+                  Overview
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderOverviewScreen = () => (
     <div className={styles.hudScreen}>
       {/* System Status Panel - positioned in inner HUD */}
       <div className={styles.statusIndicator}>
@@ -2077,13 +2218,13 @@ const HUD: React.FC<HUDProps> = ({
       </div>
       
       <div className={styles.headerContainer}>
-        <h2 className={styles.hudTitle}>HUD CHAMBERS</h2>
+        <h2 className={styles.hudTitle}>OVERVIEW</h2>
         <div className={styles.headerDivider}></div>
       </div>
       <div className={styles.campContent}>
         <div style={{textAlign: 'center', marginTop: '2rem'}}>
-          <h3>Welcome to the HUD Chambers</h3>
-          <p>This is the default screen. Connect your wallet to unlock CAMP and other features.</p>
+          <h3>Welcome to Nullblock Overview</h3>
+          <p>This is the overview screen. Connect your wallet to unlock CAMP and other features.</p>
         </div>
       </div>
     </div>
@@ -2094,8 +2235,10 @@ const HUD: React.FC<HUDProps> = ({
       return renderLockedScreen();
     }
     switch (screen) {
-      case 'chambers':
-        return renderChambersScreen();
+      case 'home':
+        return renderHomeScreen();
+      case 'overview':
+        return renderOverviewScreen();
       case 'camp':
         return renderCampScreen();
       case 'inventory':
