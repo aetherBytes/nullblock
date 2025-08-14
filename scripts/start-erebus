@@ -1,0 +1,5 @@
+#!/bin/bash
+# Quick start command for Erebus Rust Server
+cd svc/erebus
+export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
+cargo run
