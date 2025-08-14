@@ -178,7 +178,7 @@ const HUD: React.FC<HUDProps> = ({
   const [mcpHealthStatus, setMcpHealthStatus] = useState<any>(null);
   const [nulleyeState, setNulleyeState] = useState<'base' | 'response' | 'question' | 'thinking' | 'alert' | 'error' | 'warning' | 'success' | 'processing'>('base');
   const [showContextDashboard, setShowContextDashboard] = useState<boolean>(false);
-  const [contextDashboardActiveTab, setContextDashboardActiveTab] = useState<'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'>('tasks');
+  const [contextDashboardActiveTab, setContextDashboardActiveTab] = useState<'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'>('hecate');
 
   const renderClickableHecateRow = () => (
     <div 
@@ -754,7 +754,7 @@ const HUD: React.FC<HUDProps> = ({
         className={`${styles.nulleye} ${styles[nulleyeState]}`}
         onClick={() => {
           setShowContextDashboard(true);
-          setContextDashboardActiveTab('tasks');
+          setContextDashboardActiveTab('hecate');
           setNulleyeState('processing');
         }}
       >
@@ -2300,6 +2300,7 @@ const HUD: React.FC<HUDProps> = ({
           }}
           theme={theme}
           initialActiveTab={contextDashboardActiveTab}
+          onTabChange={setContextDashboardActiveTab}
         />
       )}
     </div>
