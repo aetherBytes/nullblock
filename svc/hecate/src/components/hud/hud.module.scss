@@ -3117,3 +3117,526 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     transform: translateY(0);
   }
 }
+
+// Social Trading Tab Styles
+.socialTab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+  overflow-y: auto;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 168, 255, 0.3);
+    border-radius: 2px;
+  }
+}
+
+.socialHeader {
+  margin-bottom: 1.5rem;
+  
+  h3 {
+    color: #00a8ff;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+.socialContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  
+  p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+}
+
+.socialFeatures {
+  background: rgba(0, 168, 255, 0.05);
+  border: 1px solid rgba(0, 168, 255, 0.2);
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  
+  ul {
+    margin: 0;
+    padding-left: 1rem;
+    
+    li {
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+// Portfolio Tab
+.portfolioTab {
+  padding: 1rem;
+}
+
+.portfolioHeader {
+  margin-bottom: 1.5rem;
+  
+  h3 {
+    color: #00a8ff;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+.portfolioContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  
+  p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+}
+
+.portfolioFeatures {
+  background: rgba(0, 168, 255, 0.05);
+  border: 1px solid rgba(0, 168, 255, 0.2);
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  
+  ul {
+    margin: 0;
+    padding-left: 1rem;
+    
+    li {
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+// DeFi Tab
+.defiTab {
+  padding: 1rem;
+}
+
+.defiHeader {
+  margin-bottom: 1.5rem;
+  
+  h3 {
+    color: #9333ea;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+.defiContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  
+  p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+}
+
+.defiFeatures {
+  background: rgba(147, 51, 234, 0.05);
+  border: 1px solid rgba(147, 51, 234, 0.2);
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  
+  ul {
+    margin: 0;
+    padding-left: 1rem;
+    
+    li {
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+// Integrated Trading Interface Styles
+.tradingInterface {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 255, 0, 0.2);
+  border-radius: 4px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.quickStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(0, 255, 0, 0.1);
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.statLabel {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statValue {
+  color: #00ff9d;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-shadow: 0 0 4px rgba(0, 255, 157, 0.3);
+}
+
+// Arbitrage Opportunities
+.opportunitiesList, .signalsList, .assetsList, .defiPositions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 0, 0.3);
+    border-radius: 2px;
+  }
+}
+
+.opportunity, .signal, .asset, .position {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 255, 0, 0.15);
+  border-radius: 3px;
+  padding: 0.75rem;
+  transition: border-color 0.3s ease;
+  
+  &:hover {
+    border-color: rgba(0, 255, 0, 0.3);
+  }
+}
+
+.oppHeader, .signalHeader, .assetHeader, .positionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.tokenPair, .tokenSymbol, .assetSymbol, .protocol {
+  color: #00a8ff;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.profit {
+  color: #00ff9d;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.sentiment {
+  color: #00ff9d;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.allocation, .apy {
+  color: #ff7f00;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.oppDetails, .assetDetails, .positionDetails {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.route, .balance, .asset {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.amount, .value {
+  color: #00ff9d;
+  font-weight: 500;
+}
+
+.executeBtn, .rebalanceBtn, .harvestBtn {
+  width: 100%;
+  padding: 0.4rem 0.8rem;
+  background: rgba(0, 255, 0, 0.1);
+  border: 1px solid #00ff9d;
+  border-radius: 3px;
+  color: #00ff9d;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  
+  &:hover {
+    background: rgba(0, 255, 157, 0.2);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// Social Trading Specific
+.signalContent {
+  margin-bottom: 0.5rem;
+  
+  p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.85rem;
+    line-height: 1.3;
+    margin: 0 0 0.5rem;
+    font-style: italic;
+  }
+}
+
+.signalMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.source, .engagement {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.engagement {
+  color: #00ff9d;
+}
+
+// System Status Panel Styles
+.statusIndicator {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 100;
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 0.8s ease;
+  pointer-events: auto;
+}
+
+.systemStatusPanel {
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid $echo-blue-dark;
+  border-radius: 8px;
+  backdrop-filter: blur(2px);
+  box-shadow: 0 0 15px rgba($echo-blue, 0.2);
+  min-width: 220px;
+  max-width: 280px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+
+  &.collapsed {
+    min-width: 180px;
+  }
+}
+
+.statusHeader {
+  padding: 0.75rem 1rem;
+  background: rgba($echo-blue-dark, 0.2);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.3s ease;
+
+  &:hover {
+    background: rgba($echo-blue-dark, 0.3);
+  }
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.statusTitle {
+  color: $echo-blue;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: none;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toggleIcon {
+  color: $echo-blue;
+  font-size: 0.7rem;
+  transition: transform 0.3s ease;
+}
+
+.newFeaturesLabel {
+  color: #00ff88;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+  animation: pulse-glow-green 2s ease-in-out infinite alternate;
+}
+
+.statusContent {
+  padding: 0.75rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.systemGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.groupLabel {
+  color: rgba(0, 255, 200, 0.7);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid rgba(0, 255, 200, 0.2);
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  transition: all 0.3s ease;
+  
+  &.newFeature {
+    background: rgba(0, 255, 136, 0.05);
+    border-radius: 3px;
+    padding: 0.35rem 0.5rem 0.35rem 0.25rem;
+    margin: 0.1rem -0.25rem;
+  }
+
+  .statusLabel {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex: 1;
+  }
+}
+
+.newBadge {
+  background: #00ff88;
+  color: #000;
+  font-size: 0.5rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: pulse-glow-green 2s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-glow-green {
+  from {
+    text-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+    opacity: 0.8;
+  }
+  to {
+    text-shadow: 0 0 12px rgba(0, 255, 136, 0.8);
+    opacity: 1;
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .quickStats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .tradingInterface {
+    padding: 0.75rem;
+  }
+  
+  .opportunitiesList, .signalsList, .assetsList, .defiPositions {
+    max-height: 150px;
+  }
+
+  .statusIndicator {
+    left: 1rem;
+    top: 1.5rem;
+  }
+
+  .systemStatusPanel {
+    min-width: 200px;
+    max-width: 250px;
+  }
+}
