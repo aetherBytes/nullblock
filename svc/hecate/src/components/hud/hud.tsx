@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './hud.module.scss';
-import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '@services/api';
+import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '../../common/services/api';
+import { isAuthenticated, restoreSession, createAuthChallenge, verifyAuthChallenge, checkMCPHealth } from '../../common/services/mcp-api';
+import ArbitrageDashboard from '../arbitrage/arbitrage-dashboard';
 import xLogo from '../../assets/images/X_logo_black.png';
 import nullLogo from '../../assets/images/null_logo.png';
 import echoBatWhite from '../../assets/images/echo_bat_white.png';
@@ -8,7 +10,7 @@ import echoBatBlack from '../../assets/images/echo_bat_black.png';
 
 type Screen = 'chambers' | 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
-type TabType = 'missions' | 'systems' | 'defense' | 'uplink' | 'echo' | 'status';
+type TabType = 'missions' | 'systems' | 'defense' | 'uplink' | 'hud' | 'status' | 'arbitrage';
 
 interface HUDProps {
   publicKey: string | null;
@@ -141,7 +143,7 @@ const HUD: React.FC<HUDProps> = ({
   const [showMissionBrief, setShowMissionBrief] = useState(false);
   const missionDropdownRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('echo');
+  const [activeTab, setActiveTab] = useState<TabType>('hud');
   const [emberLinkStatus, setEmberLinkStatus] = useState<EmberLinkStatus>({
     connected: false,
     lastSeen: null,
@@ -150,6 +152,9 @@ const HUD: React.FC<HUDProps> = ({
   const [isDigitizing, setIsDigitizing] = useState<boolean>(false);
   const [selectedUplink, setSelectedUplink] = useState<Uplink | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
+  const [showArbitrageDashboard, setShowArbitrageDashboard] = useState<boolean>(false);
+  const [mcpAuthenticated, setMcpAuthenticated] = useState<boolean>(false);
+  const [mcpHealthStatus, setMcpHealthStatus] = useState<any>(null);
 
   // Only unlock 'chambers' by default, unlock others if logged in
   const unlockedScreens = publicKey ? ['chambers', 'camp'] : ['chambers'];
@@ -459,6 +464,26 @@ const HUD: React.FC<HUDProps> = ({
     }
   };
 
+  // MCP initialization effect
+  useEffect(() => {
+    const initializeMCP = async () => {
+      try {
+        // Try to restore existing session
+        const hasSession = restoreSession();
+        setMcpAuthenticated(hasSession && isAuthenticated());
+        
+        // Check MCP health
+        const health = await checkMCPHealth();
+        setMcpHealthStatus(health);
+      } catch (error) {
+        console.error('Failed to initialize MCP:', error);
+        setMcpHealthStatus(null);
+      }
+    };
+
+    initializeMCP();
+  }, []);
+
   useEffect(() => {
     const loadWalletData = async () => {
       if (publicKey) {
@@ -601,7 +626,7 @@ const HUD: React.FC<HUDProps> = ({
           await provider.disconnect();
           // Clear all session data
           localStorage.removeItem('walletPublickey');
-          localStorage.removeItem('hasSeenEcho');
+          localStorage.removeItem('hasSeenHUD');
           localStorage.removeItem('chatCollapsedState');
           // Show lock instruction before disconnecting
           onDisconnect();
@@ -635,6 +660,59 @@ const HUD: React.FC<HUDProps> = ({
 
   const handleCloseLeaderboard = () => {
     setShowLeaderboard(false);
+  };
+
+  const handleMCPAuthentication = async () => {
+    if (!publicKey) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      // Create auth challenge
+      const challenge = await createAuthChallenge(publicKey);
+      
+      // For Phantom wallet, sign the challenge
+      if ('phantom' in window) {
+        const provider = (window as any).phantom?.solana;
+        if (provider) {
+          const message = new TextEncoder().encode(challenge.message);
+          const signedMessage = await provider.signMessage(message, 'utf8');
+          const signature = Array.from(signedMessage.signature);
+          
+          // Verify the signature with MCP
+          const authResponse = await verifyAuthChallenge(
+            publicKey,
+            signature.toString(),
+            'phantom'
+          );
+          
+          if (authResponse.success) {
+            setMcpAuthenticated(true);
+            alert('Successfully authenticated with MCP!');
+          } else {
+            alert('Authentication failed: ' + authResponse.message);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('MCP authentication failed:', error);
+      alert('Authentication failed. Please try again.');
+    }
+  };
+
+  const handleOpenArbitrageDashboard = () => {
+    if (!mcpAuthenticated) {
+      if (confirm('MCP authentication required. Would you like to authenticate now?')) {
+        handleMCPAuthentication();
+      }
+      return;
+    }
+    setShowArbitrageDashboard(true);
+  };
+
+  const handleCloseArbitrageDashboard = () => {
+    setShowArbitrageDashboard(false);
   };
 
   const renderControlScreen = () => (
@@ -815,7 +893,7 @@ const HUD: React.FC<HUDProps> = ({
     );
   };
 
-  const renderEchoTab = () => {
+  const renderHudTab = () => {
     return (
       <div className={styles.echoContent}>
         {emberLinkStatus.connected ? (
@@ -1158,8 +1236,8 @@ const HUD: React.FC<HUDProps> = ({
             <div className={styles.statusCard}>
               <div className={styles.statusTabs}>
                 <button 
-                  className={`${styles.statusTab} ${activeTab === 'echo' ? styles.activeTab : ''}`}
-                  onClick={() => setActiveTab('echo')}
+                  className={`${styles.statusTab} ${activeTab === 'hud' ? styles.activeTab : ''}`}
+                  onClick={() => setActiveTab('hud')}
                 >
                   H.U.D
                 </button>
@@ -1181,9 +1259,69 @@ const HUD: React.FC<HUDProps> = ({
                 >
                   MISSIONS
                 </button>
+                <button 
+                  className={`${styles.statusTab} ${activeTab === 'arbitrage' ? styles.activeTab : ''}`}
+                  onClick={() => setActiveTab('arbitrage')}
+                >
+                  ARBITRAGE
+                </button>
               </div>
               <div className={styles.tabContent}>
-                {activeTab === 'echo' && renderEchoTab()}
+                {activeTab === 'hud' && renderHudTab()}
+                {activeTab === 'arbitrage' && (
+                  <div className={styles.arbitrageTab}>
+                    <div className={styles.arbitrageHeader}>
+                      <h3>MCP Arbitrage System</h3>
+                      {mcpHealthStatus && (
+                        <div className={styles.mcpStatus}>
+                          <div className={styles.statusContainer}>
+                            <span className={styles.statusLabel}>MCP Status:</span>
+                            <span className={mcpHealthStatus.status === 'operational' ? styles.active : styles.inactive}>
+                              {mcpHealthStatus.status}
+                            </span>
+                          </div>
+                          <div className={styles.statusContainer}>
+                            <span className={styles.statusLabel}>Auth:</span>
+                            <span className={mcpAuthenticated ? styles.active : styles.inactive}>
+                              {mcpAuthenticated ? 'Authenticated' : 'Not Authenticated'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {!mcpAuthenticated ? (
+                      <div className={styles.authPrompt}>
+                        <p>MCP authentication required to access arbitrage trading.</p>
+                        <button 
+                          className={styles.authButton}
+                          onClick={handleMCPAuthentication}
+                          disabled={!publicKey}
+                        >
+                          {publicKey ? 'Authenticate with MCP' : 'Connect Wallet First'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className={styles.arbitrageContent}>
+                        <p>Arbitrage system ready. Access advanced trading dashboard.</p>
+                        <div className={styles.arbitrageFeatures}>
+                          <ul>
+                            <li>✓ Multi-DEX opportunity scanning</li>
+                            <li>✓ MEV protection via Flashbots</li>
+                            <li>✓ Risk assessment & strategy analysis</li>
+                            <li>✓ Automated execution & reporting</li>
+                          </ul>
+                        </div>
+                        <button 
+                          className={styles.launchButton}
+                          onClick={handleOpenArbitrageDashboard}
+                        >
+                          Launch Arbitrage Dashboard
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {activeTab === 'systems' && (
                   <div className={styles.systemsTab}>
                     <div className={styles.lockedContent}>
@@ -1355,6 +1493,9 @@ const HUD: React.FC<HUDProps> = ({
             </div>
           </div>
         </>
+      )}
+      {showArbitrageDashboard && (
+        <ArbitrageDashboard onClose={handleCloseArbitrageDashboard} />
       )}
     </div>
   );

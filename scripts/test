@@ -1,0 +1,3 @@
+#!/bin/bash
+# Quick test command for Nullblock MVP
+./scripts/test-setup.sh

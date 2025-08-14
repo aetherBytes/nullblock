@@ -1,0 +1,208 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for shared state
+  postgres:
+    image: postgres:15-alpine
+    container_name: nullblock-postgres
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: REDACTED_DB_PASS
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/db-init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: nullblock-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # IPFS for context storage
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: nullblock-ipfs
+    environment:
+      - IPFS_PROFILE=server
+    volumes:
+      - ipfs_data:/data/ipfs
+    ports:
+      - "4001:4001"    # P2P
+      - "5001:5001"    # API
+      - "8080:8080"    # Gateway
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Nullblock MCP Server
+  nullblock-mcp:
+    build:
+      context: ./svc/nullblock-mcp
+      dockerfile: Dockerfile
+    container_name: nullblock-mcp
+    environment:
+      - DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@postgres:5432/nullblock_mcp
+      - REDIS_URL=redis://redis:6379
+      - IPFS_API_URL=http://ipfs:5001
+      - FLASHBOTS_RPC_URL=${FLASHBOTS_RPC_URL}
+      - WEB3_RPC_URL=${WEB3_RPC_URL}
+      - PYTHONPATH=/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ipfs:
+        condition: service_healthy
+    volumes:
+      - ./svc/nullblock-mcp:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Nullblock Orchestration Engine
+  nullblock-orchestration:
+    build:
+      context: ./svc/nullblock-orchestration
+      dockerfile: Dockerfile
+    container_name: nullblock-orchestration
+    environment:
+      - DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@postgres:5432/nullblock_orchestration
+      - REDIS_URL=redis://redis:6379
+      - MCP_SERVER_URL=http://nullblock-mcp:8000
+      - BITTENSOR_NETWORK=${BITTENSOR_NETWORK:-test}
+      - PYTHONPATH=/app
+    ports:
+      - "8001:8001"
+    depends_on:
+      nullblock-mcp:
+        condition: service_healthy
+    volumes:
+      - ./svc/nullblock-orchestration:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Nullblock Agents
+  nullblock-agents:
+    build:
+      context: ./svc/nullblock-agents
+      dockerfile: Dockerfile
+    container_name: nullblock-agents
+    environment:
+      - DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@postgres:5432/nullblock_agents
+      - REDIS_URL=redis://redis:6379
+      - MCP_SERVER_URL=http://nullblock-mcp:8000
+      - ORCHESTRATION_URL=http://nullblock-orchestration:8001
+      - DEX_API_KEYS=${DEX_API_KEYS}
+      - PYTHONPATH=/app
+    ports:
+      - "8002:8002"
+    depends_on:
+      nullblock-mcp:
+        condition: service_healthy
+      nullblock-orchestration:
+        condition: service_healthy
+    volumes:
+      - ./svc/nullblock-agents:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Hecate Frontend (React/Vite)
+  hecate:
+    build:
+      context: ./svc/hecate
+      dockerfile: Dockerfile
+    container_name: nullblock-hecate
+    environment:
+      - DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@postgres:5432/nullblock_hecate
+      - VITE_MCP_API_URL=http://localhost:8000
+      - VITE_ORCHESTRATION_API_URL=http://localhost:8001
+      - VITE_AGENTS_API_URL=http://localhost:8002
+      - NODE_ENV=development
+    ports:
+      - "5173:5173"
+    depends_on:
+      - nullblock-mcp
+      - nullblock-orchestration
+      - nullblock-agents
+    volumes:
+      - ./svc/hecate:/app
+      - /app/node_modules
+    command: npm run develop
+
+  # Erebus Solana Contracts (Rust)
+  erebus:
+    build:
+      context: ./svc/erebus
+      dockerfile: Dockerfile
+    container_name: nullblock-erebus
+    environment:
+      - DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@postgres:5432/nullblock_erebus
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.devnet.solana.com}
+      - RUST_LOG=info
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./svc/erebus:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Nginx reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    container_name: nullblock-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - hecate
+      - nullblock-mcp
+      - nullblock-orchestration
+      - nullblock-agents
+      - erebus
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+  redis_data:
+  ipfs_data:
+
+networks:
+  default:
+    name: nullblock-network
