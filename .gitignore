@@ -20,3 +20,26 @@ node_modules
 
 # Build targets
 **/target/
+
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+**/__pycache__/
+**/*.pyc
+
+# Virtual environments
+venv/
+.env/
+env/
+
+# Other common Python-related ignores
+*.egg-info/
+dist/
+build/
+*.log
+.pytest_cache/
+.coverage
