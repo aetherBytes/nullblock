@@ -3,3 +3,4 @@
 cd svc/erebus
 cargo build --release
 echo "Erebus build complete"
+

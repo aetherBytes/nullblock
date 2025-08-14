@@ -2,3 +2,4 @@
 # Quick start command (build + start) for Nullblock MVP
 ./scripts/start-nullblock.sh build
 ./scripts/start-nullblock.sh start
+

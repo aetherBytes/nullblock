@@ -46,3 +46,4 @@ Connection String: postgresql://nullblock:REDACTED_DB_PASS@localhost:5432/nullbl
 # View logs: just logs
 # Check status: just status
 # Test setup: just test
+

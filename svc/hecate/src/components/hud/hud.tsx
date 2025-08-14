@@ -7,6 +7,7 @@ import xLogo from '../../assets/images/X_logo_black.png';
 import nullLogo from '../../assets/images/null_logo.png';
 import echoBatWhite from '../../assets/images/echo_bat_white.png';
 import echoBatBlack from '../../assets/images/echo_bat_black.png';
+import ContextDashboard from '../context-dashboard';
 
 type Screen = 'home' | 'overview' | 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
@@ -176,6 +177,7 @@ const HUD: React.FC<HUDProps> = ({
   const [mcpAuthenticated, setMcpAuthenticated] = useState<boolean>(false);
   const [mcpHealthStatus, setMcpHealthStatus] = useState<any>(null);
   const [nulleyeState, setNulleyeState] = useState<'base' | 'response' | 'question' | 'thinking' | 'alert' | 'error' | 'warning' | 'success' | 'processing'>('base');
+  const [showContextDashboard, setShowContextDashboard] = useState<boolean>(false);
 
   // Only unlock 'home' and 'overview' by default, unlock others if logged in
   const unlockedScreens = publicKey ? ['home', 'overview', 'camp'] : ['home', 'overview'];
@@ -737,13 +739,8 @@ const HUD: React.FC<HUDProps> = ({
       <div 
         className={`${styles.nulleye} ${styles[nulleyeState]}`}
         onClick={() => {
-          // Cycle through states for demo/testing
-          const states: Array<'base' | 'response' | 'question' | 'thinking' | 'alert' | 'error' | 'warning' | 'success' | 'processing'> = [
-            'base', 'response', 'question', 'thinking', 'alert', 'error', 'warning', 'success', 'processing'
-          ];
-          const currentIndex = states.indexOf(nulleyeState);
-          const nextIndex = (currentIndex + 1) % states.length;
-          setNulleyeState(states[nextIndex]);
+          setShowContextDashboard(true);
+          setNulleyeState('processing');
         }}
       >
         <div className={styles.pulseRing}></div>
@@ -2283,6 +2280,15 @@ const HUD: React.FC<HUDProps> = ({
         {renderScreen()}
       </div>
       
+      {showContextDashboard && (
+        <ContextDashboard
+          onClose={() => {
+            setShowContextDashboard(false);
+            setNulleyeState('base');
+          }}
+          theme={theme}
+        />
+      )}
     </div>
   );
 };
