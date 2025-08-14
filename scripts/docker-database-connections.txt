@@ -1,0 +1,48 @@
+# Nullblock Docker Database Connection Strings
+# Use these in your applications or DBeaver when using Docker
+
+# PostgreSQL Connection Details (Docker)
+Host: localhost
+Port: 5432
+Username: nullblock
+Password: nullblock_secure_pass
+
+# Individual Database Connections (Docker):
+
+# MCP Server Database
+Database: nullblock_mcp
+Connection String: postgresql://nullblock:nullblock_secure_pass@localhost:5432/nullblock_mcp
+
+# Orchestration Engine Database  
+Database: nullblock_orchestration
+Connection String: postgresql://nullblock:nullblock_secure_pass@localhost:5432/nullblock_orchestration
+
+# Agents Service Database
+Database: nullblock_agents
+Connection String: postgresql://nullblock:nullblock_secure_pass@localhost:5432/nullblock_agents
+
+# Erebus Rust Server Database
+Database: nullblock_erebus
+Connection String: postgresql://nullblock:nullblock_secure_pass@localhost:5432/nullblock_erebus
+
+# Hecate Frontend Database
+Database: nullblock_hecate
+Connection String: postgresql://nullblock:nullblock_secure_pass@localhost:5432/nullblock_hecate
+
+# Platform Marketplace Database
+Database: nullblock_platform
+Connection String: postgresql://nullblock:nullblock_secure_pass@localhost:5432/nullblock_platform
+
+# DBeaver Connection Setup (Docker):
+# 1. Create new PostgreSQL connection
+# 2. Host: localhost
+# 3. Port: 5432
+# 4. Database: (select from above)
+# 5. Username: nullblock
+# 6. Password: nullblock_secure_pass
+
+# Docker Commands:
+# Start services: just start
+# View logs: just logs
+# Check status: just status
+# Test setup: just test

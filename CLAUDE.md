@@ -4,17 +4,88 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Nullblock is a cyberpunk-themed Web3 platform built on Solana featuring conversational LLM interactions, wallet analysis, and Memory Cards (NFTs). The system consists of three microservices in a monorepo structure:
+Nullblock is a decentralized Web3 platform for deploying and monetizing agentic workflows, built on the Model Context Protocol (MCP) architecture. The platform consists of four core components in a monorepo structure:
 
-- **Helios**: Python FastAPI backend with WebSocket support for real-time communication
-- **Hecate**: React TypeScript frontend with SSR using @lomray/vite-ssr-boost  
-- **Erebus**: Rust Solana contracts for blockchain operations
+## 🎯 **MVP STATUS: CORE INFRASTRUCTURE COMPLETED** ✅
 
-The platform includes an ECHO interface (chat-like UI) with room-based commands and plans for a browser extension called Aether.
+### **Production-Ready Components**
+
+- ✅ **Nullblock.mcp** (`/svc/nullblock-mcp/`): Complete MCP server with wallet authentication, IPFS context storage, Flashbots MEV protection, and ML-based security
+- ✅ **Nullblock.orchestration** (`/svc/nullblock-orchestration/`): Goal-driven workflow engine with Bittensor subnet integration and template system  
+- ✅ **Nullblock.agents** (`/svc/nullblock-agents/`): Full arbitrage agent suite (Price, Strategy, Execution, Reporting) with MEV protection
+- 🔄 **Nullblock.platform**: dApp marketplace (pending - requires frontend development)
+
+### **Legacy Implementation Structure** (Transitioning)
+
+- **Helios** (`/svc/helios/`): Original FastAPI backend → **Replaced by Nullblock.mcp**
+- **Hecate** (`/svc/hecate/`): React frontend with SSR → **Evolving to Nullblock.platform UI**
+- **Erebus** (`/svc/erebus/`): Rust Solana contracts → **Foundation for on-chain integration**
+
+### **Current Capabilities**
+
+✅ **Full Arbitrage Trading Pipeline**: From price monitoring to MEV-protected execution with comprehensive reporting  
+✅ **Secure Wallet Operations**: Multi-wallet support (MetaMask, WalletConnect, Phantom) with challenge-response auth  
+✅ **Bittensor Task Marketplace**: Decentralized task submission with $NULL token rewards  
+✅ **Advanced Security**: Prompt injection protection, encrypted context storage, anomaly detection  
+✅ **Goal-Driven Automation**: Template-based workflows for arbitrage, DeFi, NFT, and DAO operations
 
 ## Common Development Commands
 
-### Helios Backend (`svc/helios/`)
+### **New MCP Infrastructure** 🆕
+
+#### Nullblock.mcp (`svc/nullblock-mcp/`)
+```bash
+# Install dependencies
+pip install -e .
+
+# Development server
+python -m mcp.server
+# OR with uvicorn
+uvicorn mcp.server:create_server --host 0.0.0.0 --port 8000 --reload
+
+# Code quality
+ruff format . && ruff check . --fix && mypy .
+
+# Testing
+pytest -v src/tests/
+
+# Environment setup
+cp .env.example .env
+# Edit: ETHEREUM_RPC_URL, FLASHBOTS_PRIVATE_KEY, IPFS_API
+```
+
+#### Nullblock.orchestration (`svc/nullblock-orchestration/`)
+```bash
+# Install dependencies  
+pip install -e .
+
+# Development
+python -m orchestration.workflow.engine
+
+# Code quality
+ruff format . && ruff check . --fix && mypy .
+
+# Testing
+pytest -v src/tests/
+```
+
+#### Nullblock.agents (`svc/nullblock-agents/`)
+```bash
+# Install dependencies
+pip install -e .
+
+# Run arbitrage agents
+python -m agents.arbitrage.price_agent
+python -m agents.arbitrage.strategy_agent
+
+# Code quality
+ruff format . && ruff check . --fix && mypy .
+
+# Testing
+pytest -v src/tests/
+```
+
+### **Legacy Backend** (Helios - `svc/helios/`)
 ```bash
 # Development server
 just run
@@ -25,7 +96,7 @@ just test
 pytest -vv -s src/tests
 
 # Code quality
-just lint
+just lint                    # Format + check + type checking
 ruff format . && ruff check . --fix && mypy .
 
 # Full check (lint + format + type + test)
@@ -46,6 +117,21 @@ tail -f logs/helios.log
 # Server status
 just status
 curl http://localhost:5000/status
+
+# Pre-commit setup and run
+just pre-commit-setup        # Install pre-commit hooks
+just pre-commit-run         # Run pre-commit on all files
+
+# Dependency management
+just update-reqs            # Update requirements.txt from pyproject.toml
+just sync                   # Full environment sync
+
+# Quick aliases
+just t                      # Alias for test
+just l                      # Alias for lint  
+just c                      # Alias for check
+just i                      # Alias for install
+just s                      # Alias for sync
 ```
 
 ### Hecate Frontend (`svc/hecate/`)
@@ -85,28 +171,69 @@ cargo build --release
 
 ## Architecture Details
 
-### Frontend Architecture (Hecate)
+### MCP Architecture Vision
+Nullblock implements a Model Context Protocol-first architecture for secure, agnostic agentic interactions:
+
+**Core MCP Features**:
+- Agnostic wallet interaction (MetaMask, WalletConnect, Phantom)
+- Context management on IPFS/Arweave for agent workflows
+- Cross-chain support via Chainlink/Wormhole
+- Flashbots integration for MEV protection
+- Prompt injection protection with sanitization and allowlists
+- Developer API for third-party agent development
+
+**Bittensor Integration**:
+- Nullblock subnet for crowdsourcing goal-driven tasks
+- Contributors earn $NULL tokens for high-impact strategies
+- Yuma Consensus for fair reward distribution
+- Decentralized validation of task quality and impact
+
+### Current Frontend Architecture (Hecate → Nullblock.platform)
 - **SSR Framework**: @lomray/vite-ssr-boost for server-side rendering
 - **State Management**: MobX with @lomray/react-mobx-manager
 - **Routing**: @lomray/react-route-manager for isomorphic routing
 - **Styling**: SCSS modules + Tailwind CSS
 - **Build Tool**: Vite with React plugin
 - **Wallet Integration**: @solana/web3.js with Phantom wallet support
+- **Future Integration**: OnchainKit for broader Web3 functionality
 
-### Backend Architecture (Helios)  
+### **Production MCP Architecture** ✅ (Nullblock.mcp)
+- **Web Framework**: FastAPI with uvicorn ASGI server
+- **Authentication**: Challenge-response wallet verification with session management
+- **Context Storage**: IPFS-based encrypted storage with local caching
+- **MEV Protection**: Flashbots client with bundle simulation and submission
+- **Security**: ML-based prompt injection detection with anomaly detection
+- **Multi-Wallet**: MetaMask, WalletConnect, Phantom support
+- **API Structure**: RESTful MCP endpoints with comprehensive security middleware
+
+### **MCP Server Endpoints** (Production)
+- `/health` - System health check with service status
+- `/auth/challenge` - Create wallet authentication challenge
+- `/auth/verify` - Verify signed challenge and create session
+- `/context` - Get user context and preferences (authenticated)
+- `/context/update` - Update user context (authenticated)
+- `/trading/command` - Execute trading commands with security validation
+- `/wallet/balance` - Get wallet balance (authenticated)
+
+### **Legacy Backend Architecture** (Helios - Transitioning)  
 - **Web Framework**: FastAPI with uvicorn ASGI server
 - **WebSocket Support**: Built-in for real-time communication with browser extension
 - **API Structure**: RESTful endpoints + WebSocket endpoints for live data
 - **Blockchain**: solana-py for Solana RPC interactions
 - **Logging**: Custom logging with python-json-logger
 - **Code Quality**: Ruff (linting/formatting) + MyPy (type checking)
+- **Status**: Legacy system being replaced by Nullblock.mcp
 
-### Key Backend Endpoints
+### **Legacy Endpoints** (Helios - For Reference)
 - `/api/wallet/{public_key}` - Wallet data retrieval
 - `/api/wallet/health/{public_key}` - Wallet health analysis  
+- `/api/memory-card/{public_key}` - Memory Card NFT data (mutable)
+- `/api/swap` - Token swap execution via Raydium
 - `/api/command` - Command processing for ECHO interface
+- `/api/missions/{public_key}` - Active mission data
 - `/ws/ember-link/{client_id}` - WebSocket for frontend clients
 - `/ws/aether` - WebSocket for browser extension data
+- `/status/helios` - Server status and ASCII art
 
 ### Frontend Component Structure
 ```
@@ -124,8 +251,8 @@ src/
 └── routes/                   # Route definitions
 ```
 
-### Command System
-The ECHO interface uses a room-based command structure:
+### Command System (Current ECHO Interface)
+The ECHO interface uses a room-based command structure that will evolve into MCP-powered agentic workflows:
 
 **Global Commands** (available everywhere):
 - `/help`, `/status`, `/clear`, `/connect`, `/disconnect`, `/version`
@@ -135,6 +262,17 @@ The ECHO interface uses a room-based command structure:
 - `/memory` (locked): `/mint`, `/upgrade`, `/features`, `/behavior`  
 - `/health` (locked): `/risk`, `/audit`, `/monitor`, `/alerts`
 - `/reality` (locked): `/spawn`, `/enhance`, `/interact`, `/sync`
+
+**✅ MCP Commands** (Implemented):
+- Arbitrage workflows: `/arbitrage` - Execute arbitrage with MEV protection and risk assessment
+- Trading commands: `/swap`, `/trade` - Execute trades with security validation  
+- Portfolio management: `/rebalance` - Rebalance portfolio based on user preferences
+- Settings: `/set`, `/update` - Update user context and trading preferences
+
+**🔄 Future MCP Commands** (Planned):
+- DeFi automation: `/defi/yield`, `/defi/rebalance`, `/defi/risk`
+- NFT operations: `/nft/trade`, `/nft/bid`, `/nft/analyze`
+- DAO governance: `/dao/proposals`, `/dao/vote`, `/dao/delegate`
 
 ### Environment Configuration
 - **Hecate**: Uses Vite env vars (`VITE_FAST_API_BACKEND_URL`)
@@ -148,8 +286,26 @@ The ECHO interface uses a room-based command structure:
 - **Build Output**: `svc/hecate/build/` for production builds
 
 ### WebSocket Architecture
-- **Ember Link**: Real-time communication between frontend and backend
-- **Aether Extension**: Planned browser extension WebSocket integration
+- **Ember Link**: Real-time communication between frontend and backend (foundation for MCP connections)
+- **Aether Extension**: Browser extension WebSocket integration for cross-platform agent data
 - **Connection Management**: Custom EmberLinkManager class handles connections
+- **Future MCP Integration**: WebSocket layer will support MCP protocol for agent-to-agent communication
 
-The platform implements a cyberpunk aesthetic with neon styling and maintains immersive error messages throughout the user experience.
+### Monetization Strategy (From Gameplan)
+**Target Niches**:
+- **Arbitrage Trading**: 0.5-1% trade fees on automated DEX/cross-chain arbitrage
+- **DeFi Yield Farming**: 0.5% asset management fees on automated portfolio rebalancing  
+- **NFT Trading Automation**: 1% trading fees on automated buying/selling/bidding
+- **DAO Governance Automation**: $100-$1000/month subscriptions for proposal analysis/voting
+
+**MCP SDK Monetization**:
+- Freemium model: Free basic MCP, premium features $50-$500/month
+- Transaction fees: 0.1% per MCP-mediated transaction
+- White-label licensing for protocols (Uniswap, Aave)
+
+**Platform Revenue**:
+- Marketplace fee: 5-10% of user-created workflow revenue
+- Task fees: $0.01-$0.05 per automated task
+- Premium features: $10-$100/month for advanced analytics and priority support
+
+The platform implements a cyberpunk aesthetic with neon styling and maintains immersive error messages throughout the user experience while building toward a comprehensive MCP-powered agentic ecosystem.
