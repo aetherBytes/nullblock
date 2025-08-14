@@ -5,6 +5,7 @@ interface ContextDashboardProps {
   onClose: () => void;
   theme?: 'null' | 'light';
   initialActiveTab?: 'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate';
+  onTabChange?: (tab: 'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate') => void;
 }
 
 interface ChatMessage {
@@ -54,7 +55,7 @@ interface MCPOperation {
   responseTime?: number;
 }
 
-const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'light', initialActiveTab = 'tasks' }) => {
+const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'light', initialActiveTab = 'tasks', onTabChange }) => {
   const [activeTab, setActiveTab] = useState<'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'>(initialActiveTab);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [mcpOperations, setMcpOperations] = useState<MCPOperation[]>([]);
@@ -69,6 +70,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeLens, setActiveLens] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [nulleyeState, setNulleyeState] = useState<'base' | 'response' | 'question' | 'thinking' | 'alert' | 'error' | 'warning' | 'success' | 'processing'>('base');
 
   // Define lens options outside useEffect
   const lensOptions: LensOption[] = [
@@ -419,32 +421,55 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
       setChatInput('');
       setShowSuggestions(false);
 
+      // Set NullEye to thinking state
+      setNulleyeState('thinking');
+
       // Simulate Hecate response
       setTimeout(() => {
-        const hecateResponses = [
-          'I\'m analyzing your request. Let me check the current system status...',
-          'Based on the current market conditions, I recommend monitoring the arbitrage opportunities.',
-          'I\'ve updated your portfolio settings. The changes will take effect immediately.',
-          'The social sentiment analysis shows positive signals for your current positions.',
-          'I\'ve detected a potential MEV opportunity. Would you like me to prepare a bundle?',
-          'Your risk assessment has been completed. All parameters are within acceptable limits.',
-          'I\'m processing your request. This may take a few moments...',
-          'The market data indicates favorable conditions for your trading strategy.',
-          'I can help you with that! Would you like me to use a template or create a custom workflow?',
-          'Let me suggest some relevant templates for your request...',
-          'I\'ve prepared a workflow template that matches your needs. Would you like to customize it?'
+        const responses = [
+          { message: 'I\'m analyzing your request. Let me check the current system status...', type: 'update' },
+          { message: 'Based on the current market conditions, I recommend monitoring the arbitrage opportunities.', type: 'suggestion' },
+          { message: 'I\'ve updated your portfolio settings. The changes will take effect immediately.', type: 'update' },
+          { message: 'The social sentiment analysis shows positive signals for your current positions.', type: 'text' },
+          { message: 'I\'ve detected a potential MEV opportunity. Would you like me to prepare a bundle?', type: 'question' },
+          { message: 'Your risk assessment has been completed. All parameters are within acceptable limits.', type: 'update' },
+          { message: 'I\'m processing your request. This may take a few moments...', type: 'text' },
+          { message: 'The market data indicates favorable conditions for your trading strategy.', type: 'suggestion' },
+          { message: 'I can help you with that! Would you like me to use a template or create a custom workflow?', type: 'question' },
+          { message: 'Let me suggest some relevant templates for your request...', type: 'suggestion' },
+          { message: 'I\'ve prepared a workflow template that matches your needs. Would you like to customize it?', type: 'question' }
         ];
         
-        const randomResponse = hecateResponses[Math.floor(Math.random() * hecateResponses.length)];
+        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
         const hecateMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           timestamp: new Date(),
           sender: 'hecate',
-          message: randomResponse,
-          type: 'text'
+          message: randomResponse.message,
+          type: randomResponse.type as 'text' | 'update' | 'question' | 'suggestion'
         };
         
         setChatMessages(prev => [...prev, hecateMessage]);
+        
+        // Set NullEye state based on response type
+        switch (randomResponse.type) {
+          case 'update':
+            setNulleyeState('response');
+            break;
+          case 'question':
+            setNulleyeState('question');
+            break;
+          case 'suggestion':
+            setNulleyeState('success');
+            break;
+          default:
+            setNulleyeState('base');
+        }
+        
+        // Return to base state after a delay
+        setTimeout(() => {
+          setNulleyeState('base');
+        }, 3000);
       }, 1000 + Math.random() * 2000);
     }
   };
@@ -462,6 +487,13 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
 
   const handleLensClick = (lensId: string) => {
     setActiveLens(activeLens === lensId ? null : lensId);
+  };
+
+  const handleNullEyeClick = () => {
+    setActiveTab('hecate');
+    if (onTabChange) {
+      onTabChange('hecate');
+    }
   };
 
   const renderLensContent = (lensId: string) => {
@@ -944,7 +976,18 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         <div className={styles.hecateMain}>
           <div className={styles.hecateAvatar}>
             <div className={styles.avatarCircle}>
-              <span className={styles.avatarIcon}>⚡</span>
+              <div 
+                className={`${styles.nulleyeAvatar} ${styles[nulleyeState]} ${styles.clickableNulleye}`}
+                onClick={handleNullEyeClick}
+              >
+                <div className={styles.pulseRingAvatar}></div>
+                <div className={styles.dataStreamAvatar}>
+                  <div className={styles.streamLineAvatar}></div>
+                  <div className={styles.streamLineAvatar}></div>
+                  <div className={styles.streamLineAvatar}></div>
+                </div>
+                <div className={styles.coreNodeAvatar}></div>
+              </div>
             </div>
             <div className={styles.avatarInfo}>
               <h4>Hecate</h4>
@@ -988,7 +1031,18 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
                   >
                     <div className={styles.messageHeader}>
                       <span className={styles.messageSender}>
-                        {message.sender === 'hecate' ? '⚡ Hecate' : '👤 You'}
+                        {message.sender === 'hecate' ? (
+                          <span className={styles.hecateMessageSender}>
+                            <div 
+                              className={`${styles.nulleyeChat} ${styles[`chat-${message.type || 'base'}`]} ${styles.clickableNulleyeChat}`}
+                              onClick={handleNullEyeClick}
+                            >
+                              <div className={styles.coreNodeChat}></div>
+                              <div className={styles.streamLineChat}></div>
+                            </div>
+                            Hecate
+                          </span>
+                        ) : '👤 You'}
                       </span>
                       <span className={styles.messageTime}>
                         {message.timestamp.toLocaleTimeString()}
