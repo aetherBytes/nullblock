@@ -987,12 +987,10 @@ $border-color: rgba($echo-blue, 0.3);
   .lensScrollContainer {
     flex: 1;
     min-height: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: auto;
     padding: 1rem;
     display: flex;
-    align-items: center;
-    gap: 2rem;
+    justify-content: center;
     
     // Revolutionary scrollbar styling
     &::-webkit-scrollbar {
@@ -1018,171 +1016,193 @@ $border-color: rgba($echo-blue, 0.3);
   .lensInfoPanel {
     background: linear-gradient(135deg, rgba($echo-blue, 0.1), rgba($echo-blue, 0.05));
     border: 1px solid rgba($echo-blue, 0.2);
-    border-radius: 16px;
-    padding: 1.25rem;
+    border-radius: 12px;
+    padding: 1rem;
     backdrop-filter: blur(10px);
-    min-width: 260px;
-    max-width: 300px;
+    width: 100%;
+    max-width: 100%;
     max-height: 80vh;
     overflow-y: auto;
-    position: sticky;
-    left: 0;
   }
 
   .lensInfoContent {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .headerWithTooltip {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+
     h3 {
-      margin: 0 0 0.75rem 0;
+      margin: 0;
       font-size: 1.3rem;
       font-weight: 700;
       color: $echo-blue;
       text-shadow: 0 0 10px rgba($echo-blue, 0.3);
     }
-
-    p {
-      margin: 0 0 1rem 0;
-      font-size: 0.9rem;
-      line-height: 1.5;
-      color: $text-primary;
-      font-weight: 500;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-      background: rgba($background-dark, 0.3);
-      padding: 0.75rem;
-      border-radius: 8px;
-      border: 1px solid rgba($echo-blue, 0.2);
-    }
   }
 
-  .lensFeatures {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+  .tooltipContainer {
+    position: relative;
+    display: inline-block;
 
-    .featureItem {
+    .helpIcon {
+      width: 20px;
+      height: 20px;
+      background: rgba($echo-blue, 0.2);
+      border: 1px solid rgba($echo-blue, 0.4);
+      border-radius: 50%;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.4rem 0.6rem;
-      background: rgba($echo-blue, 0.1);
-      border-radius: 6px;
-      border: 1px solid rgba($echo-blue, 0.2);
+      justify-content: center;
+      font-size: 0.8rem;
+      color: $echo-blue;
+      font-weight: bold;
+      cursor: help;
       transition: all 0.3s ease;
 
       &:hover {
-        background: rgba($echo-blue, 0.15);
-        border-color: rgba($echo-blue, 0.3);
-        transform: translateX(4px);
+        background: rgba($echo-blue, 0.3);
+        border-color: rgba($echo-blue, 0.6);
+        transform: scale(1.1);
+      }
+    }
+
+    .tooltip {
+      position: absolute;
+      top: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba($background-dark, 0.95);
+      border: 1px solid rgba($echo-blue, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      width: 280px;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-bottom: 6px solid rgba($echo-blue, 0.3);
       }
 
-      .featureIcon {
-        font-size: 1rem;
-        filter: drop-shadow(0 0 4px rgba($echo-blue, 0.5));
-      }
+      .tooltipContent {
+        h4 {
+          margin: 0 0 0.5rem 0;
+          font-size: 1rem;
+          color: $echo-blue;
+          text-shadow: 0 0 5px rgba($echo-blue, 0.3);
+        }
 
-      span:last-child {
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: $text-primary;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        h5 {
+          margin: 0.75rem 0 0.25rem 0;
+          font-size: 0.9rem;
+          color: $echo-green;
+          text-shadow: 0 0 5px rgba($echo-green, 0.3);
+        }
+
+        p {
+          margin: 0 0 0.5rem 0;
+          font-size: 0.8rem;
+          line-height: 1.4;
+          color: $text-primary;
+          font-weight: 400;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+        }
       }
+    }
+
+    &:hover .tooltip {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(5px);
     }
   }
 
-  .lensGrid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 0.4rem;
-    min-width: max-content;
-    height: 100%;
-    min-height: 0;
-    align-items: center;
-    justify-items: center;
-    margin-left: auto;
-    margin-right: 1rem;
-  }
 
-  .lensCard {
+  .lensAppsSection {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    padding: 1rem 0.75rem;
-    background: linear-gradient(135deg, rgba($background-dark, 0.8), rgba($background-light, 0.6));
-    border: 1px solid rgba(var(--lens-color), 0.3);
-    border-radius: 16px;
-    color: $text-primary;
-    cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-    min-height: 110px;
-    width: 130px;
-    backdrop-filter: blur(10px);
-    
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--lens-color), rgba(var(--lens-color), 0.5));
-      transform: scaleX(0);
-      transition: transform 0.3s ease;
-    }
+    min-height: 0;
+  }
 
-    &:hover {
-      transform: translateY(-4px) scale(1.02);
-      box-shadow: 
-        0 12px 30px rgba(var(--lens-color), 0.4),
-        0 0 20px rgba(var(--lens-color), 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      border-color: var(--lens-color);
-      
-      &::before {
-        transform: scaleX(1);
-      }
-    }
+  .appsHeader {
+    margin-bottom: 1rem;
 
-    &:active {
-      transform: translateY(-2px) scale(1.01);
-    }
-
-    .lensIcon {
-      font-size: 2rem;
-      filter: drop-shadow(0 0 8px rgba(var(--lens-color), 0.6));
-      transition: all 0.3s ease;
-    }
-
-    .lensInfo {
-      h5 {
-        margin: 0 0 0.25rem 0;
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: $text-primary;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-      }
-
-      p {
-        margin: 0;
-        font-size: 0.75rem;
-        color: $text-secondary;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        line-height: 1.2;
-        font-weight: 500;
-      }
-    }
-    
-    &:hover .lensIcon {
-      transform: scale(1.1);
-      filter: drop-shadow(0 0 12px rgba(var(--lens-color), 0.8));
+    h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: $echo-blue;
+      text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
   }
+
+  .lensAppsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    flex: 1;
+    align-content: start;
+  }
+
+  .lensAppButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: rgba($echo-blue, 0.1);
+    border: 1px solid rgba($echo-blue, 0.2);
+    border-radius: 6px;
+    color: $text-primary;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+
+    &:hover {
+      background: rgba($echo-blue, 0.15);
+      border-color: rgba($echo-blue, 0.3);
+      transform: translateX(4px);
+      box-shadow: 0 2px 8px rgba(var(--lens-color), 0.3);
+    }
+
+    .lensAppIcon {
+      font-size: 1rem;
+      filter: drop-shadow(0 0 4px rgba(var(--lens-color), 0.5));
+      flex-shrink: 0;
+    }
+
+    .lensAppTitle {
+      font-size: 0.7rem;
+      line-height: 1;
+      text-align: left;
+    }
+  }
+
 
   .lensExpanded {
     flex: 1;
@@ -1231,9 +1251,9 @@ $border-color: rgba($echo-blue, 0.3);
 
   .templateGrid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.25rem;
-    padding: 1.25rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    padding: 1rem;
     overflow-y: auto;
     flex: 1;
     min-height: 0;
@@ -1244,10 +1264,10 @@ $border-color: rgba($echo-blue, 0.3);
     background: rgba($background-dark, 0.6);
     border: 1px solid $border-color;
     border-radius: 8px;
-    padding: 1rem;
+    padding: 0.8rem;
     text-align: center;
     transition: all 0.3s ease;
-    max-width: 200px;
+    max-width: 160px;
     margin: 0 auto;
 
     &:hover {
@@ -1261,16 +1281,16 @@ $border-color: rgba($echo-blue, 0.3);
     }
 
     h6 {
-      margin: 0 0 0.6rem 0;
-      font-size: 0.85rem;
+      margin: 0 0 0.5rem 0;
+      font-size: 0.8rem;
       color: $text-primary;
     }
 
     p {
-      margin: 0 0 1rem 0;
-      font-size: 0.75rem;
+      margin: 0 0 0.8rem 0;
+      font-size: 0.7rem;
       color: $text-secondary;
-      line-height: 1.3;
+      line-height: 1.2;
     }
 
     .useTemplate {
@@ -1827,44 +1847,96 @@ $border-color: rgba($echo-blue, 0.3);
   }
 }
 
+
 // Responsive Design
 @media (max-width: 768px) {
   .lensScrollContainer {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
+    padding: 0.5rem;
   }
 
   .lensInfoPanel {
-    min-width: auto;
-    max-width: none;
-    position: static;
     max-height: none;
+    padding: 0.8rem;
   }
 
-  .lensGrid {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: auto;
-    gap: 0.6rem;
-    margin: 0;
+  .headerWithTooltip {
+    margin-bottom: 1rem;
+
+    h3 {
+      font-size: 1.1rem;
+    }
   }
 
-  .lensCard {
-    width: 120px;
-    min-height: 100px;
-    padding: 1rem 0.75rem;
-    border-radius: 12px;
-    
-    .lensIcon {
-      font-size: 1.75rem;
-    }
-    
-    .lensInfo h5 {
-      font-size: 0.85rem;
-    }
-    
-    .lensInfo p {
+  .tooltipContainer {
+    .helpIcon {
+      width: 18px;
+      height: 18px;
       font-size: 0.7rem;
+    }
+
+    .tooltip {
+      width: 240px;
+      padding: 0.8rem;
+
+      .tooltipContent {
+        h4 {
+          font-size: 0.9rem;
+        }
+
+        h5 {
+          font-size: 0.8rem;
+        }
+
+        p {
+          font-size: 0.75rem;
+        }
+      }
+    }
+  }
+
+  .appsHeader {
+    text-align: center;
+
+    h4 {
+      justify-content: center;
+      font-size: 1rem;
+    }
+  }
+
+  .lensAppsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem;
+  }
+
+  .lensAppButton {
+    padding: 0.35rem 0.4rem;
+    
+    .lensAppIcon {
+      font-size: 0.9rem;
+    }
+    
+    .lensAppTitle {
+      font-size: 0.6rem;
+    }
+  }
+}
+
+// Medium screen adjustments (smaller laptops)
+@media (max-width: 1400px) {
+  .lensAppsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem;
+  }
+
+  .lensAppButton {
+    padding: 0.35rem 0.5rem;
+    
+    .lensAppIcon {
+      font-size: 0.9rem;
+    }
+    
+    .lensAppTitle {
+      font-size: 0.65rem;
     }
   }
 }
@@ -2003,7 +2075,9 @@ $border-color: rgba($echo-blue, 0.3);
       }
 
       .templateGrid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.8rem;
+        padding: 0.8rem;
       }
 
       .hecateFeatures .featuresGrid {
