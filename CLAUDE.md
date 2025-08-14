@@ -28,6 +28,7 @@ Nullblock is a decentralized Web3 platform for deploying and monetizing agentic 
 ✅ **Bittensor Task Marketplace**: Decentralized task submission with $NULL token rewards  
 ✅ **Advanced Security**: Prompt injection protection, encrypted context storage, anomaly detection  
 ✅ **Goal-Driven Automation**: Template-based workflows for arbitrage, DeFi, NFT, and DAO operations
+✅ **Advanced UI/UX**: Responsive Command Lens with ball lightning NullEye animations and intelligent tooltips
 
 ## Common Development Commands
 
@@ -257,10 +258,18 @@ Nullblock implements a Model Context Protocol-first architecture for secure, agn
 - **SSR Framework**: @lomray/vite-ssr-boost for server-side rendering
 - **State Management**: MobX with @lomray/react-mobx-manager
 - **Routing**: @lomray/react-route-manager for isomorphic routing
-- **Styling**: SCSS modules + Tailwind CSS
+- **Styling**: SCSS modules + Tailwind CSS with responsive grid systems
 - **Build Tool**: Vite with React plugin
 - **Wallet Integration**: @solana/web3.js with Phantom wallet support
 - **Future Integration**: OnchainKit for broader Web3 functionality
+
+### **🎨 Advanced UI/UX Features** (August 2025)
+- **Command Lens Interface**: Redesigned compact grid with instant access button styling
+- **NullEye Ball Lightning**: Realistic electrical effects with silver-gold lightning arcs
+- **Intelligent Tooltips**: Hover-based help system replacing static descriptions
+- **Responsive Design**: Optimized for small screens (13-inch MacBooks) with 4-column layouts
+- **Interactive Feedback**: Clickable NullEyes with state-responsive animations and navigation
+- **Universal Navigation**: All NullEye instances default to Hecate tab with enhanced visual cues
 
 ### **Production MCP Architecture** ✅ (Nullblock.mcp)
 - **Web Framework**: FastAPI with uvicorn ASGI server
@@ -373,4 +382,12 @@ The ECHO interface uses a room-based command structure that will evolve into MCP
 - Task fees: $0.01-$0.05 per automated task
 - Premium features: $10-$100/month for advanced analytics and priority support
 
-The platform implements a cyberpunk aesthetic with neon styling and maintains immersive error messages throughout the user experience while building toward a comprehensive MCP-powered agentic ecosystem.
+The platform implements a cyberpunk aesthetic with neon styling, ball lightning visual effects, and maintains immersive error messages throughout the user experience while building toward a comprehensive MCP-powered agentic ecosystem.
+
+### **🎨 Visual Design System**
+- **NullEye Animations**: Each NullEye features 8 randomized lightning arcs with varied sizes, orientations, and timing
+- **Silver-Gold Lightning**: Consistent electrical effects using brilliant silver (#e8e8e8) with gold accents (#e6c200)
+- **State-Responsive Design**: Core colors change based on agent state while maintaining consistent lightning
+- **Universal Clickability**: All NullEyes navigate to agent interfaces with enhanced hover feedback
+- **Compact Layouts**: Command Lens uses 4-column responsive grids optimized for smaller screens
+- **Smart Information Architecture**: Hover tooltips replace static text for cleaner, more interactive interfaces

@@ -986,6 +986,17 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
                   <div className={styles.streamLineAvatar}></div>
                   <div className={styles.streamLineAvatar}></div>
                 </div>
+                <div className={styles.lightningContainer}>
+                  <div className={styles.lightningArc}></div>
+                  <div className={styles.lightningArc}></div>
+                  <div className={styles.lightningArc}></div>
+                  <div className={styles.lightningArc}></div>
+                  <div className={styles.lightningArc}></div>
+                  <div className={styles.lightningArc}></div>
+                  <div className={styles.lightningArc}></div>
+                  <div className={styles.lightningArc}></div>
+                </div>
+                <div className={styles.staticField}></div>
                 <div className={styles.coreNodeAvatar}></div>
               </div>
             </div>
@@ -1037,8 +1048,10 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
                               className={`${styles.nulleyeChat} ${styles[`chat-${message.type || 'base'}`]} ${styles.clickableNulleyeChat}`}
                               onClick={handleNullEyeClick}
                             >
+                              <div className={styles.staticFieldChat}></div>
                               <div className={styles.coreNodeChat}></div>
                               <div className={styles.streamLineChat}></div>
+                              <div className={styles.lightningSparkChat}></div>
                             </div>
                             Hecate
                           </span>
