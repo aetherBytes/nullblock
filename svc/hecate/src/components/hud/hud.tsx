@@ -764,6 +764,17 @@ const HUD: React.FC<HUDProps> = ({
           <div className={styles.streamLine}></div>
           <div className={styles.streamLine}></div>
         </div>
+        <div className={styles.lightningContainer}>
+          <div className={styles.lightningArc}></div>
+          <div className={styles.lightningArc}></div>
+          <div className={styles.lightningArc}></div>
+          <div className={styles.lightningArc}></div>
+          <div className={styles.lightningArc}></div>
+          <div className={styles.lightningArc}></div>
+          <div className={styles.lightningArc}></div>
+          <div className={styles.lightningArc}></div>
+        </div>
+        <div className={styles.staticField}></div>
         <div className={styles.coreNode}></div>
       </div>
       
