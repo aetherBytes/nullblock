@@ -1060,39 +1060,40 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
               <div className={styles.lensScrollContainer}>
                 <div className={styles.lensInfoPanel}>
                   <div className={styles.lensInfoContent}>
-                    <h3>Command Lens</h3>
-                    <p>Your intelligent interface to Hecate's capabilities. Each lens provides specialized tools and workflows designed to enhance your productivity and creativity.</p>
-                    <div className={styles.lensFeatures}>
-                      <div className={styles.featureItem}>
-                        <span className={styles.featureIcon}>⚡</span>
-                        <span>Instant Access</span>
+                    <div className={styles.headerWithTooltip}>
+                      <h3>Command Lens</h3>
+                      <div className={styles.tooltipContainer}>
+                        <div className={styles.helpIcon}>?</div>
+                        <div className={styles.tooltip}>
+                          <div className={styles.tooltipContent}>
+                            <h4>Command Lens</h4>
+                            <p>Access powerful development tools and workflows through specialized Scopes.</p>
+                            <h5>What are Scopes?</h5>
+                            <p>Scopes are focused work environments, each tailored for specific tasks like code generation, data analysis, automation, and more. Select a scope to access its specialized toolset.</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className={styles.featureItem}>
-                        <span className={styles.featureIcon}>🎯</span>
-                        <span>Specialized Tools</span>
+                    </div>
+
+                    <div className={styles.lensAppsSection}>
+                      <div className={styles.appsHeader}>
+                        <h4>🎯 Scopes</h4>
                       </div>
-                      <div className={styles.featureItem}>
-                        <span className={styles.featureIcon}>🔄</span>
-                        <span>Seamless Integration</span>
+                      <div className={styles.lensAppsGrid}>
+                        {lensOptions.map((lens) => (
+                          <button 
+                            key={lens.id}
+                            className={styles.lensAppButton}
+                            onClick={() => handleLensClick(lens.id)}
+                            style={{'--lens-color': lens.color} as React.CSSProperties}
+                          >
+                            <span className={styles.lensAppIcon}>{lens.icon}</span>
+                            <span className={styles.lensAppTitle}>{lens.title}</span>
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
-                </div>
-                <div className={styles.lensGrid}>
-                  {lensOptions.map((lens) => (
-                    <button 
-                      key={lens.id}
-                      className={styles.lensCard}
-                      onClick={() => handleLensClick(lens.id)}
-                      style={{'--lens-color': lens.color} as React.CSSProperties}
-                    >
-                      <div className={styles.lensIcon}>{lens.icon}</div>
-                      <div className={styles.lensInfo}>
-                        <h5>{lens.title}</h5>
-                        <p>{lens.description}</p>
-                      </div>
-                    </button>
-                  ))}
                 </div>
               </div>
             )}
