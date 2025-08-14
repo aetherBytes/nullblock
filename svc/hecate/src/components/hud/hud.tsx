@@ -175,6 +175,7 @@ const HUD: React.FC<HUDProps> = ({
   // Remove separate dashboard overlays - everything will be integrated into HUD tabs
   const [mcpAuthenticated, setMcpAuthenticated] = useState<boolean>(false);
   const [mcpHealthStatus, setMcpHealthStatus] = useState<any>(null);
+  const [nulleyeState, setNulleyeState] = useState<'base' | 'response' | 'question' | 'thinking' | 'alert' | 'error' | 'warning' | 'success' | 'processing'>('base');
 
   // Only unlock 'home' and 'overview' by default, unlock others if logged in
   const unlockedScreens = publicKey ? ['home', 'overview', 'camp'] : ['home', 'overview'];
@@ -731,6 +732,29 @@ const HUD: React.FC<HUDProps> = ({
       >
         NULLBLOCK
       </button>
+      
+      {/* NULLEYE - Living system indicator */}
+      <div 
+        className={`${styles.nulleye} ${styles[nulleyeState]}`}
+        onClick={() => {
+          // Cycle through states for demo/testing
+          const states: Array<'base' | 'response' | 'question' | 'thinking' | 'alert' | 'error' | 'warning' | 'success' | 'processing'> = [
+            'base', 'response', 'question', 'thinking', 'alert', 'error', 'warning', 'success', 'processing'
+          ];
+          const currentIndex = states.indexOf(nulleyeState);
+          const nextIndex = (currentIndex + 1) % states.length;
+          setNulleyeState(states[nextIndex]);
+        }}
+      >
+        <div className={styles.pulseRing}></div>
+        <div className={styles.dataStream}>
+          <div className={styles.streamLine}></div>
+          <div className={styles.streamLine}></div>
+          <div className={styles.streamLine}></div>
+        </div>
+        <div className={styles.coreNode}></div>
+      </div>
+      
       <div
         className={`${styles.screenLabel} ${screen === 'home' ? styles.centeredLabel : ''}`}
       >
