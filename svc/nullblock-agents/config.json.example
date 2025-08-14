@@ -1,0 +1,70 @@
+{
+  "social_monitor": {
+    "twitter_bearer_token": "YOUR_TWITTER_BEARER_TOKEN_HERE",
+    "dextools_api_key": "YOUR_DEXTOOLS_API_KEY_HERE",
+    "update_interval": 60,
+    "max_signals_per_token": 100,
+    "sentiment_threshold": 0.1,
+    "confidence_threshold": 0.3
+  },
+  "sentiment_analyzer": {
+    "bullish_keywords": [
+      "moon", "pump", "rocket", "bull", "buy", "hodl", "diamond hands",
+      "breakout", "bullish", "rally", "surge", "explode", "gem", "lambo"
+    ],
+    "bearish_keywords": [
+      "dump", "crash", "bear", "sell", "short", "bearish", "drop",
+      "decline", "collapse", "scam", "rug", "red", "blood", "rekt"
+    ],
+    "risk_keywords": [
+      "scam", "rug pull", "honeypot", "exit scam", "ponzi", "fraud",
+      "manipulation", "whale dump", "insider trading", "fake"
+    ]
+  },
+  "risk_profile": {
+    "risk_tolerance": "MEDIUM",
+    "max_portfolio_risk": 0.05,
+    "max_position_size": 0.10,
+    "max_correlation_exposure": 0.30,
+    "stop_loss_percentage": 0.15,
+    "take_profit_percentage": 0.50,
+    "max_drawdown_limit": 0.20,
+    "daily_loss_limit": 0.05
+  },
+  "trading": {
+    "solana_rpc_url": "https://api.mainnet-beta.solana.com",
+    "private_key": null,
+    "max_slippage": 0.05,
+    "default_slippage": 0.01,
+    "gas_budget_sol": 0.01,
+    "min_liquidity_usd": 50000.0,
+    "max_price_impact": 0.1
+  },
+  "agent": {
+    "update_interval": 60,
+    "min_signals_for_decision": 3,
+    "portfolio_value": 10000.0,
+    "monitored_tokens": [
+      "BONK",
+      "WIF", 
+      "POPCAT",
+      "MYRO",
+      "SOL",
+      "RAY",
+      "USDC"
+    ]
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "social_trading.log",
+    "max_file_size": "10MB",
+    "backup_count": 5
+  },
+  "notifications": {
+    "enabled": false,
+    "webhook_url": null,
+    "discord_webhook": null,
+    "telegram_bot_token": null,
+    "telegram_chat_id": null
+  }
+}

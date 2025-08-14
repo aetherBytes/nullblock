@@ -82,12 +82,20 @@ Action Items:
 - ✅ **Template System**: Pre-built workflow templates for arbitrage, DeFi, NFT, and DAO operations
 - ✅ **Agent Coordination**: Context sharing and automated task distribution across agent network
 
-### ✅ **Nullblock.agents** - Arbitrage Army Deployed
+### ✅ **Nullblock.agents** - Complete Agent Arsenal Deployed
 **Location**: `/svc/nullblock-agents/`
+
+#### **Arbitrage Trading Agents** ✅
 - ✅ **Price Agent**: Multi-DEX monitoring (Uniswap, SushiSwap) with real-time arbitrage opportunity detection
-- ✅ **Strategy Agent**: Comprehensive risk assessment with confidence scoring and execution planning
+- ✅ **Strategy Agent**: Comprehensive risk assessment with confidence scoring and execution planning  
 - ✅ **Execution Agent**: Trade execution with Flashbots MEV protection and transaction management
 - ✅ **Reporting Agent**: Advanced analytics with performance metrics, P&L tracking, and recommendations
+
+#### **🆕 Social Trading Agents** ✅ **NEW - August 2025**
+- ✅ **Social Monitor Agent**: Real-time monitoring of X/Twitter, GMGN.ai, and DEXTools for meme coin signals
+- ✅ **Sentiment Analyzer**: Advanced ML-powered sentiment analysis with Fear & Greed Index calculation
+- ✅ **Risk Manager**: Comprehensive position sizing and risk assessment for volatile meme coin trading
+- ✅ **Solana Trader**: Jupiter DEX integration for automated Solana token trading with MEV protection
 
 ## 📊 **Technical Architecture Delivered**
 
@@ -113,16 +121,177 @@ Action Items:
 │  ✅ Risk Assessment & Strategy Analysis      │
 │  ✅ MEV-Protected Trade Execution            │
 │  ✅ Performance Analytics & Reporting        │
+│  🆕 Social Media Signal Intelligence         │
+│  🆕 Advanced Sentiment Analysis & Scoring    │
+│  🆕 Solana Meme Coin Trading Automation      │
+│  🆕 Real-time Risk Management & Position Sizing │
 └─────────────────────────────────────────────┘
 ```
 
 ## 🚀 **Ready for Phase 2: Platform & Deployment**
 
+### **🆕 MAJOR EXPANSION: Social Trading Alpha Release** ✅ **August 2025**
+
+**New Revenue Streams Activated**:
+- **Meme Coin Trading**: 0.5-1% fees on social signal-driven trades
+- **Social Intelligence API**: $100-$500/month for sentiment data feeds  
+- **Risk Management Service**: $50-$200/month for position sizing algorithms
+- **Signal Subscriptions**: $25-$100/month for premium social trading signals
+
+**Technical Capabilities Added**:
+- **Real-time Social Monitoring**: X/Twitter, GMGN, DEXTools integration
+- **Advanced Sentiment Scoring**: ML-powered analysis with confidence metrics
+- **Solana Trading Automation**: Jupiter DEX integration with MEV protection
+- **Dynamic Risk Management**: Volatility-adjusted position sizing and stop-losses
+- **Comprehensive Testing**: Full test coverage with debug tools and monitoring
+
+### **🧪 Social Trading Testing & Development Guide**
+
+#### **Quick Start for Developers**
+```bash
+# 1. Navigate to agents directory
+cd svc/nullblock-agents/
+
+# 2. Install dependencies
+pip install -e .
+
+# 3. Copy example configuration
+cp config.json.example config.json
+
+# 4. Run basic functionality test
+python -m agents.social_trading.debug --test all --token BONK
+
+# 5. Start the social trading agent
+python -m agents.social_trading.main --log-level DEBUG
+```
+
+#### **Component Testing**
+```bash
+# Test social media monitoring (30 second demo)
+python -m agents.social_trading.debug --test social --duration 30
+
+# Test sentiment analysis with sample texts
+python -m agents.social_trading.debug --test sentiment
+
+# Test risk management with different scenarios
+python -m agents.social_trading.debug --test risk
+
+# Test complete trading pipeline for specific token
+python -m agents.social_trading.debug --test pipeline --token WIF
+```
+
+#### **Comprehensive Test Suite**
+```bash
+# Run all social trading tests
+pytest tests/test_social_trading.py -v --tb=short
+
+# Run MCP tools tests  
+pytest svc/nullblock-mcp/tests/test_mcp_tools.py -v --tb=short
+
+# Test specific components
+pytest tests/test_social_trading.py::TestSentimentAnalyzer -v
+pytest tests/test_social_trading.py::TestRiskManager -v
+pytest tests/test_social_trading.py::TestIntegration::test_end_to_end_trading_decision -v
+```
+
+#### **Configuration & Customization**
+```bash
+# Edit configuration for your needs
+nano config.json
+
+# Key settings to modify:
+# - monitored_tokens: ["BONK", "WIF", "POPCAT"] 
+# - portfolio_value: 10000.0
+# - risk_tolerance: "MEDIUM" | "LOW" | "HIGH"
+# - twitter_bearer_token: "your_token_here"
+# - update_interval: 60 (seconds)
+
+# Run with custom config
+python -m agents.social_trading.main --config custom_config.json
+```
+
+#### **Debug & Monitoring**
+```bash
+# Enable debug logging
+python -m agents.social_trading.main --log-level DEBUG --log-file trading.log
+
+# Monitor real-time performance
+tail -f trading.log
+
+# Save detailed session data
+python -m agents.social_trading.main --save-session
+
+# Analyze debug session
+python -m agents.social_trading.debug --save
+# Check output: social_trading_debug_YYYYMMDD_HHMMSS.json
+```
+
+#### **Production Deployment Checklist**
+```bash
+# 1. Run full test suite
+pytest tests/ -v --cov=agents.social_trading --cov-report=html
+
+# 2. Test with real API keys (add to config.json):
+# twitter_bearer_token: "your_twitter_token"
+# dextools_api_key: "your_dextools_key"
+
+# 3. Start with paper trading mode
+python -m agents.social_trading.main --config production_config.json
+
+# 4. Monitor logs for errors
+tail -f social_trading.log | grep ERROR
+
+# 5. Verify risk management is working
+grep "should_execute.*False" social_trading.log
+```
+
+#### **Integration Testing with MCP**
+```bash
+# Test MCP social tools directly
+cd svc/nullblock-mcp/
+python -c "
+import asyncio
+from mcp.tools.social_tools import SocialMediaTools, SocialMediaConfig
+tools = SocialMediaTools(SocialMediaConfig())
+result = asyncio.run(tools.get_twitter_sentiment('$BONK', limit=5))
+print(f'Sentiment: {result[\"sentiment_score\"]:.2f}')
+"
+
+# Test sentiment analysis
+python -c "
+from mcp.tools.sentiment_tools import SentimentAnalysisTools
+analyzer = SentimentAnalysisTools()
+signal = analyzer.analyze_text_sentiment('BONK is going to moon! 🚀')
+print(f'Sentiment: {signal.sentiment_score:.2f}, Keywords: {signal.keywords}')
+"
+
+# Test Solana trading tools
+python -c "
+import asyncio
+from mcp.tools.trading_tools import TradingTools
+trader = TradingTools('https://api.mainnet-beta.solana.com')
+simulation = asyncio.run(trader.simulate_trade(
+    'So11111111111111111111111111111111111111112',
+    'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', 
+    1000.0, 0.5
+))
+print(f'Trade simulation: {simulation[\"recommendation\"]}')
+"
+```
+
+#### **Expected Test Results**
+- **Social Monitoring**: Should collect 5-15 signals per monitored token per hour
+- **Sentiment Analysis**: Bullish texts score >0.2, bearish <-0.2, with confidence >0.5
+- **Risk Management**: High-risk tokens get <5% position allocation, low-risk get up to 15%
+- **Trading Pipeline**: End-to-end test should generate BUY/SELL/HOLD signal in <10 seconds
+- **Performance**: Agent should process 100+ social signals per minute without errors
+
 ### **Remaining Tasks for Full MVP Launch**:
 1. **Nullblock.platform** - React dApp on Polygon (Frontend development)
-2. **Marketplace Integration** - Workflow marketplace with 5% revenue sharing
-3. **Polygon Testnet Deployment** - Infrastructure deployment and testing
-4. **Beta User Onboarding** - Target 100 users in 30 days
+2. **Social Trading Dashboard** - Real-time monitoring UI for social signals and trades  
+3. **Marketplace Integration** - Workflow marketplace with 5% revenue sharing
+4. **Polygon + Solana Deployment** - Multi-chain infrastructure deployment and testing
+5. **Beta User Onboarding** - Target 100 users in 30 days with social trading focus
 
 ### **Revenue Model Implemented**:
 - ✅ 0.5% arbitrage trade fees through execution agent

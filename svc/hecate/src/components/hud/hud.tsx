@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './hud.module.scss';
 import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '../../common/services/api';
 import { isAuthenticated, restoreSession, createAuthChallenge, verifyAuthChallenge, checkMCPHealth } from '../../common/services/mcp-api';
-import ArbitrageDashboard from '../arbitrage/arbitrage-dashboard';
+// Removed separate dashboard imports - all functionality is now integrated into HUD tabs
 import xLogo from '../../assets/images/X_logo_black.png';
 import nullLogo from '../../assets/images/null_logo.png';
 import echoBatWhite from '../../assets/images/echo_bat_white.png';
@@ -10,7 +10,20 @@ import echoBatBlack from '../../assets/images/echo_bat_black.png';
 
 type Screen = 'chambers' | 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light';
-type TabType = 'missions' | 'systems' | 'defense' | 'uplink' | 'hud' | 'status' | 'arbitrage';
+type TabType = 'missions' | 'systems' | 'defense' | 'uplink' | 'hud' | 'status' | 'arbitrage' | 'social' | 'portfolio' | 'defi';
+
+interface SystemStatus {
+  hud: boolean;
+  mcp: boolean;
+  orchestration: boolean;
+  agents: boolean;
+  portfolio: boolean;
+  defi: boolean;
+  social: boolean;
+  arbitrage: boolean;
+  hecate: boolean;
+  erebus: boolean;
+}
 
 interface HUDProps {
   publicKey: string | null;
@@ -18,6 +31,9 @@ interface HUDProps {
   theme?: Theme;
   onClose: () => void;
   onThemeChange: (theme: 'null' | 'cyber' | 'light') => void;
+  systemStatus: SystemStatus;
+  statusPanelCollapsed: boolean;
+  setStatusPanelCollapsed: (collapsed: boolean) => void;
 }
 
 interface UserProfile {
@@ -114,7 +130,10 @@ const HUD: React.FC<HUDProps> = ({
   onDisconnect, 
   theme = 'light', 
   onClose, 
-  onThemeChange
+  onThemeChange,
+  systemStatus,
+  statusPanelCollapsed,
+  setStatusPanelCollapsed
 }) => {
   const [screen, setScreen] = useState<Screen>('chambers');
   const [walletData, setWalletData] = useState<any>(null);
@@ -152,7 +171,7 @@ const HUD: React.FC<HUDProps> = ({
   const [isDigitizing, setIsDigitizing] = useState<boolean>(false);
   const [selectedUplink, setSelectedUplink] = useState<Uplink | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
-  const [showArbitrageDashboard, setShowArbitrageDashboard] = useState<boolean>(false);
+  // Remove separate dashboard overlays - everything will be integrated into HUD tabs
   const [mcpAuthenticated, setMcpAuthenticated] = useState<boolean>(false);
   const [mcpHealthStatus, setMcpHealthStatus] = useState<any>(null);
 
@@ -701,19 +720,7 @@ const HUD: React.FC<HUDProps> = ({
     }
   };
 
-  const handleOpenArbitrageDashboard = () => {
-    if (!mcpAuthenticated) {
-      if (confirm('MCP authentication required. Would you like to authenticate now?')) {
-        handleMCPAuthentication();
-      }
-      return;
-    }
-    setShowArbitrageDashboard(true);
-  };
-
-  const handleCloseArbitrageDashboard = () => {
-    setShowArbitrageDashboard(false);
-  };
+  // All dashboard functionality will be integrated directly into existing tab system
 
   const renderControlScreen = () => (
     <nav className={styles.verticalNavbar}>
@@ -952,6 +959,80 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderCampScreen = () => (
     <div className={styles.hudScreen}>
+      {/* System Status Panel - positioned in inner HUD */}
+      <div className={styles.statusIndicator}>
+        <div className={`${styles.systemStatusPanel} ${statusPanelCollapsed ? styles.collapsed : ''}`}>
+          <div className={styles.statusHeader} onClick={() => setStatusPanelCollapsed(!statusPanelCollapsed)}>
+            <div className={styles.headerContent}>
+              <span className={styles.statusTitle}>SYSTEM CONTROL</span>
+              <div className={styles.headerRight}>
+                {systemStatus.portfolio && systemStatus.defi && !statusPanelCollapsed && (
+                  <span className={styles.newFeaturesLabel}>✨ NEW</span>
+                )}
+                <span className={styles.toggleIcon}>{statusPanelCollapsed ? '▼' : '▲'}</span>
+              </div>
+            </div>
+          </div>
+          
+          {!statusPanelCollapsed && (
+            <div className={styles.statusContent}>
+              {/* Core Systems */}
+              <div className={styles.systemGroup}>
+                <div className={styles.groupLabel}>CORE</div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.hecate ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>HECATE</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.erebus ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>EREBUS</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.hud ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>HUD</span>
+                </div>
+              </div>
+              
+              {/* MCP & Orchestration */}
+              <div className={styles.systemGroup}>
+                <div className={styles.groupLabel}>MCP</div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.mcp ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>SERVER</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.orchestration ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>ORCHESTRATION</span>
+                </div>
+              </div>
+              
+              {/* Trading Agents */}
+              <div className={styles.systemGroup}>
+                <div className={styles.groupLabel}>AGENTS</div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.arbitrage ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>ARBITRAGE</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.social ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>SOCIAL</span>
+                </div>
+                <div className={`${styles.statusRow} ${systemStatus.portfolio ? styles.newFeature : ''}`}>
+                  <span className={`${styles.statusDot} ${systemStatus.portfolio ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>PORTFOLIO</span>
+                  {systemStatus.portfolio && <span className={styles.newBadge}>NEW</span>}
+                </div>
+                <div className={`${styles.statusRow} ${systemStatus.defi ? styles.newFeature : ''}`}>
+                  <span className={`${styles.statusDot} ${systemStatus.defi ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>DEFI</span>
+                  {systemStatus.defi && <span className={styles.newBadge}>NEW</span>}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      
       <div className={styles.headerContainer}>
         <h2 className={styles.hudTitle}>CAMP</h2>
         <div className={styles.headerDivider}></div>
@@ -1265,6 +1346,24 @@ const HUD: React.FC<HUDProps> = ({
                 >
                   ARBITRAGE
                 </button>
+                <button 
+                  className={`${styles.statusTab} ${activeTab === 'social' ? styles.activeTab : ''}`}
+                  onClick={() => setActiveTab('social')}
+                >
+                  SOCIAL
+                </button>
+                <button 
+                  className={`${styles.statusTab} ${activeTab === 'portfolio' ? styles.activeTab : ''}`}
+                  onClick={() => setActiveTab('portfolio')}
+                >
+                  💰 PORTFOLIO
+                </button>
+                <button 
+                  className={`${styles.statusTab} ${activeTab === 'defi' ? styles.activeTab : ''}`}
+                  onClick={() => setActiveTab('defi')}
+                >
+                  🌾 DEFI
+                </button>
               </div>
               <div className={styles.tabContent}>
                 {activeTab === 'hud' && renderHudTab()}
@@ -1312,12 +1411,347 @@ const HUD: React.FC<HUDProps> = ({
                             <li>✓ Automated execution & reporting</li>
                           </ul>
                         </div>
+                        <div className={styles.tradingInterface}>
+                          <div className={styles.quickStats}>
+                            <div className={styles.statItem}>
+                              <span className={styles.statLabel}>Active Opportunities:</span>
+                              <span className={styles.statValue}>3</span>
+                            </div>
+                            <div className={styles.statItem}>
+                              <span className={styles.statLabel}>24h Profit:</span>
+                              <span className={styles.statValue}>+$127.50</span>
+                            </div>
+                            <div className={styles.statItem}>
+                              <span className={styles.statLabel}>Success Rate:</span>
+                              <span className={styles.statValue}>87%</span>
+                            </div>
+                          </div>
+                          
+                          <div className={styles.opportunitiesList}>
+                            <div className={styles.opportunity}>
+                              <div className={styles.oppHeader}>
+                                <span className={styles.tokenPair}>ETH/USDC</span>
+                                <span className={styles.profit}>+2.3%</span>
+                              </div>
+                              <div className={styles.oppDetails}>
+                                <span className={styles.route}>Uniswap → SushiSwap</span>
+                                <span className={styles.amount}>$850</span>
+                              </div>
+                              <button className={styles.executeBtn}>Execute</button>
+                            </div>
+                            
+                            <div className={styles.opportunity}>
+                              <div className={styles.oppHeader}>
+                                <span className={styles.tokenPair}>BTC/USDT</span>
+                                <span className={styles.profit}>+1.8%</span>
+                              </div>
+                              <div className={styles.oppDetails}>
+                                <span className={styles.route}>Balancer → Curve</span>
+                                <span className={styles.amount}>$1,200</span>
+                              </div>
+                              <button className={styles.executeBtn}>Execute</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {activeTab === 'social' && (
+                  <div className={styles.socialTab}>
+                    <div className={styles.socialHeader}>
+                      <h3>MCP Social Trading System</h3>
+                      {mcpHealthStatus && (
+                        <div className={styles.mcpStatus}>
+                          <div className={styles.statusContainer}>
+                            <span className={styles.statusLabel}>MCP Status:</span>
+                            <span className={mcpHealthStatus.status === 'operational' ? styles.active : styles.inactive}>
+                              {mcpHealthStatus.status}
+                            </span>
+                          </div>
+                          <div className={styles.statusContainer}>
+                            <span className={styles.statusLabel}>Auth:</span>
+                            <span className={mcpAuthenticated ? styles.active : styles.inactive}>
+                              {mcpAuthenticated ? 'Authenticated' : 'Not Authenticated'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {!mcpAuthenticated ? (
+                      <div className={styles.authPrompt}>
+                        <p>MCP authentication required to access social trading.</p>
                         <button 
-                          className={styles.launchButton}
-                          onClick={handleOpenArbitrageDashboard}
+                          className={styles.authButton}
+                          onClick={handleMCPAuthentication}
+                          disabled={!publicKey}
                         >
-                          Launch Arbitrage Dashboard
+                          {publicKey ? 'Authenticate with MCP' : 'Connect Wallet First'}
                         </button>
+                      </div>
+                    ) : (
+                      <div className={styles.socialContent}>
+                        <p>Social trading system ready. Access advanced social sentiment dashboard.</p>
+                        <div className={styles.socialFeatures}>
+                          <ul>
+                            <li>✓ Real-time X/Twitter sentiment monitoring</li>
+                            <li>✓ GMGN trending token analysis</li>
+                            <li>✓ Multi-source social signal aggregation</li>
+                            <li>✓ Automated meme coin trading signals</li>
+                            <li>✓ Risk-adjusted position sizing</li>
+                          </ul>
+                        </div>
+                        <div className={styles.tradingInterface}>
+                          <div className={styles.quickStats}>
+                            <div className={styles.statItem}>
+                              <span className={styles.statLabel}>Live Signals:</span>
+                              <span className={styles.statValue}>12</span>
+                            </div>
+                            <div className={styles.statItem}>
+                              <span className={styles.statLabel}>Bullish:</span>
+                              <span className={styles.statValue}>8</span>
+                            </div>
+                            <div className={styles.statItem}>
+                              <span className={styles.statLabel}>Bearish:</span>
+                              <span className={styles.statValue}>2</span>
+                            </div>
+                          </div>
+                          
+                          <div className={styles.signalsList}>
+                            <div className={styles.signal}>
+                              <div className={styles.signalHeader}>
+                                <span className={styles.tokenSymbol}>$BONK</span>
+                                <span className={styles.sentiment}>🚀 BULLISH</span>
+                              </div>
+                              <div className={styles.signalContent}>
+                                <p>"BONK is going to the moon! This meme season is just getting started!"</p>
+                                <div className={styles.signalMeta}>
+                                  <span className={styles.source}>Twitter</span>
+                                  <span className={styles.engagement}>85% sentiment</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className={styles.signal}>
+                              <div className={styles.signalHeader}>
+                                <span className={styles.tokenSymbol}>$WIF</span>
+                                <span className={styles.sentiment}>📈 BULLISH</span>
+                              </div>
+                              <div className={styles.signalContent}>
+                                <p>"WIF trending +25% in last hour. Strong momentum detected."</p>
+                                <div className={styles.signalMeta}>
+                                  <span className={styles.source}>GMGN</span>
+                                  <span className={styles.engagement}>78% sentiment</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {activeTab === 'portfolio' && (
+                  <div className={styles.portfolioTab}>
+                    <div className={styles.portfolioHeader}>
+                      <h3>MCP Portfolio Management</h3>
+                      {mcpHealthStatus && (
+                        <div className={styles.mcpStatus}>
+                          <div className={styles.statusContainer}>
+                            <span className={styles.statusLabel}>MCP Status:</span>
+                            <span className={mcpHealthStatus.status === 'operational' ? styles.active : styles.inactive}>
+                              {mcpHealthStatus.status}
+                            </span>
+                          </div>
+                          <div className={styles.statusContainer}>
+                            <span className={styles.statusLabel}>Auth:</span>
+                            <span className={mcpAuthenticated ? styles.active : styles.inactive}>
+                              {mcpAuthenticated ? 'Authenticated' : 'Not Authenticated'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {!mcpAuthenticated ? (
+                      <div className={styles.authPrompt}>
+                        <p>MCP authentication required to access portfolio management.</p>
+                        <button 
+                          className={styles.authButton}
+                          onClick={handleMCPAuthentication}
+                          disabled={!publicKey}
+                        >
+                          {publicKey ? 'Authenticate with MCP' : 'Connect Wallet First'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className={styles.portfolioContent}>
+                        <p>Portfolio management system ready. Track and rebalance your assets.</p>
+                        <div className={styles.portfolioFeatures}>
+                          <ul>
+                            <li>✓ Multi-chain asset tracking</li>
+                            <li>✓ Real-time portfolio analytics</li>
+                            <li>✓ Automated rebalancing recommendations</li>
+                            <li>✓ Risk assessment and diversification scoring</li>
+                            <li>✓ Performance vs benchmark tracking</li>
+                          </ul>
+                        </div>
+                        <div className={styles.tradingInterface}>
+                          <div className={styles.quickStats}>
+                            <div className={styles.statItem}>
+                              <span className={styles.statLabel}>Total Value:</span>
+                              <span className={styles.statValue}>$10,623</span>
+                            </div>
+                            <div className={styles.statItem}>
+                              <span className={styles.statLabel}>24h Change:</span>
+                              <span className={styles.statValue}>+2.78%</span>
+                            </div>
+                            <div className={styles.statItem}>
+                              <span className={styles.statLabel}>Assets:</span>
+                              <span className={styles.statValue}>4</span>
+                            </div>
+                          </div>
+                          
+                          <div className={styles.assetsList}>
+                            <div className={styles.asset}>
+                              <div className={styles.assetHeader}>
+                                <span className={styles.assetSymbol}>◎ SOL</span>
+                                <span className={styles.allocation}>32.1%</span>
+                              </div>
+                              <div className={styles.assetDetails}>
+                                <span className={styles.balance}>15.4 SOL</span>
+                                <span className={styles.value}>$3,235</span>
+                              </div>
+                            </div>
+                            
+                            <div className={styles.asset}>
+                              <div className={styles.assetHeader}>
+                                <span className={styles.assetSymbol}>⟠ ETH</span>
+                                <span className={styles.allocation}>53.9%</span>
+                              </div>
+                              <div className={styles.assetDetails}>
+                                <span className={styles.balance}>2.1 ETH</span>
+                                <span className={styles.value}>$5,432</span>
+                              </div>
+                            </div>
+                            
+                            <div className={styles.asset}>
+                              <div className={styles.assetHeader}>
+                                <span className={styles.assetSymbol}>🪙 BONK</span>
+                                <span className={styles.allocation}>14.5%</span>
+                              </div>
+                              <div className={styles.assetDetails}>
+                                <span className={styles.balance}>2.5M BONK</span>
+                                <span className={styles.value}>$1,457</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <button className={styles.rebalanceBtn}>Rebalance Portfolio</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {activeTab === 'defi' && (
+                  <div className={styles.defiTab}>
+                    <div className={styles.defiHeader}>
+                      <h3>MCP DeFi Automation</h3>
+                      {mcpHealthStatus && (
+                        <div className={styles.mcpStatus}>
+                          <div className={styles.statusContainer}>
+                            <span className={styles.statusLabel}>MCP Status:</span>
+                            <span className={mcpHealthStatus.status === 'operational' ? styles.active : styles.inactive}>
+                              {mcpHealthStatus.status}
+                            </span>
+                          </div>
+                          <div className={styles.statusContainer}>
+                            <span className={styles.statusLabel}>Auth:</span>
+                            <span className={mcpAuthenticated ? styles.active : styles.inactive}>
+                              {mcpAuthenticated ? 'Authenticated' : 'Not Authenticated'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {!mcpAuthenticated ? (
+                      <div className={styles.authPrompt}>
+                        <p>MCP authentication required to access DeFi automation.</p>
+                        <button 
+                          className={styles.authButton}
+                          onClick={handleMCPAuthentication}
+                          disabled={!publicKey}
+                        >
+                          {publicKey ? 'Authenticate with MCP' : 'Connect Wallet First'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className={styles.defiContent}>
+                        <p>DeFi automation system ready. Optimize yield and manage liquidity positions.</p>
+                        <div className={styles.defiFeatures}>
+                          <ul>
+                            <li>✓ Multi-protocol yield farming</li>
+                            <li>✓ Automated strategy execution</li>
+                            <li>✓ Liquidity position management</li>
+                            <li>✓ Gas optimization and auto-compounding</li>
+                            <li>✓ Impermanent loss protection</li>
+                          </ul>
+                        </div>
+                        <div className={styles.tradingInterface}>
+                          <div className={styles.quickStats}>
+                            <div className={styles.statItem}>
+                              <span className={styles.statLabel}>Total Staked:</span>
+                              <span className={styles.statValue}>$8,500</span>
+                            </div>
+                            <div className={styles.statItem}>
+                              <span className={styles.statLabel}>Avg APY:</span>
+                              <span className={styles.statValue}>7.8%</span>
+                            </div>
+                            <div className={styles.statItem}>
+                              <span className={styles.statLabel}>Positions:</span>
+                              <span className={styles.statValue}>4</span>
+                            </div>
+                          </div>
+                          
+                          <div className={styles.defiPositions}>
+                            <div className={styles.position}>
+                              <div className={styles.positionHeader}>
+                                <span className={styles.protocol}>👻 Aave</span>
+                                <span className={styles.apy}>4.2% APY</span>
+                              </div>
+                              <div className={styles.positionDetails}>
+                                <span className={styles.asset}>USDC Lending</span>
+                                <span className={styles.amount}>$5,000</span>
+                              </div>
+                            </div>
+                            
+                            <div className={styles.position}>
+                              <div className={styles.positionHeader}>
+                                <span className={styles.protocol}>🦄 Uniswap</span>
+                                <span className={styles.apy}>12.8% APY</span>
+                              </div>
+                              <div className={styles.positionDetails}>
+                                <span className={styles.asset}>ETH/USDC LP</span>
+                                <span className={styles.amount}>$3,000</span>
+                              </div>
+                            </div>
+                            
+                            <div className={styles.position}>
+                              <div className={styles.positionHeader}>
+                                <span className={styles.protocol}>🌀 Curve</span>
+                                <span className={styles.apy}>8.7% APY</span>
+                              </div>
+                              <div className={styles.positionDetails}>
+                                <span className={styles.asset}>3Pool</span>
+                                <span className={styles.amount}>$2,500</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <button className={styles.harvestBtn}>Harvest All Rewards</button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1494,9 +1928,7 @@ const HUD: React.FC<HUDProps> = ({
           </div>
         </>
       )}
-      {showArbitrageDashboard && (
-        <ArbitrageDashboard onClose={handleCloseArbitrageDashboard} />
-      )}
+      {/* All content integrated into HUD tabs - no separate overlays */}
     </div>
   );
 
@@ -1570,6 +2002,80 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderChambersScreen = () => (
     <div className={styles.hudScreen}>
+      {/* System Status Panel - positioned in inner HUD */}
+      <div className={styles.statusIndicator}>
+        <div className={`${styles.systemStatusPanel} ${statusPanelCollapsed ? styles.collapsed : ''}`}>
+          <div className={styles.statusHeader} onClick={() => setStatusPanelCollapsed(!statusPanelCollapsed)}>
+            <div className={styles.headerContent}>
+              <span className={styles.statusTitle}>SYSTEM CONTROL</span>
+              <div className={styles.headerRight}>
+                {systemStatus.portfolio && systemStatus.defi && !statusPanelCollapsed && (
+                  <span className={styles.newFeaturesLabel}>✨ NEW</span>
+                )}
+                <span className={styles.toggleIcon}>{statusPanelCollapsed ? '▼' : '▲'}</span>
+              </div>
+            </div>
+          </div>
+          
+          {!statusPanelCollapsed && (
+            <div className={styles.statusContent}>
+              {/* Core Systems */}
+              <div className={styles.systemGroup}>
+                <div className={styles.groupLabel}>CORE</div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.hecate ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>HECATE</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.erebus ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>EREBUS</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.hud ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>HUD</span>
+                </div>
+              </div>
+              
+              {/* MCP & Orchestration */}
+              <div className={styles.systemGroup}>
+                <div className={styles.groupLabel}>MCP</div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.mcp ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>SERVER</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.orchestration ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>ORCHESTRATION</span>
+                </div>
+              </div>
+              
+              {/* Trading Agents */}
+              <div className={styles.systemGroup}>
+                <div className={styles.groupLabel}>AGENTS</div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.arbitrage ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>ARBITRAGE</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={`${styles.statusDot} ${systemStatus.social ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>SOCIAL</span>
+                </div>
+                <div className={`${styles.statusRow} ${systemStatus.portfolio ? styles.newFeature : ''}`}>
+                  <span className={`${styles.statusDot} ${systemStatus.portfolio ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>PORTFOLIO</span>
+                  {systemStatus.portfolio && <span className={styles.newBadge}>NEW</span>}
+                </div>
+                <div className={`${styles.statusRow} ${systemStatus.defi ? styles.newFeature : ''}`}>
+                  <span className={`${styles.statusDot} ${systemStatus.defi ? styles.online : styles.offline}`}></span>
+                  <span className={styles.statusLabel}>DEFI</span>
+                  {systemStatus.defi && <span className={styles.newBadge}>NEW</span>}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      
       <div className={styles.headerContainer}>
         <h2 className={styles.hudTitle}>HUD CHAMBERS</h2>
         <div className={styles.headerDivider}></div>
@@ -1609,6 +2115,7 @@ const HUD: React.FC<HUDProps> = ({
       <div className={styles.hudWindow}>
         {renderScreen()}
       </div>
+      
     </div>
   );
 };

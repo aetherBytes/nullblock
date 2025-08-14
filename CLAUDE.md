@@ -31,6 +31,64 @@ Nullblock is a decentralized Web3 platform for deploying and monetizing agentic 
 
 ## Common Development Commands
 
+### **🆕 Social Trading Agents** (August 2025)
+
+#### Social Trading Development (`svc/nullblock-agents/`)
+```bash
+# Run social trading agent
+python -m agents.social_trading.main
+
+# Debug social trading components
+python -m agents.social_trading.debug --test all --token BONK
+
+# Test specific components
+python -m agents.social_trading.debug --test social --duration 60
+python -m agents.social_trading.debug --test sentiment
+python -m agents.social_trading.debug --test risk
+python -m agents.social_trading.debug --test pipeline --token WIF
+
+# Run comprehensive tests
+pytest tests/test_social_trading.py -v
+pytest svc/nullblock-mcp/tests/test_mcp_tools.py -v
+
+# Configuration
+cp config.json.example config.json
+# Edit: twitter_bearer_token, dextools_api_key, monitored_tokens
+
+# Start with custom config
+python -m agents.social_trading.main --config custom_config.json --log-level DEBUG
+```
+
+#### MCP Social Tools Testing (`svc/nullblock-mcp/`)
+```bash
+# Test social media tools
+python -c "
+import asyncio
+from mcp.tools.social_tools import SocialMediaTools, SocialMediaConfig
+config = SocialMediaConfig()
+tools = SocialMediaTools(config)
+result = asyncio.run(tools.get_twitter_sentiment('$BONK'))
+print(result)
+"
+
+# Test sentiment analysis
+python -c "
+from mcp.tools.sentiment_tools import SentimentAnalysisTools
+analyzer = SentimentAnalysisTools()
+signal = analyzer.analyze_text_sentiment('BONK to the moon! 🚀')
+print(f'Sentiment: {signal.sentiment_score}, Confidence: {signal.confidence}')
+"
+
+# Test trading tools
+python -c "
+import asyncio
+from mcp.tools.trading_tools import TradingTools
+trader = TradingTools('https://api.mainnet-beta.solana.com')
+tokens = asyncio.run(trader.get_token_list())
+print(f'Loaded {len(tokens)} tokens')
+"
+```
+
 ### **New MCP Infrastructure** 🆕
 
 #### Nullblock.mcp (`svc/nullblock-mcp/`)
@@ -181,6 +239,13 @@ Nullblock implements a Model Context Protocol-first architecture for secure, agn
 - Flashbots integration for MEV protection
 - Prompt injection protection with sanitization and allowlists
 - Developer API for third-party agent development
+
+**🆕 Social Trading MCP Extensions** (August 2025):
+- Real-time social media monitoring tools (Twitter/X, GMGN, DEXTools)
+- Advanced sentiment analysis with ML-powered keyword detection
+- Jupiter DEX integration for automated Solana trading
+- Dynamic risk management and position sizing algorithms
+- Comprehensive testing framework with debug utilities
 
 **Bittensor Integration**:
 - Nullblock subnet for crowdsourcing goal-driven tasks
