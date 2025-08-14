@@ -630,6 +630,1314 @@ $border-color: rgba($echo-blue, 0.3);
   }
 }
 
+// Hecate Container
+.hecateContainer {
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .hecateHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+
+    h3 {
+      margin: 0;
+      font-size: 1.4rem;
+      color: $echo-blue;
+    }
+
+    .hecateStatus {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      color: $text-secondary;
+
+      .statusIndicator {
+        color: $echo-green;
+        font-size: 1.2rem;
+        animation: pulse 2s infinite;
+      }
+    }
+  }
+
+  .hecateContent {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .hecateInterface {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .chatSection {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .hecateChat {
+    flex: 1;
+    background: rgba($background-dark, 0.6);
+    border: 1px solid $border-color;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+
+    .chatHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: rgba($background-dark, 0.8);
+      border-bottom: 1px solid $border-color;
+
+      h4 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: $echo-blue;
+      }
+
+      .chatStatus {
+        font-size: 0.8rem;
+        color: $echo-green;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        animation: pulse 2s infinite;
+      }
+    }
+
+    .chatMessages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-height: 0;
+
+      .chatMessage {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 1rem;
+        border-radius: 8px;
+        max-width: 80%;
+
+        &.message-user {
+          align-self: flex-end;
+          background: rgba($echo-blue, 0.1);
+          border: 1px solid rgba($echo-blue, 0.3);
+
+          .messageSender {
+            color: $echo-blue;
+          }
+        }
+
+        &.message-hecate {
+          align-self: flex-start;
+          background: rgba($background-dark, 0.8);
+          border: 1px solid $border-color;
+
+          .messageSender {
+            color: $echo-green;
+          }
+        }
+
+        &.type-update {
+          border-left: 3px solid $echo-blue;
+        }
+
+        &.type-question {
+          border-left: 3px solid $echo-yellow;
+        }
+
+        &.type-suggestion {
+          border-left: 3px solid $echo-green;
+        }
+
+        .messageHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 0.8rem;
+
+          .messageSender {
+            font-weight: 600;
+          }
+
+          .messageTime {
+            color: $text-secondary;
+            font-size: 0.7rem;
+          }
+        }
+
+        .messageContent {
+          color: $text-primary;
+          line-height: 1.4;
+          font-size: 0.9rem;
+        }
+      }
+    }
+
+    .chatInput {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: rgba($background-dark, 0.8);
+      border-top: 1px solid $border-color;
+
+      .chatInputField {
+        flex: 1;
+        background: rgba($background-dark, 0.6);
+        border: 1px solid $border-color;
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        color: $text-primary;
+        font-size: 0.9rem;
+
+        &::placeholder {
+          color: $text-secondary;
+        }
+
+        &:focus {
+          outline: none;
+          border-color: $echo-blue;
+          box-shadow: 0 0 10px rgba($echo-blue, 0.3);
+        }
+      }
+
+      .chatSendButton {
+        background: linear-gradient(135deg, $echo-blue, $echo-green);
+        border: none;
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+        font-weight: 600;
+
+        &:hover {
+          transform: scale(1.05);
+          box-shadow: 0 0 15px rgba($echo-blue, 0.5);
+        }
+
+        &:active {
+          transform: scale(0.95);
+        }
+      }
+
+      .chatSuggestions {
+        background: rgba($background-dark, 0.9);
+        border-top: 1px solid $border-color;
+        padding: 1rem;
+
+        .suggestionsHeader {
+          margin-bottom: 0.75rem;
+          
+          span {
+            font-size: 0.8rem;
+            color: $echo-blue;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+        }
+
+        .suggestionsList {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+
+          .suggestionButton {
+            background: rgba($echo-blue, 0.1);
+            border: 1px solid rgba($echo-blue, 0.3);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            color: $text-primary;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+
+            &:hover {
+              background: rgba($echo-blue, 0.2);
+              border-color: rgba($echo-blue, 0.5);
+              transform: translateY(-1px);
+            }
+
+            &:active {
+              transform: translateY(0);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .hecateMain {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.25rem;
+    background: rgba($background-dark, 0.6);
+    border: 1px solid $border-color;
+    border-radius: 12px;
+
+    .hecateAvatar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+
+      .avatarCircle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, $echo-blue, $echo-green);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 20px rgba($echo-blue, 0.3);
+
+        .avatarIcon {
+          font-size: 2rem;
+          filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+        }
+      }
+
+      .avatarInfo {
+        h4 {
+          margin: 0 0 0.5rem 0;
+          font-size: 1.5rem;
+          color: $text-primary;
+        }
+
+        p {
+          margin: 0;
+          color: $text-secondary;
+          font-size: 0.9rem;
+        }
+      }
+    }
+
+    .hecateStats {
+      display: flex;
+      gap: 1.5rem;
+      flex: 1;
+
+      .statCard {
+        flex: 1;
+        text-align: center;
+        padding: 1rem;
+        background: rgba($background-dark, 0.4);
+        border: 1px solid $border-color;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+
+        &:hover {
+          border-color: rgba($echo-blue, 0.5);
+          box-shadow: 0 0 15px rgba($echo-blue, 0.2);
+        }
+
+        .statValue {
+          font-size: 1.8rem;
+          font-weight: 700;
+          color: $echo-blue;
+          margin-bottom: 0.5rem;
+        }
+
+        .statLabel {
+          font-size: 0.8rem;
+          color: $text-secondary;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+      }
+    }
+  }
+
+  .lensSection {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .lensScrollContainer {
+    flex: 1;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    
+    // Revolutionary scrollbar styling
+    &::-webkit-scrollbar {
+      height: 4px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: linear-gradient(90deg, $echo-blue, $echo-green, $echo-purple);
+      border-radius: 2px;
+      box-shadow: 0 0 10px rgba($echo-blue, 0.5);
+      
+      &:hover {
+        background: linear-gradient(90deg, $echo-green, $echo-purple, $echo-blue);
+        box-shadow: 0 0 15px rgba($echo-green, 0.7);
+      }
+    }
+  }
+
+  .lensInfoPanel {
+    background: linear-gradient(135deg, rgba($echo-blue, 0.1), rgba($echo-blue, 0.05));
+    border: 1px solid rgba($echo-blue, 0.2);
+    border-radius: 16px;
+    padding: 1.25rem;
+    backdrop-filter: blur(10px);
+    min-width: 260px;
+    max-width: 300px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: sticky;
+    left: 0;
+  }
+
+  .lensInfoContent {
+    h3 {
+      margin: 0 0 0.75rem 0;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: $echo-blue;
+      text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+    }
+
+    p {
+      margin: 0 0 1rem 0;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: $text-primary;
+      font-weight: 500;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+      background: rgba($background-dark, 0.3);
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid rgba($echo-blue, 0.2);
+    }
+  }
+
+  .lensFeatures {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .featureItem {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.6rem;
+      background: rgba($echo-blue, 0.1);
+      border-radius: 6px;
+      border: 1px solid rgba($echo-blue, 0.2);
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba($echo-blue, 0.15);
+        border-color: rgba($echo-blue, 0.3);
+        transform: translateX(4px);
+      }
+
+      .featureIcon {
+        font-size: 1rem;
+        filter: drop-shadow(0 0 4px rgba($echo-blue, 0.5));
+      }
+
+      span:last-child {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: $text-primary;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+      }
+    }
+  }
+
+  .lensGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 0.4rem;
+    min-width: max-content;
+    height: 100%;
+    min-height: 0;
+    align-items: center;
+    justify-items: center;
+    margin-left: auto;
+    margin-right: 1rem;
+  }
+
+  .lensCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 1rem 0.75rem;
+    background: linear-gradient(135deg, rgba($background-dark, 0.8), rgba($background-light, 0.6));
+    border: 1px solid rgba(var(--lens-color), 0.3);
+    border-radius: 16px;
+    color: $text-primary;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    min-height: 110px;
+    width: 130px;
+    backdrop-filter: blur(10px);
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--lens-color), rgba(var(--lens-color), 0.5));
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+
+    &:hover {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: 
+        0 12px 30px rgba(var(--lens-color), 0.4),
+        0 0 20px rgba(var(--lens-color), 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      border-color: var(--lens-color);
+      
+      &::before {
+        transform: scaleX(1);
+      }
+    }
+
+    &:active {
+      transform: translateY(-2px) scale(1.01);
+    }
+
+    .lensIcon {
+      font-size: 2rem;
+      filter: drop-shadow(0 0 8px rgba(var(--lens-color), 0.6));
+      transition: all 0.3s ease;
+    }
+
+    .lensInfo {
+      h5 {
+        margin: 0 0 0.25rem 0;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: $text-primary;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.75rem;
+        color: $text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        line-height: 1.2;
+        font-weight: 500;
+      }
+    }
+    
+    &:hover .lensIcon {
+      transform: scale(1.1);
+      filter: drop-shadow(0 0 12px rgba(var(--lens-color), 0.8));
+    }
+  }
+
+  .lensExpanded {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .lensContent {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: rgba($background-dark, 0.6);
+
+    .lensHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: rgba($background-dark, 0.8);
+      border-bottom: 1px solid $border-color;
+
+      h5 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: $echo-blue;
+      }
+
+      .closeLens {
+        background: none;
+        border: none;
+        color: $text-secondary;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0.25rem;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+
+        &:hover {
+          color: $echo-red;
+          background: rgba($echo-red, 0.1);
+        }
+      }
+    }
+  }
+
+  .templateGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+    padding: 1.25rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    max-height: 70vh;
+  }
+
+  .templateCard {
+    background: rgba($background-dark, 0.6);
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    max-width: 200px;
+    margin: 0 auto;
+
+    &:hover {
+      border-color: rgba($echo-blue, 0.5);
+      box-shadow: 0 4px 15px rgba($echo-blue, 0.2);
+    }
+
+    .templateIcon {
+      font-size: 1.75rem;
+      margin-bottom: 0.6rem;
+    }
+
+    h6 {
+      margin: 0 0 0.6rem 0;
+      font-size: 0.85rem;
+      color: $text-primary;
+    }
+
+    p {
+      margin: 0 0 1rem 0;
+      font-size: 0.75rem;
+      color: $text-secondary;
+      line-height: 1.3;
+    }
+
+    .useTemplate {
+      background: linear-gradient(135deg, $echo-blue, $echo-green);
+      border: none;
+      border-radius: 6px;
+      padding: 0.6rem 1rem;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 15px rgba($echo-blue, 0.3);
+      }
+    }
+  }
+
+  .workflowCanvas {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem;
+    flex: 1;
+    min-height: 0;
+    background: rgba($background-dark, 0.4);
+  }
+
+  .workflowNode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: rgba($background-dark, 0.8);
+    border: 2px solid $echo-blue;
+    border-radius: 8px;
+    min-width: 100px;
+
+    .nodeIcon {
+      font-size: 1.5rem;
+    }
+
+    span {
+      font-size: 0.8rem;
+      color: $text-primary;
+      font-weight: 600;
+    }
+  }
+
+  .workflowArrow {
+    font-size: 1.5rem;
+    color: $echo-blue;
+    font-weight: bold;
+  }
+
+  .workflowControls {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: rgba($background-dark, 0.8);
+    border-top: 1px solid $border-color;
+
+    .workflowBtn {
+      background: rgba($echo-blue, 0.2);
+      border: 1px solid rgba($echo-blue, 0.3);
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      color: $text-primary;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba($echo-blue, 0.3);
+        border-color: rgba($echo-blue, 0.5);
+      }
+    }
+  }
+
+  .visualizerCanvas {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: rgba($background-dark, 0.4);
+  }
+
+  .chartPlaceholder {
+    display: flex;
+    align-items: end;
+    gap: 1rem;
+    height: 200px;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .chartBar {
+    flex: 1;
+    background: linear-gradient(to top, $echo-blue, $echo-green);
+    border-radius: 4px 4px 0 0;
+    min-width: 40px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: scaleY(1.1);
+      box-shadow: 0 0 15px rgba($echo-blue, 0.5);
+    }
+  }
+
+  .visualizerControls {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: rgba($background-dark, 0.8);
+    border-top: 1px solid $border-color;
+
+    .vizBtn {
+      background: rgba($echo-orange, 0.2);
+      border: 1px solid rgba($echo-orange, 0.3);
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      color: $text-primary;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba($echo-orange, 0.3);
+        border-color: rgba($echo-orange, 0.5);
+      }
+    }
+  }
+
+  .codeEditor {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: rgba($background-dark, 0.8);
+  }
+
+  .editorHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: rgba($background-dark, 0.9);
+    border-bottom: 1px solid $border-color;
+
+    span {
+      font-size: 0.9rem;
+      color: $text-primary;
+      font-weight: 600;
+    }
+
+    .editorControls {
+      display: flex;
+      gap: 0.5rem;
+
+      .editorBtn {
+        background: rgba($echo-yellow, 0.2);
+        border: 1px solid rgba($echo-yellow, 0.3);
+        border-radius: 4px;
+        padding: 0.25rem 0.75rem;
+        color: $text-primary;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: rgba($echo-yellow, 0.3);
+          border-color: rgba($echo-yellow, 0.5);
+        }
+      }
+    }
+  }
+
+  .codeTextarea {
+    flex: 1;
+    min-height: 0;
+    background: rgba($background-dark, 0.6);
+    border: none;
+    color: $text-primary;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    padding: 1rem;
+    resize: none;
+    outline: none;
+    line-height: 1.4;
+
+    &::placeholder {
+      color: $text-secondary;
+    }
+  }
+
+  .outputPanel {
+    background: rgba($background-dark, 0.9);
+    border-top: 1px solid $border-color;
+    padding: 1rem;
+
+    h6 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.9rem;
+      color: $echo-green;
+    }
+
+    .outputContent {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+
+      .outputLine {
+        font-size: 0.8rem;
+        color: $text-secondary;
+        font-family: 'Courier New', monospace;
+      }
+    }
+  }
+
+  .lensPlaceholder {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+
+    p {
+      margin: 0 0 1rem 0;
+      color: $text-secondary;
+      font-size: 1rem;
+    }
+
+    .comingSoonBtn {
+      background: linear-gradient(135deg, $echo-purple, $echo-blue);
+      border: none;
+      border-radius: 6px;
+      padding: 0.75rem 1.5rem;
+      color: white;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 15px rgba($echo-purple, 0.3);
+      }
+    }
+  }
+
+  .analyticsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 1rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .analyticsCard {
+    background: rgba($background-dark, 0.6);
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: rgba($echo-blue, 0.5);
+      box-shadow: 0 4px 15px rgba($echo-blue, 0.2);
+    }
+
+    .analyticsIcon {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    h6 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.8rem;
+      color: $text-secondary;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .analyticsValue {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: $echo-green;
+    }
+  }
+
+  .automationList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .automationItem {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba($background-dark, 0.6);
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: rgba($echo-blue, 0.5);
+      box-shadow: 0 4px 15px rgba($echo-blue, 0.2);
+    }
+
+    .automationIcon {
+      font-size: 1.5rem;
+    }
+
+    .automationInfo {
+      flex: 1;
+
+      h6 {
+        margin: 0 0 0.25rem 0;
+        font-size: 0.9rem;
+        color: $text-primary;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.8rem;
+        color: $text-secondary;
+      }
+    }
+
+    .automationStatus {
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      background: rgba($echo-green, 0.2);
+      color: $echo-green;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+
+      &:contains('Paused') {
+        background: rgba($echo-orange, 0.2);
+        color: $echo-orange;
+      }
+    }
+  }
+
+  .securityGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 1rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .securityCard {
+    background: rgba($background-dark, 0.6);
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: rgba($echo-red, 0.5);
+      box-shadow: 0 4px 15px rgba($echo-red, 0.2);
+    }
+
+    .securityIcon {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    h6 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.9rem;
+      color: $text-primary;
+    }
+
+    p {
+      margin: 0 0 1rem 0;
+      font-size: 0.8rem;
+      color: $text-secondary;
+      line-height: 1.3;
+    }
+
+    .securityBtn {
+      background: rgba($echo-red, 0.2);
+      border: 1px solid rgba($echo-red, 0.3);
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      color: $text-primary;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba($echo-red, 0.3);
+        border-color: rgba($echo-red, 0.5);
+      }
+    }
+  }
+
+  .integrationList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .integrationItem {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba($background-dark, 0.6);
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: rgba($echo-purple, 0.5);
+      box-shadow: 0 4px 15px rgba($echo-purple, 0.2);
+    }
+
+    .integrationIcon {
+      font-size: 1.5rem;
+    }
+
+    .integrationInfo {
+      flex: 1;
+
+      h6 {
+        margin: 0 0 0.25rem 0;
+        font-size: 0.9rem;
+        color: $text-primary;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.8rem;
+        color: $text-secondary;
+      }
+    }
+
+    .integrationStatus {
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      background: rgba($echo-green, 0.2);
+      color: $echo-green;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+
+      &:contains('Inactive') {
+        background: rgba($echo-orange, 0.2);
+        color: $echo-orange;
+      }
+    }
+  }
+
+  .hecateFeatures {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
+    h4 {
+      margin: 0 0 1rem 0;
+      font-size: 1.2rem;
+      color: $echo-blue;
+    }
+
+    .featuresGrid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      flex: 1;
+      overflow-y: auto;
+
+      .featureItem {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba($background-dark, 0.6);
+        border: 1px solid $border-color;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+
+        &:hover {
+          border-color: rgba($echo-blue, 0.5);
+          box-shadow: 0 0 15px rgba($echo-blue, 0.2);
+          transform: translateY(-2px);
+        }
+
+        .featureIcon {
+          font-size: 2rem;
+          width: 50px;
+          text-align: center;
+        }
+
+        .featureInfo {
+          flex: 1;
+
+          h5 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+            color: $text-primary;
+          }
+
+          p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: $text-secondary;
+            line-height: 1.4;
+          }
+        }
+      }
+    }
+  }
+
+
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .lensScrollContainer {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .lensInfoPanel {
+    min-width: auto;
+    max-width: none;
+    position: static;
+    max-height: none;
+  }
+
+  .lensGrid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto;
+    gap: 0.6rem;
+    margin: 0;
+  }
+
+  .lensCard {
+    width: 120px;
+    min-height: 100px;
+    padding: 1rem 0.75rem;
+    border-radius: 12px;
+    
+    .lensIcon {
+      font-size: 1.75rem;
+    }
+    
+    .lensInfo h5 {
+      font-size: 0.85rem;
+    }
+    
+    .lensInfo p {
+      font-size: 0.7rem;
+    }
+  }
+}
+
+// Small screen adjustments (13-inch Mac, etc.)
+@media (max-height: 800px) {
+  .lensInfoPanel {
+    max-height: 70vh;
+    padding: 1rem;
+  }
+
+  .lensInfoContent {
+    h3 {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      font-size: 0.85rem;
+      padding: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+  }
+
+  .lensFeatures {
+    gap: 0.4rem;
+
+    .featureItem {
+      padding: 0.3rem 0.5rem;
+      
+      .featureIcon {
+        font-size: 0.9rem;
+      }
+      
+      span:last-child {
+        font-size: 0.75rem;
+      }
+    }
+  }
+
+  .templateGrid {
+    max-height: 60vh;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .templateCard {
+    padding: 0.8rem;
+    max-width: 180px;
+
+    .templateIcon {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    h6 {
+      font-size: 0.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      font-size: 0.7rem;
+      margin-bottom: 0.8rem;
+      line-height: 1.2;
+    }
+
+    .useTemplate {
+      padding: 0.5rem 0.8rem;
+      font-size: 0.7rem;
+    }
+  }
+}
+
 // Responsive Design
 @media (max-width: 768px) {
   .contextDashboard {
@@ -675,6 +1983,31 @@ $border-color: rgba($echo-blue, 0.3);
       .logLevel,
       .logSource {
         font-size: 0.7rem;
+      }
+    }
+
+    .hecateContainer {
+      .hecateMain {
+        flex-direction: column;
+        gap: 1rem;
+
+        .hecateStats {
+          flex-direction: column;
+          gap: 1rem;
+        }
+      }
+
+      .hecateInterface {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .templateGrid {
+        grid-template-columns: 1fr;
+      }
+
+      .hecateFeatures .featuresGrid {
+        grid-template-columns: 1fr;
       }
     }
   }

@@ -4,6 +4,24 @@ import styles from './context-dashboard.module.scss';
 interface ContextDashboardProps {
   onClose: () => void;
   theme?: 'null' | 'light';
+  initialActiveTab?: 'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate';
+}
+
+interface ChatMessage {
+  id: string;
+  timestamp: Date;
+  sender: 'user' | 'hecate';
+  message: string;
+  type?: 'text' | 'update' | 'question' | 'suggestion';
+}
+
+interface LensOption {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  color: string;
+  expanded?: boolean;
 }
 
 interface Task {
@@ -36,8 +54,8 @@ interface MCPOperation {
   responseTime?: number;
 }
 
-const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'light' }) => {
-  const [activeTab, setActiveTab] = useState<'tasks' | 'mcp' | 'logs' | 'agents'>('tasks');
+const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'light', initialActiveTab = 'tasks' }) => {
+  const [activeTab, setActiveTab] = useState<'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'>(initialActiveTab);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [mcpOperations, setMcpOperations] = useState<MCPOperation[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -46,6 +64,99 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
   const logsEndRef = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [logFilter, setLogFilter] = useState<'all' | 'info' | 'warning' | 'error' | 'success' | 'debug'>('all');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeLens, setActiveLens] = useState<string | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Define lens options outside useEffect
+  const lensOptions: LensOption[] = [
+    {
+      id: 'templates',
+      icon: '📋',
+      title: 'Templates',
+      description: 'Task templates',
+      color: '#00d4ff'
+    },
+    {
+      id: 'workflow',
+      icon: '🔗',
+      title: 'Workflow',
+      description: 'Build workflows',
+      color: '#a55eea'
+    },
+    {
+      id: 'suggestions',
+      icon: '💡',
+      title: 'Suggestions',
+      description: 'AI suggestions',
+      color: '#00ff88'
+    },
+    {
+      id: 'visualizer',
+      icon: '📊',
+      title: 'Visualizer',
+      description: 'Data visualization',
+      color: '#ff6b35'
+    },
+    {
+      id: 'sandbox',
+      icon: '⚡',
+      title: 'Sandbox',
+      description: 'Code execution',
+      color: '#ffa502'
+    },
+    {
+      id: 'voice',
+      icon: '🎤',
+      title: 'Voice',
+      description: 'Voice controls',
+      color: '#ff4757'
+    },
+    {
+      id: 'collaboration',
+      icon: '👥',
+      title: 'Collaborate',
+      description: 'Team sharing',
+      color: '#2ed573'
+    },
+    {
+      id: 'feedback',
+      icon: '🔄',
+      title: 'Feedback',
+      description: 'Refine outputs',
+      color: '#5352ed'
+    },
+    {
+      id: 'analytics',
+      icon: '📈',
+      title: 'Analytics',
+      description: 'Data insights',
+      color: '#ff9ff3'
+    },
+    {
+      id: 'automation',
+      icon: '🤖',
+      title: 'Automation',
+      description: 'Auto workflows',
+      color: '#54a0ff'
+    },
+    {
+      id: 'security',
+      icon: '🔒',
+      title: 'Security',
+      description: 'Access control',
+      color: '#ff6348'
+    },
+    {
+      id: 'integration',
+      icon: '🔌',
+      title: 'Integration',
+      description: 'API connections',
+      color: '#5f27cd'
+    }
+  ];
 
   // Mock data for demonstration
   useEffect(() => {
@@ -171,6 +282,32 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
     setMcpOperations(mockMcpOperations);
     setLogs(mockLogs);
 
+    // Initialize chat with welcome message
+    const initialChatMessages: ChatMessage[] = [
+      {
+        id: '1',
+        timestamp: new Date(Date.now() - 5000),
+        sender: 'hecate',
+        message: 'Welcome to Nullblock! I\'m Hecate, your primary interface agent. How can I assist you today?',
+        type: 'text'
+      },
+      {
+        id: '2',
+        timestamp: new Date(Date.now() - 3000),
+        sender: 'hecate',
+        message: 'I\'ve detected 3 new arbitrage opportunities across Uniswap V3 and SushiSwap. Would you like me to analyze them?',
+        type: 'suggestion'
+      },
+      {
+        id: '3',
+        timestamp: new Date(Date.now() - 1000),
+        sender: 'hecate',
+        message: 'Your portfolio has increased by 2.3% in the last hour. All systems are running optimally.',
+        type: 'update'
+      }
+    ];
+    setChatMessages(initialChatMessages);
+
     // Simulate real-time log updates
     const interval = setInterval(() => {
       const logMessages = [
@@ -220,6 +357,12 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
     }
   }, [logs, autoScroll]);
 
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'running':
@@ -260,6 +403,355 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
     const matchesFilter = logFilter === 'all' || log.level === logFilter;
     return matchesSearch && matchesFilter;
   });
+
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (chatInput.trim()) {
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        timestamp: new Date(),
+        sender: 'user',
+        message: chatInput.trim(),
+        type: 'text'
+      };
+      
+      setChatMessages(prev => [...prev, userMessage]);
+      setChatInput('');
+      setShowSuggestions(false);
+
+      // Simulate Hecate response
+      setTimeout(() => {
+        const hecateResponses = [
+          'I\'m analyzing your request. Let me check the current system status...',
+          'Based on the current market conditions, I recommend monitoring the arbitrage opportunities.',
+          'I\'ve updated your portfolio settings. The changes will take effect immediately.',
+          'The social sentiment analysis shows positive signals for your current positions.',
+          'I\'ve detected a potential MEV opportunity. Would you like me to prepare a bundle?',
+          'Your risk assessment has been completed. All parameters are within acceptable limits.',
+          'I\'m processing your request. This may take a few moments...',
+          'The market data indicates favorable conditions for your trading strategy.',
+          'I can help you with that! Would you like me to use a template or create a custom workflow?',
+          'Let me suggest some relevant templates for your request...',
+          'I\'ve prepared a workflow template that matches your needs. Would you like to customize it?'
+        ];
+        
+        const randomResponse = hecateResponses[Math.floor(Math.random() * hecateResponses.length)];
+        const hecateMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          timestamp: new Date(),
+          sender: 'hecate',
+          message: randomResponse,
+          type: 'text'
+        };
+        
+        setChatMessages(prev => [...prev, hecateMessage]);
+      }, 1000 + Math.random() * 2000);
+    }
+  };
+
+  const handleChatInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setChatInput(value);
+    setShowSuggestions(value.length > 2);
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setChatInput(suggestion);
+    setShowSuggestions(false);
+  };
+
+  const handleLensClick = (lensId: string) => {
+    setActiveLens(activeLens === lensId ? null : lensId);
+  };
+
+  const renderLensContent = (lensId: string) => {
+    switch (lensId) {
+      case 'templates':
+        return (
+          <div className={styles.lensContent}>
+            <div className={styles.lensHeader}>
+              <h5>📋 Task Templates</h5>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+            </div>
+            <div className={styles.templateGrid}>
+              <div className={styles.templateCard}>
+                <div className={styles.templateIcon}>🐍</div>
+                <h6>Python Script</h6>
+                <p>Generate Python code for automation</p>
+                <button className={styles.useTemplate}>Use Template</button>
+              </div>
+              <div className={styles.templateCard}>
+                <div className={styles.templateIcon}>📊</div>
+                <h6>Data Analysis</h6>
+                <p>Analyze CSV data with visualizations</p>
+                <button className={styles.useTemplate}>Use Template</button>
+              </div>
+              <div className={styles.templateCard}>
+                <div className={styles.templateIcon}>📝</div>
+                <h6>Content Writer</h6>
+                <p>Create blog posts and articles</p>
+                <button className={styles.useTemplate}>Use Template</button>
+              </div>
+              <div className={styles.templateCard}>
+                <div className={styles.templateIcon}>🤖</div>
+                <h6>Bot Builder</h6>
+                <p>Create automated workflows</p>
+                <button className={styles.useTemplate}>Use Template</button>
+              </div>
+            </div>
+          </div>
+        );
+      
+      case 'workflow':
+        return (
+          <div className={styles.lensContent}>
+            <div className={styles.lensHeader}>
+              <h5>🔗 Workflow Builder</h5>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+            </div>
+            <div className={styles.workflowCanvas}>
+              <div className={styles.workflowNode}>
+                <div className={styles.nodeIcon}>📥</div>
+                <span>Input Data</span>
+              </div>
+              <div className={styles.workflowArrow}>→</div>
+              <div className={styles.workflowNode}>
+                <div className={styles.nodeIcon}>⚙️</div>
+                <span>Process</span>
+              </div>
+              <div className={styles.workflowArrow}>→</div>
+              <div className={styles.workflowNode}>
+                <div className={styles.nodeIcon}>📤</div>
+                <span>Output</span>
+              </div>
+            </div>
+            <div className={styles.workflowControls}>
+              <button className={styles.workflowBtn}>Add Node</button>
+              <button className={styles.workflowBtn}>Save Workflow</button>
+              <button className={styles.workflowBtn}>Run</button>
+            </div>
+          </div>
+        );
+
+      case 'visualizer':
+        return (
+          <div className={styles.lensContent}>
+            <div className={styles.lensHeader}>
+              <h5>📊 Data Visualizer</h5>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+            </div>
+            <div className={styles.visualizerCanvas}>
+              <div className={styles.chartPlaceholder}>
+                <div className={styles.chartBar} style={{height: '60%'}}></div>
+                <div className={styles.chartBar} style={{height: '80%'}}></div>
+                <div className={styles.chartBar} style={{height: '40%'}}></div>
+                <div className={styles.chartBar} style={{height: '90%'}}></div>
+                <div className={styles.chartBar} style={{height: '70%'}}></div>
+              </div>
+            </div>
+            <div className={styles.visualizerControls}>
+              <button className={styles.vizBtn}>Bar Chart</button>
+              <button className={styles.vizBtn}>Line Chart</button>
+              <button className={styles.vizBtn}>Pie Chart</button>
+              <button className={styles.vizBtn}>Export</button>
+            </div>
+          </div>
+        );
+
+      case 'sandbox':
+        return (
+          <div className={styles.lensContent}>
+            <div className={styles.lensHeader}>
+              <h5>⚡ Code Sandbox</h5>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+            </div>
+            <div className={styles.codeEditor}>
+              <div className={styles.editorHeader}>
+                <span>main.py</span>
+                <div className={styles.editorControls}>
+                  <button className={styles.editorBtn}>Run</button>
+                  <button className={styles.editorBtn}>Save</button>
+                </div>
+              </div>
+              <textarea 
+                className={styles.codeTextarea}
+                placeholder="print('Hello, World!')"
+                defaultValue="import requests&#10;&#10;response = requests.get('https://api.example.com/data')&#10;print(response.json())"
+              />
+            </div>
+            <div className={styles.outputPanel}>
+              <h6>Output:</h6>
+              <div className={styles.outputContent}>
+                <span className={styles.outputLine}>Running code...</span>
+                <span className={styles.outputLine}>Data fetched successfully</span>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'analytics':
+        return (
+          <div className={styles.lensContent}>
+            <div className={styles.lensHeader}>
+              <h5>📈 Analytics Dashboard</h5>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+            </div>
+            <div className={styles.analyticsGrid}>
+              <div className={styles.analyticsCard}>
+                <div className={styles.analyticsIcon}>📊</div>
+                <h6>Performance</h6>
+                <div className={styles.analyticsValue}>98.5%</div>
+              </div>
+              <div className={styles.analyticsCard}>
+                <div className={styles.analyticsIcon}>⚡</div>
+                <h6>Speed</h6>
+                <div className={styles.analyticsValue}>2.3s</div>
+              </div>
+              <div className={styles.analyticsCard}>
+                <div className={styles.analyticsIcon}>👥</div>
+                <h6>Users</h6>
+                <div className={styles.analyticsValue}>1,247</div>
+              </div>
+              <div className={styles.analyticsCard}>
+                <div className={styles.analyticsIcon}>🔄</div>
+                <h6>Uptime</h6>
+                <div className={styles.analyticsValue}>99.9%</div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'automation':
+        return (
+          <div className={styles.lensContent}>
+            <div className={styles.lensHeader}>
+              <h5>🤖 Automation Hub</h5>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+            </div>
+            <div className={styles.automationList}>
+              <div className={styles.automationItem}>
+                <div className={styles.automationIcon}>📧</div>
+                <div className={styles.automationInfo}>
+                  <h6>Email Automation</h6>
+                  <p>Auto-respond to customer inquiries</p>
+                </div>
+                <div className={styles.automationStatus}>Active</div>
+              </div>
+              <div className={styles.automationItem}>
+                <div className={styles.automationIcon}>📊</div>
+                <div className={styles.automationInfo}>
+                  <h6>Data Sync</h6>
+                  <p>Sync data across platforms</p>
+                </div>
+                <div className={styles.automationStatus}>Active</div>
+              </div>
+              <div className={styles.automationItem}>
+                <div className={styles.automationIcon}>🔔</div>
+                <div className={styles.automationInfo}>
+                  <h6>Notifications</h6>
+                  <p>Smart alert system</p>
+                </div>
+                <div className={styles.automationStatus}>Paused</div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'security':
+        return (
+          <div className={styles.lensContent}>
+            <div className={styles.lensHeader}>
+              <h5>🔒 Security Center</h5>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+            </div>
+            <div className={styles.securityGrid}>
+              <div className={styles.securityCard}>
+                <div className={styles.securityIcon}>🛡️</div>
+                <h6>Access Control</h6>
+                <p>Manage user permissions</p>
+                <button className={styles.securityBtn}>Configure</button>
+              </div>
+              <div className={styles.securityCard}>
+                <div className={styles.securityIcon}>🔐</div>
+                <h6>Encryption</h6>
+                <p>Data protection settings</p>
+                <button className={styles.securityBtn}>Settings</button>
+              </div>
+              <div className={styles.securityCard}>
+                <div className={styles.securityIcon}>📋</div>
+                <h6>Audit Log</h6>
+                <p>Activity monitoring</p>
+                <button className={styles.securityBtn}>View Log</button>
+              </div>
+              <div className={styles.securityCard}>
+                <div className={styles.securityIcon}>🚨</div>
+                <h6>Alerts</h6>
+                <p>Security notifications</p>
+                <button className={styles.securityBtn}>Configure</button>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'integration':
+        return (
+          <div className={styles.lensContent}>
+            <div className={styles.lensHeader}>
+              <h5>🔌 Integration Hub</h5>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+            </div>
+            <div className={styles.integrationList}>
+              <div className={styles.integrationItem}>
+                <div className={styles.integrationIcon}>📊</div>
+                <div className={styles.integrationInfo}>
+                  <h6>Google Analytics</h6>
+                  <p>Connected • Last sync: 2 min ago</p>
+                </div>
+                <div className={styles.integrationStatus}>Active</div>
+              </div>
+              <div className={styles.integrationItem}>
+                <div className={styles.integrationIcon}>💳</div>
+                <div className={styles.integrationInfo}>
+                  <h6>Stripe</h6>
+                  <p>Connected • Last sync: 5 min ago</p>
+                </div>
+                <div className={styles.integrationStatus}>Active</div>
+              </div>
+              <div className={styles.integrationItem}>
+                <div className={styles.integrationIcon}>📧</div>
+                <div className={styles.integrationInfo}>
+                  <h6>Mailchimp</h6>
+                  <p>Disconnected</p>
+                </div>
+                <div className={styles.integrationStatus}>Inactive</div>
+              </div>
+              <div className={styles.integrationItem}>
+                <div className={styles.integrationIcon}>☁️</div>
+                <div className={styles.integrationInfo}>
+                  <h6>AWS S3</h6>
+                  <p>Connected • Last sync: 1 min ago</p>
+                </div>
+                <div className={styles.integrationStatus}>Active</div>
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className={styles.lensContent}>
+            <div className={styles.lensHeader}>
+              <h5>💡 {lensId.charAt(0).toUpperCase() + lensId.slice(1)}</h5>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+            </div>
+            <div className={styles.lensPlaceholder}>
+              <p>This lens feature is coming soon...</p>
+              <button className={styles.comingSoonBtn}>Notify When Ready</button>
+            </div>
+          </div>
+        );
+    }
+  };
 
   const renderTasks = () => (
     <div className={styles.tasksContainer}>
@@ -446,12 +938,176 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
     </div>
   );
 
+  const renderHecate = () => (
+    <div className={styles.hecateContainer}>
+      <div className={styles.hecateContent}>
+        <div className={styles.hecateMain}>
+          <div className={styles.hecateAvatar}>
+            <div className={styles.avatarCircle}>
+              <span className={styles.avatarIcon}>⚡</span>
+            </div>
+            <div className={styles.avatarInfo}>
+              <h4>Hecate</h4>
+              <p>Primary Interface Agent</p>
+            </div>
+          </div>
+          
+          <div className={styles.hecateStats}>
+            <div className={styles.statCard}>
+              <div className={styles.statValue}>1,247</div>
+              <div className={styles.statLabel}>User Interactions</div>
+            </div>
+            <div className={styles.statCard}>
+              <div className={styles.statValue}>99.8%</div>
+              <div className={styles.statLabel}>Uptime</div>
+            </div>
+            <div className={styles.statCard}>
+              <div className={styles.statValue}>45ms</div>
+              <div className={styles.statLabel}>Response Time</div>
+            </div>
+            <div className={styles.statCard}>
+              <div className={styles.statValue}>23</div>
+              <div className={styles.statLabel}>Active Sessions</div>
+            </div>
+          </div>
+        </div>
+        
+        <div className={styles.hecateInterface}>
+          <div className={styles.chatSection}>
+            <div className={styles.hecateChat}>
+              <div className={styles.chatHeader}>
+                <h4>Chat with Hecate</h4>
+                <span className={styles.chatStatus}>Live</span>
+              </div>
+              
+              <div className={styles.chatMessages}>
+                {chatMessages.map((message) => (
+                  <div 
+                    key={message.id} 
+                    className={`${styles.chatMessage} ${styles[`message-${message.sender}`]} ${message.type ? styles[`type-${message.type}`] : ''}`}
+                  >
+                    <div className={styles.messageHeader}>
+                      <span className={styles.messageSender}>
+                        {message.sender === 'hecate' ? '⚡ Hecate' : '👤 You'}
+                      </span>
+                      <span className={styles.messageTime}>
+                        {message.timestamp.toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <div className={styles.messageContent}>
+                      {message.message}
+                    </div>
+                  </div>
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+              
+              <form className={styles.chatInput} onSubmit={handleChatSubmit}>
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={handleChatInputChange}
+                  placeholder="Ask Hecate anything..."
+                  className={styles.chatInputField}
+                />
+                <button type="submit" className={styles.chatSendButton}>
+                  <span>➤</span>
+                </button>
+              </form>
+              
+              {showSuggestions && (
+                <div className={styles.chatSuggestions}>
+                  <div className={styles.suggestionsHeader}>
+                    <span>💡 Quick Actions</span>
+                  </div>
+                  <div className={styles.suggestionsList}>
+                    <button 
+                      className={styles.suggestionButton}
+                      onClick={() => handleSuggestionClick('Show me available templates')}
+                    >
+                      📋 Browse Templates
+                    </button>
+                    <button 
+                      className={styles.suggestionButton}
+                      onClick={() => handleSuggestionClick('Create a new workflow')}
+                    >
+                      🔗 New Workflow
+                    </button>
+                    <button 
+                      className={styles.suggestionButton}
+                      onClick={() => handleSuggestionClick('Analyze market data')}
+                    >
+                      📊 Market Analysis
+                    </button>
+                    <button 
+                      className={styles.suggestionButton}
+                      onClick={() => handleSuggestionClick('Generate code for trading bot')}
+                    >
+                      ⚡ Code Generator
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className={styles.lensSection}>
+            {activeLens ? (
+              <div className={styles.lensExpanded}>
+                {renderLensContent(activeLens)}
+              </div>
+            ) : (
+              <div className={styles.lensScrollContainer}>
+                <div className={styles.lensInfoPanel}>
+                  <div className={styles.lensInfoContent}>
+                    <h3>Command Lens</h3>
+                    <p>Your intelligent interface to Hecate's capabilities. Each lens provides specialized tools and workflows designed to enhance your productivity and creativity.</p>
+                    <div className={styles.lensFeatures}>
+                      <div className={styles.featureItem}>
+                        <span className={styles.featureIcon}>⚡</span>
+                        <span>Instant Access</span>
+                      </div>
+                      <div className={styles.featureItem}>
+                        <span className={styles.featureIcon}>🎯</span>
+                        <span>Specialized Tools</span>
+                      </div>
+                      <div className={styles.featureItem}>
+                        <span className={styles.featureIcon}>🔄</span>
+                        <span>Seamless Integration</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.lensGrid}>
+                  {lensOptions.map((lens) => (
+                    <button 
+                      key={lens.id}
+                      className={styles.lensCard}
+                      onClick={() => handleLensClick(lens.id)}
+                      style={{'--lens-color': lens.color} as React.CSSProperties}
+                    >
+                      <div className={styles.lensIcon}>{lens.icon}</div>
+                      <div className={styles.lensInfo}>
+                        <h5>{lens.title}</h5>
+                        <p>{lens.description}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className={`${styles.contextDashboard} ${styles[`theme-${theme}`]}`}>
       <div className={styles.dashboardHeader}>
         <div className={styles.headerLeft}>
-          <h2>Context Dashboard</h2>
-          <span className={styles.subtitle}>System Operations & Agent Communications</span>
+          <h2>NullEye Views</h2>
+          <span className={styles.subtitle}>System Overview & Agentic Interface</span>
         </div>
         <button className={styles.closeButton} onClick={onClose}>
           ×
@@ -483,6 +1139,12 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         >
           Agents
         </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'hecate' ? styles.active : ''}`}
+          onClick={() => setActiveTab('hecate')}
+        >
+          Hecate
+        </button>
       </div>
 
       <div className={styles.dashboardContent}>
@@ -490,6 +1152,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         {activeTab === 'mcp' && renderMCPOperations()}
         {activeTab === 'logs' && renderLogs()}
         {activeTab === 'agents' && renderAgents()}
+        {activeTab === 'hecate' && renderHecate()}
       </div>
     </div>
   );

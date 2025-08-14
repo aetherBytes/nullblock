@@ -178,6 +178,20 @@ const HUD: React.FC<HUDProps> = ({
   const [mcpHealthStatus, setMcpHealthStatus] = useState<any>(null);
   const [nulleyeState, setNulleyeState] = useState<'base' | 'response' | 'question' | 'thinking' | 'alert' | 'error' | 'warning' | 'success' | 'processing'>('base');
   const [showContextDashboard, setShowContextDashboard] = useState<boolean>(false);
+  const [contextDashboardActiveTab, setContextDashboardActiveTab] = useState<'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'>('tasks');
+
+  const renderClickableHecateRow = () => (
+    <div 
+      className={`${styles.statusRow} ${styles.clickable}`}
+      onClick={() => {
+        setShowContextDashboard(true);
+        setContextDashboardActiveTab('hecate');
+      }}
+    >
+      <span className={`${styles.statusDot} ${systemStatus.hecate ? styles.online : styles.offline}`}></span>
+      <span className={styles.statusLabel}>HECATE</span>
+    </div>
+  );
 
   // Only unlock 'home' and 'overview' by default, unlock others if logged in
   const unlockedScreens = publicKey ? ['home', 'overview', 'camp'] : ['home', 'overview'];
@@ -740,6 +754,7 @@ const HUD: React.FC<HUDProps> = ({
         className={`${styles.nulleye} ${styles[nulleyeState]}`}
         onClick={() => {
           setShowContextDashboard(true);
+          setContextDashboardActiveTab('tasks');
           setNulleyeState('processing');
         }}
       >
@@ -2184,10 +2199,7 @@ const HUD: React.FC<HUDProps> = ({
               {/* Core Systems */}
               <div className={styles.systemGroup}>
                 <div className={styles.groupLabel}>CORE</div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.hecate ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>HECATE</span>
-                </div>
+                {renderClickableHecateRow()}
                 <div className={styles.statusRow}>
                   <span className={`${styles.statusDot} ${systemStatus.erebus ? styles.online : styles.offline}`}></span>
                   <span className={styles.statusLabel}>EREBUS</span>
@@ -2287,6 +2299,7 @@ const HUD: React.FC<HUDProps> = ({
             setNulleyeState('base');
           }}
           theme={theme}
+          initialActiveTab={contextDashboardActiveTab}
         />
       )}
     </div>
