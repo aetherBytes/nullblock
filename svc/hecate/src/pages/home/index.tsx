@@ -181,7 +181,7 @@ const Home: React.FC = () => {
         <div className={styles.newFeaturesHint}>
           <div className={styles.hintContent}>
             <span className={styles.hintIcon}>🚀</span>
-            <span className={styles.hintText}>NEW: Portfolio & DeFi Trading Agents Available in HUD → CAMP</span>
+            <span className={styles.hintText}>NEW: Portfolio & DeFi Trading Agents Available - Check SYSTEM CONTROL Panel</span>
           </div>
         </div>
       )}
