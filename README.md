@@ -4,6 +4,36 @@
 
 Nullblock is a decentralized Web3 platform for deploying and monetizing agentic workflows, powered by the Model Context Protocol (MCP) architecture with MEV protection, Bittensor integration, and comprehensive security.
 
+## 📚 Documentation & SDKs
+
+- **[📖 Documentation](https://aetherbytes.github.io/nullblock-sdk/)** - Complete platform guide, API reference, and tutorials
+- **[🛠️ SDK Repository](https://github.com/aetherBytes/nullblock-sdk)** - Python, JavaScript, and Rust SDKs with examples
+- **[🤖 Agent Examples](https://github.com/aetherBytes/nullblock-sdk/tree/main/examples/agents)** - Pre-built AI agent templates
+- **[📊 Trading Examples](https://github.com/aetherBytes/nullblock-sdk/tree/main/examples/trading)** - Arbitrage and trading strategies
+
+### 🚀 Quick SDK Installation
+
+```bash
+# Python SDK
+pip install nullblock-sdk
+
+# JavaScript/TypeScript SDK
+npm install @nullblock/sdk
+
+# Rust SDK
+cargo add nullblock-sdk
+```
+
+### 📖 Getting Started with SDKs
+
+Visit our comprehensive SDK documentation at **[https://aetherbytes.github.io/nullblock-sdk/](https://aetherbytes.github.io/nullblock-sdk/)** for:
+
+- **Complete API Reference** - All endpoints and methods
+- **Code Examples** - Ready-to-use templates
+- **AI Agent Integration** - MCP protocol examples
+- **Trading Strategies** - Arbitrage and DeFi examples
+- **Development Guides** - Setup and contribution instructions
+
 ## 🎯 **MVP Status: Core Systems Delivered** ✅
 
 ### **Production-Ready Components**
@@ -58,7 +88,7 @@ Nullblock is a decentralized Web3 platform for deploying and monetizing agentic 
 
 2. **Clone and Start**
    ```bash
-   git clone https://github.com/your-org/nullblock.git
+   git clone https://github.com/aetherBytes/nullblock.git
    cd nullblock
    
    # Start all services
@@ -338,7 +368,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 **Support**
 
-- **Documentation**: [CLAUDE.md](CLAUDE.md)
+- **Documentation**: [https://aetherbytes.github.io/nullblock-sdk/](https://aetherbytes.github.io/nullblock-sdk/)
+- **SDK Repository**: [https://github.com/aetherBytes/nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk)
 - **Issues**: GitHub Issues
 - **Discord**: [Join our community](https://discord.gg/nullblock)
 
