@@ -2,7 +2,9 @@ import React from 'react';
 import styles from './modal.module.scss'; // Assume you have corresponding CSS
 
 const Modal = ({ children, isVisible, onClose }) => {
-  if (!isVisible) return null;
+  if (!isVisible) {
+    return null;
+  }
 
   return (
     <div className={styles.modalOverlay}>

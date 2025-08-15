@@ -120,10 +120,10 @@ async def start_workflow(workflow_id: str):
         logger.error(f"Error starting workflow: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-def run_server(host: str = "0.0.0.0", port: int = 8001, debug: bool = False):
+def run_server(host: str = "0.0.0.0", port: int = 8002, debug: bool = False):
     """Run the orchestration server"""
     uvicorn.run(
-        "orchestration.server:app",
+        app,
         host=host,
         port=port,
         reload=debug,

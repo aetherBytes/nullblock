@@ -1,9 +1,10 @@
-import { useState, useRef, Suspense } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Points, PointMaterial, Preload } from "@react-three/drei";
-import * as random from "maath/random";
+import { Points, PointMaterial, Preload } from '@react-three/drei';
+import { Canvas, useFrame } from '@react-three/fiber';
+import * as random from 'maath/random';
+import { useState, useRef, Suspense } from 'react';
+import type { Points as ThreePoints } from 'three';
+import { Group } from 'three';
 import styles from './stars.module.scss';
-import { Group, Points as ThreePoints } from 'three';
 
 interface StarsProps {
   theme?: 'null' | 'matrix' | 'cyber' | 'light';
@@ -13,7 +14,9 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
   const ref = useRef<ThreePoints>(null);
   const [sphere] = useState<Float32Array>(() => {
     const positions = new Float32Array(5000);
+
     random.inSphere(positions, { radius: 1.2 });
+
     return positions;
   });
 
@@ -44,7 +47,7 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
           transparent
           color={getStarColor()}
           size={theme === 'light' ? 0.003 : 0.002}
-          sizeAttenuation={true}
+          sizeAttenuation
           depthWrite={false}
         />
       </Points>
@@ -56,18 +59,15 @@ interface StarsCanvasProps {
   theme?: 'null' | 'matrix' | 'cyber' | 'light';
 }
 
-const StarsCanvas = ({ theme = 'light' }: StarsCanvasProps) => {
-  return (
-    <div className={`${styles.starsCanvas} ${styles[theme]}`}>
-      <Canvas camera={{ position: [0, 0, 1] }}>
-        <Suspense fallback={null}>
-          <Stars theme={theme} />
-        </Suspense>
-        <Preload all />
-      </Canvas>
-    </div>
-  );
-};
+const StarsCanvas = ({ theme = 'light' }: StarsCanvasProps) => (
+  <div className={`${styles.starsCanvas} ${styles[theme]}`}>
+    <Canvas camera={{ position: [0, 0, 1] }}>
+      <Suspense fallback={null}>
+        <Stars theme={theme} />
+      </Suspense>
+      <Preload all />
+    </Canvas>
+  </div>
+);
 
 export default StarsCanvas;
-

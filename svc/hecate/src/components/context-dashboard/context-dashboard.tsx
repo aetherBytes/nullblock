@@ -55,8 +55,15 @@ interface MCPOperation {
   responseTime?: number;
 }
 
-const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'light', initialActiveTab = 'tasks', onTabChange }) => {
-  const [activeTab, setActiveTab] = useState<'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'>(initialActiveTab);
+const ContextDashboard: React.FC<ContextDashboardProps> = ({
+  onClose,
+  theme = 'light',
+  initialActiveTab = 'tasks',
+  onTabChange,
+}) => {
+  const [activeTab, setActiveTab] = useState<'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'>(
+    initialActiveTab,
+  );
   const [tasks, setTasks] = useState<Task[]>([]);
   const [mcpOperations, setMcpOperations] = useState<MCPOperation[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -64,13 +71,25 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
   const [autoScroll, setAutoScroll] = useState(true);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [logFilter, setLogFilter] = useState<'all' | 'info' | 'warning' | 'error' | 'success' | 'debug'>('all');
+  const [logFilter, setLogFilter] = useState<
+    'all' | 'info' | 'warning' | 'error' | 'success' | 'debug'
+  >('all');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeLens, setActiveLens] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [nulleyeState, setNulleyeState] = useState<'base' | 'response' | 'question' | 'thinking' | 'alert' | 'error' | 'warning' | 'success' | 'processing'>('base');
+  const [nulleyeState, setNulleyeState] = useState<
+    | 'base'
+    | 'response'
+    | 'question'
+    | 'thinking'
+    | 'alert'
+    | 'error'
+    | 'warning'
+    | 'success'
+    | 'processing'
+  >('base');
 
   // Define lens options outside useEffect
   const lensOptions: LensOption[] = [
@@ -79,85 +98,85 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
       icon: '📋',
       title: 'Templates',
       description: 'Task templates',
-      color: '#00d4ff'
+      color: '#00d4ff',
     },
     {
       id: 'workflow',
       icon: '🔗',
       title: 'Workflow',
       description: 'Build workflows',
-      color: '#a55eea'
+      color: '#a55eea',
     },
     {
       id: 'suggestions',
       icon: '💡',
       title: 'Suggestions',
       description: 'AI suggestions',
-      color: '#00ff88'
+      color: '#00ff88',
     },
     {
       id: 'visualizer',
       icon: '📊',
       title: 'Visualizer',
       description: 'Data visualization',
-      color: '#ff6b35'
+      color: '#ff6b35',
     },
     {
       id: 'sandbox',
       icon: '⚡',
       title: 'Sandbox',
       description: 'Code execution',
-      color: '#ffa502'
+      color: '#ffa502',
     },
     {
       id: 'voice',
       icon: '🎤',
       title: 'Voice',
       description: 'Voice controls',
-      color: '#ff4757'
+      color: '#ff4757',
     },
     {
       id: 'collaboration',
       icon: '👥',
       title: 'Collaborate',
       description: 'Team sharing',
-      color: '#2ed573'
+      color: '#2ed573',
     },
     {
       id: 'feedback',
       icon: '🔄',
       title: 'Feedback',
       description: 'Refine outputs',
-      color: '#5352ed'
+      color: '#5352ed',
     },
     {
       id: 'analytics',
       icon: '📈',
       title: 'Analytics',
       description: 'Data insights',
-      color: '#ff9ff3'
+      color: '#ff9ff3',
     },
     {
       id: 'automation',
       icon: '🤖',
       title: 'Automation',
       description: 'Auto workflows',
-      color: '#54a0ff'
+      color: '#54a0ff',
     },
     {
       id: 'security',
       icon: '🔒',
       title: 'Security',
       description: 'Access control',
-      color: '#ff6348'
+      color: '#ff6348',
     },
     {
       id: 'integration',
       icon: '🔌',
       title: 'Integration',
       description: 'API connections',
-      color: '#5f27cd'
-    }
+      color: '#5f27cd',
+    },
   ];
 
   // Mock data for demonstration
@@ -169,37 +188,70 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         name: 'Arbitrage Opportunity Scan',
         status: 'running',
         type: 'trading',
-        description: 'Scanning DEXes for arbitrage opportunities across Uniswap V3, SushiSwap, and PancakeSwap',
+        description:
+          'Scanning DEXes for arbitrage opportunities across Uniswap V3, SushiSwap, and PancakeSwap',
         startTime: new Date(Date.now() - 300000),
         progress: 65,
         logs: [
-          { id: '1', timestamp: new Date(), level: 'info', source: 'arbitrage-agent', message: 'Scanning Uniswap V3 pools' },
-          { id: '2', timestamp: new Date(), level: 'info', source: 'arbitrage-agent', message: 'Found 3 potential opportunities' },
-          { id: '3', timestamp: new Date(Date.now() - 1000), level: 'success', source: 'arbitrage-agent', message: 'Analyzing MEV protection requirements' }
-        ]
+          {
+            id: '1',
+            timestamp: new Date(),
+            level: 'info',
+            source: 'arbitrage-agent',
+            message: 'Scanning Uniswap V3 pools',
+          },
+          {
+            id: '2',
+            timestamp: new Date(),
+            level: 'info',
+            source: 'arbitrage-agent',
+            message: 'Found 3 potential opportunities',
+          },
+          {
+            id: '3',
+            timestamp: new Date(Date.now() - 1000),
+            level: 'success',
+            source: 'arbitrage-agent',
+            message: 'Analyzing MEV protection requirements',
+          },
+        ],
       },
       {
         id: '2',
         name: 'Social Sentiment Analysis',
         status: 'completed',
         type: 'agent',
-        description: 'Analyzing social media sentiment for trading signals from Twitter, Reddit, and Discord',
+        description:
+          'Analyzing social media sentiment for trading signals from Twitter, Reddit, and Discord',
         startTime: new Date(Date.now() - 600000),
         endTime: new Date(Date.now() - 300000),
         progress: 100,
         logs: [
-          { id: '4', timestamp: new Date(Date.now() - 350000), level: 'success', source: 'sentiment-agent', message: 'Analysis completed successfully' },
-          { id: '5', timestamp: new Date(Date.now() - 400000), level: 'info', source: 'sentiment-agent', message: 'Processed 1,247 social media posts' }
-        ]
+          {
+            id: '4',
+            timestamp: new Date(Date.now() - 350000),
+            level: 'success',
+            source: 'sentiment-agent',
+            message: 'Analysis completed successfully',
+          },
+          {
+            id: '5',
+            timestamp: new Date(Date.now() - 400000),
+            level: 'info',
+            source: 'sentiment-agent',
+            message: 'Processed 1,247 social media posts',
+          },
+        ],
       },
       {
         id: '3',
         name: 'Portfolio Rebalancing',
         status: 'pending',
         type: 'system',
-        description: 'Automated portfolio rebalancing based on market conditions and risk parameters',
+        description:
+          'Automated portfolio rebalancing based on market conditions and risk parameters',
         startTime: new Date(Date.now() - 100000),
-        logs: []
+        logs: [],
       },
       {
         id: '4',
@@ -210,10 +262,22 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         startTime: new Date(Date.now() - 150000),
         progress: 45,
         logs: [
-          { id: '6', timestamp: new Date(), level: 'info', source: 'flashbots-agent', message: 'Calculating optimal gas prices' },
-          { id: '7', timestamp: new Date(Date.now() - 2000), level: 'warning', source: 'flashbots-agent', message: 'High network congestion detected' }
-        ]
-      }
+          {
+            id: '6',
+            timestamp: new Date(),
+            level: 'info',
+            source: 'flashbots-agent',
+            message: 'Calculating optimal gas prices',
+          },
+          {
+            id: '7',
+            timestamp: new Date(Date.now() - 2000),
+            level: 'warning',
+            source: 'flashbots-agent',
+            message: 'High network congestion detected',
+          },
+        ],
+      },
     ];
 
     const mockMcpOperations: MCPOperation[] = [
@@ -223,7 +287,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         status: 'active',
         endpoint: '/flashbots/bundle',
         lastActivity: new Date(),
-        responseTime: 150
+        responseTime: 150,
       },
       {
         id: '2',
@@ -231,14 +295,14 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         status: 'active',
         endpoint: '/mev/protect',
         lastActivity: new Date(Date.now() - 5000),
-        responseTime: 89
+        responseTime: 89,
       },
       {
         id: '3',
         name: 'Social Trading Signals',
         status: 'idle',
         endpoint: '/social/signals',
-        lastActivity: new Date(Date.now() - 30000)
+        lastActivity: new Date(Date.now() - 30000),
       },
       {
         id: '4',
@@ -246,7 +310,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         status: 'active',
         endpoint: '/portfolio/analytics',
         lastActivity: new Date(Date.now() - 2000),
-        responseTime: 234
+        responseTime: 234,
       },
       {
         id: '5',
@@ -254,7 +318,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         status: 'active',
         endpoint: '/risk/assessment',
         lastActivity: new Date(Date.now() - 1000),
-        responseTime: 67
+        responseTime: 67,
       },
       {
         id: '6',
@@ -262,22 +326,88 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         status: 'active',
         endpoint: '/market/feed',
         lastActivity: new Date(),
-        responseTime: 12
-      }
+        responseTime: 12,
+      },
     ];
 
     const mockLogs: LogEntry[] = [
-      { id: '1', timestamp: new Date(), level: 'info', source: 'system', message: 'Context dashboard initialized' },
-      { id: '2', timestamp: new Date(Date.now() - 1000), level: 'info', source: 'mcp-server', message: 'MCP connection established' },
-      { id: '3', timestamp: new Date(Date.now() - 2000), level: 'success', source: 'arbitrage-agent', message: 'Arbitrage opportunity detected' },
-      { id: '4', timestamp: new Date(Date.now() - 3000), level: 'warning', source: 'portfolio-agent', message: 'Portfolio variance threshold exceeded' },
-      { id: '5', timestamp: new Date(Date.now() - 4000), level: 'error', source: 'social-agent', message: 'Failed to fetch Twitter sentiment data' },
-      { id: '6', timestamp: new Date(Date.now() - 5000), level: 'debug', source: 'system', message: 'Memory usage: 45%' },
-      { id: '7', timestamp: new Date(Date.now() - 6000), level: 'info', source: 'flashbots-agent', message: 'Bundle submitted to Flashbots relay' },
-      { id: '8', timestamp: new Date(Date.now() - 7000), level: 'success', source: 'risk-manager', message: 'Risk assessment completed - portfolio within limits' },
-      { id: '9', timestamp: new Date(Date.now() - 8000), level: 'info', source: 'market-data', message: 'Updated price feeds for 1,247 tokens' },
-      { id: '10', timestamp: new Date(Date.now() - 9000), level: 'warning', source: 'network-monitor', message: 'High gas prices detected on Ethereum mainnet' },
-      { id: '11', timestamp: new Date(Date.now() - 10000), level: 'debug', source: 'system', message: 'CPU usage: 23% | Network latency: 45ms' }
+      {
+        id: '1',
+        timestamp: new Date(),
+        level: 'info',
+        source: 'system',
+        message: 'Context dashboard initialized',
+      },
+      {
+        id: '2',
+        timestamp: new Date(Date.now() - 1000),
+        level: 'info',
+        source: 'mcp-server',
+        message: 'MCP connection established',
+      },
+      {
+        id: '3',
+        timestamp: new Date(Date.now() - 2000),
+        level: 'success',
+        source: 'arbitrage-agent',
+        message: 'Arbitrage opportunity detected',
+      },
+      {
+        id: '4',
+        timestamp: new Date(Date.now() - 3000),
+        level: 'warning',
+        source: 'portfolio-agent',
+        message: 'Portfolio variance threshold exceeded',
+      },
+      {
+        id: '5',
+        timestamp: new Date(Date.now() - 4000),
+        level: 'error',
+        source: 'social-agent',
+        message: 'Failed to fetch Twitter sentiment data',
+      },
+      {
+        id: '6',
+        timestamp: new Date(Date.now() - 5000),
+        level: 'debug',
+        source: 'system',
+        message: 'Memory usage: 45%',
+      },
+      {
+        id: '7',
+        timestamp: new Date(Date.now() - 6000),
+        level: 'info',
+        source: 'flashbots-agent',
+        message: 'Bundle submitted to Flashbots relay',
+      },
+      {
+        id: '8',
+        timestamp: new Date(Date.now() - 7000),
+        level: 'success',
+        source: 'risk-manager',
+        message: 'Risk assessment completed - portfolio within limits',
+      },
+      {
+        id: '9',
+        timestamp: new Date(Date.now() - 8000),
+        level: 'info',
+        source: 'market-data',
+        message: 'Updated price feeds for 1,247 tokens',
+      },
+      {
+        id: '10',
+        timestamp: new Date(Date.now() - 9000),
+        level: 'warning',
+        source: 'network-monitor',
+        message: 'High gas prices detected on Ethereum mainnet',
+      },
+      {
+        id: '11',
+        timestamp: new Date(Date.now() - 10000),
+        level: 'debug',
+        source: 'system',
+        message: 'CPU usage: 23% | Network latency: 45ms',
+      },
     ];
 
     setTasks(mockTasks);
@@ -290,24 +420,28 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         id: '1',
         timestamp: new Date(Date.now() - 5000),
         sender: 'hecate',
-        message: 'Welcome to Nullblock! I\'m Hecate, your primary interface agent. How can I assist you today?',
-        type: 'text'
+        message:
+          "Welcome to Nullblock! I'm Hecate, your primary interface agent. How can I assist you today?",
+        type: 'text',
       },
       {
         id: '2',
         timestamp: new Date(Date.now() - 3000),
         sender: 'hecate',
-        message: 'I\'ve detected 3 new arbitrage opportunities across Uniswap V3 and SushiSwap. Would you like me to analyze them?',
-        type: 'suggestion'
+        message:
+          "I've detected 3 new arbitrage opportunities across Uniswap V3 and SushiSwap. Would you like me to analyze them?",
+        type: 'suggestion',
       },
       {
         id: '3',
         timestamp: new Date(Date.now() - 1000),
         sender: 'hecate',
-        message: 'Your portfolio has increased by 2.3% in the last hour. All systems are running optimally.',
-        type: 'update'
-      }
+        message:
+          'Your portfolio has increased by 2.3% in the last hour. All systems are running optimally.',
+        type: 'update',
+      },
     ];
+
     setChatMessages(initialChatMessages);
 
     // Simulate real-time log updates
@@ -318,33 +452,41 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         { level: 'success', source: 'flashbots-agent', message: 'Bundle accepted by relay' },
         { level: 'warning', source: 'network-monitor', message: 'Gas price fluctuation detected' },
         { level: 'debug', source: 'system', message: 'Memory usage: 47% | Active connections: 12' },
-        { level: 'info', source: 'portfolio-agent', message: 'Portfolio value: $12,847.32 (+2.3%)' },
+        {
+          level: 'info',
+          source: 'portfolio-agent',
+          message: 'Portfolio value: $12,847.32 (+2.3%)',
+        },
         { level: 'success', source: 'risk-manager', message: 'Risk assessment passed' },
-        { level: 'info', source: 'social-agent', message: 'Processing 23 new social signals' }
+        { level: 'info', source: 'social-agent', message: 'Processing 23 new social signals' },
       ];
-      
+
       const randomLog = logMessages[Math.floor(Math.random() * logMessages.length)];
       const newLog: LogEntry = {
         id: Date.now().toString(),
         timestamp: new Date(),
         level: randomLog.level as any,
         source: randomLog.source,
-        message: randomLog.message
+        message: randomLog.message,
       };
-      setLogs(prev => [...prev, newLog]);
+
+      setLogs((prev) => [...prev, newLog]);
     }, 4000);
 
     // Simulate task progress updates
     const progressInterval = setInterval(() => {
-      setTasks(prev => prev.map(task => {
-        if (task.status === 'running' && task.progress !== undefined && task.progress < 100) {
-          return {
-            ...task,
-            progress: Math.min(100, task.progress + Math.random() * 5)
-          };
-        }
-        return task;
-      }));
+      setTasks((prev) =>
+        prev.map((task) => {
+          if (task.status === 'running' && task.progress !== undefined && task.progress < 100) {
+            return {
+              ...task,
+              progress: Math.min(100, task.progress + Math.random() * 5),
+            };
+          }
+
+          return task;
+        }),
+      );
     }, 5000);
 
     return () => {
@@ -399,25 +541,28 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
     }
   };
 
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.source.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredLogs = logs.filter((log) => {
+    const matchesSearch =
+      log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.source.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = logFilter === 'all' || log.level === logFilter;
+
     return matchesSearch && matchesFilter;
   });
 
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
     if (chatInput.trim()) {
       const userMessage: ChatMessage = {
         id: Date.now().toString(),
         timestamp: new Date(),
         sender: 'user',
         message: chatInput.trim(),
-        type: 'text'
+        type: 'text',
       };
-      
-      setChatMessages(prev => [...prev, userMessage]);
+
+      setChatMessages((prev) => [...prev, userMessage]);
       setChatInput('');
       setShowSuggestions(false);
 
@@ -425,57 +570,101 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
       setNulleyeState('thinking');
 
       // Simulate Hecate response
-      setTimeout(() => {
-        const responses = [
-          { message: 'I\'m analyzing your request. Let me check the current system status...', type: 'update' },
-          { message: 'Based on the current market conditions, I recommend monitoring the arbitrage opportunities.', type: 'suggestion' },
-          { message: 'I\'ve updated your portfolio settings. The changes will take effect immediately.', type: 'update' },
-          { message: 'The social sentiment analysis shows positive signals for your current positions.', type: 'text' },
-          { message: 'I\'ve detected a potential MEV opportunity. Would you like me to prepare a bundle?', type: 'question' },
-          { message: 'Your risk assessment has been completed. All parameters are within acceptable limits.', type: 'update' },
-          { message: 'I\'m processing your request. This may take a few moments...', type: 'text' },
-          { message: 'The market data indicates favorable conditions for your trading strategy.', type: 'suggestion' },
-          { message: 'I can help you with that! Would you like me to use a template or create a custom workflow?', type: 'question' },
-          { message: 'Let me suggest some relevant templates for your request...', type: 'suggestion' },
-          { message: 'I\'ve prepared a workflow template that matches your needs. Would you like to customize it?', type: 'question' }
-        ];
-        
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-        const hecateMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          timestamp: new Date(),
-          sender: 'hecate',
-          message: randomResponse.message,
-          type: randomResponse.type as 'text' | 'update' | 'question' | 'suggestion'
-        };
-        
-        setChatMessages(prev => [...prev, hecateMessage]);
-        
-        // Set NullEye state based on response type
-        switch (randomResponse.type) {
-          case 'update':
-            setNulleyeState('response');
-            break;
-          case 'question':
-            setNulleyeState('question');
-            break;
-          case 'suggestion':
-            setNulleyeState('success');
-            break;
-          default:
+      setTimeout(
+        () => {
+          const responses = [
+            {
+              message: "I'm analyzing your request. Let me check the current system status...",
+              type: 'update',
+            },
+            {
+              message:
+                'Based on the current market conditions, I recommend monitoring the arbitrage opportunities.',
+              type: 'suggestion',
+            },
+            {
+              message:
+                "I've updated your portfolio settings. The changes will take effect immediately.",
+              type: 'update',
+            },
+            {
+              message:
+                'The social sentiment analysis shows positive signals for your current positions.',
+              type: 'text',
+            },
+            {
+              message:
+                "I've detected a potential MEV opportunity. Would you like me to prepare a bundle?",
+              type: 'question',
+            },
+            {
+              message:
+                'Your risk assessment has been completed. All parameters are within acceptable limits.',
+              type: 'update',
+            },
+            {
+              message: "I'm processing your request. This may take a few moments...",
+              type: 'text',
+            },
+            {
+              message: 'The market data indicates favorable conditions for your trading strategy.',
+              type: 'suggestion',
+            },
+            {
+              message:
+                'I can help you with that! Would you like me to use a template or create a custom workflow?',
+              type: 'question',
+            },
+            {
+              message: 'Let me suggest some relevant templates for your request...',
+              type: 'suggestion',
+            },
+            {
+              message:
+                "I've prepared a workflow template that matches your needs. Would you like to customize it?",
+              type: 'question',
+            },
+          ];
+
+          const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+          const hecateMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            timestamp: new Date(),
+            sender: 'hecate',
+            message: randomResponse.message,
+            type: randomResponse.type as 'text' | 'update' | 'question' | 'suggestion',
+          };
+
+          setChatMessages((prev) => [...prev, hecateMessage]);
+
+          // Set NullEye state based on response type
+          switch (randomResponse.type) {
+            case 'update':
+              setNulleyeState('response');
+              break;
+            case 'question':
+              setNulleyeState('question');
+              break;
+            case 'suggestion':
+              setNulleyeState('success');
+              break;
+            default:
+              setNulleyeState('base');
+          }
+
+          // Return to base state after a delay
+          setTimeout(() => {
             setNulleyeState('base');
-        }
-        
-        // Return to base state after a delay
-        setTimeout(() => {
-          setNulleyeState('base');
-        }, 3000);
-      }, 1000 + Math.random() * 2000);
+          }, 3000);
+        },
+        1000 + Math.random() * 2000,
+      );
     }
   };
 
   const handleChatInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const { value } = e.target;
+
     setChatInput(value);
     setShowSuggestions(value.length > 2);
   };
@@ -491,6 +680,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
 
   const handleNullEyeClick = () => {
     setActiveTab('hecate');
+
     if (onTabChange) {
       onTabChange('hecate');
     }
@@ -503,7 +693,9 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
           <div className={styles.lensContent}>
             <div className={styles.lensHeader}>
               <h5>📋 Task Templates</h5>
-              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>
+                ×
+              </button>
             </div>
             <div className={styles.templateGrid}>
               <div className={styles.templateCard}>
@@ -533,13 +725,15 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
             </div>
           </div>
         );
-      
+
       case 'workflow':
         return (
           <div className={styles.lensContent}>
             <div className={styles.lensHeader}>
               <h5>🔗 Workflow Builder</h5>
-              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>
+                ×
+              </button>
             </div>
             <div className={styles.workflowCanvas}>
               <div className={styles.workflowNode}>
@@ -570,15 +764,17 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
           <div className={styles.lensContent}>
             <div className={styles.lensHeader}>
               <h5>📊 Data Visualizer</h5>
-              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>
+                ×
+              </button>
             </div>
             <div className={styles.visualizerCanvas}>
               <div className={styles.chartPlaceholder}>
-                <div className={styles.chartBar} style={{height: '60%'}}></div>
-                <div className={styles.chartBar} style={{height: '80%'}}></div>
-                <div className={styles.chartBar} style={{height: '40%'}}></div>
-                <div className={styles.chartBar} style={{height: '90%'}}></div>
-                <div className={styles.chartBar} style={{height: '70%'}}></div>
+                <div className={styles.chartBar} style={{ height: '60%' }}></div>
+                <div className={styles.chartBar} style={{ height: '80%' }}></div>
+                <div className={styles.chartBar} style={{ height: '40%' }}></div>
+                <div className={styles.chartBar} style={{ height: '90%' }}></div>
+                <div className={styles.chartBar} style={{ height: '70%' }}></div>
               </div>
             </div>
             <div className={styles.visualizerControls}>
@@ -595,7 +791,9 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
           <div className={styles.lensContent}>
             <div className={styles.lensHeader}>
               <h5>⚡ Code Sandbox</h5>
-              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>
+                ×
+              </button>
             </div>
             <div className={styles.codeEditor}>
               <div className={styles.editorHeader}>
@@ -605,7 +803,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
                   <button className={styles.editorBtn}>Save</button>
                 </div>
               </div>
-              <textarea 
+              <textarea
                 className={styles.codeTextarea}
                 placeholder="print('Hello, World!')"
                 defaultValue="import requests&#10;&#10;response = requests.get('https://api.example.com/data')&#10;print(response.json())"
@@ -626,7 +824,9 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
           <div className={styles.lensContent}>
             <div className={styles.lensHeader}>
               <h5>📈 Analytics Dashboard</h5>
-              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>
+                ×
+              </button>
             </div>
             <div className={styles.analyticsGrid}>
               <div className={styles.analyticsCard}>
@@ -658,7 +858,9 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
           <div className={styles.lensContent}>
             <div className={styles.lensHeader}>
               <h5>🤖 Automation Hub</h5>
-              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>
+                ×
+              </button>
             </div>
             <div className={styles.automationList}>
               <div className={styles.automationItem}>
@@ -694,7 +896,9 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
           <div className={styles.lensContent}>
             <div className={styles.lensHeader}>
               <h5>🔒 Security Center</h5>
-              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>
+                ×
+              </button>
             </div>
             <div className={styles.securityGrid}>
               <div className={styles.securityCard}>
@@ -730,7 +934,9 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
           <div className={styles.lensContent}>
             <div className={styles.lensHeader}>
               <h5>🔌 Integration Hub</h5>
-              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>
+                ×
+              </button>
             </div>
             <div className={styles.integrationList}>
               <div className={styles.integrationItem}>
@@ -774,7 +980,9 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
           <div className={styles.lensContent}>
             <div className={styles.lensHeader}>
               <h5>💡 {lensId.charAt(0).toUpperCase() + lensId.slice(1)}</h5>
-              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>×</button>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>
+                ×
+              </button>
             </div>
             <div className={styles.lensPlaceholder}>
               <p>This lens feature is coming soon...</p>
@@ -791,18 +999,18 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         <h3>Active Tasks</h3>
         <div className={styles.taskStats}>
           <span className={styles.stat}>
-            Running: {tasks.filter(t => t.status === 'running').length}
+            Running: {tasks.filter((t) => t.status === 'running').length}
           </span>
           <span className={styles.stat}>
-            Completed: {tasks.filter(t => t.status === 'completed').length}
+            Completed: {tasks.filter((t) => t.status === 'completed').length}
           </span>
           <span className={styles.stat}>
-            Failed: {tasks.filter(t => t.status === 'failed').length}
+            Failed: {tasks.filter((t) => t.status === 'failed').length}
           </span>
         </div>
       </div>
       <div className={styles.tasksList}>
-        {tasks.map(task => (
+        {tasks.map((task) => (
           <div key={task.id} className={`${styles.taskItem} ${getStatusColor(task.status)}`}>
             <div className={styles.taskHeader}>
               <div className={styles.taskInfo}>
@@ -817,10 +1025,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
             <div className={styles.taskDescription}>{task.description}</div>
             {task.progress !== undefined && (
               <div className={styles.progressBar}>
-                <div 
-                  className={styles.progressFill} 
-                  style={{ width: `${task.progress}%` }}
-                ></div>
+                <div className={styles.progressFill} style={{ width: `${task.progress}%` }}></div>
                 <span className={styles.progressText}>{task.progress}%</span>
               </div>
             )}
@@ -840,16 +1045,19 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         <h3>MCP Operations</h3>
         <div className={styles.mcpStats}>
           <span className={styles.stat}>
-            Active: {mcpOperations.filter(op => op.status === 'active').length}
+            Active: {mcpOperations.filter((op) => op.status === 'active').length}
           </span>
           <span className={styles.stat}>
-            Idle: {mcpOperations.filter(op => op.status === 'idle').length}
+            Idle: {mcpOperations.filter((op) => op.status === 'idle').length}
           </span>
         </div>
       </div>
       <div className={styles.mcpList}>
-        {mcpOperations.map(operation => (
-          <div key={operation.id} className={`${styles.mcpItem} ${getStatusColor(operation.status)}`}>
+        {mcpOperations.map((operation) => (
+          <div
+            key={operation.id}
+            className={`${styles.mcpItem} ${getStatusColor(operation.status)}`}
+          >
             <div className={styles.mcpHeader}>
               <span className={styles.mcpName}>{operation.name}</span>
               <span className={styles.mcpStatus}>{operation.status}</span>
@@ -860,9 +1068,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
                 Last: {operation.lastActivity.toLocaleTimeString()}
               </span>
               {operation.responseTime && (
-                <span className={styles.mcpResponseTime}>
-                  Response: {operation.responseTime}ms
-                </span>
+                <span className={styles.mcpResponseTime}>Response: {operation.responseTime}ms</span>
               )}
             </div>
           </div>
@@ -906,20 +1112,12 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         </div>
       </div>
       <div className={styles.logsContent}>
-        {filteredLogs.map(log => (
+        {filteredLogs.map((log) => (
           <div key={log.id} className={`${styles.logEntry} ${getLogLevelColor(log.level)}`}>
-            <div className={styles.logTimestamp}>
-              {log.timestamp.toLocaleTimeString()}
-            </div>
-            <div className={styles.logLevel}>
-              {log.level.toUpperCase()}
-            </div>
-            <div className={styles.logSource}>
-              {log.source}
-            </div>
-            <div className={styles.logMessage}>
-              {log.message}
-            </div>
+            <div className={styles.logTimestamp}>{log.timestamp.toLocaleTimeString()}</div>
+            <div className={styles.logLevel}>{log.level.toUpperCase()}</div>
+            <div className={styles.logSource}>{log.source}</div>
+            <div className={styles.logMessage}>{log.message}</div>
           </div>
         ))}
         <div ref={logsEndRef} />
@@ -976,7 +1174,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
         <div className={styles.hecateMain}>
           <div className={styles.hecateAvatar}>
             <div className={styles.avatarCircle}>
-              <div 
+              <div
                 className={`${styles.nulleyeAvatar} ${styles[nulleyeState]} ${styles.clickableNulleye}`}
                 onClick={handleNullEyeClick}
               >
@@ -1005,7 +1203,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
               <p>Primary Interface Agent</p>
             </div>
           </div>
-          
+
           <div className={styles.hecateStats}>
             <div className={styles.statCard}>
               <div className={styles.statValue}>1,247</div>
@@ -1025,7 +1223,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
             </div>
           </div>
         </div>
-        
+
         <div className={styles.hecateInterface}>
           <div className={styles.chatSection}>
             <div className={styles.hecateChat}>
@@ -1033,18 +1231,18 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
                 <h4>Chat with Hecate</h4>
                 <span className={styles.chatStatus}>Live</span>
               </div>
-              
+
               <div className={styles.chatMessages}>
                 {chatMessages.map((message) => (
-                  <div 
-                    key={message.id} 
+                  <div
+                    key={message.id}
                     className={`${styles.chatMessage} ${styles[`message-${message.sender}`]} ${message.type ? styles[`type-${message.type}`] : ''}`}
                   >
                     <div className={styles.messageHeader}>
                       <span className={styles.messageSender}>
                         {message.sender === 'hecate' ? (
                           <span className={styles.hecateMessageSender}>
-                            <div 
+                            <div
                               className={`${styles.nulleyeChat} ${styles[`chat-${message.type || 'base'}`]} ${styles.clickableNulleyeChat}`}
                               onClick={handleNullEyeClick}
                             >
@@ -1055,20 +1253,20 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
                             </div>
                             Hecate
                           </span>
-                        ) : '👤 You'}
+                        ) : (
+                          '👤 You'
+                        )}
                       </span>
                       <span className={styles.messageTime}>
                         {message.timestamp.toLocaleTimeString()}
                       </span>
                     </div>
-                    <div className={styles.messageContent}>
-                      {message.message}
-                    </div>
+                    <div className={styles.messageContent}>{message.message}</div>
                   </div>
                 ))}
                 <div ref={chatEndRef} />
               </div>
-              
+
               <form className={styles.chatInput} onSubmit={handleChatSubmit}>
                 <input
                   type="text"
@@ -1081,32 +1279,32 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
                   <span>➤</span>
                 </button>
               </form>
-              
+
               {showSuggestions && (
                 <div className={styles.chatSuggestions}>
                   <div className={styles.suggestionsHeader}>
                     <span>💡 Quick Actions</span>
                   </div>
                   <div className={styles.suggestionsList}>
-                    <button 
+                    <button
                       className={styles.suggestionButton}
                       onClick={() => handleSuggestionClick('Show me available templates')}
                     >
                       📋 Browse Templates
                     </button>
-                    <button 
+                    <button
                       className={styles.suggestionButton}
                       onClick={() => handleSuggestionClick('Create a new workflow')}
                     >
                       🔗 New Workflow
                     </button>
-                    <button 
+                    <button
                       className={styles.suggestionButton}
                       onClick={() => handleSuggestionClick('Analyze market data')}
                     >
                       📊 Market Analysis
                     </button>
-                    <button 
+                    <button
                       className={styles.suggestionButton}
                       onClick={() => handleSuggestionClick('Generate code for trading bot')}
                     >
@@ -1117,12 +1315,10 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
               )}
             </div>
           </div>
-          
+
           <div className={styles.lensSection}>
             {activeLens ? (
-              <div className={styles.lensExpanded}>
-                {renderLensContent(activeLens)}
-              </div>
+              <div className={styles.lensExpanded}>{renderLensContent(activeLens)}</div>
             ) : (
               <div className={styles.lensScrollContainer}>
                 <div className={styles.lensInfoPanel}>
@@ -1134,9 +1330,16 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
                         <div className={styles.tooltip}>
                           <div className={styles.tooltipContent}>
                             <h4>Command Lens</h4>
-                            <p>Access powerful development tools and workflows through specialized Scopes.</p>
+                            <p>
+                              Access powerful development tools and workflows through specialized
+                              Scopes.
+                            </p>
                             <h5>What are Scopes?</h5>
-                            <p>Scopes are focused work environments, each tailored for specific tasks like code generation, data analysis, automation, and more. Select a scope to access its specialized toolset.</p>
+                            <p>
+                              Scopes are focused work environments, each tailored for specific tasks
+                              like code generation, data analysis, automation, and more. Select a
+                              scope to access its specialized toolset.
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1148,11 +1351,11 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
                       </div>
                       <div className={styles.lensAppsGrid}>
                         {lensOptions.map((lens) => (
-                          <button 
+                          <button
                             key={lens.id}
                             className={styles.lensAppButton}
                             onClick={() => handleLensClick(lens.id)}
-                            style={{'--lens-color': lens.color} as React.CSSProperties}
+                            style={{ '--lens-color': lens.color } as React.CSSProperties}
                           >
                             <span className={styles.lensAppIcon}>{lens.icon}</span>
                             <span className={styles.lensAppTitle}>{lens.title}</span>
@@ -1171,7 +1374,9 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
   );
 
   return (
-    <div className={`${styles.contextDashboard} ${theme === 'dark' ? styles.dark : theme === 'light' ? styles.light : ''} ${styles[`theme-${theme}`] || ''}`}>
+    <div
+      className={`${styles.contextDashboard} ${theme === 'dark' ? styles.dark : theme === 'light' ? styles.light : ''} ${styles[`theme-${theme}`] || ''}`}
+    >
       <div className={styles.dashboardHeader}>
         <div className={styles.headerLeft}>
           <h2>NullEye Views</h2>
@@ -1181,7 +1386,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
           ×
         </button>
       </div>
-      
+
       <div className={styles.dashboardTabs}>
         <button
           className={`${styles.tab} ${activeTab === 'tasks' ? styles.active : ''}`}

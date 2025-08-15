@@ -19,23 +19,35 @@ windows:
           - ipfs daemon --enable-gc
 
   - backend:
-      layout: even-horizontal
+      layout: tiled
       panes:
         - 
           - echo "Starting MCP Server..."
           - cd svc/nullblock-mcp
-          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
-          - python3 -m mcp.server
+          - export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+          - export MCP_SERVER_HOST=0.0.0.0
+          - export MCP_SERVER_PORT=8001
+          - python3 -m mcp
         - 
           - echo "Starting Orchestration..."
           - cd svc/nullblock-orchestration
-          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
-          - python3 -m orchestration.server
+          - export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+          - export ORCHESTRATION_HOST=0.0.0.0
+          - export ORCHESTRATION_PORT=8002
+          - python3 -m orchestration
         - 
           - echo "Starting Agents..."
           - cd svc/nullblock-agents
-          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
-          - python3 -m agents.server
+          - export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+          - export AGENTS_HOST=0.0.0.0
+          - export AGENTS_PORT=8003
+          - python3 -m agents
+        - 
+          - echo "Starting Erebus Server..."
+          - cd svc/erebus
+          - export EREBUS_HOST=127.0.0.1
+          - export EREBUS_PORT=3000
+          - cargo run
 
   - frontend:
       layout: even-horizontal
@@ -43,12 +55,35 @@ windows:
         - 
           - echo "Starting Frontend..."
           - cd svc/hecate
-          - export $(cat ../../.env.dev | xargs 2>/dev/null || echo "")
-          - npm run develop
+          - export VITE_MCP_API_URL=http://localhost:8001
+          - export VITE_EREBUS_API_URL=http://localhost:3000
+          - export VITE_ORCHESTRATION_API_URL=http://localhost:8002
+          - export VITE_AGENTS_API_URL=http://localhost:8003
+          - npm run develop 2>&1 | tee hecate.log
         - 
-          - echo "Frontend logs will appear here..."
-          - echo "Monitoring frontend logs..."
-          - tail -f /dev/null
+          - echo "Waiting for frontend logs..."
+          - sleep 2
+          - cd svc/hecate
+          - tail -f hecate.log
+
+  - workspace:
+      layout: even-horizontal
+      panes:
+        - 
+          - echo "Nullblock Main Repository"
+          - echo "Available commands:"
+          - echo "  just help           - Show all available commands"
+          - echo "  just dev-tmux       - Launch development environment"
+          - echo "  just start          - Start all services with Docker"
+          - echo "  just status         - Check service status"
+          - cd ~/nullblock
+        - 
+          - echo "Nullblock SDK Repository"
+          - echo "Available commands:"
+          - echo "  npm run build       - Build SDK"
+          - echo "  npm test            - Run tests"
+          - echo "  npm run docs        - Generate documentation"
+          - cd ~/nullblock-sdk
 
 on_project_start: |
   if [ ! -f .env.dev ]; then

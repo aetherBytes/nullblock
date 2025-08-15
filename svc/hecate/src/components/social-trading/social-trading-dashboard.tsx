@@ -38,7 +38,9 @@ interface SocialTradingDashboardProps {
 }
 
 const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose }) => {
-  const [activeView, setActiveView] = useState<'signals' | 'sentiment' | 'trades' | 'portfolio'>('signals');
+  const [activeView, setActiveView] = useState<'signals' | 'sentiment' | 'trades' | 'portfolio'>(
+    'signals',
+  );
   const [isConnected, setIsConnected] = useState(false);
   const [socialSignals, setSocialSignals] = useState<SocialSignal[]>([]);
   const [tradingSignals, setTradingSignals] = useState<TradingSignal[]>([]);
@@ -46,7 +48,7 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
   const [selectedToken, setSelectedToken] = useState<string>('');
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Mock data - in production this would come from the social trading agents
   const mockSocialSignals: SocialSignal[] = [
     {
@@ -59,7 +61,7 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
       content: 'BONK is going to the moon! 🚀 This meme coin season is just getting started!',
       author: '@crypto_degen_420',
       timestamp: new Date(Date.now() - 300000), // 5 minutes ago
-      url: 'https://twitter.com/crypto_degen_420/status/123'
+      url: 'https://twitter.com/crypto_degen_420/status/123',
     },
     {
       id: '2',
@@ -93,7 +95,7 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
       content: 'MYRO holders are strong. This dip is just a shakeout before the next leg up.',
       author: '@solana_alpha',
       timestamp: new Date(Date.now() - 1800000), // 30 minutes ago
-    }
+    },
   ];
 
   const mockTradingSignals: TradingSignal[] = [
@@ -105,7 +107,7 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
       sentimentScore: 0.8,
       priceTarget: 0.000028,
       stopLoss: 0.000021,
-      reasoning: ['Strong bullish sentiment', 'High social engagement', 'Momentum building']
+      reasoning: ['Strong bullish sentiment', 'High social engagement', 'Momentum building'],
     },
     {
       tokenSymbol: 'WIF',
@@ -113,9 +115,9 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
       strength: 0.6,
       confidence: 0.8,
       sentimentScore: 0.6,
-      priceTarget: 4.20,
+      priceTarget: 4.2,
       stopLoss: 2.95,
-      reasoning: ['GMGN trending signal', 'Good technical setup', 'Strong volume']
+      reasoning: ['GMGN trending signal', 'Good technical setup', 'Strong volume'],
     },
     {
       tokenSymbol: 'POPCAT',
@@ -123,8 +125,8 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
       strength: 0.2,
       confidence: 0.4,
       sentimentScore: -0.3,
-      reasoning: ['Mixed signals', 'High volatility warning', 'Wait for clearer direction']
-    }
+      reasoning: ['Mixed signals', 'High volatility warning', 'Wait for clearer direction'],
+    },
   ];
 
   const mockPositions: PositionSizing[] = [
@@ -133,15 +135,15 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
       recommendedSizeUsd: 500,
       finalSizeUsd: 450,
       positionPercentage: 4.5,
-      riskLevel: 'MEDIUM'
+      riskLevel: 'MEDIUM',
     },
     {
       tokenSymbol: 'WIF',
       recommendedSizeUsd: 300,
       finalSizeUsd: 300,
       positionPercentage: 3.0,
-      riskLevel: 'MEDIUM'
-    }
+      riskLevel: 'MEDIUM',
+    },
   ];
 
   useEffect(() => {
@@ -150,7 +152,7 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
     setTradingSignals(mockTradingSignals);
     setPositions(mockPositions);
     setIsConnected(true);
-    
+
     // Simulate real-time updates
     const interval = setInterval(() => {
       setLastUpdate(new Date());
@@ -164,7 +166,7 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
     setIsLoading(true);
     try {
       // In production, this would connect to the social trading MCP server
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate connection
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate connection
       setIsConnected(true);
     } catch (error) {
       console.error('Failed to connect to social trading:', error);
@@ -174,26 +176,40 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
   }, []);
 
   const getSentimentColor = (score: number): string => {
-    if (score > 0.2) return styles.bullish;
-    if (score < -0.2) return styles.bearish;
+    if (score > 0.2) {
+      return styles.bullish;
+    }
+
+    if (score < -0.2) {
+      return styles.bearish;
+    }
+
     return styles.neutral;
   };
 
   const getSignalTypeColor = (type: string): string => {
     switch (type) {
-      case 'BUY': return styles.buySignal;
-      case 'SELL': return styles.sellSignal;
-      default: return styles.holdSignal;
+      case 'BUY':
+        return styles.buySignal;
+      case 'SELL':
+        return styles.sellSignal;
+      default:
+        return styles.holdSignal;
     }
   };
 
   const getRiskLevelColor = (level: string): string => {
     switch (level) {
-      case 'LOW': return styles.lowRisk;
-      case 'MEDIUM': return styles.mediumRisk;
-      case 'HIGH': return styles.highRisk;
-      case 'EXTREME': return styles.extremeRisk;
-      default: return styles.neutral;
+      case 'LOW':
+        return styles.lowRisk;
+      case 'MEDIUM':
+        return styles.mediumRisk;
+      case 'HIGH':
+        return styles.highRisk;
+      case 'EXTREME':
+        return styles.extremeRisk;
+      default:
+        return styles.neutral;
     }
   };
 
@@ -201,33 +217,41 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
     const diff = Date.now() - timestamp.getTime();
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(minutes / 60);
-    
-    if (hours > 0) return `${hours}h ago`;
+
+    if (hours > 0) {
+      return `${hours}h ago`;
+    }
+
     return `${minutes}m ago`;
   };
 
   const getSourceIcon = (source: string): string => {
     switch (source) {
-      case 'twitter': return '🐦';
-      case 'gmgn': return '📊';
-      case 'dextools': return '🔧';
-      default: return '📡';
+      case 'twitter':
+        return '🐦';
+      case 'gmgn':
+        return '📊';
+      case 'dextools':
+        return '🔧';
+      default:
+        return '📡';
     }
   };
 
   const renderConnectionStatus = () => (
     <div className={styles.connectionStatus}>
       <div className={styles.statusIndicator}>
-        <span className={`${styles.statusDot} ${isConnected ? styles.connected : styles.disconnected}`}></span>
+        <span
+          className={`${styles.statusDot} ${isConnected ? styles.connected : styles.disconnected}`}
+        >
+        </span>
         <span className={styles.statusText}>
           Social Trading Agent: {isConnected ? 'CONNECTED' : 'DISCONNECTED'}
         </span>
       </div>
-      <div className={styles.lastUpdate}>
-        Last Update: {lastUpdate.toLocaleTimeString()}
-      </div>
+      <div className={styles.lastUpdate}>Last Update: {lastUpdate.toLocaleTimeString()}</div>
       {!isConnected && (
-        <button 
+        <button
           className={styles.connectButton}
           onClick={connectToSocialTrading}
           disabled={isLoading}
@@ -244,13 +268,13 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
         <h3>SOCIAL SIGNALS</h3>
         <div className={styles.signalsStats}>
           <span>Total: {socialSignals.length}</span>
-          <span>Bullish: {socialSignals.filter(s => s.sentimentScore > 0.2).length}</span>
-          <span>Bearish: {socialSignals.filter(s => s.sentimentScore < -0.2).length}</span>
+          <span>Bullish: {socialSignals.filter((s) => s.sentimentScore > 0.2).length}</span>
+          <span>Bearish: {socialSignals.filter((s) => s.sentimentScore < -0.2).length}</span>
         </div>
       </div>
-      
+
       <div className={styles.signalsList}>
-        {socialSignals.map(signal => (
+        {socialSignals.map((signal) => (
           <div key={signal.id} className={styles.signalCard}>
             <div className={styles.signalHeader}>
               <div className={styles.signalSource}>
@@ -262,17 +286,20 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
                 <span className={styles.timestamp}>{formatTimeAgo(signal.timestamp)}</span>
               </div>
             </div>
-            
+
             <div className={styles.signalContent}>
               <p className={styles.signalText}>{signal.content}</p>
               <div className={styles.signalAuthor}>— {signal.author}</div>
             </div>
-            
+
             <div className={styles.signalMetrics}>
               <div className={styles.metric}>
                 <span className={styles.metricLabel}>Sentiment:</span>
-                <span className={`${styles.metricValue} ${getSentimentColor(signal.sentimentScore)}`}>
-                  {signal.sentimentScore > 0 ? '+' : ''}{(signal.sentimentScore * 100).toFixed(1)}%
+                <span
+                  className={`${styles.metricValue} ${getSentimentColor(signal.sentimentScore)}`}
+                >
+                  {signal.sentimentScore > 0 ? '+' : ''}
+                  {(signal.sentimentScore * 100).toFixed(1)}%
                 </span>
               </div>
               <div className={styles.metric}>
@@ -298,35 +325,37 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
           <div className={styles.indexLabel}>GREED</div>
         </div>
       </div>
-      
+
       <div className={styles.sentimentGrid}>
         <div className={styles.sentimentCard}>
           <h4>Token Sentiment</h4>
           <div className={styles.tokenSentiments}>
-            {['BONK', 'WIF', 'POPCAT', 'MYRO'].map(token => {
-              const signals = socialSignals.filter(s => s.tokenSymbol === token);
-              const avgSentiment = signals.length > 0 
-                ? signals.reduce((acc, s) => acc + s.sentimentScore, 0) / signals.length 
-                : 0;
-              
+            {['BONK', 'WIF', 'POPCAT', 'MYRO'].map((token) => {
+              const signals = socialSignals.filter((s) => s.tokenSymbol === token);
+              const avgSentiment =
+                signals.length > 0
+                  ? signals.reduce((acc, s) => acc + s.sentimentScore, 0) / signals.length
+                  : 0;
+
               return (
                 <div key={token} className={styles.tokenSentiment}>
                   <span className={styles.tokenName}>${token}</span>
                   <div className={styles.sentimentBar}>
-                    <div 
+                    <div
                       className={`${styles.sentimentFill} ${getSentimentColor(avgSentiment)}`}
                       style={{ width: `${Math.abs(avgSentiment) * 100}%` }}
                     ></div>
                   </div>
                   <span className={`${styles.sentimentScore} ${getSentimentColor(avgSentiment)}`}>
-                    {avgSentiment > 0 ? '+' : ''}{(avgSentiment * 100).toFixed(1)}%
+                    {avgSentiment > 0 ? '+' : ''}
+                    {(avgSentiment * 100).toFixed(1)}%
                   </span>
                 </div>
               );
             })}
           </div>
         </div>
-        
+
         <div className={styles.sentimentCard}>
           <h4>Market Mood</h4>
           <div className={styles.moodIndicators}>
@@ -362,19 +391,19 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
         <h3>TRADING SIGNALS</h3>
         <div className={styles.signalsSummary}>
           <span className={styles.buyCount}>
-            BUY: {tradingSignals.filter(s => s.signalType === 'BUY').length}
+            BUY: {tradingSignals.filter((s) => s.signalType === 'BUY').length}
           </span>
           <span className={styles.sellCount}>
-            SELL: {tradingSignals.filter(s => s.signalType === 'SELL').length}
+            SELL: {tradingSignals.filter((s) => s.signalType === 'SELL').length}
           </span>
           <span className={styles.holdCount}>
-            HOLD: {tradingSignals.filter(s => s.signalType === 'HOLD').length}
+            HOLD: {tradingSignals.filter((s) => s.signalType === 'HOLD').length}
           </span>
         </div>
       </div>
-      
+
       <div className={styles.signalsList}>
-        {tradingSignals.map(signal => (
+        {tradingSignals.map((signal) => (
           <div key={signal.tokenSymbol} className={styles.tradeSignalCard}>
             <div className={styles.signalHeader}>
               <div className={styles.tokenInfo}>
@@ -385,7 +414,7 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
               </div>
               <div className={styles.signalStrength}>
                 <div className={styles.strengthBar}>
-                  <div 
+                  <div
                     className={styles.strengthFill}
                     style={{ width: `${signal.strength * 100}%` }}
                   ></div>
@@ -393,7 +422,7 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
                 <span className={styles.strengthValue}>{(signal.strength * 100).toFixed(0)}%</span>
               </div>
             </div>
-            
+
             <div className={styles.signalDetails}>
               <div className={styles.priceTargets}>
                 {signal.priceTarget && (
@@ -409,7 +438,7 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
                   </div>
                 )}
               </div>
-              
+
               <div className={styles.reasoning}>
                 <span className={styles.reasoningLabel}>Reasoning:</span>
                 <ul className={styles.reasoningList}>
@@ -419,12 +448,15 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
                 </ul>
               </div>
             </div>
-            
+
             <div className={styles.signalFooter}>
               <div className={styles.confidence}>
-                Confidence: <span className={styles.confidenceValue}>{(signal.confidence * 100).toFixed(0)}%</span>
+                Confidence:{' '}
+                <span className={styles.confidenceValue}>
+                  {(signal.confidence * 100).toFixed(0)}%
+                </span>
               </div>
-              <button 
+              <button
                 className={styles.viewDetailButton}
                 onClick={() => setSelectedToken(signal.tokenSymbol)}
               >
@@ -443,12 +475,15 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
         <h3>POSITION SIZING</h3>
         <div className={styles.portfolioStats}>
           <span>Total Positions: {positions.length}</span>
-          <span>Total Allocation: {positions.reduce((acc, p) => acc + p.positionPercentage, 0).toFixed(1)}%</span>
+          <span>
+            Total Allocation:{' '}
+            {positions.reduce((acc, p) => acc + p.positionPercentage, 0).toFixed(1)}%
+          </span>
         </div>
       </div>
-      
+
       <div className={styles.positionsList}>
-        {positions.map(position => (
+        {positions.map((position) => (
           <div key={position.tokenSymbol} className={styles.positionCard}>
             <div className={styles.positionHeader}>
               <span className={styles.tokenSymbol}>${position.tokenSymbol}</span>
@@ -456,29 +491,27 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
                 {position.riskLevel} RISK
               </span>
             </div>
-            
+
             <div className={styles.positionDetails}>
               <div className={styles.positionSize}>
                 <span className={styles.sizeLabel}>Position Size:</span>
                 <span className={styles.sizeValue}>${position.finalSizeUsd}</span>
                 <span className={styles.sizePercentage}>({position.positionPercentage}%)</span>
               </div>
-              
+
               <div className={styles.allocationBar}>
-                <div 
+                <div
                   className={styles.allocationFill}
                   style={{ width: `${position.positionPercentage * 4}%` }} // Scale for visibility
                 ></div>
               </div>
             </div>
-            
+
             <div className={styles.positionActions}>
               <button className={styles.executeButton} disabled={position.riskLevel === 'EXTREME'}>
                 {position.riskLevel === 'EXTREME' ? 'TOO RISKY' : 'EXECUTE TRADE'}
               </button>
-              <button className={styles.adjustButton}>
-                Adjust Size
-              </button>
+              <button className={styles.adjustButton}>Adjust Size</button>
             </div>
           </div>
         ))}
@@ -491,38 +524,40 @@ const SocialTradingDashboard: React.FC<SocialTradingDashboardProps> = ({ onClose
       <div className={styles.dashboardHeader}>
         <div className={styles.titleSection}>
           <h2>SOCIAL TRADING COMMAND CENTER</h2>
-          <button className={styles.closeButton} onClick={onClose}>×</button>
+          <button className={styles.closeButton} onClick={onClose}>
+            ×
+          </button>
         </div>
         {renderConnectionStatus()}
       </div>
-      
+
       <div className={styles.navigationTabs}>
-        <button 
+        <button
           className={`${styles.navTab} ${activeView === 'signals' ? styles.active : ''}`}
           onClick={() => setActiveView('signals')}
         >
           📡 SIGNALS
         </button>
-        <button 
+        <button
           className={`${styles.navTab} ${activeView === 'sentiment' ? styles.active : ''}`}
           onClick={() => setActiveView('sentiment')}
         >
           🧠 SENTIMENT
         </button>
-        <button 
+        <button
           className={`${styles.navTab} ${activeView === 'trades' ? styles.active : ''}`}
           onClick={() => setActiveView('trades')}
         >
           ⚡ TRADES
         </button>
-        <button 
+        <button
           className={`${styles.navTab} ${activeView === 'portfolio' ? styles.active : ''}`}
           onClick={() => setActiveView('portfolio')}
         >
           💰 PORTFOLIO
         </button>
       </div>
-      
+
       <div className={styles.dashboardContent}>
         {activeView === 'signals' && renderSocialSignals()}
         {activeView === 'sentiment' && renderSentimentAnalysis()}

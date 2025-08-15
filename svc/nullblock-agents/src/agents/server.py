@@ -146,10 +146,10 @@ async def execute_arbitrage(token_pair: str, trade_amount: float):
         logger.error(f"Error executing arbitrage: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-def run_server(host: str = "0.0.0.0", port: int = 8002, debug: bool = False):
+def run_server(host: str = "0.0.0.0", port: int = 8003, debug: bool = False):
     """Run the agents server"""
     uvicorn.run(
-        "agents.server:app",
+        app,
         host=host,
         port=port,
         reload=debug,

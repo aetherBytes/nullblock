@@ -386,7 +386,7 @@ class MCPServer:
     def run(self, host: str = "0.0.0.0", port: int = 8000, debug: bool = False):
         """Run the MCP server"""
         uvicorn.run(
-            "mcp.server:app",
+            self.app,
             host=host,
             port=port,
             reload=debug,

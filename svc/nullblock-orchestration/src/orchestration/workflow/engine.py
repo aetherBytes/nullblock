@@ -592,24 +592,29 @@ class WorkflowOrchestrator:
         # For now, we just update the status
         return True
     
-    def start(self):
-        """Start the workflow engine"""
+    def run(self):
+        """Start the workflow engine (sync version)"""
         self.logger.info("Starting Nullblock Orchestration Engine...")
         
-        # Start the task processing loop
-        asyncio.create_task(self._process_tasks())
-        
-        # Start the scheduled workflow processor
-        asyncio.create_task(self._process_scheduled_workflows())
+        # Run the async startup
+        try:
+            asyncio.run(self._run_engine())
+        except KeyboardInterrupt:
+            self.logger.info("Shutting down Nullblock Orchestration Engine...")
+    
+    async def _run_engine(self):
+        """Main engine loop"""
+        # Start the async orchestrator
+        await self.start()
         
         self.logger.info("Nullblock Orchestration Engine started successfully")
         
-        # Keep the engine running
+        # Keep running until interrupted
         try:
-            asyncio.get_event_loop().run_forever()
+            while True:
+                await asyncio.sleep(1)
         except KeyboardInterrupt:
-            self.logger.info("Shutting down Nullblock Orchestration Engine...")
-            self.stop()
+            await self.stop()
     
     def stop(self):
         """Stop the workflow engine"""
