@@ -49,7 +49,7 @@ interface SystemStatus {
 interface HUDProps {
   publicKey: string | null;
   onDisconnect: () => void;
-  onConnectWallet: () => void;
+  onConnectWallet: (walletType?: 'phantom' | 'metamask') => void;
   theme?: Theme;
   onClose: () => void;
   onThemeChange: (theme: 'null' | 'cyber' | 'light' | 'dark') => void;
@@ -805,7 +805,7 @@ const HUD: React.FC<HUDProps> = ({
       <div className={styles.navbarButtons}>
         <button
           className={`${styles.walletButton} ${publicKey ? styles.connected : ''}`}
-          onClick={publicKey ? onDisconnect : onConnectWallet}
+          onClick={publicKey ? onDisconnect : () => onConnectWallet()}
           title={publicKey ? '🔓 Disconnect Wallet (Close Door)' : '🔒 Connect Wallet (Open Door)'}
         >
           <span className={styles.walletIcon}>{publicKey ? '🔓' : '🔒'}</span>
