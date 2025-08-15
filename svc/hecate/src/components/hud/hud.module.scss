@@ -3660,6 +3660,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .nullblockTitleButton {
   background: none;
   border: none;
+  outline: none;
   color: $echo-blue;
   font-size: 1.8rem;
   font-weight: 700;
@@ -3677,6 +3678,10 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   
   &:active {
     transform: scale(0.98);
+  }
+  
+  &:focus {
+    outline: none;
   }
 }
 
