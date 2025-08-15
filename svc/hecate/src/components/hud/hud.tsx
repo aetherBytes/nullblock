@@ -4,9 +4,7 @@ import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission
 import { isAuthenticated, restoreSession, createAuthChallenge, verifyAuthChallenge, checkMCPHealth } from '../../common/services/mcp-api';
 // Removed separate dashboard imports - all functionality is now integrated into HUD tabs
 import xLogo from '../../assets/images/X_logo_black.png';
-import nullLogo from '../../assets/images/null_logo.png';
-import echoBatWhite from '../../assets/images/echo_bat_white.png';
-import echoBatBlack from '../../assets/images/echo_bat_black.png';
+import nulleyeLogo from '../../assets/images/nulleye_logo.png';
 import ContextDashboard from '../context-dashboard';
 
 type Screen = 'home' | 'overview' | 'camp' | 'inventory' | 'campaign' | 'lab';
