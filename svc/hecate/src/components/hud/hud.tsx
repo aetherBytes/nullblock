@@ -10,7 +10,7 @@ import echoBatBlack from '../../assets/images/echo_bat_black.png';
 import ContextDashboard from '../context-dashboard';
 
 type Screen = 'home' | 'overview' | 'camp' | 'inventory' | 'campaign' | 'lab';
-type Theme = 'null' | 'light';
+type Theme = 'null' | 'light' | 'dark';
 type TabType = 'missions' | 'systems' | 'defense' | 'uplink' | 'hud' | 'status' | 'arbitrage' | 'social' | 'portfolio' | 'defi';
 
 interface SystemStatus {
@@ -31,7 +31,7 @@ interface HUDProps {
   onDisconnect: () => void;
   theme?: Theme;
   onClose: () => void;
-  onThemeChange: (theme: 'null' | 'cyber' | 'light') => void;
+  onThemeChange: (theme: 'null' | 'cyber' | 'light' | 'dark') => void;
   systemStatus: SystemStatus;
 }
 
@@ -768,6 +768,20 @@ const HUD: React.FC<HUDProps> = ({
         {SCREEN_LABELS[screen]}
       </div>
       <div className={styles.navbarButtons}>
+        <button 
+          className={styles.themeButton}
+          onClick={() => {
+            const newTheme = theme === 'light' ? 'dark' : 'light';
+            onThemeChange(newTheme);
+          }}
+          title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} theme`}
+        >
+          {theme === 'light' ? (
+            <span className={styles.themeIcon}>🌙</span>
+          ) : (
+            <span className={styles.themeIcon}>☀️</span>
+          )}
+        </button>
         <a 
           href="https://x.com/Nullblock_io" 
           target="_blank" 
