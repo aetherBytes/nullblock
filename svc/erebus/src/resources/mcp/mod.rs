@@ -7,5 +7,3 @@ pub mod worker;
 
 // Re-export main components
 pub use handler::McpHandler;
-pub use types::{McpRequest, McpResponse};
-pub use worker::{McpWorkerFactory, McpWorker, WorkerStatus};

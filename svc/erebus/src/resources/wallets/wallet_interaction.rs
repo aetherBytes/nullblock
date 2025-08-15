@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use crate::resources::types::{
-    WalletInfo, WalletProvider, WalletChallengeRequest, WalletChallengeResponse,
+    WalletProvider, WalletChallengeRequest, WalletChallengeResponse,
     WalletVerifyRequest, WalletVerifyResponse, WalletListResponse, WalletSession
 };
 use super::{MetaMaskWallet, PhantomWallet};
@@ -27,13 +27,7 @@ impl WalletManager {
         }
     }
 
-    pub fn get_challenge_storage(&self) -> ChallengeStorage {
-        Arc::clone(&self.challenge_storage)
-    }
 
-    pub fn get_session_storage(&self) -> SessionStorage {
-        Arc::clone(&self.session_storage)
-    }
 
     /// Get all supported wallets for MCP exposure
     pub fn get_supported_wallets() -> WalletListResponse {
@@ -191,26 +185,7 @@ impl WalletManager {
         }
     }
 
-    /// Get wallet info by type for MCP integration
-    pub fn get_wallet_info(wallet_type: &str) -> Option<WalletInfo> {
-        match wallet_type {
-            "phantom" => Some(PhantomWallet::get_wallet_info()),
-            "metamask" => Some(MetaMaskWallet::get_wallet_info()),
-            _ => None,
-        }
-    }
 
-    /// Clean up expired sessions (should be called periodically)
-    pub fn cleanup_expired_sessions(&self) {
-        let mut sessions = self.session_storage.lock().unwrap();
-        sessions.retain(|_, session| !session.is_expired());
-    }
-
-    /// Get active session count for monitoring
-    pub fn get_active_sessions_count(&self) -> usize {
-        let sessions = self.session_storage.lock().unwrap();
-        sessions.len()
-    }
 
     /// Get supported networks for a wallet type
     pub fn get_wallet_networks(wallet_type: &str) -> Vec<serde_json::Value> {

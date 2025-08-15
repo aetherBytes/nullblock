@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import StarsCanvas from '@components/stars/stars';
 import HUD from '../../components/hud/hud';
-import { createWalletChallenge, verifyWalletSignature, checkErebusHealth } from '../../common/services/erebus-api';
+import { 
+  createWalletChallenge, 
+  verifyWalletSignature, 
+  checkErebusHealth,
+  detectWallets,
+  initiateWalletConnection,
+  getWalletStatus
+} from '../../common/services/erebus-api';
 import styles from './index.module.scss';
 
 // Extend Window interface for ethereum
@@ -231,7 +238,7 @@ const Home: React.FC = () => {
   };
 
   const connectPhantomWallet = async () => {
-    console.log('Attempting to connect Phantom wallet via Erebus...');
+    console.log('Attempting to connect Phantom wallet via backend...');
     
     if (!('phantom' in window)) {
       setConnectionError('Phantom wallet not found. Please install the Phantom browser extension.');
@@ -259,6 +266,14 @@ const Home: React.FC = () => {
 
       const walletAddress = response.publicKey.toString();
       console.log('Connected to Phantom wallet:', walletAddress);
+
+      // Initiate connection via backend
+      console.log('Initiating wallet connection via backend...');
+      const connectionResponse = await initiateWalletConnection('phantom', walletAddress, walletAddress);
+      
+      if (!connectionResponse.success) {
+        throw new Error(`Connection failed: ${connectionResponse.message}`);
+      }
 
       // Create challenge via Erebus
       console.log('Creating authentication challenge via Erebus...');
@@ -290,7 +305,7 @@ const Home: React.FC = () => {
         localStorage.setItem('sessionToken', verifyResponse.session_token || '');
         updateAuthTime();
 
-        console.log('Phantom wallet authenticated successfully via Erebus!');
+        console.log('Phantom wallet authenticated successfully via backend!');
       } else {
         throw new Error(`Authentication failed: ${verifyResponse.message}`);
       }
@@ -311,7 +326,7 @@ const Home: React.FC = () => {
   };
 
   const connectMetaMaskWallet = async () => {
-    console.log('Attempting to connect MetaMask wallet via Erebus...');
+    console.log('Attempting to connect MetaMask wallet via backend...');
     
     if (typeof window.ethereum === 'undefined') {
       setConnectionError('MetaMask wallet not found. Please install the MetaMask browser extension.');
@@ -335,6 +350,14 @@ const Home: React.FC = () => {
 
       const walletAddress = accounts[0];
       console.log('Connected to MetaMask wallet:', walletAddress);
+
+      // Initiate connection via backend
+      console.log('Initiating wallet connection via backend...');
+      const connectionResponse = await initiateWalletConnection('metamask', walletAddress);
+      
+      if (!connectionResponse.success) {
+        throw new Error(`Connection failed: ${connectionResponse.message}`);
+      }
 
       // Create challenge via Erebus
       console.log('Creating authentication challenge via Erebus...');
@@ -365,7 +388,7 @@ const Home: React.FC = () => {
         localStorage.setItem('sessionToken', verifyResponse.session_token || '');
         updateAuthTime();
 
-        console.log('MetaMask wallet authenticated successfully via Erebus!');
+        console.log('MetaMask wallet authenticated successfully via backend!');
       } else {
         throw new Error(`Authentication failed: ${verifyResponse.message}`);
       }
@@ -385,36 +408,53 @@ const Home: React.FC = () => {
     }
   };
 
-  const showWalletSelectionModal = () => {
+  const showWalletSelectionModal = async () => {
     console.log('showWalletSelectionModal called');
-    const hasPhantom = 'phantom' in window && (window as any).phantom?.solana;
-    const hasMetaMask = typeof window.ethereum !== 'undefined';
     
-    console.log('Wallet detection:', { hasPhantom, hasMetaMask });
+    try {
+      // Detect available wallets on frontend
+      const availableWallets: string[] = [];
+      if ('phantom' in window && (window as any).phantom?.solana) {
+        availableWallets.push('phantom');
+      }
+      if (typeof window.ethereum !== 'undefined') {
+        availableWallets.push('metamask');
+      }
 
-    if (!hasPhantom && !hasMetaMask) {
-      setConnectionError('No Web3 wallets detected. Please install MetaMask or Phantom and refresh the page.');
-      setShowWalletModal(true); // Show modal even if no wallets to display the error and install links
-      return;
+      console.log('Frontend wallet detection:', availableWallets);
+
+      // Use backend to get comprehensive wallet information
+      const detectionResponse = await detectWallets(availableWallets);
+      console.log('Backend wallet detection response:', detectionResponse);
+
+      if (detectionResponse.available_wallets.length === 0) {
+        setConnectionError('No Web3 wallets detected. Please install MetaMask or Phantom and refresh the page.');
+        setShowWalletModal(true);
+        return;
+      }
+
+      // If only one wallet is available, connect directly
+      if (detectionResponse.available_wallets.length === 1) {
+        const wallet = detectionResponse.available_wallets[0];
+        if (wallet.is_available) {
+          console.log('Only one wallet available, connecting directly:', wallet.id);
+          handleConnectWallet(wallet.id as 'phantom' | 'metamask');
+          return;
+        }
+      }
+
+      // Multiple wallets or installation prompts - show modal
+      console.log('Multiple wallets detected or installation needed, showing selection modal');
+      setShowWalletModal(true);
+      setConnectionError(null);
+
+      // Store detection response for modal display
+      localStorage.setItem('walletDetectionResponse', JSON.stringify(detectionResponse));
+    } catch (error) {
+      console.error('Failed to detect wallets:', error);
+      setConnectionError('Failed to detect wallets. Please refresh the page and try again.');
+      setShowWalletModal(true);
     }
-
-    // If only one wallet is available, use it directly
-    if (hasPhantom && !hasMetaMask) {
-      console.log('Only Phantom detected, connecting directly');
-      handleConnectWallet('phantom');
-      return;
-    }
-
-    if (hasMetaMask && !hasPhantom) {
-      console.log('Only MetaMask detected, connecting directly');
-      handleConnectWallet('metamask');
-      return;
-    }
-
-    // Both wallets available - show modal
-    console.log('Both wallets detected, showing selection modal');
-    setShowWalletModal(true);
-    setConnectionError(null);
   };
 
   return (

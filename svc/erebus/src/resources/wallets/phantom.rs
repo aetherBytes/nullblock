@@ -94,54 +94,7 @@ impl PhantomWallet {
         ]
     }
 
-    pub fn create_transfer_instruction(from: &str, to: &str, amount_lamports: u64) -> SolanaInstruction {
-        SolanaInstruction {
-            program_id: "11111111111111111111111111111112".to_string(), // System Program
-            accounts: vec![
-                SolanaAccountMeta {
-                    pubkey: from.to_string(),
-                    is_signer: true,
-                    is_writable: true,
-                },
-                SolanaAccountMeta {
-                    pubkey: to.to_string(),
-                    is_signer: false,
-                    is_writable: true,
-                },
-            ],
-            data: bincode::serialize(&amount_lamports).unwrap_or_default(),
-        }
-    }
 
-    pub fn create_spl_token_transfer(
-        token_program: &str,
-        source: &str,
-        destination: &str,
-        authority: &str,
-        amount: u64,
-    ) -> SolanaInstruction {
-        SolanaInstruction {
-            program_id: token_program.to_string(),
-            accounts: vec![
-                SolanaAccountMeta {
-                    pubkey: source.to_string(),
-                    is_signer: false,
-                    is_writable: true,
-                },
-                SolanaAccountMeta {
-                    pubkey: destination.to_string(),
-                    is_signer: false,
-                    is_writable: true,
-                },
-                SolanaAccountMeta {
-                    pubkey: authority.to_string(),
-                    is_signer: true,
-                    is_writable: false,
-                },
-            ],
-            data: bincode::serialize(&amount).unwrap_or_default(),
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

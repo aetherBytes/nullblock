@@ -9,22 +9,58 @@ use axum::{
 
 use crate::resources::{
     WalletManager, WalletChallengeRequest, WalletChallengeResponse,
-    WalletVerifyRequest, WalletVerifyResponse, WalletListResponse
+    WalletVerifyRequest, WalletVerifyResponse, WalletListResponse,
 };
+use crate::resources::types::{
+    WalletDetectionRequest, WalletDetectionResponse, WalletConnectionRequest,
+    WalletConnectionResponse, WalletStatusResponse
+};
+use super::wallet_service::WalletService;
 
 /// Create wallet routes for the main router
 pub fn create_wallet_routes() -> Router<WalletManager> {
     Router::new()
         .route("/api/wallets", get(get_supported_wallets))
+        .route("/api/wallets/detect", post(detect_wallets))
+        .route("/api/wallets/connect", post(initiate_wallet_connection))
+        .route("/api/wallets/status", get(get_wallet_status))
         .route("/api/wallets/challenge", post(create_wallet_challenge))
         .route("/api/wallets/verify", post(verify_wallet_signature))
-        .route("/api/wallets/:wallet_type/networks", get(get_wallet_networks))
+        .route("/api/wallets/{wallet_type}/networks", get(get_wallet_networks))
         .route("/api/wallets/sessions/validate", post(validate_session))
 }
 
 /// Get all supported wallets endpoint
 async fn get_supported_wallets() -> Json<WalletListResponse> {
     Json(WalletManager::get_supported_wallets())
+}
+
+/// Detect available wallets endpoint
+async fn detect_wallets(
+    Json(request): Json<WalletDetectionRequest>,
+) -> Json<WalletDetectionResponse> {
+    println!("🔍 Wallet detection requested: {:?}", request.available_wallets);
+    let response = WalletService::detect_wallets(request.available_wallets);
+    Json(response)
+}
+
+/// Initiate wallet connection endpoint
+async fn initiate_wallet_connection(
+    Json(request): Json<WalletConnectionRequest>,
+) -> Json<WalletConnectionResponse> {
+    println!("🔗 Wallet connection initiated for {}: {}", request.wallet_type, request.wallet_address);
+    let response = WalletService::initiate_connection(request);
+    Json(response)
+}
+
+/// Get wallet status endpoint
+async fn get_wallet_status(
+    State(wallet_manager): State<WalletManager>,
+) -> Json<WalletStatusResponse> {
+    // In a real implementation, you'd get the session token from headers or cookies
+    // For now, we'll return a disconnected status
+    let response = WalletService::get_wallet_status(None, &wallet_manager);
+    Json(response)
 }
 
 /// Create wallet authentication challenge endpoint

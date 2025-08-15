@@ -40,6 +40,63 @@ pub struct WalletListResponse {
     pub supported_wallets: Vec<WalletInfo>,
 }
 
+// New types for backend wallet interaction
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WalletDetectionRequest {
+    pub user_agent: Option<String>,
+    pub available_wallets: Vec<String>, // Frontend sends detected wallets
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WalletDetectionResponse {
+    pub available_wallets: Vec<DetectedWallet>,
+    pub recommended_wallet: Option<String>,
+    pub install_prompts: Vec<InstallPrompt>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetectedWallet {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub icon: String,
+    pub is_available: bool,
+    pub install_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallPrompt {
+    pub wallet_id: String,
+    pub wallet_name: String,
+    pub install_url: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WalletConnectionRequest {
+    pub wallet_type: String,
+    pub wallet_address: String,
+    pub public_key: Option<String>, // For Solana wallets
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WalletConnectionResponse {
+    pub success: bool,
+    pub session_token: Option<String>,
+    pub wallet_info: Option<WalletInfo>,
+    pub message: String,
+    pub next_step: Option<String>, // e.g., "sign_challenge", "complete"
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WalletStatusResponse {
+    pub connected: bool,
+    pub wallet_type: Option<String>,
+    pub wallet_address: Option<String>,
+    pub session_valid: bool,
+    pub session_expires_at: Option<String>,
+}
+
 // Generic wallet trait that all wallet implementations must implement
 pub trait WalletProvider {
     fn get_wallet_info() -> WalletInfo;
@@ -50,6 +107,7 @@ pub trait WalletProvider {
 // Session management
 #[derive(Debug, Clone)]
 pub struct WalletSession {
+    #[allow(dead_code)]
     pub session_token: String,
     pub wallet_address: String,
     pub wallet_type: String,

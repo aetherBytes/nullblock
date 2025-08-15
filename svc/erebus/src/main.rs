@@ -6,6 +6,7 @@ use axum::{
 use serde::Serialize;
 use std::net::SocketAddr;
 use tokio;
+use tower_http::cors::{Any, CorsLayer};
 
 mod resources;
 use resources::{WalletManager, McpHandler};
@@ -39,6 +40,12 @@ async fn main() {
     let wallet_manager = WalletManager::new();
     let mcp_handler = McpHandler::new();
 
+    // Configure CORS
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     // Create main router with organized subsystem routes
     let app = Router::new()
         // Core system endpoints
@@ -46,7 +53,8 @@ async fn main() {
         // Wallet subsystem routes
         .merge(create_wallet_routes().with_state(wallet_manager))
         // MCP subsystem routes  
-        .merge(create_mcp_routes().with_state(mcp_handler));
+        .merge(create_mcp_routes().with_state(mcp_handler))
+        .layer(cors);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     println!("🔥 Erebus server listening on {}", addr);
@@ -58,9 +66,12 @@ async fn main() {
     println!("│");
     println!("│ 👛 WALLET SUBSYSTEM:");
     println!("│   GET  /api/wallets - List supported wallets");
+    println!("│   POST /api/wallets/detect - Detect available wallets");
+    println!("│   POST /api/wallets/connect - Initiate wallet connection");
+    println!("│   GET  /api/wallets/status - Get wallet status");
     println!("│   POST /api/wallets/challenge - Create auth challenge");
     println!("│   POST /api/wallets/verify - Verify wallet signature");
-    println!("│   GET  /api/wallets/:type/networks - Get networks");
+    println!("│   GET  /api/wallets/{{type}}/networks - Get networks");
     println!("│   POST /api/wallets/sessions/validate - Validate session");
     println!("│");
     println!("│ 🔗 MCP SUBSYSTEM:");
