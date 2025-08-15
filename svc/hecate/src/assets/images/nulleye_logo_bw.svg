@@ -1,0 +1,82 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Filter for glow effect -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Main eye outline -->
+  <ellipse cx="256" cy="256" rx="180" ry="120" 
+           fill="none" 
+           stroke="#000000" 
+           stroke-width="12" 
+           filter="url(#glow)"/>
+  
+  <!-- Inner eye structure -->
+  <ellipse cx="256" cy="256" rx="140" ry="90" 
+           fill="none" 
+           stroke="#000000" 
+           stroke-width="6" 
+           opacity="0.7"/>
+  
+  <!-- Iris -->
+  <ellipse cx="256" cy="256" rx="80" ry="50" 
+           fill="#000000" 
+           opacity="0.9"/>
+  
+  <!-- Pupil -->
+  <ellipse cx="256" cy="256" rx="40" ry="25" 
+           fill="#ffffff"/>
+  
+  <!-- Pupil highlight -->
+  <ellipse cx="240" cy="240" rx="8" ry="5" 
+           fill="#ffffff" 
+           opacity="0.8"/>
+  
+  <!-- Cybernetic elements -->
+  <!-- Top scan line -->
+  <line x1="76" y1="156" x2="436" y2="156" 
+        stroke="#000000" 
+        stroke-width="3" 
+        opacity="0.8"/>
+  
+  <!-- Bottom scan line -->
+  <line x1="76" y1="356" x2="436" y2="356" 
+        stroke="#000000" 
+        stroke-width="3" 
+        opacity="0.8"/>
+  
+  <!-- Corner brackets -->
+  <!-- Top left -->
+  <path d="M 76 156 L 96 156 L 96 176 L 76 176" 
+        fill="none" 
+        stroke="#000000" 
+        stroke-width="4" 
+        opacity="0.9"/>
+  
+  <!-- Top right -->
+  <path d="M 436 156 L 416 156 L 416 176 L 436 176" 
+        fill="none" 
+        stroke="#000000" 
+        stroke-width="4" 
+        opacity="0.9"/>
+  
+  <!-- Bottom left -->
+  <path d="M 76 356 L 96 356 L 96 336 L 76 336" 
+        fill="none" 
+        stroke="#000000" 
+        stroke-width="4" 
+        opacity="0.9"/>
+  
+  <!-- Bottom right -->
+  <path d="M 436 356 L 416 356 L 416 336 L 436 336" 
+        fill="none" 
+        stroke="#000000" 
+        stroke-width="4" 
+        opacity="0.9"/>
+</svg>
