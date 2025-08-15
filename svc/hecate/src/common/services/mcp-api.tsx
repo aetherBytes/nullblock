@@ -1,4 +1,5 @@
-import axios, { AxiosResponse } from 'axios';
+import type { AxiosResponse } from 'axios';
+import axios from 'axios';
 
 // MCP Server API base URL - now points to the new MCP server
 const MCP_API_BASE_URL = import.meta.env.VITE_MCP_API_URL || 'http://localhost:8000';
@@ -62,18 +63,23 @@ const getAuthHeaders = () => {
   if (!currentSession) {
     throw new Error('No active session. Please authenticate first.');
   }
+
   return {
-    'Authorization': `Bearer ${currentSession}`,
-    'Content-Type': 'application/json'
+    Authorization: `Bearer ${currentSession}`,
+    'Content-Type': 'application/json',
   };
 };
 
 // Authentication functions
 export const createAuthChallenge = async (walletAddress: string): Promise<MCPAuthChallenge> => {
   try {
-    const response: AxiosResponse<MCPAuthChallenge> = await axios.post(`${MCP_API_BASE_URL}/auth/challenge`, {
-      wallet_address: walletAddress
-    });
+    const response: AxiosResponse<MCPAuthChallenge> = await axios.post(
+      `${MCP_API_BASE_URL}/auth/challenge`,
+      {
+        wallet_address: walletAddress,
+      },
+    );
+
     return response.data;
   } catch (error) {
     console.error('Failed to create auth challenge:', error);
@@ -84,21 +90,24 @@ export const createAuthChallenge = async (walletAddress: string): Promise<MCPAut
 export const verifyAuthChallenge = async (
   walletAddress: string,
   signature: string,
-  provider: string = 'phantom'
+  provider: string = 'phantom',
 ): Promise<MCPAuthResponse> => {
   try {
-    const response: AxiosResponse<MCPAuthResponse> = await axios.post(`${MCP_API_BASE_URL}/auth/verify`, {
-      wallet_address: walletAddress,
-      signature: signature,
-      provider: provider
-    });
-    
+    const response: AxiosResponse<MCPAuthResponse> = await axios.post(
+      `${MCP_API_BASE_URL}/auth/verify`,
+      {
+        wallet_address: walletAddress,
+        signature,
+        provider,
+      },
+    );
+
     if (response.data.success && response.data.session_id) {
       currentSession = response.data.session_id;
       // Store session in localStorage for persistence
       localStorage.setItem('mcp_session_id', response.data.session_id);
     }
-    
+
     return response.data;
   } catch (error) {
     console.error('Failed to verify auth challenge:', error);
@@ -108,10 +117,13 @@ export const verifyAuthChallenge = async (
 
 export const restoreSession = (): boolean => {
   const storedSession = localStorage.getItem('mcp_session_id');
+
   if (storedSession) {
     currentSession = storedSession;
+
     return true;
   }
+
   return false;
 };
 
@@ -123,7 +135,10 @@ export const clearSession = (): void => {
 // MCP API functions
 export const checkMCPHealth = async (): Promise<MCPHealthResponse> => {
   try {
-    const response: AxiosResponse<MCPHealthResponse> = await axios.get(`${MCP_API_BASE_URL}/health`);
+    const response: AxiosResponse<MCPHealthResponse> = await axios.get(
+      `${MCP_API_BASE_URL}/health`,
+    );
+
     return response.data;
   } catch (error) {
     console.error('Failed to check MCP health:', error);
@@ -134,8 +149,9 @@ export const checkMCPHealth = async (): Promise<MCPHealthResponse> => {
 export const getUserContext = async (): Promise<MCPUserContext> => {
   try {
     const response: AxiosResponse<MCPUserContext> = await axios.get(`${MCP_API_BASE_URL}/context`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
+
     return response.data;
   } catch (error) {
     console.error('Failed to get user context:', error);
@@ -143,13 +159,20 @@ export const getUserContext = async (): Promise<MCPUserContext> => {
   }
 };
 
-export const updateUserContext = async (updates: Record<string, any>): Promise<{ success: boolean; message: string }> => {
+export const updateUserContext = async (
+  updates: Record<string, any>,
+): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await axios.post(`${MCP_API_BASE_URL}/context/update`, {
-      updates: updates
-    }, {
-      headers: getAuthHeaders()
-    });
+    const response = await axios.post(
+      `${MCP_API_BASE_URL}/context/update`,
+      {
+        updates,
+      },
+      {
+        headers: getAuthHeaders(),
+      },
+    );
+
     return response.data;
   } catch (error) {
     console.error('Failed to update user context:', error);
@@ -159,9 +182,13 @@ export const updateUserContext = async (updates: Record<string, any>): Promise<{
 
 export const getWalletBalance = async (): Promise<MCPWalletBalance> => {
   try {
-    const response: AxiosResponse<MCPWalletBalance> = await axios.get(`${MCP_API_BASE_URL}/wallet/balance`, {
-      headers: getAuthHeaders()
-    });
+    const response: AxiosResponse<MCPWalletBalance> = await axios.get(
+      `${MCP_API_BASE_URL}/wallet/balance`,
+      {
+        headers: getAuthHeaders(),
+      },
+    );
+
     return response.data;
   } catch (error) {
     console.error('Failed to get wallet balance:', error);
@@ -171,15 +198,20 @@ export const getWalletBalance = async (): Promise<MCPWalletBalance> => {
 
 export const executeTradingCommand = async (
   command: string,
-  parameters: Record<string, any> = {}
+  parameters: Record<string, any> = {},
 ): Promise<MCPTradingCommandResponse> => {
   try {
-    const response: AxiosResponse<MCPTradingCommandResponse> = await axios.post(`${MCP_API_BASE_URL}/trading/command`, {
-      command: command,
-      parameters: parameters
-    }, {
-      headers: getAuthHeaders()
-    });
+    const response: AxiosResponse<MCPTradingCommandResponse> = await axios.post(
+      `${MCP_API_BASE_URL}/trading/command`,
+      {
+        command,
+        parameters,
+      },
+      {
+        headers: getAuthHeaders(),
+      },
+    );
+
     return response.data;
   } catch (error) {
     console.error('Failed to execute trading command:', error);
@@ -188,46 +220,42 @@ export const executeTradingCommand = async (
 };
 
 // Arbitrage-specific functions
-export const findArbitrageOpportunities = async (params: {
-  min_profit_percentage?: number;
-  max_trade_amount?: number;
-} = {}): Promise<MCPTradingCommandResponse> => {
-  return executeTradingCommand('arbitrage', {
+export const findArbitrageOpportunities = async (
+  params: {
+    min_profit_percentage?: number;
+    max_trade_amount?: number;
+  } = {},
+): Promise<MCPTradingCommandResponse> =>
+  executeTradingCommand('arbitrage', {
     action: 'find_opportunities',
-    ...params
+    ...params,
   });
-};
 
 export const executeArbitrageTrade = async (params: {
   opportunity_id: string;
   trade_amount: number;
   max_slippage?: number;
-}): Promise<MCPTradingCommandResponse> => {
-  return executeTradingCommand('arbitrage', {
+}): Promise<MCPTradingCommandResponse> =>
+  executeTradingCommand('arbitrage', {
     action: 'execute',
-    ...params
+    ...params,
   });
-};
 
-export const getArbitrageHistory = async (): Promise<MCPTradingCommandResponse> => {
-  return executeTradingCommand('arbitrage', {
-    action: 'get_history'
+export const getArbitrageHistory = async (): Promise<MCPTradingCommandResponse> =>
+  executeTradingCommand('arbitrage', {
+    action: 'get_history',
   });
-};
 
-export const getArbitrageMetrics = async (): Promise<MCPTradingCommandResponse> => {
-  return executeTradingCommand('arbitrage', {
-    action: 'get_metrics'
+export const getArbitrageMetrics = async (): Promise<MCPTradingCommandResponse> =>
+  executeTradingCommand('arbitrage', {
+    action: 'get_metrics',
   });
-};
 
 // Portfolio management
 export const rebalancePortfolio = async (params: {
   strategy?: string;
   risk_tolerance?: string;
-}): Promise<MCPTradingCommandResponse> => {
-  return executeTradingCommand('rebalance', params);
-};
+}): Promise<MCPTradingCommandResponse> => executeTradingCommand('rebalance', params);
 
 export const updateTradingSettings = async (settings: {
   min_profit_threshold?: number;
@@ -235,34 +263,29 @@ export const updateTradingSettings = async (settings: {
   risk_tolerance?: string;
   preferred_dexes?: string[];
   enable_mev_protection?: boolean;
-}): Promise<MCPTradingCommandResponse> => {
-  return executeTradingCommand('set', settings);
-};
+}): Promise<MCPTradingCommandResponse> => executeTradingCommand('set', settings);
 
 // Utility functions for UI integration
-export const isAuthenticated = (): boolean => {
-  return currentSession !== null;
-};
+export const isAuthenticated = (): boolean => currentSession !== null;
 
-export const getSessionId = (): string | null => {
-  return currentSession;
-};
+export const getSessionId = (): string | null => currentSession;
 
 // Error handling utility
 export const handleMCPError = (error: any): string => {
   if (error.response?.status === 401) {
     clearSession();
+
     return 'Authentication expired. Please reconnect your wallet.';
   }
-  
+
   if (error.response?.status === 403) {
     return 'Access denied. Input may have been blocked for security reasons.';
   }
-  
+
   if (error.response?.data?.message) {
     return error.response.data.message;
   }
-  
+
   return 'An unexpected error occurred. Please try again.';
 };
 
@@ -273,22 +296,24 @@ export const migrateToMCP = {
     if (!isAuthenticated()) {
       throw new Error('MCP authentication required');
     }
-    
+
     const balance = await getWalletBalance();
+
     return {
       balance: balance.balance,
       address: balance.address,
       transactionCount: 0, // MCP doesn't track this currently
     };
   },
-  
+
   // Map old user profile to MCP context
   fetchUserProfile: async (publicKey: string) => {
     if (!isAuthenticated()) {
       throw new Error('MCP authentication required');
     }
-    
+
     const context = await getUserContext();
+
     return {
       balance: 0, // Will be fetched separately
       address: context.wallet_address,
@@ -297,7 +322,7 @@ export const migrateToMCP = {
       last_activity: context.updated_at,
       active_tokens: context.trading_profile.preferred_tokens || [],
     };
-  }
+  },
 };
 
 export default {
@@ -319,5 +344,5 @@ export default {
   isAuthenticated,
   getSessionId,
   handleMCPError,
-  migrateToMCP
+  migrateToMCP,
 };

@@ -56,6 +56,7 @@ const fetchWalletData = async (publicKey: string): Promise<WalletData> => {
     } else {
       console.error('Unexpected error:', error);
     }
+
     throw error;
   }
 };
@@ -83,6 +84,7 @@ const fetchUserProfile = async (publicKey: string): Promise<UserProfileData> => 
     } else {
       console.error('Unexpected error:', error);
     }
+
     throw error;
   }
 };
@@ -94,19 +96,19 @@ const fetchAscentLevel = async (publicKey: string): Promise<AscentLevelData> => 
     // In a real implementation, this would call the backend API
     return {
       level: 1,
-      name: "Net Dweller",
-      description: "A newcomer to the digital realm, exploring the boundaries of the network.",
+      name: 'Net Dweller',
+      description: 'A newcomer to the digital realm, exploring the boundaries of the network.',
       progress: 0.35,
       accolades: [
-        "First Connection",
-        "Wallet Initiated",
-        "Basic Navigation",
-        "Token Discovery",
-        "Transaction Initiate",
-        "Network Explorer",
-        "Data Collector",
-        "Interface Familiar"
-      ]
+        'First Connection',
+        'Wallet Initiated',
+        'Basic Navigation',
+        'Token Discovery',
+        'Transaction Initiate',
+        'Network Explorer',
+        'Data Collector',
+        'Interface Familiar',
+      ],
     };
   } catch (error) {
     console.error('Failed to fetch ascent level:', error);
@@ -117,13 +119,15 @@ const fetchAscentLevel = async (publicKey: string): Promise<AscentLevelData> => 
 export const fetchActiveMission = async (publicKey: string): Promise<MissionData> => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/missions/${publicKey}`);
+
     if (!response.ok) {
       throw new Error('Failed to fetch active mission');
     }
-    const data = await response.json();
-    return data;
+
+    return await response.json();
   } catch (error) {
     console.error('Error fetching active mission:', error);
+
     // Return a default mission if the API call fails
     return {
       id: '1',
@@ -131,7 +135,8 @@ export const fetchActiveMission = async (publicKey: string): Promise<MissionData
       description: 'Share your Base Camp on X to earn GLIMMER',
       status: 'active',
       reward: 'TBD GLIMMER AIRDROP',
-      x_url: 'https://twitter.com/intent/tweet?text=Check%20out%20my%20Base%20Camp%20in%20the%20Nullblock%20universe!%20%40Nullblock_io%20%24GLIMMER'
+      x_url:
+        'https://twitter.com/intent/tweet?text=Check%20out%20my%20Base%20Camp%20in%20the%20Nullblock%20universe!%20%40Nullblock_io%20%24GLIMMER',
     };
   }
 };

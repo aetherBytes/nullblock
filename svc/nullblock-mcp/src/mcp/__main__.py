@@ -16,7 +16,13 @@ from mcp.server import create_server
 def main():
     """Main entry point"""
     server = create_server()
-    server.run(host="0.0.0.0", port=8000, debug=False)
+    
+    # Get configuration from environment
+    host = os.getenv("MCP_SERVER_HOST", "0.0.0.0")
+    port = int(os.getenv("MCP_SERVER_PORT", "8001"))
+    debug = os.getenv("MCP_DEBUG", "false").lower() == "true"
+    
+    server.run(host=host, port=port, debug=debug)
 
 if __name__ == "__main__":
     main() 

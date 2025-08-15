@@ -36,11 +36,17 @@ interface PortfolioDashboardProps {
 }
 
 const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
-  const [activeView, setActiveView] = useState<'overview' | 'assets' | 'rebalance' | 'analytics'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'assets' | 'rebalance' | 'analytics'>(
+    'overview',
+  );
   const [assets, setAssets] = useState<Asset[]>([]);
   const [portfolioStats, setPortfolioStats] = useState<PortfolioStats | null>(null);
-  const [rebalanceRecommendations, setRebalanceRecommendations] = useState<RebalanceRecommendation[]>([]);
-  const [selectedChain, setSelectedChain] = useState<'all' | 'ethereum' | 'solana' | 'polygon'>('all');
+  const [rebalanceRecommendations, setRebalanceRecommendations] = useState<
+    RebalanceRecommendation[]
+  >([]);
+  const [selectedChain, setSelectedChain] = useState<'all' | 'ethereum' | 'solana' | 'polygon'>(
+    'all',
+  );
   // const [isLoading, setIsLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
@@ -55,7 +61,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
       price: 210.03,
       change24h: 5.23,
       allocation: 32.1,
-      chain: 'solana'
+      chain: 'solana',
     },
     {
       symbol: 'BONK',
@@ -66,18 +72,18 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
       price: 0.0000583,
       change24h: -2.15,
       allocation: 14.5,
-      chain: 'solana'
+      chain: 'solana',
     },
     {
       symbol: 'ETH',
       name: 'Ethereum',
       address: '0x0000000000000000000000000000000000000000',
       balance: 2.1,
-      usdValue: 5432.10,
+      usdValue: 5432.1,
       price: 2587.67,
       change24h: 3.45,
       allocation: 53.9,
-      chain: 'ethereum'
+      chain: 'ethereum',
     },
     {
       symbol: 'USDC',
@@ -88,8 +94,8 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
       price: 1.0,
       change24h: 0.01,
       allocation: 5.0,
-      chain: 'solana'
-    }
+      chain: 'solana',
+    },
   ];
 
   const mockStats: PortfolioStats = {
@@ -98,7 +104,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
     change24hPercent: 2.78,
     totalAssets: 4,
     diversificationScore: 7.2,
-    riskScore: 6.8
+    riskScore: 6.8,
   };
 
   const mockRebalanceRecommendations: RebalanceRecommendation[] = [
@@ -108,7 +114,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
       targetAllocation: 25.0,
       action: 'SELL',
       amount: 2.3,
-      reasoning: 'Reduce concentration risk by trimming overweight position'
+      reasoning: 'Reduce concentration risk by trimming overweight position',
     },
     {
       asset: 'ETH',
@@ -116,7 +122,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
       targetAllocation: 50.0,
       action: 'SELL',
       amount: 0.15,
-      reasoning: 'Slight rebalancing to maintain strategic allocation'
+      reasoning: 'Slight rebalancing to maintain strategic allocation',
     },
     {
       asset: 'USDC',
@@ -124,8 +130,8 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
       targetAllocation: 10.0,
       action: 'BUY',
       amount: 531.17,
-      reasoning: 'Increase stablecoin allocation for better risk management'
-    }
+      reasoning: 'Increase stablecoin allocation for better risk management',
+    },
   ];
 
   useEffect(() => {
@@ -138,48 +144,66 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
     const interval = setInterval(() => {
       setLastUpdate(new Date());
       // In production, this would fetch real price data
-      setAssets(prevAssets => 
-        prevAssets.map(asset => ({
+      setAssets((prevAssets) =>
+        prevAssets.map((asset) => ({
           ...asset,
           price: asset.price * (0.99 + Math.random() * 0.02), // ±1% random fluctuation
-          change24h: -5 + Math.random() * 10 // Random 24h change between -5% and +5%
-        }))
+          change24h: -5 + Math.random() * 10, // Random 24h change between -5% and +5%
+        })),
       );
     }, 30000); // Update every 30 seconds
 
     return () => clearInterval(interval);
   }, []);
 
-  const filteredAssets = selectedChain === 'all' 
-    ? assets 
-    : assets.filter(asset => asset.chain === selectedChain);
+  const filteredAssets =
+    selectedChain === 'all' ? assets : assets.filter((asset) => asset.chain === selectedChain);
 
   const getChangeColor = (change: number): string => {
-    if (change > 0) return styles.positive;
-    if (change < 0) return styles.negative;
+    if (change > 0) {
+      return styles.positive;
+    }
+
+    if (change < 0) {
+      return styles.negative;
+    }
+
     return styles.neutral;
   };
 
   const getChainIcon = (chain: string): string => {
     switch (chain) {
-      case 'ethereum': return '⟠';
-      case 'solana': return '◎';
-      case 'polygon': return '⬟';
-      default: return '🔗';
+      case 'ethereum':
+        return '⟠';
+      case 'solana':
+        return '◎';
+      case 'polygon':
+        return '⬟';
+      default:
+        return '🔗';
     }
   };
 
   const getActionColor = (action: string): string => {
     switch (action) {
-      case 'BUY': return styles.buyAction;
-      case 'SELL': return styles.sellAction;
-      default: return styles.holdAction;
+      case 'BUY':
+        return styles.buyAction;
+      case 'SELL':
+        return styles.sellAction;
+      default:
+        return styles.holdAction;
     }
   };
 
   const getRiskScoreColor = (score: number): string => {
-    if (score >= 8) return styles.highRisk;
-    if (score >= 6) return styles.mediumRisk;
+    if (score >= 8) {
+      return styles.highRisk;
+    }
+
+    if (score >= 6) {
+      return styles.mediumRisk;
+    }
+
     return styles.lowRisk;
   };
 
@@ -189,39 +213,51 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
         <div className={styles.statCard}>
           <h4>Total Portfolio Value</h4>
           <div className={styles.statValue}>${portfolioStats?.totalValue.toLocaleString()}</div>
-          <div className={`${styles.statChange} ${getChangeColor(portfolioStats?.change24hPercent || 0)}`}>
+          <div
+            className={`${styles.statChange} ${getChangeColor(portfolioStats?.change24hPercent || 0)}`}
+          >
             {portfolioStats?.change24hPercent && portfolioStats.change24hPercent > 0 ? '+' : ''}
-            {portfolioStats?.change24hPercent.toFixed(2)}% 
-            (${portfolioStats?.change24h.toFixed(2)})
+            {portfolioStats?.change24hPercent.toFixed(2)}% (${portfolioStats?.change24h.toFixed(2)})
           </div>
         </div>
-        
+
         <div className={styles.statCard}>
           <h4>Total Assets</h4>
           <div className={styles.statValue}>{portfolioStats?.totalAssets}</div>
-          <div className={styles.statLabel}>Across {new Set(assets.map(a => a.chain)).size} chains</div>
-        </div>
-        
-        <div className={styles.statCard}>
-          <h4>Diversification Score</h4>
-          <div className={styles.statValue}>{portfolioStats?.diversificationScore.toFixed(1)}/10</div>
           <div className={styles.statLabel}>
-            {(portfolioStats?.diversificationScore || 0) >= 7 ? 'Well Diversified' : 'Needs Improvement'}
+            Across {new Set(assets.map((a) => a.chain)).size} chains
           </div>
         </div>
-        
+
+        <div className={styles.statCard}>
+          <h4>Diversification Score</h4>
+          <div className={styles.statValue}>
+            {portfolioStats?.diversificationScore.toFixed(1)}/10
+          </div>
+          <div className={styles.statLabel}>
+            {(portfolioStats?.diversificationScore || 0) >= 7
+              ? 'Well Diversified'
+              : 'Needs Improvement'}
+          </div>
+        </div>
+
         <div className={styles.statCard}>
           <h4>Risk Score</h4>
-          <div className={`${styles.statValue} ${getRiskScoreColor(portfolioStats?.riskScore || 0)}`}>
+          <div
+            className={`${styles.statValue} ${getRiskScoreColor(portfolioStats?.riskScore || 0)}`}
+          >
             {portfolioStats?.riskScore.toFixed(1)}/10
           </div>
           <div className={styles.statLabel}>
-            {(portfolioStats?.riskScore || 0) >= 8 ? 'High Risk' : 
-             (portfolioStats?.riskScore || 0) >= 6 ? 'Medium Risk' : 'Low Risk'}
+            {(portfolioStats?.riskScore || 0) >= 8
+              ? 'High Risk'
+              : (portfolioStats?.riskScore || 0) >= 6
+                ? 'Medium Risk'
+                : 'Low Risk'}
           </div>
         </div>
       </div>
-      
+
       <div className={styles.allocationChart}>
         <h4>Asset Allocation</h4>
         <div className={styles.pieChart}>
@@ -229,7 +265,11 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
           <div className={styles.allocationList}>
             {assets.map((asset, index) => (
               <div key={asset.symbol} className={styles.allocationItem}>
-                <div className={styles.allocationColor} style={{ backgroundColor: `hsl(${index * 60}, 70%, 50%)` }}></div>
+                <div
+                  className={styles.allocationColor}
+                  style={{ backgroundColor: `hsl(${index * 60}, 70%, 50%)` }}
+                >
+                </div>
                 <span className={styles.allocationSymbol}>{asset.symbol}</span>
                 <span className={styles.allocationPercent}>{asset.allocation.toFixed(1)}%</span>
                 <span className={styles.allocationValue}>${asset.usdValue.toFixed(2)}</span>
@@ -246,19 +286,19 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
       <div className={styles.assetsHeader}>
         <h3>Portfolio Assets</h3>
         <div className={styles.chainFilters}>
-          <button 
+          <button
             className={`${styles.chainFilter} ${selectedChain === 'all' ? styles.active : ''}`}
             onClick={() => setSelectedChain('all')}
           >
             All Chains
           </button>
-          <button 
+          <button
             className={`${styles.chainFilter} ${selectedChain === 'ethereum' ? styles.active : ''}`}
             onClick={() => setSelectedChain('ethereum')}
           >
             ⟠ Ethereum
           </button>
-          <button 
+          <button
             className={`${styles.chainFilter} ${selectedChain === 'solana' ? styles.active : ''}`}
             onClick={() => setSelectedChain('solana')}
           >
@@ -266,9 +306,9 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
           </button>
         </div>
       </div>
-      
+
       <div className={styles.assetsList}>
-        {filteredAssets.map(asset => (
+        {filteredAssets.map((asset) => (
           <div key={asset.symbol} className={styles.assetCard}>
             <div className={styles.assetHeader}>
               <div className={styles.assetInfo}>
@@ -278,11 +318,9 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
                   <span className={styles.assetName}>{asset.name}</span>
                 </div>
               </div>
-              <div className={styles.assetAllocation}>
-                {asset.allocation.toFixed(1)}%
-              </div>
+              <div className={styles.assetAllocation}>{asset.allocation.toFixed(1)}%</div>
             </div>
-            
+
             <div className={styles.assetMetrics}>
               <div className={styles.metricRow}>
                 <span className={styles.metricLabel}>Balance:</span>
@@ -297,7 +335,8 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
               <div className={styles.metricRow}>
                 <span className={styles.metricLabel}>24h Change:</span>
                 <span className={`${styles.metricValue} ${getChangeColor(asset.change24h)}`}>
-                  {asset.change24h > 0 ? '+' : ''}{asset.change24h.toFixed(2)}%
+                  {asset.change24h > 0 ? '+' : ''}
+                  {asset.change24h.toFixed(2)}%
                 </span>
               </div>
               <div className={styles.metricRow}>
@@ -305,7 +344,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
                 <span className={styles.metricValue}>${asset.usdValue.toFixed(2)}</span>
               </div>
             </div>
-            
+
             <div className={styles.assetActions}>
               <button className={styles.tradeButton}>Trade</button>
               <button className={styles.detailsButton}>Details</button>
@@ -325,9 +364,9 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
           <span>Estimated Gas: $12.50</span>
         </div>
       </div>
-      
+
       <div className={styles.recommendationsList}>
-        {rebalanceRecommendations.map(rec => (
+        {rebalanceRecommendations.map((rec) => (
           <div key={rec.asset} className={styles.recommendationCard}>
             <div className={styles.recHeader}>
               <span className={styles.recAsset}>{rec.asset}</span>
@@ -335,7 +374,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
                 {rec.action}
               </span>
             </div>
-            
+
             <div className={styles.recDetails}>
               <div className={styles.allocationChange}>
                 <span className={styles.currentAllocation}>
@@ -346,33 +385,25 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
                   Target: {rec.targetAllocation.toFixed(1)}%
                 </span>
               </div>
-              
+
               <div className={styles.recAmount}>
                 Amount: {rec.amount.toLocaleString()} {rec.asset !== 'USDC' ? rec.asset : ''}
               </div>
-              
-              <div className={styles.recReasoning}>
-                {rec.reasoning}
-              </div>
+
+              <div className={styles.recReasoning}>{rec.reasoning}</div>
             </div>
-            
+
             <div className={styles.recActions}>
-              <button className={styles.executeButton}>
-                Execute {rec.action}
-              </button>
+              <button className={styles.executeButton}>Execute {rec.action}</button>
               <button className={styles.skipButton}>Skip</button>
             </div>
           </div>
         ))}
       </div>
-      
+
       <div className={styles.rebalanceActions}>
-        <button className={styles.executeAllButton}>
-          Execute All Recommendations
-        </button>
-        <button className={styles.customRebalanceButton}>
-          Custom Rebalance
-        </button>
+        <button className={styles.executeAllButton}>Execute All Recommendations</button>
+        <button className={styles.customRebalanceButton}>Custom Rebalance</button>
       </div>
     </div>
   );
@@ -388,7 +419,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
           <button className={`${styles.timeFilter} ${styles.active}`}>90D</button>
         </div>
       </div>
-      
+
       <div className={styles.analyticsGrid}>
         <div className={styles.analyticsCard}>
           <h4>Performance vs Benchmarks</h4>
@@ -411,7 +442,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
             </div>
           </div>
         </div>
-        
+
         <div className={styles.analyticsCard}>
           <h4>Risk Metrics</h4>
           <div className={styles.riskMetrics}>
@@ -433,7 +464,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
             </div>
           </div>
         </div>
-        
+
         <div className={styles.analyticsCard}>
           <h4>Chain Distribution</h4>
           <div className={styles.chainDistribution}>
@@ -451,7 +482,7 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
             </div>
           </div>
         </div>
-        
+
         <div className={styles.analyticsCard}>
           <h4>Top Performers</h4>
           <div className={styles.performers}>
@@ -486,46 +517,46 @@ const PortfolioDashboard: React.FC<PortfolioDashboardProps> = ({ onClose }) => {
       <div className={styles.dashboardHeader}>
         <div className={styles.titleSection}>
           <h2>PORTFOLIO COMMAND CENTER</h2>
-          <button className={styles.closeButton} onClick={onClose}>×</button>
+          <button className={styles.closeButton} onClick={onClose}>
+            ×
+          </button>
         </div>
         <div className={styles.connectionStatus}>
           <div className={styles.statusIndicator}>
             <span className={`${styles.statusDot} ${styles.connected}`}></span>
             <span className={styles.statusText}>Portfolio Agent: CONNECTED</span>
           </div>
-          <div className={styles.lastUpdate}>
-            Last Update: {lastUpdate.toLocaleTimeString()}
-          </div>
+          <div className={styles.lastUpdate}>Last Update: {lastUpdate.toLocaleTimeString()}</div>
         </div>
       </div>
-      
+
       <div className={styles.navigationTabs}>
-        <button 
+        <button
           className={`${styles.navTab} ${activeView === 'overview' ? styles.active : ''}`}
           onClick={() => setActiveView('overview')}
         >
           📊 OVERVIEW
         </button>
-        <button 
+        <button
           className={`${styles.navTab} ${activeView === 'assets' ? styles.active : ''}`}
           onClick={() => setActiveView('assets')}
         >
           💰 ASSETS
         </button>
-        <button 
+        <button
           className={`${styles.navTab} ${activeView === 'rebalance' ? styles.active : ''}`}
           onClick={() => setActiveView('rebalance')}
         >
           ⚖️ REBALANCE
         </button>
-        <button 
+        <button
           className={`${styles.navTab} ${activeView === 'analytics' ? styles.active : ''}`}
           onClick={() => setActiveView('analytics')}
         >
           📈 ANALYTICS
         </button>
       </div>
-      
+
       <div className={styles.dashboardContent}>
         {activeView === 'overview' && renderOverview()}
         {activeView === 'assets' && renderAssets()}

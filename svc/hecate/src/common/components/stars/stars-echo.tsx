@@ -1,14 +1,12 @@
-import { useState, useRef, Suspense } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Points, PointMaterial, Preload } from "@react-three/drei";
-import * as random from "maath/random";
+import { Points, PointMaterial, Preload } from '@react-three/drei';
+import { Canvas, useFrame } from '@react-three/fiber';
+import * as random from 'maath/random';
+import { useState, useRef, Suspense } from 'react';
 import styles from './stars.module.scss';
 
 const Stars = (props) => {
   const ref = useRef();
-  const [sphere] = useState(() =>
-    random.inSphere(new Float32Array(5000), { radius: 1.2 })
-  );
+  const [sphere] = useState(() => random.inSphere(new Float32Array(5000), { radius: 1.2 }));
 
   useFrame((state, delta) => {
     if (ref.current) {
@@ -24,7 +22,7 @@ const Stars = (props) => {
           transparent
           color="#f272c8"
           size={0.002}
-          sizeAttenuation={true}
+          sizeAttenuation
           depthWrite={false}
         />
       </Points>
@@ -32,18 +30,15 @@ const Stars = (props) => {
   );
 };
 
-const StarsCanvasEcho = () => {
-  return (
-    <div className={styles.starsCanvasEcho}>
-      <Canvas camera={{ position: [0, 0, 1] }}>
-        <Suspense fallback={null}>
-          <Stars />
-        </Suspense>
-        <Preload all />
-      </Canvas>
-    </div>
-  );
-};
+const StarsCanvasEcho = () => (
+  <div className={styles.starsCanvasEcho}>
+    <Canvas camera={{ position: [0, 0, 1] }}>
+      <Suspense fallback={null}>
+        <Stars />
+      </Suspense>
+      <Preload all />
+    </Canvas>
+  </div>
+);
 
 export default StarsCanvasEcho;
-

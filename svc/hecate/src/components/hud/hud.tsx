@@ -1,15 +1,37 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styles from './hud.module.scss';
-import { fetchWalletData, fetchUserProfile, fetchAscentLevel, fetchActiveMission, MissionData } from '../../common/services/api';
-import { isAuthenticated, restoreSession, createAuthChallenge, verifyAuthChallenge, checkMCPHealth } from '../../common/services/mcp-api';
-// Removed separate dashboard imports - all functionality is now integrated into HUD tabs
 import xLogo from '../../assets/images/X_logo_black.png';
 import nulleyeLogo from '../../assets/images/nulleye_logo.png';
+import type { MissionData } from '../../common/services/api';
+import {
+  fetchWalletData,
+  fetchUserProfile,
+  fetchAscentLevel,
+  fetchActiveMission,
+} from '../../common/services/api';
+import {
+  isAuthenticated,
+  restoreSession,
+  createAuthChallenge,
+  verifyAuthChallenge,
+  checkMCPHealth,
+} from '../../common/services/mcp-api';
+// Removed separate dashboard imports - all functionality is now integrated into HUD tabs
 import ContextDashboard from '../context-dashboard';
+import styles from './hud.module.scss';
 
 type Screen = 'home' | 'overview' | 'camp' | 'inventory' | 'campaign' | 'lab';
 type Theme = 'null' | 'light' | 'dark';
-type TabType = 'missions' | 'systems' | 'defense' | 'uplink' | 'hud' | 'status' | 'arbitrage' | 'social' | 'portfolio' | 'defi';
+type TabType =
+  | 'missions'
+  | 'systems'
+  | 'defense'
+  | 'uplink'
+  | 'hud'
+  | 'status'
+  | 'arbitrage'
+  | 'social'
+  | 'portfolio'
+  | 'defi';
 
 interface SystemStatus {
   hud: boolean;
@@ -83,11 +105,11 @@ interface Uplink {
   icon: string;
   details: {
     description: string;
-    stats: Array<{
+    stats: {
       label: string;
       value: string | number;
       status?: string;
-    }>;
+    }[];
   };
 }
 
@@ -124,14 +146,14 @@ const SCREEN_LABELS: Record<Screen, string> = {
   lab: 'LAB',
 };
 
-const HUD: React.FC<HUDProps> = ({ 
-  publicKey, 
-  onDisconnect, 
+const HUD: React.FC<HUDProps> = ({
+  publicKey,
+  onDisconnect,
   onConnectWallet,
-  theme = 'light', 
-  onClose, 
+  theme = 'light',
+  onClose,
   onThemeChange,
-  systemStatus
+  systemStatus,
 }) => {
   const [screen, setScreen] = useState<Screen>('home');
   const [walletData, setWalletData] = useState<any>(null);
@@ -144,8 +166,8 @@ const HUD: React.FC<HUDProps> = ({
     matrix: {
       level: 'NONE',
       rarity: 'NONE',
-      status: 'N/A'
-    }
+      status: 'N/A',
+    },
   });
   const [ascentLevel, setAscentLevel] = useState<AscentLevel | null>(null);
   const [showAscentDetails, setShowAscentDetails] = useState<boolean>(false);
@@ -164,7 +186,7 @@ const HUD: React.FC<HUDProps> = ({
   const [emberLinkStatus, setEmberLinkStatus] = useState<EmberLinkStatus>({
     connected: false,
     lastSeen: null,
-    browserInfo: null
+    browserInfo: null,
   });
   const [isDigitizing, setIsDigitizing] = useState<boolean>(false);
   const [selectedUplink, setSelectedUplink] = useState<Uplink | null>(null);
@@ -172,10 +194,21 @@ const HUD: React.FC<HUDProps> = ({
   // Remove separate dashboard overlays - everything will be integrated into HUD tabs
   const [mcpAuthenticated, setMcpAuthenticated] = useState<boolean>(false);
   const [mcpHealthStatus, setMcpHealthStatus] = useState<any>(null);
-  const [nulleyeState, setNulleyeState] = useState<'base' | 'response' | 'question' | 'thinking' | 'alert' | 'error' | 'warning' | 'success' | 'processing'>('base');
+  const [nulleyeState, setNulleyeState] = useState<
+    | 'base'
+    | 'response'
+    | 'question'
+    | 'thinking'
+    | 'alert'
+    | 'error'
+    | 'warning'
+    | 'success'
+    | 'processing'
+  >('base');
   const [showContextDashboard, setShowContextDashboard] = useState<boolean>(false);
-  const [contextDashboardActiveTab, setContextDashboardActiveTab] = useState<'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'>('hecate');
-
+  const [contextDashboardActiveTab, setContextDashboardActiveTab] = useState<
+    'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'
+  >('hecate');
 
   // Only unlock 'home' and 'overview' by default, unlock others if logged in
   const unlockedScreens = publicKey ? ['home', 'overview', 'camp'] : ['home', 'overview'];
@@ -188,27 +221,32 @@ const HUD: React.FC<HUDProps> = ({
       status: emberLinkStatus.connected ? 'active' : 'inactive',
       icon: '🔥',
       details: {
-        description: 'Direct connection to the Ember network, enabling secure communication and data transfer.',
+        description:
+          'Direct connection to the Ember network, enabling secure communication and data transfer.',
         stats: [
           {
             label: 'Connection Status',
             value: emberLinkStatus.connected ? 'Connected' : 'Disconnected',
-            status: emberLinkStatus.connected ? 'active' : 'inactive'
+            status: emberLinkStatus.connected ? 'active' : 'inactive',
           },
           {
             label: 'Last Seen',
-            value: emberLinkStatus.lastSeen ? new Date(emberLinkStatus.lastSeen).toLocaleString() : 'Never'
+            value: emberLinkStatus.lastSeen
+              ? new Date(emberLinkStatus.lastSeen).toLocaleString()
+              : 'Never',
           },
           {
             label: 'Browser',
-            value: emberLinkStatus.browserInfo ? `${emberLinkStatus.browserInfo.name} ${emberLinkStatus.browserInfo.version}` : 'Unknown'
+            value: emberLinkStatus.browserInfo
+              ? `${emberLinkStatus.browserInfo.name} ${emberLinkStatus.browserInfo.version}`
+              : 'Unknown',
           },
           {
             label: 'Platform',
-            value: emberLinkStatus.browserInfo?.platform || 'Unknown'
-          }
-        ]
-      }
+            value: emberLinkStatus.browserInfo?.platform || 'Unknown',
+          },
+        ],
+      },
     },
     {
       id: 'neural',
@@ -216,23 +254,24 @@ const HUD: React.FC<HUDProps> = ({
       status: 'inactive',
       icon: '🧠',
       details: {
-        description: 'Advanced neural interface for enhanced cognitive processing and system interaction.',
+        description:
+          'Advanced neural interface for enhanced cognitive processing and system interaction.',
         stats: [
           {
             label: 'Status',
             value: 'LOCKED',
-            status: 'inactive'
+            status: 'inactive',
           },
           {
             label: 'Signal Strength',
-            value: 'N/A'
+            value: 'N/A',
           },
           {
             label: 'Latency',
-            value: 'N/A'
-          }
-        ]
-      }
+            value: 'N/A',
+          },
+        ],
+      },
     },
     {
       id: 'wallet',
@@ -245,18 +284,18 @@ const HUD: React.FC<HUDProps> = ({
           {
             label: 'Status',
             value: 'LOCKED',
-            status: 'inactive'
+            status: 'inactive',
           },
           {
             label: 'Last Transaction',
-            value: 'N/A'
+            value: 'N/A',
           },
           {
             label: 'Security Level',
-            value: 'N/A'
-          }
-        ]
-      }
+            value: 'N/A',
+          },
+        ],
+      },
     },
     {
       id: 'token',
@@ -269,179 +308,179 @@ const HUD: React.FC<HUDProps> = ({
           {
             label: 'Status',
             value: 'LOCKED',
-            status: 'inactive'
+            status: 'inactive',
           },
           {
             label: 'Scan Progress',
-            value: 'N/A'
+            value: 'N/A',
           },
           {
             label: 'Last Update',
-            value: 'N/A'
-          }
-        ]
-      }
-    }
+            value: 'N/A',
+          },
+        ],
+      },
+    },
   ];
 
   // Add mock leaderboard data
   const leaderboardData: LeaderboardEntry[] = [
     {
-      id: "PervySage",
+      id: 'PervySage',
       rank: 1,
       ascent: 999,
       nether: 999999,
       cacheValue: 999999,
       memories: 999,
       matrix: {
-        level: "ARCHITECT",
-        rarity: "MYTHICAL",
-        status: "FLAME KEEPER"
-      }
+        level: 'ARCHITECT',
+        rarity: 'MYTHICAL',
+        status: 'FLAME KEEPER',
+      },
     },
     {
-      id: "HUD-001",
+      id: 'HUD-001',
       rank: 2,
       ascent: 5,
       nether: 1500,
       cacheValue: 2500,
       memories: 12,
       matrix: {
-        level: "MASTER",
-        rarity: "LEGENDARY",
-        status: "LAST FLAME"
-      }
+        level: 'MASTER',
+        rarity: 'LEGENDARY',
+        status: 'LAST FLAME',
+      },
     },
     {
-      id: "HUD-002",
+      id: 'HUD-002',
       rank: 3,
       ascent: 4,
       nether: 1200,
       cacheValue: 2000,
       memories: 10,
       matrix: {
-        level: "EXPERT",
-        rarity: "EPIC",
-        status: "LAST FLAME"
-      }
+        level: 'EXPERT',
+        rarity: 'EPIC',
+        status: 'LAST FLAME',
+      },
     },
     {
-      id: "HUD-003",
+      id: 'HUD-003',
       rank: 4,
       ascent: 3,
       nether: 900,
       cacheValue: 1500,
       memories: 8,
       matrix: {
-        level: "ADVANCED",
-        rarity: "RARE",
-        status: "LAST FLAME"
-      }
+        level: 'ADVANCED',
+        rarity: 'RARE',
+        status: 'LAST FLAME',
+      },
     },
     {
-      id: "HUD-004",
+      id: 'HUD-004',
       rank: 5,
       ascent: 2,
       nether: 600,
       cacheValue: 1000,
       memories: 6,
       matrix: {
-        level: "INTERMEDIATE",
-        rarity: "UNCOMMON",
-        status: "LAST FLAME"
-      }
+        level: 'INTERMEDIATE',
+        rarity: 'UNCOMMON',
+        status: 'LAST FLAME',
+      },
     },
     {
-      id: "HUD-005",
+      id: 'HUD-005',
       rank: 6,
       ascent: 1,
       nether: 300,
       cacheValue: 500,
       memories: 4,
       matrix: {
-        level: "BEGINNER",
-        rarity: "COMMON",
-        status: "LAST FLAME"
-      }
+        level: 'BEGINNER',
+        rarity: 'COMMON',
+        status: 'LAST FLAME',
+      },
     },
     {
-      id: "HUD-006",
+      id: 'HUD-006',
       rank: 7,
       ascent: 1,
       nether: 250,
       cacheValue: 400,
       memories: 3,
       matrix: {
-        level: "BEGINNER",
-        rarity: "COMMON",
-        status: "LAST FLAME"
-      }
+        level: 'BEGINNER',
+        rarity: 'COMMON',
+        status: 'LAST FLAME',
+      },
     },
     {
-      id: "HUD-007",
+      id: 'HUD-007',
       rank: 8,
       ascent: 1,
       nether: 200,
       cacheValue: 300,
       memories: 2,
       matrix: {
-        level: "BEGINNER",
-        rarity: "COMMON",
-        status: "LAST FLAME"
-      }
+        level: 'BEGINNER',
+        rarity: 'COMMON',
+        status: 'LAST FLAME',
+      },
     },
     {
-      id: "HUD-008",
+      id: 'HUD-008',
       rank: 9,
       ascent: 1,
       nether: 150,
       cacheValue: 200,
       memories: 1,
       matrix: {
-        level: "BEGINNER",
-        rarity: "COMMON",
-        status: "LAST FLAME"
-      }
+        level: 'BEGINNER',
+        rarity: 'COMMON',
+        status: 'LAST FLAME',
+      },
     },
     {
-      id: "HUD-009",
+      id: 'HUD-009',
       rank: 10,
       ascent: 1,
       nether: 100,
       cacheValue: 150,
       memories: 1,
       matrix: {
-        level: "BEGINNER",
-        rarity: "COMMON",
-        status: "LAST FLAME"
-      }
+        level: 'BEGINNER',
+        rarity: 'COMMON',
+        status: 'LAST FLAME',
+      },
     },
     {
-      id: "HUD-010",
+      id: 'HUD-010',
       rank: 11,
       ascent: 1,
       nether: 50,
       cacheValue: 100,
       memories: 1,
       matrix: {
-        level: "BEGINNER",
-        rarity: "COMMON",
-        status: "LAST FLAME"
-      }
+        level: 'BEGINNER',
+        rarity: 'COMMON',
+        status: 'LAST FLAME',
+      },
     },
     {
-      id: "HUD-011",
+      id: 'HUD-011',
       rank: 12,
       ascent: 1,
       nether: 25,
       cacheValue: 50,
       memories: 1,
       matrix: {
-        level: "BEGINNER",
-        rarity: "COMMON",
-        status: "LAST FLAME"
-      }
-    }
+        level: 'BEGINNER',
+        rarity: 'COMMON',
+        status: 'LAST FLAME',
+      },
+    },
   ];
 
   const getStatusClass = (status: string): string => {
@@ -464,19 +503,19 @@ const HUD: React.FC<HUDProps> = ({
   };
 
   const systemAnalysisItems: SystemAnalysis[] = [
-    { name: "Neural Link", status: "SCANNING", locked: false },
-    { name: "Wallet Health", status: "OPTIMAL", locked: false },
-    { name: "Token Analysis", status: "IN PROGRESS", locked: false },
-    { name: "Risk Assessment", status: "LOW", locked: true },
-    { name: "Memory Integrity", status: "CHECKING", locked: true },
-    { name: "Network Status", status: "CONNECTED", locked: true },
-    { name: "Matrix Sync", status: "OFFLINE", locked: true },
-    { name: "Reality Engine", status: "DORMANT", locked: true },
-    { name: "Core Systems", status: "LOCKED", locked: true },
-    { name: "Neural Cache", status: "UNAVAILABLE", locked: true },
-    { name: "Quantum Resonance", status: "UNKNOWN", locked: true },
-    { name: "Bio-Interface", status: "DISABLED", locked: true },
-    { name: "Temporal Alignment", status: "DESYNCED", locked: true }
+    { name: 'Neural Link', status: 'SCANNING', locked: false },
+    { name: 'Wallet Health', status: 'OPTIMAL', locked: false },
+    { name: 'Token Analysis', status: 'IN PROGRESS', locked: false },
+    { name: 'Risk Assessment', status: 'LOW', locked: true },
+    { name: 'Memory Integrity', status: 'CHECKING', locked: true },
+    { name: 'Network Status', status: 'CONNECTED', locked: true },
+    { name: 'Matrix Sync', status: 'OFFLINE', locked: true },
+    { name: 'Reality Engine', status: 'DORMANT', locked: true },
+    { name: 'Core Systems', status: 'LOCKED', locked: true },
+    { name: 'Neural Cache', status: 'UNAVAILABLE', locked: true },
+    { name: 'Quantum Resonance', status: 'UNKNOWN', locked: true },
+    { name: 'Bio-Interface', status: 'DISABLED', locked: true },
+    { name: 'Temporal Alignment', status: 'DESYNCED', locked: true },
   ];
 
   const handleScreenChange = (newScreen: Screen) => {
@@ -491,10 +530,12 @@ const HUD: React.FC<HUDProps> = ({
       try {
         // Try to restore existing session
         const hasSession = restoreSession();
+
         setMcpAuthenticated(hasSession && isAuthenticated());
-        
+
         // Check MCP health
         const health = await checkMCPHealth();
+
         setMcpHealthStatus(health);
       } catch (error) {
         console.error('Failed to initialize MCP:', error);
@@ -511,39 +552,43 @@ const HUD: React.FC<HUDProps> = ({
         try {
           // Fetch basic wallet data
           const data = await fetchWalletData(publicKey);
+
           setWalletData(data);
-          
+
           // Fetch user profile data including username if available
           try {
             const profileData = await fetchUserProfile(publicKey);
-            
+
             // Check if the wallet has Nectar tokens
-            const hasNectarToken = profileData.active_tokens.includes("NECTAR");
-            
+            const hasNectarToken = profileData.active_tokens.includes('NECTAR');
+
             // Update user profile with wallet data and username if available
-            setUserProfile(prev => ({
+            setUserProfile((prev) => ({
               ...prev,
               nether: hasNectarToken ? data.balance : null,
               cacheValue: data.balance || 0, // Set cache value to wallet balance
-              id: profileData.username ? `@${profileData.username}` : `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol`
+              id: profileData.username
+                ? `@${profileData.username}`
+                : `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol`,
             }));
-            
+
             // Log the profile data to debug
             console.log('Profile data received:', profileData);
             console.log('Username:', profileData.username);
           } catch (profileError) {
             console.error('Failed to fetch user profile:', profileError);
             // Fallback to just updating with wallet data
-            setUserProfile(prev => ({
+            setUserProfile((prev) => ({
               ...prev,
               nether: null, // Set to null if we can't determine if Nectar exists
-              cacheValue: data.balance || 0 // Set cache value to wallet balance
+              cacheValue: data.balance || 0, // Set cache value to wallet balance
             }));
           }
-          
+
           // Fetch ascent level data
           try {
             const ascentData = await fetchAscentLevel(publicKey);
+
             // Convert AscentLevelData to AscentLevel
             setAscentLevel({
               level: ascentData.level,
@@ -553,20 +598,21 @@ const HUD: React.FC<HUDProps> = ({
               nextLevel: ascentData.level + 1,
               nextTitle: `Level ${ascentData.level + 1}`,
               nextDescription: 'Next level description will be available soon.',
-              accolades: ascentData.accolades
+              accolades: ascentData.accolades,
             });
             // Update the ascent value in userProfile
-            setUserProfile(prev => ({
+            setUserProfile((prev) => ({
               ...prev,
-              ascent: ascentData.level
+              ascent: ascentData.level,
             }));
           } catch (ascentError) {
             console.error('Failed to fetch ascent level:', ascentError);
           }
-          
+
           // Fetch active mission
           try {
             const missionData = await fetchActiveMission(publicKey);
+
             setActiveMission(missionData);
           } catch (missionError) {
             console.error('Failed to fetch active mission:', missionError);
@@ -584,7 +630,7 @@ const HUD: React.FC<HUDProps> = ({
   useEffect(() => {
     // TODO: Implement WebSocket connection to receive Ember Link status updates
     // This will be connected to the Aether browser extension
-    
+
     // Placeholder for WebSocket connection
     const setupEmberLinkConnection = () => {
       // TODO: Connect to WebSocket server for Ember Link status
@@ -594,7 +640,7 @@ const HUD: React.FC<HUDProps> = ({
       //   const data = JSON.parse(event.data);
       //   setEmberLinkStatus(data);
       // };
-      
+
       // For now, simulate connection status
       const mockEmberLinkStatus = {
         connected: true,
@@ -602,30 +648,29 @@ const HUD: React.FC<HUDProps> = ({
         browserInfo: {
           name: 'Chrome',
           version: '120.0.0',
-          platform: 'Linux'
-        }
+          platform: 'Linux',
+        },
       };
-      
+
       // Simulate periodic updates
       const interval = setInterval(() => {
-        setEmberLinkStatus(prev => ({
+        setEmberLinkStatus((prev) => ({
           ...prev,
-          lastSeen: new Date()
+          lastSeen: new Date(),
         }));
       }, 30000); // Update every 30 seconds
-      
+
       return () => clearInterval(interval);
     };
-    
-    const cleanup = setupEmberLinkConnection();
-    return cleanup;
+
+    return setupEmberLinkConnection();
   }, []);
 
   // Add click outside handler for mission dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        missionDropdownRef.current && 
+        missionDropdownRef.current &&
         !missionDropdownRef.current.contains(event.target as Node) &&
         cardRef.current &&
         !cardRef.current.contains(event.target as Node)
@@ -635,28 +680,9 @@ const HUD: React.FC<HUDProps> = ({
     };
 
     document.addEventListener('mousedown', handleClickOutside);
+
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleDisconnect = async () => {
-    if ('phantom' in window) {
-      const provider = (window as any).phantom?.solana;
-      if (provider) {
-        try {
-          // Force disconnect from Phantom
-          await provider.disconnect();
-          // Clear all session data
-          localStorage.removeItem('walletPublickey');
-          localStorage.removeItem('hasSeenHUD');
-          localStorage.removeItem('chatCollapsedState');
-          // Show lock instruction before disconnecting
-          onDisconnect();
-        } catch (error) {
-          console.error('Error disconnecting from Phantom:', error);
-        }
-      }
-    }
-  };
 
   const handleAlertClick = () => {
     setShowAlerts(true);
@@ -686,33 +712,35 @@ const HUD: React.FC<HUDProps> = ({
   const handleMCPAuthentication = async () => {
     if (!publicKey) {
       alert('Please connect your wallet first');
+
       return;
     }
 
     try {
       // Create auth challenge
       const challenge = await createAuthChallenge(publicKey);
-      
+
       // For Phantom wallet, sign the challenge
       if ('phantom' in window) {
         const provider = (window as any).phantom?.solana;
+
         if (provider) {
           const message = new TextEncoder().encode(challenge.message);
           const signedMessage = await provider.signMessage(message, 'utf8');
           const signature = Array.from(signedMessage.signature);
-          
+
           // Verify the signature with MCP
           const authResponse = await verifyAuthChallenge(
             publicKey,
             signature.toString(),
-            'phantom'
+            'phantom',
           );
-          
+
           if (authResponse.success) {
             setMcpAuthenticated(true);
             alert('Successfully authenticated with MCP!');
           } else {
-            alert('Authentication failed: ' + authResponse.message);
+            alert(`Authentication failed: ${authResponse.message}`);
           }
         }
       }
@@ -726,26 +754,30 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderControlScreen = () => (
     <nav className={styles.verticalNavbar}>
-      <button 
-        className={styles.nullblockTitleButton}
-        onClick={() => setScreen('home')}
-      >
+      <button className={styles.nullblockTitleButton} onClick={() => setScreen('home')}>
         NULLBLOCK
       </button>
-      
+
       {/* NULLEYE - Living system indicator */}
-      <div 
-        className={`${styles.nulleye} ${styles[nulleyeState]}`}
+      <div
+        className={`${styles.nulleye} ${styles[nulleyeState]} ${!publicKey ? styles.locked : styles.unlocked}`}
         onClick={() => {
           if (!publicKey) {
-            alert('Please connect your Web3 wallet to access advanced features.');
+            // Enhanced feedback for locked state
+            setNulleyeState('error');
+            setTimeout(() => setNulleyeState('base'), 1500);
+            alert(
+              '🔒 SECURE ACCESS REQUIRED\n\nConnect your Web3 wallet to unlock the NullEye interface and access advanced features.',
+            );
+
             return;
           }
+
           setShowContextDashboard(true);
           setContextDashboardActiveTab('hecate');
           setNulleyeState('processing');
         }}
-        title={!publicKey ? 'Connect wallet to access NullEye' : 'Access NullEye'}
+        title={!publicKey ? '🔒 Connect wallet to unlock NullEye' : '🔓 Access NullEye Interface'}
       >
         <div className={styles.pulseRing}></div>
         <div className={styles.dataStream}>
@@ -766,31 +798,30 @@ const HUD: React.FC<HUDProps> = ({
         <div className={styles.staticField}></div>
         <div className={styles.coreNode}></div>
       </div>
-      
-      <div
-        className={`${styles.screenLabel} ${screen === 'home' ? styles.centeredLabel : ''}`}
-      >
+
+      <div className={`${styles.screenLabel} ${screen === 'home' ? styles.centeredLabel : ''}`}>
         {SCREEN_LABELS[screen]}
       </div>
       <div className={styles.navbarButtons}>
-        <button 
-          className={styles.walletButton}
+        <button
+          className={`${styles.walletButton} ${publicKey ? styles.connected : ''}`}
           onClick={publicKey ? onDisconnect : onConnectWallet}
-          title={publicKey ? 'Disconnect Wallet' : 'Connect Wallet'}
+          title={publicKey ? '🔓 Disconnect Wallet (Close Door)' : '🔒 Connect Wallet (Open Door)'}
         >
-          <span className={styles.walletIcon}>🚪</span>
+          <span className={styles.walletIcon}>{publicKey ? '🔓' : '🔒'}</span>
         </button>
-        <button 
+        <button
           className={styles.docsButton}
           onClick={() => window.open('https://aetherbytes.github.io/nullblock-sdk/', '_blank')}
           title="Documentation & Developer Resources"
         >
           <span className={styles.docsIcon}>📚</span>
         </button>
-        <button 
+        <button
           className={styles.themeButton}
           onClick={() => {
             const newTheme = theme === 'light' ? 'dark' : 'light';
+
             onThemeChange(newTheme);
           }}
           title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} theme`}
@@ -801,10 +832,10 @@ const HUD: React.FC<HUDProps> = ({
             <span className={styles.themeIcon}>☀️</span>
           )}
         </button>
-        <a 
-          href="https://x.com/Nullblock_io" 
-          target="_blank" 
-          rel="noopener noreferrer" 
+        <a
+          href="https://x.com/Nullblock_io"
+          target="_blank"
+          rel="noopener noreferrer"
           className={styles.socialButton}
         >
           <img src={xLogo} alt="X" className={styles.socialIcon} />
@@ -822,7 +853,7 @@ const HUD: React.FC<HUDProps> = ({
       <div className={styles.profileItem}>
         <span className={styles.label}>
           ASCENT:
-          <button 
+          <button
             className={styles.infoButton}
             onClick={() => setShowAscentDetails(!showAscentDetails)}
           >
@@ -832,18 +863,18 @@ const HUD: React.FC<HUDProps> = ({
         <div className={styles.ascentContainer}>
           <span className={styles.value}>Net Dweller: 1</span>
           <div className={styles.progressBar}>
-            <div 
-              className={styles.progressFill} 
-              style={{ width: `${35}%` }}
-            ></div>
+            <div className={styles.progressFill} style={{ width: `${35}%` }}></div>
           </div>
         </div>
         {showAscentDetails && (
           <div className={styles.ascentDetails}>
-            <div className={styles.ascentDescription}>A digital lurker extraordinaire! You've mastered the art of watching from the shadows, observing the chaos without ever dipping your toes in. Like a cat watching a laser pointer, you're fascinated but paralyzed by indecision. At least you're not the one getting your digital assets rekt!</div>
-            <div className={styles.progressText}>
-              35% to next level
+            <div className={styles.ascentDescription}>
+              A digital lurker extraordinaire! You've mastered the art of watching from the shadows,
+              observing the chaos without ever dipping your toes in. Like a cat watching a laser
+              pointer, you're fascinated but paralyzed by indecision. At least you're not the one
+              getting your digital assets rekt!
             </div>
+            <div className={styles.progressText}>35% to next level</div>
             <div className={styles.accoladesContainer}>
               <div className={styles.accoladesTitle}>ACCOLADES</div>
               <ul className={styles.accoladesList}>
@@ -863,7 +894,7 @@ const HUD: React.FC<HUDProps> = ({
       <div className={styles.profileItem}>
         <span className={styles.label}>
           NETHER:
-          <button 
+          <button
             className={styles.infoButton}
             onClick={() => setShowNectarDetails(!showNectarDetails)}
           >
@@ -874,7 +905,10 @@ const HUD: React.FC<HUDProps> = ({
         {showNectarDetails && (
           <div className={styles.ascentDetails}>
             <div className={styles.ascentDescription}>
-              NETHER: Magic internet money from the void. Born from nothing, worth everything, and somehow gaining value by the second. The integration has passed the event horizon - good luck trying to spend it. Warning: Prolonged exposure may cause reality distortion and an irresistible urge to dive deeper into the code.
+              NETHER: Magic internet money from the void. Born from nothing, worth everything, and
+              somehow gaining value by the second. The integration has passed the event horizon -
+              good luck trying to spend it. Warning: Prolonged exposure may cause reality distortion
+              and an irresistible urge to dive deeper into the code.
             </div>
           </div>
         )}
@@ -882,7 +916,7 @@ const HUD: React.FC<HUDProps> = ({
       <div className={styles.profileItem}>
         <span className={styles.label}>
           cache value:
-          <button 
+          <button
             className={styles.infoButton}
             onClick={() => setShowCacheValueDetails(!showCacheValueDetails)}
           >
@@ -893,7 +927,12 @@ const HUD: React.FC<HUDProps> = ({
         {showCacheValueDetails && (
           <div className={styles.ascentDetails}>
             <div className={styles.ascentDescription}>
-              Cache Value: Your digital treasure trove, evaluated by our ever-watchful procurement agents. This is the total worth of all valuable assets in your wallet - coins, tokens, and other digital goodies that caught our eye. Coming soon: Categories for services, participant offerings, biological enhancements, and agent capabilities. Think of it as your personal inventory of everything worth something in the Nullblock universe. Don't spend it all in one place!
+              Cache Value: Your digital treasure trove, evaluated by our ever-watchful procurement
+              agents. This is the total worth of all valuable assets in your wallet - coins, tokens,
+              and other digital goodies that caught our eye. Coming soon: Categories for services,
+              participant offerings, biological enhancements, and agent capabilities. Think of it as
+              your personal inventory of everything worth something in the Nullblock universe. Don't
+              spend it all in one place!
             </div>
           </div>
         )}
@@ -901,7 +940,7 @@ const HUD: React.FC<HUDProps> = ({
       <div className={styles.profileItem}>
         <span className={styles.label}>
           MEMORIES:
-          <button 
+          <button
             className={styles.infoButton}
             onClick={() => setShowMemoriesDetails(!showMemoriesDetails)}
           >
@@ -912,7 +951,11 @@ const HUD: React.FC<HUDProps> = ({
         {showMemoriesDetails && (
           <div className={styles.ascentDetails}>
             <div className={styles.ascentDescription}>
-              Oh no, no memories found? Wait... who are you? Where am I? *checks digital wallet* Ah, right - another poor...soul. You need to collect the artifacts that tell your story in the Nullblock universe. Each memory is a unique representation of your achievements, collectibles, and digital identity. Collect them all to unlock the secret of why you're here... or don't, I'm not your digital conscience.
+              Oh no, no memories found? Wait... who are you? Where am I? *checks digital wallet* Ah,
+              right - another poor...soul. You need to collect the artifacts that tell your story in
+              the Nullblock universe. Each memory is a unique representation of your achievements,
+              collectibles, and digital identity. Collect them all to unlock the secret of why
+              you're here... or don't, I'm not your digital conscience.
             </div>
           </div>
         )}
@@ -920,7 +963,7 @@ const HUD: React.FC<HUDProps> = ({
       <div className={styles.profileItem}>
         <span className={styles.label}>
           H.U.D:
-          <button 
+          <button
             className={styles.infoButton}
             onClick={() => setShowEmberConduitDetails(!showEmberConduitDetails)}
           >
@@ -931,7 +974,11 @@ const HUD: React.FC<HUDProps> = ({
         {showEmberConduitDetails && (
           <div className={`${styles.ascentDetails} ${styles.rightAligned}`}>
             <div className={styles.ascentDescription}>
-              HUD Interface: A direct neural link to the Nullblock systems. This advanced technology allows real-time monitoring of network activities, asset management, and system diagnostics. Through the HUD Interface, users can access mission briefings, track progress, and interface with various subsystems. Warning: Extended use may result in enhanced situational awareness.
+              HUD Interface: A direct neural link to the Nullblock systems. This advanced technology
+              allows real-time monitoring of network activities, asset management, and system
+              diagnostics. Through the HUD Interface, users can access mission briefings, track
+              progress, and interface with various subsystems. Warning: Extended use may result in
+              enhanced situational awareness.
             </div>
           </div>
         )}
@@ -956,6 +1003,7 @@ const HUD: React.FC<HUDProps> = ({
   // Update the Ember Link status display in the diagnostics section
   const renderEmberLinkStatus = (status: EmberLinkStatus) => {
     const statusClass = status.connected ? styles.active : styles.inactive;
+
     return (
       <div className={styles.statusContainer}>
         <span className={styles.statusLabel}>Ember Link:</span>
@@ -964,66 +1012,68 @@ const HUD: React.FC<HUDProps> = ({
     );
   };
 
-  const renderHudTab = () => {
-    return (
-      <div className={styles.echoContent}>
-        {emberLinkStatus.connected ? (
-          <>
-            <div className={styles.echoStatus}>
-              <div className={styles.statusContainer}>
-                <span className={styles.statusLabel}>Ember Link Status:</span>
-                <span className={styles.active}>Connected</span>
-              </div>
-              <div className={styles.browserInfo}>
-                <span className={styles.browserLabel}>Browser:</span>
-                <span className={styles.browserValue}>{emberLinkStatus.browserInfo?.name} {emberLinkStatus.browserInfo?.version} ({emberLinkStatus.browserInfo?.platform})</span>
-              </div>
+  const renderHudTab = () => (
+    <div className={styles.echoContent}>
+      {emberLinkStatus.connected ? (
+        <>
+          <div className={styles.echoStatus}>
+            <div className={styles.statusContainer}>
+              <span className={styles.statusLabel}>Ember Link Status:</span>
+              <span className={styles.active}>Connected</span>
             </div>
-            <div className={styles.echoMessage}>
-              <p>H.U.D system is active and operational.</p>
-              <p>Welcome to the interface, agent.</p>
-            </div>
-          </>
-        ) : (
-          <div className={styles.disconnectedContent}>
-            <div className={styles.echoStatus}>
-              <div className={styles.statusContainer}>
-                <span className={styles.statusLabel}>Ember Link Status:</span>
-                <span className={styles.inactive}>Disconnected</span>
-              </div>
-            </div>
-            <div className={styles.extensionPrompt}>
-              <h4>Browser Extension Required</h4>
-              <p>To establish a secure connection, you need to install the Aether browser extension.</p>
-              <p>Choose your browser to download the extension:</p>
-              <div className={styles.extensionLinks}>
-                <a
-                  href="https://chrome.google.com/webstore/detail/aether"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.extensionButton}
-                >
-                  Chrome Extension
-                </a>
-                <a
-                  href="https://addons.mozilla.org/en-US/firefox/addon/aether"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.extensionButton}
-                >
-                  Firefox Extension
-                </a>
-              </div>
+            <div className={styles.browserInfo}>
+              <span className={styles.browserLabel}>Browser:</span>
+              <span className={styles.browserValue}>
+                {emberLinkStatus.browserInfo?.name} {emberLinkStatus.browserInfo?.version} (
+                {emberLinkStatus.browserInfo?.platform})
+              </span>
             </div>
           </div>
-        )}
-      </div>
-    );
-  };
+          <div className={styles.echoMessage}>
+            <p>H.U.D system is active and operational.</p>
+            <p>Welcome to the interface, agent.</p>
+          </div>
+        </>
+      ) : (
+        <div className={styles.disconnectedContent}>
+          <div className={styles.echoStatus}>
+            <div className={styles.statusContainer}>
+              <span className={styles.statusLabel}>Ember Link Status:</span>
+              <span className={styles.inactive}>Disconnected</span>
+            </div>
+          </div>
+          <div className={styles.extensionPrompt}>
+            <h4>Browser Extension Required</h4>
+            <p>
+              To establish a secure connection, you need to install the Aether browser extension.
+            </p>
+            <p>Choose your browser to download the extension:</p>
+            <div className={styles.extensionLinks}>
+              <a
+                href="https://chrome.google.com/webstore/detail/aether"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.extensionButton}
+              >
+                Chrome Extension
+              </a>
+              <a
+                href="https://addons.mozilla.org/en-US/firefox/addon/aether"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.extensionButton}
+              >
+                Firefox Extension
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   const renderCampScreen = () => (
     <div className={styles.hudScreen}>
-      
       <div className={styles.headerContainer}>
         <h2 className={styles.hudTitle}>CAMP</h2>
         <div className={styles.headerDivider}></div>
@@ -1037,8 +1087,8 @@ const HUD: React.FC<HUDProps> = ({
           <div className={styles.leaderboardList}>
             <div className={styles.leaderboardItems}>
               {leaderboardData.map((entry) => (
-                <div 
-                  key={entry.id} 
+                <div
+                  key={entry.id}
                   className={styles.leaderboardItem}
                   onClick={() => {
                     setSelectedUplink({
@@ -1051,38 +1101,38 @@ const HUD: React.FC<HUDProps> = ({
                         stats: [
                           {
                             label: 'Rank',
-                            value: `#${entry.rank}`
+                            value: `#${entry.rank}`,
                           },
                           {
                             label: 'Ascent',
-                            value: entry.ascent
+                            value: entry.ascent,
                           },
                           {
                             label: 'Nether',
-                            value: `₦ ${entry.nether}`
+                            value: `₦ ${entry.nether}`,
                           },
                           {
                             label: 'Cache Value',
-                            value: `₦ ${entry.cacheValue}`
+                            value: `₦ ${entry.cacheValue}`,
                           },
                           {
                             label: 'Memories',
-                            value: entry.memories
+                            value: entry.memories,
                           },
                           {
                             label: 'Matrix Level',
-                            value: entry.matrix.level
+                            value: entry.matrix.level,
                           },
                           {
                             label: 'Rarity',
-                            value: entry.matrix.rarity
+                            value: entry.matrix.rarity,
                           },
                           {
                             label: 'Status',
-                            value: entry.matrix.status
-                          }
-                        ]
-                      }
+                            value: entry.matrix.status,
+                          },
+                        ],
+                      },
                     });
                   }}
                 >
@@ -1093,8 +1143,8 @@ const HUD: React.FC<HUDProps> = ({
               ))}
               {/* Duplicate items for seamless scrolling */}
               {leaderboardData.map((entry) => (
-                <div 
-                  key={`${entry.id}-duplicate`} 
+                <div
+                  key={`${entry.id}-duplicate`}
                   className={styles.leaderboardItem}
                   onClick={() => {
                     setSelectedUplink({
@@ -1107,38 +1157,38 @@ const HUD: React.FC<HUDProps> = ({
                         stats: [
                           {
                             label: 'Rank',
-                            value: `#${entry.rank}`
+                            value: `#${entry.rank}`,
                           },
                           {
                             label: 'Ascent',
-                            value: entry.ascent
+                            value: entry.ascent,
                           },
                           {
                             label: 'Nether',
-                            value: `₦ ${entry.nether}`
+                            value: `₦ ${entry.nether}`,
                           },
                           {
                             label: 'Cache Value',
-                            value: `₦ ${entry.cacheValue}`
+                            value: `₦ ${entry.cacheValue}`,
                           },
                           {
                             label: 'Memories',
-                            value: entry.memories
+                            value: entry.memories,
                           },
                           {
                             label: 'Matrix Level',
-                            value: entry.matrix.level
+                            value: entry.matrix.level,
                           },
                           {
                             label: 'Rarity',
-                            value: entry.matrix.rarity
+                            value: entry.matrix.rarity,
                           },
                           {
                             label: 'Status',
-                            value: entry.matrix.status
-                          }
-                        ]
-                      }
+                            value: entry.matrix.status,
+                          },
+                        ],
+                      },
                     });
                   }}
                 >
@@ -1161,140 +1211,174 @@ const HUD: React.FC<HUDProps> = ({
               </div>
               <div className={styles.diagnosticsContent}>
                 <div className={styles.diagnosticsList}>
-                  <div className={styles.diagnosticsItem} onClick={() => setSelectedUplink({
-                    id: 'id',
-                    name: 'ID',
-                    status: 'active',
-                    icon: '🆔',
-                    details: {
-                      description: 'Your unique identifier in the Nullblock universe. This is your digital fingerprint, your signature in the void.',
-                      stats: [
-                        {
-                          label: 'Status',
-                          value: 'Active'
+                  <div
+                    className={styles.diagnosticsItem}
+                    onClick={() =>
+                      setSelectedUplink({
+                        id: 'id',
+                        name: 'ID',
+                        status: 'active',
+                        icon: '🆔',
+                        details: {
+                          description:
+                            'Your unique identifier in the Nullblock universe. This is your digital fingerprint, your signature in the void.',
+                          stats: [
+                            {
+                              label: 'Status',
+                              value: 'Active',
+                            },
+                            {
+                              label: 'Type',
+                              value: 'HUD ID',
+                            },
+                          ],
                         },
-                        {
-                          label: 'Type',
-                          value: 'HUD ID'
-                        }
-                      ]
-                    }
-                  })}>
+                      })}
+                  >
                     <span className={styles.itemLabel}>🆔 ID</span>
                     <span className={styles.itemValue}>HUD-{userProfile.id || '0000'}</span>
                   </div>
-                  <div className={styles.diagnosticsItem} onClick={() => setSelectedUplink({
-                    id: 'ascent',
-                    name: 'ASCENT',
-                    status: 'active',
-                    icon: '↗️',
-                    details: {
-                      description: 'A digital lurker extraordinaire! You\'ve mastered the art of watching from the shadows, observing the chaos without ever dipping your toes in. Like a cat watching a laser pointer, you\'re fascinated but paralyzed by indecision. At least you\'re not the one getting your digital assets rekt!',
-                      stats: [
-                        {
-                          label: 'Level',
-                          value: 'Net Dweller: 1'
+                  <div
+                    className={styles.diagnosticsItem}
+                    onClick={() =>
+                      setSelectedUplink({
+                        id: 'ascent',
+                        name: 'ASCENT',
+                        status: 'active',
+                        icon: '↗️',
+                        details: {
+                          description:
+                            "A digital lurker extraordinaire! You've mastered the art of watching from the shadows, observing the chaos without ever dipping your toes in. Like a cat watching a laser pointer, you're fascinated but paralyzed by indecision. At least you're not the one getting your digital assets rekt!",
+                          stats: [
+                            {
+                              label: 'Level',
+                              value: 'Net Dweller: 1',
+                            },
+                            {
+                              label: 'Progress',
+                              value: '35%',
+                            },
+                          ],
                         },
-                        {
-                          label: 'Progress',
-                          value: '35%'
-                        }
-                      ]
-                    }
-                  })}>
-                    <span className={styles.itemLabel}><span className={styles.ascentLine}></span> ASCENT</span>
+                      })}
+                  >
+                    <span className={styles.itemLabel}>
+                      <span className={styles.ascentLine}></span> ASCENT
+                    </span>
                     <span className={styles.itemValue}>Net Dweller: 1</span>
                   </div>
-                  <div className={styles.diagnosticsItem} onClick={() => setSelectedUplink({
-                    id: 'nether',
-                    name: 'NETHER',
-                    status: 'active',
-                    icon: '₦',
-                    details: {
-                      description: 'NETHER: Magic internet money from the void. Born from nothing, worth everything, and somehow gaining value by the second. The integration has passed the event horizon - good luck trying to spend it. Warning: Prolonged exposure may cause reality distortion and an irresistible urge to dive deeper into the code.',
-                      stats: [
-                        {
-                          label: 'Balance',
-                          value: `₦ ${userProfile.nether?.toFixed(2) || 'N/A'}`
+                  <div
+                    className={styles.diagnosticsItem}
+                    onClick={() =>
+                      setSelectedUplink({
+                        id: 'nether',
+                        name: 'NETHER',
+                        status: 'active',
+                        icon: '₦',
+                        details: {
+                          description:
+                            'NETHER: Magic internet money from the void. Born from nothing, worth everything, and somehow gaining value by the second. The integration has passed the event horizon - good luck trying to spend it. Warning: Prolonged exposure may cause reality distortion and an irresistible urge to dive deeper into the code.',
+                          stats: [
+                            {
+                              label: 'Balance',
+                              value: `₦ ${userProfile.nether?.toFixed(2) || 'N/A'}`,
+                            },
+                            {
+                              label: 'Status',
+                              value: userProfile.nether ? 'Active' : 'Inactive',
+                            },
+                          ],
                         },
-                        {
-                          label: 'Status',
-                          value: userProfile.nether ? 'Active' : 'Inactive'
-                        }
-                      ]
-                    }
-                  })}>
+                      })}
+                  >
                     <span className={styles.itemLabel}>₦ NETHER</span>
-                    <span className={styles.itemValue}>₦ {userProfile.nether?.toFixed(2) || 'N/A'}</span>
+                    <span className={styles.itemValue}>
+                      ₦ {userProfile.nether?.toFixed(2) || 'N/A'}
+                    </span>
                   </div>
-                  <div className={styles.diagnosticsItem} onClick={() => setSelectedUplink({
-                    id: 'cache',
-                    name: 'CACHE VALUE',
-                    status: 'active',
-                    icon: '💰',
-                    details: {
-                      description: 'Cache Value: Your digital treasure trove, evaluated by our ever-watchful procurement agents. This is the total worth of all valuable assets in your wallet - coins, tokens, and other digital goodies that caught our eye. Coming soon: Categories for services, participant offerings, biological enhancements, and agent capabilities. Think of it as your personal inventory of everything worth something in the Nullblock universe. Don\'t spend it all in one place!',
-                      stats: [
-                        {
-                          label: 'Value',
-                          value: '₦ N/A'
+                  <div
+                    className={styles.diagnosticsItem}
+                    onClick={() =>
+                      setSelectedUplink({
+                        id: 'cache',
+                        name: 'CACHE VALUE',
+                        status: 'active',
+                        icon: '💰',
+                        details: {
+                          description:
+                            "Cache Value: Your digital treasure trove, evaluated by our ever-watchful procurement agents. This is the total worth of all valuable assets in your wallet - coins, tokens, and other digital goodies that caught our eye. Coming soon: Categories for services, participant offerings, biological enhancements, and agent capabilities. Think of it as your personal inventory of everything worth something in the Nullblock universe. Don't spend it all in one place!",
+                          stats: [
+                            {
+                              label: 'Value',
+                              value: '₦ N/A',
+                            },
+                            {
+                              label: 'Status',
+                              value: 'Pending',
+                            },
+                          ],
                         },
-                        {
-                          label: 'Status',
-                          value: 'Pending'
-                        }
-                      ]
-                    }
-                  })}>
+                      })}
+                  >
                     <span className={styles.itemLabel}>💰 CACHE VALUE</span>
                     <span className={styles.itemValue}>₦ N/A</span>
                   </div>
-                  <div className={styles.diagnosticsItem} onClick={() => setSelectedUplink({
-                    id: 'memories',
-                    name: 'MEMORIES',
-                    status: 'active',
-                    icon: '🧠',
-                    details: {
-                      description: 'Oh no, no memories found? Wait... who are you? Where am I? *checks digital wallet* Ah, right - another poor...soul. You need to collect the artifacts that tell your story in the Nullblock universe. Each memory is a unique representation of your achievements, collectibles, and digital identity. Collect them all to unlock the secret of why you\'re here... or don\'t, I\'m not your digital conscience.',
-                      stats: [
-                        {
-                          label: 'Count',
-                          value: userProfile.memories
+                  <div
+                    className={styles.diagnosticsItem}
+                    onClick={() =>
+                      setSelectedUplink({
+                        id: 'memories',
+                        name: 'MEMORIES',
+                        status: 'active',
+                        icon: '🧠',
+                        details: {
+                          description:
+                            "Oh no, no memories found? Wait... who are you? Where am I? *checks digital wallet* Ah, right - another poor...soul. You need to collect the artifacts that tell your story in the Nullblock universe. Each memory is a unique representation of your achievements, collectibles, and digital identity. Collect them all to unlock the secret of why you're here... or don't, I'm not your digital conscience.",
+                          stats: [
+                            {
+                              label: 'Count',
+                              value: userProfile.memories,
+                            },
+                            {
+                              label: 'Status',
+                              value: userProfile.memories > 0 ? 'Active' : 'Empty',
+                            },
+                          ],
                         },
-                        {
-                          label: 'Status',
-                          value: userProfile.memories > 0 ? 'Active' : 'Empty'
-                        }
-                      ]
-                    }
-                  })}>
+                      })}
+                  >
                     <span className={styles.itemLabel}>🧠 MEMORIES</span>
                     <span className={styles.itemValue}>{userProfile.memories}</span>
                   </div>
-                  <div className={styles.diagnosticsItem} onClick={() => setSelectedUplink({
-                    id: 'hud',
-                    name: 'HUD INTERFACE',
-                    status: 'active',
-                    icon: '📊',
-                    details: {
-                      description: 'HUD Interface: A direct neural link to the Nullblock systems. This advanced technology allows real-time monitoring of network activities, asset management, and system diagnostics. Through the HUD Interface, users can access mission briefings, track progress, and interface with various subsystems. Warning: Extended use may result in enhanced situational awareness.',
-                      stats: [
-                        {
-                          label: 'Status',
-                          value: userProfile.matrix.status
+                  <div
+                    className={styles.diagnosticsItem}
+                    onClick={() =>
+                      setSelectedUplink({
+                        id: 'hud',
+                        name: 'HUD INTERFACE',
+                        status: 'active',
+                        icon: '📊',
+                        details: {
+                          description:
+                            'HUD Interface: A direct neural link to the Nullblock systems. This advanced technology allows real-time monitoring of network activities, asset management, and system diagnostics. Through the HUD Interface, users can access mission briefings, track progress, and interface with various subsystems. Warning: Extended use may result in enhanced situational awareness.',
+                          stats: [
+                            {
+                              label: 'Status',
+                              value: userProfile.matrix.status,
+                            },
+                            {
+                              label: 'Type',
+                              value: 'HUD Interface',
+                            },
+                          ],
                         },
-                        {
-                          label: 'Type',
-                          value: 'HUD Interface'
-                        }
-                      ]
-                    }
-                  })}>
+                      })}
+                  >
                     <span className={styles.itemLabel}>📊 HUD INTERFACE</span>
                     <span className={styles.itemValue}>{userProfile.matrix.status}</span>
                   </div>
                 </div>
-                <button 
+                <button
                   className={styles.addLinkButton}
                   onClick={() => alert('No HUD Interface loaded')}
                 >
@@ -1307,49 +1391,49 @@ const HUD: React.FC<HUDProps> = ({
           <div className={styles.campStatus}>
             <div className={styles.statusCard}>
               <div className={styles.statusTabs}>
-                <button 
+                <button
                   className={`${styles.statusTab} ${activeTab === 'hud' ? styles.activeTab : ''}`}
                   onClick={() => setActiveTab('hud')}
                 >
                   H.U.D
                 </button>
-                <button 
+                <button
                   className={`${styles.statusTab} ${activeTab === 'systems' ? styles.activeTab : ''}`}
                   onClick={() => setActiveTab('systems')}
                 >
                   NYX
                 </button>
-                <button 
+                <button
                   className={`${styles.statusTab} ${activeTab === 'defense' ? styles.activeTab : ''}`}
                   onClick={() => setActiveTab('defense')}
                 >
                   LEGION
                 </button>
-                <button 
+                <button
                   className={`${styles.statusTab} ${activeTab === 'missions' ? styles.activeTab : ''}`}
                   onClick={() => setActiveTab('missions')}
                 >
                   MISSIONS
                 </button>
-                <button 
+                <button
                   className={`${styles.statusTab} ${activeTab === 'arbitrage' ? styles.activeTab : ''}`}
                   onClick={() => setActiveTab('arbitrage')}
                 >
                   ARBITRAGE
                 </button>
-                <button 
+                <button
                   className={`${styles.statusTab} ${activeTab === 'social' ? styles.activeTab : ''}`}
                   onClick={() => setActiveTab('social')}
                 >
                   SOCIAL
                 </button>
-                <button 
+                <button
                   className={`${styles.statusTab} ${activeTab === 'portfolio' ? styles.activeTab : ''}`}
                   onClick={() => setActiveTab('portfolio')}
                 >
                   💰 PORTFOLIO
                 </button>
-                <button 
+                <button
                   className={`${styles.statusTab} ${activeTab === 'defi' ? styles.activeTab : ''}`}
                   onClick={() => setActiveTab('defi')}
                 >
@@ -1366,7 +1450,13 @@ const HUD: React.FC<HUDProps> = ({
                         <div className={styles.mcpStatus}>
                           <div className={styles.statusContainer}>
                             <span className={styles.statusLabel}>MCP Status:</span>
-                            <span className={mcpHealthStatus.status === 'operational' ? styles.active : styles.inactive}>
+                            <span
+                              className={
+                                mcpHealthStatus.status === 'operational'
+                                  ? styles.active
+                                  : styles.inactive
+                              }
+                            >
                               {mcpHealthStatus.status}
                             </span>
                           </div>
@@ -1379,11 +1469,11 @@ const HUD: React.FC<HUDProps> = ({
                         </div>
                       )}
                     </div>
-                    
+
                     {!mcpAuthenticated ? (
                       <div className={styles.authPrompt}>
                         <p>MCP authentication required to access arbitrage trading.</p>
-                        <button 
+                        <button
                           className={styles.authButton}
                           onClick={handleMCPAuthentication}
                           disabled={!publicKey}
@@ -1417,7 +1507,7 @@ const HUD: React.FC<HUDProps> = ({
                               <span className={styles.statValue}>87%</span>
                             </div>
                           </div>
-                          
+
                           <div className={styles.opportunitiesList}>
                             <div className={styles.opportunity}>
                               <div className={styles.oppHeader}>
@@ -1430,7 +1520,7 @@ const HUD: React.FC<HUDProps> = ({
                               </div>
                               <button className={styles.executeBtn}>Execute</button>
                             </div>
-                            
+
                             <div className={styles.opportunity}>
                               <div className={styles.oppHeader}>
                                 <span className={styles.tokenPair}>BTC/USDT</span>
@@ -1456,7 +1546,13 @@ const HUD: React.FC<HUDProps> = ({
                         <div className={styles.mcpStatus}>
                           <div className={styles.statusContainer}>
                             <span className={styles.statusLabel}>MCP Status:</span>
-                            <span className={mcpHealthStatus.status === 'operational' ? styles.active : styles.inactive}>
+                            <span
+                              className={
+                                mcpHealthStatus.status === 'operational'
+                                  ? styles.active
+                                  : styles.inactive
+                              }
+                            >
                               {mcpHealthStatus.status}
                             </span>
                           </div>
@@ -1469,11 +1565,11 @@ const HUD: React.FC<HUDProps> = ({
                         </div>
                       )}
                     </div>
-                    
+
                     {!mcpAuthenticated ? (
                       <div className={styles.authPrompt}>
                         <p>MCP authentication required to access social trading.</p>
-                        <button 
+                        <button
                           className={styles.authButton}
                           onClick={handleMCPAuthentication}
                           disabled={!publicKey}
@@ -1483,7 +1579,9 @@ const HUD: React.FC<HUDProps> = ({
                       </div>
                     ) : (
                       <div className={styles.socialContent}>
-                        <p>Social trading system ready. Access advanced social sentiment dashboard.</p>
+                        <p>
+                          Social trading system ready. Access advanced social sentiment dashboard.
+                        </p>
                         <div className={styles.socialFeatures}>
                           <ul>
                             <li>✓ Real-time X/Twitter sentiment monitoring</li>
@@ -1508,7 +1606,7 @@ const HUD: React.FC<HUDProps> = ({
                               <span className={styles.statValue}>2</span>
                             </div>
                           </div>
-                          
+
                           <div className={styles.signalsList}>
                             <div className={styles.signal}>
                               <div className={styles.signalHeader}>
@@ -1516,14 +1614,17 @@ const HUD: React.FC<HUDProps> = ({
                                 <span className={styles.sentiment}>🚀 BULLISH</span>
                               </div>
                               <div className={styles.signalContent}>
-                                <p>"BONK is going to the moon! This meme season is just getting started!"</p>
+                                <p>
+                                  "BONK is going to the moon! This meme season is just getting
+                                  started!"
+                                </p>
                                 <div className={styles.signalMeta}>
                                   <span className={styles.source}>Twitter</span>
                                   <span className={styles.engagement}>85% sentiment</span>
                                 </div>
                               </div>
                             </div>
-                            
+
                             <div className={styles.signal}>
                               <div className={styles.signalHeader}>
                                 <span className={styles.tokenSymbol}>$WIF</span>
@@ -1551,7 +1652,13 @@ const HUD: React.FC<HUDProps> = ({
                         <div className={styles.mcpStatus}>
                           <div className={styles.statusContainer}>
                             <span className={styles.statusLabel}>MCP Status:</span>
-                            <span className={mcpHealthStatus.status === 'operational' ? styles.active : styles.inactive}>
+                            <span
+                              className={
+                                mcpHealthStatus.status === 'operational'
+                                  ? styles.active
+                                  : styles.inactive
+                              }
+                            >
                               {mcpHealthStatus.status}
                             </span>
                           </div>
@@ -1564,11 +1671,11 @@ const HUD: React.FC<HUDProps> = ({
                         </div>
                       )}
                     </div>
-                    
+
                     {!mcpAuthenticated ? (
                       <div className={styles.authPrompt}>
                         <p>MCP authentication required to access portfolio management.</p>
-                        <button 
+                        <button
                           className={styles.authButton}
                           onClick={handleMCPAuthentication}
                           disabled={!publicKey}
@@ -1603,7 +1710,7 @@ const HUD: React.FC<HUDProps> = ({
                               <span className={styles.statValue}>4</span>
                             </div>
                           </div>
-                          
+
                           <div className={styles.assetsList}>
                             <div className={styles.asset}>
                               <div className={styles.assetHeader}>
@@ -1615,7 +1722,7 @@ const HUD: React.FC<HUDProps> = ({
                                 <span className={styles.value}>$3,235</span>
                               </div>
                             </div>
-                            
+
                             <div className={styles.asset}>
                               <div className={styles.assetHeader}>
                                 <span className={styles.assetSymbol}>⟠ ETH</span>
@@ -1626,7 +1733,7 @@ const HUD: React.FC<HUDProps> = ({
                                 <span className={styles.value}>$5,432</span>
                               </div>
                             </div>
-                            
+
                             <div className={styles.asset}>
                               <div className={styles.assetHeader}>
                                 <span className={styles.assetSymbol}>🪙 BONK</span>
@@ -1638,7 +1745,7 @@ const HUD: React.FC<HUDProps> = ({
                               </div>
                             </div>
                           </div>
-                          
+
                           <button className={styles.rebalanceBtn}>Rebalance Portfolio</button>
                         </div>
                       </div>
@@ -1653,7 +1760,13 @@ const HUD: React.FC<HUDProps> = ({
                         <div className={styles.mcpStatus}>
                           <div className={styles.statusContainer}>
                             <span className={styles.statusLabel}>MCP Status:</span>
-                            <span className={mcpHealthStatus.status === 'operational' ? styles.active : styles.inactive}>
+                            <span
+                              className={
+                                mcpHealthStatus.status === 'operational'
+                                  ? styles.active
+                                  : styles.inactive
+                              }
+                            >
                               {mcpHealthStatus.status}
                             </span>
                           </div>
@@ -1666,11 +1779,11 @@ const HUD: React.FC<HUDProps> = ({
                         </div>
                       )}
                     </div>
-                    
+
                     {!mcpAuthenticated ? (
                       <div className={styles.authPrompt}>
                         <p>MCP authentication required to access DeFi automation.</p>
-                        <button 
+                        <button
                           className={styles.authButton}
                           onClick={handleMCPAuthentication}
                           disabled={!publicKey}
@@ -1680,7 +1793,10 @@ const HUD: React.FC<HUDProps> = ({
                       </div>
                     ) : (
                       <div className={styles.defiContent}>
-                        <p>DeFi automation system ready. Optimize yield and manage liquidity positions.</p>
+                        <p>
+                          DeFi automation system ready. Optimize yield and manage liquidity
+                          positions.
+                        </p>
                         <div className={styles.defiFeatures}>
                           <ul>
                             <li>✓ Multi-protocol yield farming</li>
@@ -1705,7 +1821,7 @@ const HUD: React.FC<HUDProps> = ({
                               <span className={styles.statValue}>4</span>
                             </div>
                           </div>
-                          
+
                           <div className={styles.defiPositions}>
                             <div className={styles.position}>
                               <div className={styles.positionHeader}>
@@ -1717,7 +1833,7 @@ const HUD: React.FC<HUDProps> = ({
                                 <span className={styles.amount}>$5,000</span>
                               </div>
                             </div>
-                            
+
                             <div className={styles.position}>
                               <div className={styles.positionHeader}>
                                 <span className={styles.protocol}>🦄 Uniswap</span>
@@ -1728,7 +1844,7 @@ const HUD: React.FC<HUDProps> = ({
                                 <span className={styles.amount}>$3,000</span>
                               </div>
                             </div>
-                            
+
                             <div className={styles.position}>
                               <div className={styles.positionHeader}>
                                 <span className={styles.protocol}>🌀 Curve</span>
@@ -1740,7 +1856,7 @@ const HUD: React.FC<HUDProps> = ({
                               </div>
                             </div>
                           </div>
-                          
+
                           <button className={styles.harvestBtn}>Harvest All Rewards</button>
                         </div>
                       </div>
@@ -1768,10 +1884,12 @@ const HUD: React.FC<HUDProps> = ({
                     <div className={styles.missionHeader}>
                       <div className={styles.active}>
                         <span className={styles.missionLabel}>ACTIVE:</span>
-                        <span className={styles.missionTitle}>{activeMission?.title || "Share on X"}</span>
+                        <span className={styles.missionTitle}>
+                          {activeMission?.title || 'Share on X'}
+                        </span>
                       </div>
-                  </div>
-                  
+                    </div>
+
                     <div className={styles.missionContent}>
                       <div className={styles.availableMissions}>
                         <h4>AVAILABLE MISSIONS</h4>
@@ -1788,31 +1906,42 @@ const HUD: React.FC<HUDProps> = ({
                               <span className={styles.missionTitle}>Mission 2</span>
                               <span className={styles.missionStatus}>LOCKED</span>
                             </div>
-                            <span className={`${styles.missionReward} ${styles.blurred}`}>??? NETHER</span>
+                            <span className={`${styles.missionReward} ${styles.blurred}`}>
+                              ??? NETHER
+                            </span>
                           </div>
                           <div className={`${styles.missionItem} ${styles.blurred}`}>
                             <div className={styles.missionItemContent}>
                               <span className={styles.missionTitle}>Mission 3</span>
                               <span className={styles.missionStatus}>LOCKED</span>
                             </div>
-                            <span className={`${styles.missionReward} ${styles.blurred}`}>??? NETHER</span>
+                            <span className={`${styles.missionReward} ${styles.blurred}`}>
+                              ??? NETHER
+                            </span>
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className={styles.missionDescription}>
                         <h4>MISSION BRIEF</h4>
                         <p className={styles.missionText}>
                           "Welcome, Agent, to your first trial. Interface with the HUD carefully.
-                          Share your NullEye interface on X—let its glow haunt the realm.
-                          More souls drawn, more NETHER gained. Don't let it fade."
+                          Share your NullEye interface on X—let its glow haunt the realm. More souls
+                          drawn, more NETHER gained. Don't let it fade."
                         </p>
                         <div className={styles.missionInstructions}>
                           <h4>QUALIFICATION REQUIREMENTS</h4>
                           <ul>
-                            <li>Follow<span className={styles.highlight}>@Nullblock_io</span></li>
-                            <li>Tweet out the cashtag <span className={styles.highlight}>$NETHER</span></li>
-                            <li>Include the official CA: <span className={styles.highlight}>TBD</span></li>
+                            <li>
+                              Follow<span className={styles.highlight}>@Nullblock_io</span>
+                            </li>
+                            <li>
+                              Tweet out the cashtag{' '}
+                              <span className={styles.highlight}>$NETHER</span>
+                            </li>
+                            <li>
+                              Include the official CA: <span className={styles.highlight}>TBD</span>
+                            </li>
                           </ul>
                           <p className={styles.missionNote}>
                             Airdrop amount will be determined by post engagement and creativity.
@@ -1841,7 +1970,9 @@ const HUD: React.FC<HUDProps> = ({
           <div className={styles.uplinkModal}>
             <div className={styles.modalHeader}>
               <h3>{selectedUplink.name}</h3>
-              <button className={styles.closeButton} onClick={handleCloseModal}>×</button>
+              <button className={styles.closeButton} onClick={handleCloseModal}>
+                ×
+              </button>
             </div>
             <div className={styles.modalContent}>
               <div className={styles.statusSection}>
@@ -1850,9 +1981,7 @@ const HUD: React.FC<HUDProps> = ({
                   {selectedUplink.details.stats.map((stat, index) => (
                     <div key={index} className={styles.statusItem}>
                       <div className={styles.label}>{stat.label}</div>
-                      <div className={`${styles.value} ${stat.status || ''}`}>
-                        {stat.value}
-                      </div>
+                      <div className={`${styles.value} ${stat.status || ''}`}>{stat.value}</div>
                     </div>
                   ))}
                 </div>
@@ -1871,10 +2000,14 @@ const HUD: React.FC<HUDProps> = ({
           <div className={styles.leaderboardModal}>
             <div className={styles.modalHeader}>
               <h3>TOP AGENTS</h3>
-              <button className={styles.closeButton} onClick={handleCloseLeaderboard}>×</button>
+              <button className={styles.closeButton} onClick={handleCloseLeaderboard}>
+                ×
+              </button>
             </div>
             <div className={styles.legendWarning}>
-              <p>⚠️ These are the legends of the last Interface. The current HUD has yet to awaken.</p>
+              <p>
+                ⚠️ These are the legends of the last Interface. The current HUD has yet to awaken.
+              </p>
             </div>
             <div className={styles.leaderboardGrid}>
               {leaderboardData.map((entry) => (
@@ -1957,8 +2090,12 @@ const HUD: React.FC<HUDProps> = ({
       <div className={styles.realityContent}>
         <div className={styles.realityStatus}>
           <h3>PROGRESS</h3>
-          <p>Current Level: <span>1</span></p>
-          <p>Completion: <span>0%</span></p>
+          <p>
+            Current Level: <span>1</span>
+          </p>
+          <p>
+            Completion: <span>0%</span>
+          </p>
         </div>
         <div className={styles.missions}>
           <h3>OBJECTIVES</h3>
@@ -1979,8 +2116,12 @@ const HUD: React.FC<HUDProps> = ({
       <div className={styles.interfaceContent}>
         <div className={styles.interfaceSection}>
           <h3>SYSTEMS</h3>
-          <p>Phantom: <span className={styles.connected}>CONNECTED</span></p>
-          <p>Core: <span className={styles.initializing}>INITIALIZING</span></p>
+          <p>
+            Phantom: <span className={styles.connected}>CONNECTED</span>
+          </p>
+          <p>
+            Core: <span className={styles.initializing}>INITIALIZING</span>
+          </p>
         </div>
         <div className={styles.interfaceSection}>
           <h3>CONFIGURATIONS</h3>
@@ -1994,17 +2135,23 @@ const HUD: React.FC<HUDProps> = ({
   const renderHomeScreen = () => (
     <div className={styles.hudScreen}>
       <div className={styles.homeContent}>
-                <div className={styles.landingContent}>
+        <div className={styles.landingContent}>
           <h3>Welcome to Nullblock</h3>
-          <p>Initiate connection for advanced features, agentic workflows or to speak with Hecate. Biologicals please use the door.</p>
+          <p>
+            Initiate connection for advanced features, agentic workflows or to speak with Hecate.
+            Biologicals please use the door.
+          </p>
           <p>Builders / Agents please refer to dev pages above for onboarding.</p>
           {publicKey && (
             <div className={styles.walletInfo}>
-              <p><strong>Connected Wallet:</strong></p>
+              <p>
+                <strong>Connected Wallet:</strong>
+              </p>
               <p className={styles.walletAddress}>{publicKey}</p>
-              {userProfile.id && userProfile.id !== `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol` && (
-                <p className={styles.walletUsername}>{userProfile.id}</p>
-              )}
+              {userProfile.id &&
+                userProfile.id !== `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol` && (
+                  <p className={styles.walletUsername}>{userProfile.id}</p>
+                )}
             </div>
           )}
         </div>
@@ -2014,15 +2161,17 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderOverviewScreen = () => (
     <div className={styles.hudScreen}>
-      
       <div className={styles.headerContainer}>
         <h2 className={styles.hudTitle}>OVERVIEW</h2>
         <div className={styles.headerDivider}></div>
       </div>
       <div className={styles.campContent}>
-        <div style={{textAlign: 'center', marginTop: '2rem'}}>
+        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
           <h3>Welcome to Nullblock Overview</h3>
-          <p>This is the overview screen. Connect your wallet to unlock advanced features via the NullEye.</p>
+          <p>
+            This is the overview screen. Connect your wallet to unlock advanced features via the
+            NullEye.
+          </p>
         </div>
       </div>
     </div>
@@ -2032,6 +2181,7 @@ const HUD: React.FC<HUDProps> = ({
     if (!unlockedScreens.includes(screen)) {
       return renderLockedScreen();
     }
+
     switch (screen) {
       case 'home':
         return renderHomeScreen();
@@ -2055,12 +2205,10 @@ const HUD: React.FC<HUDProps> = ({
       {!showContextDashboard && (
         <>
           {renderControlScreen()}
-          <div className={styles.hudWindow}>
-            {renderScreen()}
-          </div>
+          <div className={styles.hudWindow}>{renderScreen()}</div>
         </>
       )}
-      
+
       {showContextDashboard && (
         <ContextDashboard
           onClose={() => {

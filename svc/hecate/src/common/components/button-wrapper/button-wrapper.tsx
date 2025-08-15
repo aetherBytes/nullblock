@@ -1,10 +1,10 @@
-import React from 'react';
 import PropTypes from 'prop-types';
+import React from 'react';
 import styles from './button-wrapper.module.scss'; // Ensure this is the correct path
 
 const ButtonWrapper = ({ title, buttonImage, buttonText, setCurrentScreen }) => {
   const createRipple = (event) => {
-    const circle = document.createElement("span");
+    const circle = document.createElement('span');
     const diameter = Math.max(event.currentTarget.clientWidth, event.currentTarget.clientHeight);
     const radius = diameter / 2;
 
@@ -14,6 +14,7 @@ const ButtonWrapper = ({ title, buttonImage, buttonText, setCurrentScreen }) => 
     circle.classList.add(styles.ripple); // Ensured class addition through module
 
     const rippleContainer = event.currentTarget;
+
     rippleContainer.appendChild(circle);
     setTimeout(() => {
       circle.remove();
@@ -21,7 +22,9 @@ const ButtonWrapper = ({ title, buttonImage, buttonText, setCurrentScreen }) => 
   };
 
   return (
-    <div className={styles.wrapper}> {/* Confirm className alignment */}
+    <div className={styles.wrapper}>
+      {' '}
+      {/* Confirm className alignment */}
       <button
         type="button"
         className={styles.echoButton} // Updated to echoButton for consistency
@@ -30,7 +33,8 @@ const ButtonWrapper = ({ title, buttonImage, buttonText, setCurrentScreen }) => 
           createRipple(e);
         }}
       >
-        {buttonImage && <img src={buttonImage} alt={title} className={styles.buttonImage} />} {/* Adjusted className */}
+        {buttonImage && <img src={buttonImage} alt={title} className={styles.buttonImage} />}{' '}
+        {/* Adjusted className */}
         {buttonText}
       </button>
     </div>
@@ -45,4 +49,3 @@ ButtonWrapper.propTypes = {
 };
 
 export default ButtonWrapper;
-
