@@ -33,8 +33,6 @@ interface HUDProps {
   onClose: () => void;
   onThemeChange: (theme: 'null' | 'cyber' | 'light') => void;
   systemStatus: SystemStatus;
-  statusPanelCollapsed: boolean;
-  setStatusPanelCollapsed: (collapsed: boolean) => void;
 }
 
 interface UserProfile {
@@ -133,9 +131,7 @@ const HUD: React.FC<HUDProps> = ({
   theme = 'light', 
   onClose, 
   onThemeChange,
-  systemStatus,
-  statusPanelCollapsed,
-  setStatusPanelCollapsed
+  systemStatus
 }) => {
   const [screen, setScreen] = useState<Screen>('home');
   const [walletData, setWalletData] = useState<any>(null);
@@ -180,18 +176,6 @@ const HUD: React.FC<HUDProps> = ({
   const [showContextDashboard, setShowContextDashboard] = useState<boolean>(false);
   const [contextDashboardActiveTab, setContextDashboardActiveTab] = useState<'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'>('hecate');
 
-  const renderClickableHecateRow = () => (
-    <div 
-      className={`${styles.statusRow} ${styles.clickable}`}
-      onClick={() => {
-        setShowContextDashboard(true);
-        setContextDashboardActiveTab('hecate');
-      }}
-    >
-      <span className={`${styles.statusDot} ${systemStatus.hecate ? styles.online : styles.offline}`}></span>
-      <span className={styles.statusLabel}>HECATE</span>
-    </div>
-  );
 
   // Only unlock 'home' and 'overview' by default, unlock others if logged in
   const unlockedScreens = publicKey ? ['home', 'overview', 'camp'] : ['home', 'overview'];
@@ -931,7 +915,7 @@ const HUD: React.FC<HUDProps> = ({
       </div>
       <div className={styles.lockedContent}>
         <p>This feature is currently locked.</p>
-        <p>Return to camp and await further instructions.</p>
+        <p>Access the NullEye for further instructions.</p>
       </div>
     </div>
   );
@@ -1006,79 +990,6 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderCampScreen = () => (
     <div className={styles.hudScreen}>
-      {/* System Status Panel - positioned in inner HUD */}
-      <div className={styles.statusIndicator}>
-        <div className={`${styles.systemStatusPanel} ${statusPanelCollapsed ? styles.collapsed : ''}`}>
-          <div className={styles.statusHeader} onClick={() => setStatusPanelCollapsed(!statusPanelCollapsed)}>
-            <div className={styles.headerContent}>
-              <span className={styles.statusTitle}>SYSTEM CONTROL</span>
-              <div className={styles.headerRight}>
-                {systemStatus.portfolio && systemStatus.defi && !statusPanelCollapsed && (
-                  <span className={styles.newFeaturesLabel}>✨ NEW</span>
-                )}
-                <span className={styles.toggleIcon}>{statusPanelCollapsed ? '▼' : '▲'}</span>
-              </div>
-            </div>
-          </div>
-          
-          {!statusPanelCollapsed && (
-            <div className={styles.statusContent}>
-              {/* Core Systems */}
-              <div className={styles.systemGroup}>
-                <div className={styles.groupLabel}>CORE</div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.hecate ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>HECATE</span>
-                </div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.erebus ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>EREBUS</span>
-                </div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.hud ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>HUD</span>
-                </div>
-              </div>
-              
-              {/* MCP & Orchestration */}
-              <div className={styles.systemGroup}>
-                <div className={styles.groupLabel}>MCP</div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.mcp ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>SERVER</span>
-                </div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.orchestration ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>ORCHESTRATION</span>
-                </div>
-              </div>
-              
-              {/* Trading Agents */}
-              <div className={styles.systemGroup}>
-                <div className={styles.groupLabel}>AGENTS</div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.arbitrage ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>ARBITRAGE</span>
-                </div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.social ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>SOCIAL</span>
-                </div>
-                <div className={`${styles.statusRow} ${systemStatus.portfolio ? styles.newFeature : ''}`}>
-                  <span className={`${styles.statusDot} ${systemStatus.portfolio ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>PORTFOLIO</span>
-                  {systemStatus.portfolio && <span className={styles.newBadge}>NEW</span>}
-                </div>
-                <div className={`${styles.statusRow} ${systemStatus.defi ? styles.newFeature : ''}`}>
-                  <span className={`${styles.statusDot} ${systemStatus.defi ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>DEFI</span>
-                  {systemStatus.defi && <span className={styles.newBadge}>NEW</span>}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
       
       <div className={styles.headerContainer}>
         <h2 className={styles.hudTitle}>CAMP</h2>
@@ -1807,7 +1718,7 @@ const HUD: React.FC<HUDProps> = ({
                   <div className={styles.systemsTab}>
                     <div className={styles.lockedContent}>
                       <p>This feature is currently locked.</p>
-                      <p>Return to camp and await further instructions.</p>
+                      <p>Access the NullEye for further instructions.</p>
                     </div>
                   </div>
                 )}
@@ -1815,7 +1726,7 @@ const HUD: React.FC<HUDProps> = ({
                   <div className={styles.defenseTab}>
                     <div className={styles.lockedContent}>
                       <p>This feature is currently locked.</p>
-                      <p>Return to camp and await further instructions.</p>
+                      <p>Access the NullEye for further instructions.</p>
                     </div>
                   </div>
                 )}
@@ -1860,7 +1771,7 @@ const HUD: React.FC<HUDProps> = ({
                         <h4>MISSION BRIEF</h4>
                         <p className={styles.missionText}>
                           "Welcome, Agent, to your first trial. Interface with the HUD carefully.
-                          Share your Base Camp on X—let its glow haunt the realm.
+                          Share your NullEye interface on X—let its glow haunt the realm.
                           More souls drawn, more NETHER gained. Don't let it fade."
                         </p>
                         <div className={styles.missionInstructions}>
@@ -1990,14 +1901,14 @@ const HUD: React.FC<HUDProps> = ({
         <h3>WEAPONS</h3>
         <div className={styles.emptyState}>
           <p>No weapons found.</p>
-          <p>Complete missions to acquire gear.</p>
+          <p>Access the NullEye to acquire gear.</p>
         </div>
       </div>
       <div className={styles.inventorySection}>
         <h3>SUPPLIES</h3>
         <div className={styles.emptyState}>
           <p>Cache empty.</p>
-          <p>Gather resources to expand inventory.</p>
+          <p>Access the NullEye to expand inventory.</p>
         </div>
       </div>
     </div>
@@ -2019,7 +1930,7 @@ const HUD: React.FC<HUDProps> = ({
         <div className={styles.missions}>
           <h3>OBJECTIVES</h3>
           <p className={styles.placeholder}>No active missions</p>
-          <p className={styles.placeholder}>Complete training to begin</p>
+          <p className={styles.placeholder}>Access the NullEye to begin</p>
         </div>
       </div>
     </div>
@@ -2041,7 +1952,7 @@ const HUD: React.FC<HUDProps> = ({
         <div className={styles.interfaceSection}>
           <h3>CONFIGURATIONS</h3>
           <p className={styles.placeholder}>No active modifications</p>
-          <p className={styles.placeholder}>Run diagnostics to begin</p>
+          <p className={styles.placeholder}>Access the NullEye to begin</p>
         </div>
       </div>
     </div>
@@ -2049,79 +1960,6 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderHomeScreen = () => (
     <div className={styles.hudScreen}>
-      {/* System Status Panel - positioned in inner HUD */}
-      <div className={styles.statusIndicator}>
-        <div className={`${styles.systemStatusPanel} ${statusPanelCollapsed ? styles.collapsed : ''}`}>
-          <div className={styles.statusHeader} onClick={() => setStatusPanelCollapsed(!statusPanelCollapsed)}>
-            <div className={styles.headerContent}>
-              <span className={styles.statusTitle}>SYSTEM CONTROL</span>
-              <div className={styles.headerRight}>
-                {systemStatus.portfolio && systemStatus.defi && !statusPanelCollapsed && (
-                  <span className={styles.newFeaturesLabel}>✨ NEW</span>
-                )}
-                <span className={styles.toggleIcon}>{statusPanelCollapsed ? '▼' : '▲'}</span>
-              </div>
-            </div>
-          </div>
-          
-          {!statusPanelCollapsed && (
-            <div className={styles.statusContent}>
-              {/* Core Systems */}
-              <div className={styles.systemGroup}>
-                <div className={styles.groupLabel}>CORE</div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.hecate ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>HECATE</span>
-                </div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.erebus ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>EREBUS</span>
-                </div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.hud ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>HUD</span>
-                </div>
-              </div>
-              
-              {/* MCP & Orchestration */}
-              <div className={styles.systemGroup}>
-                <div className={styles.groupLabel}>MCP</div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.mcp ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>SERVER</span>
-                </div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.orchestration ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>ORCHESTRATION</span>
-                </div>
-              </div>
-              
-              {/* Trading Agents */}
-              <div className={styles.systemGroup}>
-                <div className={styles.groupLabel}>AGENTS</div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.arbitrage ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>ARBITRAGE</span>
-                </div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.social ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>SOCIAL</span>
-                </div>
-                <div className={`${styles.statusRow} ${systemStatus.portfolio ? styles.newFeature : ''}`}>
-                  <span className={`${styles.statusDot} ${systemStatus.portfolio ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>PORTFOLIO</span>
-                  {systemStatus.portfolio && <span className={styles.newBadge}>NEW</span>}
-                </div>
-                <div className={`${styles.statusRow} ${systemStatus.defi ? styles.newFeature : ''}`}>
-                  <span className={`${styles.statusDot} ${systemStatus.defi ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>DEFI</span>
-                  {systemStatus.defi && <span className={styles.newBadge}>NEW</span>}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
       
       <div className={styles.homeContent}>
         {!publicKey ? (
@@ -2166,13 +2004,16 @@ const HUD: React.FC<HUDProps> = ({
               )}
             </div>
             <div className={styles.quickActions}>
-              <p>Access trading systems and agents through the SYSTEM CONTROL panel, or navigate to CAMP for advanced features.</p>
+              <p>Use the NullEye to access advanced trading systems and agents and interface with the system.</p>
               <div className={styles.actionButtons}>
                 <button 
                   className={styles.actionButton}
-                  onClick={() => setScreen('camp')}
+                  onClick={() => {
+                    setShowContextDashboard(true);
+                    setContextDashboardActiveTab('hecate');
+                  }}
                 >
-                  Enter Camp
+                  Access NullEye
                 </button>
                 <button 
                   className={styles.actionButton}
@@ -2190,76 +2031,6 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderOverviewScreen = () => (
     <div className={styles.hudScreen}>
-      {/* System Status Panel - positioned in inner HUD */}
-      <div className={styles.statusIndicator}>
-        <div className={`${styles.systemStatusPanel} ${statusPanelCollapsed ? styles.collapsed : ''}`}>
-          <div className={styles.statusHeader} onClick={() => setStatusPanelCollapsed(!statusPanelCollapsed)}>
-            <div className={styles.headerContent}>
-              <span className={styles.statusTitle}>SYSTEM CONTROL</span>
-              <div className={styles.headerRight}>
-                {systemStatus.portfolio && systemStatus.defi && !statusPanelCollapsed && (
-                  <span className={styles.newFeaturesLabel}>✨ NEW</span>
-                )}
-                <span className={styles.toggleIcon}>{statusPanelCollapsed ? '▼' : '▲'}</span>
-              </div>
-            </div>
-          </div>
-          
-          {!statusPanelCollapsed && (
-            <div className={styles.statusContent}>
-              {/* Core Systems */}
-              <div className={styles.systemGroup}>
-                <div className={styles.groupLabel}>CORE</div>
-                {renderClickableHecateRow()}
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.erebus ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>EREBUS</span>
-                </div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.hud ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>HUD</span>
-                </div>
-              </div>
-              
-              {/* MCP & Orchestration */}
-              <div className={styles.systemGroup}>
-                <div className={styles.groupLabel}>MCP</div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.mcp ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>SERVER</span>
-                </div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.orchestration ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>ORCHESTRATION</span>
-                </div>
-              </div>
-              
-              {/* Trading Agents */}
-              <div className={styles.systemGroup}>
-                <div className={styles.groupLabel}>AGENTS</div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.arbitrage ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>ARBITRAGE</span>
-                </div>
-                <div className={styles.statusRow}>
-                  <span className={`${styles.statusDot} ${systemStatus.social ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>SOCIAL</span>
-                </div>
-                <div className={`${styles.statusRow} ${systemStatus.portfolio ? styles.newFeature : ''}`}>
-                  <span className={`${styles.statusDot} ${systemStatus.portfolio ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>PORTFOLIO</span>
-                  {systemStatus.portfolio && <span className={styles.newBadge}>NEW</span>}
-                </div>
-                <div className={`${styles.statusRow} ${systemStatus.defi ? styles.newFeature : ''}`}>
-                  <span className={`${styles.statusDot} ${systemStatus.defi ? styles.online : styles.offline}`}></span>
-                  <span className={styles.statusLabel}>DEFI</span>
-                  {systemStatus.defi && <span className={styles.newBadge}>NEW</span>}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
       
       <div className={styles.headerContainer}>
         <h2 className={styles.hudTitle}>OVERVIEW</h2>
@@ -2268,7 +2039,7 @@ const HUD: React.FC<HUDProps> = ({
       <div className={styles.campContent}>
         <div style={{textAlign: 'center', marginTop: '2rem'}}>
           <h3>Welcome to Nullblock Overview</h3>
-          <p>This is the overview screen. Connect your wallet to unlock CAMP and other features.</p>
+          <p>This is the overview screen. Connect your wallet to unlock advanced features via the NullEye.</p>
         </div>
       </div>
     </div>

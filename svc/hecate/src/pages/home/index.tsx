@@ -9,7 +9,6 @@ const Home: React.FC = () => {
   const [showHUD, setShowHUD] = useState<boolean>(true);
   const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('light');
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const [statusPanelCollapsed, setStatusPanelCollapsed] = useState<boolean>(true);
   const [systemStatus, setSystemStatus] = useState({
     hud: false,
     mcp: false,
@@ -160,8 +159,6 @@ const Home: React.FC = () => {
         onDisconnect={handleDisconnect}
         theme={currentTheme}
         systemStatus={systemStatus}
-        statusPanelCollapsed={statusPanelCollapsed}
-        setStatusPanelCollapsed={setStatusPanelCollapsed}
         onClose={() => {
           setShowHUD(false);
         }}
@@ -181,7 +178,7 @@ const Home: React.FC = () => {
         <div className={styles.newFeaturesHint}>
           <div className={styles.hintContent}>
             <span className={styles.hintIcon}>🚀</span>
-            <span className={styles.hintText}>NEW: Portfolio & DeFi Trading Agents Available - Check SYSTEM CONTROL Panel</span>
+            <span className={styles.hintText}>NEW: Portfolio & DeFi Trading Agents Available - Access via NullEye</span>
           </div>
         </div>
       )}
