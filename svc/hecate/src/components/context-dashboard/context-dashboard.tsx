@@ -3,7 +3,7 @@ import styles from './context-dashboard.module.scss';
 
 interface ContextDashboardProps {
   onClose: () => void;
-  theme?: 'null' | 'light';
+  theme?: 'null' | 'light' | 'dark';
   initialActiveTab?: 'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate';
   onTabChange?: (tab: 'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate') => void;
 }

@@ -2620,37 +2620,46 @@ $border-color: rgba($echo-blue, 0.3);
 
 // Dark theme for Context Dashboard
 .contextDashboard.dark {
-  background: linear-gradient(135deg, rgba(5, 5, 15, 0.15), rgba(10, 10, 20, 0.20));
-  backdrop-filter: blur(3px);
+  background: linear-gradient(135deg, rgba(5, 5, 15, 0.05), rgba(10, 10, 20, 0.08));
+  backdrop-filter: blur(1px);
+  
+  .dashboardHeader {
+    background: rgba(5, 5, 15, 0.15);
+    backdrop-filter: blur(2px);
+  }
+  
+  .dashboardTabs {
+    background: rgba(5, 5, 15, 0.10);
+  }
   
   .dashboardContent {
-    background: rgba(5, 5, 15, 0.05);
-    border-color: rgba(74, 144, 226, 0.12);
-  }
-  
-  .infoPanel {
-    background: rgba(5, 5, 15, 0.08);
-    border-color: rgba(74, 144, 226, 0.15);
-  }
-  
-  .lensAppButton {
-    background: rgba(74, 144, 226, 0.06);
-    border-color: rgba(74, 144, 226, 0.12);
-    
-    &:hover {
-      background: rgba(74, 144, 226, 0.12);
-      border-color: rgba(74, 144, 226, 0.20);
-    }
-  }
-  
-  .tabContent {
     background: rgba(5, 5, 15, 0.04);
     border-color: rgba(74, 144, 226, 0.08);
   }
   
+  .infoPanel {
+    background: rgba(5, 5, 15, 0.06);
+    border-color: rgba(74, 144, 226, 0.10);
+  }
+  
+  .lensAppButton {
+    background: rgba(74, 144, 226, 0.04);
+    border-color: rgba(74, 144, 226, 0.08);
+    
+    &:hover {
+      background: rgba(74, 144, 226, 0.08);
+      border-color: rgba(74, 144, 226, 0.15);
+    }
+  }
+  
+  .tabContent {
+    background: rgba(5, 5, 15, 0.03);
+    border-color: rgba(74, 144, 226, 0.06);
+  }
+  
   .taskCard, .agentCard, .logEntry {
-    background: rgba(5, 5, 15, 0.08);
-    border-color: rgba(74, 144, 226, 0.12);
+    background: rgba(5, 5, 15, 0.06);
+    border-color: rgba(74, 144, 226, 0.08);
   }
 }
 
