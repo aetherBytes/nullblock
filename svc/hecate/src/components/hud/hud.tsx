@@ -27,6 +27,7 @@ interface SystemStatus {
 interface HUDProps {
   publicKey: string | null;
   onDisconnect: () => void;
+  onConnectWallet: () => void;
   theme?: Theme;
   onClose: () => void;
   onThemeChange: (theme: 'null' | 'cyber' | 'light' | 'dark') => void;
@@ -126,6 +127,7 @@ const SCREEN_LABELS: Record<Screen, string> = {
 const HUD: React.FC<HUDProps> = ({ 
   publicKey, 
   onDisconnect, 
+  onConnectWallet,
   theme = 'light', 
   onClose, 
   onThemeChange,
@@ -735,10 +737,15 @@ const HUD: React.FC<HUDProps> = ({
       <div 
         className={`${styles.nulleye} ${styles[nulleyeState]}`}
         onClick={() => {
+          if (!publicKey) {
+            alert('Please connect your Web3 wallet to access advanced features.');
+            return;
+          }
           setShowContextDashboard(true);
           setContextDashboardActiveTab('hecate');
           setNulleyeState('processing');
         }}
+        title={!publicKey ? 'Connect wallet to access NullEye' : 'Access NullEye'}
       >
         <div className={styles.pulseRing}></div>
         <div className={styles.dataStream}>
@@ -766,6 +773,20 @@ const HUD: React.FC<HUDProps> = ({
         {SCREEN_LABELS[screen]}
       </div>
       <div className={styles.navbarButtons}>
+        <button 
+          className={styles.walletButton}
+          onClick={publicKey ? onDisconnect : onConnectWallet}
+          title={publicKey ? 'Disconnect Wallet' : 'Connect Wallet'}
+        >
+          <span className={styles.walletIcon}>🚪</span>
+        </button>
+        <button 
+          className={styles.docsButton}
+          onClick={() => window.open('https://github.com/nullblock-io/docs', '_blank')}
+          title="Documentation & Developer Resources"
+        >
+          <span className={styles.docsIcon}>📚</span>
+        </button>
         <button 
           className={styles.themeButton}
           onClick={() => {
@@ -1972,42 +1993,12 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderHomeScreen = () => (
     <div className={styles.hudScreen}>
-      
       <div className={styles.homeContent}>
-        {!publicKey ? (
-          <div className={styles.loginPrompt}>
-            <h3>Welcome to Nullblock</h3>
-            <p>Connect your Web3 wallet to access the full HUD interface and trading agents.</p>
-            <div className={styles.loginOptions}>
-              <button 
-                className={styles.connectWalletButton}
-                onClick={async () => {
-                  if ('phantom' in window) {
-                    const provider = (window as any).phantom?.solana;
-                    if (provider) {
-                      try {
-                        const response = await provider.connect();
-                        // This will be handled by the parent component
-                        window.location.reload();
-                      } catch (error) {
-                        console.error('Failed to connect wallet:', error);
-                      }
-                    }
-                  } else {
-                    window.open('https://phantom.app/', '_blank');
-                  }
-                }}
-              >
-                Connect Phantom Wallet
-              </button>
-              <p className={styles.walletNote}>
-                Don't have a wallet? <a href="https://phantom.app/" target="_blank" rel="noopener noreferrer">Install Phantom</a>
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className={styles.welcomeMessage}>
-            <h3>Welcome back, Agent</h3>
+                <div className={styles.landingContent}>
+          <h3>Welcome to Nullblock</h3>
+          <p>Initiate connection for advanced features, agentic workflows or to speak with Hecate. Biologicals please use the door.</p>
+          <p>Builders / Agents please refer to dev pages above for onboarding.</p>
+          {publicKey && (
             <div className={styles.walletInfo}>
               <p><strong>Connected Wallet:</strong></p>
               <p className={styles.walletAddress}>{publicKey}</p>
@@ -2015,28 +2006,8 @@ const HUD: React.FC<HUDProps> = ({
                 <p className={styles.walletUsername}>{userProfile.id}</p>
               )}
             </div>
-            <div className={styles.quickActions}>
-              <p>Use the NullEye to access advanced trading systems and agents and interface with the system.</p>
-              <div className={styles.actionButtons}>
-                <button 
-                  className={styles.actionButton}
-                  onClick={() => {
-                    setShowContextDashboard(true);
-                    setContextDashboardActiveTab('hecate');
-                  }}
-                >
-                  Access NullEye
-                </button>
-                <button 
-                  className={styles.actionButton}
-                  onClick={() => setScreen('overview')}
-                >
-                  Overview
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

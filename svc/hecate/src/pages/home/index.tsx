@@ -3,11 +3,18 @@ import styles from './index.module.scss';
 import StarsCanvas from '@components/stars/stars';
 import HUD from '../../components/hud/hud';
 
+// Extend Window interface for ethereum
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 const Home: React.FC = () => {
-  const [, setWalletConnected] = useState<boolean>(false);
+  const [walletConnected, setWalletConnected] = useState<boolean>(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [showHUD, setShowHUD] = useState<boolean>(true);
-  const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>('light');
+  const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>('dark');
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [systemStatus, setSystemStatus] = useState({
     hud: false,
@@ -147,16 +154,55 @@ const Home: React.FC = () => {
     }
   };
 
+  const handleConnectWallet = async () => {
+    // Check for Phantom first
+    if ('phantom' in window) {
+      const provider = (window as any).phantom?.solana;
+      if (provider) {
+        try {
+          const response = await provider.connect();
+          setPublicKey(response.publicKey.toString());
+          setWalletConnected(true);
+          localStorage.setItem('walletPublickey', response.publicKey.toString());
+          localStorage.setItem('hasSeenHUD', 'true');
+          updateAuthTime();
+        } catch (error) {
+          console.error('Failed to connect Phantom wallet:', error);
+        }
+      }
+    } else {
+      // Check for MetaMask
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          if (accounts.length > 0) {
+            setPublicKey(accounts[0]);
+            setWalletConnected(true);
+            localStorage.setItem('walletPublickey', accounts[0]);
+            localStorage.setItem('hasSeenHUD', 'true');
+            updateAuthTime();
+          }
+        } catch (error) {
+          console.error('Failed to connect MetaMask wallet:', error);
+        }
+      } else {
+        // No wallet detected
+        alert('No Web3 wallet detected. Please install Phantom or MetaMask.');
+      }
+    }
+  };
+
   return (
     <div className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]} ${isInitialized ? styles.initialized : ''}`}>
       <div className={styles.backgroundImage} />
-      <StarsCanvas theme={currentTheme} />
+      <StarsCanvas theme={currentTheme === 'dark' ? 'null' : currentTheme} />
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`}>
         {/* System status panel moved to HUD component */}
       </div>
       {showHUD && isInitialized && <HUD 
         publicKey={publicKey} 
         onDisconnect={handleDisconnect}
+        onConnectWallet={handleConnectWallet}
         theme={currentTheme}
         systemStatus={systemStatus}
         onClose={() => {
