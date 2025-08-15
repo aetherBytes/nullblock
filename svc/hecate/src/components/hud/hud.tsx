@@ -2083,10 +2083,14 @@ const HUD: React.FC<HUDProps> = ({
 
   return (
     <div className={`${styles.echoContainer} ${styles[theme]}`}>
-      {renderControlScreen()}
-      <div className={styles.hudWindow}>
-        {renderScreen()}
-      </div>
+      {!showContextDashboard && (
+        <>
+          {renderControlScreen()}
+          <div className={styles.hudWindow}>
+            {renderScreen()}
+          </div>
+        </>
+      )}
       
       {showContextDashboard && (
         <ContextDashboard
