@@ -628,18 +628,18 @@ h1, h2, h3, h4, h5, h6 {
 
 .theme-dark {
   .appContainer {
-    background-color: #0a0a0a;
+    background-color: transparent;
     color: #e0e0e0;
   }
   
   .backgroundImage {
-    background-color: #0a0a0a;
+    background-color: transparent;
     
     &::after {
       background: linear-gradient(to bottom,
-        rgba(10, 10, 10, 0.3) 0%,
-        rgba(20, 20, 30, 0.6) 50%,
-        rgba(10, 10, 10, 0.9) 100%);
+        rgba(5, 5, 15, 0.1) 0%,
+        rgba(10, 10, 20, 0.2) 50%,
+        rgba(5, 5, 15, 0.3) 100%);
     }
   }
   
@@ -660,9 +660,10 @@ h1, h2, h3, h4, h5, h6 {
   }
   
   .systemStatus {
-    background: rgba(10, 10, 20, 0.95);
+    background: rgba(5, 5, 15, 0.3);
     border-color: #4a90e2;
     box-shadow: 0 0 20px rgba(74, 144, 226, 0.4);
+    backdrop-filter: blur(2px);
   }
 }
 

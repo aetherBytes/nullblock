@@ -2584,6 +2584,42 @@ $border-color: rgba($echo-blue, 0.3);
   }
 }
 
+// Dark theme for Context Dashboard
+.contextDashboard.dark {
+  background: linear-gradient(135deg, rgba(5, 5, 15, 0.85), rgba(10, 10, 20, 0.85));
+  backdrop-filter: blur(20px);
+  
+  .dashboardContent {
+    background: rgba(5, 5, 15, 0.1);
+    border-color: rgba(74, 144, 226, 0.15);
+  }
+  
+  .infoPanel {
+    background: rgba(5, 5, 15, 0.12);
+    border-color: rgba(74, 144, 226, 0.18);
+  }
+  
+  .lensAppButton {
+    background: rgba(74, 144, 226, 0.08);
+    border-color: rgba(74, 144, 226, 0.15);
+    
+    &:hover {
+      background: rgba(74, 144, 226, 0.15);
+      border-color: rgba(74, 144, 226, 0.25);
+    }
+  }
+  
+  .tabContent {
+    background: rgba(5, 5, 15, 0.08);
+    border-color: rgba(74, 144, 226, 0.12);
+  }
+  
+  .taskCard, .agentCard, .logEntry {
+    background: rgba(5, 5, 15, 0.12);
+    border-color: rgba(74, 144, 226, 0.15);
+  }
+}
+
 // Responsive Design
 @media (max-width: 768px) {
   .contextDashboard {
