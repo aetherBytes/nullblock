@@ -2,3 +2,4 @@
 # Quick logs command for Nullblock MVP
 ./scripts/start-nullblock.sh logs "$@"
 
+

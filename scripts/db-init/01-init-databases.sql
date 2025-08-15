@@ -327,3 +327,4 @@ GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO nullblock;
 -- Return to postgres database
 \c postgres;
 
+

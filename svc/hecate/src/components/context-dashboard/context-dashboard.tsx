@@ -1171,7 +1171,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({ onClose, theme = 'l
   );
 
   return (
-    <div className={`${styles.contextDashboard} ${theme === 'dark' ? styles.dark : ''} ${styles[`theme-${theme}`] || ''}`}>
+    <div className={`${styles.contextDashboard} ${theme === 'dark' ? styles.dark : theme === 'light' ? styles.light : ''} ${styles[`theme-${theme}`] || ''}`}>
       <div className={styles.dashboardHeader}>
         <div className={styles.headerLeft}>
           <h2>NullEye Views</h2>
