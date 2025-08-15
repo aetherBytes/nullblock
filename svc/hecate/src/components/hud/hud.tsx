@@ -782,7 +782,7 @@ const HUD: React.FC<HUDProps> = ({
         </button>
         <button 
           className={styles.docsButton}
-          onClick={() => window.open('https://aetherbytes.github.io/nullblock/docs/', '_blank')}
+          onClick={() => window.open('https://aetherbytes.github.io/nullblock-docs/', '_blank')}
           title="Documentation & Developer Resources"
         >
           <span className={styles.docsIcon}>📚</span>
