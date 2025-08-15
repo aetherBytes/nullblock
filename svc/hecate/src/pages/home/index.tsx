@@ -7,7 +7,7 @@ const Home: React.FC = () => {
   const [, setWalletConnected] = useState<boolean>(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [showHUD, setShowHUD] = useState<boolean>(true);
-  const [currentTheme, setCurrentTheme] = useState<'null' | 'light'>('light');
+  const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>('light');
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [systemStatus, setSystemStatus] = useState({
     hud: false,
@@ -167,7 +167,7 @@ const Home: React.FC = () => {
             setCurrentTheme('null');
             localStorage.setItem('currentTheme', 'null');
           } else {
-            setCurrentTheme(theme as 'null' | 'light');
+            setCurrentTheme(theme as 'null' | 'light' | 'dark');
             localStorage.setItem('currentTheme', theme);
           }
         }}
