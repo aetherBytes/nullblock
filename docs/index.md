@@ -71,4 +71,4 @@ Development setup, contribution guidelines, and best practices
 
 ---
 
-**Need Help?** Join our community or open an issue on [GitHub](https://github.com/aetherBytes/nullblock).
+**Need Help?** Join our community or open an issue on [GitHub](https://github.com/aetherBytes/nullblock-sdk).

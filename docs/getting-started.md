@@ -32,8 +32,8 @@ Once connected:
 
 ### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/aetherBytes/nullblock.git
-cd nullblock
+git clone https://github.com/aetherBytes/nullblock-sdk.git
+cd nullblock-sdk
 ```
 
 ### Step 2: Install Dependencies
@@ -179,7 +179,7 @@ const API_ENDPOINTS = {
 - Verify sufficient balance for trading
 
 ### Getting Help
-- **GitHub Issues**: [Create an issue](https://github.com/aetherBytes/nullblock/issues)
+- **GitHub Issues**: [Create an issue](https://github.com/aetherBytes/nullblock-sdk/issues)
 - **Documentation**: Check the [API Reference](api/) for detailed information
 - **Community**: Join our Discord or Telegram channels
 

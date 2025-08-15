@@ -56,8 +56,8 @@ Update the navigation in `_config.yml` under the `nav` section.
 ## 🔗 Links
 
 - **Live Site**: https://aetherbytes.github.io/nullblock/docs/
-- **Repository**: https://github.com/aetherBytes/nullblock
-- **Issues**: https://github.com/aetherBytes/nullblock/issues
+- **Repository**: https://github.com/aetherBytes/nullblock-sdk
+- **Issues**: https://github.com/aetherBytes/nullblock-sdk/issues
 
 ## 📝 Contributing
 
