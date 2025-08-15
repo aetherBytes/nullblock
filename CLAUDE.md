@@ -30,6 +30,91 @@ Nullblock is a decentralized Web3 platform for deploying and monetizing agentic 
 ✅ **Goal-Driven Automation**: Template-based workflows for arbitrage, DeFi, NFT, and DAO operations
 ✅ **Advanced UI/UX**: Responsive Command Lens with ball lightning NullEye animations and intelligent tooltips
 
+## ⚠️ **ORGANIZATIONAL RULES** ⚠️
+
+**RESERVED DIRECTORIES** - Do not modify without explicit request:
+- `svc/erebus/src/resources/templates/` - Reserved for MCP-specific template definitions
+- `svc/erebus/src/resources/definitions/` - Reserved for MCP-specific type definitions and schemas
+
+**EREBUS ARCHITECTURE RULES**:
+- **main.rs** only contains subsystem entry points and core system routes
+- **Subsystem Organization**: Each major feature gets its own directory (wallets/, mcp/)
+- **Wallet Subsystem**: All wallet code in `resources/wallets/`
+  - Each wallet type: own module (metamask.rs, phantom.rs)  
+  - Consolidation layer: `wallet_interaction.rs`
+  - HTTP routes: `wallets/routes.rs`
+  - All wallets implement `WalletProvider` trait
+- **MCP Subsystem**: All MCP code in `resources/mcp/`
+  - Protocol handler: `handler.rs`
+  - HTTP routes: `mcp/routes.rs` 
+  - MCP types: `mcp/types.rs`
+- **Shared types**: `resources/types.rs` for cross-subsystem types
+
+## 🔥 **EREBUS WALLET ARCHITECTURE** (August 2025)
+
+Erebus now serves as the main server for wallet interactions and will be the foundation for MCP integration:
+
+### **Directory Structure**
+```
+svc/erebus/src/
+├── main.rs                           # 🎯 Main entry point (subsystem routing only)
+├── resources/
+│   ├── mod.rs                        # Module organization
+│   ├── types.rs                      # Shared types and traits
+│   ├── wallets/                      # 👛 WALLET SUBSYSTEM
+│   │   ├── mod.rs                    # Wallet module exports
+│   │   ├── wallet_interaction.rs     # Generic wallet consolidation layer
+│   │   ├── routes.rs                 # HTTP endpoints for wallets
+│   │   ├── metamask.rs              # MetaMask-specific logic
+│   │   └── phantom.rs               # Phantom-specific logic
+│   ├── mcp/                          # 🔗 MCP SUBSYSTEM
+│   │   ├── mod.rs                    # MCP module exports
+│   │   ├── handler.rs                # MCP protocol handler
+│   │   ├── routes.rs                 # HTTP endpoints for MCP
+│   │   └── types.rs                  # MCP-specific types
+│   ├── templates/                    # 🔒 RESERVED - MCP templates
+│   └── definitions/                  # 🔒 RESERVED - MCP definitions
+```
+
+### **Erebus API Endpoints** (Port 3000)
+**Core System:**
+- `GET /health` - Server health check with subsystem status
+
+**👛 Wallet Subsystem:**
+- `GET /api/wallets` - List supported wallets
+- `POST /api/wallets/challenge` - Create wallet authentication challenge
+- `POST /api/wallets/verify` - Verify wallet signature and create session
+- `GET /api/wallets/{type}/networks` - Get supported networks for wallet type
+- `POST /api/wallets/sessions/validate` - Validate session token
+
+**🔗 MCP Subsystem:**
+- `POST /mcp` - Main MCP protocol endpoint
+- `POST /mcp/initialize` - Initialize MCP server capabilities
+- `POST /mcp/resources` - List available MCP resources
+- `POST /mcp/tools` - List available MCP tools
+- `POST /mcp/prompts` - List available MCP prompts
+
+### **Wallet Provider Architecture**
+All wallet implementations must conform to the `WalletProvider` trait:
+```rust
+pub trait WalletProvider {
+    fn get_wallet_info() -> WalletInfo;
+    fn create_challenge_message(wallet_address: &str, challenge_id: &str) -> String;
+    fn verify_signature(message: &str, signature: &str, wallet_address: &str) -> Result<bool, String>;
+}
+```
+
+### **Supported Wallets**
+- **Phantom**: Solana wallet with Ed25519 signature verification
+- **MetaMask**: Ethereum wallet with ECDSA signature verification  
+- **Extensible**: New wallets can be added by implementing `WalletProvider`
+
+### **Session Management**
+- 24-hour session tokens with automatic expiration
+- In-memory storage (production should use Redis)
+- Session validation for authenticated endpoints
+- Automatic cleanup of expired sessions
+
 ## Common Development Commands
 
 ### **🆕 Social Trading Agents** (August 2025)
@@ -142,6 +227,36 @@ ruff format . && ruff check . --fix && mypy .
 
 # Testing
 pytest -v src/tests/
+```
+
+### **🔥 Erebus Wallet Server** (`svc/erebus/`)
+```bash
+# Install dependencies
+cargo build
+
+# Development server
+cargo run
+
+# Development with auto-reload (install cargo-watch first)
+cargo install cargo-watch
+cargo watch -x run
+
+# Code quality
+cargo fmt
+cargo clippy
+
+# Testing
+cargo test
+
+# Release build
+cargo build --release
+
+# Check for compilation errors without running
+cargo check
+
+# Environment setup
+# Server runs on localhost:3000 by default
+# Wallet API endpoints ready for MCP integration
 ```
 
 ### **Legacy Backend** (Helios - `svc/helios/`)
