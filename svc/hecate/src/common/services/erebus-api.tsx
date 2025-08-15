@@ -3,6 +3,56 @@ import axios from 'axios';
 // Erebus API base URL
 const EREBUS_API_BASE_URL = 'http://localhost:3000';
 
+// New interfaces for backend-driven wallet interaction
+interface WalletDetectionRequest {
+  user_agent?: string;
+  available_wallets: string[];
+}
+
+interface DetectedWallet {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  is_available: boolean;
+  install_url?: string;
+}
+
+interface InstallPrompt {
+  wallet_id: string;
+  wallet_name: string;
+  install_url: string;
+  description: string;
+}
+
+interface WalletDetectionResponse {
+  available_wallets: DetectedWallet[];
+  recommended_wallet?: string;
+  install_prompts: InstallPrompt[];
+}
+
+interface WalletConnectionRequest {
+  wallet_type: string;
+  wallet_address: string;
+  public_key?: string;
+}
+
+interface WalletConnectionResponse {
+  success: boolean;
+  session_token?: string;
+  wallet_info?: WalletInfo;
+  message: string;
+  next_step?: string;
+}
+
+interface WalletStatusResponse {
+  connected: boolean;
+  wallet_type?: string;
+  wallet_address?: string;
+  session_valid: boolean;
+  session_expires_at?: string;
+}
+
 interface WalletInfo {
   id: string;
   name: string;
@@ -109,6 +159,67 @@ export const checkErebusHealth = async (): Promise<any> => {
     return response.data;
   } catch (error) {
     console.error('Erebus health check failed:', error);
+    throw error;
+  }
+};
+
+// Backend-driven wallet detection
+export const detectWallets = async (availableWallets: string[]): Promise<WalletDetectionResponse> => {
+  try {
+    const request: WalletDetectionRequest = {
+      user_agent: navigator.userAgent,
+      available_wallets: availableWallets,
+    };
+
+    console.log('Detecting wallets:', request);
+    const response = await axios.post<WalletDetectionResponse>(
+      `${EREBUS_API_BASE_URL}/api/wallets/detect`,
+      request
+    );
+
+    console.log('Wallet detection response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to detect wallets:', error);
+    throw error;
+  }
+};
+
+// Backend-driven wallet connection initiation
+export const initiateWalletConnection = async (
+  walletType: string,
+  walletAddress: string,
+  publicKey?: string
+): Promise<WalletConnectionResponse> => {
+  try {
+    const request: WalletConnectionRequest = {
+      wallet_type: walletType,
+      wallet_address: walletAddress,
+      public_key: publicKey,
+    };
+
+    console.log('Initiating wallet connection:', request);
+    const response = await axios.post<WalletConnectionResponse>(
+      `${EREBUS_API_BASE_URL}/api/wallets/connect`,
+      request
+    );
+
+    console.log('Wallet connection response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to initiate wallet connection:', error);
+    throw error;
+  }
+};
+
+// Get wallet status from backend
+export const getWalletStatus = async (): Promise<WalletStatusResponse> => {
+  try {
+    const response = await axios.get<WalletStatusResponse>(`${EREBUS_API_BASE_URL}/api/wallets/status`);
+    console.log('Wallet status:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get wallet status:', error);
     throw error;
   }
 };

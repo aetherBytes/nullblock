@@ -1,5 +1,5 @@
 use super::types::{McpRequest, McpResponse, McpServerInfo, McpCapabilities};
-use super::worker::{McpWorkerFactory, WorkerStatus};
+use super::worker::McpWorkerFactory;
 
 #[derive(Clone)]
 pub struct McpHandler {

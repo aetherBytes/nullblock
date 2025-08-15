@@ -56,15 +56,7 @@ pub struct MetaMaskTransaction {
 }
 
 impl MetaMaskWallet {
-    pub fn create_transaction(to: &str, value: &str, data: Option<String>) -> MetaMaskTransaction {
-        MetaMaskTransaction {
-            to: to.to_string(),
-            value: value.to_string(),
-            gas: Some("21000".to_string()), // Standard gas limit for ETH transfer
-            gas_price: None, // Let MetaMask determine
-            data,
-        }
-    }
+
 
     pub fn validate_ethereum_address(address: &str) -> bool {
         // Basic Ethereum address validation
