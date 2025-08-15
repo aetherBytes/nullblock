@@ -470,7 +470,7 @@ const Home: React.FC = () => {
         <HUD
           publicKey={publicKey}
           onDisconnect={handleDisconnect}
-          onConnectWallet={handleConnectWallet}
+          onConnectWallet={(walletType?: 'phantom' | 'metamask') => handleConnectWallet(walletType)}
           theme={currentTheme}
           systemStatus={systemStatus}
           onClose={() => {
