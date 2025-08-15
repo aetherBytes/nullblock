@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import StarsCanvas from '@components/stars/stars';
 import HUD from '../../components/hud/hud';
+import { createWalletChallenge, verifyWalletSignature, checkErebusHealth } from '../../common/services/erebus-api';
 import styles from './index.module.scss';
 
 // Extend Window interface for ethereum
@@ -16,6 +17,14 @@ const Home: React.FC = () => {
   const [showHUD, setShowHUD] = useState<boolean>(true);
   const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>('dark');
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  // Debug showWalletModal state changes
+  useEffect(() => {
+    console.log('showWalletModal state changed to:', showWalletModal);
+  }, [showWalletModal]);
   const [systemStatus, setSystemStatus] = useState({
     hud: false,
     mcp: false,
@@ -193,11 +202,18 @@ const Home: React.FC = () => {
   };
 
   const handleConnectWallet = async (walletType?: 'phantom' | 'metamask') => {
+    console.log('handleConnectWallet called with walletType:', walletType);
+    
     // If no wallet type specified, show selection modal
     if (!walletType) {
+      console.log('No walletType specified, showing selection modal');
       showWalletSelectionModal();
       return;
     }
+
+    console.log('Connecting to wallet:', walletType);
+    setIsConnecting(true);
+    setConnectionError(null);
 
     try {
       if (walletType === 'phantom') {
@@ -205,108 +221,166 @@ const Home: React.FC = () => {
       } else if (walletType === 'metamask') {
         await connectMetaMaskWallet();
       }
+      setShowWalletModal(false);
     } catch (error) {
       console.error(`Failed to connect ${walletType} wallet:`, error);
-      alert(`Failed to connect ${walletType}. Please try again.`);
+      setConnectionError(`Failed to connect ${walletType}. Please try again.`);
+    } finally {
+      setIsConnecting(false);
     }
   };
 
   const connectPhantomWallet = async () => {
-    console.log('Attempting to connect Phantom wallet...');
+    console.log('Attempting to connect Phantom wallet via Erebus...');
     
     if (!('phantom' in window)) {
-      alert('👻 PHANTOM NOT FOUND\n\nPlease install the Phantom browser extension to continue.\n\nClick OK to open the Phantom website.');
+      setConnectionError('Phantom wallet not found. Please install the Phantom browser extension.');
       window.open('https://phantom.app/', '_blank');
-      return;
+      throw new Error('Phantom not installed');
     }
 
     const provider = (window as any).phantom?.solana;
 
     if (!provider) {
-      alert('👻 PHANTOM NOT INITIALIZED\n\nPhantom wallet extension found but not properly initialized.\n\nPlease refresh the page or restart your browser.');
-      return;
+      setConnectionError('Phantom wallet extension found but not properly initialized. Please refresh the page.');
+      throw new Error('Phantom not initialized');
     }
 
     try {
       console.log('Phantom detected, requesting connection...');
       
-      // This will trigger the Phantom popup UI
+      // First connect to get public key
       const response = await provider.connect();
-      
       console.log('Phantom connection response:', response);
 
-      if (response.publicKey) {
-        setPublicKey(response.publicKey.toString());
+      if (!response.publicKey) {
+        throw new Error('Failed to get public key from Phantom');
+      }
+
+      const walletAddress = response.publicKey.toString();
+      console.log('Connected to Phantom wallet:', walletAddress);
+
+      // Create challenge via Erebus
+      console.log('Creating authentication challenge via Erebus...');
+      const challengeResponse = await createWalletChallenge(walletAddress, 'phantom');
+      
+      // Sign the challenge message
+      console.log('Requesting signature for challenge...');
+      const message = new TextEncoder().encode(challengeResponse.message);
+      const signedMessage = await provider.signMessage(message, 'utf8');
+      
+      // Convert signature to string format expected by Erebus
+      const signature = Array.from(signedMessage.signature).toString();
+      
+      // Verify signature via Erebus
+      console.log('Verifying signature via Erebus...');
+      const verifyResponse = await verifyWalletSignature(
+        challengeResponse.challenge_id, 
+        signature, 
+        walletAddress
+      );
+
+      if (verifyResponse.success) {
+        // Store authentication data
+        setPublicKey(walletAddress);
         setWalletConnected(true);
-        localStorage.setItem('walletPublickey', response.publicKey.toString());
+        localStorage.setItem('walletPublickey', walletAddress);
         localStorage.setItem('walletType', 'phantom');
         localStorage.setItem('hasSeenHUD', 'true');
+        localStorage.setItem('sessionToken', verifyResponse.session_token || '');
         updateAuthTime();
 
-        console.log('Phantom wallet connected successfully:', response.publicKey.toString());
-        
-        // Success feedback
-        const shortKey = response.publicKey.toString();
-        alert(`🔓 PHANTOM CONNECTED\n\nWallet: ${shortKey.slice(0, 4)}...${shortKey.slice(-4)}\n\nYou now have access to all NullEye features!`);
+        console.log('Phantom wallet authenticated successfully via Erebus!');
+      } else {
+        throw new Error(`Authentication failed: ${verifyResponse.message}`);
       }
     } catch (error: any) {
       console.error('Phantom connection failed:', error);
       
       if (error.code === 4001 || error.message?.includes('User rejected')) {
-        // User rejected the request
-        alert('🚫 CONNECTION CANCELLED\n\nWallet connection was cancelled by user.');
+        setConnectionError('Connection cancelled by user.');
+        throw new Error('User rejected connection');
       } else if (error.code === -32002) {
-        // Request already pending
-        alert('⏳ CONNECTION PENDING\n\nPlease check your Phantom extension - a connection request is already pending.');
+        setConnectionError('Connection request already pending. Please check your Phantom extension.');
+        throw new Error('Request pending');
       } else {
-        alert(`❌ PHANTOM CONNECTION FAILED\n\nError: ${error.message || 'Unknown error'}\n\nPlease try again or check your Phantom extension.`);
+        setConnectionError(`Phantom connection failed: ${error.message || 'Unknown error'}`);
+        throw error;
       }
     }
   };
 
   const connectMetaMaskWallet = async () => {
-    console.log('Attempting to connect MetaMask wallet...');
+    console.log('Attempting to connect MetaMask wallet via Erebus...');
     
     if (typeof window.ethereum === 'undefined') {
-      alert('🦊 METAMASK NOT FOUND\n\nPlease install the MetaMask browser extension to continue.\n\nClick OK to open the MetaMask website.');
+      setConnectionError('MetaMask wallet not found. Please install the MetaMask browser extension.');
       window.open('https://metamask.io/', '_blank');
-      return;
+      throw new Error('MetaMask not installed');
     }
 
     try {
       console.log('MetaMask detected, requesting account access...');
       
-      // This will trigger the MetaMask popup UI
+      // Get account access
       const accounts = await window.ethereum.request({ 
         method: 'eth_requestAccounts' 
       });
 
       console.log('MetaMask accounts received:', accounts);
 
-      if (accounts.length > 0) {
-        setPublicKey(accounts[0]);
+      if (accounts.length === 0) {
+        throw new Error('No accounts available from MetaMask');
+      }
+
+      const walletAddress = accounts[0];
+      console.log('Connected to MetaMask wallet:', walletAddress);
+
+      // Create challenge via Erebus
+      console.log('Creating authentication challenge via Erebus...');
+      const challengeResponse = await createWalletChallenge(walletAddress, 'metamask');
+
+      // Sign the challenge message with MetaMask
+      console.log('Requesting signature for challenge...');
+      const signature = await window.ethereum.request({
+        method: 'personal_sign',
+        params: [challengeResponse.message, walletAddress],
+      });
+
+      // Verify signature via Erebus
+      console.log('Verifying signature via Erebus...');
+      const verifyResponse = await verifyWalletSignature(
+        challengeResponse.challenge_id, 
+        signature, 
+        walletAddress
+      );
+
+      if (verifyResponse.success) {
+        // Store authentication data
+        setPublicKey(walletAddress);
         setWalletConnected(true);
-        localStorage.setItem('walletPublickey', accounts[0]);
+        localStorage.setItem('walletPublickey', walletAddress);
         localStorage.setItem('walletType', 'metamask');
         localStorage.setItem('hasSeenHUD', 'true');
+        localStorage.setItem('sessionToken', verifyResponse.session_token || '');
         updateAuthTime();
 
-        console.log('MetaMask wallet connected successfully:', accounts[0]);
-        
-        // Success feedback
-        alert(`🔓 METAMASK CONNECTED\n\nWallet: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}\n\nYou now have access to all NullEye features!`);
+        console.log('MetaMask wallet authenticated successfully via Erebus!');
+      } else {
+        throw new Error(`Authentication failed: ${verifyResponse.message}`);
       }
     } catch (error: any) {
       console.error('MetaMask connection failed:', error);
       
       if (error.code === 4001) {
-        // User rejected the request
-        alert('🚫 CONNECTION CANCELLED\n\nWallet connection was cancelled by user.');
+        setConnectionError('Connection cancelled by user.');
+        throw new Error('User rejected connection');
       } else if (error.code === -32002) {
-        // Request already pending
-        alert('⏳ CONNECTION PENDING\n\nPlease check your MetaMask extension - a connection request is already pending.');
+        setConnectionError('Connection request already pending. Please check your MetaMask extension.');
+        throw new Error('Request pending');
       } else {
-        alert(`❌ METAMASK CONNECTION FAILED\n\nError: ${error.message}\n\nPlease try again or check your MetaMask extension.`);
+        setConnectionError(`MetaMask connection failed: ${error.message}`);
+        throw error;
       }
     }
   };
@@ -319,7 +393,8 @@ const Home: React.FC = () => {
     console.log('Wallet detection:', { hasPhantom, hasMetaMask });
 
     if (!hasPhantom && !hasMetaMask) {
-      alert('🔒 NO WEB3 WALLETS DETECTED\n\nPlease install a Web3 wallet to continue:\n\n• MetaMask (Ethereum): https://metamask.io/\n• Phantom (Solana): https://phantom.app/\n\nRefresh the page after installation.');
+      setConnectionError('No Web3 wallets detected. Please install MetaMask or Phantom and refresh the page.');
+      setShowWalletModal(true); // Show modal even if no wallets to display the error and install links
       return;
     }
 
@@ -336,23 +411,10 @@ const Home: React.FC = () => {
       return;
     }
 
-    // Both wallets available - show selection
-    const walletOptions = [];
-    if (hasPhantom) walletOptions.push('Phantom (Solana)');
-    if (hasMetaMask) walletOptions.push('MetaMask (Ethereum)');
-
-    // Create a better selection dialog
-    const message = `🔐 WALLET SELECTION\n\nMultiple Web3 wallets detected. Please choose:\n\n${walletOptions.map((wallet, index) => `${index + 1}. ${wallet}`).join('\n')}\n\nClick OK for Phantom, Cancel for MetaMask`;
-    
-    const usePhantom = confirm(message);
-    
-    if (usePhantom) {
-      console.log('User selected Phantom');
-      handleConnectWallet('phantom');
-    } else {
-      console.log('User selected MetaMask');
-      handleConnectWallet('metamask');
-    }
+    // Both wallets available - show modal
+    console.log('Both wallets detected, showing selection modal');
+    setShowWalletModal(true);
+    setConnectionError(null);
   };
 
   return (
@@ -394,6 +456,89 @@ const Home: React.FC = () => {
             <span className={styles.hintText}>
               NEW: Portfolio & DeFi Trading Agents Available - Access via NullEye
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Wallet Selection Modal */}
+      {showWalletModal && (
+        <div 
+          className={styles.modalOverlay} 
+          onClick={() => {
+            console.log('Modal overlay clicked, closing modal');
+            setShowWalletModal(false);
+          }}
+        >
+          <div className={styles.walletModal} onClick={(e) => {
+            console.log('Wallet modal clicked, preventing propagation');
+            e.stopPropagation();
+          }}>
+            <div className={styles.modalHeader}>
+              <h2>🔐 Connect Wallet</h2>
+              <button 
+                className={styles.closeButton} 
+                onClick={() => {
+                  console.log('Close button clicked');
+                  setShowWalletModal(false);
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className={styles.modalContent}>
+              <p>Choose a Web3 wallet to connect to Nullblock:</p>
+              
+              <div className={styles.walletOptions}>
+                {('phantom' in window && (window as any).phantom?.solana) && (
+                  <button
+                    className={styles.walletButton}
+                    onClick={() => handleConnectWallet('phantom')}
+                    disabled={isConnecting}
+                  >
+                    <div className={styles.walletIcon}>👻</div>
+                    <div className={styles.walletInfo}>
+                      <div className={styles.walletName}>Phantom</div>
+                      <div className={styles.walletDescription}>Solana Wallet</div>
+                    </div>
+                    {isConnecting && <div className={styles.connecting}>Connecting...</div>}
+                  </button>
+                )}
+                
+                {(typeof window.ethereum !== 'undefined') && (
+                  <button
+                    className={styles.walletButton}
+                    onClick={() => handleConnectWallet('metamask')}
+                    disabled={isConnecting}
+                  >
+                    <div className={styles.walletIcon}>🦊</div>
+                    <div className={styles.walletInfo}>
+                      <div className={styles.walletName}>MetaMask</div>
+                      <div className={styles.walletDescription}>Ethereum Wallet</div>
+                    </div>
+                    {isConnecting && <div className={styles.connecting}>Connecting...</div>}
+                  </button>
+                )}
+              </div>
+
+              {connectionError && (
+                <div className={styles.errorMessage}>
+                  {connectionError}
+                </div>
+              )}
+
+              <div className={styles.installPrompt}>
+                <p>Don't have a wallet?</p>
+                <div className={styles.installLinks}>
+                  <a href="https://metamask.io/" target="_blank" rel="noopener noreferrer">
+                    Install MetaMask
+                  </a>
+                  <a href="https://phantom.app/" target="_blank" rel="noopener noreferrer">
+                    Install Phantom
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
