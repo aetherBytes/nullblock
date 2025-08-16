@@ -28,7 +28,99 @@ Nullblock is a decentralized Web3 platform for deploying and monetizing agentic 
 ✅ **Bittensor Task Marketplace**: Decentralized task submission with $NULL token rewards  
 ✅ **Advanced Security**: Prompt injection protection, encrypted context storage, anomaly detection  
 ✅ **Goal-Driven Automation**: Template-based workflows for arbitrage, DeFi, NFT, and DAO operations
-✅ **Advanced UI/UX**: Responsive Command Lens with ball lightning NullEye animations and intelligent tooltips
+✅ **Advanced UI/UX**: Responsive Command Lens with ball lightning NullEye animations, intelligent tooltips, and gentle wallet interaction flows
+✅ **User-Centric Interface**: HecateHud component with personalized user stats, wallet name resolution, and non-aggressive messaging
+
+### **🔥 Information Gathering Agent Pipeline** (August 2025)
+
+🆕 **Data Intelligence Agent**: Specialized agent for analyzing prepared and modeled data from various data sources via MCP server
+- **Multi-Source Data Access**: API oracles, on-chain data, DeFi protocols, social sentiment feeds
+- **MCP Data Tools**: Standardized data source interfaces through Nullblock.mcp FastAPI server
+- **Intelligent Analysis**: Pattern recognition, trend analysis, anomaly detection across data streams
+- **Contextual Processing**: Agent adapts analysis based on user goals and historical performance
+- **Real-time Updates**: Live data streaming with efficient caching and update mechanisms
+
+### **🤖 LLM Service Factory** (August 2025)
+
+🆕 **Unified Model Selection Service**: Intelligent LLM routing for all Nullblock agents
+- **Multi-Provider Support**: OpenAI, Anthropic, Groq, HuggingFace, Ollama, Local models
+- **Intelligent Routing**: Automatic model selection based on task requirements and constraints
+- **Performance Tiers**: Premium (GPT-4, Claude Opus), Fast (GPT-3.5, Claude Haiku), Economical (Mistral, Local)
+- **Optimization Goals**: Quality, Speed, Cost, Reliability, Balanced routing strategies
+- **Capability Matching**: Route to models with specific capabilities (code, math, reasoning, multimodal)
+- **Cost Optimization**: Automatic cost tracking, estimation, and budget-aware routing
+- **Fallback System**: Automatic failover to alternative models on errors or rate limits
+- **Response Caching**: Intelligent caching to reduce costs and improve response times
+
+### **🎬 Demo & Testing Infrastructure**
+
+**Integration Demo**: Complete end-to-end demonstration (`/demo_integration.py`)
+- Multi-agent coordination showcase
+- Market intelligence analysis pipeline
+- Automated research report generation
+- Multi-model comparison and optimization
+- System monitoring and statistics
+- **🆕 FAIL-FAST ERROR HANDLING**: Comprehensive service health checks with immediate failure on critical service unavailability
+- **🆕 STANDARDIZED ERROR RESPONSES**: All services return consistent error formats for easy debugging and monitoring
+
+**Information Gathering Agent Demo**: Focused agent testing (`/svc/nullblock-agents/src/agents/information_gathering/demo.py`)
+- Price oracle analysis workflows
+- DeFi opportunity detection
+- Real-time data monitoring
+- Custom analysis request handling
+- Agent health and status monitoring
+
+**🆕 Rust Integration Test**: Comprehensive system integration testing (`/svc/erebus/tests/integration_tests.rs`)
+- Complete end-to-end pipeline testing with mock services
+- Wallet authentication and session management testing
+- Market data and DeFi protocol integration verification
+- Analysis request/response workflow testing
+- LLM generation and response handling
+- Error handling and edge case validation
+- Performance benchmarking and load testing
+- Concurrent request handling simulation
+
+### **🔗 Quick Reference - New Infrastructure**
+
+**Information Gathering Agent API**:
+```python
+# Basic usage
+agent = InformationGatheringAgent("http://localhost:8000")
+await agent.mcp_client.connect()
+
+# Market analysis
+result = await agent.analyze_market_trends(["bitcoin", "ethereum"], "24h")
+
+# DeFi opportunities
+opportunities = await agent.detect_defi_opportunities(["uniswap"])
+
+# Real-time data
+data = await agent.get_real_time_data("price_oracle", "coingecko", {"symbols": ["bitcoin"]})
+```
+
+**LLM Service Factory API**:
+```python
+# Initialize factory
+factory = LLMServiceFactory()
+await factory.initialize()
+
+# Quick generation
+response = await factory.quick_generate("Explain blockchain", "explanation", "speed")
+
+# Advanced generation with requirements
+request = LLMRequest(prompt="Analyze market data", max_tokens=500)
+requirements = TaskRequirements(
+    required_capabilities=[ModelCapability.DATA_ANALYSIS],
+    optimization_goal=OptimizationGoal.QUALITY
+)
+response = await factory.generate(request, requirements)
+```
+
+**MCP Data Source Endpoints**:
+- `GET /mcp/data-sources` - List available sources
+- `GET /mcp/data/{type}/{source}?symbols=bitcoin,ethereum` - Get data
+- `POST /mcp/data/{type}/{source}` - Complex queries
+- `GET /mcp/data-sources/status` - System health
 
 ## ⚠️ **ORGANIZATIONAL RULES** ⚠️
 
@@ -175,6 +267,82 @@ print(f'Loaded {len(tokens)} tokens')
 "
 ```
 
+#### Information Gathering Agent Development (`svc/nullblock-agents/`)
+```bash
+# Run Information Gathering Agent demo
+python -m agents.information_gathering.demo
+
+# Run specific demo scenarios
+python -c "
+import asyncio
+from agents.information_gathering.demo import demo_price_analysis
+asyncio.run(demo_price_analysis())
+"
+
+# Test agent with custom parameters
+python -c "
+import asyncio
+from agents.information_gathering.main import InformationGatheringAgent
+async def test():
+    agent = InformationGatheringAgent('http://localhost:8000')
+    await agent.mcp_client.connect()
+    result = await agent.analyze_market_trends(['bitcoin'], '24h')
+    print(f'Analysis: {result.insights}')
+    await agent.mcp_client.disconnect()
+asyncio.run(test())
+"
+
+# LLM Service Factory testing
+python -c "
+import asyncio
+from agents.llm_service.factory import LLMServiceFactory, LLMRequest
+from agents.llm_service.router import TaskRequirements, OptimizationGoal
+async def test():
+    factory = LLMServiceFactory()
+    await factory.initialize()
+    response = await factory.quick_generate('Explain DeFi in one sentence', 'explanation', 'speed')
+    print(f'Response: {response}')
+    await factory.cleanup()
+asyncio.run(test())
+"
+```
+
+#### Complete Integration Demo
+```bash
+# Run complete integration demo (requires MCP server running)
+python demo_integration.py
+
+# Prerequisites setup
+cd svc/nullblock-mcp && python -m mcp.server &  # Start MCP server
+export OPENAI_API_KEY="your-key-here"          # Optional for LLM testing
+export ANTHROPIC_API_KEY="your-key-here"       # Optional for LLM testing
+cd ../.. && python demo_integration.py         # Run integration demo
+
+# 🆕 NEW: Fail-fast demo with comprehensive error handling
+# Demo will now fail immediately if:
+# - MCP server is not accessible
+# - No LLM models are available
+# - Network connectivity issues
+# - Invalid authentication tokens
+# - Data source failures
+
+# 🆕 NEW: Rust integration testing
+cd svc/erebus/
+cargo test --test integration_tests test_full_integration_pipeline -- --nocapture
+cargo test --test integration_tests test_performance_benchmarks -- --nocapture
+cargo test --test integration_tests test_load_simulation -- --nocapture
+
+# Run all tests
+cargo test
+
+# Run benchmarks
+cargo bench
+
+# Run specific test categories
+cargo test --test unit_tests
+cargo test --test integration_tests
+```
+
 ### **New MCP Infrastructure** 🆕
 
 #### Nullblock.mcp (`svc/nullblock-mcp/`)
@@ -248,6 +416,11 @@ cargo clippy
 # Testing
 cargo test
 
+# 🆕 NEW: Integration testing
+cargo test test_full_integration_pipeline -- --nocapture
+cargo test test_performance_benchmarks -- --nocapture
+cargo test test_load_simulation -- --nocapture
+
 # Release build
 cargo build --release
 
@@ -257,6 +430,7 @@ cargo check
 # Environment setup
 # Server runs on localhost:3000 by default
 # Wallet API endpoints ready for MCP integration
+# 🆕 NEW: Comprehensive integration test suite with mock services
 ```
 
 ### **Legacy Backend** (Helios - `svc/helios/`)
@@ -385,6 +559,9 @@ Nullblock implements a Model Context Protocol-first architecture for secure, agn
 - **Responsive Design**: Optimized for small screens (13-inch MacBooks) with 4-column layouts
 - **Interactive Feedback**: Clickable NullEyes with state-responsive animations and navigation
 - **Universal Navigation**: All NullEye instances default to Hecate tab with enhanced visual cues
+- **HecateHud Interface**: Renamed from context-dashboard, now displays personalized user stats instead of generic system metrics
+- **Gentle Wallet Messaging**: Non-aggressive error handling with info/error message types and soft blue styling for notifications
+- **Wallet Name Resolution**: Click-to-edit wallet naming with SNS/ENS integration and localStorage persistence
 
 ### **Production MCP Architecture** ✅ (Nullblock.mcp)
 - **Web Framework**: FastAPI with uvicorn ASGI server
@@ -394,6 +571,8 @@ Nullblock implements a Model Context Protocol-first architecture for secure, agn
 - **Security**: ML-based prompt injection detection with anomaly detection
 - **Multi-Wallet**: MetaMask, WalletConnect, Phantom support
 - **API Structure**: RESTful MCP endpoints with comprehensive security middleware
+- **🆕 Error Handling**: Fail-fast architecture with standardized error responses and comprehensive health checks
+- **🆕 Service Validation**: Proper connection testing and service availability verification before processing requests
 
 ### **MCP Server Endpoints** (Production)
 - `/health` - System health check with service status
@@ -436,6 +615,11 @@ src/
 │   │   └── modal/            # Modal components
 │   └── services/
 │       └── api.tsx           # API client with axios
+├── components/
+│   ├── hecateHud/            # 🆕 Main interface dashboard (renamed from context-dashboard)
+│   │   ├── hecateHud.tsx     # User-personalized stats and interface
+│   │   └── hecateHud.module.scss
+│   └── hud/                  # Core HUD system with wallet integration
 ├── pages/                    # Route-based pages
 └── routes/                   # Route definitions
 ```
@@ -506,3 +690,5 @@ The platform implements a cyberpunk aesthetic with neon styling, ball lightning 
 - **Universal Clickability**: All NullEyes navigate to agent interfaces with enhanced hover feedback
 - **Compact Layouts**: Command Lens uses 4-column responsive grids optimized for smaller screens
 - **Smart Information Architecture**: Hover tooltips replace static text for cleaner, more interactive interfaces
+- **Gentle Message System**: Blue info messages (#4a90e2) for notifications, red error messages (#ff3333) for failures, no aggressive animations for user guidance
+- **Personalized User Interface**: HecateHud displays wallet-specific information (address, type, session time, connection status) instead of generic system stats
