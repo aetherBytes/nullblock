@@ -760,7 +760,7 @@ const HUD: React.FC<HUDProps> = ({
 
       {/* NULLEYE - Living system indicator */}
       <div
-        className={`${styles.nulleye} ${styles[nulleyeState]} ${!publicKey ? styles.locked : styles.unlocked}`}
+        className={`${styles.nulleye} ${styles[nulleyeState]}`}
         onClick={() => {
           if (!publicKey) {
             // Enhanced feedback for locked state
