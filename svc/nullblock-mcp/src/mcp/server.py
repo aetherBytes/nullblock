@@ -4,7 +4,7 @@ Main MCP server integrating wallet auth, context storage, Flashbots, and securit
 
 import logging
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +17,7 @@ from .wallet.auth import WalletAuthenticator, WalletSession
 from .context.storage import ContextManager, IPFSContextStorage, UserContext
 from .flashbots.client import FlashbotsClient, MEVProtectionManager
 from .security.prompt_protection import PromptProtectionManager, PromptAnalysis
+from .tools.data_source_tools import DataSourceManager, DataSourceResponse
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,16 @@ class TradingCommandResponse(BaseModel):
     result: Any = Field(None, description="Command result")
     message: str = Field(..., description="Response message")
     protected: bool = Field(..., description="Whether MEV protection was used")
+
+
+class DataSourceRequest(BaseModel):
+    source_type: str = Field(..., description="Type of data source (price_oracle, defi_protocol, etc.)")
+    source_name: str = Field(..., description="Specific source name (coingecko, uniswap, etc.)")
+    parameters: Dict[str, Any] = Field(default_factory=dict, description="Query parameters")
+
+
+class DataSourceListResponse(BaseModel):
+    sources: Dict[str, List[str]] = Field(..., description="Available data sources by type")
 
 
 class MCPServer:
@@ -102,6 +113,9 @@ class MCPServer:
         
         # Initialize security
         self.prompt_protection = PromptProtectionManager(strict_mode=True)
+        
+        # Initialize data source manager
+        self.data_source_manager = DataSourceManager()
         
         # Setup middleware
         self._setup_middleware()
@@ -290,6 +304,115 @@ class MCPServer:
             except Exception as e:
                 logger.error(f"Failed to get balance: {e}")
                 raise HTTPException(status_code=500, detail="Failed to get balance")
+        
+        # Data Source Endpoints
+        @self.app.get("/mcp/data-sources", response_model=DataSourceListResponse)
+        async def get_data_sources():
+            """Get list of available data sources"""
+            try:
+                sources = self.data_source_manager.get_available_sources()
+                return DataSourceListResponse(sources=sources)
+            except Exception as e:
+                logger.error(f"Failed to get data sources: {e}")
+                raise HTTPException(status_code=500, detail="Failed to get data sources")
+        
+        @self.app.post("/mcp/data/{source_type}/{source_name}")
+        async def get_data_source_data(
+            source_type: str,
+            source_name: str,
+            request: DataSourceRequest = None
+        ):
+            """Get data from specific data source"""
+            try:
+                # Use request body parameters if provided, otherwise use path parameters
+                parameters = request.parameters if request else {}
+                
+                response = await self.data_source_manager.get_data(
+                    source_type, source_name, parameters
+                )
+                
+                if not response.success:
+                    raise HTTPException(
+                        status_code=400 if not response.rate_limited else 429,
+                        detail=response.error or "Failed to get data"
+                    )
+                
+                return {
+                    "success": response.success,
+                    "data": response.data,
+                    "source": response.source,
+                    "timestamp": response.timestamp.isoformat(),
+                    "cached": response.cached
+                }
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Failed to get data from {source_type}/{source_name}: {e}")
+                raise HTTPException(status_code=500, detail="Internal server error")
+        
+        @self.app.get("/mcp/data/{source_type}/{source_name}")
+        async def get_data_source_data_get(
+            source_type: str,
+            source_name: str,
+            symbols: str = None,
+            timeframe: str = "24h",
+            vs_currency: str = "usd",
+            metrics: str = None,
+            address: str = None,
+            keywords: str = None
+        ):
+            """Get data from specific data source via GET (for simple queries)"""
+            try:
+                # Build parameters from query params
+                parameters = {"timeframe": timeframe}
+                
+                if symbols:
+                    parameters["symbols"] = symbols.split(",")
+                if vs_currency:
+                    parameters["vs_currency"] = vs_currency
+                if metrics:
+                    parameters["metrics"] = metrics.split(",")
+                if address:
+                    parameters["address"] = address
+                if keywords:
+                    parameters["keywords"] = keywords.split(",")
+                
+                response = await self.data_source_manager.get_data(
+                    source_type, source_name, parameters
+                )
+                
+                if not response.success:
+                    raise HTTPException(
+                        status_code=400 if not response.rate_limited else 429,
+                        detail=response.error or "Failed to get data"
+                    )
+                
+                return {
+                    "success": response.success,
+                    "data": response.data,
+                    "source": response.source,
+                    "timestamp": response.timestamp.isoformat(),
+                    "cached": response.cached
+                }
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Failed to get data from {source_type}/{source_name}: {e}")
+                raise HTTPException(status_code=500, detail="Internal server error")
+        
+        @self.app.get("/mcp/data-sources/status")
+        async def get_data_source_status():
+            """Get status of all data sources"""
+            try:
+                status = self.data_source_manager.get_source_status()
+                return {
+                    "status": "healthy",
+                    "sources": status,
+                    "timestamp": datetime.now().isoformat()
+                }
+            except Exception as e:
+                logger.error(f"Failed to get data source status: {e}")
+                raise HTTPException(status_code=500, detail="Failed to get status")
     
     async def _get_session(self, authorization: HTTPAuthorizationCredentials = Depends(HTTPBearer())) -> WalletSession:
         """Dependency to get authenticated session"""
@@ -383,8 +506,33 @@ class MCPServer:
             "message": "Settings updated successfully" if success else "Failed to update settings"
         }
     
+    async def startup(self):
+        """Initialize async components on startup"""
+        try:
+            await self.data_source_manager.initialize()
+            logger.info("Data source manager initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize data source manager: {e}")
+    
+    async def shutdown(self):
+        """Clean up async components on shutdown"""
+        try:
+            await self.data_source_manager.cleanup()
+            logger.info("Data source manager cleaned up")
+        except Exception as e:
+            logger.error(f"Failed to cleanup data source manager: {e}")
+    
     def run(self, host: str = "0.0.0.0", port: int = 8000, debug: bool = False):
         """Run the MCP server"""
+        # Add startup and shutdown event handlers
+        @self.app.on_event("startup")
+        async def startup_event():
+            await self.startup()
+        
+        @self.app.on_event("shutdown")
+        async def shutdown_event():
+            await self.shutdown()
+        
         uvicorn.run(
             self.app,
             host=host,

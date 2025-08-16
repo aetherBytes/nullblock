@@ -1,0 +1,610 @@
+"""
+LLM Service Factory
+
+Main factory class that provides unified LLM access across all Nullblock agents.
+Handles model selection, request routing, and response processing.
+"""
+
+import asyncio
+import aiohttp
+import logging
+import os
+import json
+from typing import Dict, List, Any, Optional, AsyncGenerator
+from dataclasses import dataclass
+from datetime import datetime
+
+from .models import ModelConfig, ModelProvider, AVAILABLE_MODELS, get_model_config
+from .router import ModelRouter, TaskRequirements, RoutingDecision
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class LLMRequest:
+    """Request to LLM service"""
+    prompt: str
+    system_prompt: Optional[str] = None
+    max_tokens: Optional[int] = None
+    temperature: Optional[float] = None
+    top_p: Optional[float] = None
+    stop_sequences: Optional[List[str]] = None
+    tools: Optional[List[Dict]] = None
+    model_override: Optional[str] = None  # Force specific model
+    
+@dataclass
+class LLMResponse:
+    """Response from LLM service"""
+    content: str
+    model_used: str
+    usage: Dict[str, int]  # token usage stats
+    latency_ms: float
+    cost_estimate: float
+    finish_reason: str
+    tool_calls: Optional[List[Dict]] = None
+    metadata: Dict[str, Any] = None
+
+class LLMServiceFactory:
+    """
+    Unified LLM service factory for all Nullblock agents
+    
+    Provides:
+    - Intelligent model selection based on task requirements
+    - Unified API across different providers
+    - Cost optimization and monitoring
+    - Automatic fallbacks and error handling
+    - Response caching and optimization
+    """
+    
+    def __init__(self, enable_caching: bool = True, cache_ttl: int = 300):
+        self.router = ModelRouter()
+        self.sessions: Dict[str, aiohttp.ClientSession] = {}
+        
+        # Response caching
+        self.enable_caching = enable_caching
+        self.cache_ttl = cache_ttl
+        self.response_cache: Dict[str, Dict] = {}
+        
+        # Statistics tracking
+        self.request_stats: Dict[str, int] = {}
+        self.cost_tracking: Dict[str, float] = {}
+        
+        logger.info("LLMServiceFactory initialized")
+    
+    async def initialize(self):
+        """Initialize HTTP sessions for all providers"""
+        try:
+            # Check for available API keys and warn about missing ones
+            available_providers = []
+            missing_providers = []
+            
+            # Check API key availability
+            api_keys = {
+                ModelProvider.OPENAI: os.getenv('OPENAI_API_KEY'),
+                ModelProvider.ANTHROPIC: os.getenv('ANTHROPIC_API_KEY'),
+                ModelProvider.GROQ: os.getenv('GROQ_API_KEY'),
+                ModelProvider.HUGGINGFACE: os.getenv('HUGGINGFACE_API_KEY')
+            }
+            
+            for provider, key in api_keys.items():
+                if key:
+                    available_providers.append(provider.value)
+                else:
+                    missing_providers.append(provider.value)
+            
+            # Always available (local providers)
+            available_providers.extend([ModelProvider.OLLAMA.value, ModelProvider.LOCAL.value])
+            
+            # Log provider status
+            if available_providers:
+                logger.info(f"Available LLM providers: {', '.join(available_providers)}")
+            if missing_providers:
+                logger.warning(f"Missing API keys for providers: {', '.join(missing_providers)}")
+            
+            # Create sessions for each provider (even without keys for potential local use)
+            self.sessions[ModelProvider.OPENAI.value] = aiohttp.ClientSession(
+                headers={"Authorization": f"Bearer {os.getenv('OPENAI_API_KEY', '')}"}
+            )
+            
+            self.sessions[ModelProvider.ANTHROPIC.value] = aiohttp.ClientSession(
+                headers={
+                    "x-api-key": os.getenv('ANTHROPIC_API_KEY', ''),
+                    "anthropic-version": "2023-06-01"
+                }
+            )
+            
+            self.sessions[ModelProvider.GROQ.value] = aiohttp.ClientSession(
+                headers={"Authorization": f"Bearer {os.getenv('GROQ_API_KEY', '')}"}
+            )
+            
+            self.sessions[ModelProvider.HUGGINGFACE.value] = aiohttp.ClientSession(
+                headers={"Authorization": f"Bearer {os.getenv('HUGGINGFACE_API_KEY', '')}"}
+            )
+            
+            # Local providers don't need auth headers
+            self.sessions[ModelProvider.OLLAMA.value] = aiohttp.ClientSession()
+            self.sessions[ModelProvider.LOCAL.value] = aiohttp.ClientSession()
+            
+            # Update router with provider availability
+            self._update_model_availability(api_keys)
+            
+            logger.info("HTTP sessions initialized for all providers")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize sessions: {e}")
+            raise
+    
+    def _update_model_availability(self, api_keys: Dict):
+        """Update model availability based on API key presence"""
+        for model_name, config in AVAILABLE_MODELS.items():
+            # Disable models that require API keys when keys are missing
+            if config.provider in [ModelProvider.OPENAI, ModelProvider.ANTHROPIC, 
+                                 ModelProvider.GROQ, ModelProvider.HUGGINGFACE]:
+                has_key = bool(api_keys.get(config.provider))
+                if not has_key:
+                    self.router.update_model_status(model_name, False)
+                    logger.debug(f"Disabled model {model_name} - missing API key for {config.provider.value}")
+    
+    def get_available_providers(self) -> List[str]:
+        """Get list of providers with valid API keys or local availability"""
+        available = []
+        
+        # Check API key providers
+        if os.getenv('OPENAI_API_KEY'):
+            available.append(ModelProvider.OPENAI.value)
+        if os.getenv('ANTHROPIC_API_KEY'):
+            available.append(ModelProvider.ANTHROPIC.value)
+        if os.getenv('GROQ_API_KEY'):
+            available.append(ModelProvider.GROQ.value)
+        if os.getenv('HUGGINGFACE_API_KEY'):
+            available.append(ModelProvider.HUGGINGFACE.value)
+        
+        # Local providers are always available (if services are running)
+        available.extend([ModelProvider.OLLAMA.value, ModelProvider.LOCAL.value])
+        
+        return available
+    
+    def check_prerequisites(self) -> Dict[str, Any]:
+        """Check if minimum prerequisites are met for LLM operations"""
+        available_providers = self.get_available_providers()
+        
+        # Filter out local providers for API key check
+        api_providers = [p for p in available_providers 
+                        if p not in [ModelProvider.OLLAMA.value, ModelProvider.LOCAL.value]]
+        
+        status = {
+            "has_api_keys": len(api_providers) > 0,
+            "available_providers": available_providers,
+            "api_providers": api_providers,
+            "local_providers": [ModelProvider.OLLAMA.value, ModelProvider.LOCAL.value],
+            "total_available": len(available_providers),
+            "can_operate": len(available_providers) > 0
+        }
+        
+        return status
+    
+    async def check_model_availability(self) -> bool:
+        """Check if any models are actually available and working"""
+        try:
+            # Try to get a routing decision with basic requirements
+            requirements = TaskRequirements(
+                required_capabilities=[ModelCapability.REASONING],
+                optimization_goal=OptimizationGoal.BALANCED,
+                priority=Priority.LOW,
+                task_type="health_check"
+            )
+            
+            routing_decision = await self.router.route_request(requirements)
+            return bool(routing_decision.selected_model)
+            
+        except Exception as e:
+            logger.debug(f"Model availability check failed: {e}")
+            return False
+    
+    async def cleanup(self):
+        """Clean up HTTP sessions"""
+        for session in self.sessions.values():
+            await session.close()
+        
+        logger.info("HTTP sessions cleaned up")
+    
+    async def generate(self, request: LLMRequest, requirements: TaskRequirements = None) -> LLMResponse:
+        """
+        Generate response using optimal model selection
+        
+        Args:
+            request: LLM request parameters
+            requirements: Task requirements for model selection (optional)
+            
+        Returns:
+            LLMResponse with generated content and metadata
+        """
+        start_time = asyncio.get_event_loop().time()
+        
+        # Use default requirements if none provided
+        if requirements is None:
+            requirements = TaskRequirements(
+                required_capabilities=[ModelCapability.REASONING],
+                optimization_goal=OptimizationGoal.BALANCED,
+                priority=Priority.MEDIUM,
+                task_type="general"
+            )
+        
+        try:
+            # Check cache first
+            if self.enable_caching:
+                cached_response = self._get_cached_response(request, requirements)
+                if cached_response:
+                    logger.debug("Using cached response")
+                    return cached_response
+            
+            # Route request to optimal model
+            routing_decision = await self.router.route_request(requirements)
+            
+            # Check if any models are available
+            if not routing_decision.selected_model:
+                raise ConnectionError("No LLM models available - check API keys and network connectivity")
+            
+            # Override model if specified in request
+            if request.model_override:
+                if request.model_override in AVAILABLE_MODELS:
+                    routing_decision.selected_model = request.model_override
+                    routing_decision.model_config = AVAILABLE_MODELS[request.model_override]
+                else:
+                    logger.warning(f"Model override {request.model_override} not found, using routed model")
+            
+            logger.info(f"Routing decision: {routing_decision.selected_model} (confidence: {routing_decision.confidence:.2f})")
+            
+            # Generate response
+            response = await self._generate_with_model(request, routing_decision)
+            
+            # Calculate metrics
+            end_time = asyncio.get_event_loop().time()
+            response.latency_ms = (end_time - start_time) * 1000
+            
+            # Cache successful response
+            if self.enable_caching and response.finish_reason == "stop":
+                self._cache_response(request, requirements, response)
+            
+            # Update statistics
+            self._update_stats(routing_decision.selected_model, response)
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Generation failed: {e}")
+            
+            # Try fallback if available
+            try:
+                if hasattr(routing_decision, 'fallback_models') and routing_decision.fallback_models:
+                    fallback_model = routing_decision.fallback_models[0]
+                    logger.info(f"Trying fallback model: {fallback_model}")
+                    
+                    fallback_config = get_model_config(fallback_model)
+                    if fallback_config:
+                        fallback_decision = RoutingDecision(
+                            selected_model=fallback_model,
+                            model_config=fallback_config,
+                            confidence=0.5,
+                            reasoning=["Fallback due to primary failure"],
+                            alternatives=[],
+                            estimated_cost=0.0,
+                            estimated_latency_ms=fallback_config.metrics.avg_latency_ms,
+                            fallback_models=[]
+                        )
+                        
+                        return await self._generate_with_model(request, fallback_decision)
+            except Exception as fallback_error:
+                logger.error(f"Fallback also failed: {fallback_error}")
+            
+            raise
+    
+    async def stream_generate(self, request: LLMRequest, requirements: TaskRequirements) -> AsyncGenerator[str, None]:
+        """
+        Stream response generation for real-time applications
+        """
+        # Route to optimal model
+        routing_decision = await self.router.route_request(requirements)
+        
+        # Override model if specified
+        if request.model_override and request.model_override in AVAILABLE_MODELS:
+            routing_decision.selected_model = request.model_override
+            routing_decision.model_config = AVAILABLE_MODELS[request.model_override]
+        
+        logger.info(f"Streaming with model: {routing_decision.selected_model}")
+        
+        async for chunk in self._stream_with_model(request, routing_decision):
+            yield chunk
+    
+    async def _generate_with_model(self, request: LLMRequest, routing_decision: RoutingDecision) -> LLMResponse:
+        """Generate response with specific model"""
+        config = routing_decision.model_config
+        provider = config.provider
+        
+        if provider == ModelProvider.OPENAI:
+            return await self._generate_openai(request, config)
+        elif provider == ModelProvider.ANTHROPIC:
+            return await self._generate_anthropic(request, config)
+        elif provider == ModelProvider.GROQ:
+            return await self._generate_groq(request, config)
+        elif provider == ModelProvider.OLLAMA:
+            return await self._generate_ollama(request, config)
+        elif provider == ModelProvider.HUGGINGFACE:
+            return await self._generate_huggingface(request, config)
+        else:
+            raise ValueError(f"Unsupported provider: {provider}")
+    
+    async def _generate_openai(self, request: LLMRequest, config: ModelConfig) -> LLMResponse:
+        """Generate response using OpenAI API"""
+        session = self.sessions[ModelProvider.OPENAI.value]
+        
+        # Build request payload
+        messages = []
+        if request.system_prompt:
+            messages.append({"role": "system", "content": request.system_prompt})
+        messages.append({"role": "user", "content": request.prompt})
+        
+        payload = {
+            "model": config.name,
+            "messages": messages,
+            "max_tokens": request.max_tokens or config.max_tokens,
+            "temperature": request.temperature or config.temperature
+        }
+        
+        if request.tools:
+            payload["tools"] = request.tools
+            payload["tool_choice"] = "auto"
+        
+        if request.stop_sequences:
+            payload["stop"] = request.stop_sequences
+        
+        async with session.post(config.api_endpoint, json=payload) as resp:
+            if resp.status != 200:
+                error_text = await resp.text()
+                raise Exception(f"OpenAI API error {resp.status}: {error_text}")
+            
+            data = await resp.json()
+            
+            choice = data["choices"][0]
+            usage = data.get("usage", {})
+            
+            # Calculate cost estimate
+            input_tokens = usage.get("prompt_tokens", 0)
+            output_tokens = usage.get("completion_tokens", 0)
+            total_tokens = input_tokens + output_tokens
+            cost_estimate = total_tokens * config.metrics.cost_per_1k_tokens / 1000
+            
+            return LLMResponse(
+                content=choice["message"]["content"] or "",
+                model_used=config.name,
+                usage=usage,
+                latency_ms=0.0,  # Will be set by caller
+                cost_estimate=cost_estimate,
+                finish_reason=choice["finish_reason"],
+                tool_calls=choice["message"].get("tool_calls"),
+                metadata={"provider": "openai", "model_config": config.name}
+            )
+    
+    async def _generate_anthropic(self, request: LLMRequest, config: ModelConfig) -> LLMResponse:
+        """Generate response using Anthropic API"""
+        session = self.sessions[ModelProvider.ANTHROPIC.value]
+        
+        payload = {
+            "model": config.name,
+            "max_tokens": request.max_tokens or config.max_tokens,
+            "temperature": request.temperature or config.temperature,
+            "messages": [{"role": "user", "content": request.prompt}]
+        }
+        
+        if request.system_prompt:
+            payload["system"] = request.system_prompt
+        
+        if request.stop_sequences:
+            payload["stop_sequences"] = request.stop_sequences
+        
+        async with session.post(config.api_endpoint, json=payload) as resp:
+            if resp.status != 200:
+                error_text = await resp.text()
+                raise Exception(f"Anthropic API error {resp.status}: {error_text}")
+            
+            data = await resp.json()
+            
+            content = data["content"][0]["text"] if data["content"] else ""
+            usage = data.get("usage", {})
+            
+            # Calculate cost estimate
+            input_tokens = usage.get("input_tokens", 0)
+            output_tokens = usage.get("output_tokens", 0)
+            total_tokens = input_tokens + output_tokens
+            cost_estimate = total_tokens * config.metrics.cost_per_1k_tokens / 1000
+            
+            return LLMResponse(
+                content=content,
+                model_used=config.name,
+                usage={"prompt_tokens": input_tokens, "completion_tokens": output_tokens, "total_tokens": total_tokens},
+                latency_ms=0.0,
+                cost_estimate=cost_estimate,
+                finish_reason=data.get("stop_reason", "stop"),
+                metadata={"provider": "anthropic", "model_config": config.name}
+            )
+    
+    async def _generate_groq(self, request: LLMRequest, config: ModelConfig) -> LLMResponse:
+        """Generate response using Groq API (OpenAI-compatible)"""
+        # Groq uses OpenAI-compatible API
+        return await self._generate_openai(request, config)
+    
+    async def _generate_ollama(self, request: LLMRequest, config: ModelConfig) -> LLMResponse:
+        """Generate response using Ollama local API"""
+        session = self.sessions[ModelProvider.OLLAMA.value]
+        
+        payload = {
+            "model": config.name,
+            "prompt": request.prompt,
+            "stream": False,
+            "options": {
+                "temperature": request.temperature or config.temperature,
+                "num_predict": request.max_tokens or config.max_tokens
+            }
+        }
+        
+        if request.system_prompt:
+            payload["system"] = request.system_prompt
+        
+        async with session.post(config.api_endpoint, json=payload) as resp:
+            if resp.status != 200:
+                error_text = await resp.text()
+                raise Exception(f"Ollama API error {resp.status}: {error_text}")
+            
+            data = await resp.json()
+            
+            # Ollama doesn't provide detailed usage stats
+            estimated_tokens = len(data["response"].split()) * 1.3  # Rough estimate
+            
+            return LLMResponse(
+                content=data["response"],
+                model_used=config.name,
+                usage={"total_tokens": int(estimated_tokens)},
+                latency_ms=0.0,
+                cost_estimate=0.0,  # Local models are free
+                finish_reason="stop",
+                metadata={"provider": "ollama", "model_config": config.name}
+            )
+    
+    async def _generate_huggingface(self, request: LLMRequest, config: ModelConfig) -> LLMResponse:
+        """Generate response using HuggingFace Inference API"""
+        session = self.sessions[ModelProvider.HUGGINGFACE.value]
+        
+        payload = {
+            "inputs": request.prompt,
+            "parameters": {
+                "max_new_tokens": request.max_tokens or config.max_tokens,
+                "temperature": request.temperature or config.temperature
+            }
+        }
+        
+        async with session.post(config.api_endpoint, json=payload) as resp:
+            if resp.status != 200:
+                error_text = await resp.text()
+                raise Exception(f"HuggingFace API error {resp.status}: {error_text}")
+            
+            data = await resp.json()
+            
+            # HuggingFace returns different formats
+            if isinstance(data, list) and data:
+                content = data[0].get("generated_text", "")
+                # Remove the input prompt from response
+                if content.startswith(request.prompt):
+                    content = content[len(request.prompt):].strip()
+            else:
+                content = str(data)
+            
+            estimated_tokens = len(content.split()) * 1.3
+            cost_estimate = estimated_tokens * config.metrics.cost_per_1k_tokens / 1000
+            
+            return LLMResponse(
+                content=content,
+                model_used=config.name,
+                usage={"total_tokens": int(estimated_tokens)},
+                latency_ms=0.0,
+                cost_estimate=cost_estimate,
+                finish_reason="stop",
+                metadata={"provider": "huggingface", "model_config": config.name}
+            )
+    
+    async def _stream_with_model(self, request: LLMRequest, routing_decision: RoutingDecision) -> AsyncGenerator[str, None]:
+        """Stream response with specific model"""
+        # This is a simplified streaming implementation
+        # In practice, you'd implement proper streaming for each provider
+        
+        response = await self._generate_with_model(request, routing_decision)
+        
+        # Simulate streaming by yielding chunks
+        words = response.content.split()
+        for i, word in enumerate(words):
+            yield word + (" " if i < len(words) - 1 else "")
+            await asyncio.sleep(0.05)  # Simulate streaming delay
+    
+    def _get_cache_key(self, request: LLMRequest, requirements: TaskRequirements) -> str:
+        """Generate cache key for request"""
+        key_data = {
+            "prompt": request.prompt,
+            "system_prompt": request.system_prompt,
+            "optimization_goal": requirements.optimization_goal.value,
+            "capabilities": [cap.value for cap in requirements.required_capabilities]
+        }
+        return str(hash(json.dumps(key_data, sort_keys=True)))
+    
+    def _get_cached_response(self, request: LLMRequest, requirements: TaskRequirements) -> Optional[LLMResponse]:
+        """Get cached response if available and valid"""
+        cache_key = self._get_cache_key(request, requirements)
+        
+        if cache_key in self.response_cache:
+            cached_data = self.response_cache[cache_key]
+            
+            # Check if cache is still valid
+            if (datetime.now().timestamp() - cached_data["timestamp"]) < self.cache_ttl:
+                logger.debug("Cache hit")
+                return cached_data["response"]
+            else:
+                # Remove expired cache entry
+                del self.response_cache[cache_key]
+        
+        return None
+    
+    def _cache_response(self, request: LLMRequest, requirements: TaskRequirements, response: LLMResponse):
+        """Cache response"""
+        cache_key = self._get_cache_key(request, requirements)
+        
+        self.response_cache[cache_key] = {
+            "response": response,
+            "timestamp": datetime.now().timestamp()
+        }
+        
+        # Limit cache size
+        if len(self.response_cache) > 1000:
+            # Remove oldest entries
+            oldest_keys = sorted(
+                self.response_cache.keys(),
+                key=lambda k: self.response_cache[k]["timestamp"]
+            )[:100]
+            
+            for key in oldest_keys:
+                del self.response_cache[key]
+    
+    def _update_stats(self, model_name: str, response: LLMResponse):
+        """Update usage statistics"""
+        if model_name not in self.request_stats:
+            self.request_stats[model_name] = 0
+        if model_name not in self.cost_tracking:
+            self.cost_tracking[model_name] = 0.0
+        
+        self.request_stats[model_name] += 1
+        self.cost_tracking[model_name] += response.cost_estimate
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Get usage statistics"""
+        return {
+            "request_stats": self.request_stats,
+            "cost_tracking": self.cost_tracking,
+            "cache_stats": {
+                "cache_size": len(self.response_cache),
+                "cache_enabled": self.enable_caching
+            },
+            "router_stats": self.router.get_usage_stats()
+        }
+    
+    async def quick_generate(self, prompt: str, task_type: str = "general", 
+                           optimization_goal: str = "balanced") -> str:
+        """Quick generation with minimal configuration"""
+        from .router import OptimizationGoal, Priority
+        
+        request = LLMRequest(prompt=prompt)
+        
+        requirements = TaskRequirements(
+            required_capabilities=[],
+            optimization_goal=OptimizationGoal(optimization_goal),
+            priority=Priority.MEDIUM,
+            task_type=task_type
+        )
+        
+        response = await self.generate(request, requirements)
+        return response.content

@@ -24,27 +24,32 @@ windows:
         - 
           - echo "Starting MCP Server..."
           - cd svc/nullblock-mcp
-          - export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+          - echo "Installing/updating dependencies with hatch..."
+          - hatch -e default run pip install -e .
           - export MCP_SERVER_HOST=0.0.0.0
           - export MCP_SERVER_PORT=8001
-          - python3 -m mcp
+          - hatch run python3 -m mcp
         - 
           - echo "Starting Orchestration..."
           - cd svc/nullblock-orchestration
-          - export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+          - echo "Installing/updating dependencies with hatch..."
+          - hatch -e default run pip install -e .
           - export ORCHESTRATION_HOST=0.0.0.0
           - export ORCHESTRATION_PORT=8002
-          - python3 -m orchestration
+          - hatch run python3 -m orchestration
         - 
           - echo "Starting Agents..."
           - cd svc/nullblock-agents
-          - export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+          - echo "Installing/updating dependencies with hatch..."
+          - hatch -e default run pip install -e .
           - export AGENTS_HOST=0.0.0.0
           - export AGENTS_PORT=8003
-          - python3 -m agents
+          - hatch run python3 -m agents
         - 
           - echo "Starting Erebus Server..."
           - cd svc/erebus
+          - echo "Updating Rust dependencies..."
+          - cargo update
           - export EREBUS_HOST=127.0.0.1
           - export EREBUS_PORT=3000
           - cargo run
@@ -55,6 +60,8 @@ windows:
         - 
           - echo "Starting Frontend..."
           - cd svc/hecate
+          - echo "Installing/updating npm dependencies..."
+          - npm install
           - export VITE_MCP_API_URL=http://localhost:8001
           - export VITE_EREBUS_API_URL=http://localhost:3000
           - export VITE_ORCHESTRATION_API_URL=http://localhost:8002
