@@ -4496,3 +4496,25 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     transform: scale(1);
   }
 }
+
+// Wallet name input styling
+.nameInput {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba($echo-blue, 0.3);
+  color: $text-color;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  border-radius: 2px;
+  outline: none;
+  max-width: 120px;
+  
+  &:focus {
+    border-color: rgba($echo-blue, 0.8);
+    background: rgba(0, 0, 0, 0.5);
+  }
+  
+  &::placeholder {
+    color: rgba($text-color, 0.5);
+    font-size: 0.75rem;
+  }
+}

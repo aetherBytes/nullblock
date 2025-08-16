@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styles from './context-dashboard.module.scss';
+import styles from './hecateHud.module.scss';
 
-interface ContextDashboardProps {
+interface HecateHudProps {
   onClose: () => void;
   theme?: 'null' | 'light' | 'dark';
   initialActiveTab?: 'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate';
   onTabChange?: (tab: 'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate') => void;
+  publicKey?: string | null;
+  walletName?: string | null;
+  walletType?: string;
 }
 
 interface ChatMessage {
@@ -55,11 +58,14 @@ interface MCPOperation {
   responseTime?: number;
 }
 
-const ContextDashboard: React.FC<ContextDashboardProps> = ({
+const HecateHud: React.FC<HecateHudProps> = ({
   onClose,
   theme = 'light',
   initialActiveTab = 'tasks',
   onTabChange,
+  publicKey,
+  walletName,
+  walletType,
 }) => {
   const [activeTab, setActiveTab] = useState<'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'>(
     initialActiveTab,
@@ -90,6 +96,21 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
     | 'success'
     | 'processing'
   >('base');
+
+  // Helper functions for user-specific stats
+  const getUserStats = () => {
+    const sessionStart = localStorage.getItem('lastAuthTime');
+    const sessionTime = sessionStart ? Date.now() - parseInt(sessionStart) : 0;
+    const sessionMinutes = Math.floor(sessionTime / (1000 * 60));
+    
+    return {
+      walletAddress: publicKey ? `${publicKey.slice(0, 6)}...${publicKey.slice(-4)}` : 'Not Connected',
+      walletName: walletName || null,
+      walletType: walletType || 'Unknown',
+      sessionDuration: sessionMinutes > 0 ? `${sessionMinutes}m` : 'Just started',
+      connectionStatus: publicKey ? 'Connected' : 'Disconnected',
+    };
+  };
 
   // Define lens options outside useEffect
   const lensOptions: LensOption[] = [
@@ -1206,20 +1227,22 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
 
           <div className={styles.hecateStats}>
             <div className={styles.statCard}>
-              <div className={styles.statValue}>1,247</div>
-              <div className={styles.statLabel}>User Interactions</div>
+              <div className={styles.statValue}>
+                {getUserStats().walletName || getUserStats().walletAddress}
+              </div>
+              <div className={styles.statLabel}>Wallet Identity</div>
             </div>
             <div className={styles.statCard}>
-              <div className={styles.statValue}>99.8%</div>
-              <div className={styles.statLabel}>Uptime</div>
+              <div className={styles.statValue}>{getUserStats().walletType}</div>
+              <div className={styles.statLabel}>Wallet Type</div>
             </div>
             <div className={styles.statCard}>
-              <div className={styles.statValue}>45ms</div>
-              <div className={styles.statLabel}>Response Time</div>
+              <div className={styles.statValue}>{getUserStats().sessionDuration}</div>
+              <div className={styles.statLabel}>Session Time</div>
             </div>
             <div className={styles.statCard}>
-              <div className={styles.statValue}>23</div>
-              <div className={styles.statLabel}>Active Sessions</div>
+              <div className={styles.statValue}>{getUserStats().connectionStatus}</div>
+              <div className={styles.statLabel}>Connection Status</div>
             </div>
           </div>
         </div>
@@ -1423,4 +1446,4 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
   );
 };
 
-export default ContextDashboard;
+export default HecateHud;

@@ -16,7 +16,7 @@ import {
   checkMCPHealth,
 } from '../../common/services/mcp-api';
 // Removed separate dashboard imports - all functionality is now integrated into HUD tabs
-import ContextDashboard from '../context-dashboard';
+import HecateHud from '../hecateHud';
 import styles from './hud.module.scss';
 
 type Screen = 'home' | 'overview' | 'camp' | 'inventory' | 'campaign' | 'lab';
@@ -170,6 +170,66 @@ const HUD: React.FC<HUDProps> = ({
     },
   });
   const [ascentLevel, setAscentLevel] = useState<AscentLevel | null>(null);
+  const [walletName, setWalletName] = useState<string | null>(null);
+  const [isEditingName, setIsEditingName] = useState<boolean>(false);
+
+  // Function to resolve wallet names (SNS for Solana, ENS for Ethereum)
+  const resolveWalletName = async (address: string, walletType: string) => {
+    try {
+      if (walletType === 'phantom') {
+        // For Solana - try to resolve SNS (Solana Name Service)
+        // Note: This would require @solana/spl-name-service or similar
+        console.log('Attempting to resolve Solana name for:', address);
+        
+        // For now, we'll try a simple API approach or check local storage
+        const savedName = localStorage.getItem(`walletName_${address}`);
+        if (savedName) {
+          setWalletName(savedName);
+          return savedName;
+        }
+        
+        // TODO: Implement actual SNS resolution
+        // const connection = new Connection('https://api.mainnet-beta.solana.com');
+        // const nameAccount = await NameRegistryState.retrieve(connection, ...);
+        
+      } else if (walletType === 'metamask') {
+        // For Ethereum - try to resolve ENS
+        console.log('Attempting to resolve ENS name for:', address);
+        
+        // Check if the wallet provider supports ENS
+        if (window.ethereum && typeof window.ethereum.request === 'function') {
+          try {
+            const ensName = await window.ethereum.request({
+              method: 'wallet_lookupEnsName',
+              params: [address],
+            });
+            
+            if (ensName) {
+              setWalletName(ensName);
+              localStorage.setItem(`walletName_${address}`, ensName);
+              return ensName;
+            }
+          } catch (ensError) {
+            console.log('ENS lookup not supported or failed:', ensError);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Failed to resolve wallet name:', error);
+    }
+    
+    return null;
+  };
+
+  // Function to manually set wallet name
+  const setCustomWalletName = (name: string) => {
+    if (publicKey && name.trim()) {
+      const cleanName = name.trim().replace('@', ''); // Remove @ if user typed it
+      setWalletName(cleanName);
+      localStorage.setItem(`walletName_${publicKey}`, cleanName);
+      setIsEditingName(false);
+    }
+  };
   const [showAscentDetails, setShowAscentDetails] = useState<boolean>(false);
   const [alerts, setAlerts] = useState<number>(3);
   const [showAlerts, setShowAlerts] = useState<boolean>(false);
@@ -205,8 +265,8 @@ const HUD: React.FC<HUDProps> = ({
     | 'success'
     | 'processing'
   >('base');
-  const [showContextDashboard, setShowContextDashboard] = useState<boolean>(false);
-  const [contextDashboardActiveTab, setContextDashboardActiveTab] = useState<
+  const [showHecateHud, setShowHecateHud] = useState<boolean>(false);
+  const [hecateHudActiveTab, setHecateHudActiveTab] = useState<
     'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'
   >('hecate');
 
@@ -552,6 +612,20 @@ const HUD: React.FC<HUDProps> = ({
         try {
           // Skip old backend wallet data fetch for now - using Erebus for wallet ops
           console.log('Wallet connected:', publicKey);
+          
+          // Try to resolve wallet name
+          const walletType = localStorage.getItem('walletType');
+          if (walletType) {
+            // First check if we have a saved name
+            const savedName = localStorage.getItem(`walletName_${publicKey}`);
+            if (savedName) {
+              setWalletName(savedName);
+            } else {
+              // Try to resolve automatically
+              await resolveWalletName(publicKey, walletType);
+            }
+          }
+          
           // TODO: Update to use Erebus wallet data endpoints when available
           // const data = await fetchWalletData(publicKey);
           // setWalletData(data);
@@ -775,8 +849,8 @@ const HUD: React.FC<HUDProps> = ({
             return;
           }
 
-          setShowContextDashboard(true);
-          setContextDashboardActiveTab('hecate');
+          setShowHecateHud(true);
+          setHecateHudActiveTab('hecate');
           setNulleyeState('processing');
         }}
         title={!publicKey ? '🔒 Connect wallet to unlock NullView' : '🔓 Access NullView Interface'}
@@ -850,6 +924,34 @@ const HUD: React.FC<HUDProps> = ({
     <div className={styles.userProfile}>
       {publicKey && (
         <>
+          <div className={styles.profileItem}>
+            <span className={styles.label}>NAME:</span>
+            {isEditingName ? (
+              <input
+                type="text"
+                placeholder="Enter wallet name"
+                className={styles.nameInput}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setCustomWalletName(e.currentTarget.value);
+                  } else if (e.key === 'Escape') {
+                    setIsEditingName(false);
+                  }
+                }}
+                onBlur={(e) => setCustomWalletName(e.target.value)}
+                autoFocus
+              />
+            ) : (
+              <span 
+                className={styles.value}
+                onClick={() => setIsEditingName(true)}
+                style={{ cursor: 'pointer', textDecoration: walletName ? 'none' : 'underline' }}
+                title="Click to set wallet name"
+              >
+                {walletName ? `@${walletName}` : 'Set Name'}
+              </span>
+            )}
+          </div>
           <div className={styles.profileItem}>
             <span className={styles.label}>WALLET:</span>
             <span className={styles.value}>
@@ -2220,22 +2322,25 @@ const HUD: React.FC<HUDProps> = ({
 
   return (
     <div className={`${styles.echoContainer} ${styles[theme]}`}>
-      {!showContextDashboard && (
+      {!showHecateHud && (
         <>
           {renderControlScreen()}
           <div className={styles.hudWindow}>{renderScreen()}</div>
         </>
       )}
 
-      {showContextDashboard && (
-        <ContextDashboard
+      {showHecateHud && (
+        <HecateHud
           onClose={() => {
-            setShowContextDashboard(false);
+            setShowHecateHud(false);
             setNulleyeState('base');
           }}
           theme={theme}
-          initialActiveTab={contextDashboardActiveTab}
-          onTabChange={setContextDashboardActiveTab}
+          initialActiveTab={hecateHudActiveTab}
+          onTabChange={setHecateHudActiveTab}
+          publicKey={publicKey}
+          walletName={walletName}
+          walletType={localStorage.getItem('walletType') || undefined}
         />
       )}
     </div>
