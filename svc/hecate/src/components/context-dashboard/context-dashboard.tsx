@@ -79,7 +79,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeLens, setActiveLens] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [nulleyeState, setNulleyeState] = useState<
+  const [nullviewState, setNulleyeState] = useState<
     | 'base'
     | 'response'
     | 'question'
@@ -566,7 +566,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
       setChatInput('');
       setShowSuggestions(false);
 
-      // Set NullEye to thinking state
+      // Set NullView to thinking state
       setNulleyeState('thinking');
 
       // Simulate Hecate response
@@ -637,7 +637,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
 
           setChatMessages((prev) => [...prev, hecateMessage]);
 
-          // Set NullEye state based on response type
+          // Set NullView state based on response type
           switch (randomResponse.type) {
             case 'update':
               setNulleyeState('response');
@@ -678,7 +678,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
     setActiveLens(activeLens === lensId ? null : lensId);
   };
 
-  const handleNullEyeClick = () => {
+  const handleNullViewClick = () => {
     setActiveTab('hecate');
 
     if (onTabChange) {
@@ -1175,8 +1175,8 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
           <div className={styles.hecateAvatar}>
             <div className={styles.avatarCircle}>
               <div
-                className={`${styles.nulleyeAvatar} ${styles[nulleyeState]} ${styles.clickableNulleye}`}
-                onClick={handleNullEyeClick}
+                className={`${styles.nullviewAvatar} ${styles[nullviewState]} ${styles.clickableNulleye}`}
+                onClick={handleNullViewClick}
               >
                 <div className={styles.pulseRingAvatar}></div>
                 <div className={styles.dataStreamAvatar}>
@@ -1243,8 +1243,8 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
                         {message.sender === 'hecate' ? (
                           <span className={styles.hecateMessageSender}>
                             <div
-                              className={`${styles.nulleyeChat} ${styles[`chat-${message.type || 'base'}`]} ${styles.clickableNulleyeChat}`}
-                              onClick={handleNullEyeClick}
+                              className={`${styles.nullviewChat} ${styles[`chat-${message.type || 'base'}`]} ${styles.clickableNulleyeChat}`}
+                              onClick={handleNullViewClick}
                             >
                               <div className={styles.staticFieldChat}></div>
                               <div className={styles.coreNodeChat}></div>
@@ -1324,17 +1324,12 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
                 <div className={styles.lensInfoPanel}>
                   <div className={styles.lensInfoContent}>
                     <div className={styles.headerWithTooltip}>
-                      <h3>Command Lens</h3>
+                      <h3>🎯 Scopes</h3>
                       <div className={styles.tooltipContainer}>
                         <div className={styles.helpIcon}>?</div>
                         <div className={styles.tooltip}>
                           <div className={styles.tooltipContent}>
-                            <h4>Command Lens</h4>
-                            <p>
-                              Access powerful development tools and workflows through specialized
-                              Scopes.
-                            </p>
-                            <h5>What are Scopes?</h5>
+                            <h4>Scopes</h4>
                             <p>
                               Scopes are focused work environments, each tailored for specific tasks
                               like code generation, data analysis, automation, and more. Select a
@@ -1346,9 +1341,6 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
                     </div>
 
                     <div className={styles.lensAppsSection}>
-                      <div className={styles.appsHeader}>
-                        <h4>🎯 Scopes</h4>
-                      </div>
                       <div className={styles.lensAppsGrid}>
                         {lensOptions.map((lens) => (
                           <button
@@ -1379,7 +1371,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
     >
       <div className={styles.dashboardHeader}>
         <div className={styles.headerLeft}>
-          <h2>NullEye Views</h2>
+          <h2>NullView</h2>
           <span className={styles.subtitle}>System Overview & Agentic Interface</span>
         </div>
         <button className={styles.closeButton} onClick={onClose}>
