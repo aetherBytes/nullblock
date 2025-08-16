@@ -421,7 +421,7 @@ const ContextDashboard: React.FC<ContextDashboardProps> = ({
         timestamp: new Date(Date.now() - 5000),
         sender: 'hecate',
         message:
-          "Welcome to Nullblock! I'm Hecate, your primary interface agent. How can I assist you today?",
+          "Hecate interface active. Autonomous agent protocols initialized. How may I assist with your workflows?",
         type: 'text',
       },
       {
