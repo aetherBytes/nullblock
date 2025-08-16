@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import xLogo from '../../assets/images/X_logo_black.png';
-import nulleyeLogo from '../../assets/images/nulleye_logo.png';
+import nullviewLogo from '../../assets/images/nullview_logo.png';
 import type { MissionData } from '../../common/services/api';
 import {
   fetchWalletData,
@@ -194,7 +194,7 @@ const HUD: React.FC<HUDProps> = ({
   // Remove separate dashboard overlays - everything will be integrated into HUD tabs
   const [mcpAuthenticated, setMcpAuthenticated] = useState<boolean>(false);
   const [mcpHealthStatus, setMcpHealthStatus] = useState<any>(null);
-  const [nulleyeState, setNulleyeState] = useState<
+  const [nullviewState, setNulleyeState] = useState<
     | 'base'
     | 'response'
     | 'question'
@@ -758,16 +758,16 @@ const HUD: React.FC<HUDProps> = ({
         NULLBLOCK
       </button>
 
-      {/* NULLEYE - Living system indicator */}
+      {/* NULLVIEWS - Living system indicator */}
       <div
-        className={`${styles.nulleye} ${styles[nulleyeState]}`}
+        className={`${styles.nullview} ${styles[nullviewState]}`}
         onClick={() => {
           if (!publicKey) {
             // Enhanced feedback for locked state
             setNulleyeState('error');
             setTimeout(() => setNulleyeState('base'), 1500);
             alert(
-              '🔒 SECURE ACCESS REQUIRED\n\nConnect your Web3 wallet to unlock the NullEye interface and access advanced features.',
+              '🔒 SECURE ACCESS REQUIRED\n\nConnect your Web3 wallet to unlock the NullView interface and access advanced features.',
             );
 
             return;
@@ -777,7 +777,7 @@ const HUD: React.FC<HUDProps> = ({
           setContextDashboardActiveTab('hecate');
           setNulleyeState('processing');
         }}
-        title={!publicKey ? '🔒 Connect wallet to unlock NullEye' : '🔓 Access NullEye Interface'}
+        title={!publicKey ? '🔒 Connect wallet to unlock NullView' : '🔓 Access NullView Interface'}
       >
         <div className={styles.pulseRing}></div>
         <div className={styles.dataStream}>
@@ -995,7 +995,7 @@ const HUD: React.FC<HUDProps> = ({
       </div>
       <div className={styles.lockedContent}>
         <p>This feature is currently locked.</p>
-        <p>Access the NullEye for further instructions.</p>
+        <p>Access the NullView for further instructions.</p>
       </div>
     </div>
   );
@@ -1867,7 +1867,7 @@ const HUD: React.FC<HUDProps> = ({
                   <div className={styles.systemsTab}>
                     <div className={styles.lockedContent}>
                       <p>This feature is currently locked.</p>
-                      <p>Access the NullEye for further instructions.</p>
+                      <p>Access the NullView for further instructions.</p>
                     </div>
                   </div>
                 )}
@@ -1875,7 +1875,7 @@ const HUD: React.FC<HUDProps> = ({
                   <div className={styles.defenseTab}>
                     <div className={styles.lockedContent}>
                       <p>This feature is currently locked.</p>
-                      <p>Access the NullEye for further instructions.</p>
+                      <p>Access the NullView for further instructions.</p>
                     </div>
                   </div>
                 )}
@@ -1926,7 +1926,7 @@ const HUD: React.FC<HUDProps> = ({
                         <h4>MISSION BRIEF</h4>
                         <p className={styles.missionText}>
                           "Welcome, Agent, to your first trial. Interface with the HUD carefully.
-                          Share your NullEye interface on X—let its glow haunt the realm. More souls
+                          Share your NullView interface on X—let its glow haunt the realm. More souls
                           drawn, more NETHER gained. Don't let it fade."
                         </p>
                         <div className={styles.missionInstructions}>
@@ -2067,14 +2067,14 @@ const HUD: React.FC<HUDProps> = ({
         <h3>WEAPONS</h3>
         <div className={styles.emptyState}>
           <p>No weapons found.</p>
-          <p>Access the NullEye to acquire gear.</p>
+          <p>Access the NullView to acquire gear.</p>
         </div>
       </div>
       <div className={styles.inventorySection}>
         <h3>SUPPLIES</h3>
         <div className={styles.emptyState}>
           <p>Cache empty.</p>
-          <p>Access the NullEye to expand inventory.</p>
+          <p>Access the NullView to expand inventory.</p>
         </div>
       </div>
     </div>
@@ -2100,7 +2100,7 @@ const HUD: React.FC<HUDProps> = ({
         <div className={styles.missions}>
           <h3>OBJECTIVES</h3>
           <p className={styles.placeholder}>No active missions</p>
-          <p className={styles.placeholder}>Access the NullEye to begin</p>
+          <p className={styles.placeholder}>Access the NullView to begin</p>
         </div>
       </div>
     </div>
@@ -2126,7 +2126,7 @@ const HUD: React.FC<HUDProps> = ({
         <div className={styles.interfaceSection}>
           <h3>CONFIGURATIONS</h3>
           <p className={styles.placeholder}>No active modifications</p>
-          <p className={styles.placeholder}>Access the NullEye to begin</p>
+          <p className={styles.placeholder}>Access the NullView to begin</p>
         </div>
       </div>
     </div>
@@ -2170,7 +2170,7 @@ const HUD: React.FC<HUDProps> = ({
           <h3>Welcome to Nullblock Overview</h3>
           <p>
             This is the overview screen. Connect your wallet to unlock advanced features via the
-            NullEye.
+            NullView.
           </p>
         </div>
       </div>

@@ -494,7 +494,7 @@ const Home: React.FC = () => {
           <div className={styles.hintContent}>
             <span className={styles.hintIcon}>🚀</span>
             <span className={styles.hintText}>
-              NEW: Portfolio & DeFi Trading Agents Available - Access via NullEye
+              NEW: Portfolio & DeFi Trading Agents Available - Access via NullView
             </span>
           </div>
         </div>
