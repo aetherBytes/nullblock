@@ -1031,7 +1031,7 @@ const HUD: React.FC<HUDProps> = ({
           </div>
           <div className={styles.echoMessage}>
             <p>H.U.D system is active and operational.</p>
-            <p>Welcome to the interface, agent.</p>
+            <p>Interface ready for autonomous agents.</p>
           </div>
         </>
       ) : (
@@ -2136,24 +2136,7 @@ const HUD: React.FC<HUDProps> = ({
     <div className={styles.hudScreen}>
       <div className={styles.homeContent}>
         <div className={styles.landingContent}>
-          <h3>Welcome to Nullblock</h3>
-          <p>
-            Initiate connection for advanced features, agentic workflows or to speak with Hecate.
-            Biologicals please use the door.
-          </p>
-          <p>Builders / Agents please refer to dev pages above for onboarding.</p>
-          {publicKey && (
-            <div className={styles.walletInfo}>
-              <p>
-                <strong>Connected Wallet:</strong>
-              </p>
-              <p className={styles.walletAddress}>{publicKey}</p>
-              {userProfile.id &&
-                userProfile.id !== `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol` && (
-                  <p className={styles.walletUsername}>{userProfile.id}</p>
-                )}
-            </div>
-          )}
+          {/* Empty landing screen - ready for new content */}
         </div>
       </div>
     </div>
@@ -2167,10 +2150,27 @@ const HUD: React.FC<HUDProps> = ({
       </div>
       <div className={styles.campContent}>
         <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-          <h3>Welcome to Nullblock Overview</h3>
-          <p>
-            This is the overview screen. Connect your wallet to unlock advanced features via the
-            NullView.
+          <h3>Platform Overview</h3>
+          <div className={styles.overviewGrid}>
+            <div className={styles.overviewCard}>
+              <h4>🎯 Arbitrage Agents</h4>
+              <p>Real-time price monitoring across DEXs with automated MEV-protected execution</p>
+            </div>
+            <div className={styles.overviewCard}>
+              <h4>📊 Portfolio Management</h4>
+              <p>AI-driven rebalancing and risk assessment for optimal DeFi yields</p>
+            </div>
+            <div className={styles.overviewCard}>
+              <h4>🤝 Social Trading</h4>
+              <p>Sentiment analysis and community-driven trading signals</p>
+            </div>
+            <div className={styles.overviewCard}>
+              <h4>🏛️ DAO Integration</h4>
+              <p>Automated governance participation and proposal analysis</p>
+            </div>
+          </div>
+          <p className={styles.overviewNote}>
+            Connect your wallet to unlock live agents and start earning yield.
           </p>
         </div>
       </div>
