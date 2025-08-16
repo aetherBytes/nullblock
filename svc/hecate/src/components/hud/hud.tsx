@@ -550,73 +550,75 @@ const HUD: React.FC<HUDProps> = ({
     const loadWalletData = async () => {
       if (publicKey) {
         try {
-          // Fetch basic wallet data
-          const data = await fetchWalletData(publicKey);
+          // Skip old backend wallet data fetch for now - using Erebus for wallet ops
+          console.log('Wallet connected:', publicKey);
+          // TODO: Update to use Erebus wallet data endpoints when available
+          // const data = await fetchWalletData(publicKey);
+          // setWalletData(data);
 
-          setWalletData(data);
+          // Skip old backend profile fetch for now - using Erebus for wallet ops
+          // TODO: Update to use Erebus user profile endpoints when available
+          // try {
+          //   const profileData = await fetchUserProfile(publicKey);
 
-          // Fetch user profile data including username if available
-          try {
-            const profileData = await fetchUserProfile(publicKey);
+          //   // Check if the wallet has Nectar tokens
+          //   const hasNectarToken = profileData.active_tokens.includes('NECTAR');
 
-            // Check if the wallet has Nectar tokens
-            const hasNectarToken = profileData.active_tokens.includes('NECTAR');
+          //   // Update user profile with wallet data and username if available
+          //   setUserProfile((prev) => ({
+          //     ...prev,
+          //     nether: hasNectarToken ? data.balance : null,
+          //     cacheValue: data.balance || 0, // Set cache value to wallet balance
+          //     id: profileData.username
+          //       ? `@${profileData.username}`
+          //       : `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol`,
+          //   }));
 
-            // Update user profile with wallet data and username if available
-            setUserProfile((prev) => ({
-              ...prev,
-              nether: hasNectarToken ? data.balance : null,
-              cacheValue: data.balance || 0, // Set cache value to wallet balance
-              id: profileData.username
-                ? `@${profileData.username}`
-                : `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}.sol`,
-            }));
+          //   // Log the profile data to debug
+          //   console.log('Profile data received:', profileData);
+          //   console.log('Username:', profileData.username);
+          // } catch (profileError) {
+          //   console.error('Failed to fetch user profile:', profileError);
+          //   // Fallback to just updating with wallet data
+          //   setUserProfile((prev) => ({
+          //     ...prev,
+          //     nether: null, // Set to null if we can't determine if Nectar exists
+          //     cacheValue: data.balance || 0, // Set cache value to wallet balance
+          //   }));
+          // }
 
-            // Log the profile data to debug
-            console.log('Profile data received:', profileData);
-            console.log('Username:', profileData.username);
-          } catch (profileError) {
-            console.error('Failed to fetch user profile:', profileError);
-            // Fallback to just updating with wallet data
-            setUserProfile((prev) => ({
-              ...prev,
-              nether: null, // Set to null if we can't determine if Nectar exists
-              cacheValue: data.balance || 0, // Set cache value to wallet balance
-            }));
-          }
+          // Skip old backend ascent fetch for now - using Erebus for wallet ops
+          // TODO: Update to use Erebus ascent endpoints when available
+          // try {
+          //   const ascentData = await fetchAscentLevel(publicKey);
+          //   // Convert AscentLevelData to AscentLevel
+          //   setAscentLevel({
+          //     level: ascentData.level,
+          //     title: ascentData.name,
+          //     description: ascentData.description,
+          //     progress: ascentData.progress,
+          //     nextLevel: ascentData.level + 1,
+          //     nextTitle: `Level ${ascentData.level + 1}`,
+          //     nextDescription: 'Next level description will be available soon.',
+          //     accolades: ascentData.accolades,
+          //   });
+          //   // Update the ascent value in userProfile
+          //   setUserProfile((prev) => ({
+          //     ...prev,
+          //     ascent: ascentData.level,
+          //   }));
+          // } catch (ascentError) {
+          //   console.error('Failed to fetch ascent level:', ascentError);
+          // }
 
-          // Fetch ascent level data
-          try {
-            const ascentData = await fetchAscentLevel(publicKey);
-
-            // Convert AscentLevelData to AscentLevel
-            setAscentLevel({
-              level: ascentData.level,
-              title: ascentData.name,
-              description: ascentData.description,
-              progress: ascentData.progress,
-              nextLevel: ascentData.level + 1,
-              nextTitle: `Level ${ascentData.level + 1}`,
-              nextDescription: 'Next level description will be available soon.',
-              accolades: ascentData.accolades,
-            });
-            // Update the ascent value in userProfile
-            setUserProfile((prev) => ({
-              ...prev,
-              ascent: ascentData.level,
-            }));
-          } catch (ascentError) {
-            console.error('Failed to fetch ascent level:', ascentError);
-          }
-
-          // Fetch active mission
-          try {
-            const missionData = await fetchActiveMission(publicKey);
-
-            setActiveMission(missionData);
-          } catch (missionError) {
-            console.error('Failed to fetch active mission:', missionError);
-          }
+          // Skip old backend mission fetch for now - using Erebus for wallet ops
+          // TODO: Update to use Erebus mission endpoints when available
+          // try {
+          //   const missionData = await fetchActiveMission(publicKey);
+          //   setActiveMission(missionData);
+          // } catch (missionError) {
+          //   console.error('Failed to fetch active mission:', missionError);
+          // }
         } catch (error) {
           console.error('Failed to fetch wallet data:', error);
         }
@@ -846,6 +848,22 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderUserProfile = () => (
     <div className={styles.userProfile}>
+      {publicKey && (
+        <>
+          <div className={styles.profileItem}>
+            <span className={styles.label}>WALLET:</span>
+            <span className={styles.value}>
+              {localStorage.getItem('walletType')?.toUpperCase() || 'UNKNOWN'}
+            </span>
+          </div>
+          <div className={styles.profileItem}>
+            <span className={styles.label}>ADDRESS:</span>
+            <span className={styles.value}>
+              {publicKey.slice(0, 6)}...{publicKey.slice(-4)}
+            </span>
+          </div>
+        </>
+      )}
       <div className={styles.profileItem}>
         <span className={styles.label}>ID:</span>
         <span className={styles.value}>{userProfile.id}</span>

@@ -340,10 +340,18 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       flex-direction: row;
       justify-content: flex-end;
       align-items: center;
-      gap: 0.75rem;
+      gap: 1rem;
       order: 2;
       width: 100%;
       padding-right: 1rem;
+      
+      .docsButton {
+        margin-right: -0.25rem;
+      }
+      
+      .themeButton {
+        margin-left: -0.25rem;
+      }
     }
 
     .homeButton,
@@ -405,6 +413,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     border-radius: 50%;
     background: radial-gradient(circle at 50% 50%, rgba($echo-blue, 0.25) 0%, rgba($echo-blue, 0.10) 40%, rgba(0,0,0,0.0) 80%);
     opacity: 0.85;
+    flex-shrink: 0;
 
     &:hover {
       opacity: 1;
