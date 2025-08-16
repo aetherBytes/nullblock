@@ -26,6 +26,7 @@ const Home: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [isMetaMaskPending, setIsMetaMaskPending] = useState<boolean>(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Debug showWalletModal state changes
@@ -209,7 +210,9 @@ const Home: React.FC = () => {
   };
 
   const handleConnectWallet = async (walletType?: 'phantom' | 'metamask') => {
+    console.log('=== handleConnectWallet START ===');
     console.log('handleConnectWallet called with walletType:', walletType);
+    console.log('typeof walletType:', typeof walletType);
     
     // If no wallet type specified, show selection modal
     if (!walletType) {
@@ -218,15 +221,22 @@ const Home: React.FC = () => {
       return;
     }
 
-    console.log('Connecting to wallet:', walletType);
+    console.log('About to connect to wallet:', walletType);
+    console.log('walletType === "phantom":', walletType === 'phantom');
+    console.log('walletType === "metamask":', walletType === 'metamask');
+    
     setIsConnecting(true);
     setConnectionError(null);
 
     try {
-      if (walletType === 'phantom') {
-        await connectPhantomWallet();
-      } else if (walletType === 'metamask') {
+      if (walletType === 'metamask') {
+        console.log('EXECUTING: connectMetaMaskWallet()');
         await connectMetaMaskWallet();
+      } else if (walletType === 'phantom') {
+        console.log('EXECUTING: connectPhantomWallet()');
+        await connectPhantomWallet();
+      } else {
+        console.error('UNKNOWN WALLET TYPE:', walletType);
       }
       setShowWalletModal(false);
     } catch (error) {
@@ -235,9 +245,11 @@ const Home: React.FC = () => {
     } finally {
       setIsConnecting(false);
     }
+    console.log('=== handleConnectWallet END ===');
   };
 
   const connectPhantomWallet = async () => {
+    console.log('=== PHANTOM WALLET CONNECTION START ===');
     console.log('Attempting to connect Phantom wallet via backend...');
     
     if (!('phantom' in window)) {
@@ -326,23 +338,79 @@ const Home: React.FC = () => {
   };
 
   const connectMetaMaskWallet = async () => {
-    console.log('Attempting to connect MetaMask wallet via backend...');
-    
-    if (typeof window.ethereum === 'undefined') {
-      setConnectionError('MetaMask wallet not found. Please install the MetaMask browser extension.');
-      window.open('https://metamask.io/', '_blank');
-      throw new Error('MetaMask not installed');
+    // Prevent multiple simultaneous requests
+    if (isMetaMaskPending) {
+      console.log('MetaMask request already pending, skipping...');
+      setConnectionError('MetaMask connection already in progress. Please check your MetaMask extension.');
+      return;
     }
 
     try {
+      console.log('=== METAMASK WALLET CONNECTION START ===');
+      console.log('Attempting to connect MetaMask wallet via backend...');
+      setIsMetaMaskPending(true);
+      
+      // Check for MetaMask specifically
+      const getMetaMaskProvider = () => {
+        console.log('Getting MetaMask provider...');
+        if (typeof window.ethereum === 'undefined') {
+          console.log('window.ethereum is undefined');
+          return null;
+        }
+        
+        console.log('window.ethereum exists:', window.ethereum);
+        console.log('window.ethereum.providers:', window.ethereum.providers);
+        
+        // If multiple providers exist
+        if (window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
+          console.log('Multiple providers found, looking for MetaMask...');
+          const provider = window.ethereum.providers.find((provider: any) => provider.isMetaMask);
+          console.log('Found MetaMask provider:', provider);
+          return provider;
+        }
+        
+        // If only one provider and it's MetaMask
+        if (window.ethereum.isMetaMask) {
+          console.log('Single MetaMask provider found');
+          return window.ethereum;
+        }
+        
+        console.log('No MetaMask provider found');
+        return null;
+      };
+
+      const metamaskProvider = getMetaMaskProvider();
+      console.log('Final metamaskProvider:', metamaskProvider);
+      
+      if (!metamaskProvider) {
+        console.log('MetaMask provider not found, showing error');
+        setConnectionError('MetaMask wallet not found. Please install MetaMask or ensure it is enabled.');
+        window.open('https://metamask.io/', '_blank');
+        throw new Error('MetaMask not installed');
+      }
+
+      console.log('About to request accounts...');
+      console.log('MetaMask provider found:', metamaskProvider);
       console.log('MetaMask detected, requesting account access...');
       
-      // Get account access
-      const accounts = await window.ethereum.request({ 
+      // Get account access from MetaMask specifically
+      console.log('About to request accounts from MetaMask...');
+      
+      // CRITICAL: Make the MetaMask request immediately and try to bring extension to front
+      console.log('Making immediate MetaMask request to preserve user gesture...');
+      
+      // Show prominent notification about MetaMask popup
+      setConnectionError('🦊 METAMASK REQUEST SENT: Check the MetaMask extension icon in your browser toolbar for the popup!');
+      
+      const accounts = await metamaskProvider.request({ 
         method: 'eth_requestAccounts' 
       });
 
       console.log('MetaMask accounts received:', accounts);
+      console.log('Number of accounts:', accounts.length);
+      
+      // Clear the notification since account access succeeded
+      setConnectionError(null);
 
       if (accounts.length === 0) {
         throw new Error('No accounts available from MetaMask');
@@ -358,17 +426,46 @@ const Home: React.FC = () => {
       if (!connectionResponse.success) {
         throw new Error(`Connection failed: ${connectionResponse.message}`);
       }
+      console.log('Backend connection response:', connectionResponse);
 
       // Create challenge via Erebus
       console.log('Creating authentication challenge via Erebus...');
-      const challengeResponse = await createWalletChallenge(walletAddress, 'metamask');
+      let challengeResponse;
+      try {
+        challengeResponse = await createWalletChallenge(walletAddress, 'metamask');
+        console.log('Challenge response:', challengeResponse);
+        console.log('Challenge response type:', typeof challengeResponse);
+        console.log('Challenge message exists:', !!challengeResponse.message);
+      } catch (challengeError) {
+        console.error('Challenge creation failed:', challengeError);
+        throw challengeError;
+      }
 
       // Sign the challenge message with MetaMask
       console.log('Requesting signature for challenge...');
-      const signature = await window.ethereum.request({
-        method: 'personal_sign',
-        params: [challengeResponse.message, walletAddress],
-      });
+      console.log('Challenge message to sign:', challengeResponse.message);
+      console.log('About to call personal_sign on MetaMask...');
+      
+      // CRITICAL: Make signature request immediately to preserve user gesture context
+      console.log('Making immediate MetaMask signature request...');
+      
+      // Show prominent notification about signature request
+      setConnectionError('🦊 METAMASK SIGNATURE REQUIRED: Check the MetaMask extension icon for the signing request!');
+      
+      let signature;
+      try {
+        signature = await metamaskProvider.request({
+          method: 'personal_sign',
+          params: [challengeResponse.message, walletAddress],
+        });
+        console.log('Signature received:', signature);
+        
+        // Clear the notification since signature succeeded
+        setConnectionError(null);
+      } catch (signError) {
+        console.error('Signature request failed:', signError);
+        throw signError;
+      }
 
       // Verify signature via Erebus
       console.log('Verifying signature via Erebus...');
@@ -396,15 +493,20 @@ const Home: React.FC = () => {
       console.error('MetaMask connection failed:', error);
       
       if (error.code === 4001) {
-        setConnectionError('Connection cancelled by user.');
+        setConnectionError('❌ Connection cancelled by user.');
         throw new Error('User rejected connection');
       } else if (error.code === -32002) {
-        setConnectionError('Connection request already pending. Please check your MetaMask extension.');
+        setConnectionError('⚠️ MULTIPLE REQUESTS ERROR: MetaMask is already processing a request. Please check your MetaMask extension for pending popups, or wait 30 seconds and try again.');
         throw new Error('Request pending');
+      } else if (error.code === -32603) {
+        setConnectionError('🔄 MetaMask internal error. Please refresh the page and try again.');
+        throw new Error('Internal error');
       } else {
-        setConnectionError(`MetaMask connection failed: ${error.message}`);
+        setConnectionError(`🚫 MetaMask connection failed: ${error.message}`);
         throw error;
       }
+    } finally {
+      setIsMetaMaskPending(false);
     }
   };
 
@@ -433,17 +535,7 @@ const Home: React.FC = () => {
         return;
       }
 
-      // If only one wallet is available, connect directly
-      if (detectionResponse.available_wallets.length === 1) {
-        const wallet = detectionResponse.available_wallets[0];
-        if (wallet.is_available) {
-          console.log('Only one wallet available, connecting directly:', wallet.id);
-          handleConnectWallet(wallet.id as 'phantom' | 'metamask');
-          return;
-        }
-      }
-
-      // Multiple wallets or installation prompts - show modal
+      // Always show modal to let user choose - remove auto-connection logic
       console.log('Multiple wallets detected or installation needed, showing selection modal');
       setShowWalletModal(true);
       setConnectionError(null);
