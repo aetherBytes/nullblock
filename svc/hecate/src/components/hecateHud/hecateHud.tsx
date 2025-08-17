@@ -9,6 +9,7 @@ interface HecateHudProps {
   publicKey?: string | null;
   walletName?: string | null;
   walletType?: string;
+  onThemeChange?: (theme: 'null' | 'cyber' | 'light' | 'dark') => void;
 }
 
 interface ChatMessage {
@@ -66,6 +67,7 @@ const HecateHud: React.FC<HecateHudProps> = ({
   publicKey,
   walletName,
   walletType,
+  onThemeChange,
 }) => {
   const [activeTab, setActiveTab] = useState<'tasks' | 'mcp' | 'logs' | 'agents' | 'hecate'>(
     initialActiveTab,
@@ -188,7 +190,7 @@ const HecateHud: React.FC<HecateHudProps> = ({
       id: 'security',
       icon: '🔒',
       title: 'Security',
-      description: 'Access control',
+      description: 'Access control & settings',
       color: '#ff6348',
     },
     {
@@ -197,6 +199,13 @@ const HecateHud: React.FC<HecateHudProps> = ({
       title: 'Integration',
       description: 'API connections',
       color: '#5f27cd',
+    },
+    {
+      id: 'settings',
+      icon: '⚙️',
+      title: 'Settings',
+      description: 'Theme & social links',
+      color: '#747d8c',
     },
   ];
 
@@ -996,6 +1005,105 @@ const HecateHud: React.FC<HecateHudProps> = ({
           </div>
         );
 
+      case 'settings':
+        return (
+          <div className={styles.lensContent}>
+            <div className={styles.lensHeader}>
+              <h5>⚙️ Settings</h5>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>
+                ×
+              </button>
+            </div>
+            <div className={styles.settingsGrid}>
+              {/* Theme Settings */}
+              <div className={styles.settingsCard}>
+                <div className={styles.settingsIcon}>🎨</div>
+                <h6>Theme Settings</h6>
+                <p>Customize interface appearance</p>
+                <div className={styles.themeControls}>
+                  <button
+                    className={`${styles.themeControlBtn} ${theme === 'light' ? styles.active : ''}`}
+                    onClick={() => onThemeChange && onThemeChange('light')}
+                  >
+                    ☀️ Light
+                  </button>
+                  <button
+                    className={`${styles.themeControlBtn} ${theme === 'dark' ? styles.active : ''}`}
+                    onClick={() => onThemeChange && onThemeChange('dark')}
+                  >
+                    🌙 Dark
+                  </button>
+                  <button
+                    className={`${styles.themeControlBtn} ${theme === 'null' ? styles.active : ''}`}
+                    onClick={() => onThemeChange && onThemeChange('cyber')}
+                  >
+                    ⚡ Cyber
+                  </button>
+                </div>
+              </div>
+              
+              {/* Social Links */}
+              <div className={styles.settingsCard}>
+                <div className={styles.settingsIcon}>🌍</div>
+                <h6>Social Links</h6>
+                <p>Connect with the community</p>
+                <div className={styles.socialLinks}>
+                  <a
+                    href="https://x.com/Nullblock_io"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.socialLinkBtn}
+                  >
+                    𝕏 Follow on X
+                  </a>
+                  <a
+                    href="https://discord.gg/nullblock"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.socialLinkBtn}
+                  >
+                    🎮 Discord
+                  </a>
+                  <a
+                    href="https://github.com/nullblock-io"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.socialLinkBtn}
+                  >
+                    💻 GitHub
+                  </a>
+                </div>
+              </div>
+              
+              {/* Documentation */}
+              <div className={styles.settingsCard}>
+                <div className={styles.settingsIcon}>📚</div>
+                <h6>Documentation</h6>
+                <p>Learn about Nullblock features</p>
+                <a
+                  href="https://aetherbytes.github.io/nullblock-sdk/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.docsBtn}
+                >
+                  📚 View Docs
+                </a>
+              </div>
+              
+              {/* Version Info */}
+              <div className={styles.settingsCard}>
+                <div className={styles.settingsIcon}>📝</div>
+                <h6>Version</h6>
+                <p>Current build information</p>
+                <div className={styles.versionInfo}>
+                  <span>Nullblock v0.8.17</span>
+                  <span>Build: Alpha</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className={styles.lensContent}>
@@ -1377,6 +1485,11 @@ const HecateHud: React.FC<HecateHudProps> = ({
                           </button>
                         ))}
                       </div>
+                    </div>
+                    
+                    {/* Branding */}
+                    <div className={styles.scopesBranding}>
+                      <span className={styles.brandingText}>NULLBLOCK</span>
                     </div>
                   </div>
                 </div>
