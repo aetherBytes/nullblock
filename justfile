@@ -11,6 +11,28 @@ stop:
     @echo "🛑 Stopping Nullblock services..."
     ./scripts/start-nullblock.sh stop
 
+# Kill all development services by port
+kill-services:
+    @echo "💀 Killing all development services..."
+    @echo "Stopping PostgreSQL..."
+    -brew services stop postgresql@17 2>/dev/null || true
+    @echo "Stopping Redis..."
+    -brew services stop redis 2>/dev/null || true
+    @echo "Killing IPFS daemon..."
+    -pkill -f "ipfs daemon" 2>/dev/null || true
+    @echo "Killing services on development ports..."
+    -lsof -ti:8001 | xargs kill -9 2>/dev/null || true
+    -lsof -ti:8002 | xargs kill -9 2>/dev/null || true
+    -lsof -ti:8003 | xargs kill -9 2>/dev/null || true
+    -lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    -lsof -ti:5173 | xargs kill -9 2>/dev/null || true
+    -lsof -ti:1234 | xargs kill -9 2>/dev/null || true
+    @echo "Stopping LM Studio server..."
+    -lms server stop 2>/dev/null || true
+    @echo "Killing tmuxinator sessions..."
+    -tmux kill-session -t nullblock-dev 2>/dev/null || true
+    @echo "✅ All development services killed"
+
 # Restart all services
 restart:
     @echo "🔄 Restarting Nullblock services..."
@@ -119,6 +141,7 @@ help:
     @echo "Docker Commands:"
     @echo "  just start     - Start all services"
     @echo "  just stop      - Stop all services"
+    @echo "  just kill-services - Kill all development services by port"
     @echo "  just restart   - Restart all services"
     @echo "  just build     - Build all services"
     @echo "  just logs      - Show all logs"

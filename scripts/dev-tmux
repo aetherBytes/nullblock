@@ -74,17 +74,22 @@ install_tmuxinator() {
     fi
 }
 
-# Copy tmuxinator config to proper location
+# Link tmuxinator config to proper location
 setup_tmuxinator_config() {
     print_status "Setting up tmuxinator configuration..."
     
     # Create tmuxinator config directory
     mkdir -p ~/.config/tmuxinator
     
-    # Copy the config file
-    cp scripts/nullblock-dev.yml ~/.config/tmuxinator/nullblock-dev.yml
+    # Remove existing config if it exists
+    if [ -f ~/.config/tmuxinator/nullblock-dev.yml ] || [ -L ~/.config/tmuxinator/nullblock-dev.yml ]; then
+        rm ~/.config/tmuxinator/nullblock-dev.yml
+    fi
     
-    print_success "tmuxinator configuration ready"
+    # Create symbolic link to the source config
+    ln -s "$(pwd)/scripts/nullblock-dev.yml" ~/.config/tmuxinator/nullblock-dev.yml
+    
+    print_success "tmuxinator configuration linked (symbolic link created)"
 }
 
 # Check if tmuxinator config exists
@@ -96,25 +101,50 @@ check_config() {
     fi
 }
 
+# Kill existing services
+kill_existing_services() {
+    print_status "Cleaning up existing development services..."
+    
+    # Run just kill-services to clean up everything
+    if command -v just &> /dev/null; then
+        just kill-services
+    else
+        print_warning "just command not found, performing manual cleanup..."
+        # Manual cleanup if just is not available
+        print_status "Stopping PostgreSQL..."
+        brew services stop postgresql@17 2>/dev/null || true
+        print_status "Stopping Redis..."
+        brew services stop redis 2>/dev/null || true
+        print_status "Killing IPFS daemon..."
+        pkill -f "ipfs daemon" 2>/dev/null || true
+        print_status "Killing services on development ports..."
+        lsof -ti:8001 | xargs kill -9 2>/dev/null || true
+        lsof -ti:8002 | xargs kill -9 2>/dev/null || true
+        lsof -ti:8003 | xargs kill -9 2>/dev/null || true
+        lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+        lsof -ti:5173 | xargs kill -9 2>/dev/null || true
+        lsof -ti:1234 | xargs kill -9 2>/dev/null || true
+        print_status "Stopping LM Studio server..."
+        lms server stop 2>/dev/null || true
+        print_status "Killing tmuxinator sessions..."
+        tmux kill-session -t nullblock-dev 2>/dev/null || true
+    fi
+    
+    print_success "Service cleanup completed"
+}
+
 # Launch development environment
 launch_dev() {
     print_status "Launching Nullblock development environment..."
     
-    # Check if session already exists
-    if tmux has-session -t nullblock-dev 2>/dev/null; then
-        print_warning "Development session already exists"
-        read -p "Attach to existing session? (y/n): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            tmux attach-session -t nullblock-dev
-            return 0
-        else
-            print_status "Killing existing session..."
-            tmux kill-session -t nullblock-dev
-        fi
-    fi
+    # Step 1: Kill existing services first
+    kill_existing_services
     
-    # Launch tmuxinator
+    # Step 2: Brief pause to let services fully stop
+    print_status "Waiting for services to fully stop..."
+    sleep 3
+    
+    # Step 3: Launch tmuxinator with fresh environment
     print_status "Starting tmuxinator session..."
     tmuxinator start nullblock-dev
 }
@@ -138,6 +168,7 @@ show_usage() {
     echo "  - Infrastructure services (PostgreSQL, Redis, IPFS)"
     echo "  - Backend services (MCP, Orchestration, Agents)"
     echo "  - Frontend development (Hecate with hot reload)"
+    echo "  - LLM services (LM Studio server and management)"
     echo "  - Monitoring and health checks"
     echo "  - Development tools and shell"
 }
@@ -176,6 +207,7 @@ main() {
 
 # Run main function
 main "$@"
+
 
 
 

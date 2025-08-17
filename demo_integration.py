@@ -8,7 +8,7 @@ Demonstrates the complete Information Gathering Agent pipeline with:
 - Multi-agent coordination via orchestration
 
 Prerequisites:
-1. Start Nullblock MCP server: cd svc/nullblock-mcp && python -m mcp.server
+1. Start Nullblock MCP server: cd svc/nullblock-mcp && MCP_SERVER_HOST=0.0.0.0 MCP_SERVER_PORT=8001 python -m mcp.server
 2. Ensure API keys are set in environment (OPENAI_API_KEY, etc.)
 3. Install dependencies: pip install -e svc/nullblock-agents
 """
@@ -72,7 +72,7 @@ class NullblockIntegrationDemo:
         try:
             import aiohttp
             async with aiohttp.ClientSession() as session:
-                async with session.get("http://localhost:8000/health", timeout=5) as resp:
+                async with session.get("http://localhost:8001/health", timeout=5) as resp:
                     if resp.status == 200:
                         health_data = await resp.json()
                         status["mcp_server"] = ServiceStatus(
@@ -163,13 +163,13 @@ class NullblockIntegrationDemo:
         if not status.get("mcp_server", ServiceStatus("", False)).healthy:
             raise ServiceHealthError(
                 f"MCP Server is not available: {status['mcp_server'].error_message}. "
-                "Please start the MCP server with: cd svc/nullblock-mcp && python -m mcp.server"
+                "Please start the MCP server with: cd svc/nullblock-mcp && MCP_SERVER_HOST=0.0.0.0 MCP_SERVER_PORT=8001 python -m mcp.server"
             )
         
         # Initialize Information Gathering Agent
         print("📊 Initializing Information Gathering Agent...")
         try:
-            self.info_agent = InformationGatheringAgent(mcp_server_url="http://localhost:8000")
+            self.info_agent = InformationGatheringAgent(mcp_server_url="http://localhost:8001")
             await self.info_agent.mcp_client.connect()
             
             # Verify MCP connection and data sources
@@ -213,7 +213,31 @@ class NullblockIntegrationDemo:
                 await self.llm_factory.generate(test_request)
                 print("✅ LLM Service Factory initialized and tested")
             except Exception as e:
-                if "Could not contact DNS servers" in str(e) or "Connect call failed" in str(e):
+                if "Cannot connect to host localhost:11434" in str(e):
+                    # Ollama connection failed, but LM Studio might be available
+                    print("   ⚠️  Ollama not available, trying LM Studio...")
+                    # Test LM Studio specifically
+                    try:
+                        import aiohttp
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get("http://localhost:1234/v1/models", timeout=3) as resp:
+                                if resp.status == 200:
+                                    print("   ✅ LM Studio is available")
+                                    # Force use of LM Studio models
+                                    test_request.model_override = "gemma-3-270m-it-mlx"
+                                    await self.llm_factory.generate(test_request)
+                                    print("✅ LLM Service Factory initialized with LM Studio")
+                                else:
+                                    raise ServiceHealthError(
+                                        f"LM Studio returned HTTP {resp.status}. "
+                                        "Please ensure LM Studio is running and serving on localhost:1234."
+                                    )
+                    except Exception as lm_e:
+                        raise ServiceHealthError(
+                            f"LM Studio is not accessible: {lm_e}. "
+                            "Please start LM Studio and load a model (serves on localhost:1234)."
+                        )
+                elif "Could not contact DNS servers" in str(e) or "Connect call failed" in str(e):
                     raise ServiceHealthError(
                         f"LLM services are not accessible: {e}. "
                         "Please check your network connection and API keys."
@@ -234,14 +258,18 @@ class NullblockIntegrationDemo:
         print("-" * 40)
         
         # Step 1: Gather market data
-        print("1️⃣ Gathering market data from multiple sources...")
+        print("1️⃣ Gathering market data from CoinGecko API...")
         
         symbols = ["bitcoin", "ethereum", "solana"]
         market_data = {}
         errors = []
         
+        print(f"   🌐 API Endpoint: https://api.coingecko.com/api/v3/simple/price")
+        print(f"   📡 Fetching real-time data for: {', '.join(symbols)}")
+        
         for symbol in symbols:
             try:
+                print(f"   🔄 Requesting {symbol} data from CoinGecko...")
                 data = await self.info_agent.get_real_time_data(
                     source_type="price_oracle",
                     source_name="coingecko",
@@ -251,9 +279,52 @@ class NullblockIntegrationDemo:
                 # Check if we got meaningful data
                 if not data or (isinstance(data, dict) and not data.get('data')):
                     raise ValueError(f"No data returned for {symbol}")
+                
+                # Show actual API response
+                print(f"   📊 CoinGecko API Response for {symbol}:")
+                print(f"      📅 Timestamp: {data.get('timestamp', 'N/A')}")
+                print(f"      🎯 Source: {data.get('source', 'N/A')}")
+                print(f"      ✅ Reliability: {data.get('reliability_score', 'N/A')}")
+                
+                # Extract and display price data
+                if 'data' in data:
+                    # Handle different data formats
+                    if isinstance(data['data'], list) and data['data']:
+                        # DataPoint format from MCP
+                        data_point = data['data'][0]
+                        if hasattr(data_point, 'value'):
+                            price = data_point.value
+                            print(f"      💰 Price: ${price:,.2f}")
+                            
+                            # Check for metadata
+                            if hasattr(data_point, 'metadata') and data_point.metadata:
+                                change_24h = data_point.metadata.get('change_24h', 0)
+                                volume_24h = data_point.metadata.get('volume_24h', 0)
+                                emoji = "🟢" if change_24h >= 0 else "🔴"
+                                print(f"      {emoji} 24h Change: {change_24h:+.2f}%")
+                                if volume_24h > 0:
+                                    print(f"      📊 24h Volume: ${volume_24h:,.0f}")
+                    
+                    elif isinstance(data['data'], dict) and symbol in data['data']:
+                        # Direct API response format
+                        price_info = data['data'][symbol]
+                        if isinstance(price_info, dict):
+                            if 'price' in price_info:
+                                print(f"      💰 Price: ${price_info['price']:,.2f}")
+                            if 'change_24h' in price_info:
+                                change = price_info['change_24h']
+                                emoji = "🟢" if change >= 0 else "🔴"
+                                print(f"      {emoji} 24h Change: {change:+.2f}%")
+                        else:
+                            print(f"      💰 Price: ${price_info:,.2f}")
+                    
+                    else:
+                        print(f"      💰 Raw API Data: {data['data']}")
+                else:
+                    print(f"      ⚠️  No price data found in response")
                     
                 market_data[symbol] = data
-                print(f"   ✅ {symbol}: Data retrieved successfully")
+                print(f"   ✅ {symbol}: Real market data successfully retrieved")
                 
             except Exception as e:
                 # Fail immediately if any data source fails
@@ -312,15 +383,26 @@ Recommendations:
             )
             
             try:
+                print(f"   📤 LLM Input Prompt:")
+                print(f"   {llm_request.prompt[:150]}...")
+                
                 llm_response = await self.llm_factory.generate(llm_request, requirements)
+                
+                # Validate response is not empty
+                if not llm_response.content or len(llm_response.content.strip()) == 0:
+                    raise DemoError("LLM returned empty response - model connectivity issue")
                 
                 print(f"   🤖 LLM Analysis ({llm_response.model_used}):")
                 print(f"   💰 Cost: ${llm_response.cost_estimate:.4f}")
                 print(f"   ⏱️  Latency: {llm_response.latency_ms:.0f}ms")
+                print(f"   📏 Response Length: {len(llm_response.content)} characters")
                 print(f"\n   📝 Market Intelligence Report:")
                 print("   " + "\n   ".join(llm_response.content.split("\n")))
+                print(f"   🎯 Response validation: PASSED (non-empty)")
                 
             except Exception as e:
+                if "empty response" in str(e):
+                    print(f"   ❌ CRITICAL: {e}")
                 raise DemoError(f"LLM analysis failed: {e}")
         
         print("\n✅ Market Intelligence Demo completed!\n")
@@ -406,15 +488,27 @@ Recommendations:
             )
             
             try:
+                print(f"   📤 LLM Input Prompt:")
+                print(f"   {llm_request.prompt[:150]}...")
+                
                 report = await self.llm_factory.generate(llm_request, requirements)
+                
+                # Validate response is not empty
+                if not report.content or len(report.content.strip()) == 0:
+                    raise DemoError("LLM returned empty response - model connectivity issue")
                 
                 print(f"   📋 Research Report Generated ({report.model_used}):")
                 print(f"   💰 Cost: ${report.cost_estimate:.4f}")
                 print(f"   ⏱️  Latency: {report.latency_ms:.0f}ms")
+                print(f"   📏 Response Length: {len(report.content)} characters")
                 print(f"\n   📄 DeFi Research Report:")
                 print("   " + "\n   ".join(report.content.split("\n")))
+                print(f"   🎯 Response validation: PASSED (non-empty)")
                 
             except Exception as e:
+                if "empty response" in str(e):
+                    print(f"   ❌ CRITICAL: {e}")
+                    raise DemoError(f"Research report generation failed: {e}")
                 raise DemoError(f"Report generation failed: {e}")
                 
         except Exception as e:
@@ -548,8 +642,9 @@ async def main():
         print(f"\n❌ SERVICE HEALTH ERROR: {e}")
         print("=" * 60)
         print("Please ensure all required services are running:")
-        print("1. MCP Server: cd svc/nullblock-mcp && python -m mcp.server")
-        print("2. Network connectivity and API keys")
+        print("1. MCP Server: cd svc/nullblock-mcp && MCP_SERVER_HOST=0.0.0.0 MCP_SERVER_PORT=8001 python -m mcp.server")
+        print("2. LM Studio: Start LM Studio and load a model (serves on localhost:1234)")
+        print("3. Network connectivity and API keys")
         sys.exit(1)
     except DemoError as e:
         print(f"\n❌ DEMO ERROR: {e}")
@@ -569,11 +664,12 @@ async def main():
 
 if __name__ == "__main__":
     print("📋 Prerequisites Check:")
-    print("1. MCP Server: Start with 'cd svc/nullblock-mcp && python -m mcp.server'")
-    print("2. API Keys: Ensure OPENAI_API_KEY, ANTHROPIC_API_KEY are set (optional)")
-    print("3. Dependencies: Run 'pip install -e svc/nullblock-agents'")
+    print("1. MCP Server: Start with 'cd svc/nullblock-mcp && MCP_SERVER_HOST=0.0.0.0 MCP_SERVER_PORT=8001 python -m mcp.server'")
+    print("2. LM Studio: Start LM Studio and load a model (serves on localhost:1234)")
+    print("3. API Keys: Ensure OPENAI_API_KEY, ANTHROPIC_API_KEY are set (optional)")
+    print("4. Dependencies: Run 'pip install -e svc/nullblock-agents'")
     print("\nPress Enter to continue with demo...")
-    # input()  # Uncomment to wait for user input
+    input()  # Wait for user input
     
     try:
         asyncio.run(main())
