@@ -2739,3 +2739,69 @@ $border-color: rgba($echo-blue, 0.3);
     }
   }
 }
+
+// Scopes Branding
+.scopesBranding {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 10;
+  
+  .brandingText {
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: $lightning-silver;
+    text-shadow: 
+      0 0 5px rgba($lightning-silver, 0.6),
+      0 0 10px rgba($lightning-silver, 0.3),
+      0 0 15px rgba($lightning-silver, 0.1);
+    opacity: 0.7;
+    letter-spacing: 0.1em;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      opacity: 1;
+      color: rgba($lightning-silver, 1);
+      text-shadow: 
+        0 0 8px rgba($lightning-silver, 0.8),
+        0 0 15px rgba($lightning-silver, 0.5),
+        0 0 20px rgba($lightning-silver, 0.2);
+    }
+  }
+  
+  // Theme variations
+  .contextDashboard.theme-light & {
+    .brandingText {
+      color: rgba($lightning-silver, 0.8);
+      text-shadow: 
+        0 0 3px rgba($lightning-silver, 0.4),
+        0 0 6px rgba($lightning-silver, 0.2);
+      opacity: 0.6;
+      
+      &:hover {
+        opacity: 0.9;
+        color: rgba($lightning-silver, 1);
+      }
+    }
+  }
+  
+  .contextDashboard.theme-null & {
+    .brandingText {
+      color: $lightning-silver;
+      text-shadow: 
+        0 0 6px rgba($lightning-silver, 0.7),
+        0 0 12px rgba($lightning-silver, 0.4),
+        0 0 18px rgba($lightning-silver, 0.2);
+      opacity: 0.8;
+      
+      &:hover {
+        opacity: 1;
+        text-shadow: 
+          0 0 10px rgba($lightning-silver, 0.9),
+          0 0 20px rgba($lightning-silver, 0.6),
+          0 0 30px rgba($lightning-silver, 0.3);
+      }
+    }
+  }
+}

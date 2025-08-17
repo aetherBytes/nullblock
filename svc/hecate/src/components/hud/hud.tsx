@@ -893,29 +893,6 @@ const HUD: React.FC<HUDProps> = ({
         >
           <span className={styles.docsIcon}>📚</span>
         </button>
-        <button
-          className={styles.themeButton}
-          onClick={() => {
-            const newTheme = theme === 'light' ? 'dark' : 'light';
-
-            onThemeChange(newTheme);
-          }}
-          title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} theme`}
-        >
-          {theme === 'light' ? (
-            <span className={styles.themeIcon}>🌙</span>
-          ) : (
-            <span className={styles.themeIcon}>☀️</span>
-          )}
-        </button>
-        <a
-          href="https://x.com/Nullblock_io"
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles.socialButton}
-        >
-          <img src={xLogo} alt="X" className={styles.socialIcon} />
-        </a>
       </div>
     </nav>
   );
@@ -2341,6 +2318,7 @@ const HUD: React.FC<HUDProps> = ({
           publicKey={publicKey}
           walletName={walletName}
           walletType={localStorage.getItem('walletType') || undefined}
+          onThemeChange={onThemeChange}
         />
       )}
     </div>
