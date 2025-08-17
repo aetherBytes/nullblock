@@ -14,8 +14,8 @@ from typing import Dict, List, Any, Optional, AsyncGenerator
 from dataclasses import dataclass
 from datetime import datetime
 
-from .models import ModelConfig, ModelProvider, AVAILABLE_MODELS, get_model_config
-from .router import ModelRouter, TaskRequirements, RoutingDecision
+from .models import ModelConfig, ModelProvider, ModelCapability, AVAILABLE_MODELS, get_model_config
+from .router import ModelRouter, TaskRequirements, RoutingDecision, OptimizationGoal, Priority
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +100,9 @@ class LLMServiceFactory:
             if missing_providers:
                 logger.warning(f"Missing API keys for providers: {', '.join(missing_providers)}")
             
+            # Log LM Studio as primary local model
+            logger.info("LM Studio is configured as the primary local model server")
+            
             # Create sessions for each provider (even without keys for potential local use)
             self.sessions[ModelProvider.OPENAI.value] = aiohttp.ClientSession(
                 headers={"Authorization": f"Bearer {os.getenv('OPENAI_API_KEY', '')}"}
@@ -127,6 +130,9 @@ class LLMServiceFactory:
             # Update router with provider availability
             self._update_model_availability(api_keys)
             
+            # Test local model connectivity and update availability
+            await self._test_local_models()
+            
             logger.info("HTTP sessions initialized for all providers")
             
         except Exception as e:
@@ -143,6 +149,52 @@ class LLMServiceFactory:
                 if not has_key:
                     self.router.update_model_status(model_name, False)
                     logger.debug(f"Disabled model {model_name} - missing API key for {config.provider.value}")
+    
+    async def _test_local_models(self):
+        """Test connectivity to local model providers and update availability"""
+        # Test LM Studio first (primary local model server)
+        try:
+            async with self.sessions[ModelProvider.LOCAL.value].get("http://localhost:1234/v1/models", timeout=3) as resp:
+                if resp.status == 200:
+                    logger.info("LM Studio is available (primary local model server)")
+                    # Enable LM Studio models
+                    for model_name, config in AVAILABLE_MODELS.items():
+                        if config.provider == ModelProvider.LOCAL:
+                            self.router.update_model_status(model_name, True)
+                else:
+                    logger.warning(f"LM Studio returned HTTP {resp.status}")
+                    # Disable LM Studio models
+                    for model_name, config in AVAILABLE_MODELS.items():
+                        if config.provider == ModelProvider.LOCAL:
+                            self.router.update_model_status(model_name, False)
+        except Exception as e:
+            logger.warning(f"LM Studio not accessible: {e}")
+            # Disable LM Studio models
+            for model_name, config in AVAILABLE_MODELS.items():
+                if config.provider == ModelProvider.LOCAL:
+                    self.router.update_model_status(model_name, False)
+        
+        # Test Ollama (secondary local model server)
+        try:
+            async with self.sessions[ModelProvider.OLLAMA.value].get("http://localhost:11434/api/tags", timeout=3) as resp:
+                if resp.status == 200:
+                    logger.info("Ollama is available (secondary local model server)")
+                    # Enable Ollama models
+                    for model_name, config in AVAILABLE_MODELS.items():
+                        if config.provider == ModelProvider.OLLAMA:
+                            self.router.update_model_status(model_name, True)
+                else:
+                    logger.warning(f"Ollama returned HTTP {resp.status}")
+                    # Disable Ollama models
+                    for model_name, config in AVAILABLE_MODELS.items():
+                        if config.provider == ModelProvider.OLLAMA:
+                            self.router.update_model_status(model_name, False)
+        except Exception as e:
+            logger.warning(f"Ollama not accessible: {e}")
+            # Disable Ollama models
+            for model_name, config in AVAILABLE_MODELS.items():
+                if config.provider == ModelProvider.OLLAMA:
+                    self.router.update_model_status(model_name, False)
     
     def get_available_providers(self) -> List[str]:
         """Get list of providers with valid API keys or local availability"""
@@ -229,6 +281,9 @@ class LLMServiceFactory:
                 task_type="general"
             )
         
+        # Auto-adjust for local models when API keys are missing
+        requirements = self._adjust_requirements_for_availability(requirements)
+        
         try:
             # Check cache first
             if self.enable_caching:
@@ -298,10 +353,126 @@ class LLMServiceFactory:
             
             raise
     
+    def _adjust_requirements_for_availability(self, requirements: TaskRequirements) -> TaskRequirements:
+        """
+        Adjust task requirements based on available models and API keys
+        
+        When API keys are missing, prioritize local models and adjust optimization goals.
+        """
+        # Check API key availability
+        api_providers_available = []
+        if os.getenv('OPENAI_API_KEY'):
+            api_providers_available.append('openai')
+        if os.getenv('ANTHROPIC_API_KEY'):
+            api_providers_available.append('anthropic')
+        if os.getenv('GROQ_API_KEY'):
+            api_providers_available.append('groq')
+        if os.getenv('HUGGINGFACE_API_KEY'):
+            api_providers_available.append('huggingface')
+        
+        # If no API keys are available, adjust for local models
+        if not api_providers_available:
+            logger.info("No API keys available, adjusting requirements for local models")
+            
+            # Create a copy to avoid modifying the original
+            from copy import deepcopy
+            adjusted_requirements = deepcopy(requirements)
+            
+            # Force allow local models
+            adjusted_requirements.allow_local_models = True
+            
+            # LM Studio is the primary local model server
+            adjusted_requirements.preferred_providers = ['local']  # LM Studio uses LOCAL provider
+            
+            # Adjust optimization goal to favor local models
+            if requirements.optimization_goal == OptimizationGoal.COST:
+                # Cost optimization already favors local (free) models
+                pass
+            elif requirements.optimization_goal == OptimizationGoal.QUALITY:
+                # For quality, try to use the best local model available
+                adjusted_requirements.optimization_goal = OptimizationGoal.BALANCED
+                logger.info("Adjusted optimization from QUALITY to BALANCED for local models")
+            elif requirements.optimization_goal == OptimizationGoal.SPEED:
+                # Local models can be fast, keep speed optimization
+                pass
+            else:
+                # For balanced/reliability, favor local models
+                adjusted_requirements.optimization_goal = OptimizationGoal.COST
+                logger.info("Adjusted optimization to COST to favor local models")
+            
+            # Relax quality requirements slightly for local models
+            if requirements.min_quality_score and requirements.min_quality_score > 0.7:
+                adjusted_requirements.min_quality_score = 0.65
+                logger.info(f"Relaxed min_quality_score to {adjusted_requirements.min_quality_score} for local models")
+            
+            return adjusted_requirements
+        
+        # If some API keys are available, allow local models as fallback
+        elif len(api_providers_available) < 2:
+            logger.info(f"Limited API providers available ({api_providers_available}), enabling local fallback")
+            from copy import deepcopy
+            adjusted_requirements = deepcopy(requirements)
+            adjusted_requirements.allow_local_models = True
+            # LM Studio is the primary local model server
+            adjusted_requirements.preferred_providers = ["local"]  # LM Studio uses LOCAL provider
+            return adjusted_requirements
+        
+        # All API providers available, use original requirements
+        return requirements
+    
+    def _get_default_local_model(self) -> Optional[str]:
+        """Get the best available local model"""
+        # LM Studio is the primary local model server
+        local_models = [
+            "gemma-3-270m-it-mlx",  # Primary LM Studio model
+            "lm-studio-default",    # Fallback to whatever is loaded in LM Studio
+            "llama2",               # Ollama models (secondary fallback)
+            "codellama"             # Ollama models (secondary fallback)
+        ]
+        
+        for model_name in local_models:
+            if model_name in AVAILABLE_MODELS:
+                config = AVAILABLE_MODELS[model_name]
+                if config.enabled and self.router.model_status.get(model_name, True):
+                    return model_name
+        
+        return None
+    
+    async def test_local_connectivity(self) -> Dict[str, bool]:
+        """Test connectivity to local model providers"""
+        results = {}
+        
+        # Test LM Studio
+        try:
+            session = self.sessions.get(ModelProvider.LOCAL.value)
+            if session:
+                async with session.get("http://localhost:1234/v1/models", timeout=3) as resp:
+                    results["lm_studio"] = resp.status == 200
+            else:
+                results["lm_studio"] = False
+        except Exception:
+            results["lm_studio"] = False
+        
+        # Test Ollama
+        try:
+            session = self.sessions.get(ModelProvider.OLLAMA.value)
+            if session:
+                async with session.get("http://localhost:11434/api/tags", timeout=3) as resp:
+                    results["ollama"] = resp.status == 200
+            else:
+                results["ollama"] = False
+        except Exception:
+            results["ollama"] = False
+        
+        return results
+
     async def stream_generate(self, request: LLMRequest, requirements: TaskRequirements) -> AsyncGenerator[str, None]:
         """
         Stream response generation for real-time applications
         """
+        # Adjust requirements for availability
+        requirements = self._adjust_requirements_for_availability(requirements)
+        
         # Route to optimal model
         routing_decision = await self.router.route_request(requirements)
         
@@ -330,6 +501,8 @@ class LLMServiceFactory:
             return await self._generate_ollama(request, config)
         elif provider == ModelProvider.HUGGINGFACE:
             return await self._generate_huggingface(request, config)
+        elif provider == ModelProvider.LOCAL:
+            return await self._generate_lm_studio(request, config)
         else:
             raise ValueError(f"Unsupported provider: {provider}")
     
@@ -510,6 +683,85 @@ class LLMServiceFactory:
                 metadata={"provider": "huggingface", "model_config": config.name}
             )
     
+    async def _generate_lm_studio(self, request: LLMRequest, config: ModelConfig) -> LLMResponse:
+        """Generate response using LM Studio local API (OpenAI-compatible)"""
+        session = self.sessions[ModelProvider.LOCAL.value]
+        
+        # Build request payload (OpenAI format)
+        messages = []
+        if request.system_prompt:
+            messages.append({"role": "system", "content": request.system_prompt})
+        messages.append({"role": "user", "content": request.prompt})
+        
+        payload = {
+            "model": config.name,
+            "messages": messages,
+            "max_tokens": request.max_tokens or config.max_tokens,
+            "temperature": request.temperature or config.temperature,
+            "stream": False
+        }
+        
+        if request.stop_sequences:
+            payload["stop"] = request.stop_sequences
+        
+        try:
+            async with session.post(config.api_endpoint, json=payload, timeout=30) as resp:
+                if resp.status != 200:
+                    error_text = await resp.text()
+                    # Provide helpful error message for common LM Studio issues
+                    if resp.status == 404:
+                        raise Exception(f"LM Studio server not running on {config.api_endpoint}. "
+                                      "Please start LM Studio and load a model.")
+                    elif resp.status == 422:
+                        raise Exception(f"LM Studio model not loaded. Please load a model in LM Studio.")
+                    else:
+                        raise Exception(f"LM Studio API error {resp.status}: {error_text}")
+                
+                data = await resp.json()
+                
+                # Extract response content
+                if "choices" in data and data["choices"]:
+                    choice = data["choices"][0]
+                    content = choice["message"]["content"] or ""
+                    finish_reason = choice.get("finish_reason", "stop")
+                else:
+                    content = str(data)
+                    finish_reason = "error"
+                
+                # Extract usage if available
+                usage = data.get("usage", {})
+                if not usage:
+                    # Estimate token usage for LM Studio
+                    estimated_input_tokens = len(request.prompt.split()) * 1.3
+                    estimated_output_tokens = len(content.split()) * 1.3
+                    usage = {
+                        "prompt_tokens": int(estimated_input_tokens),
+                        "completion_tokens": int(estimated_output_tokens),
+                        "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
+                    }
+                
+                return LLMResponse(
+                    content=content,
+                    model_used=config.name,
+                    usage=usage,
+                    latency_ms=0.0,  # Will be set by caller
+                    cost_estimate=0.0,  # Local models are free
+                    finish_reason=finish_reason,
+                    metadata={
+                        "provider": "lm_studio", 
+                        "model_config": config.name,
+                        "api_endpoint": config.api_endpoint
+                    }
+                )
+                
+        except asyncio.TimeoutError:
+            raise Exception("LM Studio request timed out. The model may be too slow or server overloaded.")
+        except Exception as e:
+            if "Cannot connect" in str(e) or "Connection refused" in str(e):
+                raise Exception(f"Cannot connect to LM Studio at {config.api_endpoint}. "
+                              "Please ensure LM Studio is running and serving on localhost:1234.")
+            raise
+    
     async def _stream_with_model(self, request: LLMRequest, routing_decision: RoutingDecision) -> AsyncGenerator[str, None]:
         """Stream response with specific model"""
         # This is a simplified streaming implementation
@@ -595,8 +847,6 @@ class LLMServiceFactory:
     async def quick_generate(self, prompt: str, task_type: str = "general", 
                            optimization_goal: str = "balanced") -> str:
         """Quick generation with minimal configuration"""
-        from .router import OptimizationGoal, Priority
-        
         request = LLMRequest(prompt=prompt)
         
         requirements = TaskRequirements(
@@ -608,3 +858,72 @@ class LLMServiceFactory:
         
         response = await self.generate(request, requirements)
         return response.content
+    
+    async def health_check(self) -> Dict[str, Any]:
+        """Comprehensive health check for LLM services"""
+        status = {
+            "overall_status": "healthy",
+            "api_providers": {},
+            "local_providers": {},
+            "models_available": 0,
+            "default_model": None,
+            "issues": []
+        }
+        
+        try:
+            # Check API providers
+            api_keys = {
+                "openai": bool(os.getenv('OPENAI_API_KEY')),
+                "anthropic": bool(os.getenv('ANTHROPIC_API_KEY')),
+                "groq": bool(os.getenv('GROQ_API_KEY')),
+                "huggingface": bool(os.getenv('HUGGINGFACE_API_KEY'))
+            }
+            status["api_providers"] = api_keys
+            
+            # Check local providers
+            local_connectivity = await self.test_local_connectivity()
+            status["local_providers"] = local_connectivity
+            
+            # Count available models
+            available_models = 0
+            for model_name, config in AVAILABLE_MODELS.items():
+                if config.enabled and self.router.model_status.get(model_name, True):
+                    # Check if provider is available
+                    if config.provider == ModelProvider.LOCAL:
+                        if local_connectivity.get("lm_studio", False):
+                            available_models += 1
+                    elif config.provider == ModelProvider.OLLAMA:
+                        if local_connectivity.get("ollama", False):
+                            available_models += 1
+                    elif config.api_key_env and os.getenv(config.api_key_env):
+                        available_models += 1
+            
+            status["models_available"] = available_models
+            
+            # Determine default model
+            if any(api_keys.values()):
+                status["default_model"] = "API models available"
+            elif any(local_connectivity.values()):
+                local_model = self._get_default_local_model()
+                status["default_model"] = local_model or "local models available"
+            else:
+                status["default_model"] = None
+                status["issues"].append("No models available")
+            
+            # Check for issues
+            if available_models == 0:
+                status["overall_status"] = "unhealthy"
+                status["issues"].append("No working models available")
+            elif not any(api_keys.values()) and not any(local_connectivity.values()):
+                status["overall_status"] = "degraded"
+                status["issues"].append("No API keys and no local models accessible")
+            elif available_models < 2:
+                status["overall_status"] = "degraded"
+                status["issues"].append("Limited model options available")
+            
+            return status
+            
+        except Exception as e:
+            status["overall_status"] = "error"
+            status["issues"].append(f"Health check failed: {e}")
+            return status

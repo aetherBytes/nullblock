@@ -155,6 +155,34 @@ class MCPClient:
             logger.error(f"Error getting available sources: {e}")
             raise ConnectionError(f"Failed to get available data sources: {e}")
     
+    async def call_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Call a specific tool on the MCP server
+        
+        Args:
+            tool_name: Name of the tool to call
+            parameters: Parameters to pass to the tool
+            
+        Returns:
+            Tool execution result
+        """
+        try:
+            endpoint = f"{self.server_url}/tools/{tool_name}"
+            
+            async with self.session.post(endpoint, json=parameters, timeout=30) as resp:
+                if resp.status == 200:
+                    result = await resp.json()
+                    logger.info(f"Tool {tool_name} executed successfully")
+                    return result
+                else:
+                    error_text = await resp.text()
+                    logger.error(f"Tool {tool_name} failed: HTTP {resp.status} - {error_text}")
+                    raise Exception(f"Tool execution failed: HTTP {resp.status} - {error_text}")
+                    
+        except Exception as e:
+            logger.error(f"Failed to call tool {tool_name}: {e}")
+            raise
+
     async def health_check(self) -> Dict[str, Any]:
         """Check MCP server health and status"""
         try:

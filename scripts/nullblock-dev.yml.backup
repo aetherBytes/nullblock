@@ -20,10 +20,6 @@ windows:
 
   - backend:
       layout: tiled
-      pre_window: |
-        if [ -f .env.dev ]; then
-          export $(grep -v '^#' .env.dev | xargs -0)
-        fi
       panes:
         - 
           - echo "Starting MCP Server..."
@@ -78,27 +74,50 @@ windows:
           - tail -f hecate.log
 
   - llm:
-      layout: even-horizontal
+      layout: tiled
       panes:
         - 
+          - echo "LM Studio Server"
           - echo "Starting LM Studio..."
           - lms status
-          - echo "Loading Gemma3 270M..."
           - lms load gemma-3-270m-it-mlx -y
-          - echo "Model loaded successfully! Starting API server..."
           - lms server start
         - 
-          - echo "Waiting for LM Studio server to start..."
-          - sleep 10
-          - echo "Streaming LM Studio logs..."
+          - echo "Status Monitor"
+          - sleep 3
+          - lms ps --detailed
+          - lms ls
           - lms log stream
-
+        - 
+          - echo "Management Commands"
+          - echo "lms status - Check status"
+          - echo "lms server start/stop - Control server"
+          - echo "lms load gemma-3-270m-it-mlx -y - Load Gemma3"
+          - cd ~/nullblock
+        - 
+          - echo "API Testing"
+          - sleep 5
+          - curl -s http://localhost:1234/v1/models || echo "Server starting..."
+          - echo "Test with: curl http://localhost:1234/v1/models"
 
   - workspace:
       layout: even-horizontal
       panes:
-        - echo "Nullblock Main Repository" && echo "Available commands:" && echo "  just help - Show all commands" && echo "  just dev-tmux - Launch dev environment" && echo "  just start - Start all services" && echo "  just status - Check service status" && cd ~/nullblock
-        - echo "Nullblock SDK Repository" && echo "Available commands:" && echo "  npm run build - Build SDK" && echo "  npm test - Run tests" && echo "  npm run docs - Generate docs" && cd ~/nullblock-sdk
+        - 
+          - echo "Nullblock Main Repository"
+          - echo "Available commands:"
+          - echo "  just help           - Show all available commands"
+          - echo "  just dev-tmux       - Launch development environment"
+          - echo "  just start          - Start all services with Docker"
+          - echo "  just status         - Check service status"
+          - cd ~/nullblock
+        - 
+          - echo "Nullblock SDK Repository"
+          - echo "Available commands:"
+          - echo "  npm run build       - Build SDK"
+          - echo "  npm test            - Run tests"
+          - echo "  npm run docs        - Generate documentation"
+          - cd ~/nullblock-sdk
 
 on_project_start: |
   if [ ! -f .env.dev ]; then
@@ -115,3 +134,7 @@ on_project_stop: |
   brew services stop redis 2>/dev/null || true
   pkill -f "ipfs daemon" 2>/dev/null || true
 
+pre_window: |
+  if [ -f .env.dev ]; then
+    export $(cat .env.dev | xargs)
+  fi

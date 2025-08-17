@@ -14,6 +14,9 @@ from datetime import datetime
 from .data_analyzer import DataAnalyzer
 from .pattern_detector import PatternDetector
 from .mcp_client import MCPClient
+from ..llm_service.factory import LLMServiceFactory, LLMRequest
+from ..llm_service.router import TaskRequirements, OptimizationGoal, Priority
+from ..llm_service.models import ModelCapability
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +56,11 @@ class InformationGatheringAgent:
     """
     
     def __init__(self, mcp_server_url: str = "http://localhost:8000"):
+        self.mcp_server_url = mcp_server_url
         self.mcp_client = MCPClient(mcp_server_url)
         self.data_analyzer = DataAnalyzer()
         self.pattern_detector = PatternDetector()
+        self.llm_factory: Optional[LLMServiceFactory] = None
         self.active_requests: Dict[str, DataRequest] = {}
         self.analysis_cache: Dict[str, AnalysisResult] = {}
         self.running = False
@@ -70,6 +75,10 @@ class InformationGatheringAgent:
         # Initialize MCP connection
         await self.mcp_client.connect()
         
+        # Initialize LLM factory for enhanced analysis
+        self.llm_factory = LLMServiceFactory()
+        await self.llm_factory.initialize()
+        
         # Start background processing tasks
         await asyncio.gather(
             self._data_processing_loop(),
@@ -81,6 +90,8 @@ class InformationGatheringAgent:
         """Stop the information gathering agent"""
         self.running = False
         await self.mcp_client.disconnect()
+        if self.llm_factory:
+            await self.llm_factory.cleanup()
         logger.info("Information Gathering Agent stopped")
     
     async def request_data_analysis(self, request: DataRequest) -> str:
@@ -127,64 +138,90 @@ class InformationGatheringAgent:
         """
         return await self.mcp_client.get_data(source_type, source_name, parameters)
     
-    async def analyze_market_trends(self, symbols: List[str], timeframe: str = "24h") -> AnalysisResult:
+    async def analyze_market_trends(self, symbols: List[str], timeframe: str = "24h", enhance_with_llm: bool = False) -> Dict[str, Any]:
         """
         Convenience method for market trend analysis
         
         Args:
             symbols: List of token/asset symbols to analyze
             timeframe: Analysis timeframe (1h, 24h, 7d, etc.)
+            enhance_with_llm: Whether to enhance analysis with LLM insights
             
         Returns:
-            AnalysisResult with market trend insights
+            Dict with market trend insights and analysis
         """
-        request = DataRequest(
+        if not symbols:
+            raise ValueError("Symbols list cannot be empty")
+        
+        # Use MCP client to get market data
+        result = await self.mcp_client.call_tool("analyze_market_trends", {
+            "symbols": symbols,
+            "timeframe": timeframe
+        })
+        
+        # Create AnalysisResult object with proper structure
+        analysis_result = AnalysisResult(
+            request_id=f"market_trends_{datetime.now().timestamp()}",
             source_type="price_oracle",
-            source_name="multiple",
-            parameters={"symbols": symbols, "timeframe": timeframe},
-            analysis_type="trend",
-            context={"analysis_goal": "market_trends"}
+            source_name="coingecko",
+            timestamp=datetime.now(),
+            data=result,
+            insights=result.get("insights", []),
+            confidence_score=result.get("confidence_score", 0.85),
+            patterns_detected=result.get("patterns", []),
+            anomalies=result.get("anomalies", []),
+            recommendations=result.get("recommendations", [])
         )
         
-        request_id = await self.request_data_analysis(request)
+        # Enhance with LLM if requested
+        if enhance_with_llm and self.llm_factory:
+            try:
+                llm_enhancement = await self._enhance_with_llm_analysis(
+                    context=f"Market analysis for {', '.join(symbols)} over {timeframe}",
+                    analysis_type="market_analysis",
+                    capabilities=["REASONING", "DATA_ANALYSIS"]
+                )
+                analysis_result["enhanced_analysis"] = llm_enhancement["content"]
+                analysis_result["model_used"] = llm_enhancement["model_used"]
+            except Exception as e:
+                logger.warning(f"LLM enhancement failed: {e}")
         
-        # Wait for analysis to complete (with timeout)
-        for _ in range(30):  # 30 second timeout
-            result = await self.get_analysis_result(request_id)
-            if result:
-                return result
-            await asyncio.sleep(1)
-        
-        raise TimeoutError(f"Analysis request {request_id} timed out")
+        return analysis_result
     
-    async def detect_defi_opportunities(self, protocols: List[str]) -> AnalysisResult:
+    async def detect_defi_opportunities(self, protocols: List[str], min_apr: float = 0.0, max_risk: float = 1.0) -> Dict[str, Any]:
         """
         Convenience method for DeFi opportunity detection
         
         Args:
             protocols: List of DeFi protocols to analyze
+            min_apr: Minimum APR threshold
+            max_risk: Maximum risk score threshold
             
         Returns:
-            AnalysisResult with DeFi opportunity insights
+            Dict with DeFi opportunity insights
         """
-        request = DataRequest(
+        # Use MCP client to get DeFi data
+        result = await self.mcp_client.call_tool("detect_defi_opportunities", {
+            "protocols": protocols,
+            "min_apr": min_apr,
+            "max_risk": max_risk
+        })
+        
+        # Create AnalysisResult object with proper structure for DeFi opportunities
+        opportunities_result = AnalysisResult(
+            request_id=f"defi_opportunities_{datetime.now().timestamp()}",
             source_type="defi_protocol",
-            source_name="multiple", 
-            parameters={"protocols": protocols},
-            analysis_type="pattern",
-            context={"analysis_goal": "defi_opportunities"}
+            source_name="uniswap",
+            timestamp=datetime.now(),
+            data=result,
+            insights=result.get("insights", []),
+            confidence_score=0.80,  # Default confidence for DeFi analysis
+            patterns_detected=result.get("patterns", []),
+            anomalies=[],  # DeFi opportunities don't typically have anomalies
+            recommendations=result.get("recommendations", [])
         )
         
-        request_id = await self.request_data_analysis(request)
-        
-        # Wait for analysis to complete
-        for _ in range(30):
-            result = await self.get_analysis_result(request_id)
-            if result:
-                return result
-            await asyncio.sleep(1)
-            
-        raise TimeoutError(f"Analysis request {request_id} timed out")
+        return opportunities_result
     
     async def _data_processing_loop(self):
         """Background loop for processing data requests"""
@@ -288,6 +325,180 @@ class InformationGatheringAgent:
         except Exception as e:
             logger.error(f"Error processing request {request_id}: {e}")
             # Keep in active requests for retry
+    
+    async def _enhance_with_llm_analysis(self, context: str, analysis_type: str, capabilities: List[str]) -> Dict[str, Any]:
+        """
+        Enhance analysis results using LLM
+        
+        Args:
+            context: Analysis context and data
+            analysis_type: Type of analysis being performed
+            capabilities: Required LLM capabilities
+            
+        Returns:
+            Dict with LLM enhancement results
+        """
+        if not self.llm_factory:
+            raise ValueError("LLM factory not initialized")
+        
+        # Map string capabilities to ModelCapability enum
+        capability_mapping = {
+            "REASONING": ModelCapability.REASONING,
+            "DATA_ANALYSIS": ModelCapability.DATA_ANALYSIS,
+            "CONVERSATION": ModelCapability.CONVERSATION,
+            "CREATIVE": ModelCapability.CREATIVE,
+            "CODE": ModelCapability.CODE
+        }
+        
+        mapped_capabilities = [capability_mapping.get(cap, ModelCapability.REASONING) for cap in capabilities]
+        
+        # Create LLM request
+        request = LLMRequest(
+            prompt=f"Analyze and provide insights for this {analysis_type}: {context}",
+            system_prompt=f"You are a professional {analysis_type} expert. Provide clear, actionable insights.",
+            max_tokens=300
+        )
+        
+        # Create requirements
+        requirements = TaskRequirements(
+            required_capabilities=mapped_capabilities,
+            optimization_goal=OptimizationGoal.BALANCED,
+            priority=Priority.MEDIUM,
+            task_type=analysis_type
+        )
+        
+        # Generate enhanced analysis
+        response = await self.llm_factory.generate(request, requirements)
+        
+        return {
+            "content": response.content,
+            "model_used": response.model_used,
+            "latency_ms": response.latency_ms,
+            "cost_estimate": response.cost_estimate
+        }
+    
+    async def _execute_analysis_workflow(self, workflow_type: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute a multi-step analysis workflow
+        
+        Args:
+            workflow_type: Type of workflow to execute
+            parameters: Workflow parameters
+            
+        Returns:
+            Dict with workflow results
+        """
+        workflow_steps = []
+        
+        if workflow_type == "comprehensive_market_analysis":
+            workflow_steps = [
+                {"tool": "get_market_data", "params": parameters},
+                {"tool": "analyze_patterns", "params": parameters},
+                {"tool": "enhance_with_llm", "params": parameters}
+            ]
+        
+        results = []
+        for step in workflow_steps:
+            try:
+                result = await self.mcp_client.call_tool(step["tool"], step["params"])
+                results.append({
+                    "step": step["tool"],
+                    "status": "completed",
+                    "data": result
+                })
+            except Exception as e:
+                results.append({
+                    "step": step["tool"],
+                    "status": "failed",
+                    "error": str(e)
+                })
+        
+        return {
+            "workflow_type": workflow_type,
+            "workflow_results": results,
+            "completed_steps": len([r for r in results if r["status"] == "completed"]),
+            "total_steps": len(workflow_steps)
+        }
+    
+    async def _gather_parallel_data(self, sources: List[str], parameters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Gather data from multiple sources in parallel
+        
+        Args:
+            sources: List of data source names
+            parameters: Common parameters for all sources
+            
+        Returns:
+            List of results from each source
+        """
+        tasks = []
+        for source in sources:
+            task = self.mcp_client.call_tool(source, parameters)
+            tasks.append(task)
+        
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Convert exceptions to error dictionaries
+        processed_results = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                processed_results.append({
+                    "source": sources[i],
+                    "status": "error",
+                    "error": str(result)
+                })
+            else:
+                processed_results.append({
+                    "source": sources[i],
+                    "status": "success",
+                    "data": result
+                })
+        
+        return processed_results
+    
+    async def _execute_resilient_workflow(self, steps: List[str], options: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute workflow with error recovery
+        
+        Args:
+            steps: List of workflow steps
+            options: Execution options including retry settings
+            
+        Returns:
+            Dict with workflow execution results
+        """
+        completed_steps = []
+        failed_steps = []
+        max_retries = options.get("max_retries", 1)
+        
+        for step in steps:
+            success = False
+            for attempt in range(max_retries + 1):
+                try:
+                    result = await self.mcp_client.call_tool(step, {})
+                    completed_steps.append({
+                        "step": step,
+                        "result": result,
+                        "attempt": attempt + 1
+                    })
+                    success = True
+                    break
+                except Exception as e:
+                    if attempt == max_retries:
+                        failed_steps.append({
+                            "step": step,
+                            "error": str(e),
+                            "attempts": attempt + 1
+                        })
+                    else:
+                        await asyncio.sleep(1)  # Brief delay before retry
+            
+        return {
+            "completed_steps": completed_steps,
+            "failed_steps": failed_steps,
+            "recovery_attempted": len(failed_steps) > 0 and max_retries > 0,
+            "success_rate": len(completed_steps) / len(steps) if steps else 1.0
+        }
             
 async def main():
     """Main entry point for running the information gathering agent"""

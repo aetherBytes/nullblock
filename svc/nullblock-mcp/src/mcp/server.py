@@ -18,6 +18,7 @@ from .context.storage import ContextManager, IPFSContextStorage, UserContext
 from .flashbots.client import FlashbotsClient, MEVProtectionManager
 from .security.prompt_protection import PromptProtectionManager, PromptAnalysis
 from .tools.data_source_tools import DataSourceManager, DataSourceResponse
+from .tools.analysis_tools import MarketAnalysisTools, DeFiAnalysisTools
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,10 @@ class MCPServer:
         
         # Initialize data source manager
         self.data_source_manager = DataSourceManager()
+        
+        # Initialize analysis tools
+        self.market_analysis = None
+        self.defi_analysis = None
         
         # Setup middleware
         self._setup_middleware()
@@ -413,6 +418,136 @@ class MCPServer:
             except Exception as e:
                 logger.error(f"Failed to get data source status: {e}")
                 raise HTTPException(status_code=500, detail="Failed to get status")
+        
+        # Analysis Tool Endpoints
+        @self.app.post("/tools/analyze_market_trends")
+        async def analyze_market_trends_tool(request: Dict[str, Any]):
+            """Analyze market trends using real data sources"""
+            try:
+                symbols = request.get("symbols", [])
+                timeframe = request.get("timeframe", "24h")
+                
+                if not symbols:
+                    raise HTTPException(status_code=400, detail="Symbols parameter is required")
+                
+                if not self.market_analysis:
+                    raise HTTPException(status_code=503, detail="Market analysis tools not initialized")
+                
+                result = await self.market_analysis.analyze_market_trends(symbols, timeframe)
+                return result
+                
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Error in market trends analysis: {e}")
+                raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        
+        @self.app.post("/tools/detect_defi_opportunities")
+        async def detect_defi_opportunities_tool(request: Dict[str, Any]):
+            """Detect DeFi opportunities using real protocol data"""
+            try:
+                protocols = request.get("protocols", [])
+                min_apr = request.get("min_apr", 0.0)
+                max_risk = request.get("max_risk", 1.0)
+                
+                if not protocols:
+                    raise HTTPException(status_code=400, detail="Protocols parameter is required")
+                
+                if not self.defi_analysis:
+                    raise HTTPException(status_code=503, detail="DeFi analysis tools not initialized")
+                
+                result = await self.defi_analysis.detect_defi_opportunities(protocols, min_apr, max_risk)
+                return result
+                
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Error in DeFi opportunities detection: {e}")
+                raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        
+        @self.app.post("/tools/detect_price_anomalies")
+        async def detect_price_anomalies_tool(request: Dict[str, Any]):
+            """Detect price anomalies in market data"""
+            try:
+                symbols = request.get("symbols", [])
+                threshold = request.get("threshold", 0.05)
+                
+                if not symbols:
+                    raise HTTPException(status_code=400, detail="Symbols parameter is required")
+                
+                if not self.market_analysis:
+                    raise HTTPException(status_code=503, detail="Market analysis tools not initialized")
+                
+                result = await self.market_analysis.detect_price_anomalies(symbols, threshold)
+                return result
+                
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Error in price anomaly detection: {e}")
+                raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        
+        @self.app.post("/tools/calculate_volatility_metrics")
+        async def calculate_volatility_metrics_tool(request: Dict[str, Any]):
+            """Calculate volatility metrics for symbols"""
+            try:
+                symbols = request.get("symbols", [])
+                
+                if not symbols:
+                    raise HTTPException(status_code=400, detail="Symbols parameter is required")
+                
+                if not self.market_analysis:
+                    raise HTTPException(status_code=503, detail="Market analysis tools not initialized")
+                
+                result = await self.market_analysis.calculate_volatility_metrics(symbols)
+                return result
+                
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Error in volatility calculation: {e}")
+                raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        
+        @self.app.get("/tools")
+        async def list_available_tools():
+            """List all available analysis tools"""
+            return {
+                "tools": [
+                    {
+                        "name": "analyze_market_trends",
+                        "description": "Analyze market trends for given symbols using real price data",
+                        "parameters": {
+                            "symbols": "List[str] - Token symbols to analyze",
+                            "timeframe": "str - Analysis timeframe (24h, 7d, etc.)"
+                        }
+                    },
+                    {
+                        "name": "detect_defi_opportunities",
+                        "description": "Detect DeFi opportunities across protocols using real data",
+                        "parameters": {
+                            "protocols": "List[str] - DeFi protocols to analyze",
+                            "min_apr": "float - Minimum APR threshold",
+                            "max_risk": "float - Maximum risk threshold"
+                        }
+                    },
+                    {
+                        "name": "detect_price_anomalies",
+                        "description": "Detect price anomalies in market data",
+                        "parameters": {
+                            "symbols": "List[str] - Token symbols to analyze",
+                            "threshold": "float - Anomaly detection threshold"
+                        }
+                    },
+                    {
+                        "name": "calculate_volatility_metrics",
+                        "description": "Calculate volatility metrics for symbols",
+                        "parameters": {
+                            "symbols": "List[str] - Token symbols to analyze"
+                        }
+                    }
+                ],
+                "timestamp": datetime.now().isoformat()
+            }
     
     async def _get_session(self, authorization: HTTPAuthorizationCredentials = Depends(HTTPBearer())) -> WalletSession:
         """Dependency to get authenticated session"""
@@ -511,8 +646,14 @@ class MCPServer:
         try:
             await self.data_source_manager.initialize()
             logger.info("Data source manager initialized")
+            
+            # Initialize analysis tools
+            self.market_analysis = MarketAnalysisTools(self.data_source_manager)
+            self.defi_analysis = DeFiAnalysisTools(self.data_source_manager)
+            logger.info("Analysis tools initialized")
+            
         except Exception as e:
-            logger.error(f"Failed to initialize data source manager: {e}")
+            logger.error(f"Failed to initialize components: {e}")
     
     async def shutdown(self):
         """Clean up async components on shutdown"""

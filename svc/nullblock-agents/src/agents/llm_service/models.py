@@ -177,8 +177,8 @@ AVAILABLE_MODELS = {
             tokens_per_second=10,
             cost_per_1k_tokens=0.0,  # No cost for local
             context_window=4096,
-            quality_score=0.70,
-            reliability_score=0.85
+            quality_score=0.65,  # Lower than LM Studio models
+            reliability_score=0.80  # Lower than LM Studio models
         ),
         api_endpoint="http://localhost:11434/api/chat",
         description="Local Llama2 model for privacy-focused tasks"
@@ -197,8 +197,8 @@ AVAILABLE_MODELS = {
             tokens_per_second=12,
             cost_per_1k_tokens=0.0,
             context_window=4096,
-            quality_score=0.75,
-            reliability_score=0.88
+            quality_score=0.70,  # Lower than LM Studio models
+            reliability_score=0.85  # Lower than LM Studio models
         ),
         api_endpoint="http://localhost:11434/api/chat",
         description="Local CodeLlama model specialized for code generation"
@@ -226,6 +226,49 @@ AVAILABLE_MODELS = {
         api_endpoint="https://api.groq.com/openai/v1/chat/completions",
         api_key_env="GROQ_API_KEY",
         description="Ultra-fast Mixtral model via Groq inference"
+    ),
+    
+    # LM Studio Models (Local)
+    "gemma-3-270m-it-mlx": ModelConfig(
+        name="gemma-3-270m-it-mlx",
+        provider=ModelProvider.LOCAL,
+        tier=ModelTier.LOCAL,
+        capabilities=[
+            ModelCapability.CONVERSATION,
+            ModelCapability.REASONING,
+            ModelCapability.CODE
+        ],
+        metrics=ModelMetrics(
+            avg_latency_ms=800,
+            tokens_per_second=30,
+            cost_per_1k_tokens=0.0,  # No cost for local
+            context_window=4096,
+            quality_score=0.75,  # Higher quality score than Ollama models
+            reliability_score=0.95  # Higher reliability score
+        ),
+        api_endpoint="http://localhost:1234/v1/chat/completions",
+        description="Local Gemma3 270M model via LM Studio - optimized for development"
+    ),
+    
+    "lm-studio-default": ModelConfig(
+        name="lm-studio-default",
+        provider=ModelProvider.LOCAL,
+        tier=ModelTier.LOCAL,
+        capabilities=[
+            ModelCapability.CONVERSATION,
+            ModelCapability.REASONING,
+            ModelCapability.CODE
+        ],
+        metrics=ModelMetrics(
+            avg_latency_ms=1000,
+            tokens_per_second=25,
+            cost_per_1k_tokens=0.0,
+            context_window=4096,
+            quality_score=0.72,  # Higher quality score than Ollama models
+            reliability_score=0.92  # Higher reliability score
+        ),
+        api_endpoint="http://localhost:1234/v1/chat/completions",
+        description="Default LM Studio model (whatever is currently loaded)"
     ),
     
     # HuggingFace Models

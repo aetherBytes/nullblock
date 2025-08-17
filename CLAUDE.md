@@ -51,6 +51,10 @@ Nullblock is a decentralized Web3 platform for deploying and monetizing agentic 
 - **Cost Optimization**: Automatic cost tracking, estimation, and budget-aware routing
 - **Fallback System**: Automatic failover to alternative models on errors or rate limits
 - **Response Caching**: Intelligent caching to reduce costs and improve response times
+- **🆕 LM Studio Primary**: LM Studio configured as primary local model server with Gemma3 270M
+- **🆕 Enhanced Model Prioritization**: LM Studio models prioritized over Ollama with higher quality/reliability scores
+- **🆕 Connectivity Testing**: Automatic detection and validation of local model availability
+- **🆕 Improved Error Handling**: Specific guidance for LM Studio setup and troubleshooting
 
 ### **🎬 Demo & Testing Infrastructure**
 
@@ -62,6 +66,9 @@ Nullblock is a decentralized Web3 platform for deploying and monetizing agentic 
 - System monitoring and statistics
 - **🆕 FAIL-FAST ERROR HANDLING**: Comprehensive service health checks with immediate failure on critical service unavailability
 - **🆕 STANDARDIZED ERROR RESPONSES**: All services return consistent error formats for easy debugging and monitoring
+- **🆕 ENHANCED PRICE DISPLAY**: Improved cryptocurrency price extraction and display from API responses
+- **🆕 LM Studio Integration**: Demo now prioritizes LM Studio over Ollama with proper error handling
+- **🆕 Better User Guidance**: Clear prerequisites and setup instructions for LM Studio configuration
 
 **Information Gathering Agent Demo**: Focused agent testing (`/svc/nullblock-agents/src/agents/information_gathering/demo.py`)
 - Price oracle analysis workflows
@@ -209,6 +216,43 @@ pub trait WalletProvider {
 
 ## Common Development Commands
 
+### **🤖 LLM Development Environment** (August 2025)
+
+#### LM Studio with Gemma3 270M (`llm` tab in tmux)
+```bash
+# Development environment includes dedicated LLM tab
+./scripts/dev-tmux  # Starts complete environment with LLM tab
+
+# LLM tab automatically:
+# - Loads Gemma3 270M model (gemma-3-270m-it-mlx)  
+# - Starts LM Studio API server on localhost:1234
+# - Streams logs for real-time monitoring
+# - Tests API connectivity with verification
+
+# Manual LM Studio commands
+lms status                    # Check LM Studio status
+lms load gemma-3-270m-it-mlx -y  # Load Gemma3 with GPU acceleration
+lms server start             # Start API server
+lms server stop              # Stop API server
+lms ps                       # List loaded models
+lms ls                       # List downloaded models
+lms log stream               # Stream live logs
+
+# API testing
+curl http://localhost:1234/v1/models  # List available models
+curl -X POST http://localhost:1234/v1/completions \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Hello","max_tokens":20}'  # Test completion
+
+# Integration with Nullblock agents
+# Gemma3 is available as local model option in LLM Service Factory
+# Use for cost-effective local inference in development
+
+# 🆕 NEW: LM Studio is now the primary local model server
+# The system will automatically prioritize LM Studio over Ollama
+# Enhanced error handling provides clear setup guidance
+```
+
 ### **🆕 Social Trading Agents** (August 2025)
 
 #### Social Trading Development (`svc/nullblock-agents/`)
@@ -325,6 +369,13 @@ cd ../.. && python demo_integration.py         # Run integration demo
 # - Network connectivity issues
 # - Invalid authentication tokens
 # - Data source failures
+
+# 🆕 NEW: LM Studio Integration
+# Demo now prioritizes LM Studio over Ollama
+# Enhanced price display shows actual cryptocurrency prices
+# Clear setup instructions for LM Studio configuration
+# Better error messages and user guidance
+```
 
 # 🆕 NEW: Rust integration testing
 cd svc/erebus/
@@ -682,6 +733,27 @@ The ECHO interface uses a room-based command structure that will evolve into MCP
 - Premium features: $10-$100/month for advanced analytics and priority support
 
 The platform implements a cyberpunk aesthetic with neon styling, ball lightning visual effects, and maintains immersive error messages throughout the user experience while building toward a comprehensive MCP-powered agentic ecosystem.
+
+## **📋 TODO LIST** (August 2025)
+
+### **🆕 Immediate Tasks**
+- [ ] **Ollama Integration**: Complete Ollama integration for secondary local model support
+- [ ] **Model Performance Testing**: Benchmark LM Studio vs Ollama performance and reliability
+- [ ] **Demo Price Display**: Further improve cryptocurrency price extraction from different API response formats
+- [ ] **Error Recovery**: Implement automatic fallback between LM Studio and Ollama when one is unavailable
+- [ ] **Documentation**: Create comprehensive setup guide for LM Studio configuration
+
+### **🔄 Medium Priority**
+- [ ] **Model Routing Optimization**: Fine-tune model selection algorithms for better performance
+- [ ] **Cost Analysis**: Implement detailed cost tracking and comparison between local and cloud models
+- [ ] **User Experience**: Improve error messages and user guidance for model setup
+- [ ] **Testing**: Expand test coverage for local model integration scenarios
+
+### **🎯 Long Term**
+- [ ] **Multi-Model Support**: Support for additional local model servers (vLLM, Text Generation WebUI)
+- [ ] **Model Management**: UI for managing and switching between different local models
+- [ ] **Performance Monitoring**: Real-time monitoring of model performance and health
+- [ ] **Community Integration**: Allow users to contribute and share model configurations
 
 ### **🎨 Visual Design System**
 - **NullEye Animations**: Each NullEye features 8 randomized lightning arcs with varied sizes, orientations, and timing
