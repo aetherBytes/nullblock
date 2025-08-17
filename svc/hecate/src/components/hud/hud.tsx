@@ -880,18 +880,18 @@ const HUD: React.FC<HUDProps> = ({
       </div>
       <div className={styles.navbarButtons}>
         <button
-          className={`${styles.walletButton} ${publicKey ? styles.connected : ''}`}
+          className={`${styles.walletMenuButton} ${publicKey ? styles.connected : ''}`}
           onClick={publicKey ? onDisconnect : () => onConnectWallet()}
-          title={publicKey ? '🔓 Disconnect Wallet (Close Door)' : '🔒 Connect Wallet (Open Door)'}
+          title={publicKey ? 'Disconnect Wallet' : 'Connect Wallet'}
         >
-          <span className={styles.walletIcon}>{publicKey ? '🔓' : '🔒'}</span>
+          <span className={styles.walletMenuText}>{publicKey ? 'Disconnect' : 'Connect'}</span>
         </button>
         <button
-          className={styles.docsButton}
+          className={styles.docsMenuButton}
           onClick={() => window.open('https://aetherbytes.github.io/nullblock-sdk/', '_blank')}
           title="Documentation & Developer Resources"
         >
-          <span className={styles.docsIcon}>📚</span>
+          <span className={styles.docsMenuText}>Docs</span>
         </button>
       </div>
     </nav>

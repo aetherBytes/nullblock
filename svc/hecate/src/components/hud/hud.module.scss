@@ -4518,3 +4518,95 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     font-size: 0.75rem;
   }
 }
+
+// Modern Menu Buttons
+.walletMenuButton, .docsMenuButton {
+  background: none;
+  border: none;
+  color: rgba($text-color, 0.9);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.6rem 1.2rem;
+  margin: 0 0.25rem;
+  transition: all 0.25s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  position: relative;
+  text-shadow: 0 0 8px rgba($text-color, 0.3);
+  
+  &:hover {
+    color: rgba($text-color, 1);
+    text-shadow: 0 0 12px rgba($echo-blue, 0.5);
+    transform: translateY(-1px);
+    
+    &::after {
+      width: 100%;
+    }
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, $echo-blue, rgba($echo-blue, 0.5));
+    transition: width 0.25s ease;
+  }
+}
+
+.walletMenuButton {
+  &.connected {
+    color: rgba(34, 197, 94, 0.95);
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+    
+    &:hover {
+      color: rgba(34, 197, 94, 1);
+      text-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+    }
+    
+    &::after {
+      background: linear-gradient(90deg, rgba(34, 197, 94, 0.8), rgba(34, 197, 94, 0.4));
+    }
+  }
+}
+
+.walletMenuText, .docsMenuText {
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+// Light theme adjustments
+.echoContainer.theme-light {
+  .walletMenuButton, .docsMenuButton {
+    color: rgba(#333333, 0.85);
+    
+    &:hover {
+      color: rgba(#333333, 1);
+      text-shadow: 0 0 8px rgba(42, 74, 106, 0.4);
+    }
+    
+    &::after {
+      background: linear-gradient(90deg, rgba(42, 74, 106, 0.6), rgba(42, 74, 106, 0.3));
+    }
+  }
+  
+  .walletMenuButton.connected {
+    color: rgba(34, 150, 94, 0.9);
+    
+    &:hover {
+      color: rgba(34, 150, 94, 1);
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .walletMenuButton, .docsMenuButton {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
