@@ -4,32 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Nullblock is a decentralized Web3 platform for deploying and monetizing agentic workflows, built on the Model Context Protocol (MCP) architecture. The platform consists of four core components in a monorepo structure:
+NullBlock is an Agentic Platform that provides resources and tooling for building, deploying, and monetizing intelligent agent workflows. Built on the Model Context Protocol (MCP) architecture, NullBlock enables agents to interact with various systems and data sources through standardized interfaces. Web3 wallets, Gmail profiles, content creation, and other domain-specific integrations are use cases within the broader agentic ecosystem.
 
-## 🎯 **MVP STATUS: CORE INFRASTRUCTURE COMPLETED** ✅
+**Core Architecture**: Client ↔ NullBlock (Agentic Platform) ↔ Server (Web3 wallets, Gmail, APIs, etc.)
+
+The platform consists of four core components in a monorepo structure:
+
+## 🎯 **MVP STATUS: CORE AGENTIC INFRASTRUCTURE COMPLETED** ✅
 
 ### **Production-Ready Components**
 
-- ✅ **Nullblock.mcp** (`/svc/nullblock-mcp/`): Complete MCP server with wallet authentication, IPFS context storage, Flashbots MEV protection, and ML-based security
-- ✅ **Nullblock.orchestration** (`/svc/nullblock-orchestration/`): Goal-driven workflow engine with Bittensor subnet integration and template system  
-- ✅ **Nullblock.agents** (`/svc/nullblock-agents/`): Full arbitrage agent suite (Price, Strategy, Execution, Reporting) with MEV protection
-- 🔄 **Nullblock.platform**: dApp marketplace (pending - requires frontend development)
+- ✅ **NullBlock.mcp** (`/svc/nullblock-mcp/`): Complete MCP server providing standardized agent interfaces for authentication, context storage, security middleware, and multi-system integrations
+- ✅ **NullBlock.orchestration** (`/svc/nullblock-orchestration/`): Goal-driven workflow engine for coordinating agent interactions with template system and task marketplace integration  
+- ✅ **NullBlock.agents** (`/svc/nullblock-agents/`): Comprehensive agent suite including trading, social monitoring, information gathering, and LLM service coordination
+- 🔄 **NullBlock.platform**: Agentic workflow marketplace and management interface (pending - requires frontend development)
 
 ### **Legacy Implementation Structure** (Transitioning)
 
-- **Helios** (`/svc/helios/`): Original FastAPI backend → **Replaced by Nullblock.mcp**
-- **Hecate** (`/svc/hecate/`): React frontend with SSR → **Evolving to Nullblock.platform UI**
-- **Erebus** (`/svc/erebus/`): Rust Solana contracts → **Foundation for on-chain integration**
+- **Helios** (`/svc/helios/`): Original FastAPI backend → **Replaced by NullBlock.mcp**
+- **Hecate** (`/svc/hecate/`): React frontend with SSR → **Evolving to NullBlock.platform UI**
+- **Erebus** (`/svc/erebus/`): Rust server for wallet interactions → **Foundation for multi-system integration**
 
-### **Current Capabilities**
+### **Current Agentic Capabilities**
 
-✅ **Full Arbitrage Trading Pipeline**: From price monitoring to MEV-protected execution with comprehensive reporting  
-✅ **Secure Wallet Operations**: Multi-wallet support (MetaMask, WalletConnect, Phantom) with challenge-response auth  
-✅ **Bittensor Task Marketplace**: Decentralized task submission with $NULL token rewards  
-✅ **Advanced Security**: Prompt injection protection, encrypted context storage, anomaly detection  
-✅ **Goal-Driven Automation**: Template-based workflows for arbitrage, DeFi, NFT, and DAO operations
-✅ **Advanced UI/UX**: Responsive Command Lens with ball lightning NullEye animations, intelligent tooltips, and gentle wallet interaction flows
-✅ **User-Centric Interface**: HecateHud component with personalized user stats, wallet name resolution, and non-aggressive messaging
+✅ **Multi-System Agent Integration**: Standardized interfaces for Web3 wallets, APIs, databases, and services through MCP protocol  
+✅ **Intelligent Workflow Orchestration**: Goal-driven agent coordination with template-based automation and task marketplace  
+✅ **Comprehensive Agent Suite**: Trading, social monitoring, data analysis, and LLM coordination agents with extensible architecture  
+✅ **Advanced Security & Context Management**: Prompt injection protection, encrypted context storage, and session management across all integrations  
+✅ **Flexible Authentication**: Multi-system auth support (Web3 wallets, OAuth, API keys) with challenge-response verification  
+✅ **Responsive Agent Interface**: Command Lens with NullEye animations, intelligent tooltips, and gentle user interaction flows
+✅ **Personalized Agent Management**: HecateHud for user-specific agent stats, system monitoring, and workflow configuration
 
 ### **🔥 Information Gathering Agent Pipeline** (August 2025)
 
@@ -571,28 +575,28 @@ cargo build --release
 ## Architecture Details
 
 ### MCP Architecture Vision
-Nullblock implements a Model Context Protocol-first architecture for secure, agnostic agentic interactions:
+NullBlock implements a Model Context Protocol-first architecture for secure, agnostic agent interactions across multiple systems and data sources:
 
 **Core MCP Features**:
-- Agnostic wallet interaction (MetaMask, WalletConnect, Phantom)
-- Context management on IPFS/Arweave for agent workflows
-- Cross-chain support via Chainlink/Wormhole
-- Flashbots integration for MEV protection
-- Prompt injection protection with sanitization and allowlists
-- Developer API for third-party agent development
+- Agnostic system integration (Web3 wallets, Gmail accounts, APIs, databases, services)
+- Universal context management with encrypted storage for agent workflows and user preferences
+- Multi-protocol support for various authentication methods (challenge-response, OAuth, API keys)
+- Advanced security middleware with prompt injection protection and input sanitization
+- Standardized agent-to-system interfaces enabling seamless integration with new platforms
+- Developer API and SDK for building custom agents and system integrations
 
-**🆕 Social Trading MCP Extensions** (August 2025):
-- Real-time social media monitoring tools (Twitter/X, GMGN, DEXTools)
-- Advanced sentiment analysis with ML-powered keyword detection
-- Jupiter DEX integration for automated Solana trading
-- Dynamic risk management and position sizing algorithms
-- Comprehensive testing framework with debug utilities
+**🆕 Domain-Specific Agent Extensions** (August 2025):
+- Social media monitoring and sentiment analysis (Twitter/X, GMGN, DEXTools)
+- Content creation and management (Gmail, Google Docs, social platforms)
+- Financial data processing (trading APIs, DeFi protocols, market data)
+- Communication automation (email, messaging, notifications)
+- Comprehensive testing framework with debug utilities for all agent types
 
-**Bittensor Integration**:
-- Nullblock subnet for crowdsourcing goal-driven tasks
-- Contributors earn $NULL tokens for high-impact strategies
-- Yuma Consensus for fair reward distribution
-- Decentralized validation of task quality and impact
+**Task Marketplace Integration**:
+- Decentralized task submission and validation system
+- Contributors earn rewards for high-impact agent workflows and strategies
+- Community-driven consensus for task quality and impact assessment
+- Extensible reward mechanisms supporting various token and point systems
 
 ### Current Frontend Architecture (Hecate → Nullblock.platform)
 - **SSR Framework**: @lomray/vite-ssr-boost for server-side rendering
@@ -715,22 +719,22 @@ The ECHO interface uses a room-based command structure that will evolve into MCP
 - **Connection Management**: Custom EmberLinkManager class handles connections
 - **Future MCP Integration**: WebSocket layer will support MCP protocol for agent-to-agent communication
 
-### Monetization Strategy (From Gameplan)
-**Target Niches**:
-- **Arbitrage Trading**: 0.5-1% trade fees on automated DEX/cross-chain arbitrage
-- **DeFi Yield Farming**: 0.5% asset management fees on automated portfolio rebalancing  
-- **NFT Trading Automation**: 1% trading fees on automated buying/selling/bidding
-- **DAO Governance Automation**: $100-$1000/month subscriptions for proposal analysis/voting
+### Monetization Strategy (Agentic Platform)
+**Target Use Cases**:
+- **Financial Automation**: 0.5-1% fees on automated trading, portfolio management, and DeFi operations
+- **Content & Communication**: $10-$100/month subscriptions for automated content creation, email management, and social media coordination  
+- **Data Intelligence**: $50-$500/month for automated data analysis, reporting, and insights across various data sources
+- **Workflow Automation**: $25-$250/month for complex multi-step agent workflows and business process automation
 
-**MCP SDK Monetization**:
-- Freemium model: Free basic MCP, premium features $50-$500/month
-- Transaction fees: 0.1% per MCP-mediated transaction
-- White-label licensing for protocols (Uniswap, Aave)
+**MCP Platform Monetization**:
+- Freemium model: Free basic agent development tools, premium features $50-$500/month
+- Transaction fees: 0.1% per agent-mediated operation across all systems
+- White-label licensing for enterprises and service providers
 
 **Platform Revenue**:
-- Marketplace fee: 5-10% of user-created workflow revenue
-- Task fees: $0.01-$0.05 per automated task
-- Premium features: $10-$100/month for advanced analytics and priority support
+- Marketplace fee: 5-10% of user-created agent workflow revenue
+- Task execution fees: $0.01-$0.05 per automated agent task
+- Premium agent hosting: $10-$100/month for advanced analytics, priority execution, and enhanced security
 
 The platform implements a cyberpunk aesthetic with neon styling, ball lightning visual effects, and maintains immersive error messages throughout the user experience while building toward a comprehensive MCP-powered agentic ecosystem.
 

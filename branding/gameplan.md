@@ -4,50 +4,54 @@ Pedro Sage Dev meet 08032025
 
 Core
 
-** MCP / Some type of protocol for agents. **
+** NullBlock - Agentic Platform with MCP Protocol **
 
-- Security / ease of use for Web 3 agents.
+- Security / ease of use for intelligent agents across multiple systems.
 
-- Use cases that we build to showcase the platform
-  - agents
-  - hosts
-  - clients
+- Use cases that we build to showcase the agentic platform
+  - agents (trading, content, communication, data analysis)
+  - hosts (servers, APIs, databases, services)
+  - clients (Web3 wallets, Gmail accounts, social platforms, etc.)
 
-- Visualization / HUD for all
+- Visualization / HUD for all agent interactions
 - see below.
 
 - Super Users:
   - Pedro Sage (Founder, Lead Dev)
   - Sage (AI Agent, MCP)
   - Null (AI Agent, MCP)
-  - Builders Agent /Bot builders
-    - MCP Features for bot / agent users (Security etc...), simple way to visualize their interaction with the chain.
+  - Agent Builders / Workflow Developers
+    - MCP Features for agent developers (Security, standardized interfaces), simple way to visualize agent interactions with any system.
 
-- Everyone else in the gold rush
-  - non tech folk who are building anyway.
-  - maybe focus audience?
-  - simple tools catagory
-  - basic auth / security / db protection
-  - A little more than catagor above, super users.
-    - Visualtion into tasks ocurring...
-    - Basic skeleton tools for building on {insert platform here}
+- Business Users
+  - Non-technical professionals who need automation
+  - Focus audience: productivity and workflow optimization
+  - Simple automation tools category
+  - Basic auth / security / system protection across multiple platforms
+  - Power Users:
+    - Visualization into agent tasks occurring across systems
+    - Basic skeleton tools for building on any platform (Gmail, Web3, APIs, etc.)
 
-- Everyone else
-  - Focus on visualization and ease of use.
-  - Getting individuals who do not understand the basics, a UI into the basics.
+- General Users
+  - Focus on visualization and ease of use
+  - Getting individuals who don't understand agent automation, a UI into intelligent workflows
 
-- Basic walet interaction:
-  - MCP - Making wallet / oracle access agnostic.
-  - Metamask - Start
+- Basic system interaction:
+  - MCP - Making system access agnostic (Web3 wallets, Gmail, APIs, databases)
+  - Web3 wallets (MetaMask, Phantom) - Use case example
+  - Gmail/OAuth - Use case example
 
-- client / usecas- simple simple trading bot....
-  - one set of trading logic... you can interact with any web3 wallet / oracle / major dex.
+- Client / Use case - intelligent automation agent:
+  - One set of agent logic that can interact with any authenticated system
+  - Trading example: interact with any Web3 wallet / oracle / major DEX
+  - Content example: interact with Gmail / Google Docs / social platforms
 
 Action Items:
 
-- Basic wallet interaction and tie into MCP server.
+- Basic system integration and tie into MCP server.
   - MCP server should have CURL / HTTP access / Agentic access via MCP.
-    - Server should be to read from wallet / expose holdings / stats
+    - Server should be able to read from any authenticated system / expose data / stats
+    - Examples: Web3 wallet holdings, Gmail inbox management, API data aggregation
 
 ### **🆕 ACTIVE DEVELOPMENT - Information Gathering Agent** (August 2025)
 
@@ -502,22 +506,23 @@ print(f'Trade simulation: {simulation[\"recommendation\"]}')
 
 ---
 
-# Original Vision for Nullblock
+# Updated Vision for NullBlock
 
-Nullblock is a decentralized Web3 platform for deploying and monetizing agentic workflows, powered by:
+NullBlock is an Agentic Platform for building, deploying, and monetizing intelligent agent workflows across multiple systems and data sources, powered by:
 
-**Nullblock.mcp**: Your secure tooling layer, leveraging the Model Context Protocol (MCP) with Flashbots for MEV protection, agnostic wallet interactions, and prompt injection defenses, supporting arbitrage trading, DeFi, NFTs, and DAOs.
+**NullBlock.mcp**: Your secure universal tooling layer, leveraging the Model Context Protocol (MCP) for agnostic system interactions, advanced security middleware, and standardized agent interfaces supporting any authenticated system (Web3 wallets, Gmail, APIs, databases, services).
 
-**Nullblock.orchestration**: A goal-driven engine integrating Bittensor subnets to coordinate automated workflows, rewarding contributors (users, LLMs, agents) for meaningful tasks that drive ecosystem prosperity.
+**NullBlock.orchestration**: A goal-driven workflow engine coordinating intelligent agent interactions across multiple systems, with community-driven task marketplace rewarding contributors for high-impact automation strategies and agent workflows.
 
-**Nullblock.agents**: My agentic army, delivering niche-specific services (arbitrage bots, yield optimizers, NFT traders, DAO governance tools).
+**NullBlock.agents**: Comprehensive agent suite delivering domain-specific automation (trading, content creation, data analysis, communication, social media monitoring) with extensible architecture for custom agent development.
 
-**Nullblock.platform**: A dApp and marketplace for deploying, customizing, and monetizing workflows, with Bittensor-powered task incentives. Provide hooks for any 3rd party agent.
+**NullBlock.platform**: An agentic workflow marketplace and management interface for deploying, customizing, and monetizing intelligent automation across any system. Provide standardized hooks for 3rd party agent integration.
 
-Niches:Arbitrage Trading: Automate bots for DEX, cross-chain, and NFT arbitrage. Revenue via 0.5-1% trade fees.
-DeFi Yield Farming: Automate portfolio rebalancing. Revenue via 0.5% asset management fees.
-NFT Trading Automation: Automate buying/selling/bidding. Revenue via 1% trading fees.
-DAO Governance Automation: Automate proposal analysis/voting. Revenue via $100-$1000/month subscriptions.
+Use Cases:
+Financial Automation: Automate trading, portfolio management, DeFi operations. Revenue via 0.5-1% operation fees.
+Content & Communication: Automate email management, content creation, social media coordination. Revenue via $10-$100/month subscriptions.
+Data Intelligence: Automate data analysis, reporting, insights across various sources. Revenue via $50-$500/month subscriptions.
+Workflow Automation: Automate complex multi-step business processes. Revenue via $25-$250/month subscriptions.
 
 Bittensor Integration: Nullblock.orchestration will leverage Bittensor subnets to crowdsource and prioritize goal-oriented tasks (e.g., “optimize arbitrage strategy,” “propose DAO governance rules”). Contributors are rewarded with $NULL (and potentially TAO) proportional to the task’s impact, driving ecosystem growth and engagement.Strategy: Building Nullblock with Bittensor IntegrationWe’ll integrate Bittensor into Nullblock.orchestration to create a decentralized task marketplace, while ensuring your Nullblock.mcp tooling (with Flashbots, secure wallet interactions, and prompt protection) powers all workflows. The focus remains on rapid revenue from arbitrage and other niches to offset overhead.Phase 1: Foundation - Nullblock Core with BittensorNiche Selection (Unchanged):Arbitrage Trading: Automate bots for DEX (Uniswap, SushiSwap), cross-chain (Ethereum-Polygon), and NFT arbitrage. Revenue via trade fees.
 DeFi Yield Farming: Automate yield optimization (Aave, Compound). Revenue via asset fees.
