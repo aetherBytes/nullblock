@@ -30,6 +30,8 @@ class LLMRequest:
     stop_sequences: Optional[List[str]] = None
     tools: Optional[List[Dict]] = None
     model_override: Optional[str] = None  # Force specific model
+    concise: bool = False  # Generate shorter, more concise responses
+    max_chars: Optional[int] = None  # Maximum characters in response (default 100 when enabled)
     
 @dataclass
 class LLMResponse:
@@ -281,6 +283,10 @@ class LLMServiceFactory:
                 task_type="general"
             )
         
+        # Adjust for concise mode
+        if request.concise:
+            request = self._adjust_request_for_concise_mode(request)
+        
         # Auto-adjust for local models when API keys are missing
         requirements = self._adjust_requirements_for_availability(requirements)
         
@@ -353,6 +359,51 @@ class LLMServiceFactory:
             
             raise
     
+    def _adjust_request_for_concise_mode(self, request: LLMRequest) -> LLMRequest:
+        """
+        Adjust request for concise mode by modifying prompts and token limits
+        """
+        from copy import deepcopy
+        adjusted_request = deepcopy(request)
+        
+        # Handle max_chars constraint
+        max_chars = adjusted_request.max_chars or 100  # Default to 100 chars for concise mode
+        char_instruction = f"Keep your response to {max_chars} characters or less."
+        
+        # Add concise instruction to system prompt
+        concise_instruction = f"Be concise and direct. Provide short, focused responses without unnecessary elaboration. {char_instruction}"
+        
+        if adjusted_request.system_prompt:
+            adjusted_request.system_prompt = f"{adjusted_request.system_prompt}\n\n{concise_instruction}"
+        else:
+            adjusted_request.system_prompt = concise_instruction
+        
+        # Set max_chars if not already set
+        if adjusted_request.max_chars is None:
+            adjusted_request.max_chars = 100
+        
+        # Reduce max_tokens for shorter responses (estimate ~4 chars per token)
+        estimated_tokens_for_chars = max_chars // 4
+        if adjusted_request.max_tokens:
+            # Use the more restrictive limit
+            adjusted_request.max_tokens = min(
+                adjusted_request.max_tokens // 2, 
+                estimated_tokens_for_chars,
+                200
+            )
+        else:
+            # Set token limit based on character limit
+            adjusted_request.max_tokens = min(estimated_tokens_for_chars, 150)
+        
+        # Slightly lower temperature for more focused responses
+        if adjusted_request.temperature is None:
+            adjusted_request.temperature = 0.5
+        else:
+            adjusted_request.temperature = min(adjusted_request.temperature, 0.7)
+        
+        logger.debug(f"Adjusted request for concise mode: max_tokens={adjusted_request.max_tokens}, max_chars={adjusted_request.max_chars}")
+        return adjusted_request
+
     def _adjust_requirements_for_availability(self, requirements: TaskRequirements) -> TaskRequirements:
         """
         Adjust task requirements based on available models and API keys
@@ -851,9 +902,10 @@ class LLMServiceFactory:
         }
     
     async def quick_generate(self, prompt: str, task_type: str = "general", 
-                           optimization_goal: str = "balanced") -> str:
+                           optimization_goal: str = "balanced", concise: bool = False,
+                           max_chars: Optional[int] = None) -> str:
         """Quick generation with minimal configuration"""
-        request = LLMRequest(prompt=prompt)
+        request = LLMRequest(prompt=prompt, concise=concise, max_chars=max_chars)
         
         requirements = TaskRequirements(
             required_capabilities=[],

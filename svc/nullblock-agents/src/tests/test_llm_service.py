@@ -47,6 +47,17 @@ class TestLLMServiceFactory:
         )
     
     @pytest.fixture
+    def concise_request(self):
+        """Sample concise LLM request for testing"""
+        return LLMRequest(
+            prompt="Explain machine learning",
+            max_tokens=200,
+            temperature=0.8,
+            concise=True,
+            max_chars=100
+        )
+    
+    @pytest.fixture
     def basic_requirements(self):
         """Basic task requirements for testing"""
         return TaskRequirements(
@@ -55,6 +66,158 @@ class TestLLMServiceFactory:
             priority=Priority.MEDIUM,
             task_type="test"
         )
+
+
+class TestConciseModeFeatures:
+    """Tests for concise mode and max_chars functionality"""
+    
+    @pytest.mark.asyncio
+    async def test_concise_mode_adjustments(self):
+        """Test that concise mode properly adjusts request parameters"""
+        factory = LLMServiceFactory()
+        await factory.initialize()
+        
+        # Test basic concise request
+        request = LLMRequest(
+            prompt="Explain quantum computing",
+            max_tokens=500,
+            temperature=0.9,
+            concise=True
+        )
+        
+        adjusted = factory._adjust_request_for_concise_mode(request)
+        
+        # Should have reduced max_tokens
+        assert adjusted.max_tokens < 500
+        assert adjusted.max_tokens <= 200  # Should cap at 200
+        
+        # Should have set default max_chars
+        assert adjusted.max_chars == 100
+        
+        # Should have lowered temperature
+        assert adjusted.temperature <= 0.7
+        
+        # Should have added concise instructions to system prompt
+        assert "concise" in adjusted.system_prompt.lower()
+        assert "100 characters or less" in adjusted.system_prompt
+        
+        await factory.cleanup()
+    
+    @pytest.mark.asyncio
+    async def test_max_chars_custom_value(self):
+        """Test custom max_chars value"""
+        factory = LLMServiceFactory()
+        await factory.initialize()
+        
+        request = LLMRequest(
+            prompt="Describe AI",
+            concise=True,
+            max_chars=50  # Custom limit
+        )
+        
+        adjusted = factory._adjust_request_for_concise_mode(request)
+        
+        # Should preserve custom max_chars
+        assert adjusted.max_chars == 50
+        
+        # Should mention 50 characters in instructions
+        assert "50 characters or less" in adjusted.system_prompt
+        
+        # Token limit should be adjusted for character limit (~4 chars per token)
+        expected_max_tokens = 50 // 4
+        assert adjusted.max_tokens <= expected_max_tokens + 5  # Small tolerance
+        
+        await factory.cleanup()
+    
+    @pytest.mark.asyncio
+    async def test_quick_generate_with_concise_and_max_chars(self):
+        """Test quick_generate with concise and max_chars parameters"""
+        factory = LLMServiceFactory()
+        await factory.initialize()
+        
+        # Mock a response
+        mock_response = LLMResponse(
+            content="AI is machine intelligence.",
+            model_used="test-model",
+            usage={"total_tokens": 10},
+            latency_ms=100.0,
+            cost_estimate=0.0,
+            finish_reason="stop"
+        )
+        
+        with patch.object(factory, 'generate', return_value=mock_response) as mock_generate:
+            result = await factory.quick_generate(
+                prompt="What is AI?",
+                task_type="explanation", 
+                concise=True,
+                max_chars=100
+            )
+            
+            # Verify the request was properly constructed
+            call_args = mock_generate.call_args
+            request = call_args[0][0]  # First argument (LLMRequest)
+            
+            assert request.concise == True
+            assert request.max_chars == 100
+            assert result == "AI is machine intelligence."
+        
+        await factory.cleanup()
+    
+    @pytest.mark.asyncio
+    async def test_concise_mode_with_existing_system_prompt(self):
+        """Test concise mode preserves existing system prompt"""
+        factory = LLMServiceFactory()
+        await factory.initialize()
+        
+        original_system = "You are a helpful coding assistant."
+        request = LLMRequest(
+            prompt="Explain Python",
+            system_prompt=original_system,
+            concise=True,
+            max_chars=75
+        )
+        
+        adjusted = factory._adjust_request_for_concise_mode(request)
+        
+        # Should preserve original system prompt
+        assert original_system in adjusted.system_prompt
+        
+        # Should add concise instructions
+        assert "concise" in adjusted.system_prompt.lower()
+        assert "75 characters or less" in adjusted.system_prompt
+        
+        # Should be properly separated
+        assert "\n\n" in adjusted.system_prompt
+        
+        await factory.cleanup()
+    
+    @pytest.mark.asyncio
+    async def test_token_estimation_for_characters(self):
+        """Test token estimation based on character limits"""
+        factory = LLMServiceFactory()
+        await factory.initialize()
+        
+        test_cases = [
+            (20, 5),   # 20 chars -> ~5 tokens
+            (40, 10),  # 40 chars -> ~10 tokens
+            (100, 25), # 100 chars -> ~25 tokens
+            (200, 50), # 200 chars -> ~50 tokens
+        ]
+        
+        for max_chars, expected_tokens in test_cases:
+            request = LLMRequest(
+                prompt="Test prompt",
+                concise=True,
+                max_chars=max_chars
+            )
+            
+            adjusted = factory._adjust_request_for_concise_mode(request)
+            
+            # Token limit should be approximately chars/4, capped at 150
+            expected = min(expected_tokens, 150)
+            assert abs(adjusted.max_tokens - expected) <= 2  # Small tolerance
+        
+        await factory.cleanup()
 
 
 class TestLocalModelIntegration:
