@@ -205,7 +205,9 @@ class NullblockIntegrationDemo:
             # Test LLM connectivity with a simple request
             test_request = LLMRequest(
                 prompt="Hello",
-                max_tokens=10
+                max_tokens=10,
+                concise=True,  # Use concise mode for test
+                max_chars=100  # Use test default
             )
             
             # Try to get a response (this will test connectivity)
@@ -368,9 +370,11 @@ Recommendations:
             
             # Request LLM analysis
             llm_request = LLMRequest(
-                prompt=f"Based on this market analysis data, provide a concise summary of the current market conditions and 3 specific actionable insights for traders:\n\n{context}",
+                prompt=f"Based on this market analysis data, provide a summary of the current market conditions and 3 specific actionable insights for traders:\n\n{context}",
                 system_prompt="You are a professional cryptocurrency market analyst. Provide clear, actionable insights based on data.",
-                max_tokens=500
+                max_tokens=500,
+                concise=True,  # Enable concise mode for demo
+                max_chars=100  # Limit to 100 characters for testing
             )
             
             # Use LLM factory with requirements for data analysis
@@ -483,9 +487,11 @@ Recommendations:
             
             # Use premium model for research
             llm_request = LLMRequest(
-                prompt=f"Create a comprehensive research report addressing this question based on the analysis data. Include executive summary, key findings, risk assessment, and actionable recommendations:\n\n{research_context}",
+                prompt=f"Create a research report addressing this question based on the analysis data. Include executive summary, key findings, risk assessment, and actionable recommendations:\n\n{research_context}",
                 system_prompt="You are a DeFi research analyst creating professional reports for institutional investors.",
-                max_tokens=800
+                max_tokens=800,
+                concise=True,  # Enable concise mode for demo
+                max_chars=100  # Limit to 100 characters for testing
             )
             
             requirements = TaskRequirements(
@@ -550,7 +556,9 @@ Recommendations:
             
             llm_request = LLMRequest(
                 prompt=test_prompt,
-                max_tokens=150
+                max_tokens=150,
+                concise=True,  # Enable concise mode for demo
+                max_chars=100  # Limit to 100 characters for testing
             )
             
             requirements = TaskRequirements(
