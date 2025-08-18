@@ -11,5 +11,17 @@ export default defineConfig({
   build: {
     outDir: '../build',
   },
-  plugins: [SsrBoost(), react(), MobxManager()],
+  server: {
+    host: true,
+    port: 5173,
+  },
+  logLevel: 'info',
+  clearScreen: false,
+  plugins: [
+    SsrBoost({
+      logLevel: 'info',
+    }), 
+    react(), 
+    MobxManager()
+  ],
 });
