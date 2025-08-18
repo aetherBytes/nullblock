@@ -365,78 +365,89 @@ const HecateHud: React.FC<HecateHudProps> = ({
         id: '1',
         timestamp: new Date(),
         level: 'info',
-        source: 'system',
-        message: 'Context dashboard initialized',
+        source: 'main.js:124',
+        message: 'NullView interface initialized',
+        data: { component: 'HecateHud', loadTime: '45ms', memory: '12.4MB' }
       },
       {
         id: '2',
         timestamp: new Date(Date.now() - 1000),
-        level: 'info',
-        source: 'mcp-server',
-        message: 'MCP connection established',
+        level: 'info', 
+        source: 'mcp-client.ts:87',
+        message: 'WebSocket connection established to localhost:8001',
+        data: { protocol: 'ws', latency: '23ms', status: 'connected' }
       },
       {
         id: '3',
         timestamp: new Date(Date.now() - 2000),
         level: 'success',
-        source: 'arbitrage-agent',
-        message: 'Arbitrage opportunity detected',
+        source: 'arbitrage.service.ts:203',
+        message: 'DEX opportunity found: ETH/USDC spread 0.23%',
+        data: { pair: 'ETH/USDC', spread: '0.23%', volume: '$15,234', dex: ['Uniswap', 'SushiSwap'] }
       },
       {
         id: '4',
         timestamp: new Date(Date.now() - 3000),
         level: 'warning',
-        source: 'portfolio-agent',
-        message: 'Portfolio variance threshold exceeded',
+        source: 'portfolio.controller.ts:156',
+        message: 'Portfolio variance exceeded threshold (5.2% > 5.0%)',
+        data: { currentVariance: '5.2%', threshold: '5.0%', recommendation: 'rebalance' }
       },
       {
         id: '5',
         timestamp: new Date(Date.now() - 4000),
         level: 'error',
-        source: 'social-agent',
-        message: 'Failed to fetch Twitter sentiment data',
+        source: 'social.api.ts:45',
+        message: 'Failed to fetch Twitter API data',
+        data: { status: 429, error: 'Rate limit exceeded', retryAfter: '15min' }
       },
       {
         id: '6',
         timestamp: new Date(Date.now() - 5000),
         level: 'debug',
-        source: 'system',
-        message: 'Memory usage: 45%',
+        source: 'system.monitor.ts:78',
+        message: 'Performance metrics',
+        data: { memory: '45%', cpu: '23%', heap: '89.2MB', uptime: '2h 34m' }
       },
       {
         id: '7',
         timestamp: new Date(Date.now() - 6000),
         level: 'info',
-        source: 'flashbots-agent',
-        message: 'Bundle submitted to Flashbots relay',
+        source: 'flashbots.service.ts:134',
+        message: 'Bundle submitted to MEV relay',
+        data: { bundleHash: '0x1a2b3c...', gasPrice: '45 gwei', estimatedProfit: '$12.45' }
       },
       {
         id: '8',
         timestamp: new Date(Date.now() - 7000),
         level: 'success',
-        source: 'risk-manager',
-        message: 'Risk assessment completed - portfolio within limits',
+        source: 'risk.manager.ts:92',
+        message: 'Risk assessment completed - all checks passed',
+        data: { riskScore: 0.23, maxDrawdown: '2.1%', sharpeRatio: 1.87 }
       },
       {
         id: '9',
         timestamp: new Date(Date.now() - 8000),
         level: 'info',
-        source: 'market-data',
-        message: 'Updated price feeds for 1,247 tokens',
+        source: 'market.feed.ts:67',
+        message: 'Price feed update complete',
+        data: { tokens: 1247, sources: ['CoinGecko', 'Binance', 'Uniswap'], latency: '156ms' }
       },
       {
         id: '10',
         timestamp: new Date(Date.now() - 9000),
         level: 'warning',
-        source: 'network-monitor',
-        message: 'High gas prices detected on Ethereum mainnet',
+        source: 'network.monitor.ts:89',
+        message: 'Ethereum gas prices elevated',
+        data: { currentGas: '85 gwei', average: '45 gwei', recommendation: 'delay_non_urgent' }
       },
       {
         id: '11',
         timestamp: new Date(Date.now() - 10000),
         level: 'debug',
-        source: 'system',
-        message: 'CPU usage: 23% | Network latency: 45ms',
+        source: 'wallet.service.ts:123',
+        message: 'Wallet balance check',
+        data: { address: '0x742d...35', balance: '12.5 ETH', usdValue: '$29,847' }
       },
     ];
 
@@ -477,18 +488,54 @@ const HecateHud: React.FC<HecateHudProps> = ({
     // Simulate real-time log updates
     const interval = setInterval(() => {
       const logMessages = [
-        { level: 'info', source: 'market-data', message: 'Price update for ETH/USD: $2,847.32' },
-        { level: 'info', source: 'arbitrage-agent', message: 'Scanning for new opportunities...' },
-        { level: 'success', source: 'flashbots-agent', message: 'Bundle accepted by relay' },
-        { level: 'warning', source: 'network-monitor', message: 'Gas price fluctuation detected' },
-        { level: 'debug', source: 'system', message: 'Memory usage: 47% | Active connections: 12' },
+        { 
+          level: 'info', 
+          source: 'market.feed.ts:89', 
+          message: 'Price update received',
+          data: { symbol: 'ETH/USD', price: '$2,847.32', change: '+1.2%', volume24h: '$1.2B' }
+        },
+        { 
+          level: 'info', 
+          source: 'arbitrage.scanner.ts:145', 
+          message: 'DEX scan initiated',
+          data: { dexes: ['Uniswap', 'SushiSwap', 'Curve'], pairs: 247, scanTime: '1.2s' }
+        },
+        { 
+          level: 'success', 
+          source: 'flashbots.client.ts:203', 
+          message: 'MEV bundle included in block',
+          data: { blockNumber: 18945672, bundleHash: '0x4f5e6d...', profit: '$23.45' }
+        },
+        { 
+          level: 'warning', 
+          source: 'gas.monitor.ts:67', 
+          message: 'Gas price spike detected',
+          data: { currentGas: '95 gwei', previousGas: '45 gwei', increase: '111%' }
+        },
+        { 
+          level: 'debug', 
+          source: 'performance.monitor.ts:34', 
+          message: 'System metrics update',
+          data: { memory: '47%', cpu: '23%', heap: '102.4MB', connections: 12, uptime: '3h 12m' }
+        },
         {
           level: 'info',
-          source: 'portfolio-agent',
-          message: 'Portfolio value: $12,847.32 (+2.3%)',
+          source: 'portfolio.service.ts:178',
+          message: 'Portfolio valuation updated',
+          data: { totalValue: '$12,847.32', change24h: '+2.3%', assets: 8, lastUpdate: new Date().toISOString() }
         },
-        { level: 'success', source: 'risk-manager', message: 'Risk assessment passed' },
-        { level: 'info', source: 'social-agent', message: 'Processing 23 new social signals' },
+        { 
+          level: 'success', 
+          source: 'risk.engine.ts:124', 
+          message: 'Risk assessment completed',
+          data: { riskScore: 0.18, confidence: '94%', checksPassed: 15, checksTotal: 15 }
+        },
+        { 
+          level: 'info', 
+          source: 'sentiment.analyzer.ts:89', 
+          message: 'Social sentiment batch processed',
+          data: { sources: ['Twitter', 'Reddit', 'Discord'], posts: 23, bullish: 18, bearish: 5 }
+        },
       ];
 
       const randomLog = logMessages[Math.floor(Math.random() * logMessages.length)];
@@ -498,6 +545,7 @@ const HecateHud: React.FC<HecateHudProps> = ({
         level: randomLog.level as any,
         source: randomLog.source,
         message: randomLog.message,
+        data: randomLog.data,
       };
 
       setLogs((prev) => [...prev, newLog]);
@@ -1246,7 +1294,17 @@ const HecateHud: React.FC<HecateHudProps> = ({
             <div className={styles.logTimestamp}>{log.timestamp.toLocaleTimeString()}</div>
             <div className={styles.logLevel}>{log.level.toUpperCase()}</div>
             <div className={styles.logSource}>{log.source}</div>
-            <div className={styles.logMessage}>{log.message}</div>
+            <div className={styles.logMessage}>
+              {log.message}
+              {log.data && (
+                <details className={styles.logDetails}>
+                  <summary className={styles.logSummary}>📊 Data</summary>
+                  <pre className={styles.logData}>
+                    {JSON.stringify(log.data, null, 2)}
+                  </pre>
+                </details>
+              )}
+            </div>
           </div>
         ))}
         <div ref={logsEndRef} />

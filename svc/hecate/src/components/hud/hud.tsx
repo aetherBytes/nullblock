@@ -29,7 +29,6 @@ type TabType =
   | 'hud'
   | 'status'
   | 'arbitrage'
-  | 'social'
   | 'portfolio'
   | 'defi';
 
@@ -1519,12 +1518,6 @@ const HUD: React.FC<HUDProps> = ({
                   ARBITRAGE
                 </button>
                 <button
-                  className={`${styles.statusTab} ${activeTab === 'social' ? styles.activeTab : ''}`}
-                  onClick={() => setActiveTab('social')}
-                >
-                  SOCIAL
-                </button>
-                <button
                   className={`${styles.statusTab} ${activeTab === 'portfolio' ? styles.activeTab : ''}`}
                   onClick={() => setActiveTab('portfolio')}
                 >
@@ -1635,112 +1628,6 @@ const HUD: React.FC<HUDProps> = ({
                     )}
                   </div>
                 )}
-                {activeTab === 'social' && (
-                  <div className={styles.socialTab}>
-                    <div className={styles.socialHeader}>
-                      <h3>MCP Social Trading System</h3>
-                      {mcpHealthStatus && (
-                        <div className={styles.mcpStatus}>
-                          <div className={styles.statusContainer}>
-                            <span className={styles.statusLabel}>MCP Status:</span>
-                            <span
-                              className={
-                                mcpHealthStatus.status === 'operational'
-                                  ? styles.active
-                                  : styles.inactive
-                              }
-                            >
-                              {mcpHealthStatus.status}
-                            </span>
-                          </div>
-                          <div className={styles.statusContainer}>
-                            <span className={styles.statusLabel}>Auth:</span>
-                            <span className={mcpAuthenticated ? styles.active : styles.inactive}>
-                              {mcpAuthenticated ? 'Authenticated' : 'Not Authenticated'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {!mcpAuthenticated ? (
-                      <div className={styles.authPrompt}>
-                        <p>MCP authentication required to access social trading.</p>
-                        <button
-                          className={styles.authButton}
-                          onClick={handleMCPAuthentication}
-                          disabled={!publicKey}
-                        >
-                          {publicKey ? 'Authenticate with MCP' : 'Connect Wallet First'}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className={styles.socialContent}>
-                        <p>
-                          Social trading system ready. Access advanced social sentiment dashboard.
-                        </p>
-                        <div className={styles.socialFeatures}>
-                          <ul>
-                            <li>✓ Real-time X/Twitter sentiment monitoring</li>
-                            <li>✓ GMGN trending token analysis</li>
-                            <li>✓ Multi-source social signal aggregation</li>
-                            <li>✓ Automated meme coin trading signals</li>
-                            <li>✓ Risk-adjusted position sizing</li>
-                          </ul>
-                        </div>
-                        <div className={styles.tradingInterface}>
-                          <div className={styles.quickStats}>
-                            <div className={styles.statItem}>
-                              <span className={styles.statLabel}>Live Signals:</span>
-                              <span className={styles.statValue}>12</span>
-                            </div>
-                            <div className={styles.statItem}>
-                              <span className={styles.statLabel}>Bullish:</span>
-                              <span className={styles.statValue}>8</span>
-                            </div>
-                            <div className={styles.statItem}>
-                              <span className={styles.statLabel}>Bearish:</span>
-                              <span className={styles.statValue}>2</span>
-                            </div>
-                          </div>
-
-                          <div className={styles.signalsList}>
-                            <div className={styles.signal}>
-                              <div className={styles.signalHeader}>
-                                <span className={styles.tokenSymbol}>$BONK</span>
-                                <span className={styles.sentiment}>🚀 BULLISH</span>
-                              </div>
-                              <div className={styles.signalContent}>
-                                <p>
-                                  "BONK is going to the moon! This meme season is just getting
-                                  started!"
-                                </p>
-                                <div className={styles.signalMeta}>
-                                  <span className={styles.source}>Twitter</span>
-                                  <span className={styles.engagement}>85% sentiment</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className={styles.signal}>
-                              <div className={styles.signalHeader}>
-                                <span className={styles.tokenSymbol}>$WIF</span>
-                                <span className={styles.sentiment}>📈 BULLISH</span>
-                              </div>
-                              <div className={styles.signalContent}>
-                                <p>"WIF trending +25% in last hour. Strong momentum detected."</p>
-                                <div className={styles.signalMeta}>
-                                  <span className={styles.source}>GMGN</span>
-                                  <span className={styles.engagement}>78% sentiment</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
                 {activeTab === 'portfolio' && (
                   <div className={styles.portfolioTab}>
                     <div className={styles.portfolioHeader}>
@@ -1790,6 +1677,8 @@ const HUD: React.FC<HUDProps> = ({
                             <li>✓ Automated rebalancing recommendations</li>
                             <li>✓ Risk assessment and diversification scoring</li>
                             <li>✓ Performance vs benchmark tracking</li>
+                            <li>✓ Social sentiment integration</li>
+                            <li>✓ Community-driven trading signals</li>
                           </ul>
                         </div>
                         <div className={styles.tradingInterface}>

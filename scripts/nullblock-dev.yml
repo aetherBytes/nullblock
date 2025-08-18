@@ -59,7 +59,6 @@ windows:
           - cargo run
 
   - frontend:
-      layout: even-horizontal
       panes:
         - 
           - echo "Starting Frontend..."
@@ -70,12 +69,7 @@ windows:
           - export VITE_EREBUS_API_URL=http://localhost:3000
           - export VITE_ORCHESTRATION_API_URL=http://localhost:8002
           - export VITE_AGENTS_API_URL=http://localhost:8003
-          - npm run develop 2>&1 | tee hecate.log
-        - 
-          - echo "Waiting for frontend logs..."
-          - sleep 2
-          - cd svc/hecate
-          - tail -f hecate.log
+          - npm run develop
 
   - llm:
       layout: even-horizontal
