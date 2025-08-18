@@ -81,17 +81,17 @@ windows:
       layout: even-horizontal
       panes:
         - 
-          - echo "Starting LM Studio..."
-          - lms status
-          - echo "Loading Gemma3 270M..."
-          - lms load gemma-3-270m-it-mlx -y
-          - echo "Model loaded successfully! Starting API server..."
-          - lms server start
+          - ~/nullblock/scripts/start-lmstudio.sh
         - 
           - echo "Waiting for LM Studio server to start..."
           - sleep 10
-          - echo "Streaming LM Studio logs..."
-          - lms log stream
+          - echo "📊 Starting log monitoring..."
+          - echo "Press Ctrl+C to stop"
+          - echo ""
+          - echo "📊 Monitoring LM Studio server logs..."
+          - while true; do lms log stream 2>/dev/null || echo "⚠️  No recent log files found in LM Studio server logs"; sleep 5; done
+        - 
+          - ~/nullblock/scripts/wait-for-lmstudio.sh
 
 
   - workspace:
