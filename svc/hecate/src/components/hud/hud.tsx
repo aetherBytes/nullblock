@@ -2120,9 +2120,20 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderHomeScreen = () => (
     <div className={styles.hudScreen}>
+      {/* Menu bar at the top of innermost HUD screen */}
+      <div className={styles.innerHudMenuBar}>
+        <button 
+          className={styles.menuButton}
+          onClick={() => {
+            // Status button functionality - leaving content blank for now
+          }}
+        >
+          Status
+        </button>
+      </div>
       <div className={styles.homeContent}>
         <div className={styles.landingContent}>
-          {/* Empty landing screen - ready for new content */}
+          {/* Content area below menu bar */}
         </div>
       </div>
     </div>
