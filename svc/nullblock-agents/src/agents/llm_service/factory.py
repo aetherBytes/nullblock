@@ -719,11 +719,17 @@ class LLMServiceFactory:
                 
                 data = await resp.json()
                 
+                # Log the full conversation for debugging
+                logger.info(f"LM Studio API Response: {data}")
+                
                 # Extract response content
                 if "choices" in data and data["choices"]:
                     choice = data["choices"][0]
                     content = choice["message"]["content"] or ""
                     finish_reason = choice.get("finish_reason", "stop")
+                    
+                    # Log the actual response content
+                    logger.info(f"LM Studio Model Response: {content[:200]}{'...' if len(content) > 200 else ''}")
                 else:
                     content = str(data)
                     finish_reason = "error"

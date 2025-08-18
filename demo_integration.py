@@ -386,7 +386,16 @@ Recommendations:
                 print(f"   📤 LLM Input Prompt:")
                 print(f"   {llm_request.prompt[:150]}...")
                 
+                # Log the full prompt for debugging
+                logger.info(f"LLM Request - Prompt: {llm_request.prompt}")
+                logger.info(f"LLM Request - System: {llm_request.system_prompt}")
+                
                 llm_response = await self.llm_factory.generate(llm_request, requirements)
+                
+                # Log the full response for debugging
+                logger.info(f"LLM Response - Content: {llm_response.content}")
+                logger.info(f"LLM Response - Model: {llm_response.model_used}")
+                logger.info(f"LLM Response - Latency: {llm_response.latency_ms}ms")
                 
                 # Validate response is not empty
                 if not llm_response.content or len(llm_response.content.strip()) == 0:
