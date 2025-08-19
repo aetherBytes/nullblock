@@ -66,6 +66,106 @@ health:
     @echo "🏥 Running health checks..."
     ./scripts/start-nullblock.sh health
 
+# Comprehensive health check with curl
+health-check:
+    @mkdir -p logs
+    @echo "$(date '+%Y-%m-%d %H:%M:%S') [HEALTH-CHECK] 🏥 Starting comprehensive health check" | tee -a logs/just-commands.log
+    @echo "🏥 Comprehensive Health Check - All Services"
+    @echo "=============================================="
+    @echo ""
+    @echo "🔍 MCP Server (Port 8001):"
+    @curl -s --max-time 5 http://localhost:8001/health | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ MCP Server not responding" | tee -a logs/just-commands.log)
+    @echo ""
+    @echo "🔍 Orchestration (Port 8002):"
+    @curl -s --max-time 5 http://localhost:8002/health | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Orchestration not responding" | tee -a logs/just-commands.log)
+    @echo ""
+    @echo "🔍 Erebus Server (Port 3000):"
+    @curl -s --max-time 5 http://localhost:3000/health | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Erebus Server not responding" | tee -a logs/just-commands.log)
+    @echo ""
+    @echo "🔍 General Agents (Port 9001):"
+    @curl -s --max-time 5 http://localhost:9001/health | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ General Agents not responding" | tee -a logs/just-commands.log)
+    @echo ""
+    @echo "🔍 Hecate Agent (Port 9002):"
+    @curl -s --max-time 5 http://localhost:9002/health | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Hecate Agent not responding" | tee -a logs/just-commands.log)
+    @echo ""
+    @echo "🔍 Frontend (Port 5173):"
+    @curl -s --max-time 5 http://localhost:5173 >/dev/null && (echo "✅ Frontend responding" | tee -a logs/just-commands.log) || (echo "❌ Frontend not responding" | tee -a logs/just-commands.log)
+    @echo ""
+    @echo "🔍 LM Studio (Port 1234):"
+    @curl -s --max-time 5 http://localhost:1234/v1/models >/dev/null && (echo "✅ LM Studio responding" | tee -a logs/just-commands.log) || (echo "❌ LM Studio not responding" | tee -a logs/just-commands.log)
+    @echo "$(date '+%Y-%m-%d %H:%M:%S') [HEALTH-CHECK] ✅ Health check completed" | tee -a logs/just-commands.log
+    @echo ""
+
+# Mock API tests for base endpoints
+test-api:
+    @mkdir -p logs
+    @echo "$(date '+%Y-%m-%d %H:%M:%S') [API-TEST] 🧪 Starting API endpoint tests" | tee -a logs/just-commands.log
+    @echo "🧪 API Endpoint Tests - Mock Data"
+    @echo "=================================="
+    @echo ""
+    @echo "🔹 Testing MCP Server endpoints:"
+    @curl -s --max-time 5 http://localhost:8001/mcp/data-sources | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ MCP data sources not available" | tee -a logs/just-commands.log)
+    @echo ""
+    @echo "🔹 Testing Orchestration endpoints:"
+    @curl -s --max-time 5 http://localhost:8002/orchestration/status | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Orchestration status not available" | tee -a logs/just-commands.log)
+    @echo ""
+    @echo "🔹 Testing Erebus wallet endpoints:"
+    @curl -s --max-time 5 http://localhost:3000/api/wallets | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Erebus wallets not available" | tee -a logs/just-commands.log)
+    @echo ""
+    @echo "🔹 Testing Hecate Agent endpoints:"
+    @curl -s --max-time 5 http://localhost:9002/model-status | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Hecate model status not available" | tee -a logs/just-commands.log)
+    @echo ""
+    @echo "🔹 Testing LLM Service endpoints:"
+    @curl -s --max-time 5 http://localhost:1234/v1/models | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ LM Studio models not available" | tee -a logs/just-commands.log)
+    @echo "$(date '+%Y-%m-%d %H:%M:%S') [API-TEST] ✅ API tests completed" | tee -a logs/just-commands.log
+    @echo ""
+
+# Quick connectivity test
+ping-services:
+    @mkdir -p logs
+    @echo "$(date '+%Y-%m-%d %H:%M:%S') [PING-TEST] 🏓 Starting connectivity ping" | tee -a logs/just-commands.log
+    @echo "🏓 Quick Connectivity Test"
+    @echo "=========================="
+    @echo -n "MCP (8001): "; curl -s --max-time 2 http://localhost:8001/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
+    @echo -n "Orchestration (8002): "; curl -s --max-time 2 http://localhost:8002/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
+    @echo -n "Erebus (3000): "; curl -s --max-time 2 http://localhost:3000/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
+    @echo -n "General Agents (9001): "; curl -s --max-time 2 http://localhost:9001/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
+    @echo -n "Hecate Agent (9002): "; curl -s --max-time 2 http://localhost:9002/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
+    @echo -n "Frontend (5173): "; curl -s --max-time 2 http://localhost:5173 >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
+    @echo -n "LM Studio (1234): "; curl -s --max-time 2 http://localhost:1234/v1/models >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
+    @echo "$(date '+%Y-%m-%d %H:%M:%S') [PING-TEST] ✅ Ping test completed" | tee -a logs/just-commands.log
+
+# Test Hecate Agent chat endpoint with mock message
+test-chat:
+    @mkdir -p logs
+    @echo "$(date '+%Y-%m-%d %H:%M:%S') [CHAT-TEST] 💬 Starting Hecate chat test" | tee -a logs/just-commands.log
+    @echo "💬 Testing Hecate Agent Chat"
+    @echo "============================="
+    @echo "Sending test message..."
+    @echo "$(date '+%Y-%m-%d %H:%M:%S') [CHAT-TEST] 📤 REQUEST:" | tee -a logs/just-commands.log
+    @echo '{"message":"Hello, this is a test message from the health check system."}' | jq '.' | tee -a logs/just-commands.log
+    @echo "$(date '+%Y-%m-%d %H:%M:%S') [CHAT-TEST] 📥 RESPONSE:" | tee -a logs/just-commands.log
+    @curl -s --max-time 10 -X POST http://localhost:9002/chat \
+        -H "Content-Type: application/json" \
+        -d '{"message":"Hello, this is a test message from the health check system."}' | \
+        jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Chat endpoint not responding" | tee -a logs/just-commands.log)
+    @echo "$(date '+%Y-%m-%d %H:%M:%S') [CHAT-TEST] ✅ Chat test completed" | tee -a logs/just-commands.log
+    @echo ""
+
+# Test MCP data sources with mock query
+test-mcp-data:
+    @mkdir -p logs
+    @echo "$(date '+%Y-%m-%d %H:%M:%S') [MCP-DATA-TEST] 📊 Starting MCP data test" | tee -a logs/just-commands.log
+    @echo "📊 Testing MCP Data Sources"
+    @echo "==========================="
+    @echo "Available data sources:"
+    @curl -s --max-time 5 http://localhost:8001/mcp/data-sources | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ No data sources available" | tee -a logs/just-commands.log)
+    @echo ""
+    @echo "Testing price oracle data:"
+    @curl -s --max-time 5 "http://localhost:8001/mcp/data/price_oracle/coingecko?symbols=bitcoin" | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Price data not available" | tee -a logs/just-commands.log)
+    @echo "$(date '+%Y-%m-%d %H:%M:%S') [MCP-DATA-TEST] ✅ MCP data test completed" | tee -a logs/just-commands.log
+    @echo ""
+
 # Clean up everything
 cleanup:
     @echo "🧹 Cleaning up..."
@@ -104,7 +204,19 @@ start-erebus:
 # Test the complete setup
 test:
     @echo "🧪 Testing Nullblock setup..."
-    ./scripts/test-setup.sh
+    @echo "Running comprehensive test suite..."
+    @echo ""
+    just health-check
+    @echo ""
+    just ping-services
+    @echo ""
+    just test-api
+    @echo ""
+    just test-chat
+    @echo ""
+    just test-mcp-data
+    @echo ""
+    @echo "✅ Complete test suite finished"
 
 # Quick start (build + start)
 quick:
@@ -166,7 +278,12 @@ help:
     @echo "  just docker-db-info - Show Docker database connections"
     @echo ""
     @echo "Testing Commands:"
-    @echo "  just test      - Test complete setup"
+    @echo "  just test         - Test complete setup"
+    @echo "  just health-check - Comprehensive health check with curl"
+    @echo "  just ping-services - Quick connectivity test"
+    @echo "  just test-api     - Test API endpoints with mock data"
+    @echo "  just test-chat    - Test Hecate Agent chat endpoint"
+    @echo "  just test-mcp-data - Test MCP data sources"
     @echo ""
     @echo "Development Environment:"
     @echo "  just dev-tmux        - Launch complete dev environment with tmuxinator"
