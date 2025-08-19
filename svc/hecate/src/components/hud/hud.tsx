@@ -17,6 +17,7 @@ import {
 } from '../../common/services/mcp-api';
 // Removed separate dashboard imports - all functionality is now integrated into HUD tabs
 import HecateHud from '../hecateHud';
+import { hecateAgent, type ChatMessage as HecateChatMessage, type HecateResponse } from '../../common/services/hecate-agent';
 import styles from './hud.module.scss';
 
 type Screen = 'home' | 'overview' | 'camp' | 'inventory' | 'campaign' | 'lab';
@@ -263,6 +264,7 @@ const HUD: React.FC<HUDProps> = ({
     | 'warning'
     | 'success'
     | 'processing'
+    | 'idle'
   >('base');
   const [showHecateHud, setShowHecateHud] = useState<boolean>(false);
   const [hecateHudActiveTab, setHecateHudActiveTab] = useState<
@@ -2134,6 +2136,47 @@ const HUD: React.FC<HUDProps> = ({
   const [chatInput, setChatInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeLens, setActiveLens] = useState<string | null>(null);
+  const [agentConnected, setAgentConnected] = useState(false);
+  const [currentModel, setCurrentModel] = useState<string | null>(null);
+  const [isConnectingAgent, setIsConnectingAgent] = useState(false);
+
+  // Initialize Hecate agent connection
+  useEffect(() => {
+    const initializeHecateAgent = async () => {
+      try {
+        setIsConnectingAgent(true);
+        const connected = await hecateAgent.connect();
+        setAgentConnected(connected);
+        
+        if (connected) {
+          // Get initial model status
+          const modelStatus = await hecateAgent.getModelStatus();
+          setCurrentModel(modelStatus.current_model);
+          console.log('Hecate agent connected successfully');
+        } else {
+          console.warn('Failed to connect to Hecate agent');
+        }
+      } catch (error) {
+        console.error('Error connecting to Hecate agent:', error);
+        setAgentConnected(false);
+      } finally {
+        setIsConnectingAgent(false);
+      }
+    };
+
+    initializeHecateAgent();
+  }, []);
+
+  // Update avatar state based on agent connection
+  useEffect(() => {
+    if (isConnectingAgent) {
+      setNulleyeState('processing');
+    } else if (agentConnected) {
+      setNulleyeState('base');
+    } else {
+      setNulleyeState('idle');
+    }
+  }, [agentConnected, isConnectingAgent]);
 
   // Define lens options (scopes)
   const lensOptions: LensOption[] = [
@@ -2194,6 +2237,8 @@ const HUD: React.FC<HUDProps> = ({
     sender: 'user' | 'hecate';
     message: string;
     type?: 'text' | 'update' | 'question' | 'suggestion';
+    model_used?: string;
+    metadata?: any;
   }
 
   interface LensOption {
@@ -2205,7 +2250,7 @@ const HUD: React.FC<HUDProps> = ({
     expanded?: boolean;
   }
 
-  const handleChatSubmit = (e: React.FormEvent) => {
+  const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
 
@@ -2218,19 +2263,63 @@ const HUD: React.FC<HUDProps> = ({
     };
 
     setChatMessages(prev => [...prev, userMessage]);
+    const currentInput = chatInput;
     setChatInput('');
 
-    // Simulate Hecate response
-    setTimeout(() => {
-      const hecateResponse: ChatMessage = {
+    // Get agent response if connected
+    if (agentConnected) {
+      try {
+        // Prepare user context
+        const userContext = {
+          wallet_address: publicKey || undefined,
+          wallet_type: localStorage.getItem('walletType') || undefined,
+          session_time: publicKey ? `${Math.floor((Date.now() - parseInt(localStorage.getItem('lastAuthTime') || '0')) / 60000)}m` : undefined
+        };
+
+        const response: HecateResponse = await hecateAgent.sendMessage(currentInput, userContext);
+        
+        // Update current model
+        setCurrentModel(response.model_used);
+        
+        const hecateResponse: ChatMessage = {
+          id: Date.now().toString() + '-hecate',
+          timestamp: new Date(),
+          sender: 'hecate',
+          message: response.content,
+          type: 'text',
+          model_used: response.model_used,
+          metadata: response.metadata
+        };
+        
+        setChatMessages(prev => [...prev, hecateResponse]);
+      } catch (error) {
+        console.error('Failed to get Hecate response:', error);
+        
+        // Fallback response
+        const errorResponse: ChatMessage = {
+          id: Date.now().toString() + '-hecate',
+          timestamp: new Date(),
+          sender: 'hecate',
+          message: `I'm having trouble connecting to my backend systems. Please ensure the Hecate agent server is running or try again in a moment.`,
+          type: 'text',
+          model_used: 'error'
+        };
+        
+        setChatMessages(prev => [...prev, errorResponse]);
+      }
+    } else {
+      // Fallback when agent not connected
+      const fallbackResponse: ChatMessage = {
         id: Date.now().toString() + '-hecate',
         timestamp: new Date(),
         sender: 'hecate',
-        message: `I understand you're asking about "${chatInput}". Let me help you with that. What specific aspect would you like to explore?`,
-        type: 'text'
+        message: `Agent offline. I understand you're asking about "${currentInput}". Please start the Hecate agent server to enable full functionality.`,
+        type: 'text',
+        model_used: 'offline'
       };
-      setChatMessages(prev => [...prev, hecateResponse]);
-    }, 1000);
+      
+      setChatMessages(prev => [...prev, fallbackResponse]);
+    }
   };
 
   const handleChatInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -3086,8 +3175,17 @@ const HUD: React.FC<HUDProps> = ({
                   <div className={styles.chatSection}>
                     <div className={styles.hecateChat}>
                       <div className={styles.chatHeader}>
-                        <h4>Chat with Hecate</h4>
-                        <span className={styles.chatStatus}>Live</span>
+                        <div className={styles.chatTitle}>
+                          <h4>Hecate Agent</h4>
+                          {currentModel && (
+                            <span className={styles.modelIndicator}>
+                              {currentModel}
+                            </span>
+                          )}
+                        </div>
+                        <span className={`${styles.chatStatus} ${agentConnected ? styles.connected : styles.disconnected}`}>
+                          {isConnectingAgent ? 'Connecting...' : agentConnected ? 'Live' : 'Offline'}
+                        </span>
                       </div>
 
                       <div className={styles.chatMessages}>
@@ -3101,7 +3199,7 @@ const HUD: React.FC<HUDProps> = ({
                                 {message.sender === 'hecate' ? (
                                   <span className={styles.hecateMessageSender}>
                                     <div
-                                      className={`${styles.nullviewChat} ${styles[`chat-${message.type || 'base'}`]} ${styles.clickableNulleyeChat}`}
+                                      className={`${styles.nullviewChat} ${styles[`chat-${agentConnected ? (message.type || 'base') : 'idle'}`]} ${styles.clickableNulleyeChat}`}
                                     >
                                       <div className={styles.staticFieldChat}></div>
                                       <div className={styles.coreNodeChat}></div>

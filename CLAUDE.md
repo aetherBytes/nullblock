@@ -16,7 +16,8 @@ The platform consists of four core components in a monorepo structure:
 
 - ✅ **NullBlock.mcp** (`/svc/nullblock-mcp/`): Complete MCP server providing standardized agent interfaces for authentication, context storage, security middleware, and multi-system integrations
 - ✅ **NullBlock.orchestration** (`/svc/nullblock-orchestration/`): Goal-driven workflow engine for coordinating agent interactions with template system and task marketplace integration  
-- ✅ **NullBlock.agents** (`/svc/nullblock-agents/`): Comprehensive agent suite including trading, social monitoring, information gathering, and LLM service coordination
+- ✅ **NullBlock.agents** (`/svc/nullblock-agents/`): Comprehensive agent suite including Hecate orchestrator, trading, social monitoring, information gathering, and LLM service coordination
+- ✅ **Hecate Agent** (`/svc/nullblock-agents/src/agents/hecate/`): Primary interface agent and orchestration engine with full frontend integration
 - 🔄 **NullBlock.platform**: Agentic workflow marketplace and management interface (pending - requires frontend development)
 
 ### **Legacy Implementation Structure** (Transitioning)
@@ -59,6 +60,32 @@ The platform consists of four core components in a monorepo structure:
 - **🆕 Enhanced Model Prioritization**: LM Studio models prioritized over Ollama with higher quality/reliability scores
 - **🆕 Connectivity Testing**: Automatic detection and validation of local model availability
 - **🆕 Improved Error Handling**: Specific guidance for LM Studio setup and troubleshooting
+
+### **🤖 Hecate Agent - Primary Interface & Orchestrator** (August 2025)
+
+🆕 **Production-Ready Chat Interface**: Complete frontend integration with real-time model display
+- **Frontend Integration**: Full React component integration with Hecate agent backend
+- **Model Awareness**: Real-time display of current LLM model in chat interface
+- **Connection Status**: Visual indicators for agent connectivity and health (Live/Offline/Connecting)
+- **Idle State Theming**: Red/dimmed NullEye avatars when agent is offline with slower animations
+- **User Context**: Wallet-aware conversations with session persistence
+- **Orchestration Preview**: Demonstrates intent analysis and multi-agent coordination
+- **Error Handling**: Graceful fallbacks when agent services are unavailable
+
+🆕 **Orchestration Architecture**: Foundation for multi-agent coordination
+- **Intent Analysis**: Keyword-based analysis evolving to LLM-powered routing
+- **Agent Delegation**: Framework for coordinating specialized agents
+- **Response Synthesis**: LLM-powered aggregation of multi-agent responses
+- **Task Queue Management**: Foundation for complex workflow orchestration
+- **Context Preservation**: Maintains conversation state across agent interactions
+
+🆕 **Development Setup**: Complete development and integration guide
+- **HTTP API Server**: FastAPI server on port 8001 for frontend communication
+- **Interactive CLI**: Direct agent testing and development mode
+- **Frontend Chat**: React component with real-time model display
+- **CSS Styling**: Cyberpunk-themed UI with connection status indicators
+- **Visual Feedback**: NullEye avatars change to red "idle" theme when agent is offline
+- **Documentation**: Comprehensive setup and integration instructions
 
 ### **🎬 Demo & Testing Infrastructure**
 
@@ -441,9 +468,22 @@ pytest -v src/tests/
 # Install dependencies
 pip install -e .
 
-# Run arbitrage agents
+# 🆕 Run Hecate Agent (Primary Interface & Orchestrator)
+python -m agents.hecate.server  # HTTP API server for frontend integration (Port 8001)
+python -m agents.hecate.main    # Interactive CLI mode
+
+# Hecate agent setup
+# 1. Start Hecate agent server for frontend chat integration
+cd svc/nullblock-agents && python -m agents.hecate.server
+
+# 2. Frontend will connect automatically on localhost:8001
+# 3. Model selection handled by LLM Service Factory
+# 4. Orchestration features demonstrate multi-agent coordination
+
+# Run specialized agents
 python -m agents.arbitrage.price_agent
 python -m agents.arbitrage.strategy_agent
+python -m agents.information_gathering.main
 
 # Code quality
 ruff format . && ruff check . --fix && mypy .
@@ -539,9 +579,14 @@ just s                      # Alias for sync
 
 ### Hecate Frontend (`svc/hecate/`)
 ```bash
-# Development server
+# Development server (requires Hecate agent for chat functionality)
 npm run develop
 ssr-boost dev
+
+# Prerequisites for full chat functionality:
+# 1. Start Hecate agent server: cd svc/nullblock-agents && python -m agents.hecate.server
+# 2. Configure LLM models (LM Studio or API keys)
+# 3. Chat interface will display current model and connection status
 
 # Production builds
 npm run build                # Standard build
@@ -584,6 +629,13 @@ NullBlock implements a Model Context Protocol-first architecture for secure, agn
 - Advanced security middleware with prompt injection protection and input sanitization
 - Standardized agent-to-system interfaces enabling seamless integration with new platforms
 - Developer API and SDK for building custom agents and system integrations
+
+**🆕 Hecate Agent Architecture** (August 2025):
+- **Primary Interface Agent**: Hecate serves as the main user-facing conversational interface
+- **Orchestration Engine**: Coordinates and delegates tasks across specialized agents
+- **Decision-Making Hub**: Analyzes gathered data vs. task requirements for intelligent routing
+- **Context Management**: Maintains conversation state and user preferences across sessions
+- **LLM Integration**: Unified access to multiple language models with intelligent selection
 
 **🆕 Domain-Specific Agent Extensions** (August 2025):
 - Social media monitoring and sentiment analysis (Twitter/X, GMGN, DEXTools)
@@ -763,6 +815,7 @@ The platform implements a cyberpunk aesthetic with neon styling, ball lightning 
 - **NullEye Animations**: Each NullEye features 8 randomized lightning arcs with varied sizes, orientations, and timing
 - **Silver-Gold Lightning**: Consistent electrical effects using brilliant silver (#e8e8e8) with gold accents (#e6c200)
 - **State-Responsive Design**: Core colors change based on agent state while maintaining consistent lightning
+- **🆕 Idle State Theme**: Red-tinted, dimmed NullEye avatars with slower animations when Hecate agent is offline
 - **Universal Clickability**: All NullEyes navigate to agent interfaces with enhanced hover feedback
 - **Compact Layouts**: Command Lens uses 4-column responsive grids optimized for smaller screens
 - **Smart Information Architecture**: Hover tooltips replace static text for cleaner, more interactive interfaces

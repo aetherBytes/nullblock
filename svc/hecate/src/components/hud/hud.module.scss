@@ -5552,6 +5552,38 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+.nullviewAvatar.idle {
+  .pulseRingAvatar {
+    border-color: rgba($echo-red, 0.4);
+    animation-duration: 4s;
+    border-width: 1px;
+    opacity: 0.6;
+  }
+  .streamLineAvatar {
+    background: linear-gradient(90deg, transparent, rgba($echo-red, 0.3), transparent);
+    animation-duration: 6s;
+    opacity: 0.4;
+  }
+  .coreNodeAvatar {
+    background: rgba($echo-red, 0.3);
+    opacity: 0.5;
+    box-shadow: 
+      0 0 5px rgba($echo-red, 0.2),
+      0 0 10px rgba($echo-red, 0.1);
+  }
+  .lightningArc {
+    background: linear-gradient(180deg, transparent, rgba($echo-red, 0.4), transparent);
+    animation-duration: 8s;
+    height: 15px;
+    opacity: 0.3;
+  }
+  .staticField {
+    background: radial-gradient(circle, transparent 60%, rgba($echo-red, 0.1) 70%, transparent 80%);
+    animation-duration: 5s;
+    opacity: 0.3;
+  }
+}
+
 .hecateStats {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -5645,12 +5677,45 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+.chatTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.modelIndicator {
+  color: $echo-orange;
+  font-size: 0.7rem;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+  background: rgba($echo-orange, 0.1);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  border: 1px solid rgba($echo-orange, 0.3);
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .chatStatus {
   color: $echo-green;
   font-size: 0.8rem;
   font-family: 'Courier New', monospace;
   text-transform: uppercase;
   letter-spacing: 1px;
+  
+  &.connected {
+    color: $echo-green;
+    text-shadow: 0 0 4px rgba($echo-green, 0.5);
+  }
+  
+  &.disconnected {
+    color: $echo-red;
+    text-shadow: 0 0 4px rgba($echo-red, 0.5);
+  }
 }
 
 .chatMessages {
@@ -6120,6 +6185,72 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   75% {
     opacity: 0.6;
     transform: scaleY(1);
+  }
+}
+
+// Chat idle state for when agent is offline
+.nullviewChat.chat-idle {
+  .staticFieldChat {
+    background: radial-gradient(circle, transparent 40%, rgba($echo-red, 0.05) 50%, transparent 60%);
+    animation: staticFieldChatIdle 6s ease-in-out infinite;
+    opacity: 0.3;
+  }
+  
+  .coreNodeChat {
+    background: rgba($echo-red, 0.4);
+    box-shadow: 0 0 2px rgba($echo-red, 0.2);
+    animation: coreNodeChatIdle 8s ease-in-out infinite;
+    opacity: 0.5;
+  }
+  
+  .streamLineChat {
+    background: linear-gradient(90deg, transparent, rgba($echo-red, 0.3), transparent);
+    animation: streamLineChatIdle 10s ease-in-out infinite;
+    opacity: 0.2;
+  }
+  
+  .lightningSparkChat {
+    background: linear-gradient(180deg, transparent, rgba($echo-red, 0.3), transparent);
+    animation: lightningSparkChatIdle 12s ease-in-out infinite;
+    opacity: 0.2;
+  }
+}
+
+@keyframes staticFieldChatIdle {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.2; }
+}
+
+@keyframes coreNodeChatIdle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.5;
+  }
+}
+
+@keyframes streamLineChatIdle {
+  0%, 100% {
+    opacity: 0.1;
+    transform: scaleX(0.3);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scaleX(0.6);
+  }
+}
+
+@keyframes lightningSparkChatIdle {
+  0%, 100% {
+    opacity: 0.1;
+    transform: scaleY(0.5);
+  }
+  50% {
+    opacity: 0.2;
+    transform: scaleY(0.8);
   }
 }
 
