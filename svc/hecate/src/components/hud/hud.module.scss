@@ -6627,6 +6627,9 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
 
     .themeControlBtn {
       background: rgba($lightning-silver, 0.2);
@@ -6637,6 +6640,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       font-size: 0.8rem;
       cursor: pointer;
       transition: all 0.3s ease;
+      position: relative;
+      display: block;
 
       &:hover {
         background: rgba($lightning-silver, 0.3);
@@ -6655,6 +6660,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    position: relative;
+    width: 100%;
 
     .socialLinkBtn {
       background: rgba($lightning-silver, 0.2);
@@ -6666,6 +6673,10 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       text-decoration: none;
       text-align: center;
       transition: all 0.3s ease;
+      position: relative;
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
 
       &:hover {
         background: rgba($lightning-silver, 0.3);

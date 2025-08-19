@@ -2178,6 +2178,13 @@ const HUD: React.FC<HUDProps> = ({
       title: 'Voice',
       description: 'Voice interface',
       color: '#ff3333'
+    },
+    {
+      id: 'settings',
+      icon: '⚙️',
+      title: 'Settings',
+      description: 'Theme & preferences',
+      color: '#888888'
     }
   ];
 
