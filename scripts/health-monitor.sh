@@ -150,14 +150,14 @@ main() {
     while true; do
         check_count=$((check_count + 1))
         
-        # First 2 minutes: check every 15 seconds (8 checks = 2 minutes)
-        if [ $check_count -le 8 ]; then
-            sleep 15
-            echo -e "${GRAY}[Check $check_count/8 - Fast mode: 15s intervals]${NC}"
+        # First 30 seconds: check every 10 seconds (3 checks = 30 seconds)
+        if [ $check_count -le 3 ]; then
+            sleep 10
+            echo -e "${GRAY}[Check $check_count/3 - Fast mode: 10s intervals]${NC}"
         else
-            # After 2 minutes: check every 5 minutes
+            # After 30 seconds: check every 5 minutes (standardized)
             sleep 300
-            echo -e "${GRAY}[Check $check_count - Slow mode: 5min intervals]${NC}"
+            echo -e "${GRAY}[Check $check_count - Standard mode: 5min intervals]${NC}"
         fi
         
         clear

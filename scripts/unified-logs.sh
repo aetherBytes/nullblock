@@ -46,13 +46,28 @@ get_service_name() {
     local filename=$(basename "$filepath" .log)
     
     case "$filename" in
-        "mcp"|"mcp-install")
+        "mcp-server"|"mcp"|"mcp-install")
+            echo "MCP"
+            ;;
+        "mcp-server-errors")
+            echo "MCP"
+            ;;
+        "mcp-server-access")
             echo "MCP"
             ;;
         "orchestration"|"orchestration-install") 
             echo "ORCHESTRATION"
             ;;
+        "orchestration-errors")
+            echo "ORCHESTRATION"
+            ;;
+        "orchestration-workflows")
+            echo "ORCHESTRATION"
+            ;;
         "erebus"|"erebus-update")
+            echo "EREBUS"
+            ;;
+        "erebus-errors")
             echo "EREBUS"
             ;;
         "hecate-agent"|"hecate-agent-install")
@@ -149,46 +164,92 @@ print_header() {
     echo ""
 }
 
-# Function to show initial log file status
+# Function to show initial log file status and recent entries
 show_log_status() {
-    echo -e "${WHITE}📋 Log File Status:${NC}"
+    echo -e "${WHITE}📋 Log File Status (showing last 15 minutes):${NC}"
     
-    # Main logs directory
+    # Calculate timestamp for 15 minutes ago
+    local since_time
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        since_time=$(date -v-15M '+%Y-%m-%d %H:%M:%S')
+    else
+        # Linux
+        since_time=$(date -d '15 minutes ago' '+%Y-%m-%d %H:%M:%S')
+    fi
+    
+    # Updated log file paths to include new services
     local main_logs=(
-        "/Users/sage/nullblock/logs/mcp.log"
+        "/Users/sage/nullblock/logs/mcp-server.log"
         "/Users/sage/nullblock/logs/orchestration.log" 
         "/Users/sage/nullblock/logs/erebus.log"
         "/Users/sage/nullblock/logs/frontend.log"
         "/Users/sage/nullblock/logs/ipfs.log"
     )
     
-    # Agent logs directory
+    # Updated agent logs directory paths
     local agent_logs=(
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-agent.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-server.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-startup.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/agents.log"
     )
     
-    for log_file in "${main_logs[@]}" "${agent_logs[@]}"; do
+    # Service-specific MCP logs
+    local mcp_logs=(
+        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server.log"
+        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server-errors.log"
+        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server-access.log"
+    )
+    
+    # Service-specific Orchestration logs
+    local orchestration_logs=(
+        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration.log"
+        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration-errors.log"
+        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration-workflows.log"
+    )
+    
+    # Service-specific Erebus logs
+    local erebus_logs=(
+        "/Users/sage/nullblock/svc/erebus/logs/erebus.log"
+        "/Users/sage/nullblock/svc/erebus/logs/erebus-errors.log"
+    )
+    
+    for log_file in "${main_logs[@]}" "${agent_logs[@]}" "${mcp_logs[@]}" "${orchestration_logs[@]}" "${erebus_logs[@]}"; do
         local service=$(get_service_name "$log_file")
         local color=$(get_service_color "$service")
         
         if check_log_file "$log_file"; then
             local size=$(du -h "$log_file" 2>/dev/null | cut -f1)
             local lines=$(wc -l < "$log_file" 2>/dev/null || echo "0")
-            echo -e "  ${color}✓${NC} $(basename "$log_file") (${size}, ${lines} lines)"
+            local recent_lines
+            
+            # Get recent lines (last 15 minutes)
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                # macOS: use a simpler approach with tail
+                recent_lines=$(tail -100 "$log_file" 2>/dev/null | wc -l | tr -d ' ')
+            else
+                # Linux: can use more sophisticated time filtering
+                recent_lines=$(awk -v since="$since_time" '$0 >= since' "$log_file" 2>/dev/null | wc -l | tr -d ' ')
+            fi
+            
+            echo -e "  ${color}✓${NC} $(basename "$log_file") (${size}, ${lines} total, ${recent_lines} recent)"
         else
             echo -e "  ${GRAY}✗${NC} $(basename "$log_file") ${GRAY}(not found)${NC}"
         fi
     done
     echo ""
+    echo -e "${CYAN}⏱️  Showing entries from the last 15 minutes by default${NC}"
+    echo -e "${GRAY}   Log files are automatically rotated and archived for persistence${NC}"
+    echo ""
 }
 
-# Function to start log monitoring
+# Function to start log monitoring with recent entries
 start_log_monitoring() {
-    # All potential log files to monitor
+    # All potential log files to monitor (updated paths)
     local log_files=(
-        "/Users/sage/nullblock/logs/mcp.log"
+        # Main logs directory
+        "/Users/sage/nullblock/logs/mcp-server.log"
         "/Users/sage/nullblock/logs/orchestration.log"
         "/Users/sage/nullblock/logs/erebus.log"
         "/Users/sage/nullblock/logs/frontend.log"
@@ -198,9 +259,26 @@ start_log_monitoring() {
         "/Users/sage/nullblock/logs/erebus-update.log"
         "/Users/sage/nullblock/logs/hecate-agent-install.log"
         "/Users/sage/nullblock/logs/frontend-install.log"
+        
+        # Agent logs
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-server.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-startup.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/agents.log"
+        
+        # MCP service logs
+        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server.log"
+        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server-errors.log"
+        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server-access.log"
+        
+        # Orchestration service logs
+        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration.log"
+        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration-errors.log"
+        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration-workflows.log"
+        
+        # Erebus service logs
+        "/Users/sage/nullblock/svc/erebus/logs/erebus.log"
+        "/Users/sage/nullblock/svc/erebus/logs/erebus-errors.log"
     )
     
     # Create array of existing log files

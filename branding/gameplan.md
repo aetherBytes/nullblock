@@ -802,6 +802,35 @@ Profitability: Fees, subscriptions, and licensing offset overhead ASAP.
 - **Error Handling**: Fixed tmuxinator YAML parsing and command issues
 - **Port Standardization**: MCP server updated to port 8001, demo integration aligned
 
+### **🏥 Health Monitoring & Service Reliability** (August 2025)
+
+**Standardized Health Check System**:
+All Nullblock services now implement consistent health monitoring with 5-minute intervals to reduce system overhead while maintaining reliability:
+
+**📊 Service Health Standards**:
+- **MCP Server** (`localhost:8001/health`): System components, Web3 connectivity, security status
+- **Orchestration** (`localhost:8002/health`): Workflow engine status, task queue health
+- **General Agents** (`localhost:9001/health`): Agent service connectivity and performance
+- **Hecate Agent** (`localhost:9002/health`): Agent running status, model connectivity, conversation state
+- **Erebus Server** (`localhost:3000/health`): Wallet subsystems, MCP protocol status
+
+**🔄 Monitoring Schedule**:
+- **Fast Startup**: 10-second intervals for first 30 seconds (rapid service detection)
+- **Standard Operation**: 5-minute intervals for all services (optimized frequency)
+- **Automated Logging**: All health checks logged with rotation for historical tracking
+
+**🎯 Development Integration**:
+- **Tmux Logs Tab**: 55/45 split (logs/monitoring+commands) for optimal screen utilization
+- **Visual Indicators**: ✅/❌ status for all services with real-time counts
+- **Persistent Monitoring**: Health status archived in log files for long-term analysis
+- **Command Center**: Comprehensive reference for all service endpoints and debug commands
+
+**🚀 Impact on User Experience**:
+- **Reduced System Load**: 5-minute intervals prevent excessive health check traffic
+- **Faster Debugging**: Standardized endpoints and responses across all services
+- **Better Visibility**: Real-time service status in development environment
+- **Historical Tracking**: Persistent logs enable analysis of service reliability patterns
+
 ### **🎯 Next Priorities**
 - LLM Service Factory integration with local Gemma3 model
 - Production deployment testing with LM Studio integration

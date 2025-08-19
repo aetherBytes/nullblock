@@ -22,6 +22,9 @@ tower-http = { version = "0.5", features = ["cors"] }
 tower = "0.4"
 actix-web = "4.5"
 url = "2.5"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
 
 [dev-dependencies]
 criterion = "0.5"

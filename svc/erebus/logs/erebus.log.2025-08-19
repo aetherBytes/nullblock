@@ -1,0 +1,627 @@
+2025-08-19T05:59:25.724964Z  INFO erebus: ============================================================
+2025-08-19T05:59:25.725028Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T05:59:25.725042Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T05:59:25.725149Z  INFO erebus: 🕐 Timestamp: 2025-08-19 05:59:25
+2025-08-19T05:59:25.725171Z  INFO erebus: ============================================================
+2025-08-19T05:59:25.725206Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T05:59:25.725246Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T05:59:25.727279Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T05:59:25.727331Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T05:59:25.727375Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T05:59:25.727392Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T05:59:25.727437Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T05:59:25.727473Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T05:59:25.727488Z  INFO erebus: │
+2025-08-19T05:59:25.727500Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T05:59:25.727517Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T05:59:25.727527Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T05:59:25.727542Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T05:59:25.727553Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T05:59:25.727588Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T05:59:25.727598Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T05:59:25.727607Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T05:59:25.727618Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T05:59:25.727627Z  INFO erebus: │
+2025-08-19T05:59:25.727641Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T05:59:25.727651Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T05:59:25.727660Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T05:59:25.727695Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T05:59:25.727713Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T05:59:25.727723Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T05:59:25.727733Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T05:59:25.727742Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T05:59:25.727752Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:07:51.537051Z  INFO erebus: ============================================================
+2025-08-19T06:07:51.537088Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:07:51.537105Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:07:51.537154Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:07:51
+2025-08-19T06:07:51.537163Z  INFO erebus: ============================================================
+2025-08-19T06:07:51.537179Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:07:51.537197Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:07:51.537944Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:07:51.537950Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:07:51.537966Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:07:51.543582Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:07:51.543670Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:07:51.543714Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:07:51.543729Z  INFO erebus: │
+2025-08-19T06:07:51.543744Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:07:51.543759Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:07:51.543774Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:07:51.543798Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:07:51.552680Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:07:51.552873Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:07:51.552932Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:07:51.552939Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:07:51.552944Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:07:51.552949Z  INFO erebus: │
+2025-08-19T06:07:51.552954Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:07:51.552959Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:07:51.557537Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:07:51.557679Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:07:51.557697Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:07:51.557712Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:07:51.557727Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:07:51.557743Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:07:51.557757Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:11:09.245127Z  INFO erebus: ============================================================
+2025-08-19T06:11:09.245195Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:11:09.245230Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:11:09.245318Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:11:09
+2025-08-19T06:11:09.245345Z  INFO erebus: ============================================================
+2025-08-19T06:11:09.245379Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:11:09.245469Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:11:09.247772Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:11:09.247797Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:11:09.247816Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:11:09.247821Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:11:09.247826Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:11:09.254033Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:11:09.254160Z  INFO erebus: │
+2025-08-19T06:11:09.254178Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:11:09.254196Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:11:09.254212Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:11:09.254229Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:11:09.254246Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:11:09.254294Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:11:09.259556Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:11:09.259652Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:11:09.259669Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:11:09.259685Z  INFO erebus: │
+2025-08-19T06:11:09.259701Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:11:09.259717Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:11:09.259733Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:11:09.259841Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:11:09.259856Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:11:09.266482Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:11:09.266591Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:11:09.266614Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:11:09.266630Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:11:40.461999Z  INFO erebus: ============================================================
+2025-08-19T06:11:40.462047Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:11:40.462053Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:11:40.462103Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:11:40
+2025-08-19T06:11:40.462112Z  INFO erebus: ============================================================
+2025-08-19T06:11:40.462128Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:11:40.462147Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:11:40.462882Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:11:40.462889Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:11:40.462906Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:11:40.467365Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:11:40.467453Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:11:40.467494Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:11:40.467510Z  INFO erebus: │
+2025-08-19T06:11:40.467526Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:11:40.467541Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:11:40.467556Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:11:40.467580Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:11:40.467595Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:11:40.471925Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:11:40.472023Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:11:40.472040Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:11:40.472055Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:11:40.472071Z  INFO erebus: │
+2025-08-19T06:11:40.472091Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:11:40.472111Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:11:40.472131Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:11:40.472170Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:11:40.476461Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:11:40.476556Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:11:40.476573Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:11:40.476597Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:11:40.476612Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:16:07.748426Z  INFO erebus: ============================================================
+2025-08-19T06:16:07.748511Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:16:07.748529Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:16:07.748710Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:16:07
+2025-08-19T06:16:07.748794Z  INFO erebus: ============================================================
+2025-08-19T06:16:07.748863Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:16:07.748935Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:16:07.751494Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:16:07.751525Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:16:07.751548Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:16:07.751554Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:16:07.757948Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:16:07.758149Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:16:07.758178Z  INFO erebus: │
+2025-08-19T06:16:07.758201Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:16:07.758268Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:16:07.758294Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:16:07.758322Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:16:07.758338Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:16:07.758373Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:16:07.763758Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:16:07.763859Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:16:07.763876Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:16:07.763891Z  INFO erebus: │
+2025-08-19T06:16:07.763907Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:16:07.763922Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:16:07.763938Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:16:07.763982Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:16:07.772453Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:16:07.772555Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:16:07.772572Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:16:07.772601Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:16:07.772616Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:17:48.613690Z  INFO erebus: ============================================================
+2025-08-19T06:17:48.613766Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:17:48.614516Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:17:48.614577Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:17:48
+2025-08-19T06:17:48.614587Z  INFO erebus: ============================================================
+2025-08-19T06:17:48.614606Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:17:48.614628Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:17:48.615380Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:17:48.615388Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:17:48.615405Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:17:48.615410Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:17:48.615414Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:17:48.623077Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:17:48.623362Z  INFO erebus: │
+2025-08-19T06:17:48.623379Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:17:48.623395Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:17:48.623410Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:17:48.623426Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:17:48.623440Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:17:48.623486Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:17:48.623502Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:17:48.629386Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:17:48.629468Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:17:48.629484Z  INFO erebus: │
+2025-08-19T06:17:48.629500Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:17:48.629516Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:17:48.629538Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:17:48.629583Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:17:48.629598Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:17:48.640623Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:17:48.640819Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:17:48.640837Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:17:48.640852Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:20:27.962985Z  INFO erebus: ============================================================
+2025-08-19T06:20:27.963045Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:20:27.963051Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:20:27.963102Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:20:27
+2025-08-19T06:20:27.963112Z  INFO erebus: ============================================================
+2025-08-19T06:20:27.963128Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:20:27.963149Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:20:27.968239Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:20:27.968263Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:20:27.968288Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:20:27.968293Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:20:27.978227Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:20:27.978332Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:20:27.978348Z  INFO erebus: │
+2025-08-19T06:20:27.978363Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:20:27.978378Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:20:27.978392Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:20:27.978407Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:20:27.978421Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:20:27.994884Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:20:27.994969Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:20:27.994986Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:20:27.995001Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:20:27.995017Z  INFO erebus: │
+2025-08-19T06:20:27.995032Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:20:27.995048Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:20:27.995068Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:20:27.995107Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:20:28.010690Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:20:28.010857Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:20:28.010864Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:20:28.010870Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:20:28.010876Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:22:19.757915Z  INFO erebus: ============================================================
+2025-08-19T06:22:19.757943Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:22:19.757949Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:22:19.758000Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:22:19
+2025-08-19T06:22:19.758009Z  INFO erebus: ============================================================
+2025-08-19T06:22:19.758025Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:22:19.758054Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:22:19.758865Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:22:19.758874Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:22:19.758891Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:22:19.772258Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:22:19.772340Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:22:19.772364Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:22:19.772370Z  INFO erebus: │
+2025-08-19T06:22:19.772375Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:22:19.772380Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:22:19.772385Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:22:19.772391Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:22:19.772395Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:22:19.772412Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:22:19.781012Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:22:19.781112Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:22:19.781129Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:22:19.781145Z  INFO erebus: │
+2025-08-19T06:22:19.781166Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:22:19.781181Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:22:19.781197Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:22:19.781234Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:22:19.787382Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:22:19.787484Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:22:19.787502Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:22:19.787524Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:22:19.787540Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:23:55.745791Z  INFO erebus: ============================================================
+2025-08-19T06:23:55.745840Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:23:55.745845Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:23:55.745896Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:23:55
+2025-08-19T06:23:55.745905Z  INFO erebus: ============================================================
+2025-08-19T06:23:55.745921Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:23:55.745942Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:23:55.746668Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:23:55.746674Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:23:55.746690Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:23:55.753835Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:23:55.754108Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:23:55.754152Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:23:55.754172Z  INFO erebus: │
+2025-08-19T06:23:55.754187Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:23:55.754202Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:23:55.754233Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:23:55.754273Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:23:55.765295Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:23:55.765374Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:23:55.765381Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:23:55.765386Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:23:55.765391Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:23:55.765396Z  INFO erebus: │
+2025-08-19T06:23:55.765401Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:23:55.765406Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:23:55.765411Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:23:55.765427Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:23:55.770826Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:23:55.771010Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:23:55.771031Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:23:55.771049Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:23:55.771363Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:26:05.293718Z  INFO erebus: ============================================================
+2025-08-19T06:26:05.293771Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:26:05.293791Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:26:05.293898Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:26:05
+2025-08-19T06:26:05.293924Z  INFO erebus: ============================================================
+2025-08-19T06:26:05.293958Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:26:05.294019Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:26:05.295430Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:26:05.295444Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:26:05.304138Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:26:05.304369Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:26:05.304382Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:26:05.304404Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:26:05.304410Z  INFO erebus: │
+2025-08-19T06:26:05.304415Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:26:05.304420Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:26:05.304425Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:26:05.310076Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:26:05.310129Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:26:05.310152Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:26:05.310175Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:26:05.310180Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:26:05.310184Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:26:05.310189Z  INFO erebus: │
+2025-08-19T06:26:05.310194Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:26:05.310199Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:26:05.320300Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:26:05.320475Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:26:05.320490Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:26:05.320505Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:26:05.320521Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:26:05.320544Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:26:05.327123Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:28:01.189468Z  INFO erebus: ============================================================
+2025-08-19T06:28:01.189756Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:28:01.189766Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:28:01.190407Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:28:01
+2025-08-19T06:28:01.190430Z  INFO erebus: ============================================================
+2025-08-19T06:28:01.190456Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:28:01.190478Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:28:01.192065Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:28:01.192086Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:28:01.192107Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:28:01.192166Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:28:01.203268Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:28:01.203360Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:28:01.203367Z  INFO erebus: │
+2025-08-19T06:28:01.203373Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:28:01.203379Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:28:01.203384Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:28:01.203389Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:28:01.203394Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:28:01.203410Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:28:01.216572Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:28:01.216680Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:28:01.216688Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:28:01.216693Z  INFO erebus: │
+2025-08-19T06:28:01.216821Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:28:01.216873Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:28:01.216890Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:28:01.216941Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:28:01.217461Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:28:01.217468Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:28:01.227628Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:28:01.227727Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:28:01.227743Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:29:13.450175Z  INFO erebus: ============================================================
+2025-08-19T06:29:13.450224Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:29:13.450230Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:29:13.450286Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:29:13
+2025-08-19T06:29:13.450307Z  INFO erebus: ============================================================
+2025-08-19T06:29:13.450411Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:29:13.450455Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:29:13.457222Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:29:13.457311Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:29:13.457361Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:29:13.457377Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:29:13.457392Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:29:13.457425Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:29:13.457439Z  INFO erebus: │
+2025-08-19T06:29:13.473060Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:29:13.473147Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:29:13.473154Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:29:13.473160Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:29:13.473165Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:29:13.473187Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:29:13.473192Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:29:13.473197Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:29:13.473202Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:29:13.473206Z  INFO erebus: │
+2025-08-19T06:29:13.489317Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:29:13.489442Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:29:13.489451Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:29:13.489475Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:29:13.489480Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:29:13.489484Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:29:13.489489Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:29:13.489508Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:29:13.489520Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:29:58.109380Z  INFO erebus: ============================================================
+2025-08-19T06:29:58.109417Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:29:58.109423Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:29:58.109472Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:29:58
+2025-08-19T06:29:58.109480Z  INFO erebus: ============================================================
+2025-08-19T06:29:58.109496Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:29:58.109514Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:29:58.110280Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:29:58.110287Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:29:58.117882Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:29:58.117984Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:29:58.118001Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:29:58.118044Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:29:58.118120Z  INFO erebus: │
+2025-08-19T06:29:58.118141Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:29:58.118198Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:29:58.118215Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:29:58.125761Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:29:58.125827Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:29:58.125850Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:29:58.125855Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:29:58.125860Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:29:58.125865Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:29:58.125870Z  INFO erebus: │
+2025-08-19T06:29:58.125875Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:29:58.125879Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:29:58.125884Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:29:58.125901Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:29:58.135769Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:29:58.135892Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:29:58.135909Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:29:58.135926Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:29:58.135942Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:31:14.107456Z  INFO erebus: ============================================================
+2025-08-19T06:31:14.107496Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:31:14.107502Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:31:14.107553Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:31:14
+2025-08-19T06:31:14.107563Z  INFO erebus: ============================================================
+2025-08-19T06:31:14.107580Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:31:14.107600Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:31:14.108407Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:31:14.108422Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:31:14.108439Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:31:14.117718Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:31:14.117864Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:31:14.117906Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:31:14.117926Z  INFO erebus: │
+2025-08-19T06:31:14.117947Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:31:14.117966Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:31:14.117981Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:31:14.118001Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:31:14.128506Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:31:14.128814Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:31:14.128842Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:31:14.128856Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:31:14.128863Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:31:14.128868Z  INFO erebus: │
+2025-08-19T06:31:14.128884Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:31:14.128890Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:31:14.128895Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:31:14.135337Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:31:14.135453Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:31:14.135469Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:31:14.135485Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:31:14.135502Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:31:14.135518Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:32:06.240412Z  INFO erebus: ============================================================
+2025-08-19T06:32:06.240454Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:32:06.240460Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:32:06.240512Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:32:06
+2025-08-19T06:32:06.240521Z  INFO erebus: ============================================================
+2025-08-19T06:32:06.240538Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:32:06.240556Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:32:06.241330Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:32:06.241339Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:32:06.241356Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:32:06.252962Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:32:06.253030Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:32:06.253054Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:32:06.253060Z  INFO erebus: │
+2025-08-19T06:32:06.253065Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:32:06.253069Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:32:06.253074Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:32:06.253079Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:32:06.257455Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:32:06.257566Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:32:06.257591Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:32:06.257627Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:32:06.257643Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:32:06.257658Z  INFO erebus: │
+2025-08-19T06:32:06.257673Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:32:06.257688Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:32:06.266571Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:32:06.266885Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:32:06.266903Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:32:06.266918Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:32:06.266933Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:32:06.266960Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:32:06.266974Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:33:48.941493Z  INFO erebus: ============================================================
+2025-08-19T06:33:48.941533Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:33:48.941538Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:33:48.941590Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:33:48
+2025-08-19T06:33:48.941599Z  INFO erebus: ============================================================
+2025-08-19T06:33:48.941616Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:33:48.941636Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:33:48.942569Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:33:48.942583Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:33:48.942600Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:33:48.949794Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:33:48.949949Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:33:48.949977Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:33:48.949982Z  INFO erebus: │
+2025-08-19T06:33:48.949988Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:33:48.949993Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:33:48.949998Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:33:48.950008Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:33:48.956394Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:33:48.956518Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:33:48.956542Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:33:48.956557Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:33:48.956572Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:33:48.956586Z  INFO erebus: │
+2025-08-19T06:33:48.956600Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:33:48.956614Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:33:48.965241Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:33:48.968193Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:33:48.969134Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:33:48.969155Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:33:48.969171Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:33:48.969186Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:33:48.969201Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:35:28.886027Z  INFO erebus: ============================================================
+2025-08-19T06:35:28.886133Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:35:28.886150Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:35:28.886243Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:35:28
+2025-08-19T06:35:28.886269Z  INFO erebus: ============================================================
+2025-08-19T06:35:28.886303Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:35:28.886347Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:35:28.887996Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:35:28.888021Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:35:28.888061Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:35:28.888077Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:35:28.888092Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:35:28.888125Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:35:28.894774Z  INFO erebus: │
+2025-08-19T06:35:28.894957Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:35:28.894976Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:35:28.894992Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:35:28.895109Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:35:28.895128Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:35:28.895177Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:35:28.895193Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:35:28.901062Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:35:28.901141Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:35:28.901158Z  INFO erebus: │
+2025-08-19T06:35:28.901176Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:35:28.901191Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:35:28.901208Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:35:28.901248Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:35:28.901264Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:35:28.908287Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:35:28.908336Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:35:28.908343Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:35:28.908348Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:36:25.346783Z  INFO erebus: ============================================================
+2025-08-19T06:36:25.346855Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:36:25.346870Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:36:25.346966Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:36:25
+2025-08-19T06:36:25.346992Z  INFO erebus: ============================================================
+2025-08-19T06:36:25.347082Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:36:25.347123Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:36:25.349568Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:36:25.349679Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:36:25.349700Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:36:25.349706Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:36:25.354389Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:36:25.354512Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:36:25.354528Z  INFO erebus: │
+2025-08-19T06:36:25.354544Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:36:25.354558Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:36:25.354574Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:36:25.354596Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:36:25.354611Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:36:25.354644Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:36:25.362541Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:36:25.362646Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:36:25.362663Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:36:25.362678Z  INFO erebus: │
+2025-08-19T06:36:25.362694Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:36:25.362710Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:36:25.362726Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:36:25.362936Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:36:25.362954Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:36:25.370523Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:36:25.370702Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:36:25.370720Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:36:25.370735Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)
+2025-08-19T06:38:22.954531Z  INFO erebus: ============================================================
+2025-08-19T06:38:22.954605Z  INFO erebus: 🔥 EREBUS WALLET SERVER STARTING
+2025-08-19T06:38:22.954622Z  INFO erebus: 📍 Version: 0.1.0
+2025-08-19T06:38:22.954713Z  INFO erebus: 🕐 Timestamp: 2025-08-19 06:38:22
+2025-08-19T06:38:22.954740Z  INFO erebus: ============================================================
+2025-08-19T06:38:22.954774Z  INFO erebus: 🏗️  Initializing subsystem managers...
+2025-08-19T06:38:22.954843Z  INFO erebus: ✅ Subsystem managers initialized
+2025-08-19T06:38:22.957804Z  INFO erebus: 🚀 Erebus server listening on 127.0.0.1:3000
+2025-08-19T06:38:22.957830Z  INFO erebus: ┌─────────────────────────────────────────────┐
+2025-08-19T06:38:22.957849Z  INFO erebus: │             EREBUS SUBSYSTEMS               │
+2025-08-19T06:38:22.957855Z  INFO erebus: ├─────────────────────────────────────────────┤
+2025-08-19T06:38:22.963956Z  INFO erebus: │ 🏥 CORE:
+2025-08-19T06:38:22.964118Z  INFO erebus: │   GET  /health - System health check
+2025-08-19T06:38:22.964142Z  INFO erebus: │
+2025-08-19T06:38:22.964164Z  INFO erebus: │ 👛 WALLET SUBSYSTEM:
+2025-08-19T06:38:22.964183Z  INFO erebus: │   GET  /api/wallets - List supported wallets
+2025-08-19T06:38:22.964198Z  INFO erebus: │   POST /api/wallets/detect - Detect available wallets
+2025-08-19T06:38:22.964218Z  INFO erebus: │   POST /api/wallets/connect - Initiate wallet connection
+2025-08-19T06:38:22.964233Z  INFO erebus: │   GET  /api/wallets/status - Get wallet status
+2025-08-19T06:38:22.964335Z  INFO erebus: │   POST /api/wallets/challenge - Create auth challenge
+2025-08-19T06:38:22.984593Z  INFO erebus: │   POST /api/wallets/verify - Verify wallet signature
+2025-08-19T06:38:22.984696Z  INFO erebus: │   GET  /api/wallets/{type}/networks - Get networks
+2025-08-19T06:38:22.984719Z  INFO erebus: │   POST /api/wallets/sessions/validate - Validate session
+2025-08-19T06:38:22.984735Z  INFO erebus: │
+2025-08-19T06:38:22.984751Z  INFO erebus: │ 🔗 MCP SUBSYSTEM:
+2025-08-19T06:38:22.984767Z  INFO erebus: │   POST /mcp - Main MCP protocol endpoint
+2025-08-19T06:38:22.984793Z  INFO erebus: │   POST /mcp/initialize - Initialize MCP server
+2025-08-19T06:38:22.984833Z  INFO erebus: │   POST /mcp/resources - List available resources
+2025-08-19T06:38:22.989978Z  INFO erebus: │   POST /mcp/tools - List available tools
+2025-08-19T06:38:22.990126Z  INFO erebus: │   POST /mcp/prompts - List available prompts
+2025-08-19T06:38:22.990145Z  INFO erebus: └─────────────────────────────────────────────┘
+2025-08-19T06:38:22.990162Z  INFO erebus: 🎯 Ready for agentic workflows and MCP integration
+2025-08-19T06:38:22.990177Z  INFO erebus: 📝 Logs: logs/erebus.log (main), logs/erebus-errors.log (errors)

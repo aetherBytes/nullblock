@@ -108,10 +108,11 @@ windows:
         - ~/nullblock/scripts/wait-for-lmstudio.sh
 
   - logs:
-      layout: even-horizontal
+      layout: 'tiled'
       panes:
-        - ~/nullblock/scripts/unified-logs.sh
         - ~/nullblock/scripts/health-monitor.sh
+        -
+        - ~/nullblock/scripts/unified-logs.sh
 
   - workspace:
       layout: even-horizontal
@@ -139,12 +140,25 @@ on_project_start: |
     echo "ETHEREUM_RPC_URL=https://eth-sepolia.alchemyapi.io/v2/your-key" >> .env.dev
     echo "Please edit .env.dev with your actual API keys"
   fi
-  echo "Creating logs directory for agent services..."
+  echo "📁 Creating comprehensive log directory structure..."
   mkdir -p logs
+  mkdir -p svc/nullblock-agents/logs
+  mkdir -p svc/nullblock-mcp/logs
+  mkdir -p svc/nullblock-orchestration/logs
+  mkdir -p svc/erebus/logs
+  mkdir -p svc/hecate/logs
+  echo "✅ Log directories created with archival support"
   echo "🚀 Nullblock development environment ready!"
   echo "🤖 Agents tab: General agents (9001) + Hecate server (9002) with comprehensive logging"
   echo "🌐 Frontend connects to Hecate agent for chat functionality"
-  echo "💡 Use 'tail -f logs/*.log' to monitor all service logs"
+  echo "📝 All services now have persistent log files with rotation"
+  echo "💡 Unified logs tab shows last 15 minutes by default"
+  echo "🗂️  Log locations:"
+  echo "   - Main: logs/"
+  echo "   - Agents: svc/nullblock-agents/logs/"
+  echo "   - MCP: svc/nullblock-mcp/logs/"
+  echo "   - Orchestration: svc/nullblock-orchestration/logs/"
+  echo "   - Erebus: svc/erebus/logs/"
 
 on_project_stop: |
   echo "Stopping development services..."

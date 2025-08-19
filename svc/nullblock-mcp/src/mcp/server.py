@@ -3,7 +3,9 @@ Main MCP server integrating wallet auth, context storage, Flashbots, and securit
 """
 
 import logging
+import logging.handlers
 import os
+from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Depends, Request
@@ -20,7 +22,75 @@ from .security.prompt_protection import PromptProtectionManager, PromptAnalysis
 from .tools.data_source_tools import DataSourceManager, DataSourceResponse
 from .tools.analysis_tools import MarketAnalysisTools, DeFiAnalysisTools
 
-logger = logging.getLogger(__name__)
+def setup_logging():
+    """Setup comprehensive logging for MCP server with file persistence"""
+    # Create logs directory
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    
+    # Setup root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    
+    # Clear existing handlers
+    root_logger.handlers.clear()
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_formatter = logging.Formatter(
+        '%(asctime)s [MCP-SERVER] %(levelname)-8s %(name)s - %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    console_handler.setFormatter(console_formatter)
+    root_logger.addHandler(console_handler)
+    
+    # Main log file handler
+    file_handler = logging.handlers.RotatingFileHandler(
+        log_dir / "mcp-server.log",
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    file_formatter = logging.Formatter(
+        '%(asctime)s [MCP-SERVER] %(levelname)-8s %(name)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    file_handler.setFormatter(file_formatter)
+    root_logger.addHandler(file_handler)
+    
+    # Error log file handler
+    error_handler = logging.handlers.RotatingFileHandler(
+        log_dir / "mcp-server-errors.log",
+        maxBytes=5*1024*1024,  # 5MB
+        backupCount=3,
+        encoding='utf-8'
+    )
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(file_formatter)
+    root_logger.addHandler(error_handler)
+    
+    # Access log file handler
+    access_handler = logging.handlers.RotatingFileHandler(
+        log_dir / "mcp-server-access.log",
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    access_formatter = logging.Formatter(
+        '%(asctime)s [ACCESS] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    access_handler.setFormatter(access_formatter)
+    
+    # Create access logger
+    access_logger = logging.getLogger("mcp.access")
+    access_logger.setLevel(logging.INFO)
+    access_logger.addHandler(access_handler)
+    access_logger.propagate = False
+    
+    return logging.getLogger(__name__)
+
+logger = setup_logging()
 
 
 # Request/Response models
@@ -643,25 +713,40 @@ class MCPServer:
     
     async def startup(self):
         """Initialize async components on startup"""
+        logger.info("=" * 60)
+        logger.info("🚀 MCP SERVER STARTING")
+        logger.info(f"📍 Version: 0.1.0")
+        logger.info(f"🕐 Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info("=" * 60)
+        
         try:
             await self.data_source_manager.initialize()
-            logger.info("Data source manager initialized")
+            logger.info("✅ Data source manager initialized")
             
             # Initialize analysis tools
             self.market_analysis = MarketAnalysisTools(self.data_source_manager)
             self.defi_analysis = DeFiAnalysisTools(self.data_source_manager)
-            logger.info("Analysis tools initialized")
+            logger.info("✅ Analysis tools initialized")
+            
+            logger.info("🎯 MCP Server ready for connections")
             
         except Exception as e:
-            logger.error(f"Failed to initialize components: {e}")
+            logger.error(f"❌ Failed to initialize components: {e}")
+            raise
     
     async def shutdown(self):
         """Clean up async components on shutdown"""
+        logger.info("=" * 60)
+        logger.info("🛑 MCP SERVER SHUTTING DOWN")
+        logger.info(f"🕐 Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info("=" * 60)
+        
         try:
             await self.data_source_manager.cleanup()
-            logger.info("Data source manager cleaned up")
+            logger.info("✅ Data source manager cleaned up")
+            logger.info("👋 MCP Server shutdown complete")
         except Exception as e:
-            logger.error(f"Failed to cleanup data source manager: {e}")
+            logger.error(f"❌ Failed to cleanup data source manager: {e}")
     
     def run(self, host: str = "0.0.0.0", port: int = 8000, debug: bool = False):
         """Run the MCP server"""
