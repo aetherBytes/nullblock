@@ -108,11 +108,12 @@ windows:
         - ~/nullblock/scripts/wait-for-lmstudio.sh
 
   - logs:
-      layout: 'tiled'
+      layout: "main-vertical"
+      main-pane-size: 50%
       panes:
+        - ~/nullblock/scripts/unified-logs.sh
         - ~/nullblock/scripts/health-monitor.sh
         -
-        - ~/nullblock/scripts/unified-logs.sh
 
   - workspace:
       layout: even-horizontal
@@ -165,4 +166,3 @@ on_project_stop: |
   brew services stop postgresql@17 2>/dev/null || true
   brew services stop redis 2>/dev/null || true
   pkill -f "ipfs daemon" 2>/dev/null || true
-
