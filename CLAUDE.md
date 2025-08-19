@@ -842,6 +842,44 @@ The platform implements a cyberpunk aesthetic with neon styling, ball lightning 
 - [ ] **Performance Monitoring**: Real-time monitoring of model performance and health
 - [ ] **Community Integration**: Allow users to contribute and share model configurations
 
+## **🏥 Health Monitoring & Service Standards** (August 2025)
+
+### **Standardized Health Check System**
+All Nullblock services implement consistent health monitoring with 5-minute intervals:
+
+**📊 Health Endpoints (All Services)**:
+- `GET /health` - Standardized health check endpoint
+- **MCP Server**: `http://localhost:8001/health` - System components status
+- **Orchestration**: `http://localhost:8002/health` - Workflow engine status  
+- **General Agents**: `http://localhost:9001/health` - Agent service status
+- **Hecate Agent**: `http://localhost:9002/health` - Agent running status & model info
+- **Erebus Server**: `http://localhost:3000/health` - Wallet subsystems status
+
+**🔄 Monitoring Schedule**:
+- **Initial Checks**: 10-second intervals for first 30 seconds (fast startup detection)
+- **Standard Monitoring**: 5-minute intervals for all services (reduced frequency)
+- **Automated Rotation**: Log files with archival for long-term health tracking
+
+**📝 Health Response Format**:
+```json
+{
+  "status": "healthy|unhealthy",
+  "service": "service-name", 
+  "version": "0.1.0",
+  "timestamp": "2025-08-19T05:59:25.724Z",
+  "components": {
+    "component1": "healthy|unhealthy",
+    "component2": "healthy|unhealthy"
+  }
+}
+```
+
+**🎯 Health Monitor Integration**:
+- **Tmux Logs Tab**: 55/45 split (logs/monitoring+commands)
+- **Visual Status**: ✅/❌ indicators for all services
+- **Service Count**: Real-time online/offline tracking
+- **Log Integration**: Health status logged to persistent files
+
 ### **🎨 Visual Design System**
 - **NullEye Animations**: Each NullEye features 8 randomized lightning arcs with varied sizes, orientations, and timing
 - **Silver-Gold Lightning**: Consistent electrical effects using brilliant silver (#e8e8e8) with gold accents (#e6c200)
