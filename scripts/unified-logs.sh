@@ -34,6 +34,11 @@ get_service_color() {
         "FRONTEND") echo "${BLUE}" ;;
         "IPFS") echo "${MAGENTA}" ;;
         "AGENTS") echo "${CYAN}" ;;
+        "LLM-SERVICE") echo "${BRIGHT_YELLOW}" ;;
+        "LLM-FACTORY") echo "${YELLOW}" ;;
+        "LM-STUDIO") echo "${MAGENTA}" ;;
+        "LLM-STREAM") echo "${BRIGHT_MAGENTA}" ;;
+        "LLM-MONITOR") echo "${CYAN}" ;;
         "JUST-CMD") echo "${BRIGHT_YELLOW}" ;;
         "INSTALL") echo "${GRAY}" ;;
         "UPDATE") echo "${GRAY}" ;;
@@ -91,6 +96,24 @@ get_service_name() {
             ;;
         "agents")
             echo "AGENTS"
+            ;;
+        "llm-service")
+            echo "LLM-SERVICE"
+            ;;
+        "llm-factory")
+            echo "LLM-FACTORY"
+            ;;
+        "main")
+            # LM Studio log file
+            echo "LM-STUDIO"
+            ;;
+        "lm-studio-stream")
+            # LM Studio stream capture log
+            echo "LLM-STREAM"
+            ;;
+        "lm-studio-monitor")
+            # LM Studio monitor output log
+            echo "LLM-MONITOR"
             ;;
         "just-commands")
             echo "JUST-CMD"
@@ -197,7 +220,7 @@ print_header() {
     
     # Show service color legend
     echo -e "${WHITE}Service Legend:${NC}"
-    local services=("MCP" "ORCHESTRATION" "EREBUS" "HECATE-AGENT" "HECATE-SERVER" "HECATE-STARTUP" "FRONTEND" "IPFS" "AGENTS" "JUST-CMD" "INSTALL" "UPDATE")
+    local services=("MCP" "ORCHESTRATION" "EREBUS" "HECATE-AGENT" "HECATE-SERVER" "HECATE-STARTUP" "FRONTEND" "IPFS" "AGENTS" "LLM-SERVICE" "LLM-FACTORY" "LM-STUDIO" "LLM-STREAM" "LLM-MONITOR" "JUST-CMD" "INSTALL" "UPDATE")
     for service in "${services[@]}"; do
         local color=$(get_service_color "$service")
         printf "  ${color}● %-14s${NC}" "$service"
@@ -211,6 +234,11 @@ print_header() {
             "FRONTEND") echo " - React Frontend & Vite Dev Server" ;;
             "IPFS") echo " - InterPlanetary File System" ;;
             "AGENTS") echo " - General Agent Services" ;;
+            "LLM-SERVICE") echo " - LLM Service Input/Output Logs" ;;
+            "LLM-FACTORY") echo " - LLM Factory & Model Selection" ;;
+            "LM-STUDIO") echo " - Local LM Studio Server Logs" ;;
+            "LLM-STREAM") echo " - LM Studio Stream Capture (Input)" ;;
+            "LLM-MONITOR") echo " - LM Studio Monitor Output (Input/Output)" ;;
             "JUST-CMD") echo " - Just Command Executions & Tests" ;;
             "INSTALL") echo " - Installation & Setup Logs" ;;
             "UPDATE") echo " - Update & Dependency Logs" ;;
@@ -252,12 +280,20 @@ start_log_monitoring() {
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-server.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-startup.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/agents.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/llm-service.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/llm-factory.log"
         
         # MCP service logs (verified existing files)
         "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server.log"
         
         # Orchestration service logs (verified existing files)
         "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration.log"
+        
+        # LLM Service logs (input/output tracking)
+        "/Users/sage/Library/Logs/LM Studio/main.log"
+        "/Users/sage/nullblock/logs/lm-studio-stream.log"
+        "/Users/sage/nullblock/logs/lm-studio-monitor.log"
     )
     
     # Also dynamically find any dated log files
