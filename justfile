@@ -21,16 +21,19 @@ kill-services:
     @echo "Killing IPFS daemon..."
     -pkill -f "ipfs daemon" 2>/dev/null || true
     @echo "Killing services on development ports..."
-    -lsof -ti:8001 | xargs kill -9 2>/dev/null || true
-    -lsof -ti:8002 | xargs kill -9 2>/dev/null || true
-    -lsof -ti:8003 | xargs kill -9 2>/dev/null || true
-    -lsof -ti:3000 | xargs kill -9 2>/dev/null || true
-    -lsof -ti:5173 | xargs kill -9 2>/dev/null || true
-    -lsof -ti:1234 | xargs kill -9 2>/dev/null || true
+    -lsof -ti:8001 | xargs kill -9 2>/dev/null || true  # MCP Server
+    -lsof -ti:8002 | xargs kill -9 2>/dev/null || true  # Orchestration
+    -lsof -ti:9001 | xargs kill -9 2>/dev/null || true  # General Agents
+    -lsof -ti:9002 | xargs kill -9 2>/dev/null || true  # Hecate Agent
+    -lsof -ti:3000 | xargs kill -9 2>/dev/null || true  # Erebus
+    -lsof -ti:5173 | xargs kill -9 2>/dev/null || true  # Frontend
+    -lsof -ti:1234 | xargs kill -9 2>/dev/null || true  # LM Studio
     @echo "Stopping LM Studio server..."
     -lms server stop 2>/dev/null || true
     @echo "Killing tmuxinator sessions..."
     -tmux kill-session -t nullblock-dev 2>/dev/null || true
+    @echo "Cleaning up PID files..."
+    -rm -f logs/*.pid 2>/dev/null || true
     @echo "✅ All development services killed"
 
 # Restart all services

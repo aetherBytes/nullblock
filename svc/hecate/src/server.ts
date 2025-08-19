@@ -11,6 +11,35 @@ import StateKey from '@constants/state-key';
 import routes from '@routes/index';
 import App from './app';
 
+// Enhanced logging utility
+const log = {
+  info: (message: string, data?: any) => {
+    const timestamp = new Date().toISOString();
+    console.log(`🌐 [${timestamp}] ℹ️  ${message}`, data ? data : '');
+  },
+  success: (message: string, data?: any) => {
+    const timestamp = new Date().toISOString();
+    console.log(`🌐 [${timestamp}] ✅ ${message}`, data ? data : '');
+  },
+  warning: (message: string, data?: any) => {
+    const timestamp = new Date().toISOString();
+    console.log(`🌐 [${timestamp}] ⚠️  ${message}`, data ? data : '');
+  },
+  error: (message: string, data?: any) => {
+    const timestamp = new Date().toISOString();
+    console.log(`🌐 [${timestamp}] ❌ ${message}`, data ? data : '');
+  },
+  request: (method: string, url: string, userAgent?: string) => {
+    const timestamp = new Date().toISOString();
+    console.log(`🌐 [${timestamp}] 📥 ${method} ${url} ${userAgent ? `(${userAgent.substring(0, 50)}...)` : ''}`);
+  },
+  response: (statusCode: number, url: string, duration?: number) => {
+    const timestamp = new Date().toISOString();
+    const emoji = statusCode >= 200 && statusCode < 300 ? '✅' : statusCode >= 400 ? '❌' : '⚠️';
+    console.log(`🌐 [${timestamp}] ${emoji} ${statusCode} ${url} ${duration ? `(${duration}ms)` : ''}`);
+  }
+};
+
 /**
  * Exclude AWS Amplify user agent
  */
@@ -28,9 +57,32 @@ export default entryServer(App, routes, {
      * Once after create server
      */
     onServerCreated: (app) => {
-      enableStaticRendering(true);
+      log.success('🚀 Hecate Server Created Successfully');
+      log.info('📋 Server Configuration:', {
+        abortDelay: 20000,
+        patternsToRemove: Array.from(patternsToRemove),
+        isBotPatterns: list.length
+      });
 
+      enableStaticRendering(true);
       app.use(CookieParser());
+
+      // Add request logging middleware
+      app.use((req, res, next) => {
+        const start = Date.now();
+        const userAgent = req.get('user-agent') || 'Unknown';
+        
+        log.request(req.method, req.url, userAgent);
+        
+        res.on('finish', () => {
+          const duration = Date.now() - start;
+          log.response(res.statusCode, req.url, duration);
+        });
+        
+        next();
+      });
+
+      log.success('🔧 Middleware and Static Rendering Configured');
     },
     /**
      * For each request:
@@ -39,33 +91,53 @@ export default entryServer(App, routes, {
      * 3. Listen stream to add mobx suspense stores to output
      */
     onRequest: async () => {
-      const storeManager = new Manager({
-        options: { shouldDisablePersist: true },
-      });
-      const storeManageStream = new ManagerStream(storeManager);
-      const metaManager = new MetaManager();
+      log.info('🔄 Processing New Request - Initializing Managers');
+      
+      try {
+        const storeManager = new Manager({
+          options: { shouldDisablePersist: true },
+        });
+        const storeManageStream = new ManagerStream(storeManager);
+        const metaManager = new MetaManager();
 
-      await storeManager.init();
+        log.info('📦 Store Manager Created');
+        await storeManager.init();
+        log.success('✅ Store Manager Initialized');
 
-      const streamSuspense = StreamSuspense.create((suspenseId) =>
-        storeManageStream.take(suspenseId),
-      );
+        const streamSuspense = StreamSuspense.create((suspenseId) =>
+          storeManageStream.take(suspenseId),
+        );
+        log.success('🌊 Stream Suspense Created');
 
-      return {
-        appProps: {
-          storeManager,
-          metaManager,
-          streamSuspense,
-        },
-        // disable 103 early hints for AWS ALB
-        hasEarlyHints: false,
-      };
+        log.success('🎯 Request Processing Complete - All Managers Ready');
+        
+        return {
+          appProps: {
+            storeManager,
+            metaManager,
+            streamSuspense,
+          },
+          // disable 103 early hints for AWS ALB
+          hasEarlyHints: false,
+        };
+      } catch (error) {
+        log.error('❌ Failed to Initialize Request Managers', error);
+        throw error;
+      }
     },
     /**
      * We can control stream mode here
      */
     onRouterReady: ({ context: { req } }) => {
-      const isStream = !isBot(req.get('user-agent') || '') && req.cookies?.isCrawler !== '1';
+      const userAgent = req.get('user-agent') || '';
+      const isStream = !isBot(userAgent) && req.cookies?.isCrawler !== '1';
+      
+      log.info('🎯 Router Ready - Determining Stream Mode', {
+        userAgent: userAgent.substring(0, 100),
+        isBot: isBot(userAgent),
+        isCrawler: req.cookies?.isCrawler,
+        isStream
+      });
 
       return {
         isStream,
@@ -80,11 +152,19 @@ export default entryServer(App, routes, {
         html: { header },
       },
     }) => {
-      const newHead = MetaServer.inject(header, metaManager);
-
-      return {
-        header: newHead,
-      };
+      log.info('📄 Shell Ready - Injecting Meta Tags');
+      
+      try {
+        const newHead = MetaServer.inject(header, metaManager);
+        log.success('✅ Meta Tags Injected Successfully');
+        
+        return {
+          header: newHead,
+        };
+      } catch (error) {
+        log.error('❌ Failed to Inject Meta Tags', error);
+        throw error;
+      }
     },
     /**
      * Analyze react stream output and return additional html from callback `onRequest` in StreamSuspense
@@ -97,10 +177,19 @@ export default entryServer(App, routes, {
       html,
     }) => {
       if (!isStream) {
+        log.info('📤 Non-Stream Response - Skipping Stream Analysis');
         return;
       }
 
-      return streamSuspense.analyze(html);
+      log.info('🌊 Analyzing Stream Response');
+      try {
+        const result = streamSuspense.analyze(html);
+        log.success('✅ Stream Analysis Complete');
+        return result;
+      } catch (error) {
+        log.error('❌ Stream Analysis Failed', error);
+        throw error;
+      }
     },
     /**
      * Return server state to client (once when app she'll ready) for:
@@ -112,13 +201,25 @@ export default entryServer(App, routes, {
         appProps: { storeManager, metaManager },
       },
     }) => {
-      const storeState = storeManager.toJSON();
-      const metaState = MetaServer.getState(metaManager);
+      log.info('📦 Preparing Server State for Client');
+      
+      try {
+        const storeState = storeManager.toJSON();
+        const metaState = MetaServer.getState(metaManager);
+        
+        log.success('✅ Server State Prepared', {
+          storeStateKeys: Object.keys(storeState),
+          metaStateKeys: Object.keys(metaState)
+        });
 
-      return {
-        [StateKey.storeManager]: storeState,
-        [StateKey.metaManager]: metaState,
-      };
+        return {
+          [StateKey.storeManager]: storeState,
+          [StateKey.metaManager]: metaState,
+        };
+      } catch (error) {
+        log.error('❌ Failed to Prepare Server State', error);
+        throw error;
+      }
     },
   }),
 });

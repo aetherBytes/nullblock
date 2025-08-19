@@ -118,12 +118,13 @@ kill_existing_services() {
         print_status "Killing IPFS daemon..."
         pkill -f "ipfs daemon" 2>/dev/null || true
         print_status "Killing services on development ports..."
-        lsof -ti:8001 | xargs kill -9 2>/dev/null || true
-        lsof -ti:8002 | xargs kill -9 2>/dev/null || true
-        lsof -ti:8003 | xargs kill -9 2>/dev/null || true
-        lsof -ti:3000 | xargs kill -9 2>/dev/null || true
-        lsof -ti:5173 | xargs kill -9 2>/dev/null || true
-        lsof -ti:1234 | xargs kill -9 2>/dev/null || true
+        lsof -ti:8001 | xargs kill -9 2>/dev/null || true  # MCP Server
+        lsof -ti:8002 | xargs kill -9 2>/dev/null || true  # Orchestration
+        lsof -ti:9001 | xargs kill -9 2>/dev/null || true  # General Agents
+        lsof -ti:9002 | xargs kill -9 2>/dev/null || true  # Hecate Agent
+        lsof -ti:3000 | xargs kill -9 2>/dev/null || true  # Erebus
+        lsof -ti:5173 | xargs kill -9 2>/dev/null || true  # Vite dev server
+        lsof -ti:1234 | xargs kill -9 2>/dev/null || true  # LM Studio
         print_status "Stopping LM Studio server..."
         lms server stop 2>/dev/null || true
         print_status "Killing tmuxinator sessions..."
@@ -151,13 +152,14 @@ launch_dev() {
 
 # Show usage
 show_usage() {
-    echo "Usage: $0 [install|launch|setup|help]"
+    echo "Usage: $0 [install|launch|setup|restart-hecate|help]"
     echo ""
     echo "Commands:"
-    echo "  install  - Install tmuxinator and setup configuration"
-    echo "  launch   - Launch development environment (default)"
-    echo "  setup    - Setup tmuxinator configuration only"
-    echo "  help     - Show this help message"
+    echo "  install        - Install tmuxinator and setup configuration"
+    echo "  launch         - Launch development environment (default)"
+    echo "  setup          - Setup tmuxinator configuration only"
+    echo "  restart-hecate - Restart Hecate agent (useful if LM Studio was started after)"
+    echo "  help           - Show this help message"
     echo ""
     echo "Examples:"
     echo "  $0              # Launch development environment"
@@ -166,10 +168,11 @@ show_usage() {
     echo ""
     echo "After launching, you'll have:"
     echo "  - Infrastructure services (PostgreSQL, Redis, IPFS)"
-    echo "  - Backend services (MCP, Orchestration, Agents)"
-    echo "  - Frontend development (Hecate with hot reload)"
+    echo "  - Backend services (MCP:8001, Orchestration:8002, Erebus:3000)"
+    echo "  - Agent services (General Agents:9001, Hecate Agent:9002)"
+    echo "  - Frontend development (Vite:5173 with hot reload)"
     echo "  - LLM services (LM Studio server and management)"
-    echo "  - Monitoring and health checks"
+    echo "  - Master logs tab (unified log monitoring)"
     echo "  - Development tools and shell"
 }
 
@@ -194,6 +197,10 @@ main() {
             setup_tmuxinator_config
             print_success "Configuration setup complete!"
             ;;
+        "restart-hecate")
+            print_status "Restarting Hecate agent..."
+            ./scripts/restart-hecate.sh
+            ;;
         "help")
             show_usage
             ;;
@@ -207,6 +214,7 @@ main() {
 
 # Run main function
 main "$@"
+
 
 
 

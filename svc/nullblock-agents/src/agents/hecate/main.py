@@ -18,8 +18,9 @@ from datetime import datetime
 from ..llm_service.factory import LLMServiceFactory, LLMRequest, LLMResponse
 from ..llm_service.router import TaskRequirements, OptimizationGoal, Priority
 from ..llm_service.models import ModelCapability
+from ..logging_config import setup_agent_logging, log_agent_startup, log_agent_shutdown, log_model_info, log_request_start, log_request_complete
 
-logger = logging.getLogger(__name__)
+logger = setup_agent_logging("hecate", "INFO", enable_file_logging=True)
 
 @dataclass
 class ConversationMessage:
@@ -102,16 +103,21 @@ class HecateAgent:
             }
         }
         
-        logger.info(f"Hecate Agent initialized with personality: {personality}")
+        log_agent_startup(logger, "hecate", "1.0.0")
+        logger.info(f"🎭 Personality: {personality}")
+        logger.info(f"⚙️ Orchestration: Enabled")
+        logger.info(f"🧠 LLM Integration: Ready")
     
     async def start(self):
         """Start the Hecate agent"""
         self.running = True
-        logger.info("Hecate Agent started")
+        logger.info("🚀 Starting Hecate Agent services...")
         
         # Initialize LLM factory
+        logger.info("🧠 Initializing LLM Service Factory...")
         self.llm_factory = LLMServiceFactory()
         await self.llm_factory.initialize()
+        logger.info("✅ LLM Service Factory ready")
         
         # Add system message to conversation
         personality_config = self.personalities.get(self.personality, self.personalities["helpful_cyberpunk"])
@@ -121,15 +127,23 @@ class HecateAgent:
             timestamp=datetime.now()
         )
         self.conversation_history.append(system_message)
+        logger.info(f"💬 Conversation context initialized with {self.personality} personality")
         
-        logger.info("Hecate Agent ready for conversations")
+        logger.info("🎯 Hecate Agent ready for conversations and orchestration")
+        
+        # Get port from environment variable
+        import os
+        hecate_port = os.getenv('HECATE_PORT', '9002')
+        logger.info(f"📡 Waiting for frontend connections on port {hecate_port}...")
     
     async def stop(self):
         """Stop the Hecate agent"""
         self.running = False
+        logger.info("🛑 Stopping Hecate Agent...")
         if self.llm_factory:
+            logger.info("🧠 Cleaning up LLM Service Factory...")
             await self.llm_factory.cleanup()
-        logger.info("Hecate Agent stopped")
+        log_agent_shutdown(logger, "hecate")
     
     async def chat(self, message: str, user_context: Optional[Dict[str, Any]] = None) -> ChatResponse:
         """
@@ -147,6 +161,11 @@ class HecateAgent:
         
         start_time = asyncio.get_event_loop().time()
         
+        # Log request start
+        user_id = user_context.get('wallet_address', 'anonymous') if user_context else 'anonymous'
+        log_request_start(logger, "chat", f"from {user_id[:8]}..." if len(user_id) > 8 else user_id)
+        logger.debug(f"📝 User message: {message[:100]}{'...' if len(message) > 100 else ''}")
+        
         # Add user message to history
         user_message = ConversationMessage(
             content=message,
@@ -162,10 +181,14 @@ class HecateAgent:
             
             if orchestrated_response:
                 # Use orchestrated response
+                latency_ms = (asyncio.get_event_loop().time() - start_time) * 1000
+                logger.info(f"🎯 Orchestrated response generated")
+                log_request_complete(logger, "chat", latency_ms, True)
+                
                 return ChatResponse(
                     content=orchestrated_response,
                     model_used=f"{self.current_model or 'unknown'} (orchestrated)",
-                    latency_ms=(asyncio.get_event_loop().time() - start_time) * 1000,
+                    latency_ms=latency_ms,
                     confidence_score=0.9,  # High confidence for orchestrated responses
                     metadata={
                         "personality": self.personality,
@@ -199,6 +222,7 @@ class HecateAgent:
             )
             
             # Generate response
+            logger.info(f"🧠 Generating response with {requirements.optimization_goal.value} optimization...")
             llm_response = await self.llm_factory.generate(request, requirements)
             
             # Calculate latency
@@ -207,6 +231,8 @@ class HecateAgent:
             
             # Store current model for display
             self.current_model = llm_response.model_used
+            log_model_info(logger, llm_response.model_used, "LLM Factory", llm_response.cost_estimate)
+            logger.debug(f"💬 Response: {llm_response.content[:100]}{'...' if len(llm_response.content) > 100 else ''}")
             
             # Add assistant response to history
             assistant_message = ConversationMessage(
@@ -228,6 +254,9 @@ class HecateAgent:
             # Calculate confidence based on model performance
             confidence_score = self._calculate_confidence(llm_response)
             
+            log_request_complete(logger, "chat", latency_ms, True)
+            logger.info(f"💯 Confidence: {confidence_score:.2f} | Tokens: {llm_response.usage.get('total_tokens', 'unknown')}")
+            
             return ChatResponse(
                 content=llm_response.content,
                 model_used=llm_response.model_used,
@@ -243,13 +272,15 @@ class HecateAgent:
             )
             
         except Exception as e:
-            logger.error(f"Chat processing failed: {e}")
+            latency_ms = (asyncio.get_event_loop().time() - start_time) * 1000
+            logger.error(f"❌ Chat processing failed: {e}")
+            log_request_complete(logger, "chat", latency_ms, False)
             
             # Return error response
             error_response = ChatResponse(
                 content=f"I encountered an error processing your message. Please try again. Error: {str(e)}",
                 model_used="error",
-                latency_ms=0.0,
+                latency_ms=latency_ms,
                 confidence_score=0.0,
                 metadata={"error": str(e), "personality": self.personality}
             )
@@ -548,10 +579,17 @@ class HecateAgent:
 
 async def main():
     """Main entry point for running the Hecate agent"""
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    # Create logs directory
+    import os
+    os.makedirs("logs", exist_ok=True)
+    
+    # Use standardized logging instead of basicConfig
+    interactive_logger = setup_agent_logging("hecate-interactive", "INFO", enable_file_logging=True)
+    
+    log_agent_startup(interactive_logger, "hecate-interactive", "1.0.0")
+    interactive_logger.info("🎮 Starting Hecate Agent in interactive mode...")
+    interactive_logger.info("💬 Type messages to chat with Hecate")
+    interactive_logger.info("🚪 Type 'quit', 'exit', or 'q' to stop")
     
     agent = HecateAgent()
     
@@ -566,12 +604,14 @@ async def main():
                 break
             
             if user_input.strip():
+                interactive_logger.info(f"👤 User input: {user_input}")
                 response = await agent.chat(user_input)
                 print(f"\nHecate ({response.model_used}): {response.content}")
                 print(f"[Latency: {response.latency_ms:.0f}ms, Confidence: {response.confidence_score:.2f}]")
+                interactive_logger.info(f"🤖 Response delivered: {len(response.content)} chars, {response.latency_ms:.0f}ms")
     
     except KeyboardInterrupt:
-        logger.info("Received interrupt signal")
+        interactive_logger.info("🛑 Received interrupt signal")
     finally:
         await agent.stop()
 

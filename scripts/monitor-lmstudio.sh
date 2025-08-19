@@ -158,3 +158,4 @@ trap 'echo ""; echo "🛑 Monitoring stopped"; exit 0' INT
 
 # Run main function
 main
+

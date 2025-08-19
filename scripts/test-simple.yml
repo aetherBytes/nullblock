@@ -1,0 +1,9 @@
+name: test-simple
+root: ~/nullblock
+
+windows:
+  - test:
+      layout: even-horizontal
+      panes:
+        - echo "Test pane 1"
+        - echo "Test pane 2"

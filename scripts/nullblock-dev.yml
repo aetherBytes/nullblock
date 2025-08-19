@@ -6,17 +6,17 @@ windows:
   - infrastructure:
       layout: even-horizontal
       panes:
-        - 
-          - echo "Starting PostgreSQL..."
-          - brew services start postgresql@17
-          - echo "PostgreSQL started"
-        - 
-          - echo "Starting Redis..."  
-          - brew services start redis
-          - echo "Redis started"
-        - 
-          - echo "Starting IPFS..."
-          - ipfs daemon --enable-gc
+        - |
+          echo "Starting PostgreSQL..."
+          brew services start postgresql@17
+          echo "PostgreSQL started"
+        - |
+          echo "Starting Redis..."  
+          brew services start redis
+          echo "Redis started"
+        - |
+          echo "Starting IPFS..."
+          ipfs daemon --enable-gc
 
   - backend:
       layout: tiled
@@ -25,74 +25,305 @@ windows:
           export $(grep -v '^#' .env.dev | xargs -0)
         fi
       panes:
-        - 
-          - echo "Starting MCP Server..."
-          - cd svc/nullblock-mcp
-          - echo "Installing/updating dependencies with hatch..."
-          - hatch -e default run pip install -e .
-          - export MCP_SERVER_HOST=0.0.0.0
-          - export MCP_SERVER_PORT=8001
-          - hatch run python3 -m mcp
-        - 
-          - echo "Starting Orchestration..."
-          - cd svc/nullblock-orchestration
-          - echo "Installing/updating dependencies with hatch..."
-          - hatch -e default run pip install -e .
-          - export ORCHESTRATION_HOST=0.0.0.0
-          - export ORCHESTRATION_PORT=8002
-          - hatch run python3 -m orchestration
-        - 
-          - echo "Starting Agents..."
-          - cd svc/nullblock-agents
-          - echo "Installing/updating dependencies with hatch..."
-          - hatch -e default run pip install -e .
-          - export AGENTS_HOST=0.0.0.0
-          - export AGENTS_PORT=8003
-          - hatch run python3 -m agents
-        - 
-          - echo "Starting Erebus Server..."
-          - cd svc/erebus
-          - echo "Updating Rust dependencies..."
-          - cargo update
-          - export EREBUS_HOST=127.0.0.1
-          - export EREBUS_PORT=3000
-          - cargo run
+        - |
+          echo "Starting MCP Server..."
+          cd svc/nullblock-mcp
+          echo "Installing/updating dependencies with hatch..."
+          hatch -e default run pip install -e .
+          export MCP_SERVER_HOST=0.0.0.0
+          export MCP_SERVER_PORT=8001
+          hatch run python3 -m mcp
+        - |
+          echo "Starting Orchestration..."
+          cd svc/nullblock-orchestration
+          echo "Installing/updating dependencies with hatch..."
+          hatch -e default run pip install -e .
+          export ORCHESTRATION_HOST=0.0.0.0
+          export ORCHESTRATION_PORT=8002
+          hatch run python3 -m orchestration
+        - |
+          echo "Starting Erebus Server..."
+          cd svc/erebus
+          echo "Updating Rust dependencies..."
+          cargo update
+          export EREBUS_HOST=127.0.0.1
+          export EREBUS_PORT=3000
+          cargo run
+
+  - agents:
+      layout: even-horizontal
+      pre_window: |
+        if [ -f .env.dev ]; then
+          export $(grep -v '^#' .env.dev | xargs -0)
+        fi
+      panes:
+        - |
+          echo "🤖 Starting Nullblock Agents Server..."
+          cd svc/nullblock-agents
+          echo "Installing/updating dependencies with hatch..."
+          hatch -e default run pip install -e .
+          echo "Creating logs directory..."
+          mkdir -p logs
+          export AGENTS_HOST=0.0.0.0
+          export AGENTS_PORT=9001
+          echo "🚀 Starting general agents server on port 9001..."
+          echo "📝 Logs will be written to logs/agents.log"
+          echo "💡 Use 'tail -f logs/agents.log' to monitor logs"
+          hatch run python3 -m agents
+        - |
+          echo "🎯 Starting Hecate Agent Server with Dependencies..."
+          echo "📋 This will wait for LM Studio to be ready before starting Hecate"
+          echo ""
+          exec ~/nullblock/scripts/start-hecate-with-deps.sh
 
   - frontend:
       panes:
-        - 
-          - echo "Starting Frontend..."
-          - cd svc/hecate
-          - echo "Installing/updating npm dependencies..."
-          - npm install
-          - export VITE_MCP_API_URL=http://localhost:8001
-          - export VITE_EREBUS_API_URL=http://localhost:3000
-          - export VITE_ORCHESTRATION_API_URL=http://localhost:8002
-          - export VITE_AGENTS_API_URL=http://localhost:8003
-          - npm run develop
+        - |
+          echo "Starting Frontend..."
+          cd svc/hecate
+          echo "Installing/updating npm dependencies..."
+          npm install
+          export VITE_MCP_API_URL=http://localhost:8001
+          export VITE_EREBUS_API_URL=http://localhost:3000
+          export VITE_ORCHESTRATION_API_URL=http://localhost:8002
+          export VITE_AGENTS_API_URL=http://localhost:9001
+          export VITE_HECATE_API_URL=http://localhost:9002
+          npm run develop
 
   - llm:
       layout: even-horizontal
       panes:
-        - 
-          - ~/nullblock/scripts/start-lmstudio.sh
-        - 
-          - echo "Waiting for LM Studio server to start..."
-          - sleep 10
-          - echo "📊 Starting log monitoring..."
-          - echo "Press Ctrl+C to stop"
-          - echo ""
-          - echo "📊 Monitoring LM Studio server logs..."
-          - while true; do lms log stream 2>/dev/null || echo "⚠️  No recent log files found in LM Studio server logs"; sleep 5; done
-        - 
-          - ~/nullblock/scripts/wait-for-lmstudio.sh
+        - ~/nullblock/scripts/start-lmstudio.sh
+        - |
+          echo "Waiting for LM Studio server to start..."
+          sleep 10
+          echo "📊 Starting log monitoring..."
+          echo "Press Ctrl+C to stop"
+          echo ""
+          echo "📊 Monitoring LM Studio server logs..."
+          while true; do 
+            lms log stream 2>/dev/null || echo "⚠️  No recent log files found in LM Studio server logs"
+            sleep 5
+          done
+        - ~/nullblock/scripts/wait-for-lmstudio.sh
 
+  - logs:
+      layout: even-horizontal
+      panes:
+        - |
+          echo "📊 MASTER LOGS - All Services Combined"
+          echo "🎯 Monitoring all service logs in real-time"
+          echo "💡 Press Ctrl+C to stop monitoring"
+          echo "=" * 80
+          echo ""
+          echo "📋 Available log files:"
+          ls -la logs/ | grep -E "\\.log$" || echo "  No log files found yet"
+          echo ""
+          echo "🔄 Starting unified log stream..."
+          echo "=" * 80
+          tail -f logs/*.log
+                              - |
+                        echo "📈 COMPREHENSIVE HEALTH MONITORING"
+                        echo "🔍 Real-time service status and log analysis"
+                        echo "=" * 80
+                        echo ""
+                        
+                        # Function to check if a service is running
+                        check_service() {
+                          local name="$1"
+                          local port="$2"
+                          local url="$3"
+                          local check_type="$4"
+                          
+                          if [ "$check_type" = "port" ]; then
+                            if lsof -i :$port > /dev/null 2>&1; then
+                              echo "✅"
+                            else
+                              echo "❌"
+                            fi
+                          elif [ "$check_type" = "http" ]; then
+                            if curl -s --max-time 3 "$url" > /dev/null 2>&1; then
+                              echo "✅"
+                            else
+                              echo "❌"
+                            fi
+                          elif [ "$check_type" = "brew" ]; then
+                            if brew services list | grep -q "$name.*started"; then
+                              echo "✅"
+                            else
+                              echo "❌"
+                            fi
+                          else
+                            echo "❓"
+                          fi
+                        }
+                        
+                        # Function to print status table
+                        print_status_table() {
+                          local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+                          echo "🕐 $timestamp - COMPREHENSIVE SERVICE STATUS"
+                          echo "=" * 80
+                          echo ""
+                          printf "%-25s %-15s %-10s %-15s %s\n" "SERVICE" "PORT/CHECK" "STATUS" "RESPONSE TIME" "DETAILS"
+                          printf "%-25s %-15s %-10s %-15s %s\n" "-------" "----------" "------" "-------------" "-------"
+                          
+                          # Infrastructure Services
+                          postgres_status=$(check_service "postgresql@17" "" "" "brew")
+                          printf "%-25s %-15s %-10s %-15s %s\n" "PostgreSQL" "brew service" "$postgres_status" "-" "Database"
+                          
+                          redis_status=$(check_service "redis" "" "" "brew")
+                          printf "%-25s %-15s %-10s %-15s %s\n" "Redis" "brew service" "$redis_status" "-" "Cache"
+                          
+                          # Check if IPFS is running
+                          if pgrep -f "ipfs daemon" > /dev/null; then
+                            ipfs_status="✅"
+                          else
+                            ipfs_status="❌"
+                          fi
+                          printf "%-25s %-15s %-10s %-15s %s\n" "IPFS Daemon" "process" "$ipfs_status" "-" "File System"
+                          
+                          # Backend Services
+                          mcp_status=$(check_service "MCP" "8001" "http://localhost:8001/health" "http")
+                          mcp_time=$(curl -s --max-time 3 -w "%{time_total}" http://localhost:8001/health -o /dev/null 2>/dev/null || echo "N/A")
+                          printf "%-25s %-15s %-10s %-15s %s\n" "MCP Server" "8001" "$mcp_status" "${mcp_time}s" "Protocol Server"
+                          
+                          orch_status=$(check_service "Orchestration" "8002" "http://localhost:8002/health" "http")
+                          orch_time=$(curl -s --max-time 3 -w "%{time_total}" http://localhost:8002/health -o /dev/null 2>/dev/null || echo "N/A")
+                          printf "%-25s %-15s %-10s %-15s %s\n" "Orchestration" "8002" "$orch_status" "${orch_time}s" "Workflow Engine"
+                          
+                          erebus_status=$(check_service "Erebus" "3000" "http://localhost:3000/health" "http")
+                          erebus_time=$(curl -s --max-time 3 -w "%{time_total}" http://localhost:3000/health -o /dev/null 2>/dev/null || echo "N/A")
+                          printf "%-25s %-15s %-10s %-15s %s\n" "Erebus" "3000" "$erebus_status" "${erebus_time}s" "Rust Backend"
+                          
+                          # Agent Services
+                          agents_status=$(check_service "General Agents" "9001" "http://localhost:9001/health" "http")
+                          agents_time=$(curl -s --max-time 3 -w "%{time_total}" http://localhost:9001/health -o /dev/null 2>/dev/null || echo "N/A")
+                          printf "%-25s %-15s %-10s %-15s %s\n" "General Agents" "9001" "$agents_status" "${agents_time}s" "Agent Services"
+                          
+                          hecate_status=$(check_service "Hecate Agent" "9002" "http://localhost:9002/health" "http")
+                          hecate_time=$(curl -s --max-time 3 -w "%{time_total}" http://localhost:9002/health -o /dev/null 2>/dev/null || echo "N/A")
+                          printf "%-25s %-15s %-10s %-15s %s\n" "Hecate Agent" "9002" "$hecate_status" "${hecate_time}s" "Chat Interface"
+                          
+                          # Frontend Services
+                          frontend_status=$(check_service "Frontend" "5173" "http://localhost:5173" "http")
+                          frontend_time=$(curl -s --max-time 3 -w "%{time_total}" http://localhost:5173 -o /dev/null 2>/dev/null || echo "N/A")
+                          printf "%-25s %-15s %-10s %-15s %s\n" "Frontend" "5173" "$frontend_status" "${frontend_time}s" "Vite Dev Server"
+                          
+                          # LM Studio
+                          if lsof -i :1234 > /dev/null 2>&1; then
+                            lm_status="✅"
+                            lm_time="N/A"
+                          else
+                            lm_status="❌"
+                            lm_time="N/A"
+                          fi
+                          printf "%-25s %-15s %-10s %-15s %s\n" "LM Studio" "1234" "$lm_status" "$lm_time" "LLM Server"
+                          
+                          echo ""
+                          echo "=" * 80
+                          
+                          # Count online/offline services
+                          total_services=9
+                          online_services=$(printf "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s" "$postgres_status" "$redis_status" "$ipfs_status" "$mcp_status" "$orch_status" "$erebus_status" "$agents_status" "$hecate_status" "$frontend_status" | grep -c "✅")
+                          offline_services=$((total_services - online_services))
+                          
+                          echo "📊 SUMMARY: $online_services/$total_services services online ($offline_services offline)"
+                          
+                          if [ $offline_services -eq 0 ]; then
+                            echo "🎉 ALL SERVICES ARE ONLINE! 🎉"
+                          else
+                            echo "⚠️  $offline_services service(s) still offline"
+                          fi
+                          
+                          echo ""
+                        }
+                        
+                        # Function to show log statistics
+                        show_log_stats() {
+                          echo "📋 LOG FILE STATISTICS:"
+                          echo "----------------------"
+                          if [ -d logs ]; then
+                            for logfile in logs/*.log; do
+                              if [ -f "$logfile" ]; then
+                                size=$(du -h "$logfile" | cut -f1)
+                                lines=$(wc -l < "$logfile" 2>/dev/null || echo "0")
+                                last_modified=$(stat -f "%Sm" -t "%H:%M:%S" "$logfile" 2>/dev/null || echo "N/A")
+                                echo "  📄 $(basename "$logfile"): $size ($lines lines) - Last: $last_modified"
+                              fi
+                            done
+                          else
+                            echo "  📁 No logs directory found"
+                          fi
+                          echo ""
+                        }
+                        
+                        # Function to show system resources
+                        show_system_resources() {
+                          echo "💻 SYSTEM RESOURCES:"
+                          echo "-------------------"
+                          cpu_usage=$(top -l 1 | grep "CPU usage" | awk '{print $3}' | sed 's/%//')
+                          memory_info=$(vm_stat | grep "Pages free" | awk '{print $3}' | sed 's/\.//')
+                          memory_mb=$((memory_info * 4096 / 1024 / 1024))
+                          disk_usage=$(df -h . | tail -1 | awk '{print $5}')
+                          echo "  🖥️  CPU Usage: ${cpu_usage}%"
+                          echo "  💾 Memory Free: ${memory_mb}MB"
+                          echo "  💿 Disk Usage: $disk_usage"
+                          echo ""
+                        }
+                        
+                        # Initial status check
+                        print_status_table
+                        show_log_stats
+                        show_system_resources
+                        
+                        # Continuous monitoring
+                        check_count=0
+                        while true; do
+                          check_count=$((check_count + 1))
+                          
+                          # Check every 15 seconds until all services are online
+                          if [ $check_count -le 40 ]; then  # 40 checks = 10 minutes
+                            sleep 15
+                            clear
+                            echo "📈 COMPREHENSIVE HEALTH MONITORING"
+                            echo "🔍 Real-time service status and log analysis"
+                            echo "=" * 80
+                            echo ""
+                            print_status_table
+                            show_log_stats
+                            show_system_resources
+                          else
+                            # After 10 minutes, switch to 5-minute intervals
+                            sleep 300  # 5 minutes
+                            clear
+                            echo "📈 COMPREHENSIVE HEALTH MONITORING"
+                            echo "🔍 Real-time service status and log analysis"
+                            echo "=" * 80
+                            echo ""
+                            print_status_table
+                            show_log_stats
+                            show_system_resources
+                          fi
+                        done
 
   - workspace:
       layout: even-horizontal
       panes:
-        - echo "Nullblock Main Repository" && echo "Available commands:" && echo "  just help - Show all commands" && echo "  just dev-tmux - Launch dev environment" && echo "  just start - Start all services" && echo "  just status - Check service status" && cd ~/nullblock
-        - echo "Nullblock SDK Repository" && echo "Available commands:" && echo "  npm run build - Build SDK" && echo "  npm test - Run tests" && echo "  npm run docs - Generate docs" && cd ~/nullblock-sdk
+        - |
+          echo "Nullblock Main Repository"
+          echo "Available commands:"
+          echo "  just help - Show all commands"
+          echo "  just dev-tmux - Launch dev environment"
+          echo "  just start - Start all services"
+          echo "  just status - Check service status"
+          cd ~/nullblock
+        - |
+          echo "Nullblock SDK Repository"
+          echo "Available commands:"
+          echo "  npm run build - Build SDK"
+          echo "  npm test - Run tests"
+          echo "  npm run docs - Generate docs"
+          cd ~/nullblock-sdk
 
 on_project_start: |
   if [ ! -f .env.dev ]; then
@@ -101,7 +332,12 @@ on_project_start: |
     echo "ETHEREUM_RPC_URL=https://eth-sepolia.alchemyapi.io/v2/your-key" >> .env.dev
     echo "Please edit .env.dev with your actual API keys"
   fi
-  echo "Development environment ready!"
+  echo "Creating logs directory for agent services..."
+  mkdir -p logs
+  echo "🚀 Nullblock development environment ready!"
+  echo "🤖 Agents tab: General agents (9001) + Hecate server (9002) with comprehensive logging"
+  echo "🌐 Frontend connects to Hecate agent for chat functionality"
+  echo "💡 Use 'tail -f logs/*.log' to monitor all service logs"
 
 on_project_stop: |
   echo "Stopping development services..."

@@ -41,7 +41,7 @@ class HecateAgentService {
   private baseUrl: string;
   private isConnected: boolean = false;
 
-  constructor(baseUrl: string = 'http://localhost:8001') {
+  constructor(baseUrl: string = import.meta.env.VITE_HECATE_API_URL || 'http://localhost:8001') {
     this.baseUrl = baseUrl;
   }
 
