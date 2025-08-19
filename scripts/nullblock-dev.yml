@@ -101,8 +101,10 @@ windows:
           echo "Press Ctrl+C to stop"
           echo ""
           echo "📊 Monitoring LM Studio server logs..."
+          mkdir -p logs
           while true; do 
-            lms log stream 2>/dev/null || echo "⚠️  No recent log files found in LM Studio server logs"
+            echo "$(date '+%Y-%m-%d %H:%M:%S') [LM-STUDIO-STREAM] Starting log stream capture" | tee -a logs/lm-studio-stream.log
+            lms log stream 2>/dev/null | tee -a logs/lm-studio-stream.log || echo "⚠️  No recent log files found in LM Studio server logs" | tee -a logs/lm-studio-stream.log
             sleep 5
           done
         - ~/nullblock/scripts/wait-for-lmstudio.sh

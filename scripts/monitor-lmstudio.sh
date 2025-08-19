@@ -102,29 +102,34 @@ main() {
     # Create timestamp for monitoring
     touch /tmp/lmstudio_monitor_start
     
-    echo "🚀 Starting LM Studio monitoring..."
-    echo ""
+    # Create logs directory and monitoring output file
+    mkdir -p ~/nullblock/logs
+    local monitor_log="$HOME/nullblock/logs/lm-studio-monitor.log"
+    
+    echo "🚀 Starting LM Studio monitoring..." | tee -a "$monitor_log"
+    echo "📁 Monitor log file: $monitor_log" | tee -a "$monitor_log"
+    echo "" | tee -a "$monitor_log"
     
     # Check LM Studio process
-    check_lmstudio_process
-    echo ""
+    check_lmstudio_process | tee -a "$monitor_log"
+    echo "" | tee -a "$monitor_log"
     
     # Check API status
-    check_api_status
-    echo ""
+    check_api_status | tee -a "$monitor_log"
+    echo "" | tee -a "$monitor_log"
     
     # Check various log directories
-    echo "📁 Checking log directories..."
+    echo "📁 Checking log directories..." | tee -a "$monitor_log"
     
     local log_found=false
     
     # Check common LM Studio log locations
-    check_log_directory "$HOME/.lmstudio/logs" "LM Studio logs" && log_found=true
-    check_log_directory "$HOME/.lmstudio/server-logs" "LM Studio server logs" && log_found=true
-    check_log_directory "$HOME/Library/Application Support/LM Studio/logs" "LM Studio App Support logs" && log_found=true
-    check_log_directory "$HOME/Library/Logs/LM Studio" "LM Studio Library logs" && log_found=true
+    check_log_directory "$HOME/.lmstudio/logs" "LM Studio logs" | tee -a "$monitor_log" && log_found=true
+    check_log_directory "$HOME/.lmstudio/server-logs" "LM Studio server logs" | tee -a "$monitor_log" && log_found=true
+    check_log_directory "$HOME/Library/Application Support/LM Studio/logs" "LM Studio App Support logs" | tee -a "$monitor_log" && log_found=true
+    check_log_directory "$HOME/Library/Logs/LM Studio" "LM Studio Library logs" | tee -a "$monitor_log" && log_found=true
     
-    echo ""
+    echo "" | tee -a "$monitor_log"
     
     if [ "$log_found" = true ]; then
         echo "📊 Starting log monitoring..."

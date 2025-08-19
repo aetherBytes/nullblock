@@ -106,18 +106,33 @@ print_status() {
 show_log_summary() {
     echo -e "${CYAN}📋 Log File Status:${NC}"
     
-    # Updated log file paths to include all services (no duplicates)
+    # Updated log file paths to match actual file locations
     local log_files=(
+        # Main logs directory
         "/Users/sage/nullblock/logs/just-commands.log"
         "/Users/sage/nullblock/logs/frontend.log"
         "/Users/sage/nullblock/logs/ipfs.log"
+        "/Users/sage/nullblock/logs/erebus.log"
+        "/Users/sage/nullblock/logs/erebus-temp.log"
+        "/Users/sage/nullblock/logs/mcp.log"
+        "/Users/sage/nullblock/logs/orchestration.log"
+        
+        # Agent logs (actual paths)
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-server.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-startup.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/agents.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/llm-service.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/llm-factory.log"
+        
+        # Service-specific logs
         "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server.log"
         "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration.log"
-        "/Users/sage/nullblock/svc/erebus/logs/erebus.log"
+        
+        # LLM Service logs (input/output tracking)
+        "/Users/sage/Library/Logs/LM Studio/main.log"
+        "/Users/sage/nullblock/logs/lm-studio-stream.log"
+        "/Users/sage/nullblock/logs/lm-studio-monitor.log"
     )
     
     local active_logs=0
