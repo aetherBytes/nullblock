@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Nullblock Unified Log Stream
 # Real-time monitoring of all service logs with color coding and service identification
@@ -21,21 +21,24 @@ BRIGHT_MAGENTA='\033[1;35m'
 BRIGHT_CYAN='\033[1;36m'
 NC='\033[0m' # No Color
 
-# Service color mapping (cyberpunk-themed)
-declare -A SERVICE_COLORS=(
-    ["MCP"]="${BRIGHT_CYAN}"
-    ["ORCHESTRATION"]="${BRIGHT_MAGENTA}"
-    ["EREBUS"]="${BRIGHT_RED}"
-    ["HECATE-AGENT"]="${BRIGHT_GREEN}"
-    ["HECATE-SERVER"]="${GREEN}"
-    ["HECATE-STARTUP"]="${YELLOW}"
-    ["FRONTEND"]="${BLUE}"
-    ["IPFS"]="${MAGENTA}"
-    ["AGENTS"]="${CYAN}"
-    ["INSTALL"]="${GRAY}"
-    ["UPDATE"]="${GRAY}"
-    ["UNKNOWN"]="${WHITE}"
-)
+# Service color mapping function (cyberpunk-themed)
+get_service_color() {
+    local service="$1"
+    case "$service" in
+        "MCP") echo "${BRIGHT_CYAN}" ;;
+        "ORCHESTRATION") echo "${BRIGHT_MAGENTA}" ;;
+        "EREBUS") echo "${BRIGHT_RED}" ;;
+        "HECATE-AGENT") echo "${BRIGHT_GREEN}" ;;
+        "HECATE-SERVER") echo "${GREEN}" ;;
+        "HECATE-STARTUP") echo "${YELLOW}" ;;
+        "FRONTEND") echo "${BLUE}" ;;
+        "IPFS") echo "${MAGENTA}" ;;
+        "AGENTS") echo "${CYAN}" ;;
+        "INSTALL") echo "${GRAY}" ;;
+        "UPDATE") echo "${GRAY}" ;;
+        *) echo "${WHITE}" ;;
+    esac
+}
 
 # Function to get service name from log file path
 get_service_name() {
@@ -79,11 +82,6 @@ get_service_name() {
     esac
 }
 
-# Function to get color for service
-get_service_color() {
-    local service="$1"
-    echo "${SERVICE_COLORS[$service]:-${SERVICE_COLORS[UNKNOWN]}}"
-}
 
 # Function to format log line with service tag and color
 format_log_line() {
@@ -127,8 +125,9 @@ print_header() {
     
     # Show service color legend
     echo -e "${WHITE}Service Legend:${NC}"
-    for service in "${!SERVICE_COLORS[@]}"; do
-        local color="${SERVICE_COLORS[$service]}"
+    local services=("MCP" "ORCHESTRATION" "EREBUS" "HECATE-AGENT" "HECATE-SERVER" "HECATE-STARTUP" "FRONTEND" "IPFS" "AGENTS" "INSTALL" "UPDATE")
+    for service in "${services[@]}"; do
+        local color=$(get_service_color "$service")
         printf "  ${color}● %-14s${NC}" "$service"
         case "$service" in
             "MCP") echo " - Model Context Protocol Server" ;;
