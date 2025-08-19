@@ -202,6 +202,7 @@ h1, h2, h3, h4, h5, h6 {
     }
   }
   
+  
   .scene {
     .fire {
       position: fixed;
@@ -247,122 +248,6 @@ h1, h2, h3, h4, h5, h6 {
   100% { opacity: 0.6; transform: scale(1.05); }
 }
 
-.socialLinks {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  z-index: 100;
-}
-
-.socialLink {
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: radial-gradient(circle at 50% 50%, rgba($echo-blue, 0.25) 0%, rgba($echo-blue, 0.10) 40%, rgba(0,0,0,0.0) 80%);
-  background-color: transparent;
-  opacity: 0.45;
-  box-shadow: 0 0 15px rgba($echo-blue, 0.3);
-  border-radius: 50%;
-  background-image: url('../../assets/images/X_logo_black.png');
-  background-size: 80%;
-  background-repeat: no-repeat;
-  background-position: center;
-  filter: none;
-  position: relative;
-  padding: 0;
-
-  &::after {
-    content: 'X';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 2.2rem;
-    font-weight: 900;
-    color: #fff;
-    text-shadow: 0 0 15px rgba($echo-blue, 0.8);
-    opacity: 0.9;
-    font-family: Arial, sans-serif;
-    letter-spacing: -2px;
-    line-height: 1;
-    pointer-events: none;
-    z-index: 2;
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url('../../assets/images/X_logo_black.png');
-    background-size: 80%;
-    background-repeat: no-repeat;
-    background-position: center;
-    filter: invert(1) brightness(1.2);
-    opacity: 1;
-    z-index: 1;
-    border-radius: 50%;
-  }
-
-  &:hover {
-    opacity: 1;
-    transform: scale(1.02);
-    box-shadow: 0 0 20px rgba($echo-blue, 0.5);
-    background-color: rgba(0, 0, 0, 0.5);
-    &::after {
-      text-shadow: 0 0 25px rgba($echo-blue, 1);
-    }
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
-}
-
-.nullButton {
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: radial-gradient(circle at 50% 50%, rgba($echo-blue, 0.25) 0%, rgba($echo-blue, 0.10) 40%, rgba(0,0,0,0.0) 80%);
-  background-color: transparent;
-  opacity: 0.45;
-  box-shadow: 0 0 15px rgba($echo-blue, 0.3);
-  border-radius: 50%;
-  background-image: url('../../assets/images/null_logo.png');
-  background-size: 90%;
-  background-repeat: no-repeat;
-  background-position: center;
-  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
-  padding: 0;
-
-  &:hover {
-    opacity: 1;
-    transform: scale(1.02);
-    box-shadow: 0 0 20px rgba($echo-blue, 0.5);
-    background-color: rgba(0, 0, 0, 0.5);
-    filter: drop-shadow(0 0 4px rgba(0, 0, 0, 1));
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
-}
 
 // HUD Active State
 .hudActive {
