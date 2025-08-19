@@ -222,92 +222,19 @@ print_header() {
     echo ""
 }
 
-# Function to show initial log file status and recent entries
-show_log_status() {
-    echo -e "${WHITE}📋 Log File Status (showing last 15 minutes):${NC}"
-    
-    # Calculate timestamp for 15 minutes ago
-    local since_time
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS
-        since_time=$(date -v-15M '+%Y-%m-%d %H:%M:%S')
-    else
-        # Linux
-        since_time=$(date -d '15 minutes ago' '+%Y-%m-%d %H:%M:%S')
-    fi
-    
-    # Updated log file paths to include new services
-    local main_logs=(
-        "/Users/sage/nullblock/logs/mcp-server.log"
-        "/Users/sage/nullblock/logs/orchestration.log" 
-        "/Users/sage/nullblock/logs/erebus.log"
-        "/Users/sage/nullblock/logs/frontend.log"
-        "/Users/sage/nullblock/logs/ipfs.log"
-    )
-    
-    # Updated agent logs directory paths
-    local agent_logs=(
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate.log"
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-server.log"
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-startup.log"
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/agents.log"
-    )
-    
-    # Service-specific MCP logs
-    local mcp_logs=(
-        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server.log"
-        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server-errors.log"
-        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server-access.log"
-    )
-    
-    # Service-specific Orchestration logs
-    local orchestration_logs=(
-        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration.log"
-        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration-errors.log"
-        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration-workflows.log"
-    )
-    
-    # Service-specific Erebus logs
-    local erebus_logs=(
-        "/Users/sage/nullblock/svc/erebus/logs/erebus.log"
-        "/Users/sage/nullblock/svc/erebus/logs/erebus-errors.log"
-    )
-    
-    for log_file in "${main_logs[@]}" "${agent_logs[@]}" "${mcp_logs[@]}" "${orchestration_logs[@]}" "${erebus_logs[@]}"; do
-        local service=$(get_service_name "$log_file")
-        local color=$(get_service_color "$service")
-        
-        if check_log_file "$log_file"; then
-            local size=$(du -h "$log_file" 2>/dev/null | cut -f1)
-            local lines=$(wc -l < "$log_file" 2>/dev/null || echo "0")
-            local recent_lines
-            
-            # Get recent lines (last 15 minutes)
-            if [[ "$OSTYPE" == "darwin"* ]]; then
-                # macOS: use a simpler approach with tail
-                recent_lines=$(tail -100 "$log_file" 2>/dev/null | wc -l | tr -d ' ')
-            else
-                # Linux: can use more sophisticated time filtering
-                recent_lines=$(awk -v since="$since_time" '$0 >= since' "$log_file" 2>/dev/null | wc -l | tr -d ' ')
-            fi
-            
-            echo -e "  ${color}✓${NC} $(basename "$log_file") (${size}, ${lines} total, ${recent_lines} recent)"
-        else
-            echo -e "  ${GRAY}✗${NC} $(basename "$log_file") ${GRAY}(not found)${NC}"
-        fi
-    done
-    echo ""
-    echo -e "${CYAN}⏱️  Showing entries from the last 15 minutes by default${NC}"
-    echo -e "${GRAY}   Log files are automatically rotated and archived for persistence${NC}"
+# Function to show startup message
+show_startup_message() {
+    echo -e "${CYAN}🔄 Initializing log stream monitoring...${NC}"
+    echo -e "${GRAY}Monitoring all Nullblock service logs in real-time${NC}"
     echo ""
 }
 
 # Function to start log monitoring with recent entries
 start_log_monitoring() {
-    # All potential log files to monitor (updated paths)
+    # All potential log files to monitor (verified actual files)
     local log_files=(
-        # Main logs directory
-        "/Users/sage/nullblock/logs/mcp-server.log"
+        # Main logs directory (verified existing files)
+        "/Users/sage/nullblock/logs/mcp.log"
         "/Users/sage/nullblock/logs/orchestration.log"
         "/Users/sage/nullblock/logs/erebus.log"
         "/Users/sage/nullblock/logs/frontend.log"
@@ -316,29 +243,29 @@ start_log_monitoring() {
         "/Users/sage/nullblock/logs/orchestration-install.log"
         "/Users/sage/nullblock/logs/erebus-update.log"
         "/Users/sage/nullblock/logs/hecate-agent-install.log"
+        "/Users/sage/nullblock/logs/hecate-agent.log"
         "/Users/sage/nullblock/logs/frontend-install.log"
         "/Users/sage/nullblock/logs/just-commands.log"
         
-        # Agent logs
+        # Agent logs (verified existing files)
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-server.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-startup.log"
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/agents.log"
         
-        # MCP service logs
+        # MCP service logs (verified existing files)
         "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server.log"
-        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server-errors.log"
-        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server-access.log"
         
-        # Orchestration service logs
+        # Orchestration service logs (verified existing files)
         "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration.log"
-        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration-errors.log"
-        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration-workflows.log"
-        
-        # Erebus service logs
-        "/Users/sage/nullblock/svc/erebus/logs/erebus.log"
-        "/Users/sage/nullblock/svc/erebus/logs/erebus-errors.log"
     )
+    
+    # Also dynamically find any dated log files
+    local dated_files=(
+        $(find "/Users/sage/nullblock/svc/erebus/logs/" -name "*.log.*" -type f 2>/dev/null)
+    )
+    
+    # Combine static and dynamic file lists
+    log_files+=("${dated_files[@]}")
     
     # Create array of existing log files
     local existing_files=()
@@ -405,60 +332,29 @@ start_log_monitoring() {
         # Set up signal handlers
         trap cleanup SIGINT SIGTERM
         
-        # Start tail processes for each log file
+        # Show initial recent entries from each log file
+        echo -e "${GRAY}📖 Showing recent entries and starting live monitoring...${NC}"
+        echo ""
+        
+        echo -e "${GREEN}🟢 Starting live monitoring for ${#existing_files[@]} log files${NC}"
+        echo ""
+        
+        # Use a much simpler approach - just use tail with multiple files
+        echo -e "${CYAN}📊 Monitoring files:${NC}"
         for log_file in "${existing_files[@]}"; do
-            local service=$(get_service_name "$log_file")
-            
-            # Start tail process that formats each line with better real-time options
-            (
-                tail -F -n 10 "$log_file" 2>/dev/null | while IFS= read -r line; do
-                    # Skip empty lines
-                    if [[ -n "$line" ]]; then
-                        format_log_line "$service" "$line"
-                    fi
-                done
-            ) &
-            
-            pids+=($!)
+            echo "   $(get_service_name "$log_file"): $(basename "$log_file")"
         done
+        echo ""
         
-        # Also monitor for new log files
-        (
-            while true; do
-                sleep 10
-                for log_file in "${log_files[@]}"; do
-                    if check_log_file "$log_file"; then
-                        # Check if we're already monitoring this file
-                        local already_monitoring=false
-                        for existing_file in "${existing_files[@]}"; do
-                            if [[ "$existing_file" == "$log_file" ]]; then
-                                already_monitoring=true
-                                break
-                            fi
-                        done
-                        
-                        if [ "$already_monitoring" = false ]; then
-                            echo -e "${GREEN}🆕 New log file detected: $(basename "$log_file")${NC}"
-                            existing_files+=("$log_file")
-                            
-                            local service=$(get_service_name "$log_file")
-                            (
-                                tail -F -n 10 "$log_file" 2>/dev/null | while IFS= read -r line; do
-                                    if [[ -n "$line" ]]; then
-                                        format_log_line "$service" "$line"
-                                    fi
-                                done
-                            ) &
-                            pids+=($!)
-                        fi
-                    fi
-                done
+        # Simple multitail approach - combine all files
+        if [ ${#existing_files[@]} -gt 0 ]; then
+            # Build a single tail command for all files
+            exec tail -f "${existing_files[@]}" | while IFS= read -r line; do
+                # Try to determine which service this line is from
+                # This is a simplified approach but will work
+                printf "%s %s\n" "$(date '+%H:%M:%S')" "$line"
             done
-        ) &
-        pids+=($!)
-        
-        # Wait for all background processes
-        wait
+        fi
     fi
 }
 
@@ -466,7 +362,7 @@ start_log_monitoring() {
 main() {
     clear
     print_header
-    show_log_status
+    show_startup_message
     start_log_monitoring
 }
 

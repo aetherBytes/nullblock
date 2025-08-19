@@ -102,34 +102,51 @@ print_status() {
     echo -e "${BRIGHT_BLUE}└────────────────────────────────────────────────────────────────────┘${NC}"
 }
 
-# Function to show log file summary
+# Function to show detailed log file status
 show_log_summary() {
-    echo -e "${CYAN}📋 Log Summary:${NC}"
+    echo -e "${CYAN}📋 Log File Status:${NC}"
     
-    local log_dirs=(
-        "/Users/sage/nullblock/logs"
-        "/Users/sage/nullblock/svc/nullblock-agents/logs"
+    # Updated log file paths to include all services (no duplicates)
+    local log_files=(
+        "/Users/sage/nullblock/logs/just-commands.log"
+        "/Users/sage/nullblock/logs/frontend.log"
+        "/Users/sage/nullblock/logs/ipfs.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-server.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-startup.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/agents.log"
+        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server.log"
+        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration.log"
+        "/Users/sage/nullblock/svc/erebus/logs/erebus.log"
     )
     
-    local total_logs=0
+    local active_logs=0
     local total_size=0
     
-    for log_dir in "${log_dirs[@]}"; do
-        if [ -d "$log_dir" ]; then
-            local count=$(find "$log_dir" -name "*.log" 2>/dev/null | wc -l | tr -d ' ')
-            total_logs=$((total_logs + count))
+    for log_file in "${log_files[@]}"; do
+        if [ -f "$log_file" ]; then
+            local size_bytes=$(stat -f%z "$log_file" 2>/dev/null || echo "0")
+            local size_human=$(du -h "$log_file" 2>/dev/null | cut -f1)
+            local lines=$(wc -l < "$log_file" 2>/dev/null | tr -d ' ')
             
-            for log_file in "$log_dir"/*.log; do
-                if [ -f "$log_file" ]; then
-                    local size=$(stat -f%z "$log_file" 2>/dev/null || echo "0")
-                    total_size=$((total_size + size))
-                fi
-            done
+            echo -e "  ${GREEN}✓${NC} $(basename "$log_file") (${size_human}, ${lines} lines)"
+            active_logs=$((active_logs + 1))
+            total_size=$((total_size + size_bytes))
+        else
+            echo -e "  ${GRAY}✗${NC} $(basename "$log_file") ${GRAY}(not found)${NC}"
         fi
     done
     
-    local size_mb=$((total_size / 1024 / 1024))
-    echo -e "   ${total_logs} log files, ${size_mb}MB total"
+    # Better size calculation
+    local size_display
+    if [ $total_size -gt 1048576 ]; then
+        size_display="$((total_size / 1024 / 1024))MB"
+    elif [ $total_size -gt 1024 ]; then
+        size_display="$((total_size / 1024))KB"
+    else
+        size_display="${total_size}B"
+    fi
+    echo -e "${CYAN}📊 Summary: ${active_logs}/${#log_files[@]} active, ${size_display} total${NC}"
     echo ""
 }
 
