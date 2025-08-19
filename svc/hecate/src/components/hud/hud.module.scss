@@ -9,7 +9,7 @@ $echo-red: #ff3333;
 $echo-orange: #ff7f00;
 $echo-green: #00ff9d;
 $echo-gray: #808080;
-$lightning-gold: #e6c200;
+$lightning-blue: #00d4ff;
 $lightning-silver: #e8e8e8;
 $text-color: #c8c8d0;
 
@@ -2746,7 +2746,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   border-bottom: 1px solid rgba(255, 165, 0, 0.3);
 
   h3 {
-    color: #ffa500;
+    color: $echo-blue;
     margin: 0;
     font-size: 1.5rem;
     text-transform: uppercase;
@@ -2763,7 +2763,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   text-align: center;
 
   p {
-    color: #ffa500;
+    color: $echo-blue;
     margin: 0;
     font-size: 0.9rem;
     font-style: italic;
@@ -2800,7 +2800,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   border-bottom: 1px solid rgba(255, 165, 0, 0.2);
 
   .rank {
-    color: #ffa500;
+    color: $echo-blue;
     font-size: 1.2rem;
     font-weight: bold;
   }
@@ -2835,7 +2835,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .closeButton {
   background: none;
   border: none;
-  color: #ffa500;
+  color: $echo-blue;
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0 10px;
@@ -2954,7 +2954,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   position: relative;
 
   & > span, & {
-    background: linear-gradient(90deg, #23242a 0%, #f8fafd 50%, #23242a 100%);
+    background: linear-gradient(90deg, #23242a 0%, #e6f3ff 50%, #23242a 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -3973,7 +3973,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
 .lightningArc {
   position: absolute;
-  background: linear-gradient(to right, transparent, rgba($lightning-silver, 0.9), rgba($lightning-gold, 0.6), transparent);
+  background: linear-gradient(to right, transparent, rgba($lightning-silver, 0.9), rgba($lightning-blue, 0.6), transparent);
   border-radius: 1px;
   opacity: 0;
   animation: lightningFlash 1.5s ease-in-out infinite;
@@ -4057,7 +4057,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: radial-gradient(circle, transparent 60%, rgba($lightning-silver, 0.25) 70%, rgba($lightning-gold, 0.1) 80%, transparent 90%);
+  background: radial-gradient(circle, transparent 60%, rgba($lightning-silver, 0.25) 70%, rgba($lightning-blue, 0.1) 80%, transparent 90%);
   animation: staticCrackle 0.8s ease-in-out infinite;
   opacity: 0.8;
   box-shadow: 0 0 12px rgba($lightning-silver, 0.4);
@@ -4578,26 +4578,129 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
 }
 
-// Light theme adjustments
-.echoContainer.theme-light {
-  .walletMenuButton, .docsMenuButton {
-    color: rgba(#333333, 0.85);
+// Light theme adjustments - Using correct theme selector that matches component usage
+.echoContainer.light {
+  // Main menu buttons - clean style using exact same colors as other menu buttons
+  .navbarButtons .walletMenuButton, 
+  .navbarButtons .docsMenuButton {
+    color: $echo-blue !important;
+    background: none !important;
+    border: none !important;
+    text-shadow: 0 0 8px rgba($echo-blue, 0.6) !important;
     
     &:hover {
-      color: rgba(#333333, 1);
-      text-shadow: 0 0 8px rgba(42, 74, 106, 0.4);
+      color: $echo-blue !important;
+      text-shadow: 0 0 12px rgba($echo-blue, 0.5) !important;
+      transform: translateY(-1px) !important;
     }
     
     &::after {
-      background: linear-gradient(90deg, rgba(42, 74, 106, 0.6), rgba(42, 74, 106, 0.3));
+      background: linear-gradient(90deg, $echo-blue, rgba($echo-blue, 0.5)) !important;
     }
   }
   
-  .walletMenuButton.connected {
-    color: rgba(34, 150, 94, 0.9);
+  // Target the text spans specifically
+  .navbarButtons .walletMenuButton .walletMenuText, 
+  .navbarButtons .docsMenuButton .docsMenuText {
+    color: $echo-blue !important;
+    text-shadow: 0 0 8px rgba($echo-blue, 0.6) !important;
+  }
+  
+  // Connected wallet button state
+  .navbarButtons .walletMenuButton.connected {
+    color: rgba(34, 150, 94, 0.95) !important;
+    background: none !important;
+    border: none !important;
+    text-shadow: 0 0 8px rgba(34, 150, 94, 0.6) !important;
     
     &:hover {
-      color: rgba(34, 150, 94, 1);
+      color: rgba(34, 150, 94, 1) !important;
+      text-shadow: 0 0 12px rgba(34, 150, 94, 0.8) !important;
+    }
+    
+    .walletMenuText {
+      color: rgba(34, 150, 94, 0.95) !important;
+      text-shadow: 0 0 8px rgba(34, 150, 94, 0.6) !important;
+    }
+  }
+
+  // Navigation buttons visibility improvements
+  .nullLogoButton, .socialButton, .themeButton, .walletButton, .docsButton {
+    background: rgba(42, 74, 106, 0.1) !important;
+    border: 1px solid rgba(42, 74, 106, 0.2);
+    box-shadow: 0 2px 8px rgba(42, 74, 106, 0.15);
+    
+    &:hover {
+      background: rgba(42, 74, 106, 0.2) !important;
+      border-color: rgba(42, 74, 106, 0.4);
+      box-shadow: 0 4px 12px rgba(42, 74, 106, 0.25);
+    }
+  }
+
+  // Icon and text contrast improvements
+  .themeIcon, .walletIcon, .docsIcon {
+    color: $light-accent !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  }
+
+  .socialButton::after {
+    color: $light-accent !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  // Menu text improvements
+  .screenLabel, .nullblockTitle {
+    color: rgba($light-text, 0.9) !important;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  }
+
+  // Tab and content visibility improvements
+  .tab {
+    background: rgba(42, 74, 106, 0.1);
+    border: 1px solid rgba(42, 74, 106, 0.2);
+    color: $light-accent;
+    
+    &.active {
+      background: rgba(42, 74, 106, 0.2);
+      border-color: rgba(42, 74, 106, 0.4);
+      color: $light-text;
+    }
+  }
+
+  // Settings and form elements
+  .settingsCard {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(42, 74, 106, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .themeControlBtn, .socialLinkBtn {
+    background: rgba(42, 74, 106, 0.1);
+    border-color: rgba(42, 74, 106, 0.3);
+    color: $light-text;
+    
+    &:hover {
+      background: rgba(42, 74, 106, 0.2);
+      border-color: rgba(42, 74, 106, 0.5);
+    }
+
+    &.active {
+      background: rgba(42, 74, 106, 0.25);
+      border-color: rgba(42, 74, 106, 0.6);
+      color: $light-accent;
+    }
+  }
+
+  // Lens/scope items visibility
+  .lensItem, .scopeItem {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(42, 74, 106, 0.2);
+    color: $light-text;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(42, 74, 106, 0.4);
     }
   }
 }
@@ -4679,12 +4782,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         45deg,
         transparent 0%,
         $lightning-silver 20%,
-        $lightning-gold  50%,
+        $lightning-blue  50%,
         $lightning-silver 80%,
         transparent 100%
       );
       box-shadow: 
-        0 0 4px rgba($lightning-gold, 0.8),
+        0 0 4px rgba($lightning-blue, 0.8),
         0 0 8px rgba($lightning-silver, 0.4);
       animation: lightningFlicker 2s ease-in-out infinite;
     }
@@ -4986,7 +5089,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   
   .progressFill {
     height: 100%;
-    background: linear-gradient(90deg, $echo-blue, $lightning-gold);
+    background: linear-gradient(90deg, $echo-blue, $lightning-blue);
     border-radius: 3px;
     transition: width 0.3s ease;
   }
@@ -5164,7 +5267,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     font-size: 0.8rem;
     
     &:hover {
-      color: $lightning-gold;
+      color: $lightning-blue;
     }
   }
   
@@ -5363,11 +5466,11 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       0 0 20px rgba($echo-green, 0.4);
   }
   .lightningArc {
-    background: linear-gradient(180deg, transparent, rgba($lightning-gold, 0.9), rgba($lightning-silver, 0.8), transparent);
+    background: linear-gradient(180deg, transparent, rgba($lightning-blue, 0.9), rgba($lightning-silver, 0.8), transparent);
     animation-duration: 1.2s;
   }
   .staticField {
-    background: radial-gradient(circle, transparent 60%, rgba($lightning-gold, 0.2) 70%, rgba($lightning-silver, 0.1) 80%, transparent 90%);
+    background: radial-gradient(circle, transparent 60%, rgba($lightning-blue, 0.2) 70%, rgba($lightning-silver, 0.1) 80%, transparent 90%);
     animation-duration: 0.6s;
   }
 }
@@ -5388,11 +5491,11 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       0 0 20px rgba($echo-purple, 0.4);
   }
   .lightningArc {
-    background: linear-gradient(180deg, transparent, rgba($lightning-gold, 0.9), rgba($lightning-silver, 0.8), transparent);
+    background: linear-gradient(180deg, transparent, rgba($lightning-blue, 0.9), rgba($lightning-silver, 0.8), transparent);
     animation-duration: 2s;
   }
   .staticField {
-    background: radial-gradient(circle, transparent 60%, rgba($lightning-gold, 0.2) 70%, rgba($lightning-silver, 0.1) 80%, transparent 90%);
+    background: radial-gradient(circle, transparent 60%, rgba($lightning-blue, 0.2) 70%, rgba($lightning-silver, 0.1) 80%, transparent 90%);
     animation-duration: 1.2s;
   }
 }
@@ -5973,7 +6076,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   position: absolute;
   width: 1px;
   height: 8px;
-  background: linear-gradient(180deg, transparent, rgba($lightning-gold, 0.8), transparent);
+  background: linear-gradient(180deg, transparent, rgba($lightning-blue, 0.8), transparent);
   animation: lightningSparkChat 2.5s ease-in-out infinite;
   opacity: 0.7;
 }
@@ -6138,7 +6241,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 
   .useTemplate {
-    background: linear-gradient(135deg, $lightning-silver, $lightning-gold);
+    background: linear-gradient(135deg, $lightning-silver, $lightning-blue);
     border: none;
     border-radius: 6px;
     padding: 0.6rem 1rem;
@@ -6241,7 +6344,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
 .chartBar {
   flex: 1;
-  background: linear-gradient(to top, $lightning-silver, $lightning-gold);
+  background: linear-gradient(to top, $lightning-silver, $lightning-blue);
   border-radius: 4px 4px 0 0;
   min-width: 40px;
   transition: all 0.3s ease;
@@ -6260,8 +6363,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   border-top: 1px solid $border-color;
 
   .vizBtn {
-    background: rgba($lightning-gold, 0.2);
-    border: 1px solid rgba($lightning-gold, 0.3);
+    background: rgba($lightning-blue, 0.2);
+    border: 1px solid rgba($lightning-blue, 0.3);
     border-radius: 6px;
     padding: 0.5rem 1rem;
     color: $text-primary;
@@ -6270,8 +6373,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
 
     &:hover {
-      background: rgba($lightning-gold, 0.3);
-      border-color: rgba($lightning-gold, 0.5);
+      background: rgba($lightning-blue, 0.3);
+      border-color: rgba($lightning-blue, 0.5);
     }
   }
 }
@@ -6304,8 +6407,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     gap: 0.5rem;
 
     .editorBtn {
-      background: rgba($lightning-gold, 0.2);
-      border: 1px solid rgba($lightning-gold, 0.3);
+      background: rgba($lightning-blue, 0.2);
+      border: 1px solid rgba($lightning-blue, 0.3);
       border-radius: 4px;
       padding: 0.25rem 0.75rem;
       color: $text-primary;
@@ -6314,8 +6417,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       transition: all 0.3s ease;
 
       &:hover {
-        background: rgba($lightning-gold, 0.3);
-        border-color: rgba($lightning-gold, 0.5);
+        background: rgba($lightning-blue, 0.3);
+        border-color: rgba($lightning-blue, 0.5);
       }
     }
   }
@@ -6347,7 +6450,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   h6 {
     margin: 0 0 0.5rem 0;
     font-size: 0.9rem;
-    color: $lightning-gold;
+    color: $lightning-blue;
   }
 
   .outputContent {
@@ -6403,7 +6506,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   .analyticsValue {
     font-size: 1.5rem;
     font-weight: 700;
-    color: $lightning-gold;
+    color: $lightning-blue;
   }
 }
 
@@ -6458,8 +6561,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     font-weight: 600;
     padding: 0.25rem 0.75rem;
     border-radius: 12px;
-    background: rgba($lightning-gold, 0.2);
-    color: $lightning-gold;
+    background: rgba($lightning-blue, 0.2);
+    color: $lightning-blue;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -6575,8 +6678,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     font-weight: 600;
     padding: 0.25rem 0.75rem;
     border-radius: 12px;
-    background: rgba($lightning-gold, 0.2);
-    color: $lightning-gold;
+    background: rgba($lightning-blue, 0.2);
+    color: $lightning-blue;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -6649,9 +6752,9 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       }
 
       &.active {
-        background: rgba($lightning-gold, 0.3);
-        border-color: rgba($lightning-gold, 0.5);
-        color: $lightning-gold;
+        background: rgba($lightning-blue, 0.3);
+        border-color: rgba($lightning-blue, 0.5);
+        color: $lightning-blue;
       }
     }
   }
@@ -6687,8 +6790,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 
   .docsBtn {
-    background: rgba($lightning-gold, 0.2);
-    border: 1px solid rgba($lightning-gold, 0.3);
+    background: rgba($lightning-blue, 0.2);
+    border: 1px solid rgba($lightning-blue, 0.3);
     border-radius: 6px;
     padding: 0.75rem 1rem;
     color: $text-primary;
@@ -6699,8 +6802,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
 
     &:hover {
-      background: rgba($lightning-gold, 0.3);
-      border-color: rgba($lightning-gold, 0.5);
+      background: rgba($lightning-blue, 0.3);
+      border-color: rgba($lightning-blue, 0.5);
       transform: translateY(-1px);
     }
   }
@@ -6740,7 +6843,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 
   .comingSoonBtn {
-    background: linear-gradient(135deg, $lightning-silver, $lightning-gold);
+    background: linear-gradient(135deg, $lightning-silver, $lightning-blue);
     border: none;
     border-radius: 6px;
     padding: 0.75rem 1.5rem;
@@ -6899,7 +7002,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     h4 {
       margin: 0 0 1rem 0;
       font-size: 1.2rem;
-      color: $lightning-gold;
+      color: $lightning-blue;
       text-align: center;
       font-weight: 600;
     }
