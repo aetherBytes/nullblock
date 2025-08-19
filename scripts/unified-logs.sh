@@ -280,9 +280,7 @@ start_log_monitoring() {
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-server.log"
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-startup.log"
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/agents.log"
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/llm-service.log"
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/llm-factory.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/agents.log"
         
         # MCP service logs (verified existing files)
         "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server.log"
