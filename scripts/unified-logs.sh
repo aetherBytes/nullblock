@@ -34,6 +34,7 @@ get_service_color() {
         "FRONTEND") echo "${BLUE}" ;;
         "IPFS") echo "${MAGENTA}" ;;
         "AGENTS") echo "${CYAN}" ;;
+        "JUST-CMD") echo "${BRIGHT_YELLOW}" ;;
         "INSTALL") echo "${GRAY}" ;;
         "UPDATE") echo "${GRAY}" ;;
         *) echo "${WHITE}" ;;
@@ -91,12 +92,59 @@ get_service_name() {
         "agents")
             echo "AGENTS"
             ;;
+        "just-commands")
+            echo "JUST-CMD"
+            ;;
         *)
             echo "UNKNOWN"
             ;;
     esac
 }
 
+
+# Function to filter out noisy log lines
+should_filter_line() {
+    local line="$1"
+    
+    # Filter out excessive health check logs
+    if [[ "$line" =~ "Health check requested" ]] || \
+       [[ "$line" =~ "Health check successful" ]] || \
+       [[ "$line" =~ "GET /health" ]] || \
+       [[ "$line" =~ "📥 GET /health" ]] || \
+       [[ "$line" =~ "📤 GET /health" ]] || \
+       [[ "$line" =~ "🏥 Health check" ]]; then
+        return 0  # Filter out (return true)
+    fi
+    
+    # Filter out pip upgrade notices (too frequent)
+    if [[ "$line" =~ "A new release of pip is available" ]] || \
+       [[ "$line" =~ "To update, run: pip install --upgrade pip" ]]; then
+        return 0  # Filter out
+    fi
+    
+    # Filter out npm audit suggestions (not critical)
+    if [[ "$line" =~ "npm audit fix" ]] || \
+       [[ "$line" =~ "Run \`npm audit\` for details" ]]; then
+        return 0  # Filter out
+    fi
+    
+    return 1  # Don't filter (return false)
+}
+
+# Function to detect and format JSON in log lines
+format_json_if_present() {
+    local line="$1"
+    
+    # Try to detect JSON patterns (starts with { or [, ends with } or ])
+    if [[ "$line" =~ ^\s*[\[{] ]] && [[ "$line" =~ [\]}]\s*$ ]]; then
+        # Try to format as JSON, fall back to original if it fails
+        echo "$line" | jq '.' 2>/dev/null && return 0
+    fi
+    
+    # Not JSON or failed to parse, return original
+    echo "$line"
+    return 1
+}
 
 # Function to format log line with service tag and color
 format_log_line() {
@@ -105,16 +153,25 @@ format_log_line() {
     local color=$(get_service_color "$service")
     local timestamp=$(date '+%H:%M:%S')
     
+    # Skip noisy lines
+    if should_filter_line "$line"; then
+        return
+    fi
+    
+    # Try to format JSON in the line
+    local formatted_line
+    formatted_line=$(format_json_if_present "$line")
+    
     # Extract timestamp from log line if it exists
     if [[ "$line" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]+[0-9]{2}:[0-9]{2}:[0-9]{2} ]]; then
         # Line already has timestamp, use it
-        printf "${color}[%-14s]${NC} %s\n" "$service" "$line"
+        printf "${color}[%-14s]${NC} %s\n" "$service" "$formatted_line"
     elif [[ "$line" =~ ^\[[0-9]{2}:[0-9]{2}:[0-9]{2}\] ]]; then
         # Line has short timestamp
-        printf "${color}[%-14s]${NC} %s\n" "$service" "$line"
+        printf "${color}[%-14s]${NC} %s\n" "$service" "$formatted_line"
     else
         # No timestamp in line, add our own
-        printf "${color}[%-14s]${NC} ${GRAY}${timestamp}${NC} %s\n" "$service" "$line"
+        printf "${color}[%-14s]${NC} ${GRAY}${timestamp}${NC} %s\n" "$service" "$formatted_line"
     fi
 }
 
@@ -140,7 +197,7 @@ print_header() {
     
     # Show service color legend
     echo -e "${WHITE}Service Legend:${NC}"
-    local services=("MCP" "ORCHESTRATION" "EREBUS" "HECATE-AGENT" "HECATE-SERVER" "HECATE-STARTUP" "FRONTEND" "IPFS" "AGENTS" "INSTALL" "UPDATE")
+    local services=("MCP" "ORCHESTRATION" "EREBUS" "HECATE-AGENT" "HECATE-SERVER" "HECATE-STARTUP" "FRONTEND" "IPFS" "AGENTS" "JUST-CMD" "INSTALL" "UPDATE")
     for service in "${services[@]}"; do
         local color=$(get_service_color "$service")
         printf "  ${color}● %-14s${NC}" "$service"
@@ -154,6 +211,7 @@ print_header() {
             "FRONTEND") echo " - React Frontend & Vite Dev Server" ;;
             "IPFS") echo " - InterPlanetary File System" ;;
             "AGENTS") echo " - General Agent Services" ;;
+            "JUST-CMD") echo " - Just Command Executions & Tests" ;;
             "INSTALL") echo " - Installation & Setup Logs" ;;
             "UPDATE") echo " - Update & Dependency Logs" ;;
             *) echo "" ;;
@@ -259,6 +317,7 @@ start_log_monitoring() {
         "/Users/sage/nullblock/logs/erebus-update.log"
         "/Users/sage/nullblock/logs/hecate-agent-install.log"
         "/Users/sage/nullblock/logs/frontend-install.log"
+        "/Users/sage/nullblock/logs/just-commands.log"
         
         # Agent logs
         "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate.log"
@@ -350,10 +409,13 @@ start_log_monitoring() {
         for log_file in "${existing_files[@]}"; do
             local service=$(get_service_name "$log_file")
             
-            # Start tail process that formats each line
+            # Start tail process that formats each line with better real-time options
             (
-                tail -f "$log_file" 2>/dev/null | while IFS= read -r line; do
-                    format_log_line "$service" "$line"
+                tail -F -n 10 "$log_file" 2>/dev/null | while IFS= read -r line; do
+                    # Skip empty lines
+                    if [[ -n "$line" ]]; then
+                        format_log_line "$service" "$line"
+                    fi
                 done
             ) &
             
@@ -381,8 +443,10 @@ start_log_monitoring() {
                             
                             local service=$(get_service_name "$log_file")
                             (
-                                tail -f "$log_file" 2>/dev/null | while IFS= read -r line; do
-                                    format_log_line "$service" "$line"
+                                tail -F -n 10 "$log_file" 2>/dev/null | while IFS= read -r line; do
+                                    if [[ -n "$line" ]]; then
+                                        format_log_line "$service" "$line"
+                                    fi
                                 done
                             ) &
                             pids+=($!)
