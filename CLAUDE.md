@@ -63,6 +63,15 @@ The platform consists of four core components in a monorepo structure:
 
 ### **🤖 Hecate Agent - Primary Interface & Orchestrator** (August 2025)
 
+🆕 **Standardized Agent Logging System**: Consistent logging across all Nullblock agents
+- **Colored Console Output**: Cyberpunk-themed console logs with agent-specific colors
+- **File Logging**: Automatic log file generation in `logs/` directory
+- **Log Levels**: DEBUG, INFO, WARNING, ERROR, CRITICAL with visual indicators
+- **Request Tracking**: Start/complete logging for all agent requests
+- **Model Information**: LLM usage tracking with cost estimates
+- **Health Monitoring**: Agent status and performance metrics
+- **Tmux Integration**: Real-time log monitoring in development environment
+
 🆕 **Production-Ready Chat Interface**: Complete frontend integration with real-time model display
 - **Frontend Integration**: Full React component integration with Hecate agent backend
 - **Model Awareness**: Real-time display of current LLM model in chat interface
@@ -85,6 +94,8 @@ The platform consists of four core components in a monorepo structure:
 - **Frontend Chat**: React component with real-time model display
 - **CSS Styling**: Cyberpunk-themed UI with connection status indicators
 - **Visual Feedback**: NullEye avatars change to red "idle" theme when agent is offline
+- **🆕 Standardized Logging**: Colored console output with file logging for all agents
+- **🆕 Tmux Integration**: Dedicated agents tab with real-time log monitoring
 - **Documentation**: Comprehensive setup and integration instructions
 
 ### **🎬 Demo & Testing Infrastructure**
@@ -472,13 +483,33 @@ pip install -e .
 python -m agents.hecate.server  # HTTP API server for frontend integration (Port 8001)
 python -m agents.hecate.main    # Interactive CLI mode
 
-# Hecate agent setup
+# 🤖 Complete agent development environment (via tmux):
+./scripts/dev-tmux  # Includes new "agents" tab with:
+# - General agents server (port 8003)
+# - Hecate agent server (port 8001) 
+# - Real-time log monitoring for all agents
+# - Standardized logging with cyberpunk color themes
+
+# 📊 Agent Log System:
+# Console: Colored output with agent-specific themes
+# Files: logs/hecate.log, logs/hecate-server.log, logs/hecate-startup.log
+# Format: [timestamp] [AGENT] LEVEL message with emojis and colors
+# Monitoring: Real-time log viewer in tmux agents tab
+
+# Manual Hecate agent setup:
 # 1. Start Hecate agent server for frontend chat integration
 cd svc/nullblock-agents && python -m agents.hecate.server
 
 # 2. Frontend will connect automatically on localhost:8001
 # 3. Model selection handled by LLM Service Factory
 # 4. Orchestration features demonstrate multi-agent coordination
+# 5. Logs written to logs/hecate.log and logs/hecate-server.log
+
+# 🔍 Reading Agent Logs:
+# View real-time logs: tail -f logs/hecate-server.log
+# Check startup logs: cat logs/hecate-startup.log  
+# Monitor all agents: ./scripts/dev-tmux (agents tab, pane 3)
+# Test logging: python test_hecate_logging.py
 
 # Run specialized agents
 python -m agents.arbitrage.price_agent
