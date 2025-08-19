@@ -13,6 +13,11 @@ $lightning-gold: #e6c200;
 $lightning-silver: #e8e8e8;
 $text-color: #c8c8d0;
 
+// Additional text and border variables
+$text-primary: #ffffff;
+$text-secondary: #c8c8d0;
+$border-color: rgba(255, 255, 255, 0.1);
+
 // Theme Variables
 $null-bg: rgba(0, 0, 0, 0.9);
 $null-border: $echo-blue;
@@ -3641,25 +3646,19 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
 // Home screen content styles
 .homeContent {
-  padding: 2rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  text-align: center;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
 }
 
 .landingContent {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   height: 100%;
-  text-align: center;
-  padding: 2rem;
-  max-width: 600px;
-  margin: 0 auto;
+  width: 100%;
+  overflow: hidden;
 
   h3 {
     font-size: 2.5rem;
@@ -4607,6 +4606,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .innerHudMenuBar {
   display: flex;
   align-items: center;
+  gap: 2rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid rgba($echo-blue, 0.2);
   background: rgba($background-dark, 0.1);
@@ -4622,8 +4622,9 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     letter-spacing: 1px;
     cursor: pointer;
     transition: all 0.3s ease;
-    padding: 0;
+    padding: 0.5rem 0;
     position: relative;
+    white-space: nowrap;
     text-shadow: 
       0 0 6px rgba($lightning-silver, 0.7),
       0 0 12px rgba($lightning-silver, 0.4),
@@ -4644,11 +4645,32 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         0 0 12px rgba($echo-blue, 0.6);
     }
     
+    // Active state styling
+    &.active {
+      color: $echo-blue;
+      text-shadow: 
+        0 0 8px rgba($echo-blue, 0.9),
+        0 0 16px rgba($echo-blue, 0.6),
+        0 0 24px rgba($echo-blue, 0.4);
+    }
+    
+    // Fade in animation for login buttons
+    &.fadeIn {
+      animation: fadeInButton 0.8s ease-out forwards;
+      opacity: 0;
+      
+      @for $i from 1 through 5 {
+        &:nth-child(#{$i + 1}) {
+          animation-delay: #{$i * 0.2}s;
+        }
+      }
+    }
+    
     // Lightning divider after each button (except last)
     &:not(:last-child)::after {
       content: '';
       position: absolute;
-      right: -0.75rem;
+      right: -1rem;
       top: 50%;
       transform: translateY(-50%);
       width: 1px;
@@ -4688,6 +4710,1316 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+@keyframes fadeInButton {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Avatar animations
+@keyframes pulseRingAvatar {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+}
+
+@keyframes dataFlowAvatar {
+  0% {
+    opacity: 0.3;
+    transform: scaleX(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scaleX(0.5);
+  }
+}
+
+@keyframes coreNodeAvatar {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+// Main HUD Tab Content Styles
+.mainHudContent {
+  padding: 0;
+  color: $text-color;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.3);
+    border-radius: 2px;
+  }
+  
+  h3 {
+    color: $echo-blue;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 1.5rem;
+    text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+  }
+  
+  .placeholder {
+    text-align: center;
+    color: rgba($text-color, 0.7);
+    font-style: italic;
+    padding: 2rem;
+    
+    p {
+      margin: 0.5rem 0;
+    }
+  }
+  
+  .statusContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    margin: 0.5rem 0;
+    background: rgba($background-dark, 0.3);
+    border: 1px solid rgba($echo-blue, 0.2);
+    border-radius: 4px;
+    
+    .statusLabel {
+      color: rgba($text-color, 0.8);
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+  }
+  
+  .tasksList, .agentsList, .logsList {
+    background: rgba($background-dark, 0.2);
+    border: 1px solid rgba($echo-blue, 0.1);
+    border-radius: 4px;
+    min-height: 200px;
+    padding: 1rem;
+  }
+  
+  .mcpStatus {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+// Styles for transferred HecateHud content
+.tasksContainer, .mcpContainer, .logsContainer, .agentsContainer {
+  color: $text-color;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.hecateContainer {
+  color: $text-color;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.tasksHeader, .mcpHeader, .logsHeader, .agentsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-shrink: 0;
+  
+  h3 {
+    color: $echo-blue;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0;
+    text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+  }
+}
+
+.taskStats, .mcpStats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  
+  .stat {
+    font-size: 0.9rem;
+    color: rgba($text-color, 0.8);
+    font-family: 'Courier New', monospace;
+    white-space: nowrap;
+  }
+}
+
+.tasksList, .mcpList, .agentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.3);
+    border-radius: 2px;
+  }
+}
+
+.taskItem, .mcpItem, .agentItem {
+  background: rgba($background-dark, 0.3);
+  border: 1px solid rgba($echo-blue, 0.2);
+  border-radius: 4px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: rgba($echo-blue, 0.4);
+    background: rgba($background-dark, 0.4);
+  }
+}
+
+.taskHeader, .mcpHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.taskInfo, .agentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.taskName, .mcpName, .agentName {
+  font-weight: bold;
+  color: $lightning-silver;
+  font-family: 'Courier New', monospace;
+}
+
+.taskType, .mcpStatus, .agentStatus {
+  font-size: 0.8rem;
+  color: rgba($text-color, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.taskStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.taskDescription {
+  color: rgba($text-color, 0.8);
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.progressBar {
+  position: relative;
+  height: 6px;
+  background: rgba($background-dark, 0.5);
+  border-radius: 3px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  
+  .progressFill {
+    height: 100%;
+    background: linear-gradient(90deg, $echo-blue, $lightning-gold);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+  
+  .progressText {
+    position: absolute;
+    right: 0.5rem;
+    top: -1.5rem;
+    font-size: 0.8rem;
+    color: $echo-blue;
+  }
+}
+
+.taskTiming {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: rgba($text-color, 0.6);
+}
+
+.mcpDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  
+  .mcpEndpoint {
+    color: $echo-blue;
+    font-family: 'Courier New', monospace;
+  }
+  
+  .mcpLastActivity, .mcpResponseTime {
+    color: rgba($text-color, 0.7);
+    font-size: 0.8rem;
+  }
+}
+
+.agentMetrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  
+  span {
+    font-size: 0.9rem;
+    color: rgba($text-color, 0.8);
+  }
+}
+
+// Status color classes
+.statusRunning {
+  .statusDot, .taskStatus, .mcpStatus, .agentStatus {
+    color: $echo-green;
+  }
+}
+
+.statusCompleted {
+  .statusDot, .taskStatus, .mcpStatus, .agentStatus {
+    color: $echo-blue;
+  }
+}
+
+.statusFailed {
+  .statusDot, .taskStatus, .mcpStatus, .agentStatus {
+    color: $echo-red;
+  }
+}
+
+.statusPending {
+  .statusDot, .taskStatus, .mcpStatus, .agentStatus {
+    color: $echo-orange;
+  }
+}
+
+// Logs specific styles
+.logsControls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  
+  .searchInput, .filterSelect {
+    background: rgba($background-dark, 0.5);
+    border: 1px solid rgba($echo-blue, 0.3);
+    color: $text-color;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    
+    &:focus {
+      outline: none;
+      border-color: rgba($echo-blue, 0.6);
+      box-shadow: 0 0 8px rgba($echo-blue, 0.3);
+    }
+  }
+  
+  .autoScrollLabel {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba($text-color, 0.8);
+    font-size: 0.9rem;
+    cursor: pointer;
+    
+    input[type="checkbox"] {
+      accent-color: $echo-blue;
+    }
+  }
+}
+
+.logsContent {
+  flex: 1;
+  overflow-y: auto;
+  background: rgba($background-dark, 0.2);
+  border: 1px solid rgba($echo-blue, 0.1);
+  border-radius: 4px;
+  padding: 1rem;
+  min-height: 300px;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.3);
+    border-radius: 2px;
+  }
+}
+
+.logEntry {
+  display: grid;
+  grid-template-columns: auto auto 1fr 2fr;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba($echo-blue, 0.1);
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.logTimestamp {
+  color: rgba($text-color, 0.6);
+  white-space: nowrap;
+}
+
+.logLevel {
+  font-weight: bold;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.logSource {
+  color: rgba($text-color, 0.7);
+  font-size: 0.75rem;
+}
+
+.logMessage {
+  color: $text-color;
+}
+
+.logDetails {
+  margin-top: 0.5rem;
+  
+  .logSummary {
+    color: $echo-blue;
+    cursor: pointer;
+    font-size: 0.8rem;
+    
+    &:hover {
+      color: $lightning-gold;
+    }
+  }
+  
+  .logData {
+    background: rgba($background-dark, 0.5);
+    border: 1px solid rgba($echo-blue, 0.2);
+    border-radius: 4px;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    color: rgba($text-color, 0.8);
+    overflow-x: auto;
+  }
+}
+
+// Log level colors
+.logInfo .logLevel {
+  color: $echo-blue;
+}
+
+.logSuccess .logLevel {
+  color: $echo-green;
+}
+
+.logWarning .logLevel {
+  color: $echo-orange;
+}
+
+.logError .logLevel {
+  color: $echo-red;
+}
+
+.logDebug .logLevel {
+  color: $echo-gray;
+}
+
+// Hecate specific styles
+.hecateContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  padding: 0 1rem;
+  box-sizing: border-box;
+}
+
+.hecateMain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  flex-shrink: 0;
+}
+
+.hecateAvatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  
+  .avatarCircle {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .avatarInfo {
+    text-align: center;
+    
+    h4 {
+      color: $lightning-silver;
+      font-family: 'Courier New', monospace;
+      font-size: 1.2rem;
+      margin: 0 0 0.5rem 0;
+      text-shadow: 0 0 8px rgba($lightning-silver, 0.5);
+    }
+    
+    p {
+      color: rgba($text-color, 0.7);
+      margin: 0;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// NullView Avatar Styles (from HecateHud)
+.nullviewAvatar {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clickableNulleye {
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: scale(1.1);
+    
+    .pulseRingAvatar {
+      border-width: 3px;
+      opacity: 1;
+    }
+    
+    .coreNodeAvatar {
+      transform: scale(1.3);
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+    }
+    
+    .streamLineAvatar {
+      opacity: 1;
+      animation-duration: 0.8s;
+    }
+  }
+
+  &:active {
+    transform: scale(1.05);
+  }
+}
+
+.pulseRingAvatar {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  animation: pulseRingAvatar 2s ease-in-out infinite;
+  opacity: 0.8;
+}
+
+.dataStreamAvatar {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.streamLineAvatar {
+  width: 28px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  animation: dataFlowAvatar 1.5s ease-in-out infinite;
+  
+  &:nth-child(1) {
+    animation-delay: 0s;
+  }
+  
+  &:nth-child(2) {
+    animation-delay: 0.3s;
+    width: 22px;
+  }
+  
+  &:nth-child(3) {
+    animation-delay: 0.6s;
+    width: 25px;
+  }
+}
+
+.coreNodeAvatar {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 10px rgba(255, 255, 255, 0.5),
+    0 0 20px rgba(255, 255, 255, 0.3),
+    inset 0 0 5px rgba(255, 255, 255, 0.8);
+  animation: coreNodeAvatar 3s ease-in-out infinite;
+}
+
+// NullView Avatar States
+.nullviewAvatar.response {
+  .pulseRingAvatar {
+    border-color: rgba($echo-green, 0.8);
+    animation-duration: 0.8s;
+  }
+  .streamLineAvatar {
+    background: linear-gradient(90deg, transparent, rgba($echo-green, 0.9), transparent);
+    animation-duration: 0.6s;
+  }
+  .coreNodeAvatar {
+    background: rgba($echo-green, 0.9);
+    box-shadow: 
+      0 0 10px rgba($echo-green, 0.6),
+      0 0 20px rgba($echo-green, 0.4);
+  }
+  .lightningArc {
+    background: linear-gradient(180deg, transparent, rgba($lightning-gold, 0.9), rgba($lightning-silver, 0.8), transparent);
+    animation-duration: 1.2s;
+  }
+  .staticField {
+    background: radial-gradient(circle, transparent 60%, rgba($lightning-gold, 0.2) 70%, rgba($lightning-silver, 0.1) 80%, transparent 90%);
+    animation-duration: 0.6s;
+  }
+}
+
+.nullviewAvatar.thinking {
+  .pulseRingAvatar {
+    border-color: rgba($echo-purple, 0.8);
+    animation-duration: 1.8s;
+  }
+  .streamLineAvatar {
+    background: linear-gradient(90deg, transparent, rgba($echo-purple, 0.9), transparent);
+    animation-duration: 1.4s;
+  }
+  .coreNodeAvatar {
+    background: rgba($echo-purple, 0.9);
+    box-shadow: 
+      0 0 10px rgba($echo-purple, 0.6),
+      0 0 20px rgba($echo-purple, 0.4);
+  }
+  .lightningArc {
+    background: linear-gradient(180deg, transparent, rgba($lightning-gold, 0.9), rgba($lightning-silver, 0.8), transparent);
+    animation-duration: 2s;
+  }
+  .staticField {
+    background: radial-gradient(circle, transparent 60%, rgba($lightning-gold, 0.2) 70%, rgba($lightning-silver, 0.1) 80%, transparent 90%);
+    animation-duration: 1.2s;
+  }
+}
+
+.nullviewAvatar.processing {
+  .pulseRingAvatar {
+    border-color: rgba(255, 255, 255, 0.8);
+    animation-duration: 1.1s;
+  }
+  .streamLineAvatar {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+    animation-duration: 0.9s;
+  }
+  .coreNodeAvatar {
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 
+      0 0 10px rgba(255, 255, 255, 0.6),
+      0 0 20px rgba(255, 255, 255, 0.4);
+  }
+  .lightningArc {
+    background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 1), transparent);
+    animation-duration: 1.5s;
+  }
+  .staticField {
+    background: radial-gradient(circle, transparent 60%, rgba(255, 255, 255, 0.2) 70%, transparent 80%);
+    animation-duration: 0.8s;
+  }
+}
+
+.nullviewAvatar.error {
+  .pulseRingAvatar {
+    border-color: rgba($echo-red, 0.8);
+    animation-duration: 0.3s;
+    border-width: 3px;
+  }
+  .streamLineAvatar {
+    background: linear-gradient(90deg, transparent, rgba($echo-red, 0.9), transparent);
+    animation-duration: 0.2s;
+  }
+  .coreNodeAvatar {
+    background: rgba($echo-red, 0.9);
+    box-shadow: 
+      0 0 10px rgba($echo-red, 0.6),
+      0 0 20px rgba($echo-red, 0.4);
+  }
+  .lightningArc {
+    background: linear-gradient(180deg, transparent, rgba($echo-red, 1), transparent);
+    animation-duration: 0.5s;
+    height: 20px;
+  }
+  .staticField {
+    background: radial-gradient(circle, transparent 50%, rgba($echo-red, 0.3) 60%, transparent 70%);
+    animation-duration: 0.3s;
+  }
+}
+
+.hecateStats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  width: 100%;
+}
+
+.statCard {
+  background: rgba($background-dark, 0.3);
+  border: 1px solid rgba($echo-blue, 0.2);
+  border-radius: 4px;
+  padding: 0.75rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: rgba($echo-blue, 0.4);
+    background: rgba($background-dark, 0.4);
+  }
+  
+  .statValue {
+    color: $lightning-silver;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 0 6px rgba($lightning-silver, 0.5);
+  }
+  
+  .statLabel {
+    color: rgba($text-color, 0.7);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+// Hecate Interface Layout  
+.hecateInterface {
+  display: flex;
+  flex: 1;
+  gap: 1rem;
+  overflow: hidden;
+  padding: 1rem 0;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chatSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 50%;
+}
+
+.lensSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 50%;
+}
+
+// Chat Interface
+.hecateChat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: rgba($background-dark, 0.3);
+  border: 1px solid rgba($echo-blue, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.chatHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba($background-dark, 0.5);
+  border-bottom: 1px solid rgba($echo-blue, 0.2);
+  
+  h4 {
+    color: $lightning-silver;
+    font-family: 'Courier New', monospace;
+    margin: 0;
+    font-size: 1rem;
+    text-shadow: 0 0 8px rgba($lightning-silver, 0.5);
+  }
+}
+
+.chatStatus {
+  color: $echo-green;
+  font-size: 0.8rem;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.chatMessages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.3);
+    border-radius: 2px;
+  }
+}
+
+.chatMessage {
+  background: rgba($background-dark, 0.4);
+  border: 1px solid rgba($echo-blue, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  
+  &.message-hecate {
+    border-color: rgba($echo-blue, 0.3);
+  }
+  
+  &.message-user {
+    border-color: rgba($lightning-silver, 0.2);
+    margin-left: 2rem;
+  }
+}
+
+.messageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.messageSender {
+  font-weight: bold;
+  color: $lightning-silver;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+.hecateMessageSender {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.messageTime {
+  color: rgba($text-color, 0.6);
+  font-size: 0.8rem;
+  font-family: 'Courier New', monospace;
+}
+
+.messageContent {
+  color: $text-color;
+  line-height: 1.4;
+}
+
+.chatInput {
+  display: flex;
+  padding: 1rem;
+  background: rgba($background-dark, 0.5);
+  border-top: 1px solid rgba($echo-blue, 0.2);
+  gap: 0.5rem;
+}
+
+.chatInputField {
+  flex: 1;
+  background: rgba($background-dark, 0.7);
+  border: 1px solid rgba($echo-blue, 0.3);
+  color: $text-color;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  
+  &:focus {
+    outline: none;
+    border-color: rgba($echo-blue, 0.6);
+    box-shadow: 0 0 8px rgba($echo-blue, 0.3);
+  }
+  
+  &::placeholder {
+    color: rgba($text-color, 0.5);
+  }
+}
+
+.chatSendButton {
+  background: $echo-blue;
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba($echo-blue, 0.8);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.chatSuggestions {
+  margin: 1rem;
+  background: rgba($background-dark, 0.5);
+  border: 1px solid rgba($echo-blue, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.suggestionsHeader {
+  color: $echo-blue;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.suggestionsList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+.suggestionButton {
+  background: rgba($background-dark, 0.7);
+  border: 1px solid rgba($echo-blue, 0.3);
+  color: $text-color;
+  padding: 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+  text-align: left;
+  
+  &:hover {
+    border-color: rgba($echo-blue, 0.6);
+    background: rgba($background-dark, 0.8);
+    transform: translateY(-1px);
+  }
+}
+
+// Scopes/Lens Interface
+.lensScrollContainer {
+  height: 100%;
+  overflow-y: auto;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.3);
+    border-radius: 2px;
+  }
+}
+
+.lensInfoPanel {
+  background: rgba($background-dark, 0.3);
+  border: 1px solid rgba($echo-blue, 0.2);
+  border-radius: 8px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.lensInfoContent {
+  padding: 1.5rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.headerWithTooltip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  
+  h3 {
+    color: $echo-blue;
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    margin: 0;
+    text-shadow: 0 0 8px rgba($echo-blue, 0.5);
+  }
+}
+
+.tooltipContainer {
+  position: relative;
+  
+  .helpIcon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba($echo-blue, 0.2);
+    color: $echo-blue;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    cursor: help;
+    
+    &:hover + .tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+  }
+  
+  .tooltip {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba($background-dark, 0.95);
+    border: 1px solid rgba($echo-blue, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    width: 300px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 10;
+    
+    .tooltipContent {
+      h4 {
+        color: $echo-blue;
+        margin: 0 0 0.5rem 0;
+        font-size: 0.9rem;
+      }
+      
+      p {
+        color: $text-color;
+        margin: 0;
+        font-size: 0.8rem;
+        line-height: 1.4;
+      }
+    }
+  }
+}
+
+.lensAppsSection {
+  flex: 1;
+  margin-bottom: 2rem;
+}
+
+.lensAppsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+  overflow: visible;
+}
+
+.lensAppButton {
+  background: rgba($background-dark, 0.5);
+  border: 1px solid rgba($echo-blue, 0.3);
+  border-radius: 6px;
+  padding: 0.75rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+  min-height: 80px;
+  
+  &:hover {
+    border-color: var(--lens-color, #{$echo-blue});
+    background: rgba($background-dark, 0.7);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(var(--lens-color, #{$echo-blue}), 0.2);
+  }
+}
+
+.lensAppIcon {
+  font-size: 1.5rem;
+}
+
+.lensAppTitle {
+  color: $text-color;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+
+.lensExpanded {
+  background: rgba($background-dark, 0.3);
+  border: 1px solid rgba($echo-blue, 0.2);
+  border-radius: 8px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.lensContentExpanded {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.lensContentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba($background-dark, 0.5);
+  border-bottom: 1px solid rgba($echo-blue, 0.2);
+  
+  h4 {
+    color: $lightning-silver;
+    font-family: 'Courier New', monospace;
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+.lensCloseButton {
+  background: none;
+  border: none;
+  color: $text-color;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  
+  &:hover {
+    color: $echo-red;
+  }
+}
+
+.lensContentBody {
+  flex: 1;
+  padding: 1.5rem;
+  color: $text-color;
+}
+
+// Chat avatar styles (mini nulleyes in chat)
+.nullviewChat {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clickableNulleyeChat {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 50%;
+  padding: 2px;
+
+  &:hover {
+    transform: scale(1.2);
+    background: rgba($echo-blue, 0.1);
+    
+    .coreNodeChat {
+      transform: scale(1.4);
+      animation-duration: 1s;
+    }
+    
+    .streamLineChat {
+      opacity: 1;
+      width: 14px;
+      animation-duration: 1s;
+    }
+  }
+}
+
+.staticFieldChat {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 40%, rgba($lightning-silver, 0.1) 50%, transparent 60%);
+  animation: staticFieldChat 3s ease-in-out infinite;
+}
+
+.coreNodeChat {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba($lightning-silver, 0.9);
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba($lightning-silver, 0.5);
+  animation: coreNodeChat 2s ease-in-out infinite;
+}
+
+.streamLineChat {
+  position: absolute;
+  width: 10px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba($lightning-silver, 0.7), transparent);
+  animation: streamLineChat 1.5s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+.lightningSparkChat {
+  position: absolute;
+  width: 1px;
+  height: 8px;
+  background: linear-gradient(180deg, transparent, rgba($lightning-gold, 0.8), transparent);
+  animation: lightningSparkChat 2.5s ease-in-out infinite;
+  opacity: 0.7;
+}
+
+@keyframes staticFieldChat {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes coreNodeChat {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+
+@keyframes streamLineChat {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scaleX(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes lightningSparkChat {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scaleY(0.8);
+  }
+  25% {
+    opacity: 0.8;
+    transform: scaleY(1.2);
+  }
+  75% {
+    opacity: 0.6;
+    transform: scaleY(1);
+  }
+}
+
 // Responsive adjustments
 @media (max-width: 768px) {
   .walletMenuButton, .docsMenuButton {
@@ -4702,5 +6034,888 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       font-size: 0.8rem;
       padding: 0.4rem 0.8rem;
     }
+  }
+  
+  .hecateInterface {
+    flex-direction: column;
+    
+    .chatSection, .lensSection {
+      width: 100%;
+    }
+  }
+  
+  .lensAppsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .hecateStats {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Lens content styles for scope interfaces
+.lensContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: rgba($background-dark, 0.8);
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lensHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba($background-dark, 0.9);
+  border-bottom: 1px solid $border-color;
+
+  h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: $text-primary;
+  }
+
+  .closeLens {
+    background: none;
+    border: none;
+    color: $text-secondary;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.3s ease;
+
+    &:hover {
+      color: $text-primary;
+    }
+  }
+}
+
+// Template Grid Styles
+.templateGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  max-height: 70vh;
+}
+
+.templateCard {
+  background: rgba($background-dark, 0.6);
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  padding: 0.8rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  max-width: 160px;
+  margin: 0 auto;
+
+  &:hover {
+    border-color: rgba($lightning-silver, 0.5);
+    box-shadow: 0 4px 15px rgba($lightning-silver, 0.2);
+  }
+
+  .templateIcon {
+    font-size: 1.75rem;
+    margin-bottom: 0.6rem;
+  }
+
+  h6 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.8rem;
+    color: $text-primary;
+  }
+
+  p {
+    margin: 0 0 0.8rem 0;
+    font-size: 0.7rem;
+    color: $text-secondary;
+    line-height: 1.2;
+  }
+
+  .useTemplate {
+    background: linear-gradient(135deg, $lightning-silver, $lightning-gold);
+    border: none;
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    color: $text-primary;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 15px rgba($lightning-silver, 0.3);
+    }
+  }
+}
+
+// Workflow Canvas Styles
+.workflowCanvas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  flex: 1;
+  min-height: 0;
+  background: rgba($background-dark, 0.4);
+}
+
+.workflowNode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba($background-dark, 0.8);
+  border: 2px solid $lightning-silver;
+  border-radius: 8px;
+  min-width: 100px;
+
+  .nodeIcon {
+    font-size: 1.5rem;
+  }
+
+  span {
+    font-size: 0.8rem;
+    color: $text-primary;
+    font-weight: 600;
+  }
+}
+
+.workflowArrow {
+  font-size: 1.5rem;
+  color: $lightning-silver;
+  font-weight: bold;
+}
+
+.workflowControls {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba($background-dark, 0.8);
+  border-top: 1px solid $border-color;
+
+  .workflowBtn {
+    background: rgba($lightning-silver, 0.2);
+    border: 1px solid rgba($lightning-silver, 0.3);
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    color: $text-primary;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba($lightning-silver, 0.3);
+      border-color: rgba($lightning-silver, 0.5);
+    }
+  }
+}
+
+// Visualizer Canvas Styles
+.visualizerCanvas {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba($background-dark, 0.4);
+}
+
+.chartPlaceholder {
+  display: flex;
+  align-items: end;
+  gap: 1rem;
+  height: 200px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.chartBar {
+  flex: 1;
+  background: linear-gradient(to top, $lightning-silver, $lightning-gold);
+  border-radius: 4px 4px 0 0;
+  min-width: 40px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: scaleY(1.1);
+    box-shadow: 0 0 15px rgba($lightning-silver, 0.5);
+  }
+}
+
+.visualizerControls {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba($background-dark, 0.8);
+  border-top: 1px solid $border-color;
+
+  .vizBtn {
+    background: rgba($lightning-gold, 0.2);
+    border: 1px solid rgba($lightning-gold, 0.3);
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    color: $text-primary;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba($lightning-gold, 0.3);
+      border-color: rgba($lightning-gold, 0.5);
+    }
+  }
+}
+
+// Code Editor Styles
+.codeEditor {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba($background-dark, 0.8);
+}
+
+.editorHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba($background-dark, 0.9);
+  border-bottom: 1px solid $border-color;
+
+  span {
+    font-size: 0.9rem;
+    color: $text-primary;
+    font-weight: 600;
+  }
+
+  .editorControls {
+    display: flex;
+    gap: 0.5rem;
+
+    .editorBtn {
+      background: rgba($lightning-gold, 0.2);
+      border: 1px solid rgba($lightning-gold, 0.3);
+      border-radius: 4px;
+      padding: 0.25rem 0.75rem;
+      color: $text-primary;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba($lightning-gold, 0.3);
+        border-color: rgba($lightning-gold, 0.5);
+      }
+    }
+  }
+}
+
+.codeTextarea {
+  flex: 1;
+  min-height: 0;
+  background: rgba($background-dark, 0.6);
+  border: none;
+  color: $text-primary;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  padding: 1rem;
+  resize: none;
+  outline: none;
+  line-height: 1.4;
+
+  &::placeholder {
+    color: $text-secondary;
+  }
+}
+
+.outputPanel {
+  background: rgba($background-dark, 0.9);
+  border-top: 1px solid $border-color;
+  padding: 1rem;
+
+  h6 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: $lightning-gold;
+  }
+
+  .outputContent {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    .outputLine {
+      font-size: 0.8rem;
+      color: $text-secondary;
+      font-family: 'Courier New', monospace;
+    }
+  }
+}
+
+// Analytics Grid Styles
+.analyticsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.analyticsCard {
+  background: rgba($background-dark, 0.6);
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba($lightning-silver, 0.5);
+    box-shadow: 0 4px 15px rgba($lightning-silver, 0.2);
+  }
+
+  .analyticsIcon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  h6 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.8rem;
+    color: $text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .analyticsValue {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: $lightning-gold;
+  }
+}
+
+// Automation List Styles
+.automationList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.automationItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba($background-dark, 0.6);
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba($lightning-silver, 0.5);
+    box-shadow: 0 4px 15px rgba($lightning-silver, 0.2);
+  }
+
+  .automationIcon {
+    font-size: 1.5rem;
+  }
+
+  .automationInfo {
+    flex: 1;
+
+    h6 {
+      margin: 0 0 0.25rem 0;
+      font-size: 0.9rem;
+      color: $text-primary;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.8rem;
+      color: $text-secondary;
+    }
+  }
+
+  .automationStatus {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    background: rgba($lightning-gold, 0.2);
+    color: $lightning-gold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+// Security Grid Styles
+.securityGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.securityCard {
+  background: rgba($background-dark, 0.6);
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba(#ff3333, 0.5);
+    box-shadow: 0 4px 15px rgba(#ff3333, 0.2);
+  }
+
+  .securityIcon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  h6 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: $text-primary;
+  }
+
+  p {
+    margin: 0 0 1rem 0;
+    font-size: 0.8rem;
+    color: $text-secondary;
+    line-height: 1.3;
+  }
+
+  .securityBtn {
+    background: rgba(#ff3333, 0.2);
+    border: 1px solid rgba(#ff3333, 0.3);
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    color: $text-primary;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba(#ff3333, 0.3);
+      border-color: rgba(#ff3333, 0.5);
+    }
+  }
+}
+
+// Integration List Styles
+.integrationList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.integrationItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba($background-dark, 0.6);
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba(#a855f7, 0.5);
+    box-shadow: 0 4px 15px rgba(#a855f7, 0.2);
+  }
+
+  .integrationIcon {
+    font-size: 1.5rem;
+  }
+
+  .integrationInfo {
+    flex: 1;
+
+    h6 {
+      margin: 0 0 0.25rem 0;
+      font-size: 0.9rem;
+      color: $text-primary;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.8rem;
+      color: $text-secondary;
+    }
+  }
+
+  .integrationStatus {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    background: rgba($lightning-gold, 0.2);
+    color: $lightning-gold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+// Settings Grid Styles
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.settingsCard {
+  background: rgba($background-dark, 0.6);
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba($lightning-silver, 0.5);
+    box-shadow: 0 4px 15px rgba($lightning-silver, 0.2);
+  }
+
+  .settingsIcon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  h6 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: $text-primary;
+  }
+
+  p {
+    margin: 0 0 1rem 0;
+    font-size: 0.8rem;
+    color: $text-secondary;
+    line-height: 1.3;
+  }
+
+  .themeControls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+
+    .themeControlBtn {
+      background: rgba($lightning-silver, 0.2);
+      border: 1px solid rgba($lightning-silver, 0.3);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      color: $text-primary;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba($lightning-silver, 0.3);
+        border-color: rgba($lightning-silver, 0.5);
+      }
+
+      &.active {
+        background: rgba($lightning-gold, 0.3);
+        border-color: rgba($lightning-gold, 0.5);
+        color: $lightning-gold;
+      }
+    }
+  }
+
+  .socialLinks {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .socialLinkBtn {
+      background: rgba($lightning-silver, 0.2);
+      border: 1px solid rgba($lightning-silver, 0.3);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      color: $text-primary;
+      font-size: 0.8rem;
+      text-decoration: none;
+      text-align: center;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba($lightning-silver, 0.3);
+        border-color: rgba($lightning-silver, 0.5);
+        transform: translateY(-1px);
+      }
+    }
+  }
+
+  .docsBtn {
+    background: rgba($lightning-gold, 0.2);
+    border: 1px solid rgba($lightning-gold, 0.3);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    color: $text-primary;
+    font-size: 0.8rem;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba($lightning-gold, 0.3);
+      border-color: rgba($lightning-gold, 0.5);
+      transform: translateY(-1px);
+    }
+  }
+
+  .versionInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    span {
+      font-size: 0.8rem;
+      color: $text-secondary;
+      
+      &:first-child {
+        color: $text-primary;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+// Placeholder content styles
+.lensPlaceholder {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+
+  p {
+    margin: 0 0 1rem 0;
+    color: $text-secondary;
+    font-size: 1rem;
+  }
+
+  .comingSoonBtn {
+    background: linear-gradient(135deg, $lightning-silver, $lightning-gold);
+    border: none;
+    border-radius: 6px;
+    padding: 0.75rem 1.5rem;
+    color: $text-primary;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 15px rgba($lightning-silver, 0.3);
+    }
+  }
+}
+
+// Scopes avatar container styles - now static at bottom
+.scopesAvatarContainer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: linear-gradient(transparent, rgba($background-dark, 0.01) 90%);
+  backdrop-filter: blur(0.5px);
+  z-index: 3;
+  box-sizing: border-box;
+  
+  .hecateAvatar {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 1rem;
+    
+    .avatarCircle {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: 
+        radial-gradient(circle at 30% 30%, rgba($lightning-silver, 0.3), transparent 50%),
+        radial-gradient(circle at 70% 70%, rgba($echo-blue, 0.2), transparent 50%),
+        linear-gradient(135deg, rgba($background-dark, 0.9), rgba($background-dark, 0.7));
+      border: 2px solid $lightning-silver;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 
+        0 0 20px rgba($lightning-silver, 0.4),
+        inset 0 0 10px rgba($lightning-silver, 0.1);
+      position: relative;
+      overflow: hidden;
+      
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: conic-gradient(
+          from 0deg,
+          transparent,
+          rgba($lightning-silver, 0.2),
+          transparent,
+          rgba($echo-blue, 0.1),
+          transparent
+        );
+        border-radius: 50%;
+        animation: avatarRotate 4s linear infinite;
+        pointer-events: none;
+      }
+    }
+    
+    .avatarInfo {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      text-align: left;
+      
+      h4 {
+        margin: 0;
+        font-size: 0.9rem;
+        color: $text-primary;
+        font-weight: 600;
+        text-shadow: 
+          0 0 8px rgba($lightning-silver, 0.8),
+          0 1px 2px rgba(0, 0, 0, 0.8);
+        line-height: 1.3;
+        white-space: nowrap;
+      }
+    }
+  }
+  
+}
+
+// Enhanced scopes container with scroll and fade
+.lensScrollContainer {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.lensInfoPanel {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 120px; // Space for fixed avatar at bottom
+  
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.lensInfoContent {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.lensAppsSection {
+  .lensAppsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+}
+
+// Status tab styles
+.statusContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+  gap: 1.5rem;
+
+  .statusHeader {
+    h3 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: $text-primary;
+      text-align: center;
+      font-weight: 600;
+      text-shadow: 0 0 10px rgba($lightning-silver, 0.5);
+    }
+  }
+
+  .walletStatusSection {
+    h4 {
+      margin: 0 0 1rem 0;
+      font-size: 1.2rem;
+      color: $lightning-gold;
+      text-align: center;
+      font-weight: 600;
+    }
+  }
+
+  .placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    text-align: center;
+    color: $text-secondary;
+    
+    p {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+  }
+}
+
+// Avatar rotation animation
+@keyframes avatarRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
