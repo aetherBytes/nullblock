@@ -42,13 +42,13 @@ windows:
           export ORCHESTRATION_PORT=8002
           hatch run python3 -m orchestration
         - |
-          echo "Starting Erebus Server (Temporary Python Version)..."
-          echo "Note: Using Python replacement while fixing Rust compilation issues"
+          echo "Starting Erebus Server (Rust)..."
+          cd svc/erebus
           mkdir -p logs
           export EREBUS_HOST=127.0.0.1
           export EREBUS_PORT=3000
           echo "📝 Logs will be written to logs/erebus.log"
-          python3 scripts/temp-erebus.py 2>&1 | tee logs/erebus.log
+          cargo run 2>&1 | tee logs/erebus.log
 
   - agents:
       layout: even-horizontal

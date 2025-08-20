@@ -113,7 +113,6 @@ show_log_summary() {
         "/Users/sage/nullblock/logs/frontend.log"
         "/Users/sage/nullblock/logs/ipfs.log"
         "/Users/sage/nullblock/logs/erebus.log"
-        "/Users/sage/nullblock/logs/erebus-temp.log"
         "/Users/sage/nullblock/logs/mcp.log"
         "/Users/sage/nullblock/logs/orchestration.log"
         
