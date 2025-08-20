@@ -13,7 +13,7 @@ pub struct AgentRequest {
 pub struct AgentResponse {
     pub content: String,
     pub model_used: String,
-    pub latency_ms: u64,
+    pub latency_ms: f64,
     pub confidence_score: f64,
     pub metadata: HashMap<String, serde_json::Value>,
 }
