@@ -29,6 +29,7 @@ const Home: React.FC = () => {
   const [isMetaMaskPending, setIsMetaMaskPending] = useState<boolean>(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'error' | 'info'>('error');
+  const lastConnectionAttempt = React.useRef<number>(0);
 
   // Debug showWalletModal state changes
   useEffect(() => {
@@ -231,6 +232,15 @@ const Home: React.FC = () => {
     console.log('handleConnectWallet called with walletType:', walletType);
     console.log('typeof walletType:', typeof walletType);
     
+    // Debounce rapid successive calls (prevent within 1 second)
+    const now = Date.now();
+    if (now - lastConnectionAttempt.current < 1000) {
+      console.log('Connection attempt too soon, debouncing...');
+      setInfoMessage('⏱️ Please wait before trying again.');
+      return;
+    }
+    lastConnectionAttempt.current = now;
+    
     // If no wallet type specified, show selection modal
     if (!walletType) {
       console.log('No walletType specified, showing selection modal');
@@ -356,9 +366,9 @@ const Home: React.FC = () => {
 
   const connectMetaMaskWallet = async () => {
     // Prevent multiple simultaneous requests
-    if (isMetaMaskPending) {
+    if (isMetaMaskPending || isConnecting) {
       console.log('MetaMask request already pending, skipping...');
-      setInfoMessage('MetaMask connection in progress. Please check your MetaMask extension.');
+      setInfoMessage('🔄 Connecting... Check MetaMask extension.');
       return;
     }
 
@@ -401,7 +411,7 @@ const Home: React.FC = () => {
       
       if (!metamaskProvider) {
         console.log('MetaMask provider not found, showing error');
-        setInfoMessage('MetaMask wallet not found. Please install MetaMask or ensure it is enabled.');
+        setInfoMessage('🚫 MetaMask not found. Install extension and refresh page.');
         window.open('https://metamask.io/', '_blank');
         throw new Error('MetaMask not installed');
       }
@@ -410,18 +420,46 @@ const Home: React.FC = () => {
       console.log('MetaMask provider found:', metamaskProvider);
       console.log('MetaMask detected, requesting account access...');
       
-      // Get account access from MetaMask specifically
-      console.log('About to request accounts from MetaMask...');
+      // First check if accounts are already available
+      let accounts;
+      try {
+        console.log('Checking for existing accounts...');
+        accounts = await metamaskProvider.request({ method: 'eth_accounts' });
+        console.log('Existing accounts found:', accounts);
+      } catch (error) {
+        console.log('No existing accounts, will request access');
+        accounts = [];
+      }
       
-      // CRITICAL: Make the MetaMask request immediately and try to bring extension to front
-      console.log('Making immediate MetaMask request to preserve user gesture...');
-      
-      // Show gentle notification about MetaMask popup
-      setInfoMessage('🦊 Please check your MetaMask extension for the connection request.');
-      
-      const accounts = await metamaskProvider.request({ 
-        method: 'eth_requestAccounts' 
-      });
+      // If no accounts, request access
+      if (accounts.length === 0) {
+        console.log('About to request accounts from MetaMask...');
+        
+        // Show clear instructions for MetaMask popup
+        setInfoMessage('🦊 Check MetaMask extension to approve connection.');
+        
+        try {
+          accounts = await metamaskProvider.request({ 
+            method: 'eth_requestAccounts' 
+          });
+        } catch (requestError: any) {
+          // If there's already a pending request, try to wait and check again
+          if (requestError.code === -32002) {
+            console.log('Pending request detected, waiting...');
+            setInfoMessage('⚠️ MetaMask busy. Complete pending requests and try again.');
+            
+            // Wait a bit and try to get existing accounts
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            accounts = await metamaskProvider.request({ method: 'eth_accounts' });
+            
+            if (accounts.length === 0) {
+              throw new Error('Connection timed out. Check MetaMask is unlocked and try again.');
+            }
+          } else {
+            throw requestError;
+          }
+        }
+      }
 
       console.log('MetaMask accounts received:', accounts);
       console.log('Number of accounts:', accounts.length);
@@ -466,8 +504,8 @@ const Home: React.FC = () => {
       // CRITICAL: Make signature request immediately to preserve user gesture context
       console.log('Making immediate MetaMask signature request...');
       
-      // Show gentle notification about signature request
-      setInfoMessage('🦊 Please check your MetaMask extension to sign the request.');
+      // Show clear instructions for signature request
+      setInfoMessage('✍️ Sign message in MetaMask to complete login.');
       
       let signature;
       try {
@@ -510,16 +548,16 @@ const Home: React.FC = () => {
       console.error('MetaMask connection failed:', error);
       
       if (error.code === 4001) {
-        setInfoMessage('Connection cancelled by user.');
+        setInfoMessage('❌ Connection cancelled. Try again and approve in MetaMask.');
         throw new Error('User rejected connection');
       } else if (error.code === -32002) {
-        setInfoMessage('MetaMask is processing another request. Please check your extension or wait a moment and try again.');
+        setInfoMessage('⚠️ MetaMask busy. Complete pending actions and retry.');
         throw new Error('Request pending');
       } else if (error.code === -32603) {
-        setErrorMessage('MetaMask encountered an issue. Please refresh the page and try again.');
+        setErrorMessage('💥 MetaMask error. Refresh page and ensure MetaMask is unlocked.');
         throw new Error('Internal error');
       } else {
-        setErrorMessage(`MetaMask connection failed: ${error.message}`);
+        setErrorMessage(`❌ Connection failed: ${error.message}`);
         throw error;
       }
     } finally {
@@ -547,7 +585,7 @@ const Home: React.FC = () => {
       console.log('Backend wallet detection response:', detectionResponse);
 
       if (detectionResponse.available_wallets.length === 0) {
-        setInfoMessage('No Web3 wallets detected. Please install MetaMask or Phantom and refresh the page.');
+        setInfoMessage('🔍 No wallets found. Install MetaMask or Phantom and refresh.');
         setShowWalletModal(true);
         return;
       }
@@ -561,7 +599,7 @@ const Home: React.FC = () => {
       localStorage.setItem('walletDetectionResponse', JSON.stringify(detectionResponse));
     } catch (error) {
       console.error('Failed to detect wallets:', error);
-      setInfoMessage('Failed to detect wallets. Please refresh the page and try again.');
+      setInfoMessage('⚠️ Wallet detection failed. Refresh and check extensions.');
       setShowWalletModal(true);
     }
   };
