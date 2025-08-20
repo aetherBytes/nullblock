@@ -1,8 +1,9 @@
-// Resource modules for wallet interactions, MCP, and other services
+// Resource modules for wallet interactions, MCP, agents, and other services
 
 pub mod types;
 pub mod wallets;
 pub mod mcp;
+pub mod agents;
 
 // Re-export commonly used types and traits
 pub use types::{
@@ -11,3 +12,4 @@ pub use types::{
 };
 pub use wallets::WalletManager;
 pub use mcp::McpHandler;
+pub use agents::{AgentProxy, AgentRequest, AgentResponse};

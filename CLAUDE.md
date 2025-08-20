@@ -191,14 +191,14 @@ response = await factory.generate(request, requirements)
   - MCP types: `mcp/types.rs`
 - **Shared types**: `resources/types.rs` for cross-subsystem types
 
-## 🔥 **EREBUS WALLET ARCHITECTURE** (August 2025)
+## 🔥 **EREBUS UNIFIED ARCHITECTURE** (August 2025)
 
-Erebus now serves as the main server for wallet interactions and will be the foundation for MCP integration:
+Erebus now serves as the **unified routing server** for all backend communication, handling wallet interactions, agent routing, and MCP integration. The frontend communicates **exclusively** with Erebus, which routes requests to appropriate backend services:
 
 ### **Directory Structure**
 ```
 svc/erebus/src/
-├── main.rs                           # 🎯 Main entry point (subsystem routing only)
+├── main.rs                           # 🎯 Main entry point with enhanced logging and routing
 ├── resources/
 │   ├── mod.rs                        # Module organization
 │   ├── types.rs                      # Shared types and traits
@@ -213,13 +213,18 @@ svc/erebus/src/
 │   │   ├── handler.rs                # MCP protocol handler
 │   │   ├── routes.rs                 # HTTP endpoints for MCP
 │   │   └── types.rs                  # MCP-specific types
+│   ├── agents/                       # 🤖 AGENT ROUTING SUBSYSTEM
+│   │   ├── mod.rs                    # Agent module exports
+│   │   ├── proxy.rs                  # Agent proxy service
+│   │   └── routes.rs                 # HTTP endpoints for agent routing
 │   ├── templates/                    # 🔒 RESERVED - MCP templates
 │   └── definitions/                  # 🔒 RESERVED - MCP definitions
 ```
 
-### **Erebus API Endpoints** (Port 3000)
+### **Erebus API Endpoints** (Port 3000) with Enhanced Logging
 **Core System:**
 - `GET /health` - Server health check with subsystem status
+- **🆕 All endpoints include comprehensive request/response logging with pretty-printed JSON**
 
 **👛 Wallet Subsystem:**
 - `GET /api/wallets` - List supported wallets
@@ -227,6 +232,16 @@ svc/erebus/src/
 - `POST /api/wallets/verify` - Verify wallet signature and create session
 - `GET /api/wallets/{type}/networks` - Get supported networks for wallet type
 - `POST /api/wallets/sessions/validate` - Validate session token
+
+**🤖 Agent Routing Subsystem (🆕):**
+- `GET /api/agents/health` - Agent routing health check
+- `POST /api/agents/hecate/chat` - Chat with Hecate agent
+- `GET /api/agents/hecate/status` - Get Hecate agent status
+- `POST /api/agents/hecate/personality` - Set Hecate agent personality
+- `POST /api/agents/hecate/clear` - Clear Hecate conversation history
+- `GET /api/agents/hecate/history` - Get Hecate conversation history
+- `POST /api/agents/{agent_name}/chat` - Generic agent chat endpoint
+- `GET /api/agents/{agent_name}/status` - Generic agent status endpoint
 
 **🔗 MCP Subsystem:**
 - `POST /mcp` - Main MCP protocol endpoint
@@ -689,6 +704,9 @@ NullBlock implements a Model Context Protocol-first architecture for secure, agn
 - **Build Tool**: Vite with React plugin
 - **Wallet Integration**: @solana/web3.js with Phantom wallet support
 - **Future Integration**: OnchainKit for broader Web3 functionality
+- **🆕 Backend Communication**: Frontend communicates exclusively with Erebus (localhost:3000) for all backend operations
+- **🆕 Agent Integration**: Hecate agent communication routes through Erebus proxy with enhanced logging
+- **🆕 Unified API Client**: Single service endpoint for all backend functionality through Erebus routing layer
 
 ### **🎨 Advanced UI/UX Features** (August 2025)
 - **Command Lens Interface**: Redesigned compact grid with instant access button styling
