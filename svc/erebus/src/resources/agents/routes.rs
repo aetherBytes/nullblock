@@ -31,7 +31,7 @@ pub async fn agent_health() -> ResponseJson<Value> {
         "agents": {
             "hecate": {
                 "status": if hecate_healthy { "healthy" } else { "unavailable" },
-                "url": hecate_proxy.agent_base_url
+                "url": hecate_proxy.agent_base_url()
             }
         }
     });

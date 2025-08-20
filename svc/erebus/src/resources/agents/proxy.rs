@@ -1,5 +1,4 @@
 // Agent proxy service for routing requests to agent backends
-use axum::{response::Json, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{info, error, warn};
@@ -47,6 +46,10 @@ impl AgentProxy {
             agent_base_url,
             timeout_seconds: 30,
         }
+    }
+
+    pub fn agent_base_url(&self) -> &str {
+        &self.agent_base_url
     }
 
     /// Proxy chat request to Hecate agent backend

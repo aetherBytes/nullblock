@@ -11,7 +11,8 @@ use std::net::SocketAddr;
 use tokio;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{info, error, warn};
-use tracing_subscriber::{EnvFilter, Layer};
+use tracing_subscriber::{prelude::*, EnvFilter, fmt, Layer};
+use tracing_appender::{rolling, non_blocking};
 
 // Import our modules
 mod resources;
@@ -49,68 +50,156 @@ async fn root() -> Json<StatusResponse> {
     Json(response)
 }
 
-/// Logging middleware for all requests
+/// Comprehensive logging middleware for all requests and responses
 async fn logging_middleware(request: Request, next: Next) -> Result<axum::response::Response, StatusCode> {
     let method = request.method().clone();
     let uri = request.uri().clone();
     let headers = request.headers().clone();
+    let user_agent = headers.get("user-agent").and_then(|h| h.to_str().ok()).unwrap_or("unknown");
+    let remote_addr = headers.get("x-forwarded-for")
+        .or_else(|| headers.get("x-real-ip"))
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("unknown");
     
-    // Extract request body for logging (for POST requests)
+    // Generate unique request ID for tracing
+    let request_id = uuid::Uuid::new_v4().to_string();
+    
+    // Extract request body for logging
     let (parts, body) = request.into_parts();
     let body_bytes = match axum::body::to_bytes(body, usize::MAX).await {
         Ok(bytes) => bytes,
         Err(e) => {
-            error!("❌ Failed to read request body: {}", e);
+            error!("❌ [{}] Failed to read request body: {}", request_id, e);
             return Err(StatusCode::BAD_REQUEST);
         }
     };
     
-    // Log incoming request
-    info!("📥 Incoming request: {} {}", method, uri);
-    info!("📋 Request headers: {:#?}", headers);
+    // Log structured request information
+    info!("🔄 [{}] REQUEST START", request_id);
+    info!("📥 [{}] {} {} from {}", request_id, method, uri, remote_addr);
+    info!("🌐 [{}] User-Agent: {}", request_id, user_agent);
+    info!("📋 [{}] Headers: {:#?}", request_id, headers);
     
+    // Log request body with size limit for security
     if !body_bytes.is_empty() {
-        match serde_json::from_slice::<serde_json::Value>(&body_bytes) {
-            Ok(json) => {
-                info!("📝 Request body (JSON): {}", serde_json::to_string_pretty(&json).unwrap_or_default());
-            }
-            Err(_) => {
-                // Not JSON, log as string if it's valid UTF-8
-                match String::from_utf8(body_bytes.to_vec()) {
-                    Ok(text) => info!("📝 Request body (Text): {}", text),
-                    Err(_) => info!("📝 Request body: {} bytes (binary)", body_bytes.len()),
+        let body_size = body_bytes.len();
+        if body_size > 10_000 {
+            info!("📝 [{}] Request body: {} bytes (truncated for security)", request_id, body_size);
+        } else {
+            match serde_json::from_slice::<serde_json::Value>(&body_bytes) {
+                Ok(json) => {
+                    info!("📝 [{}] Request body (JSON): {}", request_id, serde_json::to_string_pretty(&json).unwrap_or_default());
+                }
+                Err(_) => {
+                    match String::from_utf8(body_bytes.to_vec()) {
+                        Ok(text) => info!("📝 [{}] Request body (Text): {}", request_id, text),
+                        Err(_) => info!("📝 [{}] Request body: {} bytes (binary)", request_id, body_size),
+                    }
                 }
             }
         }
+    } else {
+        info!("📝 [{}] Request body: empty", request_id);
     }
     
     // Rebuild request
     let request = Request::from_parts(parts, axum::body::Body::from(body_bytes));
     
-    // Process request
+    // Process request and capture timing
     let start_time = std::time::Instant::now();
     let response = next.run(request).await;
     let duration = start_time.elapsed();
     
-    // Log response
-    info!("📤 Response: {} {} -> {} ({:.2}ms)", 
-          method, uri, response.status(), duration.as_millis());
+    // Capture response details
+    let status = response.status();
+    let response_headers = response.headers().clone();
+    
+    // Log response information
+    info!("📤 [{}] RESPONSE: {} {} -> {} ({:.2}ms)", 
+          request_id, method, uri, status, duration.as_millis());
+    info!("📋 [{}] Response headers: {:#?}", request_id, response_headers);
+    
+    // Extract and log response body for non-streaming responses
+    let (parts, body) = response.into_parts();
+    let response_body = match axum::body::to_bytes(body, usize::MAX).await {
+        Ok(bytes) => {
+            if !bytes.is_empty() {
+                let body_size = bytes.len();
+                if body_size > 10_000 {
+                    info!("📄 [{}] Response body: {} bytes (truncated for log size)", request_id, body_size);
+                } else {
+                    match serde_json::from_slice::<serde_json::Value>(&bytes) {
+                        Ok(json) => {
+                            info!("📄 [{}] Response body (JSON): {}", request_id, serde_json::to_string_pretty(&json).unwrap_or_default());
+                        }
+                        Err(_) => {
+                            match String::from_utf8(bytes.to_vec()) {
+                                Ok(text) => info!("📄 [{}] Response body (Text): {}", request_id, text),
+                                Err(_) => info!("📄 [{}] Response body: {} bytes (binary)", request_id, body_size),
+                            }
+                        }
+                    }
+                }
+            } else {
+                info!("📄 [{}] Response body: empty", request_id);
+            }
+            bytes
+        }
+        Err(e) => {
+            error!("❌ [{}] Failed to read response body: {}", request_id, e);
+            axum::body::Bytes::new()
+        }
+    };
+    
+    // Log completion
+    if status.is_success() {
+        info!("✅ [{}] REQUEST COMPLETED SUCCESSFULLY", request_id);
+    } else if status.is_client_error() {
+        warn!("⚠️ [{}] CLIENT ERROR: {}", request_id, status);
+    } else if status.is_server_error() {
+        error!("💥 [{}] SERVER ERROR: {}", request_id, status);
+    }
+    
+    // Rebuild response
+    let response = axum::response::Response::from_parts(parts, axum::body::Body::from(response_body));
     
     Ok(response)
 }
 
-fn setup_logging() {
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+fn setup_logging() -> tracing_appender::non_blocking::WorkerGuard {
+    let log_level = std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
+    let filter = EnvFilter::new(&log_level);
+
+    // Create logs directory if it doesn't exist
+    std::fs::create_dir_all("logs").expect("Failed to create logs directory");
+    
+    // Set up file appender with daily rotation
+    let file_appender = rolling::daily("logs", "erebus.log");
+    let (non_blocking, guard) = non_blocking(file_appender);
+    
+    // Create file layer
+    let file_layer = fmt::layer()
+        .with_writer(non_blocking)
+        .with_ansi(false)
+        .with_filter(EnvFilter::new(&log_level));
+    
+    // Create console layer
+    let console_layer = fmt::layer()
+        .with_writer(std::io::stdout)
+        .with_ansi(true)
+        .with_filter(filter);
 
     tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer().with_filter(filter))
+        .with(file_layer)
+        .with(console_layer)
         .init();
+        
+    guard
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    setup_logging();
+    let _guard = setup_logging();
 
     info!("🚀 Starting Erebus server...");
     info!("📍 Version: 0.1.0");
