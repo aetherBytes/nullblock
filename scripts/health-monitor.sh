@@ -170,10 +170,10 @@ main() {
     echo -e "${GRAY}Press Ctrl+C to stop${NC}"
     echo ""
     
-    # Initial status
+    # Initial status - Log files first, then services
+    show_log_summary
     print_status
     echo ""
-    show_log_summary
     
     # Continuous monitoring with adaptive intervals
     local check_count=0
@@ -195,9 +195,9 @@ main() {
         echo -e "${GRAY}Compact service status monitoring${NC}"
         echo -e "${GRAY}Press Ctrl+C to stop${NC}"
         echo ""
+        show_log_summary
         print_status
         echo ""
-        show_log_summary
     done
 }
 

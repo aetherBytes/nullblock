@@ -38,23 +38,23 @@ interface ModelStatus {
 }
 
 class HecateAgentService {
-  private baseUrl: string;
+  private erebusUrl: string;
   private isConnected: boolean = false;
 
-  constructor(baseUrl: string = import.meta.env.VITE_HECATE_API_URL || 'http://localhost:8001') {
-    this.baseUrl = baseUrl;
+  constructor(erebusUrl: string = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000') {
+    this.erebusUrl = erebusUrl;
   }
 
   /**
-   * Initialize connection to Hecate agent
+   * Initialize connection to Hecate agent via Erebus
    */
   async connect(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`);
+      const response = await fetch(`${this.erebusUrl}/api/agents/health`);
       this.isConnected = response.ok;
       return this.isConnected;
     } catch (error) {
-      console.error('Failed to connect to Hecate agent:', error);
+      console.error('Failed to connect to Hecate agent via Erebus:', error);
       this.isConnected = false;
       return false;
     }
@@ -76,7 +76,7 @@ class HecateAgentService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/chat`, {
+      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ class HecateAgentService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/model-status`);
+      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/status`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -131,7 +131,7 @@ class HecateAgentService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/personality`, {
+      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/personality`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -155,7 +155,7 @@ class HecateAgentService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/clear`, {
+      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/clear`, {
         method: 'POST',
       });
 
@@ -175,7 +175,7 @@ class HecateAgentService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/history`);
+      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/history`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -212,7 +212,7 @@ class HecateAgentService {
   getConnectionStatus(): { connected: boolean; url: string } {
     return {
       connected: this.isConnected,
-      url: this.baseUrl
+      url: this.erebusUrl
     };
   }
 }
