@@ -110,12 +110,43 @@ windows:
         - ~/nullblock/scripts/wait-for-lmstudio.sh
 
   - logs:
-      layout: "main-vertical"
-      main-pane-size: 50%
+      layout: tiled
       panes:
-        - ~/nullblock/scripts/unified-logs.sh
+        - |
+          echo "📊 LM Studio Log Stream"
+          echo "Monitoring LM Studio server logs..."
+          echo "Press Ctrl+C to stop"
+          echo ""
+          echo "📊 Monitoring LM Studio server logs..."
+          mkdir -p logs
+          while true; do 
+            echo "$(date '+%Y-%m-%d %H:%M:%S') [LM-STUDIO-STREAM] Starting log stream capture" | tee -a logs/lm-studio-stream.log
+            lms log stream 2>/dev/null | tee -a logs/lm-studio-stream.log || echo "⚠️  No recent log files found in LM Studio server logs" | tee -a logs/lm-studio-stream.log
+            sleep 5
+          done
+        - ~/nullblock/scripts/wait-for-lmstudio.sh
+        - |
+          echo "🎯 Hecate Agent Logs"
+          echo "Monitoring Hecate agent server and client logs..."
+          echo ""
+          mkdir -p svc/nullblock-agents/logs
+          touch svc/nullblock-agents/logs/hecate-server.log
+          tail -f svc/nullblock-agents/logs/hecate-server.log 2>/dev/null || echo "⚠️ Waiting for Hecate logs..."
+        - |
+          echo "🔗 Erebus Server Logs"
+          echo "Monitoring Erebus wallet server logs..."
+          echo ""
+          mkdir -p logs
+          touch logs/erebus.log
+          tail -f logs/erebus.log 2>/dev/null || echo "⚠️ Waiting for Erebus logs..."
+        - |
+          echo "🌐 MCP Server Logs"
+          echo "Monitoring MCP server logs..."
+          echo ""
+          mkdir -p svc/nullblock-mcp/logs
+          touch svc/nullblock-mcp/logs/mcp-server.log
+          tail -f svc/nullblock-mcp/logs/mcp-server.log 2>/dev/null || echo "⚠️ Waiting for MCP logs..."
         - ~/nullblock/scripts/health-monitor.sh
-        -
 
   - workspace:
       layout: even-horizontal
