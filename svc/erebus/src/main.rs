@@ -20,6 +20,8 @@ use resources::agents::routes::{
     agent_health, hecate_chat, hecate_status, agent_chat, agent_status,
     hecate_personality, hecate_clear, hecate_history
 };
+use resources::wallets::routes::create_wallet_routes;
+use resources::WalletManager;
 
 #[derive(Serialize)]
 struct StatusResponse {
@@ -206,7 +208,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🕐 Timestamp: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"));
     info!("============================================================");
     
-    // Create router with CORS and agent routes
+    // Create wallet manager
+    let wallet_manager = WalletManager::new();
+    
+    // Create router with CORS, agent routes, and wallet routes
     let app = Router::new()
         .route("/", get(root))
         .route("/health", get(health_check))
@@ -219,6 +224,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/agents/hecate/history", get(hecate_history))
         .route("/api/agents/:agent_name/chat", post(agent_chat))
         .route("/api/agents/:agent_name/status", get(agent_status))
+        // Merge wallet routes
+        .merge(create_wallet_routes())
+        .with_state(wallet_manager)
         // Add logging middleware
         .layer(middleware::from_fn(logging_middleware))
         // Add CORS layer
@@ -237,6 +245,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("⚙️ Hecate personality: http://localhost:3000/api/agents/hecate/personality");
     info!("🧹 Hecate clear: http://localhost:3000/api/agents/hecate/clear");
     info!("📜 Hecate history: http://localhost:3000/api/agents/hecate/history");
+    info!("👛 Wallet endpoints: http://localhost:3000/api/wallets");
+    info!("🔍 Wallet detection: http://localhost:3000/api/wallets/detect");
+    info!("🔐 Wallet challenge: http://localhost:3000/api/wallets/challenge");
+    info!("✅ Wallet verify: http://localhost:3000/api/wallets/verify");
     info!("💡 Ready for agentic workflows and MCP integration");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
