@@ -12,7 +12,7 @@ use super::proxy::{AgentProxy, AgentRequest, AgentResponse, AgentStatus, AgentEr
 /// Hecate agent proxy instance
 fn get_hecate_proxy() -> AgentProxy {
     let hecate_url = std::env::var("HECATE_AGENT_URL")
-        .unwrap_or_else(|_| "http://localhost:8001".to_string());
+        .unwrap_or_else(|_| "http://localhost:9002".to_string());
     AgentProxy::new(hecate_url)
 }
 
