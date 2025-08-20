@@ -11,5 +11,3 @@ pub use types::{
     WalletVerifyRequest, WalletVerifyResponse, WalletListResponse
 };
 pub use wallets::WalletManager;
-pub use mcp::McpHandler;
-pub use agents::{AgentProxy, AgentRequest, AgentResponse};

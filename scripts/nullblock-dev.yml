@@ -136,9 +136,12 @@ windows:
           echo "🔗 Erebus Server Logs"
           echo "Monitoring Erebus wallet server logs..."
           echo ""
+          cd svc/erebus
           mkdir -p logs
-          touch logs/erebus.log
-          tail -f logs/erebus.log 2>/dev/null || echo "⚠️ Waiting for Erebus logs..."
+          LOG_FILE="logs/erebus.log.$(date +%Y-%m-%d)"
+          touch "$LOG_FILE"
+          echo "📝 Tailing: $LOG_FILE"
+          tail -f "$LOG_FILE" 2>/dev/null || echo "⚠️ Waiting for Erebus logs..."
         - |
           echo "🌐 MCP Server Logs"
           echo "Monitoring MCP server logs..."
