@@ -24,6 +24,7 @@ class LLMRequest:
     """Request to LLM service"""
     prompt: str
     system_prompt: Optional[str] = None
+    messages: Optional[List[Dict[str, str]]] = None  # Full conversation history as [{"role": "user/assistant", "content": "..."}]
     max_tokens: Optional[int] = None
     temperature: Optional[float] = None
     top_p: Optional[float] = None
@@ -562,10 +563,21 @@ class LLMServiceFactory:
         session = self.sessions[ModelProvider.OPENAI.value]
         
         # Build request payload
-        messages = []
-        if request.system_prompt:
-            messages.append({"role": "system", "content": request.system_prompt})
-        messages.append({"role": "user", "content": request.prompt})
+        if request.messages:
+            # Use provided conversation history
+            messages = request.messages.copy()
+            # Add system prompt if not already present
+            if request.system_prompt and (not messages or messages[0]["role"] != "system"):
+                messages.insert(0, {"role": "system", "content": request.system_prompt})
+            # Add current prompt as latest user message if not already included
+            if not messages or messages[-1]["content"] != request.prompt:
+                messages.append({"role": "user", "content": request.prompt})
+        else:
+            # Fallback to old behavior
+            messages = []
+            if request.system_prompt:
+                messages.append({"role": "system", "content": request.system_prompt})
+            messages.append({"role": "user", "content": request.prompt})
         
         payload = {
             "model": config.name,
@@ -612,11 +624,21 @@ class LLMServiceFactory:
         """Generate response using Anthropic API"""
         session = self.sessions[ModelProvider.ANTHROPIC.value]
         
+        # Build messages payload
+        if request.messages:
+            # Use provided conversation history, filtering out system messages (handled separately in Anthropic)
+            messages = [msg for msg in request.messages if msg["role"] != "system"]
+            # Add current prompt if not already included
+            if not messages or messages[-1]["content"] != request.prompt:
+                messages.append({"role": "user", "content": request.prompt})
+        else:
+            messages = [{"role": "user", "content": request.prompt}]
+        
         payload = {
             "model": config.name,
             "max_tokens": request.max_tokens or config.max_tokens,
             "temperature": request.temperature or config.temperature,
-            "messages": [{"role": "user", "content": request.prompt}]
+            "messages": messages
         }
         
         if request.system_prompt:
@@ -739,10 +761,21 @@ class LLMServiceFactory:
         session = self.sessions[ModelProvider.LOCAL.value]
         
         # Build request payload (OpenAI format)
-        messages = []
-        if request.system_prompt:
-            messages.append({"role": "system", "content": request.system_prompt})
-        messages.append({"role": "user", "content": request.prompt})
+        if request.messages:
+            # Use provided conversation history
+            messages = request.messages.copy()
+            # Add system prompt if not already present
+            if request.system_prompt and (not messages or messages[0]["role"] != "system"):
+                messages.insert(0, {"role": "system", "content": request.system_prompt})
+            # Add current prompt as latest user message if not already included
+            if not messages or messages[-1]["content"] != request.prompt:
+                messages.append({"role": "user", "content": request.prompt})
+        else:
+            # Fallback to old behavior
+            messages = []
+            if request.system_prompt:
+                messages.append({"role": "system", "content": request.system_prompt})
+            messages.append({"role": "user", "content": request.prompt})
         
         payload = {
             "model": config.name,

@@ -204,10 +204,11 @@ class HecateAgent:
             # Build conversation context
             context = self._build_conversation_context(user_context)
             
-            # Create LLM request
+            # Create LLM request with full conversation history
             request = LLMRequest(
                 prompt=message,
                 system_prompt=context["system_prompt"],
+                messages=context["messages"],
                 max_tokens=800,
                 temperature=0.7
             )
@@ -492,7 +493,7 @@ class HecateAgent:
             logger.error(f"Response synthesis failed: {e}")
             return f"I analyzed your request for {intent_analysis['intent_type']} and coordinated with {len(intent_analysis['required_agents'])} specialized agents. The orchestration system is still evolving, but I'm ready to help with your request."
     
-    def _build_conversation_context(self, user_context: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+    def _build_conversation_context(self, user_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Build conversation context for the LLM"""
         personality_config = self.personalities.get(self.personality, self.personalities["helpful_cyberpunk"])
         base_system_prompt = personality_config["system_prompt"]
@@ -510,25 +511,33 @@ class HecateAgent:
             if user_context.get("session_time"):
                 context_additions.append(f"Session active for: {user_context['session_time']}")
         
-        # Build conversation history for context
-        recent_messages = []
-        for msg in self.conversation_history[-6:]:  # Last 6 messages for context
-            if msg.role != "system":
-                recent_messages.append(f"{msg.role}: {msg.content}")
-        
-        # Combine all context
+        # Build enhanced system prompt
         full_system_prompt = base_system_prompt
-        
         if context_additions:
             full_system_prompt += f"\n\nUser Context: {'; '.join(context_additions)}"
         
-        if recent_messages:
-            full_system_prompt += f"\n\nRecent conversation:\n" + "\n".join(recent_messages)
-        
         return {
             "system_prompt": full_system_prompt,
-            "conversation_context": recent_messages
+            "messages": self._build_messages_history()
         }
+    
+    def _build_messages_history(self) -> List[Dict[str, str]]:
+        """Convert conversation history to structured messages format"""
+        messages = []
+        
+        # Add system message first
+        personality_config = self.personalities.get(self.personality, self.personalities["helpful_cyberpunk"])
+        messages.append({"role": "system", "content": personality_config["system_prompt"]})
+        
+        # Add conversation messages (excluding system messages from history since we added our own)
+        for msg in self.conversation_history:
+            if msg.role != "system":  # Skip system messages from history
+                messages.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
+        
+        return messages
     
     async def _trim_conversation_history(self):
         """Trim conversation history to stay within context limits"""
