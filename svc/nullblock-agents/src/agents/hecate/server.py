@@ -67,6 +67,9 @@ class ChatRequest(BaseModel):
 class PersonalityRequest(BaseModel):
     personality: str
 
+class ModelSelectionRequest(BaseModel):
+    model_name: str
+
 class ChatMessageResponse(BaseModel):
     id: str
     timestamp: str
@@ -252,6 +255,54 @@ def create_app() -> FastAPI:
             log_response(500, "🔍 Model status request failed", {"error": str(e)})
             raise HTTPException(status_code=500, detail=str(e))
     
+    @app.get("/available-models")
+    async def get_available_models(request: Request):
+        """Get list of available models for selection"""
+        if not agent:
+            log_request(request, "🚫 Available models request rejected - agent not initialized")
+            log_response(503, "🚫 Available models request failed - agent not initialized")
+            raise HTTPException(status_code=503, detail="Agent not initialized")
+        
+        try:
+            log_request(request, "📋 Available models requested")
+            
+            available_models = []
+            
+            if hasattr(agent, 'llm_factory') and agent.llm_factory:
+                # Get all models from the router
+                from ..llm_service.models import AVAILABLE_MODELS
+                
+                for model_name, config in AVAILABLE_MODELS.items():
+                    # Check if model is available
+                    is_available = agent.llm_factory.router.model_status.get(model_name, False)
+                    
+                    available_models.append({
+                        "name": model_name,
+                        "display_name": config.name,
+                        "provider": config.provider.value,
+                        "available": is_available,
+                        "tier": config.tier.value,
+                        "context_length": config.metrics.context_window,
+                        "capabilities": [cap.value for cap in config.capabilities]
+                    })
+            
+            # Sort by availability first, then by provider and name
+            available_models.sort(key=lambda x: (not x["available"], x["provider"], x["name"]))
+            
+            log_response(200, "📋 Available models retrieved successfully", {
+                "models_count": len(available_models),
+                "available_count": sum(1 for m in available_models if m["available"])
+            })
+            
+            return {
+                "models": available_models,
+                "current_model": agent.current_model
+            }
+        except Exception as e:
+            logger.error(f"❌ Get available models failed: {e}")
+            log_response(500, "📋 Get available models failed", {"error": str(e)})
+            raise HTTPException(status_code=500, detail=str(e))
+
     @app.post("/refresh-models")
     async def refresh_models(request: Request):
         """Refresh model availability status"""
@@ -283,6 +334,46 @@ def create_app() -> FastAPI:
             log_response(500, "🔄 Model refresh failed", {"error": str(e)})
             raise HTTPException(status_code=500, detail=str(e))
     
+    @app.post("/set-model")
+    async def set_model(request: Request, model_request: ModelSelectionRequest):
+        """Set preferred model for chat responses"""
+        if not agent:
+            log_request(request, "🚫 Model selection rejected - agent not initialized")
+            log_response(503, "🚫 Model selection failed - agent not initialized")
+            raise HTTPException(status_code=503, detail="Agent not initialized")
+        
+        try:
+            log_request(request, "🎯 Model selection requested", {
+                "model_name": model_request.model_name
+            })
+            
+            old_model = agent.get_preferred_model()
+            success = agent.set_preferred_model(model_request.model_name)
+            
+            if success:
+                log_response(200, "🎯 Model selection successful", {
+                    "old_model": old_model,
+                    "new_model": model_request.model_name
+                })
+                
+                return {
+                    "success": True,
+                    "model": model_request.model_name,
+                    "previous_model": old_model
+                }
+            else:
+                log_response(400, "🎯 Model selection failed - model not available", {
+                    "requested_model": model_request.model_name
+                })
+                raise HTTPException(status_code=400, detail=f"Model {model_request.model_name} is not available")
+                
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"❌ Set model failed: {e}")
+            log_response(500, "🎯 Model selection failed", {"error": str(e)})
+            raise HTTPException(status_code=500, detail=str(e))
+
     @app.post("/personality")
     async def set_personality(request: Request, personality_request: PersonalityRequest):
         """Set agent personality"""
@@ -397,6 +488,8 @@ def run_server(host: str = "0.0.0.0", port: int = None):
     logger.info(f"💬 Chat endpoint: http://{host}:{port}/chat")
     logger.info(f"📚 API Documentation: http://{host}:{port}/docs")
     logger.info(f"🔍 Model status: http://{host}:{port}/model-status")
+    logger.info(f"📋 Available models: http://{host}:{port}/available-models")
+    logger.info(f"🎯 Set model: http://{host}:{port}/set-model")
     logger.info(f"📜 History: http://{host}:{port}/history")
     logger.info(f"🎭 Personality: http://{host}:{port}/personality")
     logger.info(f"🗑️ Clear: http://{host}:{port}/clear")

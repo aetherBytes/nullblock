@@ -11,6 +11,10 @@ $echo-green: #00ff9d;
 $echo-gray: #808080;
 $lightning-blue: #00d4ff;
 $lightning-silver: #e8e8e8;
+$lightning-gold: #e6c200;
+$lightning-green: #00ff9d;
+$lightning-red: #ff3333;
+$lightning-purple: #b967ff;
 $text-color: #c8c8d0;
 
 // Additional text and border variables
@@ -7151,6 +7155,165 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     p {
       margin: 0;
       font-size: 1.1rem;
+    }
+  }
+}
+
+// Model Selection Styles
+.modelSelection {
+  padding: 1rem;
+  
+  .currentModelDisplay {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba($background-dark, 0.6);
+    border: 1px solid rgba($lightning-blue, 0.3);
+    border-radius: 6px;
+    
+    .modelLabel {
+      color: $text-secondary;
+      font-size: 0.9rem;
+    }
+    
+    .currentModel {
+      color: #e6c200;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+  }
+  
+  .modelsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  
+  .modelCard {
+    background: rgba($background-dark, 0.4);
+    border: 1px solid rgba($lightning-blue, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    
+    &:hover {
+      border-color: rgba($lightning-blue, 0.6);
+      background: rgba($background-dark, 0.6);
+      transform: translateY(-2px);
+    }
+    
+    &.available {
+      border-left: 3px solid $echo-green;
+      
+      &:hover {
+        border-left-color: $echo-green;
+        box-shadow: 0 0 10px rgba($echo-green, 0.3);
+      }
+    }
+    
+    &.unavailable {
+      border-left: 3px solid $echo-red;
+      opacity: 0.6;
+      cursor: not-allowed;
+      
+      &:hover {
+        transform: none;
+        border-color: rgba($lightning-blue, 0.2);
+        background: rgba($background-dark, 0.4);
+      }
+    }
+    
+    &.selected {
+      border: 2px solid #e6c200;
+      background: rgba(230, 194, 0, 0.1);
+      
+      &::after {
+        content: '✓';
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        color: #e6c200;
+        font-weight: bold;
+        font-size: 1.2rem;
+      }
+    }
+    
+    .modelHeader {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      
+      .modelIcon {
+        font-size: 1.2rem;
+      }
+      
+      .modelName {
+        flex: 1;
+        font-weight: bold;
+        color: $text-primary;
+        font-size: 0.95rem;
+      }
+      
+      .statusIndicator {
+        font-size: 0.8rem;
+        
+        &.online {
+          color: $echo-green;
+        }
+        
+        &.offline {
+          color: $echo-red;
+        }
+      }
+    }
+    
+    .modelDetails {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      
+      .provider {
+        background: rgba($lightning-blue, 0.2);
+        color: $lightning-blue;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+      
+      .tier {
+        background: rgba($echo-purple, 0.2);
+        color: $echo-purple;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+    }
+    
+    .modelCapabilities {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      
+      .capability {
+        background: rgba($text-secondary, 0.1);
+        color: $text-secondary;
+        padding: 0.2rem 0.4rem;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        text-transform: lowercase;
+      }
     }
   }
 }
