@@ -231,3 +231,60 @@ pub async fn hecate_history() -> Result<ResponseJson<Value>, (StatusCode, Respon
         }
     }
 }
+
+/// Get available models from Hecate agent
+pub async fn hecate_available_models() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("🧠 Hecate available models request received");
+    
+    let proxy = get_hecate_proxy();
+    
+    match proxy.proxy_request("available-models", "GET", None).await {
+        Ok(response) => {
+            info!("✅ Hecate available models retrieved successfully");
+            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            Ok(ResponseJson(response))
+        }
+        Err(error) => {
+            error!("❌ Hecate available models request failed");
+            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            
+            let status_code = match error.code.as_str() {
+                "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
+                "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
+                "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            
+            Err((status_code, ResponseJson(error)))
+        }
+    }
+}
+
+/// Set Hecate model selection
+pub async fn hecate_set_model(Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("🎯 Hecate set model request received");
+    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    
+    let proxy = get_hecate_proxy();
+    
+    match proxy.proxy_request("set-model", "POST", Some(request)).await {
+        Ok(response) => {
+            info!("✅ Hecate model set successfully");
+            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            Ok(ResponseJson(response))
+        }
+        Err(error) => {
+            error!("❌ Hecate set model request failed");
+            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            
+            let status_code = match error.code.as_str() {
+                "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
+                "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
+                "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            
+            Err((status_code, ResponseJson(error)))
+        }
+    }
+}

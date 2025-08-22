@@ -247,7 +247,8 @@ class HecateAgent:
                 system_prompt=context["system_prompt"],
                 messages=context["messages"],
                 max_tokens=800,
-                temperature=0.7
+                temperature=0.7,
+                model_override=getattr(self, 'preferred_model', None)
             )
             
             # Set task requirements based on personality
@@ -357,6 +358,32 @@ class HecateAgent:
             self.conversation_history.append(system_message)
         else:
             logger.warning(f"Unknown personality: {personality}")
+    
+    def set_preferred_model(self, model_name: str):
+        """Set preferred model for chat responses"""
+        # Check if model is available
+        if hasattr(self, 'llm_factory') and self.llm_factory:
+            from ..llm_service.models import AVAILABLE_MODELS
+            
+            if model_name in AVAILABLE_MODELS:
+                is_available = self.llm_factory.router.model_status.get(model_name, False)
+                if is_available:
+                    self.preferred_model = model_name
+                    logger.info(f"🎯 Preferred model set to: {model_name}")
+                    return True
+                else:
+                    logger.warning(f"⚠️ Model {model_name} is not currently available")
+                    return False
+            else:
+                logger.warning(f"⚠️ Unknown model: {model_name}")
+                return False
+        else:
+            logger.warning("⚠️ LLM factory not initialized")
+            return False
+    
+    def get_preferred_model(self) -> Optional[str]:
+        """Get current preferred model"""
+        return getattr(self, 'preferred_model', None)
     
     def clear_conversation(self):
         """Clear conversation history"""

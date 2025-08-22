@@ -103,6 +103,10 @@ const HecateHud: React.FC<HecateHudProps> = ({
     | 'success'
     | 'processing'
   >('base');
+  const [availableModels, setAvailableModels] = useState<any[]>([]);
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [currentSelectedModel, setCurrentSelectedModel] = useState<string | null>(null);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
 
   // Helper functions for user-specific stats
   const getUserStats = () => {
@@ -121,6 +125,13 @@ const HecateHud: React.FC<HecateHudProps> = ({
 
   // Define lens options outside useEffect
   const lensOptions: LensOption[] = [
+    {
+      id: 'models',
+      icon: '🧠',
+      title: 'Models',
+      description: 'AI model selection',
+      color: '#e6c200',
+    },
     {
       id: 'templates',
       icon: '📋',
@@ -490,6 +501,9 @@ const HecateHud: React.FC<HecateHudProps> = ({
 
     setChatMessages(initialChatMessages);
     
+    // Load available models
+    loadAvailableModels();
+    
     // Ensure we start scrolled to bottom
     setTimeout(() => {
       if (chatEndRef.current) {
@@ -782,6 +796,71 @@ const HecateHud: React.FC<HecateHudProps> = ({
     setActiveLens(activeLens === lensId ? null : lensId);
   };
 
+  const loadAvailableModels = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/agents/hecate/available-models');
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableModels(data.models || []);
+        setCurrentSelectedModel(data.current_model);
+        console.log('Available models loaded:', data.models?.length || 0);
+      } else {
+        console.warn('Failed to load available models');
+      }
+    } catch (error) {
+      console.error('Error loading available models:', error);
+    }
+  };
+
+  const handleModelSelection = async (modelName: string) => {
+    try {
+      setShowModelDropdown(false);
+      
+      const response = await fetch('http://localhost:3000/api/agents/hecate/set-model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model_name: modelName })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentSelectedModel(data.model);
+        console.log('Model changed to:', data.model);
+        
+        // Add system message to indicate model change
+        const systemMessage: ChatMessage = {
+          id: Date.now().toString(),
+          timestamp: new Date(),
+          sender: 'hecate',
+          message: `🔄 Switched to ${modelName}`,
+          type: 'update'
+        };
+        setChatMessages(prev => [...prev, systemMessage]);
+      } else {
+        console.error('Failed to set model');
+      }
+    } catch (error) {
+      console.error('Error setting model:', error);
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target as Node)) {
+        setShowModelDropdown(false);
+      }
+    };
+
+    if (showModelDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showModelDropdown]);
+
   const handleNullViewClick = () => {
     setActiveTab('hecate');
 
@@ -792,6 +871,57 @@ const HecateHud: React.FC<HecateHudProps> = ({
 
   const renderLensContent = (lensId: string) => {
     switch (lensId) {
+      case 'models':
+        return (
+          <div className={styles.lensContent}>
+            <div className={styles.lensHeader}>
+              <h5>🧠 AI Models</h5>
+              <button className={styles.closeLens} onClick={() => setActiveLens(null)}>
+                ×
+              </button>
+            </div>
+            <div className={styles.modelSelection}>
+              <div className={styles.currentModelDisplay}>
+                <span className={styles.modelLabel}>Current Model:</span>
+                <span className={styles.currentModel}>
+                  {currentSelectedModel || 'Default'}
+                </span>
+              </div>
+              <div className={styles.modelsGrid}>
+                {availableModels.map((model) => (
+                  <div
+                    key={model.name}
+                    className={`${styles.modelCard} ${
+                      model.available ? styles.available : styles.unavailable
+                    } ${currentSelectedModel === model.name ? styles.selected : ''}`}
+                    onClick={() => model.available && handleModelSelection(model.name)}
+                  >
+                    <div className={styles.modelHeader}>
+                      <span className={styles.modelIcon}>🤖</span>
+                      <span className={styles.modelName}>{model.display_name}</span>
+                      <span className={`${styles.statusIndicator} ${
+                        model.available ? styles.online : styles.offline
+                      }`}>
+                        {model.available ? '🟢' : '🔴'}
+                      </span>
+                    </div>
+                    <div className={styles.modelDetails}>
+                      <span className={styles.provider}>{model.provider}</span>
+                      <span className={styles.tier}>{model.tier}</span>
+                    </div>
+                    <div className={styles.modelCapabilities}>
+                      {model.capabilities?.slice(0, 3).map((cap: string) => (
+                        <span key={cap} className={styles.capability}>
+                          {cap}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
       case 'templates':
         return (
           <div className={styles.lensContent}>
@@ -1443,7 +1573,40 @@ const HecateHud: React.FC<HecateHudProps> = ({
           <div className={styles.chatSection}>
             <div className={styles.hecateChat}>
               <div className={styles.chatHeader}>
-                <h4>Chat with Hecate</h4>
+                <div className={styles.chatTitle}>
+                  <h4>Chat with Hecate</h4>
+                  {currentSelectedModel && (
+                    <div className={styles.modelSelector} ref={modelDropdownRef}>
+                      <button 
+                        className={styles.modelDropdownBtn}
+                        onClick={() => setShowModelDropdown(!showModelDropdown)}
+                        title="Select model"
+                      >
+                        🧠 {currentSelectedModel}
+                        <span className={styles.dropdownArrow}>▼</span>
+                      </button>
+                      {showModelDropdown && (
+                        <div className={styles.modelDropdown}>
+                          <div className={styles.dropdownHeader}>Select Model</div>
+                          {availableModels.map((model) => (
+                            <button
+                              key={model.name}
+                              className={`${styles.modelOption} ${!model.available ? styles.disabled : ''} ${model.name === currentSelectedModel ? styles.selected : ''}`}
+                              onClick={() => model.available && handleModelSelection(model.name)}
+                              disabled={!model.available}
+                              title={`${model.display_name} (${model.provider}) - ${model.available ? 'Available' : 'Unavailable'}`}
+                            >
+                              <span className={styles.modelName}>{model.display_name}</span>
+                              <span className={styles.modelProvider}>{model.provider}</span>
+                              {!model.available && <span className={styles.unavailable}>⚠️</span>}
+                              {model.name === currentSelectedModel && <span className={styles.selected}>✓</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div className={styles.chatHeaderControls}>
                   {!chatAutoScroll && (
                     <button
