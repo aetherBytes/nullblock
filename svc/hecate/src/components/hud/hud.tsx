@@ -2137,6 +2137,8 @@ const HUD: React.FC<HUDProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeLens, setActiveLens] = useState<string | null>(null);
   const [agentConnected, setAgentConnected] = useState(false);
+  const chatMessagesRef = useRef<HTMLDivElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const [currentModel, setCurrentModel] = useState<string | null>(null);
   const [isConnectingAgent, setIsConnectingAgent] = useState(false);
 
@@ -2335,6 +2337,30 @@ const HUD: React.FC<HUDProps> = ({
   const handleLensClick = (lensId: string) => {
     setActiveLens(activeLens === lensId ? null : lensId);
   };
+
+  // Auto-scroll chat to bottom when new messages arrive
+  useEffect(() => {
+    if (chatMessages.length === 0) return;
+    
+    const scrollToBottom = () => {
+      // Direct container scroll
+      if (chatMessagesRef.current) {
+        const container = chatMessagesRef.current;
+        container.scrollTop = container.scrollHeight;
+      }
+      
+      // Scroll the end element into view as backup
+      if (chatEndRef.current) {
+        chatEndRef.current.scrollIntoView({ block: 'end' });
+      }
+    };
+    
+    // Try multiple times to ensure it works
+    scrollToBottom();
+    setTimeout(scrollToBottom, 10);
+    setTimeout(scrollToBottom, 100);
+    
+  }, [chatMessages]);
 
   const renderLensContent = (lensId: string) => {
     switch (lensId) {
@@ -3188,7 +3214,7 @@ const HUD: React.FC<HUDProps> = ({
                         </span>
                       </div>
 
-                      <div className={styles.chatMessages}>
+                      <div className={styles.chatMessages} ref={chatMessagesRef}>
                         {chatMessages.map((message) => (
                           <div
                             key={message.id}
@@ -3219,6 +3245,7 @@ const HUD: React.FC<HUDProps> = ({
                             <div className={styles.messageContent}>{message.message}</div>
                           </div>
                         ))}
+                        <div ref={chatEndRef} />
                       </div>
 
                       <form className={styles.chatInput} onSubmit={handleChatSubmit}>

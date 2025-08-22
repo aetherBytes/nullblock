@@ -87,6 +87,11 @@ const HecateHud: React.FC<HecateHudProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeLens, setActiveLens] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatMessagesRef = useRef<HTMLDivElement>(null);
+  const [chatAutoScroll, setChatAutoScroll] = useState(true);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const previousMessageCountRef = useRef<number>(0);
   const [nullviewState, setNulleyeState] = useState<
     | 'base'
     | 'response'
@@ -484,6 +489,13 @@ const HecateHud: React.FC<HecateHudProps> = ({
     ];
 
     setChatMessages(initialChatMessages);
+    
+    // Ensure we start scrolled to bottom
+    setTimeout(() => {
+      if (chatEndRef.current) {
+        chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
 
     // Simulate real-time log updates
     const interval = setInterval(() => {
@@ -570,6 +582,9 @@ const HecateHud: React.FC<HecateHudProps> = ({
     return () => {
       clearInterval(interval);
       clearInterval(progressInterval);
+      if (userScrollTimeoutRef.current) {
+        clearTimeout(userScrollTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -579,11 +594,22 @@ const HecateHud: React.FC<HecateHudProps> = ({
     }
   }, [logs, autoScroll]);
 
-  useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [chatMessages]);
+  // Auto-scroll for new messages (disabled - using hud.tsx implementation)
+  // This component is not the active chat interface
+
+  // Simplified scroll detection that doesn't interfere with auto-scroll
+  const handleChatScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const scrollTop = container.scrollTop;
+    const scrollHeight = container.scrollHeight;
+    const clientHeight = container.clientHeight;
+    
+    // Check if user is away from the bottom (more than 100px to avoid false triggers)
+    const isAwayFromBottom = scrollHeight - scrollTop - clientHeight > 100;
+    
+    // Only show the "jump to latest" button if user is significantly away from bottom
+    setChatAutoScroll(!isAwayFromBottom);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1418,10 +1444,32 @@ const HecateHud: React.FC<HecateHudProps> = ({
             <div className={styles.hecateChat}>
               <div className={styles.chatHeader}>
                 <h4>Chat with Hecate</h4>
-                <span className={styles.chatStatus}>Live</span>
+                <div className={styles.chatHeaderControls}>
+                  {!chatAutoScroll && (
+                    <button
+                      className={styles.scrollToBottomBtn}
+                      onClick={() => {
+                        setChatAutoScroll(true);
+                        setIsUserScrolling(false);
+                        
+                        if (chatMessagesRef.current) {
+                          chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+                        }
+                        
+                        if (chatEndRef.current) {
+                          chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }}
+                      title="Scroll to bottom and resume auto-scroll"
+                    >
+                      ↓ Jump to latest
+                    </button>
+                  )}
+                  <span className={styles.chatStatus}>Live</span>
+                </div>
               </div>
 
-              <div className={styles.chatMessages}>
+              <div className={styles.chatMessages} ref={chatMessagesRef} onScroll={handleChatScroll}>
                 {chatMessages.map((message) => (
                   <div
                     key={message.id}
