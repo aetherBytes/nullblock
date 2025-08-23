@@ -7301,6 +7301,19 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       }
     }
     
+    &.locked {
+      opacity: 0.4;
+      cursor: not-allowed;
+      pointer-events: none;
+      
+      &:hover {
+        transform: none;
+        box-shadow: none;
+        border-color: rgba($lightning-blue, 0.2);
+        background: rgba($background-dark, 0.4);
+      }
+    }
+    
     .modelCapabilities {
       display: flex;
       flex-wrap: wrap;

@@ -6,6 +6,7 @@ Simple FastAPI server wrapper for the Hecate agent to enable frontend integratio
 
 import asyncio
 import logging
+import subprocess
 import time
 import json
 from datetime import datetime
@@ -374,6 +375,47 @@ def create_app() -> FastAPI:
             log_response(500, "🎯 Model selection failed", {"error": str(e)})
             raise HTTPException(status_code=500, detail=str(e))
 
+    @app.post("/unload-lm-studio-model")
+    async def unload_lm_studio_model(request: Request, unload_request: dict):
+        """Unload model from LM Studio using CLI"""
+        try:
+            log_request(request, "🔄 LM Studio model unload requested", {
+                "current_model": unload_request.get("current_model")
+            })
+            
+            # Use lms unload --all to unload all models for clean slate
+            proc = await asyncio.create_subprocess_exec(
+                "lms", "unload", "--all",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await proc.communicate()
+            
+            if proc.returncode == 0:
+                log_response(200, "🔄 LM Studio model unloaded successfully")
+                return {
+                    "success": True,
+                    "message": "LM Studio model unloaded successfully",
+                    "output": stdout.decode() if stdout else "No output"
+                }
+            else:
+                error_msg = stderr.decode() if stderr else "Unknown error"
+                log_response(400, "🔄 LM Studio model unload failed", {
+                    "error": error_msg,
+                    "return_code": proc.returncode
+                })
+                return {
+                    "success": False,
+                    "message": f"Failed to unload LM Studio model: {error_msg}",
+                    "return_code": proc.returncode
+                }
+                
+        except Exception as e:
+            logger.error(f"❌ LM Studio model unload failed: {e}")
+            log_response(500, "🔄 LM Studio model unload failed", {"error": str(e)})
+            raise HTTPException(status_code=500, detail=str(e))
+
     @app.post("/personality")
     async def set_personality(request: Request, personality_request: PersonalityRequest):
         """Set agent personality"""
@@ -490,6 +532,7 @@ def run_server(host: str = "0.0.0.0", port: int = None):
     logger.info(f"🔍 Model status: http://{host}:{port}/model-status")
     logger.info(f"📋 Available models: http://{host}:{port}/available-models")
     logger.info(f"🎯 Set model: http://{host}:{port}/set-model")
+    logger.info(f"🔄 Unload LM Studio model: http://{host}:{port}/unload-lm-studio-model")
     logger.info(f"📜 History: http://{host}:{port}/history")
     logger.info(f"🎭 Personality: http://{host}:{port}/personality")
     logger.info(f"🗑️ Clear: http://{host}:{port}/clear")

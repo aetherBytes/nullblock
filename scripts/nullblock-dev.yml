@@ -1,8 +1,69 @@
 name: nullblock-dev
 root: ~/nullblock
-startup_window: infrastructure
+startup_window: logs
 
 windows:
+  - logs:
+      layout: tiled
+      panes:
+        - |
+          echo "📊 LM Studio Log Stream"
+          echo "Monitoring LM Studio server logs..."
+          echo "Press Ctrl+C to stop"
+          echo ""
+          echo "📊 Monitoring LM Studio server logs..."
+          mkdir -p logs
+          while true; do 
+            echo "$(date '+%Y-%m-%d %H:%M:%S') [LM-STUDIO-STREAM] Starting log stream capture" | tee -a logs/lm-studio-stream.log
+            lms log stream 2>/dev/null | tee -a logs/lm-studio-stream.log || echo "⚠️  No recent log files found in LM Studio server logs" | tee -a logs/lm-studio-stream.log
+            sleep 5
+          done
+        - ~/nullblock/scripts/wait-for-lmstudio.sh
+        - |
+          echo "🎯 Hecate Agent Logs"
+          echo "Monitoring Hecate agent server and client logs..."
+          echo ""
+          mkdir -p svc/nullblock-agents/logs
+          touch svc/nullblock-agents/logs/hecate-server.log
+          tail -f svc/nullblock-agents/logs/hecate-server.log 2>/dev/null || echo "⚠️ Waiting for Hecate logs..."
+        - |
+          echo "🔗 Erebus Server Logs"
+          echo "Monitoring Erebus wallet server logs..."
+          echo ""
+          cd svc/erebus
+          mkdir -p logs
+          LOG_FILE="logs/erebus.log.$(date +%Y-%m-%d)"
+          touch "$LOG_FILE"
+          echo "📝 Tailing: $LOG_FILE"
+          tail -f "$LOG_FILE" 2>/dev/null || echo "⚠️ Waiting for Erebus logs..."
+        - |
+          echo "🌐 MCP Server Logs"
+          echo "Monitoring MCP server logs..."
+          echo ""
+          mkdir -p svc/nullblock-mcp/logs
+          touch svc/nullblock-mcp/logs/mcp-server.log
+          tail -f svc/nullblock-mcp/logs/mcp-server.log 2>/dev/null || echo "⚠️ Waiting for MCP logs..."
+        - ~/nullblock/scripts/health-monitor.sh
+
+  - workspace:
+      layout: even-horizontal
+      panes:
+        - |
+          echo "Nullblock Main Repository"
+          echo "Available commands:"
+          echo "  just help - Show all commands"
+          echo "  just dev-tmux - Launch dev environment"
+          echo "  just start - Start all services"
+          echo "  just status - Check service status"
+          cd ~/nullblock
+        - |
+          echo "Nullblock SDK Repository"
+          echo "Available commands:"
+          echo "  npm run build - Build SDK"
+          echo "  npm test - Run tests"
+          echo "  npm run docs - Generate docs"
+          cd ~/nullblock-sdk
+
   - infrastructure:
       layout: even-horizontal
       panes:
@@ -108,67 +169,6 @@ windows:
             sleep 5
           done
         - ~/nullblock/scripts/wait-for-lmstudio.sh
-
-  - logs:
-      layout: tiled
-      panes:
-        - |
-          echo "📊 LM Studio Log Stream"
-          echo "Monitoring LM Studio server logs..."
-          echo "Press Ctrl+C to stop"
-          echo ""
-          echo "📊 Monitoring LM Studio server logs..."
-          mkdir -p logs
-          while true; do 
-            echo "$(date '+%Y-%m-%d %H:%M:%S') [LM-STUDIO-STREAM] Starting log stream capture" | tee -a logs/lm-studio-stream.log
-            lms log stream 2>/dev/null | tee -a logs/lm-studio-stream.log || echo "⚠️  No recent log files found in LM Studio server logs" | tee -a logs/lm-studio-stream.log
-            sleep 5
-          done
-        - ~/nullblock/scripts/wait-for-lmstudio.sh
-        - |
-          echo "🎯 Hecate Agent Logs"
-          echo "Monitoring Hecate agent server and client logs..."
-          echo ""
-          mkdir -p svc/nullblock-agents/logs
-          touch svc/nullblock-agents/logs/hecate-server.log
-          tail -f svc/nullblock-agents/logs/hecate-server.log 2>/dev/null || echo "⚠️ Waiting for Hecate logs..."
-        - |
-          echo "🔗 Erebus Server Logs"
-          echo "Monitoring Erebus wallet server logs..."
-          echo ""
-          cd svc/erebus
-          mkdir -p logs
-          LOG_FILE="logs/erebus.log.$(date +%Y-%m-%d)"
-          touch "$LOG_FILE"
-          echo "📝 Tailing: $LOG_FILE"
-          tail -f "$LOG_FILE" 2>/dev/null || echo "⚠️ Waiting for Erebus logs..."
-        - |
-          echo "🌐 MCP Server Logs"
-          echo "Monitoring MCP server logs..."
-          echo ""
-          mkdir -p svc/nullblock-mcp/logs
-          touch svc/nullblock-mcp/logs/mcp-server.log
-          tail -f svc/nullblock-mcp/logs/mcp-server.log 2>/dev/null || echo "⚠️ Waiting for MCP logs..."
-        - ~/nullblock/scripts/health-monitor.sh
-
-  - workspace:
-      layout: even-horizontal
-      panes:
-        - |
-          echo "Nullblock Main Repository"
-          echo "Available commands:"
-          echo "  just help - Show all commands"
-          echo "  just dev-tmux - Launch dev environment"
-          echo "  just start - Start all services"
-          echo "  just status - Check service status"
-          cd ~/nullblock
-        - |
-          echo "Nullblock SDK Repository"
-          echo "Available commands:"
-          echo "  npm run build - Build SDK"
-          echo "  npm test - Run tests"
-          echo "  npm run docs - Generate docs"
-          cd ~/nullblock-sdk
 
 on_project_start: |
   if [ ! -f .env.dev ]; then
