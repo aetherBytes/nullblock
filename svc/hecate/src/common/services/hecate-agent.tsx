@@ -78,7 +78,7 @@ class HecateAgentService {
     try {
       // Create AbortController for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes timeout for thinking models
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout for thinking models
 
       const response = await fetch(`${this.erebusUrl}/api/agents/hecate/chat`, {
         method: 'POST',
