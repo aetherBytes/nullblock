@@ -44,7 +44,7 @@ impl AgentProxy {
     pub fn new(agent_base_url: String) -> Self {
         Self {
             agent_base_url,
-            timeout_seconds: 30,
+            timeout_seconds: 300,
         }
     }
 

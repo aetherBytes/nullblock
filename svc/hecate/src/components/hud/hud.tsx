@@ -2145,6 +2145,7 @@ const HUD: React.FC<HUDProps> = ({
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [currentSelectedModel, setCurrentSelectedModel] = useState<string | null>(null);
   const [isModelChanging, setIsModelChanging] = useState(false);
+  const [isAgentThinking, setIsAgentThinking] = useState(false);
 
   // Initialize Hecate agent connection
   useEffect(() => {
@@ -2283,8 +2284,8 @@ const HUD: React.FC<HUDProps> = ({
   };
 
   const handleModelSelection = async (modelName: string) => {
-    if (isModelChanging) {
-      return; // Prevent multiple simultaneous model changes
+    if (isModelChanging || isAgentThinking) {
+      return; // Prevent model changes during model switching or agent thinking
     }
 
     try {
@@ -2374,7 +2375,7 @@ const HUD: React.FC<HUDProps> = ({
 
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim()) return;
+    if (!chatInput.trim() || isAgentThinking) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString() + '-user',
@@ -2390,6 +2391,7 @@ const HUD: React.FC<HUDProps> = ({
 
     // Set NullEye to thinking state while waiting for response
     setNulleyeState('thinking');
+    setIsAgentThinking(true);
 
     // Get agent response if connected
     if (agentConnected) {
@@ -2420,6 +2422,7 @@ const HUD: React.FC<HUDProps> = ({
         
         // Set success state briefly, then return to base
         setNulleyeState('success');
+        setIsAgentThinking(false);
         setTimeout(() => {
           setNulleyeState('base');
         }, 2000);
@@ -2441,6 +2444,7 @@ const HUD: React.FC<HUDProps> = ({
         
         // Set error state briefly, then return to base
         setNulleyeState('error');
+        setIsAgentThinking(false);
         setTimeout(() => {
           setNulleyeState('base');
         }, 2000);
@@ -2461,6 +2465,7 @@ const HUD: React.FC<HUDProps> = ({
       
       // Set warning state for offline, then return to base
       setNulleyeState('warning');
+      setIsAgentThinking(false);
       setTimeout(() => {
         setNulleyeState('base');
       }, 2000);
@@ -2529,8 +2534,8 @@ const HUD: React.FC<HUDProps> = ({
                     key={model.name}
                     className={`${styles.modelCard} ${
                       model.available ? styles.available : styles.unavailable
-                    } ${currentSelectedModel === model.name ? styles.selected : ''} ${isModelChanging ? styles.locked : ''}`}
-                    onClick={() => model.available && !isModelChanging && handleModelSelection(model.name)}
+                    } ${currentSelectedModel === model.name ? styles.selected : ''} ${isModelChanging || isAgentThinking ? styles.locked : ''}`}
+                    onClick={() => model.available && !isModelChanging && !isAgentThinking && handleModelSelection(model.name)}
                   >
                     <div className={styles.modelHeader}>
                       <span className={styles.modelIcon}>🤖</span>
@@ -3447,11 +3452,12 @@ const HUD: React.FC<HUDProps> = ({
                           type="text"
                           value={chatInput}
                           onChange={handleChatInputChange}
-                          placeholder="Ask Hecate anything..."
+                          placeholder={isAgentThinking ? "Hecate is thinking..." : "Ask Hecate anything..."}
                           className={styles.chatInputField}
+                          disabled={isAgentThinking}
                         />
-                        <button type="submit" className={styles.chatSendButton}>
-                          <span>➤</span>
+                        <button type="submit" className={styles.chatSendButton} disabled={isAgentThinking}>
+                          <span>{isAgentThinking ? '🤔' : '➤'}</span>
                         </button>
                       </form>
 

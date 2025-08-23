@@ -83,6 +83,7 @@ svc/erebus/src/resources/
 - **Cloud Models**: OpenAI, Anthropic, Groq, HuggingFace
 - **Routing**: Automatic model selection based on task requirements
 - **Optimization**: Quality, speed, cost, or balanced strategies
+- **Timeout Configuration**: 5-minute timeout for thinking models (Qwen, etc.) to handle complex reasoning
 
 ### Specialized Agents
 - **Information Gathering**: Market data, DeFi protocols, social sentiment
@@ -150,6 +151,7 @@ tail -f logs/hecate-server.log
 - **Subsystem Organization**: Each feature gets own directory (wallets/, mcp/, agents/)
 - **Wallet Subsystem**: All wallets implement `WalletProvider` trait
 - **Shared Types**: Use `resources/types.rs` for cross-subsystem types
+- **Agent Timeout**: 5-minute proxy timeout for thinking models and complex agent operations
 
 ## 🎨 UI/UX Standards
 
