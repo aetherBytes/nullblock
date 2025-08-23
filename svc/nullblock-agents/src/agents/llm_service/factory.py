@@ -514,10 +514,11 @@ class LLMServiceFactory:
     def _get_default_local_model(self) -> Optional[str]:
         """Get the best available local model"""
         # LM Studio is the primary local model server
+        # Gemma is prioritized as the default for Hecate
         local_models = [
+            "gemma-3-270m-it-mlx",         # Gemma3 270M (default for Hecate - fast/reliable)
             "qwen/qwen3-4b-thinking-2507",  # Qwen3 4B thinking model (best reasoning)
             "openai/gpt-oss-20b",          # GPT-OSS 20B (general purpose)
-            "gemma-3-270m-it-mlx",         # Gemma3 270M (fast/lightweight)
             "llama2",                      # Ollama models (secondary fallback)
             "codellama"                    # Ollama models (secondary fallback)
         ]

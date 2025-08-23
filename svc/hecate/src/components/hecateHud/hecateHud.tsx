@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './hecateHud.module.scss';
+import { hecateAgent } from '../../common/services/hecate-agent';
 
 interface HecateHudProps {
   onClose: () => void;
@@ -17,7 +18,9 @@ interface ChatMessage {
   timestamp: Date;
   sender: 'user' | 'hecate';
   message: string;
-  type?: 'text' | 'update' | 'question' | 'suggestion';
+  type: 'text' | 'system' | 'error';
+  model_used?: string;
+  metadata?: any;
 }
 
 interface LensOption {
@@ -602,6 +605,30 @@ const HecateHud: React.FC<HecateHudProps> = ({
     };
   }, []);
 
+  // Initialize Hecate agent connection
+  useEffect(() => {
+    const initHecateAgent = async () => {
+      try {
+        const connected = await hecateAgent.connect();
+        if (connected) {
+          console.log('Hecate agent connected successfully');
+          // Optionally fetch available models and conversation history
+          try {
+            await hecateAgent.getConversationHistory();
+          } catch (historyError) {
+            console.warn('Could not load conversation history:', historyError);
+          }
+        } else {
+          console.warn('Failed to connect to Hecate agent');
+        }
+      } catch (error) {
+        console.error('Error initializing Hecate agent:', error);
+      }
+    };
+
+    initHecateAgent();
+  }, []);
+
   useEffect(() => {
     if (autoScroll && logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -687,96 +714,74 @@ const HecateHud: React.FC<HecateHudProps> = ({
       // Set NullView to thinking state
       setNulleyeState('thinking');
 
-      // Simulate Hecate response
-      setTimeout(
-        () => {
-          const responses = [
-            {
-              message: "I'm analyzing your request. Let me check the current system status...",
-              type: 'update',
-            },
-            {
-              message:
-                'Based on the current market conditions, I recommend monitoring the arbitrage opportunities.',
-              type: 'suggestion',
-            },
-            {
-              message:
-                "I've updated your portfolio settings. The changes will take effect immediately.",
-              type: 'update',
-            },
-            {
-              message:
-                'The social sentiment analysis shows positive signals for your current positions.',
-              type: 'text',
-            },
-            {
-              message:
-                "I've detected a potential MEV opportunity. Would you like me to prepare a bundle?",
-              type: 'question',
-            },
-            {
-              message:
-                'Your risk assessment has been completed. All parameters are within acceptable limits.',
-              type: 'update',
-            },
-            {
-              message: "I'm processing your request. This may take a few moments...",
-              type: 'text',
-            },
-            {
-              message: 'The market data indicates favorable conditions for your trading strategy.',
-              type: 'suggestion',
-            },
-            {
-              message:
-                'I can help you with that! Would you like me to use a template or create a custom workflow?',
-              type: 'question',
-            },
-            {
-              message: 'Let me suggest some relevant templates for your request...',
-              type: 'suggestion',
-            },
-            {
-              message:
-                "I've prepared a workflow template that matches your needs. Would you like to customize it?",
-              type: 'question',
-            },
-          ];
+      // Send real message to Hecate agent
+      handleRealChatResponse(userMessage.message);
+    }
+  };
 
-          const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-          const hecateMessage: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            timestamp: new Date(),
-            sender: 'hecate',
-            message: randomResponse.message,
-            type: randomResponse.type as 'text' | 'update' | 'question' | 'suggestion',
-          };
+  const handleRealChatResponse = async (message: string) => {
+    try {
+      // Ensure connection to Hecate agent
+      const connected = await hecateAgent.connect();
+      if (!connected) {
+        throw new Error('Failed to connect to Hecate agent');
+      }
 
-          setChatMessages((prev) => [...prev, hecateMessage]);
+      // Send message and get response
+      const response = await hecateAgent.sendMessage(message, {
+        wallet_address: publicKey || undefined,
+        wallet_type: walletType,
+        session_time: new Date().toISOString()
+      });
 
-          // Set NullView state based on response type
-          switch (randomResponse.type) {
-            case 'update':
-              setNulleyeState('response');
-              break;
-            case 'question':
-              setNulleyeState('question');
-              break;
-            case 'suggestion':
-              setNulleyeState('success');
-              break;
-            default:
-              setNulleyeState('base');
-          }
+      // Create Hecate response message
+      const hecateMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        timestamp: new Date(),
+        sender: 'hecate',
+        message: response.content,
+        type: 'text',
+        model_used: response.model_used,
+        metadata: response.metadata
+      };
 
-          // Return to base state after a delay
-          setTimeout(() => {
-            setNulleyeState('base');
-          }, 3000);
-        },
-        1000 + Math.random() * 2000,
-      );
+      setChatMessages((prev) => [...prev, hecateMessage]);
+
+      // Set NullView state based on response confidence/quality
+      if (response.confidence_score > 0.8) {
+        setNulleyeState('success');
+      } else if (response.metadata.finish_reason === 'question') {
+        setNulleyeState('question');
+      } else {
+        setNulleyeState('response');
+      }
+
+      // Return to base state after a delay
+      setTimeout(() => {
+        setNulleyeState('base');
+      }, 3000);
+
+    } catch (error) {
+      console.error('Failed to get Hecate response:', error);
+      
+      // Create error message
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        timestamp: new Date(),
+        sender: 'hecate',
+        message: error instanceof Error ? error.message : 'Failed to process your message. Please try again.',
+        type: 'error'
+      };
+
+      setChatMessages((prev) => [...prev, errorMessage]);
+
+      // Set error state
+      setNulleyeState('error');
+
+      // Return to base state after delay
+      setTimeout(() => {
+        setNulleyeState('base');
+      }, 3000);
     }
   };
 

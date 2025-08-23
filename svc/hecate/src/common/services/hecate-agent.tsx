@@ -76,6 +76,10 @@ class HecateAgentService {
     }
 
     try {
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes timeout for thinking models
+
       const response = await fetch(`${this.erebusUrl}/api/agents/hecate/chat`, {
         method: 'POST',
         headers: {
@@ -85,7 +89,10 @@ class HecateAgentService {
           message,
           user_context: userContext
         }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -95,6 +102,9 @@ class HecateAgentService {
       return data;
     } catch (error) {
       console.error('Failed to send message to Hecate agent:', error);
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('Request timed out - the model may be thinking too long or server overloaded');
+      }
       throw error;
     }
   }
