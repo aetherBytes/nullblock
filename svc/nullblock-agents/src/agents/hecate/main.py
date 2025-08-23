@@ -469,23 +469,21 @@ class HecateAgent:
         try:
             import subprocess
 
-            # Get status in table format (JSON not supported)
+            # Get loaded models using ps command
             result = subprocess.run(
-                ["lms", "status"], capture_output=True, text=True, timeout=10
+                ["lms", "ps"], capture_output=True, text=True, timeout=10
             )
 
             if result.returncode == 0:
-                # Parse the table output to find loaded models
+                # Parse the lms ps output to find loaded models
                 lines = result.stdout.split("\n")
                 loaded_models = []
 
                 for line in lines:
-                    # Look for lines with model names (contain ' - ' for size info)
-                    if " - " in line and ("MB" in line or "GB" in line):
-                        # Extract model name (everything before ' - ')
-                        model_name = line.strip().split(" - ")[0].strip()
-                        if model_name.startswith("· "):
-                            model_name = model_name[2:]  # Remove bullet point
+                    # Look for lines starting with "Identifier:" which contain model names
+                    if line.strip().startswith("Identifier:"):
+                        # Extract model name (everything after "Identifier: ")
+                        model_name = line.strip().replace("Identifier:", "").strip()
                         if model_name and model_name != keep_model:
                             loaded_models.append(model_name)
 
