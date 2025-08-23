@@ -313,6 +313,9 @@ class HecateAgent:
             )
             llm_response = await self.llm_factory.generate(request, requirements)
 
+            # Strip thinking tags from response content
+            cleaned_content = self._strip_thinking_tags(llm_response.content)
+
             # Calculate latency
             end_time = asyncio.get_event_loop().time()
             latency_ms = (end_time - start_time) * 1000
@@ -326,14 +329,14 @@ class HecateAgent:
                 llm_response.cost_estimate,
             )
             logger.debug(
-                f"💬 Response: {llm_response.content[:100]}{
-                    '...' if len(llm_response.content) > 100 else ''
+                f"💬 Response: {cleaned_content[:100]}{
+                    '...' if len(cleaned_content) > 100 else ''
                 }"
             )
 
-            # Add assistant response to history
+            # Add assistant response to history (use cleaned content)
             assistant_message = ConversationMessage(
-                content=llm_response.content,
+                content=cleaned_content,
                 role="assistant",
                 timestamp=datetime.now(),
                 model_used=llm_response.model_used,
@@ -359,7 +362,7 @@ class HecateAgent:
             )
 
             return ChatResponse(
-                content=llm_response.content,
+                content=cleaned_content,
                 model_used=llm_response.model_used,
                 latency_ms=latency_ms,
                 confidence_score=confidence_score,
@@ -762,7 +765,7 @@ class HecateAgent:
             )
 
             response = await self.llm_factory.generate(request, requirements)
-            return response.content
+            return self._strip_thinking_tags(response.content)
 
         except Exception as e:
             logger.error(f"Response synthesis failed: {e}")
@@ -853,6 +856,19 @@ class HecateAgent:
                     len(self.conversation_history)
                 } messages"
             )
+
+    def _strip_thinking_tags(self, content: str) -> str:
+        """Strip thinking model tags from response content"""
+        import re
+        
+        # Remove <think>...</think> blocks
+        content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
+        
+        # Clean up any extra whitespace that might be left
+        content = re.sub(r'\n\s*\n\s*\n', '\n\n', content)  # Multiple newlines to double
+        content = content.strip()
+        
+        return content
 
     def _calculate_confidence(self, llm_response: LLMResponse) -> float:
         """Calculate confidence score based on response characteristics"""

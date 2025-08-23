@@ -829,8 +829,8 @@ class LLMServiceFactory:
         if request.stop_sequences:
             payload["stop"] = request.stop_sequences
         
-        # Set timeout based on model type - thinking models need more time
-        timeout = 60 if "thinking" in config.name.lower() else 30
+        # Set timeout based on model type - thinking models need much more time
+        timeout = 300 if "thinking" in config.name.lower() else 120
         
         try:
             async with session.post(config.api_endpoint, json=payload, timeout=timeout) as resp:
@@ -889,7 +889,9 @@ class LLMServiceFactory:
                 )
                 
         except asyncio.TimeoutError:
-            raise Exception("LM Studio request timed out. The model may be too slow or server overloaded.")
+            model_type = "thinking" if "thinking" in config.name.lower() else "standard"
+            timeout_duration = "5 minutes" if "thinking" in config.name.lower() else "2 minutes"
+            raise Exception(f"LM Studio request timed out after {timeout_duration} for {model_type} model '{config.name}'. The model may need more time to process complex requests.")
         except Exception as e:
             if "Cannot connect" in str(e) or "Connection refused" in str(e):
                 raise Exception(f"Cannot connect to LM Studio at {config.api_endpoint}. "
