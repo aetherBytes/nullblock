@@ -2966,6 +2966,40 @@ $border-color: rgba($echo-blue, 0.3);
   }
 }
 
+// Model changing states
+.modelDropdownBtn.modelChanging {
+  opacity: 0.7;
+  cursor: not-allowed;
+  border-color: rgba($echo-purple, 0.5);
+  
+  .loadingSpinner {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+    margin-left: 0.5rem;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Locked model cards during changes
+.modelCard.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+  
+  &:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
 // Model Selection Styles
 .modelSelection {
   padding: 1rem;

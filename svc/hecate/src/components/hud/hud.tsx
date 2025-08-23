@@ -2144,6 +2144,7 @@ const HUD: React.FC<HUDProps> = ({
   const [availableModels, setAvailableModels] = useState<any[]>([]);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [currentSelectedModel, setCurrentSelectedModel] = useState<string | null>(null);
+  const [isModelChanging, setIsModelChanging] = useState(false);
 
   // Initialize Hecate agent connection
   useEffect(() => {
@@ -2282,8 +2283,48 @@ const HUD: React.FC<HUDProps> = ({
   };
 
   const handleModelSelection = async (modelName: string) => {
+    if (isModelChanging) {
+      return; // Prevent multiple simultaneous model changes
+    }
+
     try {
+      setIsModelChanging(true);
       setShowModelDropdown(false);
+      
+      // Set NullEye to thinking state during model change
+      setNulleyeState('thinking');
+      
+      // First, unload the current model in LM Studio if it's a local model
+      if (currentSelectedModel && currentSelectedModel.includes('lm-studio')) {
+        console.log('Unloading current model from LM Studio...');
+        try {
+          // Add system message about unloading
+          const unloadMessage: ChatMessage = {
+            id: Date.now().toString(),
+            timestamp: new Date(),
+            sender: 'hecate',
+            message: `🔄 Unloading ${currentSelectedModel}...`,
+            type: 'system'
+          };
+          setChatMessages(prev => [...prev, unloadMessage]);
+          
+          // Use LM Studio CLI to unload the model
+          const unloadResponse = await fetch('http://localhost:3000/api/agents/hecate/unload-lm-studio-model', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_model: currentSelectedModel })
+          });
+          
+          if (unloadResponse.ok) {
+            console.log('Successfully unloaded previous model from LM Studio');
+          } else {
+            console.warn('Failed to unload previous model from LM Studio, continuing anyway...');
+          }
+        } catch (unloadError) {
+          console.warn('Error unloading model from LM Studio:', unloadError);
+          // Continue with model switch even if unload fails
+        }
+      }
       
       const response = await fetch('http://localhost:3000/api/agents/hecate/set-model', {
         method: 'POST',
@@ -2294,6 +2335,7 @@ const HUD: React.FC<HUDProps> = ({
       if (response.ok) {
         const data = await response.json();
         setCurrentModel(data.model);
+        setCurrentSelectedModel(data.model);
         console.log('Model changed to:', data.model);
         
         // Add system message to indicate model change
@@ -2305,11 +2347,28 @@ const HUD: React.FC<HUDProps> = ({
           type: 'update'
         };
         setChatMessages(prev => [...prev, systemMessage]);
+        
+        // Set success state briefly, then return to base
+        setNulleyeState('success');
+        setTimeout(() => {
+          setNulleyeState('base');
+        }, 2000);
+        
       } else {
         console.error('Failed to set model');
+        setNulleyeState('error');
+        setTimeout(() => {
+          setNulleyeState('base');
+        }, 2000);
       }
     } catch (error) {
       console.error('Error setting model:', error);
+      setNulleyeState('error');
+      setTimeout(() => {
+        setNulleyeState('base');
+      }, 2000);
+    } finally {
+      setIsModelChanging(false);
     }
   };
 
@@ -2328,6 +2387,9 @@ const HUD: React.FC<HUDProps> = ({
     setChatMessages(prev => [...prev, userMessage]);
     const currentInput = chatInput;
     setChatInput('');
+
+    // Set NullEye to thinking state while waiting for response
+    setNulleyeState('thinking');
 
     // Get agent response if connected
     if (agentConnected) {
@@ -2355,6 +2417,13 @@ const HUD: React.FC<HUDProps> = ({
         };
         
         setChatMessages(prev => [...prev, hecateResponse]);
+        
+        // Set success state briefly, then return to base
+        setNulleyeState('success');
+        setTimeout(() => {
+          setNulleyeState('base');
+        }, 2000);
+        
       } catch (error) {
         console.error('Failed to get Hecate response:', error);
         
@@ -2369,6 +2438,13 @@ const HUD: React.FC<HUDProps> = ({
         };
         
         setChatMessages(prev => [...prev, errorResponse]);
+        
+        // Set error state briefly, then return to base
+        setNulleyeState('error');
+        setTimeout(() => {
+          setNulleyeState('base');
+        }, 2000);
+        
       }
     } else {
       // Fallback when agent not connected
@@ -2382,6 +2458,12 @@ const HUD: React.FC<HUDProps> = ({
       };
       
       setChatMessages(prev => [...prev, fallbackResponse]);
+      
+      // Set warning state for offline, then return to base
+      setNulleyeState('warning');
+      setTimeout(() => {
+        setNulleyeState('base');
+      }, 2000);
     }
   };
 
@@ -2447,8 +2529,8 @@ const HUD: React.FC<HUDProps> = ({
                     key={model.name}
                     className={`${styles.modelCard} ${
                       model.available ? styles.available : styles.unavailable
-                    } ${currentSelectedModel === model.name ? styles.selected : ''}`}
-                    onClick={() => model.available && handleModelSelection(model.name)}
+                    } ${currentSelectedModel === model.name ? styles.selected : ''} ${isModelChanging ? styles.locked : ''}`}
+                    onClick={() => model.available && !isModelChanging && handleModelSelection(model.name)}
                   >
                     <div className={styles.modelHeader}>
                       <span className={styles.modelIcon}>🤖</span>
