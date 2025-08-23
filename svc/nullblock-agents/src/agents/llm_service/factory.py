@@ -14,7 +14,7 @@ from typing import Dict, List, Any, Optional, AsyncGenerator
 from dataclasses import dataclass
 from datetime import datetime
 
-from .models import ModelConfig, ModelProvider, ModelCapability, AVAILABLE_MODELS, get_model_config
+from .models import ModelConfig, ModelProvider, ModelTier, ModelCapability, ModelMetrics, AVAILABLE_MODELS, get_model_config
 from .router import ModelRouter, TaskRequirements, RoutingDecision, OptimizationGoal, Priority
 
 logger = logging.getLogger(__name__)
@@ -159,11 +159,50 @@ class LLMServiceFactory:
         try:
             async with self.sessions[ModelProvider.LOCAL.value].get("http://localhost:1234/v1/models", timeout=3) as resp:
                 if resp.status == 200:
-                    logger.info("LM Studio is available (primary local model server)")
-                    # Enable LM Studio models
+                    data = await resp.json()
+                    available_lm_models = {model["id"] for model in data.get("data", [])}
+                    logger.info(f"LM Studio is available with models: {list(available_lm_models)}")
+                    
+                    # Enable only LM Studio models that are actually available
                     for model_name, config in AVAILABLE_MODELS.items():
                         if config.provider == ModelProvider.LOCAL:
-                            self.router.update_model_status(model_name, True)
+                            is_available = model_name in available_lm_models
+                            self.router.update_model_status(model_name, is_available)
+                            if is_available:
+                                logger.info(f"Enabled LM Studio model: {model_name}")
+                            else:
+                                logger.debug(f"LM Studio model not available: {model_name}")
+                    
+                    # Dynamically add any discovered models that don't have configurations yet
+                    for discovered_model in available_lm_models:
+                        if discovered_model not in AVAILABLE_MODELS:
+                            # Create a generic configuration for unknown discovered models
+                            
+                            dynamic_config = ModelConfig(
+                                name=discovered_model,
+                                provider=ModelProvider.LOCAL,
+                                tier=ModelTier.LOCAL,
+                                capabilities=[
+                                    ModelCapability.CONVERSATION,
+                                    ModelCapability.REASONING,
+                                    ModelCapability.CODE
+                                ],
+                                metrics=ModelMetrics(
+                                    avg_latency_ms=1500,  # Conservative estimate
+                                    tokens_per_second=20,  # Conservative estimate
+                                    cost_per_1k_tokens=0.0,  # Local models are free
+                                    context_window=4096,  # Conservative default
+                                    quality_score=0.75,  # Conservative estimate
+                                    reliability_score=0.85  # Conservative estimate
+                                ),
+                                api_endpoint="http://localhost:1234/v1/chat/completions",
+                                description=f"Dynamically discovered local model: {discovered_model}"
+                            )
+                            
+                            # Add to available models
+                            AVAILABLE_MODELS[discovered_model] = dynamic_config
+                            self.router.update_model_status(discovered_model, True)
+                            logger.info(f"🆕 Dynamically added discovered model: {discovered_model}")
                 else:
                     logger.warning(f"LM Studio returned HTTP {resp.status}")
                     # Disable LM Studio models
@@ -476,10 +515,11 @@ class LLMServiceFactory:
         """Get the best available local model"""
         # LM Studio is the primary local model server
         local_models = [
-            "gemma-3-270m-it-mlx",  # Primary LM Studio model
-            "lm-studio-default",    # Fallback to whatever is loaded in LM Studio
-            "llama2",               # Ollama models (secondary fallback)
-            "codellama"             # Ollama models (secondary fallback)
+            "qwen/qwen3-4b-thinking-2507",  # Qwen3 4B thinking model (best reasoning)
+            "openai/gpt-oss-20b",          # GPT-OSS 20B (general purpose)
+            "gemma-3-270m-it-mlx",         # Gemma3 270M (fast/lightweight)
+            "llama2",                      # Ollama models (secondary fallback)
+            "codellama"                    # Ollama models (secondary fallback)
         ]
         
         for model_name in local_models:
@@ -788,8 +828,11 @@ class LLMServiceFactory:
         if request.stop_sequences:
             payload["stop"] = request.stop_sequences
         
+        # Set timeout based on model type - thinking models need more time
+        timeout = 60 if "thinking" in config.name.lower() else 30
+        
         try:
-            async with session.post(config.api_endpoint, json=payload, timeout=30) as resp:
+            async with session.post(config.api_endpoint, json=payload, timeout=timeout) as resp:
                 if resp.status != 200:
                     error_text = await resp.text()
                     # Provide helpful error message for common LM Studio issues

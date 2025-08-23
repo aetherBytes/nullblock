@@ -348,7 +348,7 @@ def create_app() -> FastAPI:
             })
             
             old_model = agent.get_preferred_model()
-            success = agent.set_preferred_model(model_request.model_name)
+            success = await agent.set_preferred_model(model_request.model_name)
             
             if success:
                 log_response(200, "🎯 Model selection successful", {

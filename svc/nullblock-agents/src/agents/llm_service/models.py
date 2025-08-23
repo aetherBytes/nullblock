@@ -250,25 +250,50 @@ AVAILABLE_MODELS = {
         description="Local Gemma3 270M model via LM Studio - optimized for development"
     ),
     
-    "lm-studio-default": ModelConfig(
-        name="lm-studio-default",
+    "openai/gpt-oss-20b": ModelConfig(
+        name="openai/gpt-oss-20b",
         provider=ModelProvider.LOCAL,
-        tier=ModelTier.LOCAL,
+        tier=ModelTier.STANDARD,
         capabilities=[
             ModelCapability.CONVERSATION,
             ModelCapability.REASONING,
-            ModelCapability.CODE
+            ModelCapability.CODE,
+            ModelCapability.CREATIVE,
+            ModelCapability.DATA_ANALYSIS
+        ],
+        metrics=ModelMetrics(
+            avg_latency_ms=1200,
+            tokens_per_second=20,
+            cost_per_1k_tokens=0.0,
+            context_window=8192,
+            quality_score=0.88,
+            reliability_score=0.92
+        ),
+        api_endpoint="http://localhost:1234/v1/chat/completions",
+        description="GPT-OSS 20B model via LM Studio - open-source GPT alternative"
+    ),
+    
+    "qwen/qwen3-4b-thinking-2507": ModelConfig(
+        name="qwen/qwen3-4b-thinking-2507",
+        provider=ModelProvider.LOCAL,
+        tier=ModelTier.STANDARD,
+        capabilities=[
+            ModelCapability.REASONING,
+            ModelCapability.MATH,
+            ModelCapability.CODE,
+            ModelCapability.DATA_ANALYSIS,
+            ModelCapability.LONG_CONTEXT
         ],
         metrics=ModelMetrics(
             avg_latency_ms=1000,
             tokens_per_second=25,
             cost_per_1k_tokens=0.0,
-            context_window=4096,
-            quality_score=0.72,  # Higher quality score than Ollama models
-            reliability_score=0.92  # Higher reliability score
+            context_window=32768,
+            quality_score=0.85,
+            reliability_score=0.92
         ),
         api_endpoint="http://localhost:1234/v1/chat/completions",
-        description="Default LM Studio model (whatever is currently loaded)"
+        description="Qwen3 4B thinking model via LM Studio - advanced reasoning capabilities"
     ),
     
     # HuggingFace Models
