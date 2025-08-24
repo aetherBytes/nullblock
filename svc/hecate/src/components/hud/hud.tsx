@@ -3700,7 +3700,7 @@ const HUD: React.FC<HUDProps> = ({
   return (
     <div className={`${styles.echoContainer} ${styles[theme]}`}>
       {renderControlScreen()}
-      <div className={styles.hudWindow}>{renderScreen()}</div>
+      {renderScreen()}
     </div>
   );
 };
