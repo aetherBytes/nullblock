@@ -611,6 +611,11 @@ const HUD: React.FC<HUDProps> = ({
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Block submission if model is changing or Hecate is thinking
+    if (isModelChanging || nullviewState === 'thinking') {
+      return;
+    }
+
     if (chatInput.trim()) {
       const userMessage = {
         id: Date.now().toString(),
@@ -1406,15 +1411,26 @@ const HUD: React.FC<HUDProps> = ({
                           type="text"
                           value={chatInput}
                           onChange={handleChatInputChange}
-                          placeholder="Ask Hecate anything..."
+                          placeholder={
+                            isModelChanging 
+                              ? "Switching models..." 
+                              : nullviewState === 'thinking' 
+                                ? "Hecate is thinking..." 
+                                : "Ask Hecate anything..."
+                          }
                           className={styles.chatInputField}
+                          disabled={isModelChanging || nullviewState === 'thinking'}
                         />
-                        <button type="submit" className={styles.chatSendButton}>
+                        <button 
+                          type="submit" 
+                          className={styles.chatSendButton}
+                          disabled={isModelChanging || nullviewState === 'thinking'}
+                        >
                           <span>➤</span>
                         </button>
                       </form>
 
-                      {showSuggestions && (
+                      {showSuggestions && !isModelChanging && nullviewState !== 'thinking' && (
                         <div className={styles.chatSuggestions}>
                           <div className={styles.suggestionsHeader}>
                             <span>💡 Quick Actions</span>
