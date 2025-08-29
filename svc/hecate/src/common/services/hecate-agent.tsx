@@ -133,6 +133,87 @@ class HecateAgentService {
   }
 
   /**
+   * Get available models
+   */
+  async getAvailableModels(): Promise<{ models: any[], current_model: string | null }> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to Hecate agent. Call connect() first.');
+    }
+
+    try {
+      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/available-models`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Failed to get available models:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Set preferred model
+   */
+  async setModel(modelName: string): Promise<boolean> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to Hecate agent. Call connect() first.');
+    }
+
+    try {
+      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/set-model`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ model_name: modelName }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success || false;
+    } catch (error) {
+      console.error('Failed to set model:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Unload current model from LM Studio (for clean model switching)
+   */
+  async unloadModel(currentModel?: string): Promise<boolean> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to Hecate agent. Call connect() first.');
+    }
+
+    try {
+      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/unload-lm-studio-model`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ current_model: currentModel }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success || false;
+    } catch (error) {
+      console.error('Failed to unload model:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Set agent personality
    */
   async setPersonality(personality: 'helpful_cyberpunk' | 'technical_expert' | 'concise_assistant'): Promise<boolean> {
