@@ -138,6 +138,8 @@ const HUD: React.FC<HUDProps> = ({
   const [isSearchingModels, setIsSearchingModels] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [defaultModelLoaded, setDefaultModelLoaded] = useState(false);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [lastStatusMessageModel, setLastStatusMessageModel] = useState<string | null>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
 
   // Sandbox state
@@ -379,12 +381,22 @@ const HUD: React.FC<HUDProps> = ({
 
   // Initialize Hecate specific functionality
   useEffect(() => {
-    if (!publicKey) return;
+    if (!publicKey) {
+      // Reset state when wallet disconnected
+      setChatMessages([]);
+      setAvailableModels([]);
+      setCurrentSelectedModel(null);
+      setDefaultModelLoaded(false);
+      setIsLoadingModels(false);
+      setLastStatusMessageModel(null);
+      return;
+    }
     
     // Initialize with empty chat
     setChatMessages([]);
     
     // Load available models when wallet connected
+    console.log('Wallet connection triggered loadAvailableModels');
     loadAvailableModels();
     
     // Ensure we start scrolled to bottom
@@ -401,10 +413,11 @@ const HUD: React.FC<HUDProps> = ({
     };
   }, [publicKey]);
 
-  // Load models when Hecate tab becomes active
+  // Load models when Hecate tab becomes active (only if not already loaded)
   useEffect(() => {
-    if (mainHudActiveTab === 'hecate' && publicKey) {
-      // Always refresh models when switching to Hecate tab
+    if (mainHudActiveTab === 'hecate' && publicKey && availableModels.length === 0 && !isLoadingModels) {
+      // Only load models if not already loaded and not currently loading
+      console.log('Tab switch triggered loadAvailableModels');
       loadAvailableModels();
     }
   }, [mainHudActiveTab, publicKey]);
@@ -563,7 +576,21 @@ const HUD: React.FC<HUDProps> = ({
   ];
 
   const loadAvailableModels = async () => {
+    // Prevent concurrent executions
+    if (isLoadingModels) {
+      console.log('Model loading already in progress, skipping duplicate call');
+      return;
+    }
+
     try {
+      console.log('=== LOADING MODELS START ===');
+      console.log('isLoadingModels:', isLoadingModels);
+      console.log('defaultModelLoaded:', defaultModelLoaded);
+      console.log('availableModels.length:', availableModels.length);
+      console.log('currentSelectedModel:', currentSelectedModel);
+
+      setIsLoadingModels(true);
+
       // Import the hecate agent service
       const { hecateAgent } = await import('../../common/services/hecate-agent');
       
@@ -581,10 +608,28 @@ const HUD: React.FC<HUDProps> = ({
       console.log('Available models loaded:', modelsData.models?.length || 0);
       console.log('Current model from backend:', modelsData.current_model);
       
-      // If a model is already set, mark default as loaded to avoid duplicate loading
+      // If a model is already set, just update the UI state
       if (modelsData.current_model) {
         setCurrentSelectedModel(modelsData.current_model);
         setDefaultModelLoaded(true);
+        
+        // Only show status message if we haven't shown it for this model yet
+        if (lastStatusMessageModel !== modelsData.current_model) {
+          const currentModelInfo = modelsData.models?.find((m: any) => m.name === modelsData.current_model);
+          const modelDisplayName = currentModelInfo?.display_name || modelsData.current_model;
+          
+          const statusMessage = {
+            id: Date.now().toString(),
+            timestamp: new Date(),
+            sender: 'hecate',
+            message: `🤖 ${modelDisplayName} is active`,
+            type: 'update'
+          };
+          setChatMessages(prev => [...prev, statusMessage]);
+          setLastStatusMessageModel(modelsData.current_model);
+        }
+        console.log('=== LOADING MODELS END (model already set) ===');
+        return;
       }
       
       // Find DeepSeek Chat model in available models (default)
@@ -625,31 +670,21 @@ const HUD: React.FC<HUDProps> = ({
             console.log('Successfully loaded DeepSeek Chat as default model');
           } else {
             console.warn('Failed to load DeepSeek Chat as default model');
+            setDefaultModelLoaded(false); // Reset if failed
           }
         } catch (error) {
           console.error('Error loading DeepSeek Chat as default:', error);
-        }
-      } else {
-        // Use current model from backend
-        setCurrentSelectedModel(modelsData.current_model);
-        
-        if (modelsData.current_model) {
-          const currentModelInfo = modelsData.models?.find((m: any) => m.name === modelsData.current_model);
-          const modelDisplayName = currentModelInfo?.display_name || modelsData.current_model;
-          
-          const statusMessage = {
-            id: Date.now().toString(),
-            timestamp: new Date(),
-            sender: 'hecate',
-            message: `🤖 ${modelDisplayName} is active`,
-            type: 'update'
-          };
-          setChatMessages(prev => [...prev, statusMessage]);
+          setDefaultModelLoaded(false); // Reset if failed
         }
       }
+
+      console.log('=== LOADING MODELS END ===');
       
     } catch (error) {
       console.error('Error loading available models:', error);
+      setDefaultModelLoaded(false); // Reset on error
+    } finally {
+      setIsLoadingModels(false);
     }
   };
 
