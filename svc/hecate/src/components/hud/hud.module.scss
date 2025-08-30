@@ -7730,15 +7730,15 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .modelSelector {
   position: relative;
   display: inline-block;
-  min-width: 200px;
+  min-width: 240px;
 
   .modelDropdownBtn {
     width: 100%;
-    background: rgba($background-dark, 0.8);
-    border: 1px solid rgba($echo-blue, 0.3);
+    background: rgba($background-dark, 0.9);
+    border: 1px solid rgba($echo-blue, 0.4);
     color: $text-primary;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
@@ -7746,23 +7746,27 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     font-size: 0.9rem;
     font-family: 'Courier New', monospace;
     letter-spacing: 0.5px;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
 
     &:hover {
-      border-color: rgba($echo-blue, 0.6);
-      background: rgba($background-dark, 0.9);
-      box-shadow: 0 0 8px rgba($echo-blue, 0.2);
+      border-color: rgba($echo-blue, 0.7);
+      background: rgba($background-dark, 0.95);
+      box-shadow: 0 0 15px rgba($echo-blue, 0.3);
+      transform: translateY(-1px);
     }
 
     &:disabled, &.modelChanging {
       opacity: 0.6;
       cursor: not-allowed;
+      transform: none;
     }
 
     .dropdownArrow {
       margin-left: 0.5rem;
       color: rgba($echo-blue, 0.8);
-      transition: transform 0.2s ease;
+      transition: transform 0.3s ease;
+      font-size: 0.8rem;
     }
 
     .loadingSpinner {
@@ -7774,85 +7778,190 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
   .modelDropdown {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + 6px);
     left: 0;
     right: 0;
-    background: rgba($background-dark, 0.95);
-    border: 1px solid rgba($echo-blue, 0.4);
-    border-radius: 6px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 20px rgba($echo-blue, 0.1);
+    background: rgba($background-dark, 0.98);
+    border: 1px solid rgba($echo-blue, 0.5);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.9), 0 0 30px rgba($echo-blue, 0.15);
     z-index: 1000;
-    max-height: 300px;
+    max-height: 400px;
     overflow-y: auto;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(15px);
+    animation: dropdownSlideIn 0.3s ease-out;
 
     .dropdownHeader {
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid rgba($echo-blue, 0.2);
-      font-size: 0.8rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid rgba($echo-blue, 0.3);
+      font-size: 0.85rem;
       font-weight: bold;
-      color: rgba($echo-blue, 0.9);
+      color: rgba($echo-blue, 0.95);
       text-transform: uppercase;
-      letter-spacing: 1px;
-      background: rgba($background-dark, 0.5);
+      letter-spacing: 1.5px;
+      background: rgba($background-dark, 0.7);
+      border-radius: 10px 10px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      &::before {
+        content: "🧠";
+        font-size: 1rem;
+      }
     }
 
     .modelOption {
       width: 100%;
       background: transparent;
       border: none;
-      padding: 0.75rem 1rem;
+      padding: 1rem 1.25rem;
       text-align: left;
       cursor: pointer;
       color: $text-primary;
       border-bottom: 1px solid rgba($echo-blue, 0.1);
-      transition: all 0.2s ease;
+      transition: all 0.3s ease;
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-family: 'Courier New', monospace;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
+      position: relative;
+      overflow: hidden;
 
       &:hover {
-        background: rgba($echo-blue, 0.1);
-        border-color: rgba($echo-blue, 0.3);
+        background: rgba($echo-blue, 0.15);
+        border-color: rgba($echo-blue, 0.4);
+        transform: translateX(4px);
       }
 
       &.selected {
-        background: rgba($echo-green, 0.1);
-        border-color: rgba($echo-green, 0.3);
+        background: rgba($echo-green, 0.15);
+        border-color: rgba($echo-green, 0.4);
         
         .modelName {
           color: $echo-green;
         }
+
+        .modelProvider {
+          color: rgba($echo-green, 0.8);
+        }
+      }
+
+      .modelInfo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex: 1;
+      }
+
+      .modelIcon {
+        font-size: 1.2rem;
+        width: 1.5rem;
+        text-align: center;
+        flex-shrink: 0;
+      }
+
+      .modelDetails {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        flex: 1;
       }
 
       .modelName {
-        font-weight: 500;
+        font-weight: 600;
         color: $text-primary;
+        font-size: 0.95rem;
+        line-height: 1.2;
       }
 
       .modelProvider {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
         color: rgba($text-secondary, 0.8);
         text-transform: uppercase;
+        letter-spacing: 0.8px;
+        font-weight: 500;
+      }
+
+      .modelBadge {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-left: 0.5rem;
+      }
+
+      .tierBadge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        font-weight: bold;
+        text-transform: uppercase;
         letter-spacing: 0.5px;
+        
+        &.free {
+          background: rgba($echo-green, 0.2);
+          color: $echo-green;
+          border: 1px solid rgba($echo-green, 0.3);
+        }
+        
+        &.fast {
+          background: rgba($lightning-gold, 0.2);
+          color: $lightning-gold;
+          border: 1px solid rgba($lightning-gold, 0.3);
+        }
+        
+        &.standard {
+          background: rgba($echo-blue, 0.2);
+          color: $echo-blue;
+          border: 1px solid rgba($echo-blue, 0.3);
+        }
+        
+        &.premium {
+          background: rgba($echo-purple, 0.2);
+          color: $echo-purple;
+          border: 1px solid rgba($echo-purple, 0.3);
+        }
       }
 
       .selected {
         color: $echo-green;
-        font-size: 0.8rem;
+        font-size: 0.9rem;
+        font-weight: bold;
+      }
+
+      // Hover effect with glow
+      &:hover::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba($echo-blue, 0.1), transparent);
+        animation: glowSweep 0.6s ease-out;
       }
     }
   }
 }
 
-// Spinner animation for loading state
-@keyframes spin {
+// Animations
+@keyframes dropdownSlideIn {
   from {
-    transform: rotate(0deg);
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
   }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes glowSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
   }
 }
