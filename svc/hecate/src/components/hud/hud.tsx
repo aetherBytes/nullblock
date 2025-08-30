@@ -562,47 +562,46 @@ const HUD: React.FC<HUDProps> = ({
       console.log('Available models loaded:', modelsData.models?.length || 0);
       console.log('Current model from backend:', modelsData.current_model);
       
-      // Find Gemma model in available models
-      const gemmaModel = modelsData.models?.find((model: any) => 
-        model.name.toLowerCase().includes('gemma') || 
-        model.display_name.toLowerCase().includes('gemma')
+      // Find DeepSeek Chat model in available models (default)
+      const deepseekModel = modelsData.models?.find((model: any) => 
+        model.name === 'deepseek/deepseek-chat-v3.1:free'
       );
       
-      // If no current model is set, or if we want to force Gemma as default
-      if (!modelsData.current_model && gemmaModel) {
-        console.log('No current model set, loading Gemma as default:', gemmaModel.name);
+      // If no current model is set, load DeepSeek Chat as default
+      if (!modelsData.current_model && deepseekModel) {
+        console.log('No current model set, loading DeepSeek Chat as default:', deepseekModel.name);
         
         // Add a loading message
         const loadingMessage = {
           id: Date.now().toString(),
           timestamp: new Date(),
           sender: 'hecate',
-          message: `🚀 Loading default model: ${gemmaModel.display_name || gemmaModel.name}`,
+          message: `🚀 Loading default model: ${deepseekModel.display_name || deepseekModel.name}`,
           type: 'update'
         };
         setChatMessages(prev => [...prev, loadingMessage]);
         
-        // Load Gemma as default
+        // Load DeepSeek Chat as default
         try {
-          const success = await hecateAgent.setModel(gemmaModel.name);
+          const success = await hecateAgent.setModel(deepseekModel.name);
           if (success) {
-            setCurrentSelectedModel(gemmaModel.name);
+            setCurrentSelectedModel(deepseekModel.name);
             
             const successMessage = {
               id: (Date.now() + 1).toString(),
               timestamp: new Date(),
               sender: 'hecate',
-              message: `✅ ${gemmaModel.display_name || gemmaModel.name} ready`,
+              message: `✅ ${deepseekModel.display_name || deepseekModel.name} ready`,
               type: 'update'
             };
             setChatMessages(prev => [...prev, successMessage]);
             
-            console.log('Successfully loaded Gemma as default model');
+            console.log('Successfully loaded DeepSeek Chat as default model');
           } else {
-            console.warn('Failed to load Gemma as default model');
+            console.warn('Failed to load DeepSeek Chat as default model');
           }
         } catch (error) {
-          console.error('Error loading Gemma as default:', error);
+          console.error('Error loading DeepSeek Chat as default:', error);
         }
       } else {
         // Use current model from backend
@@ -1538,9 +1537,22 @@ const HUD: React.FC<HUDProps> = ({
                                       onClick={() => handleModelSelection(model.name)}
                                       title={`${model.display_name} (${model.provider})`}
                                     >
-                                      <span className={styles.modelName}>{model.display_name}</span>
-                                      <span className={styles.modelProvider}>{model.provider}</span>
-                                      {model.name === currentSelectedModel && <span className={styles.selected}>✓</span>}
+                                      <div className={styles.modelInfo}>
+                                        <span className={styles.modelIcon}>{model.icon || '🤖'}</span>
+                                        <div className={styles.modelDetails}>
+                                          <span className={styles.modelName}>{model.display_name}</span>
+                                          <span className={styles.modelProvider}>{model.provider}</span>
+                                        </div>
+                                      </div>
+                                      <div className={styles.modelBadge}>
+                                        <span className={`${styles.tierBadge} ${styles[model.tier]}`}>
+                                          {model.tier === 'economical' ? '🆓' : 
+                                           model.tier === 'fast' ? '⚡' : 
+                                           model.tier === 'standard' ? '⭐' : 
+                                           model.tier === 'premium' ? '💎' : '🤖'}
+                                        </span>
+                                        {model.name === currentSelectedModel && <span className={styles.selected}>✓</span>}
+                                      </div>
                                     </button>
                                   ))}
                                 </div>

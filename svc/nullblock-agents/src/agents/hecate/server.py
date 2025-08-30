@@ -16,10 +16,36 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import uvicorn
+from pathlib import Path
+import os
 
 from .main import HecateAgent, ConversationMessage
 from ..logging_config import setup_agent_logging, log_agent_startup, log_agent_shutdown
 from ..config import get_hecate_config, config
+
+# Load environment variables from .env.dev file
+def load_env_file():
+    """Load environment variables from .env.dev file"""
+    # Look for .env.dev in the project root (2 levels up from agents directory)
+    # Path: svc/nullblock-agents/src/agents/hecate/server.py -> project root
+    env_path = Path(__file__).parent.parent.parent.parent.parent.parent / '.env.dev'
+    
+    if env_path.exists():
+        print(f"📝 Loading environment from: {env_path}")
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    # Remove quotes if present
+                    value = value.strip('"').strip("'")
+                    os.environ[key] = value
+        print("✅ Environment variables loaded successfully")
+    else:
+        print(f"⚠️  .env.dev file not found at: {env_path}")
+
+# Load environment variables
+load_env_file()
 
 logger = setup_agent_logging("hecate-server", "INFO", enable_file_logging=True)
 
@@ -279,7 +305,8 @@ def create_app() -> FastAPI:
                     
                     available_models.append({
                         "name": model_name,
-                        "display_name": config.name,
+                        "display_name": getattr(config, 'display_name', config.name),
+                        "icon": getattr(config, 'icon', '🤖'),
                         "provider": config.provider.value,
                         "available": is_available,
                         "tier": config.tier.value,

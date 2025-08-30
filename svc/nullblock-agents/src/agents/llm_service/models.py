@@ -65,6 +65,8 @@ class ModelConfig:
     description: str = ""
     supports_reasoning: bool = False     # Whether model supports reasoning tokens
     reasoning_max_tokens: int = 2000     # Default reasoning token limit
+    display_name: Optional[str] = None   # User-friendly display name
+    icon: Optional[str] = None          # Model icon
 
 # Predefined model configurations
 AVAILABLE_MODELS = {
@@ -255,7 +257,9 @@ AVAILABLE_MODELS = {
         ),
         api_endpoint="https://openrouter.ai/api/v1/chat/completions",
         api_key_env="OPENROUTER_API_KEY",
-        description="GPT-4o via OpenRouter - latest OpenAI model with multimodal capabilities"
+        description="GPT-4o via OpenRouter - latest OpenAI model with multimodal capabilities",
+        display_name="GPT-4o",
+        icon="🧠"
     ),
     
     "anthropic/claude-3.5-sonnet": ModelConfig(
@@ -280,7 +284,9 @@ AVAILABLE_MODELS = {
         ),
         api_endpoint="https://openrouter.ai/api/v1/chat/completions",
         api_key_env="OPENROUTER_API_KEY",
-        description="Claude 3.5 Sonnet via OpenRouter - excellent reasoning and coding capabilities"
+        description="Claude 3.5 Sonnet via OpenRouter - excellent reasoning and coding capabilities",
+        display_name="Claude 3.5 Sonnet",
+        icon="🤖"
     ),
     
     "qwen/qwen-2.5-72b-instruct": ModelConfig(
@@ -305,7 +311,9 @@ AVAILABLE_MODELS = {
         ),
         api_endpoint="https://openrouter.ai/api/v1/chat/completions",
         api_key_env="OPENROUTER_API_KEY",
-        description="Qwen 2.5 72B via OpenRouter - powerful reasoning model with multilingual support"
+        description="Qwen 2.5 72B via OpenRouter - powerful reasoning model with multilingual support",
+        display_name="Qwen 2.5 72B",
+        icon="🐉"
     ),
     
     "meta-llama/llama-3.1-8b-instruct": ModelConfig(
@@ -328,7 +336,9 @@ AVAILABLE_MODELS = {
         ),
         api_endpoint="https://openrouter.ai/api/v1/chat/completions",
         api_key_env="OPENROUTER_API_KEY",
-        description="Llama 3.1 8B via OpenRouter - fast and efficient for general tasks"
+        description="Llama 3.1 8B via OpenRouter - fast and efficient for general tasks",
+        display_name="Llama 3.1 8B",
+        icon="⚡"
     ),
     
     "deepseek/deepseek-chat-v3.1:free": ModelConfig(
@@ -352,7 +362,9 @@ AVAILABLE_MODELS = {
         ),
         api_endpoint="https://openrouter.ai/api/v1/chat/completions",
         api_key_env="OPENROUTER_API_KEY",
-        description="DeepSeek Chat v3.1 Free - excellent free model for conversation and coding"
+        description="DeepSeek Chat v3.1 Free - excellent free model for conversation and coding",
+        display_name="DeepSeek Chat (Free)",
+        icon="💬"
     ),
     
     "deepseek/deepseek-r1": ModelConfig(
@@ -379,7 +391,9 @@ AVAILABLE_MODELS = {
         api_key_env="OPENROUTER_API_KEY",
         description="DeepSeek-R1 - Advanced reasoning model with transparent thinking process",
         supports_reasoning=True,
-        reasoning_max_tokens=8000
+        reasoning_max_tokens=8000,
+        display_name="DeepSeek-R1 (Reasoning)",
+        icon="💭"
     ),
     
     "openai/o3-mini": ModelConfig(
@@ -405,7 +419,9 @@ AVAILABLE_MODELS = {
         api_key_env="OPENROUTER_API_KEY",
         description="OpenAI o3-mini - Advanced reasoning model with high-effort thinking",
         supports_reasoning=True,
-        reasoning_max_tokens=10000
+        reasoning_max_tokens=10000,
+        display_name="O3-Mini (Reasoning)",
+        icon="🔍"
     ),
     
     # HuggingFace Models
@@ -477,16 +493,8 @@ def get_cheapest_models(max_cost: float = 0.001) -> Dict[str, ModelConfig]:
 
 def get_default_hecate_model() -> str:
     """Get the default model for Hecate Agent (prioritizes free/cheap models)"""
-    # Prioritize free models first, then cheap ones
-    free_models = get_cheapest_models(0.0)  # Free models
-    if "deepseek/deepseek-chat-v3.1:free" in free_models:
-        return "deepseek/deepseek-chat-v3.1:free"
-    
-    # Fallback to other free models
-    if free_models:
-        return list(free_models.keys())[0]
-    
-    # Fallback to cheap models
+    # Always return DeepSeek Chat v3.1 Free as default
+    return "deepseek/deepseek-chat-v3.1:free"
     cheap_models = get_cheapest_models(0.001)
     if cheap_models:
         return list(cheap_models.keys())[0]
