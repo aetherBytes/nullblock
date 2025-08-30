@@ -14,10 +14,18 @@ from typing import Dict, List, Any, Optional, AsyncGenerator
 from dataclasses import dataclass
 from datetime import datetime
 
-from .models import ModelConfig, ModelProvider, ModelTier, ModelCapability, ModelMetrics, AVAILABLE_MODELS, get_model_config
+from .models import ModelConfig, ModelProvider, ModelTier, ModelCapability, ModelMetrics, AVAILABLE_MODELS, get_model_config, get_default_hecate_model
 from .router import ModelRouter, TaskRequirements, RoutingDecision, OptimizationGoal, Priority
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class ReasoningConfig:
+    """Configuration for reasoning/thinking tokens"""
+    enabled: bool = False
+    effort: Optional[str] = None  # "high", "medium", "low" for OpenAI-style
+    max_tokens: Optional[int] = None  # Specific token limit for Anthropic-style
+    exclude: bool = False  # Exclude reasoning tokens from response
 
 @dataclass
 class LLMRequest:
@@ -33,6 +41,7 @@ class LLMRequest:
     model_override: Optional[str] = None  # Force specific model
     concise: bool = False  # Generate shorter, more concise responses
     max_chars: Optional[int] = None  # Maximum characters in response (default 100 when enabled)
+    reasoning: Optional[ReasoningConfig] = None  # Reasoning token configuration
     
 @dataclass
 class LLMResponse:
@@ -45,6 +54,8 @@ class LLMResponse:
     finish_reason: str
     tool_calls: Optional[List[Dict]] = None
     metadata: Dict[str, Any] = None
+    reasoning: Optional[str] = None  # Reasoning/thinking tokens if available
+    reasoning_details: Optional[List[Dict]] = None  # Detailed reasoning blocks
 
 class LLMServiceFactory:
     """
@@ -85,7 +96,8 @@ class LLMServiceFactory:
                 ModelProvider.OPENAI: os.getenv('OPENAI_API_KEY'),
                 ModelProvider.ANTHROPIC: os.getenv('ANTHROPIC_API_KEY'),
                 ModelProvider.GROQ: os.getenv('GROQ_API_KEY'),
-                ModelProvider.HUGGINGFACE: os.getenv('HUGGINGFACE_API_KEY')
+                ModelProvider.HUGGINGFACE: os.getenv('HUGGINGFACE_API_KEY'),
+                ModelProvider.OPENROUTER: os.getenv('OPENROUTER_API_KEY')
             }
             
             for provider, key in api_keys.items():
@@ -95,7 +107,7 @@ class LLMServiceFactory:
                     missing_providers.append(provider.value)
             
             # Always available (local providers)
-            available_providers.extend([ModelProvider.OLLAMA.value, ModelProvider.LOCAL.value])
+            available_providers.extend([ModelProvider.OLLAMA.value])
             
             # Log provider status
             if available_providers:
@@ -103,8 +115,9 @@ class LLMServiceFactory:
             if missing_providers:
                 logger.warning(f"Missing API keys for providers: {', '.join(missing_providers)}")
             
-            # Log LM Studio as primary local model
-            logger.info("LM Studio is configured as the primary local model server")
+            # Log OpenRouter as cloud model aggregator
+            if os.getenv('OPENROUTER_API_KEY'):
+                logger.info("OpenRouter is configured as the cloud model aggregator")
             
             # Create sessions for each provider (even without keys for potential local use)
             self.sessions[ModelProvider.OPENAI.value] = aiohttp.ClientSession(
@@ -126,9 +139,16 @@ class LLMServiceFactory:
                 headers={"Authorization": f"Bearer {os.getenv('HUGGINGFACE_API_KEY', '')}"}
             )
             
+            self.sessions[ModelProvider.OPENROUTER.value] = aiohttp.ClientSession(
+                headers={
+                    "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY', '')}",
+                    "HTTP-Referer": "https://nullblock.ai",
+                    "X-Title": "NullBlock Agent Platform"
+                }
+            )
+            
             # Local providers don't need auth headers
             self.sessions[ModelProvider.OLLAMA.value] = aiohttp.ClientSession()
-            self.sessions[ModelProvider.LOCAL.value] = aiohttp.ClientSession()
             
             # Update router with provider availability
             self._update_model_availability(api_keys)
@@ -147,7 +167,7 @@ class LLMServiceFactory:
         for model_name, config in AVAILABLE_MODELS.items():
             # Disable models that require API keys when keys are missing
             if config.provider in [ModelProvider.OPENAI, ModelProvider.ANTHROPIC, 
-                                 ModelProvider.GROQ, ModelProvider.HUGGINGFACE]:
+                                 ModelProvider.GROQ, ModelProvider.HUGGINGFACE, ModelProvider.OPENROUTER]:
                 has_key = bool(api_keys.get(config.provider))
                 if not has_key:
                     self.router.update_model_status(model_name, False)
@@ -155,72 +175,11 @@ class LLMServiceFactory:
     
     async def _test_local_models(self):
         """Test connectivity to local model providers and update availability"""
-        # Test LM Studio first (primary local model server)
-        try:
-            async with self.sessions[ModelProvider.LOCAL.value].get("http://localhost:1234/v1/models", timeout=3) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    available_lm_models = {model["id"] for model in data.get("data", [])}
-                    logger.info(f"LM Studio is available with models: {list(available_lm_models)}")
-                    
-                    # Enable only LM Studio models that are actually available
-                    for model_name, config in AVAILABLE_MODELS.items():
-                        if config.provider == ModelProvider.LOCAL:
-                            is_available = model_name in available_lm_models
-                            self.router.update_model_status(model_name, is_available)
-                            if is_available:
-                                logger.info(f"Enabled LM Studio model: {model_name}")
-                            else:
-                                logger.debug(f"LM Studio model not available: {model_name}")
-                    
-                    # Dynamically add any discovered models that don't have configurations yet
-                    for discovered_model in available_lm_models:
-                        if discovered_model not in AVAILABLE_MODELS:
-                            # Create a generic configuration for unknown discovered models
-                            
-                            dynamic_config = ModelConfig(
-                                name=discovered_model,
-                                provider=ModelProvider.LOCAL,
-                                tier=ModelTier.LOCAL,
-                                capabilities=[
-                                    ModelCapability.CONVERSATION,
-                                    ModelCapability.REASONING,
-                                    ModelCapability.CODE
-                                ],
-                                metrics=ModelMetrics(
-                                    avg_latency_ms=1500,  # Conservative estimate
-                                    tokens_per_second=20,  # Conservative estimate
-                                    cost_per_1k_tokens=0.0,  # Local models are free
-                                    context_window=4096,  # Conservative default
-                                    quality_score=0.75,  # Conservative estimate
-                                    reliability_score=0.85  # Conservative estimate
-                                ),
-                                api_endpoint="http://localhost:1234/v1/chat/completions",
-                                description=f"Dynamically discovered local model: {discovered_model}"
-                            )
-                            
-                            # Add to available models
-                            AVAILABLE_MODELS[discovered_model] = dynamic_config
-                            self.router.update_model_status(discovered_model, True)
-                            logger.info(f"🆕 Dynamically added discovered model: {discovered_model}")
-                else:
-                    logger.warning(f"LM Studio returned HTTP {resp.status}")
-                    # Disable LM Studio models
-                    for model_name, config in AVAILABLE_MODELS.items():
-                        if config.provider == ModelProvider.LOCAL:
-                            self.router.update_model_status(model_name, False)
-        except Exception as e:
-            logger.warning(f"LM Studio not accessible: {e}")
-            # Disable LM Studio models
-            for model_name, config in AVAILABLE_MODELS.items():
-                if config.provider == ModelProvider.LOCAL:
-                    self.router.update_model_status(model_name, False)
-        
-        # Test Ollama (secondary local model server)
+        # Test Ollama (local model server)
         try:
             async with self.sessions[ModelProvider.OLLAMA.value].get("http://localhost:11434/api/tags", timeout=3) as resp:
                 if resp.status == 200:
-                    logger.info("Ollama is available (secondary local model server)")
+                    logger.info("Ollama is available (local model server)")
                     # Enable Ollama models
                     for model_name, config in AVAILABLE_MODELS.items():
                         if config.provider == ModelProvider.OLLAMA:
@@ -251,9 +210,11 @@ class LLMServiceFactory:
             available.append(ModelProvider.GROQ.value)
         if os.getenv('HUGGINGFACE_API_KEY'):
             available.append(ModelProvider.HUGGINGFACE.value)
+        if os.getenv('OPENROUTER_API_KEY'):
+            available.append(ModelProvider.OPENROUTER.value)
         
         # Local providers are always available (if services are running)
-        available.extend([ModelProvider.OLLAMA.value, ModelProvider.LOCAL.value])
+        available.extend([ModelProvider.OLLAMA.value])
         
         return available
     
@@ -263,13 +224,13 @@ class LLMServiceFactory:
         
         # Filter out local providers for API key check
         api_providers = [p for p in available_providers 
-                        if p not in [ModelProvider.OLLAMA.value, ModelProvider.LOCAL.value]]
+                        if p not in [ModelProvider.OLLAMA.value]]
         
         status = {
             "has_api_keys": len(api_providers) > 0,
             "available_providers": available_providers,
             "api_providers": api_providers,
-            "local_providers": [ModelProvider.OLLAMA.value, ModelProvider.LOCAL.value],
+            "local_providers": [ModelProvider.OLLAMA.value],
             "total_available": len(available_providers),
             "can_operate": len(available_providers) > 0
         }
@@ -461,35 +422,39 @@ class LLMServiceFactory:
         if os.getenv('HUGGINGFACE_API_KEY'):
             api_providers_available.append('huggingface')
         
-        # If no API keys are available, adjust for local models
+        # If no API keys are available, adjust for free models
         if not api_providers_available:
-            logger.info("No API keys available, adjusting requirements for local models")
+            logger.info("No API keys available, adjusting requirements for free models")
             
             # Create a copy to avoid modifying the original
             from copy import deepcopy
             adjusted_requirements = deepcopy(requirements)
             
-            # Force allow local models
+            # Allow local models as fallback
             adjusted_requirements.allow_local_models = True
             
-            # LM Studio is the primary local model server
-            adjusted_requirements.preferred_providers = ['local']  # LM Studio uses LOCAL provider
+            # Try OpenRouter first (for free models like DeepSeek), then Ollama as fallback
+            adjusted_requirements.preferred_providers = ['openrouter', 'ollama']
             
-            # Adjust optimization goal to favor local models
+            # Prefer free models like DeepSeek when no API keys are available
+            adjusted_requirements.preferred_providers = ['openrouter']
+            
+            # Adjust optimization goal to favor free models
             if requirements.optimization_goal == OptimizationGoal.COST:
-                # Cost optimization already favors local (free) models
+                # Cost optimization already favors free models
                 pass
             elif requirements.optimization_goal == OptimizationGoal.QUALITY:
-                # For quality, try to use the best local model available
+                # For quality, balance with cost to get free models
                 adjusted_requirements.optimization_goal = OptimizationGoal.BALANCED
-                logger.info("Adjusted optimization from QUALITY to BALANCED for local models")
+                logger.info("Adjusted optimization from QUALITY to BALANCED to favor free models")
             elif requirements.optimization_goal == OptimizationGoal.SPEED:
-                # Local models can be fast, keep speed optimization
-                pass
-            else:
-                # For balanced/reliability, favor local models
+                # For speed, still prefer free models when possible
                 adjusted_requirements.optimization_goal = OptimizationGoal.COST
-                logger.info("Adjusted optimization to COST to favor local models")
+                logger.info("Adjusted optimization from SPEED to COST to favor free models")
+            else:
+                # For balanced/reliability, favor free models
+                adjusted_requirements.optimization_goal = OptimizationGoal.COST
+                logger.info("Adjusted optimization to COST to favor free models")
             
             # Relax quality requirements slightly for local models
             if requirements.min_quality_score and requirements.min_quality_score > 0.7:
@@ -504,8 +469,8 @@ class LLMServiceFactory:
             from copy import deepcopy
             adjusted_requirements = deepcopy(requirements)
             adjusted_requirements.allow_local_models = True
-            # LM Studio is the primary local model server
-            adjusted_requirements.preferred_providers = ["local"]  # LM Studio uses LOCAL provider
+            # Ollama is the local model server
+            adjusted_requirements.preferred_providers = ["ollama"]
             return adjusted_requirements
         
         # All API providers available, use original requirements
@@ -513,14 +478,10 @@ class LLMServiceFactory:
     
     def _get_default_local_model(self) -> Optional[str]:
         """Get the best available local model"""
-        # LM Studio is the primary local model server
-        # Gemma is prioritized as the default for Hecate
+        # Ollama is the local model server
         local_models = [
-            "gemma-3-270m-it-mlx",         # Gemma3 270M (default for Hecate - fast/reliable)
-            "qwen/qwen3-4b-thinking-2507",  # Qwen3 4B thinking model (best reasoning)
-            "openai/gpt-oss-20b",          # GPT-OSS 20B (general purpose)
-            "llama2",                      # Ollama models (secondary fallback)
-            "codellama"                    # Ollama models (secondary fallback)
+            "llama2",                      # Ollama models
+            "codellama"                    # Ollama models
         ]
         
         for model_name in local_models:
@@ -531,20 +492,21 @@ class LLMServiceFactory:
         
         return None
     
+    def get_default_hecate_model(self) -> Optional[str]:
+        """Get the default model for Hecate Agent (prioritizes DeepSeek free model)"""
+        default_model = get_default_hecate_model()
+        
+        # Check if the default model is available and enabled
+        if default_model in AVAILABLE_MODELS:
+            config = AVAILABLE_MODELS[default_model]
+            if config.enabled and self.router.model_status.get(default_model, True):
+                return default_model
+        
+        return None
+    
     async def test_local_connectivity(self) -> Dict[str, bool]:
         """Test connectivity to local model providers"""
         results = {}
-        
-        # Test LM Studio
-        try:
-            session = self.sessions.get(ModelProvider.LOCAL.value)
-            if session:
-                async with session.get("http://localhost:1234/v1/models", timeout=3) as resp:
-                    results["lm_studio"] = resp.status == 200
-            else:
-                results["lm_studio"] = False
-        except Exception:
-            results["lm_studio"] = False
         
         # Test Ollama
         try:
@@ -594,8 +556,8 @@ class LLMServiceFactory:
             return await self._generate_ollama(request, config)
         elif provider == ModelProvider.HUGGINGFACE:
             return await self._generate_huggingface(request, config)
-        elif provider == ModelProvider.LOCAL:
-            return await self._generate_lm_studio(request, config)
+        elif provider == ModelProvider.OPENROUTER:
+            return await self._generate_openrouter(request, config)
         else:
             raise ValueError(f"Unsupported provider: {provider}")
     
@@ -797,9 +759,9 @@ class LLMServiceFactory:
                 metadata={"provider": "huggingface", "model_config": config.name}
             )
     
-    async def _generate_lm_studio(self, request: LLMRequest, config: ModelConfig) -> LLMResponse:
-        """Generate response using LM Studio local API (OpenAI-compatible)"""
-        session = self.sessions[ModelProvider.LOCAL.value]
+    async def _generate_openrouter(self, request: LLMRequest, config: ModelConfig) -> LLMResponse:
+        """Generate response using OpenRouter API (OpenAI-compatible)"""
+        session = self.sessions[ModelProvider.OPENROUTER.value]
         
         # Build request payload (OpenAI format)
         if request.messages:
@@ -822,81 +784,69 @@ class LLMServiceFactory:
             "model": config.name,
             "messages": messages,
             "max_tokens": request.max_tokens or config.max_tokens,
-            "temperature": request.temperature or config.temperature,
-            "stream": False
+            "temperature": request.temperature or config.temperature
         }
+        
+        if request.tools:
+            payload["tools"] = request.tools
+            payload["tool_choice"] = "auto"
         
         if request.stop_sequences:
             payload["stop"] = request.stop_sequences
         
-        # Set timeout based on model type - thinking models need much more time
-        timeout = 300 if "thinking" in config.name.lower() else 120
+        # Add reasoning configuration if supported and requested
+        if request.reasoning and config.supports_reasoning:
+            reasoning_payload = {}
+            if request.reasoning.enabled:
+                reasoning_payload["enabled"] = True
+            
+            # Only one of effort or max_tokens can be specified
+            if request.reasoning.effort:
+                reasoning_payload["effort"] = request.reasoning.effort
+            elif request.reasoning.max_tokens:
+                reasoning_payload["max_tokens"] = request.reasoning.max_tokens
+            else:
+                # Default to medium effort if reasoning is enabled but no specific config
+                reasoning_payload["effort"] = "medium"
+                
+            if request.reasoning.exclude:
+                reasoning_payload["exclude"] = request.reasoning.exclude
+            
+            if reasoning_payload:
+                payload["reasoning"] = reasoning_payload
         
-        try:
-            async with session.post(config.api_endpoint, json=payload, timeout=timeout) as resp:
-                if resp.status != 200:
-                    error_text = await resp.text()
-                    # Provide helpful error message for common LM Studio issues
-                    if resp.status == 404:
-                        raise Exception(f"LM Studio server not running on {config.api_endpoint}. "
-                                      "Please start LM Studio and load a model.")
-                    elif resp.status == 422:
-                        raise Exception(f"LM Studio model not loaded. Please load a model in LM Studio.")
-                    else:
-                        raise Exception(f"LM Studio API error {resp.status}: {error_text}")
-                
-                data = await resp.json()
-                
-                # Log the full conversation for debugging
-                logger.info(f"LM Studio API Response: {data}")
-                
-                # Extract response content
-                if "choices" in data and data["choices"]:
-                    choice = data["choices"][0]
-                    content = choice["message"]["content"] or ""
-                    finish_reason = choice.get("finish_reason", "stop")
-                    
-                    # Log the actual response content
-                    logger.info(f"LM Studio Model Response: {content[:200]}{'...' if len(content) > 200 else ''}")
-                else:
-                    content = str(data)
-                    finish_reason = "error"
-                
-                # Extract usage if available
-                usage = data.get("usage", {})
-                if not usage:
-                    # Estimate token usage for LM Studio
-                    estimated_input_tokens = len(request.prompt.split()) * 1.3
-                    estimated_output_tokens = len(content.split()) * 1.3
-                    usage = {
-                        "prompt_tokens": int(estimated_input_tokens),
-                        "completion_tokens": int(estimated_output_tokens),
-                        "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
-                    }
-                
-                return LLMResponse(
-                    content=content,
-                    model_used=config.name,
-                    usage=usage,
-                    latency_ms=0.0,  # Will be set by caller
-                    cost_estimate=0.0,  # Local models are free
-                    finish_reason=finish_reason,
-                    metadata={
-                        "provider": "lm_studio", 
-                        "model_config": config.name,
-                        "api_endpoint": config.api_endpoint
-                    }
-                )
-                
-        except asyncio.TimeoutError:
-            model_type = "thinking" if "thinking" in config.name.lower() else "standard"
-            timeout_duration = "5 minutes" if "thinking" in config.name.lower() else "2 minutes"
-            raise Exception(f"LM Studio request timed out after {timeout_duration} for {model_type} model '{config.name}'. The model may need more time to process complex requests.")
-        except Exception as e:
-            if "Cannot connect" in str(e) or "Connection refused" in str(e):
-                raise Exception(f"Cannot connect to LM Studio at {config.api_endpoint}. "
-                              "Please ensure LM Studio is running and serving on localhost:1234.")
-            raise
+        async with session.post(config.api_endpoint, json=payload) as resp:
+            if resp.status != 200:
+                error_text = await resp.text()
+                raise Exception(f"OpenRouter API error {resp.status}: {error_text}")
+            
+            data = await resp.json()
+            
+            choice = data["choices"][0]
+            usage = data.get("usage", {})
+            
+            # Calculate cost estimate
+            input_tokens = usage.get("prompt_tokens", 0)
+            output_tokens = usage.get("completion_tokens", 0)
+            total_tokens = input_tokens + output_tokens
+            cost_estimate = total_tokens * config.metrics.cost_per_1k_tokens / 1000
+            
+            # Extract reasoning information if available
+            reasoning = choice["message"].get("reasoning")
+            reasoning_details = choice["message"].get("reasoning_details")
+            
+            return LLMResponse(
+                content=choice["message"]["content"] or "",
+                model_used=config.name,
+                usage=usage,
+                latency_ms=0.0,  # Will be set by caller
+                cost_estimate=cost_estimate,
+                finish_reason=choice["finish_reason"],
+                tool_calls=choice["message"].get("tool_calls"),
+                metadata={"provider": "openrouter", "model_config": config.name},
+                reasoning=reasoning,
+                reasoning_details=reasoning_details
+            )
     
     async def _stream_with_model(self, request: LLMRequest, routing_decision: RoutingDecision) -> AsyncGenerator[str, None]:
         """Stream response with specific model"""
@@ -982,9 +932,9 @@ class LLMServiceFactory:
     
     async def quick_generate(self, prompt: str, task_type: str = "general", 
                            optimization_goal: str = "balanced", concise: bool = False,
-                           max_chars: Optional[int] = None) -> str:
+                           max_chars: Optional[int] = None, reasoning: Optional[ReasoningConfig] = None) -> str:
         """Quick generation with minimal configuration"""
-        request = LLMRequest(prompt=prompt, concise=concise, max_chars=max_chars)
+        request = LLMRequest(prompt=prompt, concise=concise, max_chars=max_chars, reasoning=reasoning)
         
         requirements = TaskRequirements(
             required_capabilities=[],
@@ -995,6 +945,32 @@ class LLMServiceFactory:
         
         response = await self.generate(request, requirements)
         return response.content
+    
+    async def generate_with_reasoning(self, prompt: str, model_name: str = None, 
+                                     effort: str = "medium", max_reasoning_tokens: int = None,
+                                     exclude_reasoning: bool = False) -> LLMResponse:
+        """Generate response with reasoning tokens"""
+        reasoning_config = ReasoningConfig(
+            enabled=True,
+            effort=effort,  # Prioritize effort over max_tokens
+            max_tokens=max_reasoning_tokens,
+            exclude=exclude_reasoning
+        )
+        
+        request = LLMRequest(
+            prompt=prompt,
+            reasoning=reasoning_config,
+            model_override=model_name
+        )
+        
+        requirements = TaskRequirements(
+            required_capabilities=[ModelCapability.REASONING, ModelCapability.REASONING_TOKENS],
+            optimization_goal=OptimizationGoal.QUALITY,
+            priority=Priority.HIGH,
+            task_type="reasoning"
+        )
+        
+        return await self.generate(request, requirements)
     
     async def health_check(self) -> Dict[str, Any]:
         """Comprehensive health check for LLM services"""
@@ -1013,7 +989,8 @@ class LLMServiceFactory:
                 "openai": bool(os.getenv('OPENAI_API_KEY')),
                 "anthropic": bool(os.getenv('ANTHROPIC_API_KEY')),
                 "groq": bool(os.getenv('GROQ_API_KEY')),
-                "huggingface": bool(os.getenv('HUGGINGFACE_API_KEY'))
+                "huggingface": bool(os.getenv('HUGGINGFACE_API_KEY')),
+                "openrouter": bool(os.getenv('OPENROUTER_API_KEY'))
             }
             status["api_providers"] = api_keys
             
@@ -1026,10 +1003,7 @@ class LLMServiceFactory:
             for model_name, config in AVAILABLE_MODELS.items():
                 if config.enabled and self.router.model_status.get(model_name, True):
                     # Check if provider is available
-                    if config.provider == ModelProvider.LOCAL:
-                        if local_connectivity.get("lm_studio", False):
-                            available_models += 1
-                    elif config.provider == ModelProvider.OLLAMA:
+                    if config.provider == ModelProvider.OLLAMA:
                         if local_connectivity.get("ollama", False):
                             available_models += 1
                     elif config.api_key_env and os.getenv(config.api_key_env):
@@ -1039,7 +1013,8 @@ class LLMServiceFactory:
             
             # Determine default model
             if any(api_keys.values()):
-                status["default_model"] = "API models available"
+                default_hecate = self.get_default_hecate_model()
+                status["default_model"] = default_hecate or "API models available"
             elif any(local_connectivity.values()):
                 local_model = self._get_default_local_model()
                 status["default_model"] = local_model or "local models available"

@@ -37,9 +37,9 @@ NullBlock is an Agentic Platform providing resources and tooling for building, d
 ### Key Ports
 - **3000**: Erebus (unified backend router)
 - **5173**: Hecate frontend (development)
-- **8001**: Hecate agent API
-- **8000**: MCP server
-- **1234**: LM Studio (local LLM)
+- **8001**: MCP server
+- **9001**: General agents API
+- **9002**: Hecate agent API
 
 ## 🏗️ Architecture
 
@@ -79,11 +79,10 @@ svc/erebus/src/resources/
 - **Logging**: Standardized cyberpunk-themed logs in `logs/` directory
 
 ### LLM Service Factory
-- **Local Models**: LM Studio (primary), Ollama (fallback)
-- **Cloud Models**: OpenAI, Anthropic, Groq, HuggingFace
+- **Cloud Models**: OpenRouter (DeepSeek, GPT-4o, Claude), OpenAI, Anthropic, Groq, HuggingFace
 - **Routing**: Automatic model selection based on task requirements
 - **Optimization**: Quality, speed, cost, or balanced strategies
-- **Timeout Configuration**: 5-minute timeout for thinking models (Qwen, etc.) to handle complex reasoning
+- **Timeout Configuration**: 5-minute timeout for thinking models (DeepSeek-R1, etc.) to handle complex reasoning
 
 ### Specialized Agents
 - **Information Gathering**: Market data, DeFi protocols, social sentiment

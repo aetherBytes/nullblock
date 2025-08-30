@@ -400,6 +400,7 @@ const HUD: React.FC<HUDProps> = ({
   // Load models when Hecate tab becomes active
   useEffect(() => {
     if (mainHudActiveTab === 'hecate' && publicKey) {
+      // Always refresh models when switching to Hecate tab
       loadAvailableModels();
     }
   }, [mainHudActiveTab, publicKey]);
@@ -512,6 +513,15 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [logs, autoScroll]);
 
+  // Auto-scroll effect for chat messages
+  useEffect(() => {
+    if (chatAutoScroll && chatEndRef.current) {
+      setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, [chatMessages, chatAutoScroll]);
+
   // Helper functions for Hecate functionality
   const getUserStats = () => {
     const sessionStart = localStorage.getItem('lastAuthTime');
@@ -548,9 +558,70 @@ const HUD: React.FC<HUDProps> = ({
       // Get available models
       const modelsData = await hecateAgent.getAvailableModels();
       setAvailableModels(modelsData.models || []);
-      setCurrentSelectedModel(modelsData.current_model);
       
       console.log('Available models loaded:', modelsData.models?.length || 0);
+      console.log('Current model from backend:', modelsData.current_model);
+      
+      // Find Gemma model in available models
+      const gemmaModel = modelsData.models?.find((model: any) => 
+        model.name.toLowerCase().includes('gemma') || 
+        model.display_name.toLowerCase().includes('gemma')
+      );
+      
+      // If no current model is set, or if we want to force Gemma as default
+      if (!modelsData.current_model && gemmaModel) {
+        console.log('No current model set, loading Gemma as default:', gemmaModel.name);
+        
+        // Add a loading message
+        const loadingMessage = {
+          id: Date.now().toString(),
+          timestamp: new Date(),
+          sender: 'hecate',
+          message: `🚀 Loading default model: ${gemmaModel.display_name || gemmaModel.name}`,
+          type: 'update'
+        };
+        setChatMessages(prev => [...prev, loadingMessage]);
+        
+        // Load Gemma as default
+        try {
+          const success = await hecateAgent.setModel(gemmaModel.name);
+          if (success) {
+            setCurrentSelectedModel(gemmaModel.name);
+            
+            const successMessage = {
+              id: (Date.now() + 1).toString(),
+              timestamp: new Date(),
+              sender: 'hecate',
+              message: `✅ ${gemmaModel.display_name || gemmaModel.name} ready`,
+              type: 'update'
+            };
+            setChatMessages(prev => [...prev, successMessage]);
+            
+            console.log('Successfully loaded Gemma as default model');
+          } else {
+            console.warn('Failed to load Gemma as default model');
+          }
+        } catch (error) {
+          console.error('Error loading Gemma as default:', error);
+        }
+      } else {
+        // Use current model from backend
+        setCurrentSelectedModel(modelsData.current_model);
+        
+        if (modelsData.current_model) {
+          const currentModelInfo = modelsData.models?.find((m: any) => m.name === modelsData.current_model);
+          const modelDisplayName = currentModelInfo?.display_name || modelsData.current_model;
+          
+          const statusMessage = {
+            id: Date.now().toString(),
+            timestamp: new Date(),
+            sender: 'hecate',
+            message: `🤖 ${modelDisplayName} is active`,
+            type: 'update'
+          };
+          setChatMessages(prev => [...prev, statusMessage]);
+        }
+      }
       
     } catch (error) {
       console.error('Error loading available models:', error);
@@ -559,11 +630,19 @@ const HUD: React.FC<HUDProps> = ({
 
   const handleModelSelection = async (modelName: string) => {
     if (isModelChanging) return;
+    
+    // Don't switch if already using this model
+    if (currentSelectedModel === modelName) {
+      console.log(`Already using model: ${modelName}`);
+      setShowModelDropdown(false);
+      return;
+    }
 
     try {
       setIsModelChanging(true);
       setShowModelDropdown(false);
       
+      console.log(`=== MODEL SWITCH START: ${currentSelectedModel} -> ${modelName} ===`);
       setNulleyeState('thinking');
       
       // Import the hecate agent service
@@ -575,33 +654,72 @@ const HUD: React.FC<HUDProps> = ({
         throw new Error('Failed to connect to Hecate agent');
       }
 
-      // First, eject the current model if one is loaded
-      if (currentSelectedModel && currentSelectedModel !== modelName) {
-        console.log(`Ejecting current model: ${currentSelectedModel}`);
+      // Always attempt to eject current model first, even if we're not sure what it is
+      if (currentSelectedModel) {
+        console.log(`Step 1: Ejecting current model: ${currentSelectedModel}`);
+        
+        const ejectionMessage = {
+          id: Date.now().toString(),
+          timestamp: new Date(),
+          sender: 'hecate',
+          message: `🔄 Ejecting ${currentSelectedModel}...`,
+          type: 'update'
+        };
+        setChatMessages(prev => [...prev, ejectionMessage]);
+        
         try {
-          await hecateAgent.unloadModel(currentSelectedModel);
+          const ejectionResult = await hecateAgent.unloadModel(currentSelectedModel);
+          console.log(`Ejection result:`, ejectionResult);
+          
+          // Clear current model immediately after successful ejection
+          setCurrentSelectedModel(null);
+          
           console.log(`Successfully ejected model: ${currentSelectedModel}`);
           
-          // Add ejection message
-          const ejectionMessage = {
-            id: Date.now().toString(),
+          // Update ejection message
+          const ejectionCompleteMessage = {
+            id: (Date.now() + 1).toString(),
             timestamp: new Date(),
             sender: 'hecate',
-            message: `🔄 Ejected ${currentSelectedModel}`,
+            message: `✅ Ejected ${currentSelectedModel}`,
             type: 'update'
           };
-          setChatMessages(prev => [...prev, ejectionMessage]);
+          setChatMessages(prev => [...prev, ejectionCompleteMessage]);
           
-          // Brief pause to allow ejection to complete
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Wait for ejection to fully complete
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
         } catch (ejectionError) {
-          console.warn('Failed to eject current model:', ejectionError);
+          console.error('Failed to eject current model:', ejectionError);
+          
+          const ejectionErrorMessage = {
+            id: (Date.now() + 2).toString(),
+            timestamp: new Date(),
+            sender: 'hecate',
+            message: `⚠️ Ejection failed for ${currentSelectedModel}, continuing with load...`,
+            type: 'update'
+          };
+          setChatMessages(prev => [...prev, ejectionErrorMessage]);
+          
           // Continue with model loading even if ejection fails
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
+      } else {
+        console.log('No current model to eject, proceeding with load');
       }
 
-      // Set the new model using the Hecate agent service
-      console.log(`Loading new model: ${modelName}`);
+      // Load the new model
+      console.log(`Step 2: Loading new model: ${modelName}`);
+      
+      const loadingMessage = {
+        id: (Date.now() + 3).toString(),
+        timestamp: new Date(),
+        sender: 'hecate',
+        message: `⚡ Loading ${modelName}...`,
+        type: 'update'
+      };
+      setChatMessages(prev => [...prev, loadingMessage]);
+      
       const success = await hecateAgent.setModel(modelName);
       
       if (!success) {
@@ -609,13 +727,16 @@ const HUD: React.FC<HUDProps> = ({
       }
       
       console.log(`Successfully switched to model: ${modelName}`);
+      console.log(`=== MODEL SWITCH COMPLETE ===`);
+      
+      // Update state with new model
       setCurrentSelectedModel(modelName);
       
       const systemMessage = {
-        id: (Date.now() + 1).toString(),
+        id: (Date.now() + 4).toString(),
         timestamp: new Date(),
         sender: 'hecate',
-        message: `✅ Loaded ${modelName}`,
+        message: `✅ ${modelName} ready`,
         type: 'update'
       };
       setChatMessages(prev => [...prev, systemMessage]);
@@ -625,8 +746,18 @@ const HUD: React.FC<HUDProps> = ({
       
     } catch (error) {
       console.error('Error setting model:', error);
+      
+      const errorMessage = {
+        id: (Date.now() + 5).toString(),
+        timestamp: new Date(),
+        sender: 'hecate',
+        message: `❌ Failed to load ${modelName}: ${error.message}`,
+        type: 'error'
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+      
       setNulleyeState('error');
-      setTimeout(() => setNulleyeState('base'), 2000);
+      setTimeout(() => setNulleyeState('base'), 3000);
     } finally {
       setIsModelChanging(false);
     }
@@ -765,8 +896,33 @@ const HUD: React.FC<HUDProps> = ({
     const scrollHeight = container.scrollHeight;
     const clientHeight = container.clientHeight;
     
-    const isAwayFromBottom = scrollHeight - scrollTop - clientHeight > 100;
-    setChatAutoScroll(!isAwayFromBottom);
+    // Consider user to be at bottom if within 50px of bottom
+    const isNearBottom = scrollHeight - scrollTop - clientHeight <= 50;
+    
+    // Only disable auto-scroll if user has manually scrolled up significantly
+    if (!isNearBottom && !isUserScrolling) {
+      setIsUserScrolling(true);
+      setChatAutoScroll(false);
+      
+      // Clear any existing timeout
+      if (userScrollTimeoutRef.current) {
+        clearTimeout(userScrollTimeoutRef.current);
+      }
+      
+      // Re-enable auto-scroll after 3 seconds of no scrolling
+      userScrollTimeoutRef.current = setTimeout(() => {
+        setIsUserScrolling(false);
+        setChatAutoScroll(true);
+      }, 3000);
+    } else if (isNearBottom && isUserScrolling) {
+      // User scrolled back to bottom, re-enable auto-scroll immediately
+      setIsUserScrolling(false);
+      setChatAutoScroll(true);
+      
+      if (userScrollTimeoutRef.current) {
+        clearTimeout(userScrollTimeoutRef.current);
+      }
+    }
   };
 
   // Sandbox functionality
