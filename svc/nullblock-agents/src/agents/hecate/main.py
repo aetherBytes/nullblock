@@ -13,6 +13,9 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+import json
+import os
+from pathlib import Path
 
 from ..llm_service.factory import LLMRequest, LLMResponse, LLMServiceFactory
 from ..llm_service.models import ModelCapability
@@ -76,10 +79,15 @@ class HecateAgent:
         self.conversation_history: List[ConversationMessage] = []
         self.running = False
         self.current_model: Optional[str] = None
-        # Default to gemma model for consistent Hecate personality
-        self.preferred_model: Optional[str] = "gemma-3-270m-it-mlx"
+        # Default to DeepSeek V3 Free for consistent Hecate personality (cost: $0.00)
+        self.preferred_model: Optional[str] = "deepseek/deepseek-chat-v3.1:free"
         self.context_limit = 8000  # Token limit for conversation context
-
+        
+        # Chat logging
+        self.chat_log_dir = Path("logs/chats")
+        self.chat_log_dir.mkdir(parents=True, exist_ok=True)
+        self.current_session_id = None
+        
         # Orchestration components
         self.available_agents: Dict[str, Any] = {}
         self.active_tasks: Dict[str, Any] = {}
@@ -156,6 +164,48 @@ class HecateAgent:
         logger.info("⚙️ Orchestration: Enabled")
         logger.info("🧠 LLM Integration: Ready")
 
+    def _start_new_chat_session(self):
+        """Start a new chat session with unique ID"""
+        self.current_session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        logger.info(f"💬 Started new chat session: {self.current_session_id}")
+        
+    def _log_chat_message(self, message: ConversationMessage, session_metadata: Optional[Dict] = None):
+        """Log a chat message to persistent storage"""
+        if not self.current_session_id:
+            self._start_new_chat_session()
+            
+        # Create session-specific log file
+        session_file = self.chat_log_dir / f"{self.current_session_id}.jsonl"
+        
+        # Prepare log entry
+        log_entry = {
+            "timestamp": message.timestamp.isoformat(),
+            "session_id": self.current_session_id,
+            "role": message.role,
+            "content": message.content,
+            "model_used": message.model_used,
+            "metadata": message.metadata or {},
+            "session_metadata": session_metadata or {}
+        }
+        
+        # Append to session log file
+        try:
+            with open(session_file, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(log_entry, ensure_ascii=False) + '\n')
+        except Exception as e:
+            logger.error(f"❌ Failed to log chat message: {e}")
+            
+        # Also log to main chat log for easy tailing
+        main_chat_log = self.chat_log_dir / "hecate-chat.log"
+        try:
+            with open(main_chat_log, 'a', encoding='utf-8') as f:
+                timestamp = message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                role_emoji = "👤" if message.role == "user" else "🤖" if message.role == "assistant" else "⚙️"
+                model_info = f" [{message.model_used}]" if message.model_used else ""
+                f.write(f"[{timestamp}] {role_emoji} {message.role.upper()}{model_info}: {message.content}\n")
+        except Exception as e:
+            logger.error(f"❌ Failed to log to main chat log: {e}")
+
     async def start(self):
         """Start the Hecate agent"""
         self.running = True
@@ -176,6 +226,9 @@ class HecateAgent:
             else:
                 logger.warning(f"⚠️ Could not load default model {self.preferred_model}, will use routing")
 
+        # Start new chat session for logging
+        self._start_new_chat_session()
+
         # Add system message to conversation
         personality_config = self.personalities.get(
             self.personality, self.personalities["helpful_cyberpunk"]
@@ -186,6 +239,10 @@ class HecateAgent:
             timestamp=datetime.now(),
         )
         self.conversation_history.append(system_message)
+        
+        # Log system message to chat log
+        self._log_chat_message(system_message, {"initialization": True})
+        
         logger.info(
             f"💬 Conversation context initialized with {self.personality} personality"
         )
@@ -246,6 +303,9 @@ class HecateAgent:
             metadata=user_context,
         )
         self.conversation_history.append(user_message)
+        
+        # Log user message to chat log
+        self._log_chat_message(user_message, {"user_id": user_id})
 
         try:
             # First, try orchestration workflow for complex requests
@@ -258,6 +318,20 @@ class HecateAgent:
                 latency_ms = (asyncio.get_event_loop().time() - start_time) * 1000
                 logger.info("🎯 Orchestrated response generated")
                 log_request_complete(logger, "chat", latency_ms, True)
+
+                # Log orchestrated response
+                orchestrated_message = ConversationMessage(
+                    content=orchestrated_response,
+                    role="assistant",
+                    timestamp=datetime.now(),
+                    model_used=f"{self.current_model or 'unknown'} (orchestrated)",
+                    metadata={
+                        "response_type": "orchestrated",
+                        "latency_ms": latency_ms,
+                    }
+                )
+                self.conversation_history.append(orchestrated_message)
+                self._log_chat_message(orchestrated_message, {"user_id": user_id})
 
                 return ChatResponse(
                     content=orchestrated_response,
@@ -347,6 +421,9 @@ class HecateAgent:
                 },
             )
             self.conversation_history.append(assistant_message)
+            
+            # Log assistant message to chat log
+            self._log_chat_message(assistant_message, {"user_id": user_id})
 
             # Trim conversation history if too long
             await self._trim_conversation_history()

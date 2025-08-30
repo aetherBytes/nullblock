@@ -7811,6 +7811,77 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       }
     }
 
+    .searchContainer {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid rgba($echo-blue, 0.2);
+      position: relative;
+      background: rgba($background-dark, 0.5);
+    }
+
+    .modelSearchInput {
+      width: 100%;
+      background: rgba($background-dark, 0.8);
+      border: 1px solid rgba($echo-blue, 0.4);
+      color: $text-primary;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-family: 'Courier New', monospace;
+      transition: all 0.3s ease;
+
+      &:focus {
+        outline: none;
+        border-color: rgba($echo-blue, 0.7);
+        box-shadow: 0 0 10px rgba($echo-blue, 0.3);
+        background: rgba($background-dark, 0.9);
+      }
+
+      &::placeholder {
+        color: rgba($text-secondary, 0.6);
+        font-style: italic;
+      }
+    }
+
+    .searchSpinner {
+      position: absolute;
+      right: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      animation: spin 1s linear infinite;
+      color: $lightning-gold;
+      font-size: 1rem;
+    }
+
+    .searchSection {
+      border-bottom: 1px solid rgba($echo-blue, 0.2);
+    }
+
+    .searchHeader {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: rgba($lightning-gold, 0.9);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: rgba($background-dark, 0.6);
+      border-bottom: 1px solid rgba($echo-blue, 0.1);
+    }
+
+    .popularSection {
+      border-bottom: 1px solid rgba($echo-blue, 0.2);
+    }
+
+    .sectionHeader {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: rgba($echo-blue, 0.9);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: rgba($background-dark, 0.6);
+      border-bottom: 1px solid rgba($echo-blue, 0.1);
+    }
+
     .modelOption {
       width: 100%;
       background: transparent;

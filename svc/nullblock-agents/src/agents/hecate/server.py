@@ -22,6 +22,7 @@ import os
 from .main import HecateAgent, ConversationMessage
 from ..logging_config import setup_agent_logging, log_agent_startup, log_agent_shutdown
 from ..config import get_hecate_config, config
+from ..llm_service.models import get_dynamic_models, POPULAR_MODELS
 
 # Load environment variables from .env.dev file
 def load_env_file():
@@ -48,6 +49,13 @@ def load_env_file():
 load_env_file()
 
 logger = setup_agent_logging("hecate-server", "INFO", enable_file_logging=True)
+
+# Cache for models endpoint to reduce logging frequency
+_models_cache = None
+_models_cache_timestamp = 0
+_models_log_timestamp = 0
+MODELS_CACHE_TTL = 30  # Cache for 30 seconds
+MODELS_LOG_INTERVAL = 300  # Log only every 5 minutes (300 seconds)
 
 # Enhanced logging utility for the server
 def log_request(request: Request, message: str, data: Any = None):
@@ -282,28 +290,34 @@ def create_app() -> FastAPI:
             log_response(500, "🔍 Model status request failed", {"error": str(e)})
             raise HTTPException(status_code=500, detail=str(e))
     
-    @app.get("/available-models")
-    async def get_available_models(request: Request):
-        """Get list of available models for selection"""
+    @app.get("/search-models")
+    async def search_models(request: Request, q: str = "", limit: int = 20):
+        """Search for models by name or description"""
         if not agent:
-            log_request(request, "🚫 Available models request rejected - agent not initialized")
-            log_response(503, "🚫 Available models request failed - agent not initialized")
+            log_request(request, "🚫 Model search rejected - agent not initialized")
+            log_response(503, "🚫 Model search failed - agent not initialized")
             raise HTTPException(status_code=503, detail="Agent not initialized")
         
         try:
-            log_request(request, "📋 Available models requested")
+            log_request(request, "🔍 Model search requested", {"query": q, "limit": limit})
             
-            available_models = []
+            # Get dynamic models from OpenRouter
+            dynamic_models = await get_dynamic_models()
             
-            if hasattr(agent, 'llm_factory') and agent.llm_factory:
-                # Get all models from the router
-                from ..llm_service.models import AVAILABLE_MODELS, get_default_hecate_model
-                
-                for model_name, config in AVAILABLE_MODELS.items():
-                    # Check if model is available (default to config.enabled if not explicitly set)
-                    is_available = agent.llm_factory.router.model_status.get(model_name, config.enabled)
+            # Search through models
+            search_results = []
+            query_lower = q.lower()
+            
+            for model_name, config in dynamic_models.items():
+                # Search in name, display_name, and description
+                if (query_lower in model_name.lower() or 
+                    query_lower in getattr(config, 'display_name', '').lower() or
+                    query_lower in config.description.lower()):
                     
-                    available_models.append({
+                    # Check if model is available
+                    is_available = agent.llm_factory.router.model_status.get(model_name, True)
+                    
+                    search_results.append({
                         "name": model_name,
                         "display_name": getattr(config, 'display_name', config.name),
                         "icon": getattr(config, 'icon', '🤖'),
@@ -313,23 +327,122 @@ def create_app() -> FastAPI:
                         "context_length": config.metrics.context_window,
                         "capabilities": [cap.value for cap in config.capabilities],
                         "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
-                        "supports_reasoning": getattr(config, 'supports_reasoning', False),
                         "description": config.description
                     })
             
-            # Sort by availability first, then by provider and name
-            available_models.sort(key=lambda x: (not x["available"], x["provider"], x["name"]))
+            # Sort by relevance (exact matches first, then partial matches)
+            search_results.sort(key=lambda x: (
+                not x["name"].lower().startswith(query_lower),
+                not x["display_name"].lower().startswith(query_lower),
+                x["name"]
+            ))
+            
+            # Limit results
+            search_results = search_results[:limit]
+            
+            log_response(200, "🔍 Model search completed successfully", {
+                "query": q,
+                "results_count": len(search_results),
+                "total_available": len(dynamic_models)
+            })
+            
+            return {
+                "query": q,
+                "results": search_results,
+                "total_available": len(dynamic_models)
+            }
+        except Exception as e:
+            logger.error(f"❌ Model search failed: {e}")
+            log_response(500, "🔍 Model search failed", {"error": str(e)})
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/available-models")
+    async def get_available_models(request: Request):
+        """Get list of available models with dynamic loading from OpenRouter (cached)"""
+        global _models_cache, _models_cache_timestamp, _models_log_timestamp
+        
+        if not agent:
+            log_request(request, "🚫 Available models rejected - agent not initialized")
+            log_response(503, "🚫 Available models failed - agent not initialized")
+            raise HTTPException(status_code=503, detail="Agent not initialized")
+        
+        try:
+            current_time = time.time()
+            
+            # Check if we should log this request (throttle logging)
+            should_log = current_time - _models_log_timestamp > MODELS_LOG_INTERVAL
+            if should_log:
+                log_request(request, "📋 Available models requested (throttled logging)")
+                _models_log_timestamp = current_time
+            
+            # Check cache first
+            if _models_cache and current_time - _models_cache_timestamp < MODELS_CACHE_TTL:
+                if should_log:
+                    log_response(200, "📋 Available models from cache", {
+                        "cache_age_seconds": current_time - _models_cache_timestamp,
+                        "models_count": len(_models_cache.get("models", []))
+                    })
+                return _models_cache
+            
+            available_models = []
+            
+            # Get static models
+            from ..llm_service.models import AVAILABLE_MODELS, get_default_hecate_model
+            
+            for model_name, config in AVAILABLE_MODELS.items():
+                # Check if model is available (default to config.enabled if not explicitly set)
+                is_available = agent.llm_factory.router.model_status.get(model_name, config.enabled)
+                
+                available_models.append({
+                    "name": model_name,
+                    "display_name": getattr(config, 'display_name', config.name),
+                    "icon": getattr(config, 'icon', '🤖'),
+                    "provider": config.provider.value,
+                    "available": is_available,
+                    "tier": config.tier.value,
+                    "context_length": config.metrics.context_window,
+                    "capabilities": [cap.value for cap in config.capabilities],
+                    "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
+                    "supports_reasoning": getattr(config, 'supports_reasoning', False),
+                    "description": config.description,
+                    "is_popular": model_name in POPULAR_MODELS
+                })
+            
+            # Get dynamic models from OpenRouter (popular ones first)
+            dynamic_models = await get_dynamic_models()
+            
+            for model_name, config in dynamic_models.items():
+                # Check if model is available
+                is_available = agent.llm_factory.router.model_status.get(model_name, True)
+                
+                available_models.append({
+                    "name": model_name,
+                    "display_name": getattr(config, 'display_name', config.name),
+                    "icon": getattr(config, 'icon', '🤖'),
+                    "provider": config.provider.value,
+                    "available": is_available,
+                    "tier": config.tier.value,
+                    "context_length": config.metrics.context_window,
+                    "capabilities": [cap.value for cap in config.capabilities],
+                    "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
+                    "supports_reasoning": getattr(config, 'supports_reasoning', False),
+                    "description": config.description,
+                    "is_popular": model_name in POPULAR_MODELS
+                })
+            
+            # Sort by popularity first, then availability, then provider and name
+            available_models.sort(key=lambda x: (
+                not x["is_popular"],
+                not x["available"], 
+                x["provider"], 
+                x["name"]
+            ))
             
             # Get default model
             default_model = get_default_hecate_model()
             
-            log_response(200, "📋 Available models retrieved successfully", {
-                "models_count": len(available_models),
-                "available_count": sum(1 for m in available_models if m["available"]),
-                "default_model": default_model
-            })
-            
-            return {
+            # Create response
+            response_data = {
                 "models": available_models,
                 "current_model": getattr(agent, 'current_model', None),
                 "default_model": default_model,
@@ -337,8 +450,25 @@ def create_app() -> FastAPI:
                     "free": "deepseek/deepseek-chat-v3.1:free",
                     "reasoning": "deepseek/deepseek-r1",
                     "premium": "anthropic/claude-3.5-sonnet"
-                }
+                },
+                "total_models": len(available_models),
+                "dynamic_models": len(dynamic_models)
             }
+            
+            # Cache the response
+            _models_cache = response_data
+            _models_cache_timestamp = current_time
+            
+            # Only log when throttling allows
+            if should_log:
+                log_response(200, "📋 Available models retrieved successfully", {
+                    "models_count": len(available_models),
+                    "available_count": sum(1 for m in available_models if m["available"]),
+                    "dynamic_count": len(dynamic_models),
+                    "default_model": default_model
+                })
+            
+            return response_data
         except Exception as e:
             logger.error(f"❌ Get available models failed: {e}")
             log_response(500, "📋 Get available models failed", {"error": str(e)})
