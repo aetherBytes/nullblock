@@ -380,7 +380,7 @@ const HUD: React.FC<HUDProps> = ({
     // Initialize with empty chat
     setChatMessages([]);
     
-    // Load available models
+    // Load available models when wallet connected
     loadAvailableModels();
     
     // Ensure we start scrolled to bottom
@@ -396,6 +396,30 @@ const HUD: React.FC<HUDProps> = ({
       }
     };
   }, [publicKey]);
+
+  // Load models when Hecate tab becomes active
+  useEffect(() => {
+    if (mainHudActiveTab === 'hecate' && publicKey) {
+      loadAvailableModels();
+    }
+  }, [mainHudActiveTab, publicKey]);
+
+  // Click outside handler for model dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target as Node)) {
+        setShowModelDropdown(false);
+      }
+    };
+
+    if (showModelDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showModelDropdown]);
 
   const handleMCPAuthentication = async () => {
     if (!publicKey) {
@@ -684,12 +708,33 @@ const HUD: React.FC<HUDProps> = ({
     } catch (error) {
       console.error('Failed to get Hecate response:', error);
       
-      // Create error message
+      // Create user-friendly error message
+      let userFriendlyMessage = "I'm having trouble processing your request right now. Please try again in a moment.";
+      
+      // Check for specific error types and provide better messages
+      if (error instanceof Error) {
+        const errorMsg = error.message.toLowerCase();
+        
+        if (errorMsg.includes('lm studio') || errorMsg.includes('localhost:1234')) {
+          userFriendlyMessage = "I'm currently offline. Please check that the local AI service is running and try again.";
+        } else if (errorMsg.includes('connection') || errorMsg.includes('network')) {
+          userFriendlyMessage = "I'm having connection issues. Please check your network and try again.";
+        } else if (errorMsg.includes('timeout')) {
+          userFriendlyMessage = "That request took too long to process. Please try a shorter message or try again later.";
+        } else if (errorMsg.includes('model') || errorMsg.includes('load')) {
+          userFriendlyMessage = "I'm having trouble with my current AI model. Please try switching models or try again later.";
+        } else if (errorMsg.includes('auth') || errorMsg.includes('permission')) {
+          userFriendlyMessage = "I don't have permission to complete that request. Please check your authentication.";
+        } else if (errorMsg.includes('rate limit')) {
+          userFriendlyMessage = "I'm receiving too many requests right now. Please wait a moment and try again.";
+        }
+      }
+      
       const errorMessage = {
         id: (Date.now() + 1).toString(),
         timestamp: new Date(),
         sender: 'hecate',
-        message: `I encountered an error processing your message: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        message: userFriendlyMessage,
         type: 'error',
       };
 
@@ -1313,7 +1358,7 @@ const HUD: React.FC<HUDProps> = ({
                     <div className={styles.hecateChat}>
                       <div className={styles.chatHeader}>
                         <div className={styles.chatTitle}>
-                          {currentSelectedModel ? (
+                          {availableModels.length > 0 ? (
                             <div className={styles.modelSelector} ref={modelDropdownRef}>
                               <button 
                                 className={`${styles.modelDropdownBtn} ${isModelChanging ? styles.modelChanging : ''}`}
@@ -1324,7 +1369,7 @@ const HUD: React.FC<HUDProps> = ({
                                 {isModelChanging ? (
                                   <>⚡ Switching... <span className={styles.loadingSpinner}>⟳</span></>
                                 ) : (
-                                  <>{currentSelectedModel} <span className={styles.dropdownArrow}>▼</span></>
+                                  <>{currentSelectedModel || 'Select Model'} <span className={styles.dropdownArrow}>▼</span></>
                                 )}
                               </button>
                               {showModelDropdown && !isModelChanging && (
