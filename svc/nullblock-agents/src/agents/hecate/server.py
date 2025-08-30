@@ -403,7 +403,7 @@ def create_app() -> FastAPI:
                     "context_length": config.metrics.context_window,
                     "capabilities": [cap.value for cap in config.capabilities],
                     "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
-                    "supports_reasoning": getattr(config, 'supports_reasoning', False),
+                    "supports_reasoning": getattr(config, 'supports_reasoning', False) or ModelCapability.REASONING in config.capabilities,
                     "description": config.description,
                     "is_popular": model_name in POPULAR_MODELS
                 })
@@ -425,7 +425,7 @@ def create_app() -> FastAPI:
                     "context_length": config.metrics.context_window,
                     "capabilities": [cap.value for cap in config.capabilities],
                     "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
-                    "supports_reasoning": getattr(config, 'supports_reasoning', False),
+                    "supports_reasoning": getattr(config, 'supports_reasoning', False) or ModelCapability.REASONING in config.capabilities,
                     "description": config.description,
                     "is_popular": model_name in POPULAR_MODELS
                 })
@@ -543,6 +543,111 @@ def create_app() -> FastAPI:
         except Exception as e:
             logger.error(f"❌ Set model failed: {e}")
             log_response(500, "🎯 Model selection failed", {"error": str(e)})
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/model-info")
+    async def get_model_info(request: Request, model_name: str = None):
+        """Get detailed information about a specific model or current model"""
+        try:
+            if not agent:
+                log_response(503, "❌ Model info failed", {"error": "Agent not initialized"})
+                raise HTTPException(status_code=503, detail="Agent not initialized")
+
+            log_request(request, f"📋 Model info requested for: {model_name or 'current'}")
+
+            # Use current model if no specific model requested
+            if not model_name:
+                model_name = getattr(agent, 'preferred_model', None)
+                if not model_name:
+                    return {"error": "No model currently loaded", "model_name": None}
+
+            # Get model from static models first
+            from ..llm_service.models import AVAILABLE_MODELS, get_dynamic_models
+            
+            model_config = None
+            is_dynamic = False
+            
+            if model_name in AVAILABLE_MODELS:
+                model_config = AVAILABLE_MODELS[model_name]
+            else:
+                # Check dynamic models
+                dynamic_models = await get_dynamic_models()
+                if model_name in dynamic_models:
+                    model_config = dynamic_models[model_name]
+                    is_dynamic = True
+
+            if not model_config:
+                log_response(404, "❌ Model not found", {"model": model_name})
+                raise HTTPException(status_code=404, detail=f"Model {model_name} not found")
+
+            # Check if model is currently available
+            is_available = agent.llm_factory.router.model_status.get(model_name, getattr(model_config, 'enabled', True))
+            
+            # Get current model status if this is the active model
+            model_status = None
+            llm_stats = None
+            if model_name == getattr(agent, 'preferred_model', None):
+                try:
+                    status_info = await agent.get_model_status()
+                    model_status = status_info.get('status', 'unknown')
+                    llm_stats = status_info.get('stats', {})
+                except Exception as e:
+                    logger.warning(f"Failed to get model status: {e}")
+
+            # Build detailed model information
+            model_info = {
+                "name": model_name,
+                "display_name": getattr(model_config, 'display_name', getattr(model_config, 'name', model_name)),
+                "icon": getattr(model_config, 'icon', '🤖'),
+                "provider": model_config.provider.value if hasattr(model_config, 'provider') else 'unknown',
+                "description": getattr(model_config, 'description', 'No description available'),
+                "tier": model_config.tier.value if hasattr(model_config, 'tier') else 'standard',
+                
+                # Availability and status
+                "available": is_available,
+                "is_current": model_name == getattr(agent, 'preferred_model', None),
+                "is_dynamic": is_dynamic,
+                "status": model_status,
+                
+                # Technical specifications
+                "context_length": getattr(model_config.metrics, 'context_window', 0) if hasattr(model_config, 'metrics') else 0,
+                "max_tokens": getattr(model_config.metrics, 'max_output_tokens', 0) if hasattr(model_config, 'metrics') else 0,
+                "capabilities": [cap.value for cap in model_config.capabilities] if hasattr(model_config, 'capabilities') else [],
+                "supports_reasoning": getattr(model_config, 'supports_reasoning', False) or ModelCapability.REASONING in model_config.capabilities,
+                "supports_vision": 'vision' in [cap.value for cap in getattr(model_config, 'capabilities', [])],
+                "supports_function_calling": 'function_calling' in [cap.value for cap in getattr(model_config, 'capabilities', [])],
+                
+                # Cost information
+                "cost_per_1k_tokens": getattr(model_config.metrics, 'cost_per_1k_tokens', 0.0) if hasattr(model_config, 'metrics') else 0.0,
+                "cost_per_1m_tokens": (getattr(model_config.metrics, 'cost_per_1k_tokens', 0.0) * 1000) if hasattr(model_config, 'metrics') else 0.0,
+                
+                # Performance metrics from LLM factory if available
+                "performance_stats": llm_stats or {},
+                
+                # Usage information
+                "conversation_length": len(agent.conversation_history) if hasattr(agent, 'conversation_history') else 0,
+                "last_used": None,  # Could be enhanced to track actual usage
+            }
+            
+            # Add estimated costs for conversation if this is current model
+            if model_info["is_current"] and model_info["conversation_length"] > 0:
+                estimated_tokens = model_info["conversation_length"] * 100  # Rough estimate
+                estimated_cost = (estimated_tokens / 1000) * model_info["cost_per_1k_tokens"]
+                model_info["estimated_session_cost"] = estimated_cost
+            
+            log_response(200, "📋 Model info retrieved", {
+                "model": model_name,
+                "is_current": model_info["is_current"],
+                "available": model_info["available"]
+            })
+            
+            return model_info
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"❌ Get model info failed: {e}")
+            log_response(500, "📋 Get model info failed", {"error": str(e)})
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.post("/reset-models")

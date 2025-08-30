@@ -291,6 +291,30 @@ class HecateAgentService {
   }
 
   /**
+   * Get detailed model information
+   */
+  async getModelInfo(modelName?: string): Promise<any> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to Hecate agent. Call connect() first.');
+    }
+
+    try {
+      const params = modelName ? `?model_name=${encodeURIComponent(modelName)}` : '';
+      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/model-info${params}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Failed to get model info:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Check if service is connected
    */
   isAgentConnected(): boolean {
