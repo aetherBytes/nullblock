@@ -36,6 +36,23 @@ check_service() {
         else
             echo "❌"
         fi
+    elif [ "$check_type" = "openrouter" ]; then
+        # Check OpenRouter API with authentication (no tokens spent)
+        local api_key="${OPENROUTER_API_KEY:-}"
+        if [ -z "$api_key" ] && [ -f "/Users/sage/nullblock/.env.dev" ]; then
+            api_key=$(grep "OPENROUTER_API_KEY" /Users/sage/nullblock/.env.dev 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d ' ')
+        fi
+        
+        if [ -n "$api_key" ]; then
+            local response=$(curl -s --max-time 5 -H "Authorization: Bearer $api_key" "https://openrouter.ai/api/v1/models" 2>/dev/null)
+            if echo "$response" | grep -q '"data"' && ! echo "$response" | grep -q '"error"'; then
+                echo "✅"
+            else
+                echo "❌"
+            fi
+        else
+            echo "❓"
+        fi
     elif [ "$check_type" = "brew" ]; then
         if brew services list | grep -q "$name.*started"; then
             echo "✅"
@@ -75,15 +92,15 @@ print_status() {
     
     # Frontend & LLM
     local frontend_status=$(check_service "Frontend" "5173" "http://localhost:5173" "http")
-    local lm_status=$(check_service "LM Studio" "1234" "" "port")
+    local openrouter_status=$(check_service "OpenRouter" "" "" "openrouter")
     
     echo -e "${WHITE}│ Infrastructure: ${postgres15_status} PG@15 ${postgres17_status} PG@17 ${redis_status} Redis ${ipfs_status} IPFS                        │${NC}"
     echo -e "${WHITE}│ Backend:        ${mcp_status} MCP:8001 ${orch_status} Orchestration:8002 ${erebus_status} Erebus:3000            │${NC}"
     echo -e "${WHITE}│ Agents:         ${agents_status} General:9001 ${hecate_status} Hecate:9002                              │${NC}"
-    echo -e "${WHITE}│ Frontend:       ${frontend_status} Vite:5173 ${lm_status} LM Studio:1234                             │${NC}"
+    echo -e "${WHITE}│ Frontend:       ${frontend_status} Vite:5173 ${openrouter_status} OpenRouter API                        │${NC}"
     
     # Count services
-    local all_statuses=("$postgres15_status" "$postgres17_status" "$redis_status" "$ipfs_status" "$mcp_status" "$orch_status" "$erebus_status" "$agents_status" "$hecate_status" "$frontend_status" "$lm_status")
+    local all_statuses=("$postgres15_status" "$postgres17_status" "$redis_status" "$ipfs_status" "$mcp_status" "$orch_status" "$erebus_status" "$agents_status" "$hecate_status" "$frontend_status" "$openrouter_status")
     local online_count=0
     for status in "${all_statuses[@]}"; do
         if [[ "$status" == "✅" ]]; then
@@ -126,10 +143,9 @@ show_log_summary() {
         "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server.log"
         "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration.log"
         
-        # LLM Service logs (input/output tracking)
-        "/Users/sage/Library/Logs/LM Studio/main.log"
-        "/Users/sage/nullblock/logs/lm-studio-stream.log"
-        "/Users/sage/nullblock/logs/lm-studio-monitor.log"
+        # LLM Service logs (OpenRouter)
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/llm-health.log"
+        "/Users/sage/nullblock/svc/nullblock-agents/logs/model-performance.log"
     )
     
     local active_logs=0

@@ -271,11 +271,11 @@ def create_app() -> FastAPI:
             
             if hasattr(agent, 'llm_factory') and agent.llm_factory:
                 # Get all models from the router
-                from ..llm_service.models import AVAILABLE_MODELS
+                from ..llm_service.models import AVAILABLE_MODELS, get_default_hecate_model
                 
                 for model_name, config in AVAILABLE_MODELS.items():
-                    # Check if model is available
-                    is_available = agent.llm_factory.router.model_status.get(model_name, False)
+                    # Check if model is available (default to config.enabled if not explicitly set)
+                    is_available = agent.llm_factory.router.model_status.get(model_name, config.enabled)
                     
                     available_models.append({
                         "name": model_name,
@@ -284,20 +284,33 @@ def create_app() -> FastAPI:
                         "available": is_available,
                         "tier": config.tier.value,
                         "context_length": config.metrics.context_window,
-                        "capabilities": [cap.value for cap in config.capabilities]
+                        "capabilities": [cap.value for cap in config.capabilities],
+                        "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
+                        "supports_reasoning": getattr(config, 'supports_reasoning', False),
+                        "description": config.description
                     })
             
             # Sort by availability first, then by provider and name
             available_models.sort(key=lambda x: (not x["available"], x["provider"], x["name"]))
             
+            # Get default model
+            default_model = get_default_hecate_model()
+            
             log_response(200, "📋 Available models retrieved successfully", {
                 "models_count": len(available_models),
-                "available_count": sum(1 for m in available_models if m["available"])
+                "available_count": sum(1 for m in available_models if m["available"]),
+                "default_model": default_model
             })
             
             return {
                 "models": available_models,
-                "current_model": agent.current_model
+                "current_model": getattr(agent, 'current_model', None),
+                "default_model": default_model,
+                "recommended_models": {
+                    "free": "deepseek/deepseek-chat-v3.1:free",
+                    "reasoning": "deepseek/deepseek-r1",
+                    "premium": "anthropic/claude-3.5-sonnet"
+                }
             }
         except Exception as e:
             logger.error(f"❌ Get available models failed: {e}")
@@ -375,45 +388,33 @@ def create_app() -> FastAPI:
             log_response(500, "🎯 Model selection failed", {"error": str(e)})
             raise HTTPException(status_code=500, detail=str(e))
 
-    @app.post("/unload-lm-studio-model")
-    async def unload_lm_studio_model(request: Request, unload_request: dict):
-        """Unload model from LM Studio using CLI"""
+    @app.post("/reset-models")
+    async def reset_models(request: Request):
+        """Reset and refresh model availability"""
         try:
-            log_request(request, "🔄 LM Studio model unload requested", {
-                "current_model": unload_request.get("current_model")
-            })
+            log_request(request, "🔄 Model reset requested")
             
-            # Use lms unload --all to unload all models for clean slate
-            proc = await asyncio.create_subprocess_exec(
-                "lms", "unload", "--all",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await proc.communicate()
-            
-            if proc.returncode == 0:
-                log_response(200, "🔄 LM Studio model unloaded successfully")
+            if hasattr(agent, 'llm_factory') and agent.llm_factory:
+                # Re-initialize the factory to refresh model status
+                await agent.llm_factory.initialize()
+                logger.info("✅ Model factory reinitialized")
+                
+                # Get updated model status
+                health = await agent.llm_factory.health_check()
+                
+                log_response(200, "🔄 Model reset completed successfully", health)
+                
                 return {
                     "success": True,
-                    "message": "LM Studio model unloaded successfully",
-                    "output": stdout.decode() if stdout else "No output"
+                    "message": "Models reset and refreshed successfully",
+                    "health": health
                 }
             else:
-                error_msg = stderr.decode() if stderr else "Unknown error"
-                log_response(400, "🔄 LM Studio model unload failed", {
-                    "error": error_msg,
-                    "return_code": proc.returncode
-                })
-                return {
-                    "success": False,
-                    "message": f"Failed to unload LM Studio model: {error_msg}",
-                    "return_code": proc.returncode
-                }
+                raise HTTPException(status_code=503, detail="LLM factory not available")
                 
         except Exception as e:
-            logger.error(f"❌ LM Studio model unload failed: {e}")
-            log_response(500, "🔄 LM Studio model unload failed", {"error": str(e)})
+            logger.error(f"❌ Model reset failed: {e}")
+            log_response(500, "🔄 Model reset failed", {"error": str(e)})
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.post("/personality")
@@ -532,7 +533,7 @@ def run_server(host: str = "0.0.0.0", port: int = None):
     logger.info(f"🔍 Model status: http://{host}:{port}/model-status")
     logger.info(f"📋 Available models: http://{host}:{port}/available-models")
     logger.info(f"🎯 Set model: http://{host}:{port}/set-model")
-    logger.info(f"🔄 Unload LM Studio model: http://{host}:{port}/unload-lm-studio-model")
+    logger.info(f"🔄 Reset models: http://{host}:{port}/reset-models")
     logger.info(f"📜 History: http://{host}:{port}/history")
     logger.info(f"🎭 Personality: http://{host}:{port}/personality")
     logger.info(f"🗑️ Clear: http://{host}:{port}/clear")

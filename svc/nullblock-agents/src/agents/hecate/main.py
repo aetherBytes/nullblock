@@ -301,7 +301,7 @@ class HecateAgent:
                 priority=Priority.HIGH,  # Higher priority for Hecate responses
                 task_type="conversation",
                 allow_local_models=True,
-                preferred_providers=["local"],  # Prefer local models (LM Studio)
+                preferred_providers=["openrouter"],  # Prefer cloud models
                 min_quality_score=0.7,  # Ensure decent quality
             )
 
@@ -430,22 +430,13 @@ class HecateAgent:
         """Set preferred model for chat responses with automatic model ejection"""
         # Check if model is available
         if hasattr(self, "llm_factory") and self.llm_factory:
-            from ..llm_service.models import AVAILABLE_MODELS, ModelProvider
+            from ..llm_service.models import AVAILABLE_MODELS
 
             if model_name in AVAILABLE_MODELS:
                 is_available = self.llm_factory.router.model_status.get(
                     model_name, False
                 )
                 if is_available:
-                    # Get current model config to check if it's a local model
-                    model_config = AVAILABLE_MODELS[model_name]
-
-                    # If switching to a local model, unload other local models to free memory
-                    if model_config.provider == ModelProvider.LOCAL:
-                        await self._eject_other_local_models(model_name)
-                        # Actively load the new model
-                        await self._load_model(model_name)
-
                     # Set the preferred model
                     previous_model = self.preferred_model
                     self.preferred_model = model_name
@@ -467,103 +458,6 @@ class HecateAgent:
             logger.warning("⚠️ LLM factory not initialized")
             return False
 
-    async def _eject_other_local_models(self, keep_model: str):
-        """Eject (unload) other local models from LM Studio to free memory"""
-        try:
-            import subprocess
-
-            # Get loaded models using ps command
-            result = subprocess.run(
-                ["lms", "ps"], capture_output=True, text=True, timeout=10
-            )
-
-            if result.returncode == 0:
-                # Parse the lms ps output to find loaded models
-                lines = result.stdout.split("\n")
-                loaded_models = []
-
-                for line in lines:
-                    # Look for lines starting with "Identifier:" which contain model names
-                    if line.strip().startswith("Identifier:"):
-                        # Extract model name (everything after "Identifier: ")
-                        model_name = line.strip().replace("Identifier:", "").strip()
-                        if model_name and model_name != keep_model:
-                            loaded_models.append(model_name)
-
-                # Unload the models
-                for model_name in loaded_models:
-                    logger.info(f"🗑️ Ejecting model: {model_name}")
-                    unload_result = subprocess.run(
-                        ["lms", "unload", model_name],
-                        capture_output=True,
-                        text=True,
-                        timeout=30,
-                    )
-
-                    if unload_result.returncode == 0:
-                        logger.info(f"✅ Successfully ejected model: {model_name}")
-                    else:
-                        logger.warning(
-                            f"⚠️ Failed to eject model {model_name}: {
-                                unload_result.stderr
-                            }"
-                        )
-
-            else:
-                logger.warning(f"Failed to get LM Studio status: {result.stderr}")
-
-        except subprocess.TimeoutExpired:
-            logger.warning("LM Studio CLI command timed out")
-        except Exception as e:
-            logger.warning(f"Error during model ejection: {e}")
-
-    async def _load_model(self, model_name: str):
-        """Actively load a model in LM Studio"""
-        try:
-            import subprocess
-
-            logger.info(f"🚀 Loading model: {model_name}")
-
-            # Load the model using LM Studio CLI
-            load_result = subprocess.run(
-                ["lms", "load", model_name, "--yes"],
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-
-            if load_result.returncode == 0:
-                logger.info(f"✅ Successfully loaded model: {model_name}")
-            else:
-                logger.warning(
-                    f"⚠️ Failed to load model {model_name}: {load_result.stderr}"
-                )
-                # Try to load without --yes flag in case the model needs interactive selection
-                if "not found" in load_result.stderr.lower():
-                    logger.info(f"🔄 Retrying load for {model_name} without --yes flag")
-                    retry_result = subprocess.run(
-                        ["lms", "load", model_name],
-                        input="\n",  # Send enter to select first match if prompted
-                        capture_output=True,
-                        text=True,
-                        timeout=60,
-                    )
-
-                    if retry_result.returncode == 0:
-                        logger.info(
-                            f"✅ Successfully loaded model on retry: {model_name}"
-                        )
-                    else:
-                        logger.warning(
-                            f"⚠️ Failed to load model on retry {model_name}: {
-                                retry_result.stderr
-                            }"
-                        )
-
-        except subprocess.TimeoutExpired:
-            logger.warning(f"⚠️ Model loading timed out for: {model_name}")
-        except Exception as e:
-            logger.warning(f"Error loading model {model_name}: {e}")
 
     def get_preferred_model(self) -> Optional[str]:
         """Get current preferred model"""

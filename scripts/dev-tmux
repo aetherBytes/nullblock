@@ -49,6 +49,19 @@ check_ruby() {
     print_success "Ruby is available"
 }
 
+# Check OpenRouter configuration
+check_openrouter_config() {
+    print_status "Checking OpenRouter configuration..."
+    
+    if [ -z "$OPENROUTER_API_KEY" ] && [ ! -f .env.dev ]; then
+        print_warning "OpenRouter API key not found in environment or .env.dev"
+        print_status "OpenRouter provides free models for development"
+        print_status "Visit: https://openrouter.ai/ to get a free API key"
+    else
+        print_success "OpenRouter configuration ready"
+    fi
+}
+
 # Install tmuxinator
 install_tmuxinator() {
     print_status "Installing tmuxinator..."
@@ -124,9 +137,6 @@ kill_existing_services() {
         lsof -ti:9002 | xargs kill -9 2>/dev/null || true  # Hecate Agent
         lsof -ti:3000 | xargs kill -9 2>/dev/null || true  # Erebus
         lsof -ti:5173 | xargs kill -9 2>/dev/null || true  # Vite dev server
-        lsof -ti:1234 | xargs kill -9 2>/dev/null || true  # LM Studio
-        print_status "Stopping LM Studio server..."
-        lms server stop 2>/dev/null || true
         print_status "Killing tmuxinator sessions..."
         tmux kill-session -t nullblock-dev 2>/dev/null || true
     fi
@@ -158,7 +168,7 @@ show_usage() {
     echo "  install        - Install tmuxinator and setup configuration"
     echo "  launch         - Launch development environment (default)"
     echo "  setup          - Setup tmuxinator configuration only"
-    echo "  restart-hecate - Restart Hecate agent (useful if LM Studio was started after)"
+    echo "  restart-hecate - Restart Hecate agent"
     echo "  help           - Show this help message"
     echo ""
     echo "Examples:"
@@ -171,7 +181,7 @@ show_usage() {
     echo "  - Backend services (MCP:8001, Orchestration:8002, Erebus:3000)"
     echo "  - Agent services (General Agents:9001, Hecate Agent:9002)"
     echo "  - Frontend development (Vite:5173 with hot reload)"
-    echo "  - LLM services (LM Studio server and management)"
+    echo "  - LLM services (OpenRouter cloud models)"
     echo "  - Master logs tab (unified log monitoring)"
     echo "  - Development tools and shell"
 }
@@ -189,6 +199,7 @@ main() {
         "launch")
             check_tmux
             check_ruby
+            check_openrouter_config
             install_tmuxinator
             check_config
             launch_dev
