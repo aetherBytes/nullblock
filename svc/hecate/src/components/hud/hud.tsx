@@ -142,6 +142,11 @@ const HUD: React.FC<HUDProps> = ({
   const [lastStatusMessageModel, setLastStatusMessageModel] = useState<string | null>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Model info state
+  const [modelInfo, setModelInfo] = useState<any>(null);
+  const [isLoadingModelInfo, setIsLoadingModelInfo] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
+
   // Sandbox state
   const [sandboxCode, setSandboxCode] = useState('# Welcome to NullBlock Sandbox\n# Select a language and start coding!\n\nprint("Hello NullBlock!")');
   const [selectedLanguage, setSelectedLanguage] = useState('python');
@@ -570,10 +575,64 @@ const HUD: React.FC<HUDProps> = ({
   };
 
   const scopesOptions = [
+    { id: 'modelinfo', icon: '🤖', title: 'Model Info', description: 'Current model details', color: '#ff6b6b' },
     { id: 'sandbox', icon: '⚡', title: 'Sandbox', description: 'Code execution', color: '#ffa502' },
     { id: 'templates', icon: '📋', title: 'Templates', description: 'Task templates', color: '#00d4ff' },
     { id: 'settings', icon: '⚙️', title: 'Settings', description: 'Theme & social links', color: '#747d8c' },
   ];
+
+  const loadModelInfo = async () => {
+    if (isLoadingModelInfo) {
+      return;
+    }
+
+    try {
+      setIsLoadingModelInfo(true);
+
+      const { hecateAgent } = await import('../../common/services/hecate-agent');
+      
+      // Ensure connection to Hecate agent
+      const connected = await hecateAgent.connect();
+      if (!connected) {
+        console.warn('Failed to connect to Hecate agent for model info');
+        return;
+      }
+
+      // Get available models to get rich descriptions
+      const modelsData = await hecateAgent.getAvailableModels();
+      const currentModelName = currentSelectedModel;
+      
+      if (!currentModelName) {
+        setModelInfo({ error: 'No model currently selected' });
+        return;
+      }
+
+      // Find the current model in available models
+      const currentModelInfo = modelsData.models?.find((model: any) => model.name === currentModelName);
+      
+      if (!currentModelInfo) {
+        setModelInfo({ error: `Model ${currentModelName} not found in available models` });
+        return;
+      }
+
+      // Use the rich model info from available models
+      console.log('Model info loaded:', currentModelInfo);
+      
+      // Add is_current field based on current selection
+      const enrichedModelInfo = {
+        ...currentModelInfo,
+        is_current: currentModelName === currentSelectedModel
+      };
+      
+      setModelInfo(enrichedModelInfo);
+      
+    } catch (error) {
+      console.error('Error loading model info:', error);
+      setModelInfo({ error: error.message });
+    } finally {
+      setIsLoadingModelInfo(false);
+    }
+  };
 
   const loadAvailableModels = async () => {
     // Prevent concurrent executions
@@ -981,7 +1040,13 @@ const HUD: React.FC<HUDProps> = ({
   };
 
   const handleScopesClick = (scopeId: string) => {
-    setActiveLens(activeScope === scopeId ? null : scopeId);
+    const newScope = activeScope === scopeId ? null : scopeId;
+    setActiveLens(newScope);
+    
+    // Load data when specific scopes are opened
+    if (newScope === 'modelinfo') {
+      loadModelInfo();
+    }
   };
 
   const handleChatScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -1919,6 +1984,187 @@ const HUD: React.FC<HUDProps> = ({
                                     <p>Template for portfolio tracking</p>
                                   </div>
                                 </div>
+                              </div>
+                            )}
+
+                            {activeScope === 'modelinfo' && (
+                              <div className={styles.modelInfoScope}>
+                                {isLoadingModelInfo ? (
+                                  <div className={styles.modelInfoLoading}>
+                                    <p>🔄 Loading model information...</p>
+                                  </div>
+                                ) : modelInfo?.error ? (
+                                  <div className={styles.modelInfoError}>
+                                    <h6>❌ Error Loading Model Info</h6>
+                                    <p>{modelInfo.error}</p>
+                                    <button onClick={loadModelInfo} className={styles.retryButton}>
+                                      🔄 Retry
+                                    </button>
+                                  </div>
+                                ) : modelInfo ? (
+                                  <div className={styles.modelInfoContent}>
+                                    <div className={styles.modelInfoHeader}>
+                                      <div className={styles.modelInfoTitle}>
+                                        <span className={styles.modelIcon}>{modelInfo.icon || '🤖'}</span>
+                                        <div>
+                                          <h6>{modelInfo.display_name || modelInfo.name}</h6>
+                                          <span className={styles.modelProvider}>{modelInfo.provider}</span>
+                                        </div>
+                                      </div>
+                                      <div className={styles.modelStatus}>
+                                        <span className={`${styles.statusBadge} ${modelInfo.is_current ? styles.current : ''}`}>
+                                          {modelInfo.is_current ? '🟢 Active' : (modelInfo.available ? '⚪ Available' : '🔴 Unavailable')}
+                                        </span>
+                                        <span className={`${styles.tierBadge} ${styles[modelInfo.tier]}`}>
+                                          {modelInfo.tier === 'economical' ? '🆓 Free' : 
+                                           modelInfo.tier === 'fast' ? '⚡ Fast' : 
+                                           modelInfo.tier === 'standard' ? '⭐ Standard' : 
+                                           modelInfo.tier === 'premium' ? '💎 Premium' : modelInfo.tier}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {modelInfo.description && (
+                                      <div className={styles.modelInfoSection}>
+                                        <h6>📝 Description</h6>
+                                        <p>
+                                          {modelInfo.description.length > 300 && !showFullDescription 
+                                            ? `${modelInfo.description.substring(0, 300)}...`
+                                            : modelInfo.description
+                                          }
+                                        </p>
+                                        {modelInfo.description.length > 300 && (
+                                          <button 
+                                            onClick={() => setShowFullDescription(!showFullDescription)}
+                                            className={styles.showMoreButton}
+                                          >
+                                            {showFullDescription ? 'Show Less' : 'Show More'}
+                                          </button>
+                                        )}
+                                        {/* Add reasoning capability note */}
+                                        {(modelInfo.supports_reasoning || (modelInfo.capabilities && modelInfo.capabilities.includes('reasoning'))) && 
+                                         !(modelInfo.capabilities && modelInfo.capabilities.includes('reasoning_tokens')) && (
+                                          <div className={styles.reasoningNote}>
+                                            <p>
+                                              <strong>💡 Note:</strong> This model supports general reasoning but not step-by-step reasoning tokens. 
+                                              For complex reasoning tasks, consider using a model with reasoning tokens like DeepSeek-R1.
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    <div className={styles.modelInfoSection}>
+                                      <h6>⚙️ Technical Specifications</h6>
+                                      <div className={styles.modelSpecs}>
+                                        <div className={styles.specItem}>
+                                          <span className={styles.specLabel}>Context Length:</span>
+                                          <span className={styles.specValue}>{modelInfo.context_length?.toLocaleString() || 'N/A'} tokens</span>
+                                        </div>
+                                        {modelInfo.max_tokens > 0 && (
+                                          <div className={styles.specItem}>
+                                            <span className={styles.specLabel}>Max Output:</span>
+                                            <span className={styles.specValue}>{modelInfo.max_tokens.toLocaleString()} tokens</span>
+                                          </div>
+                                        )}
+                                        <div className={styles.specItem}>
+                                          <span className={styles.specLabel}>Reasoning:</span>
+                                          <span className={styles.specValue}>
+                                            {modelInfo.supports_reasoning || (modelInfo.capabilities && modelInfo.capabilities.includes('reasoning')) 
+                                              ? '✅ Yes (General reasoning)' 
+                                              : '❌ No'}
+                                          </span>
+                                        </div>
+                                        <div className={styles.specItem}>
+                                          <span className={styles.specLabel}>Reasoning Tokens:</span>
+                                          <span className={styles.specValue}>
+                                            {modelInfo.supports_reasoning || (modelInfo.capabilities && modelInfo.capabilities.includes('reasoning_tokens'))
+                                              ? '✅ Yes (Step-by-step thinking)' 
+                                              : '❌ No (General reasoning only)'}
+                                          </span>
+                                        </div>
+                                        <div className={styles.specItem}>
+                                          <span className={styles.specLabel}>Vision:</span>
+                                          <span className={styles.specValue}>{modelInfo.supports_vision ? '✅ Yes' : '❌ No'}</span>
+                                        </div>
+                                        <div className={styles.specItem}>
+                                          <span className={styles.specLabel}>Function Calls:</span>
+                                          <span className={styles.specValue}>{modelInfo.supports_function_calling ? '✅ Yes' : '❌ No'}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className={styles.modelInfoSection}>
+                                      <h6>💰 Cost Information</h6>
+                                      <div className={styles.costInfo}>
+                                        <div className={styles.specItem}>
+                                          <span className={styles.specLabel}>Cost per 1K tokens:</span>
+                                          <span className={styles.specValue}>
+                                            {modelInfo.cost_per_1k_tokens === 0 ? '🆓 Free' : `$${modelInfo.cost_per_1k_tokens.toFixed(6)}`}
+                                          </span>
+                                        </div>
+                                        <div className={styles.specItem}>
+                                          <span className={styles.specLabel}>Cost per 1M tokens:</span>
+                                          <span className={styles.specValue}>
+                                            {modelInfo.cost_per_1k_tokens === 0 ? '🆓 Free' : `$${(modelInfo.cost_per_1k_tokens * 1000).toFixed(2)}`}
+                                          </span>
+                                        </div>
+                                        {modelInfo.estimated_session_cost !== undefined && (
+                                          <div className={styles.specItem}>
+                                            <span className={styles.specLabel}>Estimated session cost:</span>
+                                            <span className={styles.specValue}>${modelInfo.estimated_session_cost.toFixed(6)}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {modelInfo.capabilities && modelInfo.capabilities.length > 0 && (
+                                      <div className={styles.modelInfoSection}>
+                                        <h6>🎯 Capabilities</h6>
+                                        <div className={styles.capabilitiesList}>
+                                          {modelInfo.capabilities.map((capability: string) => (
+                                            <span 
+                                              key={capability} 
+                                              className={styles.capabilityTag}
+                                              title={capability.replace('_', ' ')}
+                                            >
+                                              {capability.replace('_', ' ')}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {modelInfo.is_current && modelInfo.conversation_length > 0 && (
+                                      <div className={styles.modelInfoSection}>
+                                        <h6>📊 Session Statistics</h6>
+                                        <div className={styles.sessionStats}>
+                                          <div className={styles.specItem}>
+                                            <span className={styles.specLabel}>Messages in conversation:</span>
+                                            <span className={styles.specValue}>{modelInfo.conversation_length}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    <div className={styles.modelInfoActions}>
+                                      <button 
+                                        onClick={loadModelInfo} 
+                                        className={styles.refreshButton}
+                                        disabled={isLoadingModelInfo}
+                                      >
+                                        🔄 Refresh Info
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className={styles.modelInfoEmpty}>
+                                    <p>No model information available</p>
+                                    <button onClick={loadModelInfo} className={styles.loadButton}>
+                                      📊 Load Model Info
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             )}
 

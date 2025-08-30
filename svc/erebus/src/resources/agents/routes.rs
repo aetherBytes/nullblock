@@ -288,3 +288,31 @@ pub async fn hecate_set_model(Json(request): Json<Value>) -> Result<ResponseJson
         }
     }
 }
+
+/// Get detailed model information from Hecate agent
+pub async fn hecate_model_info() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("📋 Hecate model info request received");
+    
+    let proxy = get_hecate_proxy();
+    
+    match proxy.proxy_request("model-info", "GET", None).await {
+        Ok(response) => {
+            info!("✅ Hecate model info retrieved successfully");
+            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            Ok(ResponseJson(response))
+        }
+        Err(error) => {
+            error!("❌ Hecate model info request failed");
+            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            
+            let status_code = match error.code.as_str() {
+                "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
+                "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
+                "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            
+            Err((status_code, ResponseJson(error)))
+        }
+    }
+}

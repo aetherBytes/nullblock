@@ -6422,6 +6422,9 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   height: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .scopesContentExpanded {
@@ -6463,6 +6466,26 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   flex: 1;
   padding: 1.5rem;
   color: $text-color;
+  overflow-y: auto;
+  min-height: 0;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba($background-dark, 0.3);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.3);
+    border-radius: 3px;
+    
+    &:hover {
+      background: rgba($echo-blue, 0.5);
+    }
+  }
 }
 
 // Chat avatar styles (mini nulleyes in chat)
@@ -8034,5 +8057,529 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
   100% {
     transform: translateX(100%);
+  }
+}
+
+// Model Info Scope Styles
+.modelInfoScope {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 400px;
+  overflow: hidden;
+  background: rgba($background-dark, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba($echo-blue, 0.2);
+}
+
+.modelInfoLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  
+  p {
+    color: $echo-blue;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    text-align: center;
+    margin: 0;
+  }
+}
+
+.modelInfoError {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+  
+  h6 {
+    color: $echo-red;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    margin: 0 0 1rem 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  p {
+    color: $text-secondary;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    margin: 0 0 1.5rem 0;
+    max-width: 300px;
+  }
+  
+  .retryButton {
+    background: rgba($echo-red, 0.2);
+    border: 1px solid rgba($echo-red, 0.4);
+    color: $echo-red;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    
+    &:hover {
+      background: rgba($echo-red, 0.3);
+      border-color: rgba($echo-red, 0.6);
+      transform: translateY(-1px);
+    }
+  }
+}
+
+.modelInfoContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: 1.5rem;
+  gap: 1.5rem;
+  min-height: 0;
+  flex: 1;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba($background-dark, 0.3);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.3);
+    border-radius: 3px;
+    
+    &:hover {
+      background: rgba($echo-blue, 0.5);
+    }
+  }
+}
+
+.modelInfoHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba($echo-blue, 0.2);
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .modelInfoTitle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    
+    .modelIcon {
+      font-size: 1.5rem;
+      width: 2rem;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    
+    h6 {
+      margin: 0;
+      color: $lightning-silver;
+      font-family: 'Courier New', monospace;
+      font-size: 1.2rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      line-height: 1.2;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
+    }
+    
+    .modelProvider {
+      color: $echo-blue;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.8;
+      margin-top: 0.25rem;
+    }
+  }
+  
+  .modelStatus {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    
+    @media (max-width: 768px) {
+      align-items: flex-start;
+      flex-direction: row;
+      gap: 0.75rem;
+    }
+    
+    .statusBadge {
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      
+      &.current {
+        background: rgba($echo-green, 0.2);
+        color: $echo-green;
+        border: 1px solid rgba($echo-green, 0.4);
+      }
+    }
+    
+    .tierBadge {
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.7rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      
+      &.economical {
+        background: rgba($echo-green, 0.2);
+        color: $echo-green;
+        border: 1px solid rgba($echo-green, 0.3);
+      }
+      
+      &.fast {
+        background: rgba($lightning-gold, 0.2);
+        color: $lightning-gold;
+        border: 1px solid rgba($lightning-gold, 0.3);
+      }
+      
+      &.standard {
+        background: rgba($echo-blue, 0.2);
+        color: $echo-blue;
+        border: 1px solid rgba($echo-blue, 0.3);
+      }
+      
+      &.premium {
+        background: rgba($echo-purple, 0.2);
+        color: $echo-purple;
+        border: 1px solid rgba($echo-purple, 0.3);
+      }
+    }
+  }
+}
+
+.modelInfoSection {
+  background: rgba($background-dark, 0.4);
+  border: 1px solid rgba($echo-blue, 0.15);
+  border-radius: 6px;
+  padding: 1.25rem;
+  
+  h6 {
+    margin: 0 0 1rem 0;
+    color: $echo-blue;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  p {
+    margin: 0;
+    color: $text-secondary;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    text-align: justify;
+    
+    // Handle very long descriptions
+    &:first-of-type {
+      margin-bottom: 0.5rem;
+    }
+  }
+  
+  .showMoreButton {
+    background: rgba($echo-blue, 0.1);
+    border: 1px solid rgba($echo-blue, 0.3);
+    color: $echo-blue;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.75rem;
+    
+    &:hover {
+      background: rgba($echo-blue, 0.2);
+      border-color: rgba($echo-blue, 0.5);
+      transform: translateY(-1px);
+    }
+  }
+  
+  .reasoningNote {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: rgba($lightning-gold, 0.1);
+    border: 1px solid rgba($lightning-gold, 0.3);
+    border-radius: 4px;
+    
+    p {
+      margin: 0;
+      color: $lightning-gold;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      
+      strong {
+        color: $lightning-gold;
+        font-weight: bold;
+      }
+    }
+  }
+}
+
+.modelSpecs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  
+  .specItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba($echo-blue, 0.1);
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    .specLabel {
+      color: $text-secondary;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .specValue {
+      color: $lightning-silver;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      font-weight: bold;
+      text-align: right;
+    }
+  }
+}
+
+.costInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  
+  .specItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba($echo-blue, 0.1);
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    .specLabel {
+      color: $text-secondary;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .specValue {
+      color: $lightning-gold;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      font-weight: bold;
+      text-align: right;
+    }
+  }
+}
+
+.capabilitiesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-width: 100%;
+  
+  .capabilityTag {
+    background: rgba($echo-blue, 0.15);
+    color: $echo-blue;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: capitalize;
+    border: 1px solid rgba($echo-blue, 0.3);
+    transition: all 0.3s ease;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    
+    &:hover {
+      background: rgba($echo-blue, 0.25);
+      border-color: rgba($echo-blue, 0.5);
+      transform: translateY(-1px);
+      position: relative;
+      
+      &::after {
+        content: attr(title);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba($background-dark, 0.95);
+        color: $echo-blue;
+        padding: 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        white-space: nowrap;
+        z-index: 1000;
+        border: 1px solid rgba($echo-blue, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+      }
+    }
+  }
+}
+
+.sessionStats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  
+  .specItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba($echo-blue, 0.1);
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    .specLabel {
+      color: $text-secondary;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .specValue {
+      color: $echo-green;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      font-weight: bold;
+      text-align: right;
+    }
+  }
+}
+
+.modelInfoActions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba($echo-blue, 0.2);
+  
+  .refreshButton, .loadButton {
+    background: rgba($echo-blue, 0.2);
+    border: 1px solid rgba($echo-blue, 0.4);
+    color: $echo-blue;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    
+    &:hover:not(:disabled) {
+      background: rgba($echo-blue, 0.3);
+      border-color: rgba($echo-blue, 0.6);
+      transform: translateY(-1px);
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
+}
+
+.modelInfoEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+  
+  p {
+    color: $text-secondary;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    margin: 0 0 1.5rem 0;
+  }
+  
+  .loadButton {
+    background: rgba($echo-blue, 0.2);
+    border: 1px solid rgba($echo-blue, 0.4);
+    color: $echo-blue;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    
+    &:hover {
+      background: rgba($echo-blue, 0.3);
+      border-color: rgba($echo-blue, 0.6);
+      transform: translateY(-1px);
+    }
   }
 }
