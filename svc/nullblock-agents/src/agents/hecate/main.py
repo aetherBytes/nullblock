@@ -78,9 +78,9 @@ class HecateAgent:
         self.llm_factory: Optional[LLMServiceFactory] = None
         self.conversation_history: List[ConversationMessage] = []
         self.running = False
-        self.current_model: Optional[str] = None
         # Default to DeepSeek V3 Free for consistent Hecate personality (cost: $0.00)
         self.preferred_model: Optional[str] = "deepseek/deepseek-chat-v3.1:free"
+        self.current_model: Optional[str] = self.preferred_model  # Initialize with preferred
         self.context_limit = 8000  # Token limit for conversation context
         
         # Chat logging
@@ -517,6 +517,7 @@ class HecateAgent:
                     # Set the preferred model
                     previous_model = self.preferred_model
                     self.preferred_model = model_name
+                    self.current_model = model_name  # Sync current with preferred
                     logger.info(f"🎯 Preferred model set to: {model_name}")
 
                     if previous_model and previous_model != model_name:

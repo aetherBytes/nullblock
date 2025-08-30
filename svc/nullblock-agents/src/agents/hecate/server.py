@@ -444,7 +444,7 @@ def create_app() -> FastAPI:
             # Create response
             response_data = {
                 "models": available_models,
-                "current_model": getattr(agent, 'current_model', None),
+                "current_model": getattr(agent, 'preferred_model', None),
                 "default_model": default_model,
                 "recommended_models": {
                     "free": "deepseek/deepseek-chat-v3.1:free",
