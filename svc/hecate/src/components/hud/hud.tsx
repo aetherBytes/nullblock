@@ -807,68 +807,14 @@ const HUD: React.FC<HUDProps> = ({
         throw new Error('Failed to connect to Hecate agent');
       }
 
-      // Always attempt to eject current model first, even if we're not sure what it is
-      if (currentSelectedModel) {
-        console.log(`Step 1: Ejecting current model: ${currentSelectedModel}`);
-        
-        const ejectionMessage = {
-          id: Date.now().toString(),
-          timestamp: new Date(),
-          sender: 'hecate',
-          message: `🔄 Ejecting ${currentSelectedModel}...`,
-          type: 'update'
-        };
-        setChatMessages(prev => [...prev, ejectionMessage]);
-        
-        try {
-          const ejectionResult = await hecateAgent.unloadModel(currentSelectedModel);
-          console.log(`Ejection result:`, ejectionResult);
-          
-          // Clear current model immediately after successful ejection
-          setCurrentSelectedModel(null);
-          
-          console.log(`Successfully ejected model: ${currentSelectedModel}`);
-          
-          // Update ejection message
-          const ejectionCompleteMessage = {
-            id: (Date.now() + 1).toString(),
-            timestamp: new Date(),
-            sender: 'hecate',
-            message: `✅ Ejected ${currentSelectedModel}`,
-            type: 'update'
-          };
-          setChatMessages(prev => [...prev, ejectionCompleteMessage]);
-          
-          // Wait for ejection to fully complete
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-        } catch (ejectionError) {
-          console.error('Failed to eject current model:', ejectionError);
-          
-          const ejectionErrorMessage = {
-            id: (Date.now() + 2).toString(),
-            timestamp: new Date(),
-            sender: 'hecate',
-            message: `⚠️ Ejection failed for ${currentSelectedModel}, continuing with load...`,
-            type: 'update'
-          };
-          setChatMessages(prev => [...prev, ejectionErrorMessage]);
-          
-          // Continue with model loading even if ejection fails
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      } else {
-        console.log('No current model to eject, proceeding with load');
-      }
-
-      // Load the new model
-      console.log(`Step 2: Loading new model: ${modelName}`);
+      // Load the new model directly (no ejection needed for OpenRouter)
+      console.log(`Loading new model: ${modelName}`);
       
       const loadingMessage = {
-        id: (Date.now() + 3).toString(),
+        id: Date.now().toString(),
         timestamp: new Date(),
         sender: 'hecate',
-        message: `⚡ Loading ${modelName}...`,
+        message: `⚡ Switching to ${modelName}...`,
         type: 'update'
       };
       setChatMessages(prev => [...prev, loadingMessage]);
@@ -886,7 +832,7 @@ const HUD: React.FC<HUDProps> = ({
       setCurrentSelectedModel(modelName);
       
       const systemMessage = {
-        id: (Date.now() + 4).toString(),
+        id: (Date.now() + 1).toString(),
         timestamp: new Date(),
         sender: 'hecate',
         message: `✅ ${modelName} ready`,
@@ -901,10 +847,10 @@ const HUD: React.FC<HUDProps> = ({
       console.error('Error setting model:', error);
       
       const errorMessage = {
-        id: (Date.now() + 5).toString(),
+        id: (Date.now() + 1).toString(),
         timestamp: new Date(),
         sender: 'hecate',
-        message: `❌ Failed to load ${modelName}: ${error.message}`,
+        message: `❌ Failed to switch to ${modelName}: ${error.message}`,
         type: 'error'
       };
       setChatMessages(prev => [...prev, errorMessage]);
