@@ -22,7 +22,7 @@ import os
 from .main import HecateAgent, ConversationMessage
 from ..logging_config import setup_agent_logging, log_agent_startup, log_agent_shutdown
 from ..config import get_hecate_config, config
-from ..llm_service.models import get_dynamic_models, POPULAR_MODELS
+from ..llm_service.models import get_dynamic_models, POPULAR_MODELS, ModelCapability, AVAILABLE_MODELS, get_default_hecate_model
 
 # Load environment variables from .env.dev file
 def load_env_file():
@@ -387,7 +387,6 @@ def create_app() -> FastAPI:
             available_models = []
             
             # Get static models
-            from ..llm_service.models import AVAILABLE_MODELS, get_default_hecate_model
             
             for model_name, config in AVAILABLE_MODELS.items():
                 # Check if model is available (default to config.enabled if not explicitly set)
@@ -562,7 +561,6 @@ def create_app() -> FastAPI:
                     return {"error": "No model currently loaded", "model_name": None}
 
             # Get model from static models first
-            from ..llm_service.models import AVAILABLE_MODELS, get_dynamic_models
             
             model_config = None
             is_dynamic = False
