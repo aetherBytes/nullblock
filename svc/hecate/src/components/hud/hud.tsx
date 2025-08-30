@@ -134,6 +134,10 @@ const HUD: React.FC<HUDProps> = ({
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [currentSelectedModel, setCurrentSelectedModel] = useState<string | null>(null);
   const [isModelChanging, setIsModelChanging] = useState(false);
+  const [modelSearchQuery, setModelSearchQuery] = useState('');
+  const [isSearchingModels, setIsSearchingModels] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [defaultModelLoaded, setDefaultModelLoaded] = useState(false);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
 
   // Sandbox state
@@ -410,6 +414,8 @@ const HUD: React.FC<HUDProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target as Node)) {
         setShowModelDropdown(false);
+        setModelSearchQuery('');
+        setSearchResults([]);
       }
     };
 
@@ -421,6 +427,19 @@ const HUD: React.FC<HUDProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showModelDropdown]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (modelSearchQuery.trim()) {
+        searchModels(modelSearchQuery);
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [modelSearchQuery]);
 
   const handleMCPAuthentication = async () => {
     if (!publicKey) {
@@ -562,14 +581,21 @@ const HUD: React.FC<HUDProps> = ({
       console.log('Available models loaded:', modelsData.models?.length || 0);
       console.log('Current model from backend:', modelsData.current_model);
       
+      // If a model is already set, mark default as loaded to avoid duplicate loading
+      if (modelsData.current_model) {
+        setCurrentSelectedModel(modelsData.current_model);
+        setDefaultModelLoaded(true);
+      }
+      
       // Find DeepSeek Chat model in available models (default)
       const deepseekModel = modelsData.models?.find((model: any) => 
         model.name === 'deepseek/deepseek-chat-v3.1:free'
       );
       
-      // If no current model is set, load DeepSeek Chat as default
-      if (!modelsData.current_model && deepseekModel) {
+      // If no current model is set and we haven't loaded default yet, load DeepSeek Chat as default
+      if (!modelsData.current_model && deepseekModel && !defaultModelLoaded) {
         console.log('No current model set, loading DeepSeek Chat as default:', deepseekModel.name);
+        setDefaultModelLoaded(true); // Mark as loading to prevent duplicates
         
         // Add a loading message
         const loadingMessage = {
@@ -624,6 +650,40 @@ const HUD: React.FC<HUDProps> = ({
       
     } catch (error) {
       console.error('Error loading available models:', error);
+    }
+  };
+
+  const searchModels = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsSearchingModels(true);
+      const { hecateAgent } = await import('../../common/services/hecate-agent');
+      
+      // Ensure connection to Hecate agent
+      const connected = await hecateAgent.connect();
+      if (!connected) {
+        console.warn('Failed to connect to Hecate agent for model search');
+        return;
+      }
+
+      // Search models via API
+      const response = await fetch(`http://localhost:9002/search-models?q=${encodeURIComponent(query)}&limit=20`);
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data.results || []);
+      } else {
+        console.error('Failed to search models:', response.statusText);
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Error searching models:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearchingModels(false);
     }
   };
 
@@ -1530,7 +1590,62 @@ const HUD: React.FC<HUDProps> = ({
                               {showModelDropdown && !isModelChanging && (
                                 <div className={styles.modelDropdown}>
                                   <div className={styles.dropdownHeader}>Select Model</div>
-                                  {availableModels.filter(model => model.available).map((model) => (
+                                  
+                                  {/* Search Input */}
+                                  <div className={styles.searchContainer}>
+                                    <input
+                                      type="text"
+                                      placeholder="Search 400+ models..."
+                                      value={modelSearchQuery}
+                                      onChange={(e) => setModelSearchQuery(e.target.value)}
+                                      className={styles.modelSearchInput}
+                                      autoFocus
+                                    />
+                                    {isSearchingModels && (
+                                      <div className={styles.searchSpinner}>⟳</div>
+                                    )}
+                                  </div>
+
+                                  {/* Search Results */}
+                                  {searchResults.length > 0 && (
+                                    <div className={styles.searchSection}>
+                                      <div className={styles.searchHeader}>
+                                        Search Results ({searchResults.length})
+                                      </div>
+                                      {searchResults.map((model) => (
+                                        <button
+                                          key={model.name}
+                                          className={`${styles.modelOption} ${model.name === currentSelectedModel ? styles.selected : ''}`}
+                                          onClick={() => handleModelSelection(model.name)}
+                                          title={`${model.display_name} (${model.provider})`}
+                                        >
+                                          <div className={styles.modelInfo}>
+                                            <span className={styles.modelIcon}>{model.icon || '🤖'}</span>
+                                            <div className={styles.modelDetails}>
+                                              <span className={styles.modelName}>{model.display_name}</span>
+                                              <span className={styles.modelProvider}>{model.provider}</span>
+                                            </div>
+                                          </div>
+                                          <div className={styles.modelBadge}>
+                                            <span className={`${styles.tierBadge} ${styles[model.tier]}`}>
+                                              {model.tier === 'economical' ? '🆓' : 
+                                               model.tier === 'fast' ? '⚡' : 
+                                               model.tier === 'standard' ? '⭐' : 
+                                               model.tier === 'premium' ? '💎' : '🤖'}
+                                            </span>
+                                            {model.name === currentSelectedModel && <span className={styles.selected}>✓</span>}
+                                          </div>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Popular Models */}
+                                  <div className={styles.popularSection}>
+                                    <div className={styles.sectionHeader}>
+                                      Popular Models
+                                    </div>
+                                    {availableModels.filter(model => model.available && model.is_popular).map((model) => (
                                     <button
                                       key={model.name}
                                       className={`${styles.modelOption} ${model.name === currentSelectedModel ? styles.selected : ''}`}
@@ -1555,6 +1670,7 @@ const HUD: React.FC<HUDProps> = ({
                                       </div>
                                     </button>
                                   ))}
+                                </div>
                                 </div>
                               )}
                             </div>

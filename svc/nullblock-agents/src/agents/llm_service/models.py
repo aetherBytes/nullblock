@@ -4,8 +4,10 @@ LLM Model Definitions and Configurations
 Defines available LLM models, their capabilities, and configuration parameters.
 """
 
+import requests
+import asyncio
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 
 class ModelProvider(Enum):
@@ -447,6 +449,129 @@ AVAILABLE_MODELS = {
         description="Economical Mistral model via HuggingFace"
     )
 }
+
+async def fetch_openrouter_models() -> List[Dict[str, Any]]:
+    """Fetch available models from OpenRouter API"""
+    try:
+        url = "https://openrouter.ai/api/v1/models"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("data", [])
+    except Exception as e:
+        print(f"Error fetching OpenRouter models: {e}")
+        return []
+
+def create_model_config_from_openrouter(model_data: Dict[str, Any]) -> Optional[ModelConfig]:
+    """Create a ModelConfig from OpenRouter model data"""
+    try:
+        model_id = model_data.get("id", "")
+        name = model_data.get("name", "")
+        description = model_data.get("description", "")
+        
+        # Extract pricing info
+        pricing = model_data.get("pricing", {})
+        prompt_cost = float(pricing.get("prompt", "0"))
+        completion_cost = float(pricing.get("completion", "0"))
+        total_cost = prompt_cost + completion_cost
+        
+        # Determine tier based on cost
+        if total_cost == 0:
+            tier = ModelTier.ECONOMICAL
+        elif total_cost < 0.001:
+            tier = ModelTier.FAST
+        elif total_cost < 0.01:
+            tier = ModelTier.STANDARD
+        else:
+            tier = ModelTier.PREMIUM
+        
+        # Determine capabilities based on model info
+        capabilities = [ModelCapability.CONVERSATION]
+        if "code" in description.lower() or "programming" in description.lower():
+            capabilities.append(ModelCapability.CODE)
+        if "reasoning" in description.lower() or "thinking" in description.lower():
+            capabilities.append(ModelCapability.REASONING)
+        if "math" in description.lower() or "mathematical" in description.lower():
+            capabilities.append(ModelCapability.MATH)
+        
+        # Create display name
+        display_name = name.replace("/", " ").replace("-", " ").title()
+        if "free" in name.lower():
+            display_name += " (Free)"
+        
+        # Determine icon based on model characteristics
+        icon = "🤖"  # default
+        if "claude" in name.lower():
+            icon = "🤖"
+        elif "gpt" in name.lower():
+            icon = "🧠"
+        elif "deepseek" in name.lower():
+            icon = "💬"
+        elif "llama" in name.lower():
+            icon = "🦙"
+        elif "gemma" in name.lower():
+            icon = "💎"
+        elif "qwen" in name.lower():
+            icon = "🐉"
+        elif "mistral" in name.lower():
+            icon = "🌪️"
+        elif "free" in name.lower():
+            icon = "🆓"
+        
+        return ModelConfig(
+            name=model_id,
+            provider=ModelProvider.OPENROUTER,
+            tier=tier,
+            capabilities=capabilities,
+            metrics=ModelMetrics(
+                avg_latency_ms=2000,  # Default estimate
+                tokens_per_second=20,  # Default estimate
+                cost_per_1k_tokens=total_cost,
+                context_window=model_data.get("context_length", 32000),
+                quality_score=0.8,  # Default estimate
+                reliability_score=0.9  # Default estimate
+            ),
+            api_endpoint="https://openrouter.ai/api/v1/chat/completions",
+            api_key_env="OPENROUTER_API_KEY",
+            description=description,
+            display_name=display_name,
+            icon=icon
+        )
+    except Exception as e:
+        print(f"Error creating model config for {model_data.get('id', 'unknown')}: {e}")
+        return None
+
+# Popular models to always include
+POPULAR_MODELS = [
+    "anthropic/claude-3.5-sonnet",
+    "deepseek/deepseek-chat-v3.1:free",
+    "deepseek/deepseek-r1",
+    "openai/gpt-4o",
+    "openai/o3-mini",
+    "meta-llama/llama-3.1-8b-instruct",
+    "qwen/qwen-2.5-72b-instruct",
+    "google/gemma-2-27b-it",
+    "mistralai/mistral-7b-instruct",
+    "anthropic/claude-3-haiku",
+    "openai/gpt-3.5-turbo",
+    "meta-llama/llama-3.1-70b-instruct"
+]
+
+async def get_dynamic_models() -> Dict[str, ModelConfig]:
+    """Get dynamic models from OpenRouter API"""
+    try:
+        openrouter_models = await fetch_openrouter_models()
+        dynamic_models = {}
+        
+        for model_data in openrouter_models:
+            model_config = create_model_config_from_openrouter(model_data)
+            if model_config:
+                dynamic_models[model_config.name] = model_config
+        
+        return dynamic_models
+    except Exception as e:
+        print(f"Error getting dynamic models: {e}")
+        return {}
 
 def get_models_by_provider(provider: ModelProvider) -> Dict[str, ModelConfig]:
     """Get all models from a specific provider"""

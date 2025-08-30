@@ -74,12 +74,15 @@ svc/erebus/src/resources/
 
 ### Hecate Agent (Primary Interface)
 - **Purpose**: Main conversational interface and orchestration engine
+- **Default Model**: DeepSeek Chat v3.1 Free (cost: $0.00) for all conversations
 - **Features**: Multi-model LLM support, intent analysis, agent delegation
 - **Integration**: Full frontend chat with real-time model display
+- **Chat Logging**: Real-time conversation logs with timestamps, model info, and cost tracking
 - **Logging**: Standardized cyberpunk-themed logs in `logs/` directory
 
 ### LLM Service Factory
 - **Cloud Models**: OpenRouter (DeepSeek, GPT-4o, Claude), OpenAI, Anthropic, Groq, HuggingFace
+- **Default Model**: DeepSeek Chat v3.1 Free ($0.00/request) for cost-effective testing
 - **Routing**: Automatic model selection based on task requirements
 - **Optimization**: Quality, speed, cost, or balanced strategies
 - **Timeout Configuration**: 5-minute timeout for thinking models (DeepSeek-R1, etc.) to handle complex reasoning
@@ -130,7 +133,22 @@ python -m agents.information_gathering.demo
 
 # Monitor logs
 tail -f logs/hecate-server.log
+
+# Monitor chat conversations (real-time)
+tail -f svc/nullblock-agents/logs/chats/hecate-chat.log
+
+# View chat session data (JSON format)
+cat svc/nullblock-agents/logs/chats/session_*.jsonl
 ```
+
+### Chat Logging Structure
+- **Real-time Chat Log**: `svc/nullblock-agents/logs/chats/hecate-chat.log`
+  - Human-readable format with timestamps, emojis, and model info
+  - Continuous log of all conversations across sessions
+- **Session-specific Logs**: `svc/nullblock-agents/logs/chats/session_*.jsonl`
+  - Structured JSON data with full metadata
+  - Individual file per agent startup session
+  - Includes user context, model costs, latency metrics
 
 ## ⚠️ Organizational Rules
 
