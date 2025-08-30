@@ -1900,7 +1900,10 @@ const HUD: React.FC<HUDProps> = ({
                       <div className={styles.scopesExpanded}>
                         <div className={styles.scopesContent}>
                           <div className={styles.scopesHeader}>
-                            <h5>{scopesOptions.find(s => s.id === activeScope)?.icon} {activeScope.charAt(0).toUpperCase() + activeScope.slice(1)}</h5>
+                            <h5>
+                              {activeScope === 'modelinfo' ? '🤖 Model Information' : 
+                               `${scopesOptions.find(s => s.id === activeScope)?.icon} ${activeScope.charAt(0).toUpperCase() + activeScope.slice(1)}`}
+                            </h5>
                             <button className={styles.closeScopes} onClick={() => setActiveLens(null)}>
                               ×
                             </button>
