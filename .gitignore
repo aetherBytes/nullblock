@@ -1,3 +1,16 @@
+# env files 
+*.env
+*.env.*
+.env
+.env.local
+.env.dev
+.env.development
+.env.test
+.env.production
+
+# Config directories
+config/generated/
+
 # Logs
 *.log
 *.log.*
@@ -37,6 +50,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
 **/__pycache__/
 **/*.pyc
 
@@ -49,6 +63,6 @@ env/
 *.egg-info/
 dist/
 build/
-*.log
+
 .pytest_cache/
 .coverage

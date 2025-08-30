@@ -123,7 +123,6 @@ const HUD: React.FC<HUDProps> = ({
   // Hecate specific state
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeScope, setActiveLens] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
@@ -550,13 +549,21 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [logs, autoScroll]);
 
-  // Auto-scroll effect for chat messages
+  // Track previous message count for auto-scroll
+  const prevMessageCountRef = useRef(0);
+
+  // Auto-scroll effect for chat messages - only when new messages are added
   useEffect(() => {
-    if (chatAutoScroll && chatEndRef.current) {
-      setTimeout(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+    const currentMessageCount = chatMessages.length;
+    const prevMessageCount = prevMessageCountRef.current;
+    
+    // Only auto-scroll if new messages were added and auto-scroll is enabled
+    if (chatAutoScroll && currentMessageCount > prevMessageCount && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'auto' });
     }
+    
+    // Update the previous message count
+    prevMessageCountRef.current = currentMessageCount;
   }, [chatMessages, chatAutoScroll]);
 
   // Helper functions for Hecate functionality
@@ -881,7 +888,6 @@ const HUD: React.FC<HUDProps> = ({
 
       setChatMessages((prev) => [...prev, userMessage]);
       setChatInput('');
-      setShowSuggestions(false);
 
       setNulleyeState('thinking');
 
@@ -977,13 +983,8 @@ const HUD: React.FC<HUDProps> = ({
   const handleChatInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
     setChatInput(value);
-    setShowSuggestions(value.length > 2);
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setChatInput(suggestion);
-    setShowSuggestions(false);
-  };
 
   const handleScopesClick = (scopeId: string) => {
     const newScope = activeScope === scopeId ? null : scopeId;
@@ -1725,26 +1726,6 @@ const HUD: React.FC<HUDProps> = ({
                           )}
                         </div>
                         <div className={styles.chatHeaderControls}>
-                          {!chatAutoScroll && (
-                            <button
-                              className={styles.scrollToBottomBtn}
-                              onClick={() => {
-                                setChatAutoScroll(true);
-                                setIsUserScrolling(false);
-                                
-                                if (chatMessagesRef.current) {
-                                  chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
-                                }
-                                
-                                if (chatEndRef.current) {
-                                  chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-                                }
-                              }}
-                              title="Scroll to bottom and resume auto-scroll"
-                            >
-                              ↓ Jump to latest
-                            </button>
-                          )}
                           <span className={styles.chatStatus}>Live</span>
                         </div>
                       </div>
@@ -1805,39 +1786,6 @@ const HUD: React.FC<HUDProps> = ({
                         </button>
                       </form>
 
-                      {showSuggestions && !isModelChanging && nullviewState !== 'thinking' && (
-                        <div className={styles.chatSuggestions}>
-                          <div className={styles.suggestionsHeader}>
-                            <span>💡 Quick Actions</span>
-                          </div>
-                          <div className={styles.suggestionsList}>
-                            <button
-                              className={styles.suggestionButton}
-                              onClick={() => handleSuggestionClick('Show me available templates')}
-                            >
-                              📋 Browse Templates
-                            </button>
-                            <button
-                              className={styles.suggestionButton}
-                              onClick={() => handleSuggestionClick('Create a new workflow')}
-                            >
-                              🔗 New Workflow
-                            </button>
-                            <button
-                              className={styles.suggestionButton}
-                              onClick={() => handleSuggestionClick('Analyze market data')}
-                            >
-                              📊 Market Analysis
-                            </button>
-                            <button
-                              className={styles.suggestionButton}
-                              onClick={() => handleSuggestionClick('Generate code for trading bot')}
-                            >
-                              ⚡ Code Generator
-                            </button>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
 

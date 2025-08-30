@@ -457,11 +457,27 @@ class HecateAgent:
             logger.error(f"❌ Chat processing failed: {e}")
             log_request_complete(logger, "chat", latency_ms, False)
 
+            # Provide more specific error messages based on error type
+            error_str = str(e).lower()
+            if "cannot connect to host" in error_str or "no route to host" in error_str:
+                if "openrouter" in error_str or "api.openai" in error_str:
+                    user_message = "🔑 I can't connect to the AI service, likely due to missing API keys. Please set your OPENROUTER_API_KEY or OPENAI_API_KEY environment variables, or install Ollama for local AI models."
+                else:
+                    user_message = "🌐 I'm having trouble connecting to the AI service. This might be a temporary network issue. Please check your internet connection and try again in a moment."
+            elif "timeout" in error_str or "dns" in error_str:
+                user_message = "⏰ The AI service is taking too long to respond. This might be due to high demand or network issues. Please try again in a few moments."
+            elif "ssl" in error_str or "certificate" in error_str:
+                user_message = "🔒 There's a security certificate issue preventing connection to the AI service. This is usually temporary - please try again."
+            elif "403" in error_str or "unauthorized" in error_str or "invalid api key" in error_str:
+                user_message = "🚫 Authentication issue with the AI service. Please check your API keys are set correctly in your environment variables."
+            elif "rate limit" in error_str or "429" in error_str:
+                user_message = "🚦 The AI service is currently rate-limited due to high demand. Please wait a moment and try again."
+            else:
+                user_message = f"❌ I encountered an unexpected error processing your message. Please try again. Technical details: {str(e)[:100]}..."
+
             # Return error response
             error_response = ChatResponse(
-                content=f"I encountered an error processing your message. Please try again. Error: {
-                    str(e)
-                }",
+                content=user_message,
                 model_used="error",
                 latency_ms=latency_ms,
                 confidence_score=0.0,
