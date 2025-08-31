@@ -5,6 +5,7 @@ Simple FastAPI server wrapper for the Hecate agent to enable frontend integratio
 """
 
 import asyncio
+import difflib
 import logging
 import subprocess
 import time
@@ -291,65 +292,145 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.get("/search-models")
-    async def search_models(request: Request, q: str = "", limit: int = 20):
-        """Search for models by name or description"""
+    async def search_models(request: Request, q: str = "", category: str = "", limit: int = 20):
+        """Search for models by name, description, or category (free, fast, premium, thinkers)"""
         if not agent:
             log_request(request, "🚫 Model search rejected - agent not initialized")
             log_response(503, "🚫 Model search failed - agent not initialized")
             raise HTTPException(status_code=503, detail="Agent not initialized")
         
         try:
-            log_request(request, "🔍 Model search requested", {"query": q, "limit": limit})
+            log_request(request, "🔍 Model search requested", {"query": q, "category": category, "limit": limit})
             
-            # Get dynamic models from OpenRouter
-            dynamic_models = await get_dynamic_models()
+            # Get available models (same data as /available-models endpoint)
+            available_models = await get_dynamic_models()
             
-            # Search through models
-            search_results = []
-            query_lower = q.lower()
+            # Filter to only available models based on API keys
+            filtered_models = {}
+            for model_name, config in available_models.items():
+                if agent.is_model_available(model_name):
+                    filtered_models[model_name] = config
             
-            for model_name, config in dynamic_models.items():
-                # Search in name, display_name, and description
-                if (query_lower in model_name.lower() or 
-                    query_lower in getattr(config, 'display_name', '').lower() or
-                    query_lower in config.description.lower()):
+            # Category mapping
+            def get_model_category(config):
+                tier = getattr(config, 'tier', None)
+                cost = getattr(config.metrics, 'cost_per_1k_tokens', 0)
+                supports_reasoning = getattr(config, 'supports_reasoning', False)
+                
+                categories = []
+                if cost == 0:
+                    categories.append("free")
+                if tier and tier.value == "fast":
+                    categories.append("fast")
+                if cost > 0.00001:  # Higher cost models are premium
+                    categories.append("premium") 
+                if supports_reasoning:
+                    categories.append("thinkers")
                     
-                    # Check if model is available
-                    is_available = agent.llm_factory.router.model_status.get(model_name, True)
+                return categories
+            
+            # Apply category filter if specified
+            if category:
+                category_lower = category.lower()
+                temp_filtered = {}
+                for model_name, config in filtered_models.items():
+                    model_categories = get_model_category(config)
+                    if category_lower in model_categories:
+                        temp_filtered[model_name] = config
+                filtered_models = temp_filtered
+            
+            # Convert to list for easier processing
+            model_list = []
+            for model_name, config in filtered_models.items():
+                display_name = getattr(config, 'display_name', config.name)
+                model_categories = get_model_category(config)
+                
+                model_data = {
+                    "name": model_name,
+                    "display_name": display_name,
+                    "icon": getattr(config, 'icon', '🤖'),
+                    "provider": config.provider.value,
+                    "available": True,
+                    "tier": config.tier.value,
+                    "context_length": config.metrics.context_window,
+                    "capabilities": [cap.value for cap in config.capabilities],
+                    "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
+                    "supports_reasoning": getattr(config, 'supports_reasoning', False),
+                    "description": config.description,
+                    "is_popular": getattr(config, 'is_popular', False),
+                    "categories": model_categories
+                }
+                model_list.append(model_data)
+            
+            # If no query, return models sorted by popularity and name
+            if not q.strip():
+                search_results = sorted(model_list, key=lambda x: (-x["is_popular"], x["name"]))[:limit]
+            else:
+                # Use improved search logic
+                query_lower = q.lower().strip()
+                search_results = []
+                
+                for model in model_list:
+                    # Calculate relevance score  
+                    score = 0
+                    model_name_lower = model["name"].lower()
+                    display_name_lower = model["display_name"].lower()
+                    description_lower = model["description"].lower()
                     
-                    search_results.append({
-                        "name": model_name,
-                        "display_name": getattr(config, 'display_name', config.name),
-                        "icon": getattr(config, 'icon', '🤖'),
-                        "provider": config.provider.value,
-                        "available": is_available,
-                        "tier": config.tier.value,
-                        "context_length": config.metrics.context_window,
-                        "capabilities": [cap.value for cap in config.capabilities],
-                        "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
-                        "description": config.description
-                    })
-            
-            # Sort by relevance (exact matches first, then partial matches)
-            search_results.sort(key=lambda x: (
-                not x["name"].lower().startswith(query_lower),
-                not x["display_name"].lower().startswith(query_lower),
-                x["name"]
-            ))
-            
-            # Limit results
-            search_results = search_results[:limit]
+                    # Exact matches get highest score
+                    if query_lower == model_name_lower or query_lower == display_name_lower:
+                        score = 100
+                    # Starts with match
+                    elif model_name_lower.startswith(query_lower) or display_name_lower.startswith(query_lower):
+                        score = 90
+                    # Contains match - this should catch "claude" in "anthropic/claude-3-haiku"
+                    elif query_lower in model_name_lower or query_lower in display_name_lower:
+                        score = 80
+                    # Description match
+                    elif query_lower in description_lower:
+                        score = 70
+                    # Fuzzy matching for partial matches
+                    else:
+                        name_ratio = difflib.SequenceMatcher(None, query_lower, model_name_lower).ratio()
+                        display_ratio = difflib.SequenceMatcher(None, query_lower, display_name_lower).ratio()
+                        max_ratio = max(name_ratio, display_ratio)
+                        
+                        if max_ratio > 0.5:  # Lower threshold for broader matching
+                            score = int(max_ratio * 60)
+                        # Word-based matching in description
+                        elif len(query_lower) > 2:
+                            query_words = query_lower.split()
+                            if any(word in description_lower for word in query_words if len(word) > 2):
+                                score = 40
+                    
+                    # Boost popular models
+                    if model.get("is_popular", False):
+                        score += 5
+                    
+                    # Add to results if score is above threshold
+                    if score > 0:
+                        model_copy = model.copy()  # Make a copy to avoid modifying original
+                        model_copy["_score"] = score
+                        search_results.append(model_copy)
+                
+                # Sort by score (descending) then name
+                search_results.sort(key=lambda x: (-x.get("_score", 0), x["name"]))
+                
+                # Remove score and limit results
+                for result in search_results:
+                    result.pop("_score", None)
+                search_results = search_results[:limit]
             
             log_response(200, "🔍 Model search completed successfully", {
                 "query": q,
                 "results_count": len(search_results),
-                "total_available": len(dynamic_models)
+                "total_available": len(filtered_models)
             })
             
             return {
                 "query": q,
                 "results": search_results,
-                "total_available": len(dynamic_models)
+                "total_available": len(filtered_models)
             }
         except Exception as e:
             logger.error(f"❌ Model search failed: {e}")
