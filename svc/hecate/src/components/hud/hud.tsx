@@ -140,6 +140,7 @@ const HUD: React.FC<HUDProps> = ({
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [lastStatusMessageModel, setLastStatusMessageModel] = useState<string | null>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const isLoadingModelsRef = useRef(false);
 
   // Model info state
   const [modelInfo, setModelInfo] = useState<any>(null);
@@ -393,6 +394,7 @@ const HUD: React.FC<HUDProps> = ({
       setDefaultModelLoaded(false);
       setIsLoadingModels(false);
       setLastStatusMessageModel(null);
+      isLoadingModelsRef.current = false;
       return;
     }
     
@@ -642,19 +644,28 @@ const HUD: React.FC<HUDProps> = ({
   };
 
   const loadAvailableModels = async () => {
-    // Prevent concurrent executions
-    if (isLoadingModels) {
-      console.log('Model loading already in progress, skipping duplicate call');
+    // Prevent concurrent executions using synchronous ref
+    if (isLoadingModelsRef.current) {
+      console.log('Model loading already in progress (ref guard), skipping duplicate call');
+      return;
+    }
+
+    // Also prevent if models are already loaded
+    if (availableModels.length > 0 && currentSelectedModel && defaultModelLoaded) {
+      console.log('Models already loaded and configured, skipping duplicate call');
       return;
     }
 
     try {
       console.log('=== LOADING MODELS START ===');
       console.log('isLoadingModels:', isLoadingModels);
+      console.log('isLoadingModelsRef:', isLoadingModelsRef.current);
       console.log('defaultModelLoaded:', defaultModelLoaded);
       console.log('availableModels.length:', availableModels.length);
       console.log('currentSelectedModel:', currentSelectedModel);
 
+      // Set both the ref (synchronous) and state (for UI)
+      isLoadingModelsRef.current = true;
       setIsLoadingModels(true);
 
       // Import the hecate agent service
@@ -679,8 +690,8 @@ const HUD: React.FC<HUDProps> = ({
         setCurrentSelectedModel(modelsData.current_model);
         setDefaultModelLoaded(true);
         
-        // Only show status message if we haven't shown it for this model yet
-        if (lastStatusMessageModel !== modelsData.current_model) {
+        // Only show status message if we haven't shown it for this model yet AND we have no chat messages yet
+        if (lastStatusMessageModel !== modelsData.current_model && chatMessages.length === 0) {
           const currentModelInfo = modelsData.models?.find((m: any) => m.name === modelsData.current_model);
           const modelDisplayName = currentModelInfo?.display_name || modelsData.current_model;
           
@@ -750,6 +761,8 @@ const HUD: React.FC<HUDProps> = ({
       console.error('Error loading available models:', error);
       setDefaultModelLoaded(false); // Reset on error
     } finally {
+      // Reset both the ref and state
+      isLoadingModelsRef.current = false;
       setIsLoadingModels(false);
     }
   };
