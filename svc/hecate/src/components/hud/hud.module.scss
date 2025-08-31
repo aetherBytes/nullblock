@@ -8583,3 +8583,84 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     }
   }
 }
+
+// Expand functionality styles
+.expandButton {
+  background: rgba($echo-blue, 0.2);
+  border: 1px solid rgba($echo-blue, 0.4);
+  color: $echo-blue;
+  padding: 0.4rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 0.5rem;
+  min-width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background: rgba($echo-blue, 0.3);
+    border-color: rgba($echo-blue, 0.6);
+    transform: translateY(-1px);
+  }
+}
+
+.scopesHeaderControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+// Container expand states
+.hecateContainer {
+  &.chatExpanded {
+    .chatSection {
+      width: 100% !important;
+    }
+    
+    .scopesSection {
+      display: none;
+    }
+  }
+  
+  &.scopesExpanded {
+    .scopesSection {
+      width: 100% !important;
+    }
+    
+    .chatSection {
+      display: none;
+    }
+  }
+}
+
+// Section expand states
+.chatSection {
+  &.expanded {
+    width: 100% !important;
+  }
+  
+  &.hidden {
+    display: none;
+  }
+}
+
+.scopesSection {
+  &.expanded {
+    width: 100% !important;
+  }
+  
+  &.hidden {
+    display: none;
+  }
+}
+
+.scopesScrollContainer {
+  &.hidden {
+    display: none;
+  }
+}

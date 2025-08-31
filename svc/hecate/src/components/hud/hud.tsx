@@ -147,12 +147,11 @@ const HUD: React.FC<HUDProps> = ({
   const [isLoadingModelInfo, setIsLoadingModelInfo] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
-  // Sandbox state
-  const [sandboxCode, setSandboxCode] = useState('# Welcome to NullBlock Sandbox\n# Select a language and start coding!\n\nprint("Hello NullBlock!")');
-  const [selectedLanguage, setSelectedLanguage] = useState('python');
-  const [sandboxOutput, setSandboxOutput] = useState('');
-  const [isRunning, setIsRunning] = useState(false);
-  const [savedScripts, setSavedScripts] = useState<{[key: string]: string}>({});
+  // Expand states for containers
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [isScopesExpanded, setIsScopesExpanded] = useState(false);
+
+
 
   // MCP initialization effect
   useEffect(() => {
@@ -395,6 +394,8 @@ const HUD: React.FC<HUDProps> = ({
       setIsLoadingModels(false);
       setLastStatusMessageModel(null);
       isLoadingModelsRef.current = false;
+      setIsChatExpanded(false);
+      setIsScopesExpanded(false);
       return;
     }
     
@@ -418,6 +419,14 @@ const HUD: React.FC<HUDProps> = ({
       }
     };
   }, [publicKey]);
+
+  // Reset expanded states when switching away from Hecate tab
+  useEffect(() => {
+    if (mainHudActiveTab !== 'hecate') {
+      setIsChatExpanded(false);
+      setIsScopesExpanded(false);
+    }
+  }, [mainHudActiveTab]);
 
   // Load models when Hecate tab becomes active (only if not already loaded)
   useEffect(() => {
@@ -585,8 +594,6 @@ const HUD: React.FC<HUDProps> = ({
 
   const scopesOptions = [
     { id: 'modelinfo', icon: '🤖', title: 'Model Info', description: 'Current model details', color: '#ff6b6b' },
-    { id: 'sandbox', icon: '⚡', title: 'Sandbox', description: 'Code execution', color: '#ffa502' },
-    { id: 'templates', icon: '📋', title: 'Templates', description: 'Task templates', color: '#00d4ff' },
     { id: 'settings', icon: '⚙️', title: 'Settings', description: 'Theme & social links', color: '#747d8c' },
   ];
 
@@ -1044,84 +1051,6 @@ const HUD: React.FC<HUDProps> = ({
     }
   };
 
-  // Sandbox functionality
-  const languageOptions = [
-    { id: 'python', name: 'Python', extension: '.py' },
-    { id: 'javascript', name: 'JavaScript', extension: '.js' },
-    { id: 'typescript', name: 'TypeScript', extension: '.ts' },
-    { id: 'rust', name: 'Rust', extension: '.rs' },
-    { id: 'go', name: 'Go', extension: '.go' },
-  ];
-
-  const handleLanguageChange = (language: string) => {
-    setSelectedLanguage(language);
-    const examples = {
-      python: '# Welcome to NullBlock Sandbox\n# Python execution environment\n\nprint("Hello NullBlock!")',
-      javascript: '// Welcome to NullBlock Sandbox\n// JavaScript execution environment\n\nconsole.log("Hello NullBlock!");',
-      typescript: '// Welcome to NullBlock Sandbox\n// TypeScript execution environment\n\nconst message: string = "Hello NullBlock!";\nconsole.log(message);',
-      rust: '// Welcome to NullBlock Sandbox\n// Rust execution environment\n\nfn main() {\n    println!("Hello NullBlock!");\n}',
-      go: '// Welcome to NullBlock Sandbox\n// Go execution environment\n\npackage main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello NullBlock!")\n}',
-    };
-    setSandboxCode(examples[language as keyof typeof examples] || examples.python);
-  };
-
-  const handleRunCode = async () => {
-    setIsRunning(true);
-    setSandboxOutput('Running code...');
-    
-    try {
-      // Simulate code execution - in real implementation, this would call NullBlock SDK
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (selectedLanguage === 'javascript') {
-        // Simple JavaScript evaluation for demo
-        try {
-          // Create a safe execution environment for JavaScript
-          const jsCode = sandboxCode;
-          // Capture console.log output by overriding it temporarily
-          const originalLog = console.log;
-          let capturedOutput = '';
-          console.log = (...args) => {
-            capturedOutput += args.join(' ') + '\n';
-          };
-          
-          // Execute the code
-          eval(jsCode);
-          
-          // Restore original console.log
-          console.log = originalLog;
-          
-          setSandboxOutput(`Output: ${capturedOutput.trim() || 'Code executed successfully'}`);
-        } catch (error) {
-          setSandboxOutput(`Error: ${error}`);
-        }
-      } else {
-        setSandboxOutput(`✓ ${selectedLanguage} code would be executed via NullBlock SDK\nOutput: Hello NullBlock!`);
-      }
-    } catch (error) {
-      setSandboxOutput(`Error: ${error}`);
-    } finally {
-      setIsRunning(false);
-    }
-  };
-
-  const handleSaveScript = () => {
-    const scriptName = prompt('Enter script name:');
-    if (scriptName && scriptName.trim()) {
-      setSavedScripts(prev => ({
-        ...prev,
-        [scriptName.trim()]: sandboxCode
-      }));
-      setSandboxOutput(`Script "${scriptName}" saved successfully!`);
-    }
-  };
-
-  const handleLoadScript = (scriptName: string) => {
-    if (savedScripts[scriptName]) {
-      setSandboxCode(savedScripts[scriptName]);
-      setSandboxOutput(`Script "${scriptName}" loaded!`);
-    }
-  };
 
   const renderTabContent = () => {
     if (!publicKey) {
@@ -1625,11 +1554,11 @@ const HUD: React.FC<HUDProps> = ({
           );
         case 'hecate':
           return (
-            <div className={styles.hecateContainer}>
+            <div className={`${styles.hecateContainer} ${isChatExpanded ? styles.chatExpanded : ''} ${isScopesExpanded ? styles.scopesExpanded : ''}`}>
               <div className={styles.hecateContent}>
                 <div className={styles.hecateMain}>
                   <div className={styles.hecateInterface}>
-                  <div className={styles.chatSection}>
+                  <div className={`${styles.chatSection} ${isChatExpanded ? styles.expanded : ''} ${isScopesExpanded ? styles.hidden : ''}`}>
                     <div className={styles.hecateChat}>
                       <div className={styles.chatHeader}>
                         <div className={styles.chatTitle}>
@@ -1740,6 +1669,18 @@ const HUD: React.FC<HUDProps> = ({
                         </div>
                         <div className={styles.chatHeaderControls}>
                           <span className={styles.chatStatus}>Live</span>
+                          <button 
+                            className={styles.expandButton}
+                            onClick={() => {
+                              const newChatExpanded = !isChatExpanded;
+                              setIsChatExpanded(newChatExpanded);
+                              if (isScopesExpanded) setIsScopesExpanded(false); // Close scopes if open
+                              if (newChatExpanded && activeScope) setActiveLens(null); // Close active scope when expanding chat
+                            }}
+                            title={isChatExpanded ? "Exit full screen" : "Expand chat full screen"}
+                          >
+                            {isChatExpanded ? '⊟' : '⊞'}
+                          </button>
                         </div>
                       </div>
 
@@ -1802,7 +1743,7 @@ const HUD: React.FC<HUDProps> = ({
                     </div>
                   </div>
 
-                  <div className={styles.scopesSection}>
+                  <div className={`${styles.scopesSection} ${isScopesExpanded ? styles.expanded : ''} ${isChatExpanded ? styles.hidden : ''}`}>
                     {activeScope ? (
                       <div className={styles.scopesExpanded}>
                         <div className={styles.scopesContent}>
@@ -1811,91 +1752,25 @@ const HUD: React.FC<HUDProps> = ({
                               {activeScope === 'modelinfo' ? '🤖 Model Information' : 
                                `${scopesOptions.find(s => s.id === activeScope)?.icon} ${activeScope.charAt(0).toUpperCase() + activeScope.slice(1)}`}
                             </h5>
-                            <button className={styles.closeScopes} onClick={() => setActiveLens(null)}>
-                              ×
-                            </button>
+                            <div className={styles.scopesHeaderControls}>
+                              <button 
+                                className={styles.expandButton}
+                                onClick={() => {
+                                  const newScopesExpanded = !isScopesExpanded;
+                                  setIsScopesExpanded(newScopesExpanded);
+                                  if (isChatExpanded) setIsChatExpanded(false); // Close chat if open
+                                  // Don't close active scope when expanding scopes - we want to keep it visible
+                                }}
+                                title={isScopesExpanded ? "Exit full screen" : "Expand scopes full screen"}
+                              >
+                                {isScopesExpanded ? '⊟' : '⊞'}
+                              </button>
+                              <button className={styles.closeScopes} onClick={() => setActiveLens(null)}>
+                                ×
+                              </button>
+                            </div>
                           </div>
                           <div className={styles.scopesContent}>
-                            {activeScope === 'sandbox' && (
-                              <div className={styles.sandboxScope}>
-                                <div className={styles.sandboxControls}>
-                                  <select 
-                                    value={selectedLanguage} 
-                                    onChange={(e) => handleLanguageChange(e.target.value)}
-                                    className={styles.languageSelect}
-                                  >
-                                    {languageOptions.map(lang => (
-                                      <option key={lang.id} value={lang.id}>{lang.name}</option>
-                                    ))}
-                                  </select>
-                                  <button 
-                                    onClick={handleRunCode}
-                                    disabled={isRunning}
-                                    className={styles.runButton}
-                                  >
-                                    {isRunning ? '⏳ Running...' : '▶️ Run'}
-                                  </button>
-                                  <button 
-                                    onClick={handleSaveScript}
-                                    className={styles.saveButton}
-                                  >
-                                    💾 Save
-                                  </button>
-                                </div>
-                                
-                                <div className={styles.sandboxEditor}>
-                                  <textarea
-                                    value={sandboxCode}
-                                    onChange={(e) => setSandboxCode(e.target.value)}
-                                    className={styles.codeEditor}
-                                    placeholder="Write your code here..."
-                                    spellCheck={false}
-                                  />
-                                </div>
-                                
-                                <div className={styles.sandboxOutput}>
-                                  <h6>Output:</h6>
-                                  <pre className={styles.outputText}>{sandboxOutput || 'Ready to execute code...'}</pre>
-                                </div>
-
-                                {Object.keys(savedScripts).length > 0 && (
-                                  <div className={styles.savedScripts}>
-                                    <h6>Saved Scripts:</h6>
-                                    <div className={styles.scriptsList}>
-                                      {Object.keys(savedScripts).map(name => (
-                                        <button 
-                                          key={name}
-                                          onClick={() => handleLoadScript(name)}
-                                          className={styles.scriptButton}
-                                        >
-                                          📄 {name}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {activeScope === 'templates' && (
-                              <div className={styles.templatesScope}>
-                                <p>Task templates for common workflows</p>
-                                <div className={styles.templatesList}>
-                                  <div className={styles.templateCard}>
-                                    <h6>📊 Data Analysis</h6>
-                                    <p>Template for data processing workflows</p>
-                                  </div>
-                                  <div className={styles.templateCard}>
-                                    <h6>🤖 Trading Bot</h6>
-                                    <p>Template for automated trading strategies</p>
-                                  </div>
-                                  <div className={styles.templateCard}>
-                                    <h6>📈 Portfolio Monitor</h6>
-                                    <p>Template for portfolio tracking</p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
 
                             {activeScope === 'modelinfo' && (
                               <div className={styles.modelInfoScope}>
@@ -2143,7 +2018,7 @@ const HUD: React.FC<HUDProps> = ({
                         </div>
                       </div>
                     ) : (
-                      <div className={styles.scopesScrollContainer}>
+                      <div className={`${styles.scopesScrollContainer} ${isChatExpanded ? styles.hidden : ''}`}>
                         <div className={styles.scopesInfoPanel}>
                           <div className={styles.scopesInfoContent}>
                             <div className={styles.headerWithTooltip}>
