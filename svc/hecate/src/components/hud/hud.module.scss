@@ -5720,9 +5720,10 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   background: rgba($background-dark, 0.5);
   border-bottom: 1px solid rgba($echo-blue, 0.2);
+  min-height: 60px; // Slightly thinner header height
 
   h4 {
     color: $lightning-silver;
@@ -5730,6 +5731,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     margin: 0;
     font-size: 1rem;
     text-shadow: 0 0 8px rgba($lightning-silver, 0.5);
+    line-height: 1.2; // Consistent line height
   }
 }
 
@@ -6719,26 +6721,41 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  background: rgba($background-dark, 0.9);
-  border-bottom: 1px solid $border-color;
+  padding: 0.75rem 1rem;
+  background: rgba($background-dark, 0.5);
+  border-bottom: 1px solid rgba($echo-blue, 0.2);
+  min-height: 60px; // Slightly thinner header height
 
   h5 {
     margin: 0;
-    font-size: 1.1rem;
-    color: $text-primary;
+    font-size: 1rem;
+    color: $lightning-silver;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 8px rgba($lightning-silver, 0.5);
+    line-height: 1.2; // Match h4 line height
   }
 
   .closeScopes {
-    background: none;
-    border: none;
-    color: $text-secondary;
-    font-size: 1.5rem;
+    background: rgba($echo-blue, 0.2);
+    border: 1px solid rgba($echo-blue, 0.4);
+    color: $echo-blue;
+    padding: 0.4rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
     cursor: pointer;
-    transition: color 0.3s ease;
+    transition: all 0.2s ease;
+    margin-left: 0.5rem;
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     &:hover {
-      color: $text-primary;
+      background: rgba($echo-blue, 0.3);
+      border-color: rgba($echo-blue, 0.6);
+      color: $lightning-silver;
     }
   }
 }
