@@ -798,15 +798,9 @@ const HUD: React.FC<HUDProps> = ({
         return;
       }
 
-      // Search models via API
-      const response = await fetch(`http://localhost:9002/search-models?q=${encodeURIComponent(query)}&limit=20`);
-      if (response.ok) {
-        const data = await response.json();
-        setSearchResults(data.results || []);
-      } else {
-        console.error('Failed to search models:', response.statusText);
-        setSearchResults([]);
-      }
+      // Search models via hecateAgent service (which routes through Erebus)
+      const data = await hecateAgent.searchModels(query, 20);
+      setSearchResults(data.results || []);
     } catch (error) {
       console.error('Error searching models:', error);
       setSearchResults([]);

@@ -43,16 +43,24 @@ NullBlock is an Agentic Platform providing resources and tooling for building, d
 
 ## 🏗️ Architecture
 
-### Erebus Unified Router (Port 3000)
-All frontend communication routes through Erebus, which proxies to appropriate services:
+### Erebus Unified Router (Port 3000) - GOLDEN RULE
+🚨 **CRITICAL ARCHITECTURE RULE**: ALL frontend communication MUST route through Erebus. NO direct service connections allowed.
 
 ```
 Frontend → Erebus → {
   Wallet operations → Internal wallet handlers
-  Agent chat → Hecate agent (port 8001)
-  MCP operations → MCP server (port 8000)
+  Agent chat → Hecate agent (port 9002)  
+  Agent search → Hecate agent (port 9002)
+  MCP operations → MCP server (port 8001)
 }
 ```
+
+**NEVER allow frontend to bypass Erebus by connecting directly to:**
+- Hecate agent (port 9002)
+- MCP server (port 8001)
+- Any other backend services
+
+**This prevents CORS issues and maintains proper request routing/logging.**
 
 ### Key API Endpoints
 - **Wallets**: `/api/wallets/*` - Authentication, session management
@@ -164,11 +172,13 @@ cat svc/nullblock-agents/logs/chats/session_*.jsonl
 - Use existing libraries already present in the codebase
 
 ### Erebus Architecture Rules
+- **GOLDEN RULE**: ALL frontend requests MUST route through Erebus (port 3000) - NO EXCEPTIONS
 - **main.rs**: Only subsystem entry points and core routes
 - **Subsystem Organization**: Each feature gets own directory (wallets/, mcp/, agents/)
 - **Wallet Subsystem**: All wallets implement `WalletProvider` trait
 - **Shared Types**: Use `resources/types.rs` for cross-subsystem types
 - **Agent Timeout**: 5-minute proxy timeout for thinking models and complex agent operations
+- **Frontend Discipline**: If you see direct service calls (localhost:9002, localhost:8001) in frontend code, FIX IMMEDIATELY by routing through Erebus
 
 ## 🎨 UI/UX Standards
 
