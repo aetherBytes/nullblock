@@ -389,45 +389,49 @@ def create_app() -> FastAPI:
             # Get static models
             
             for model_name, config in AVAILABLE_MODELS.items():
-                # Check if model is available (default to config.enabled if not explicitly set)
-                is_available = agent.llm_factory.router.model_status.get(model_name, config.enabled)
+                # Check if model is truly available (API keys, etc.)
+                is_truly_available = agent.is_model_available(model_name)
                 
-                available_models.append({
-                    "name": model_name,
-                    "display_name": getattr(config, 'display_name', config.name),
-                    "icon": getattr(config, 'icon', '🤖'),
-                    "provider": config.provider.value,
-                    "available": is_available,
-                    "tier": config.tier.value,
-                    "context_length": config.metrics.context_window,
-                    "capabilities": [cap.value for cap in config.capabilities],
-                    "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
-                    "supports_reasoning": getattr(config, 'supports_reasoning', False) or ModelCapability.REASONING in config.capabilities,
-                    "description": config.description,
-                    "is_popular": model_name in POPULAR_MODELS
-                })
+                # Only include models that are actually available
+                if is_truly_available:
+                    available_models.append({
+                        "name": model_name,
+                        "display_name": getattr(config, 'display_name', config.name),
+                        "icon": getattr(config, 'icon', '🤖'),
+                        "provider": config.provider.value,
+                        "available": True,
+                        "tier": config.tier.value,
+                        "context_length": config.metrics.context_window,
+                        "capabilities": [cap.value for cap in config.capabilities],
+                        "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
+                        "supports_reasoning": getattr(config, 'supports_reasoning', False) or ModelCapability.REASONING in config.capabilities,
+                        "description": config.description,
+                        "is_popular": model_name in POPULAR_MODELS
+                    })
             
             # Get dynamic models from OpenRouter (popular ones first)
             dynamic_models = await get_dynamic_models()
             
             for model_name, config in dynamic_models.items():
-                # Check if model is available
-                is_available = agent.llm_factory.router.model_status.get(model_name, True)
+                # Check if model is truly available (API keys, etc.)
+                is_truly_available = agent.is_model_available(model_name)
                 
-                available_models.append({
-                    "name": model_name,
-                    "display_name": getattr(config, 'display_name', config.name),
-                    "icon": getattr(config, 'icon', '🤖'),
-                    "provider": config.provider.value,
-                    "available": is_available,
-                    "tier": config.tier.value,
-                    "context_length": config.metrics.context_window,
-                    "capabilities": [cap.value for cap in config.capabilities],
-                    "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
-                    "supports_reasoning": getattr(config, 'supports_reasoning', False) or ModelCapability.REASONING in config.capabilities,
-                    "description": config.description,
-                    "is_popular": model_name in POPULAR_MODELS
-                })
+                # Only include models that are actually available
+                if is_truly_available:
+                    available_models.append({
+                        "name": model_name,
+                        "display_name": getattr(config, 'display_name', config.name),
+                        "icon": getattr(config, 'icon', '🤖'),
+                        "provider": config.provider.value,
+                        "available": True,
+                        "tier": config.tier.value,
+                        "context_length": config.metrics.context_window,
+                        "capabilities": [cap.value for cap in config.capabilities],
+                        "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
+                        "supports_reasoning": getattr(config, 'supports_reasoning', False) or ModelCapability.REASONING in config.capabilities,
+                        "description": config.description,
+                        "is_popular": model_name in POPULAR_MODELS
+                    })
             
             # Sort by popularity first, then availability, then provider and name
             available_models.sort(key=lambda x: (
@@ -532,10 +536,12 @@ def create_app() -> FastAPI:
                     "previous_model": old_model
                 }
             else:
-                log_response(400, "🎯 Model selection failed - model not available", {
+                # Get more specific error message about why model is not available
+                error_detail = agent.get_model_availability_reason(model_request.model_name)
+                log_response(400, f"🎯 Model selection failed - {error_detail}", {
                     "requested_model": model_request.model_name
                 })
-                raise HTTPException(status_code=400, detail=f"Model {model_request.model_name} is not available")
+                raise HTTPException(status_code=400, detail=error_detail)
                 
         except HTTPException:
             raise

@@ -521,37 +521,135 @@ class HecateAgent:
 
     async def set_preferred_model(self, model_name: str):
         """Set preferred model for chat responses with automatic model ejection"""
-        # Check if model is available
-        if hasattr(self, "llm_factory") and self.llm_factory:
-            from ..llm_service.models import AVAILABLE_MODELS
+        # Check if model is available using the same logic as is_model_available
+        if self.is_model_available(model_name):
+            # Set the preferred model
+            previous_model = self.preferred_model
+            self.preferred_model = model_name
+            self.current_model = model_name  # Sync current with preferred
+            logger.info(f"🎯 Preferred model set to: {model_name}")
 
-            if model_name in AVAILABLE_MODELS:
-                is_available = self.llm_factory.router.model_status.get(
-                    model_name, False
+            if previous_model and previous_model != model_name:
+                logger.info(
+                    f"📤 Switched from {previous_model} to {model_name}"
                 )
-                if is_available:
-                    # Set the preferred model
-                    previous_model = self.preferred_model
-                    self.preferred_model = model_name
-                    self.current_model = model_name  # Sync current with preferred
-                    logger.info(f"🎯 Preferred model set to: {model_name}")
 
-                    if previous_model and previous_model != model_name:
-                        logger.info(
-                            f"📤 Switched from {previous_model} to {model_name}"
-                        )
-
-                    return True
-                else:
-                    logger.warning(f"⚠️ Model {model_name} is not currently available")
-                    return False
-            else:
-                logger.warning(f"⚠️ Unknown model: {model_name}")
-                return False
+            return True
         else:
             logger.warning("⚠️ LLM factory not initialized")
             return False
 
+    def is_model_available(self, model_name: str) -> bool:
+        """Check if a model is available for use, considering API key requirements"""
+        if not hasattr(self, "llm_factory") or not self.llm_factory:
+            logger.warning("⚠️ LLM factory not initialized")
+            return False
+            
+        from ..llm_service.models import AVAILABLE_MODELS
+        import os
+        
+        # Check static models first
+        if model_name in AVAILABLE_MODELS:
+            config = AVAILABLE_MODELS[model_name]
+            
+            if not config.enabled:
+                logger.warning(f"⚠️ Model {model_name} is disabled")
+                return False
+                
+            # Check provider-specific API key requirements
+            provider = config.provider.value.lower()
+            
+            if provider == "openrouter":
+                # If OpenRouter API key is available, all models work
+                if os.getenv('OPENROUTER_API_KEY'):
+                    return True
+                # Without API key, only free models work
+                elif config.metrics.cost_per_1k_tokens == 0.0:
+                    return True
+                else:
+                    return False
+                    
+            elif provider == "anthropic":
+                return bool(os.getenv('ANTHROPIC_API_KEY'))
+                
+            elif provider == "openai":
+                return bool(os.getenv('OPENAI_API_KEY'))
+                
+            elif provider == "groq":
+                return bool(os.getenv('GROQ_API_KEY'))
+                
+            elif provider == "huggingface":
+                return bool(os.getenv('HUGGINGFACE_API_KEY'))
+                
+            elif provider == "ollama":
+                # Check if Ollama is running (simplified check)
+                return True  # Assume available for now
+                
+            else:
+                # Unknown provider
+                logger.warning(f"⚠️ Unknown provider for model {model_name}: {provider}")
+                return False
+        else:
+            # For dynamic OpenRouter models, assume they work with API key
+            if ":" in model_name or "/" in model_name:
+                # This looks like a dynamic OpenRouter model
+                if os.getenv('OPENROUTER_API_KEY'):
+                    return True
+                else:
+                    # Without API key, we can't determine if it's free, so assume it's not available
+                    logger.warning(f"⚠️ Unknown model: {model_name}")
+                    return False
+            else:
+                logger.warning(f"⚠️ Unknown model: {model_name}")
+                return False
+
+    def get_model_availability_reason(self, model_name: str) -> str:
+        """Get specific reason why a model is not available"""
+        if not hasattr(self, "llm_factory") or not self.llm_factory:
+            return "LLM service not initialized"
+        
+        from ..llm_service.models import AVAILABLE_MODELS
+        
+        # Check if model exists in our registry
+        if model_name not in AVAILABLE_MODELS:
+            return f"Unknown model '{model_name}'. Use GET /available-models to see supported models."
+        
+        model_config = AVAILABLE_MODELS[model_name]
+        
+        # Check if model is disabled
+        if not model_config.enabled:
+            return f"Model '{model_name}' is currently disabled."
+        
+        # Check provider-specific requirements
+        if model_config.provider.value == "openrouter":
+            import os
+            if not os.getenv('OPENROUTER_API_KEY'):
+                if model_config.metrics.cost_per_1k_tokens == 0.0:
+                    return f"Model '{model_name}' is temporarily unavailable (free model, no API key needed)."
+                else:
+                    return f"Model '{model_name}' requires OPENROUTER_API_KEY to be set (paid model: ${model_config.metrics.cost_per_1k_tokens:.6f}/1k tokens)."
+            # If we have API key, model should work
+            return f"Model '{model_name}' is temporarily unavailable."
+                
+        elif model_config.provider.value == "anthropic" and not os.getenv('ANTHROPIC_API_KEY'):
+            return f"Model '{model_name}' requires ANTHROPIC_API_KEY to be set."
+            
+        elif model_config.provider.value == "openai" and not os.getenv('OPENAI_API_KEY'):
+            return f"Model '{model_name}' requires OPENAI_API_KEY to be set."
+            
+        elif model_config.provider.value == "groq" and not os.getenv('GROQ_API_KEY'):
+            return f"Model '{model_name}' requires GROQ_API_KEY to be set."
+            
+        elif model_config.provider.value == "huggingface" and not os.getenv('HUGGINGFACE_API_KEY'):
+            return f"Model '{model_name}' requires HUGGINGFACE_API_KEY to be set."
+        
+        # Check if model is marked as unavailable by router
+        if hasattr(self.llm_factory, 'router') and self.llm_factory.router:
+            status = self.llm_factory.router.model_status.get(model_name, True)
+            if not status:
+                return f"Model '{model_name}' is temporarily unavailable due to API issues."
+        
+        return f"Model '{model_name}' is not currently available."
 
     def get_preferred_model(self) -> Optional[str]:
         """Get current preferred model"""
