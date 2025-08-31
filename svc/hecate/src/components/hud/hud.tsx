@@ -1666,9 +1666,9 @@ const HUD: React.FC<HUDProps> = ({
                           ) : (
                             <h4>Chat with Hecate</h4>
                           )}
+                          <span className={styles.chatStatus}>Live</span>
                         </div>
                         <div className={styles.chatHeaderControls}>
-                          <span className={styles.chatStatus}>Live</span>
                           <button 
                             className={styles.expandButton}
                             onClick={() => {

@@ -5735,8 +5735,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
 .chatTitle {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .modelIndicator {
@@ -5758,10 +5758,15 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
 .chatStatus {
   color: $echo-green;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-family: 'Courier New', monospace;
   text-transform: uppercase;
   letter-spacing: 1px;
+  padding: 0.25rem 0.5rem;
+  background: rgba($echo-green, 0.1);
+  border-radius: 4px;
+  border: 1px solid rgba($echo-green, 0.3);
+  white-space: nowrap;
 
   &.connected {
     color: $echo-green;
