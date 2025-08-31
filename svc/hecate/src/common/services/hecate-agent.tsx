@@ -288,6 +288,29 @@ class HecateAgentService {
   }
 
   /**
+   * Search models
+   */
+  async searchModels(query: string, limit: number = 20): Promise<{ results: any[] }> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to Hecate agent. Call connect() first.');
+    }
+
+    try {
+      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/search-models?q=${encodeURIComponent(query)}&limit=${limit}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Failed to search models:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Check if service is connected
    */
   isAgentConnected(): boolean {
