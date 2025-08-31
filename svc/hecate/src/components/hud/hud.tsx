@@ -1601,9 +1601,9 @@ const HUD: React.FC<HUDProps> = ({
                                       <div className={styles.searchHeader}>
                                         Search Results ({searchResults.length})
                                       </div>
-                                      {searchResults.map((model) => (
+                                      {searchResults.map((model, index) => (
                                         <button
-                                          key={model.name}
+                                          key={`search-${model.name}-${index}`}
                                           className={`${styles.modelOption} ${model.name === currentSelectedModel ? styles.selected : ''}`}
                                           onClick={() => handleModelSelection(model.name)}
                                           title={`${model.display_name} (${model.provider})`}
@@ -1634,9 +1634,9 @@ const HUD: React.FC<HUDProps> = ({
                                     <div className={styles.sectionHeader}>
                                       Popular Models
                                     </div>
-                                    {availableModels.filter(model => model.available && model.is_popular).map((model) => (
+                                    {availableModels.filter(model => model.available && model.is_popular).map((model, index) => (
                                     <button
-                                      key={model.name}
+                                      key={`popular-${model.name}-${index}`}
                                       className={`${styles.modelOption} ${model.name === currentSelectedModel ? styles.selected : ''}`}
                                       onClick={() => handleModelSelection(model.name)}
                                       title={`${model.display_name} (${model.provider})`}
