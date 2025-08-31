@@ -469,6 +469,13 @@ const HUD: React.FC<HUDProps> = ({
     return () => clearTimeout(timeoutId);
   }, [modelSearchQuery]);
 
+  // Auto-load model info when current model changes
+  useEffect(() => {
+    if (currentSelectedModel && activeScope === 'modelinfo') {
+      loadModelInfo(currentSelectedModel);
+    }
+  }, [currentSelectedModel, activeScope]);
+
   const handleMCPAuthentication = async () => {
     if (!publicKey) {
       alert('Please connect your wallet first');
@@ -597,7 +604,7 @@ const HUD: React.FC<HUDProps> = ({
     { id: 'settings', icon: '⚙️', title: 'Settings', description: 'Theme & social links', color: '#747d8c' },
   ];
 
-  const loadModelInfo = async () => {
+  const loadModelInfo = async (modelName?: string) => {
     if (isLoadingModelInfo) {
       return;
     }
@@ -616,7 +623,7 @@ const HUD: React.FC<HUDProps> = ({
 
       // Get available models to get rich descriptions
       const modelsData = await hecateAgent.getAvailableModels();
-      const currentModelName = currentSelectedModel;
+      const currentModelName = modelName || currentSelectedModel;
       
       if (!currentModelName) {
         setModelInfo({ error: 'No model currently selected' });
@@ -867,6 +874,11 @@ const HUD: React.FC<HUDProps> = ({
       };
       setChatMessages(prev => [...prev, systemMessage]);
       
+      // Automatically reload model info if the modelinfo scope is active
+      if (activeScope === 'modelinfo') {
+        loadModelInfo(modelName);
+      }
+      
       setNulleyeState('success');
       setTimeout(() => setNulleyeState('base'), 2000);
       
@@ -1012,7 +1024,7 @@ const HUD: React.FC<HUDProps> = ({
     
     // Load data when specific scopes are opened
     if (newScope === 'modelinfo') {
-      loadModelInfo();
+      loadModelInfo(currentSelectedModel);
     }
   };
 
@@ -1782,9 +1794,6 @@ const HUD: React.FC<HUDProps> = ({
                                   <div className={styles.modelInfoError}>
                                     <h6>❌ Error Loading Model Info</h6>
                                     <p>{modelInfo.error}</p>
-                                    <button onClick={loadModelInfo} className={styles.retryButton}>
-                                      🔄 Retry
-                                    </button>
                                   </div>
                                 ) : modelInfo ? (
                                   <div className={styles.modelInfoContent}>
@@ -1932,22 +1941,10 @@ const HUD: React.FC<HUDProps> = ({
                                       </div>
                                     )}
 
-                                    <div className={styles.modelInfoActions}>
-                                      <button 
-                                        onClick={loadModelInfo} 
-                                        className={styles.refreshButton}
-                                        disabled={isLoadingModelInfo}
-                                      >
-                                        🔄 Refresh Info
-                                      </button>
-                                    </div>
                                   </div>
                                 ) : (
                                   <div className={styles.modelInfoEmpty}>
                                     <p>No model information available</p>
-                                    <button onClick={loadModelInfo} className={styles.loadButton}>
-                                      📊 Load Model Info
-                                    </button>
                                   </div>
                                 )}
                               </div>
