@@ -237,6 +237,38 @@ class LLMServiceFactory:
         
         return status
     
+    def _is_dynamic_openrouter_model(self, model_name: str) -> bool:
+        """Check if a model looks like a dynamic OpenRouter model"""
+        import os
+        # Check if it has the pattern of OpenRouter models and we have API key
+        return ((":" in model_name or "/" in model_name) and 
+                os.getenv('OPENROUTER_API_KEY'))
+    
+    def _create_dynamic_model_config(self, model_name: str):
+        """Create a basic model config for dynamic OpenRouter models"""
+        from .models import ModelConfig, ModelProvider, ModelTier, ModelCapability, ModelMetrics
+        
+        # Create a basic config for dynamic OpenRouter models
+        return ModelConfig(
+            name=model_name,
+            provider=ModelProvider.OPENROUTER,
+            tier=ModelTier.STANDARD,  # Default tier
+            capabilities=[ModelCapability.CONVERSATION],  # Basic capabilities
+            metrics=ModelMetrics(
+                avg_latency_ms=1000.0,  # Default latency
+                tokens_per_second=50,   # Default generation speed
+                cost_per_1k_tokens=0.001,  # Default cost, will be overridden by actual API
+                context_window=8000,  # Default context
+                quality_score=0.75,
+                reliability_score=0.80
+            ),
+            api_endpoint="https://openrouter.ai/api/v1/chat/completions",
+            api_key_env="OPENROUTER_API_KEY",
+            description=f"Dynamic OpenRouter model: {model_name}",
+            display_name=model_name.split('/')[-1] if '/' in model_name else model_name,
+            enabled=True
+        )
+    
     async def check_model_availability(self) -> bool:
         """Check if any models are actually available and working"""
         try:
@@ -311,6 +343,10 @@ class LLMServiceFactory:
                 if request.model_override in AVAILABLE_MODELS:
                     routing_decision.selected_model = request.model_override
                     routing_decision.model_config = AVAILABLE_MODELS[request.model_override]
+                elif self._is_dynamic_openrouter_model(request.model_override):
+                    # Handle dynamic OpenRouter models
+                    routing_decision.selected_model = request.model_override
+                    routing_decision.model_config = self._create_dynamic_model_config(request.model_override)
                 else:
                     logger.warning(f"Model override {request.model_override} not found, using routed model")
             
