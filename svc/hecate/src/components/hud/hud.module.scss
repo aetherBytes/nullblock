@@ -5711,8 +5711,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   flex-direction: column;
   height: 100%;
   background: rgba($background-dark, 0.3);
-  border: 1px solid rgba($echo-blue, 0.2);
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -5788,6 +5787,9 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  border: 1px solid rgba($echo-blue, 0.3);
+  margin: 0.5rem;
+  border-radius: 0;
 
   &::-webkit-scrollbar {
     width: 4px;
