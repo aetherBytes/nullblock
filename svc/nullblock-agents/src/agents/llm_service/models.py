@@ -69,6 +69,8 @@ class ModelConfig:
     reasoning_max_tokens: int = 2000     # Default reasoning token limit
     display_name: Optional[str] = None   # User-friendly display name
     icon: Optional[str] = None          # Model icon
+    created: Optional[int] = None        # Creation timestamp from provider
+    pricing: Optional[Dict[str, str]] = None  # OpenRouter pricing structure
 
 # Predefined model configurations
 AVAILABLE_MODELS = {
@@ -535,7 +537,9 @@ def create_model_config_from_openrouter(model_data: Dict[str, Any]) -> Optional[
             api_key_env="OPENROUTER_API_KEY",
             description=description,
             display_name=display_name,
-            icon=icon
+            icon=icon,
+            created=model_data.get("created"),  # Use real OpenRouter creation timestamp
+            pricing=pricing  # Preserve original OpenRouter pricing structure
         )
     except Exception as e:
         print(f"Error creating model config for {model_data.get('id', 'unknown')}: {e}")

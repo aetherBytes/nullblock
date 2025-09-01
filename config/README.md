@@ -197,7 +197,7 @@ const HECATE_PORT = hecateConfig.port;  // ✅ Generated
 ### Update tmuxinator Configuration
 Copy the generated environment file to your tmuxinator configuration:
 ```bash
-cp config/generated/.env.dev ~/.env.nullblock-dev
+cp .env.dev ~/.env.nullblock-dev
 ```
 
 ## 🛠️ Advanced Usage
