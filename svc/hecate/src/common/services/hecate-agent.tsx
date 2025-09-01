@@ -184,34 +184,7 @@ class HecateAgentService {
     }
   }
 
-  /**
-   * Unload current model from LM Studio (for clean model switching)
-   */
-  async unloadModel(currentModel?: string): Promise<boolean> {
-    if (!this.isConnected) {
-      throw new Error('Not connected to Hecate agent. Call connect() first.');
-    }
 
-    try {
-      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/unload-lm-studio-model`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ current_model: currentModel }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.success || false;
-    } catch (error) {
-      console.error('Failed to unload model:', error);
-      throw error;
-    }
-  }
 
   /**
    * Set agent personality
@@ -286,6 +259,53 @@ class HecateAgentService {
       }));
     } catch (error) {
       console.error('Failed to get conversation history:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get detailed model information
+   */
+  async getModelInfo(modelName?: string): Promise<any> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to Hecate agent. Call connect() first.');
+    }
+
+    try {
+      const params = modelName ? `?model_name=${encodeURIComponent(modelName)}` : '';
+      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/model-info${params}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Failed to get model info:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Search models
+   */
+  async searchModels(query: string, limit: number = 20): Promise<{ results: any[] }> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to Hecate agent. Call connect() first.');
+    }
+
+    try {
+      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/search-models?q=${encodeURIComponent(query)}&limit=${limit}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Failed to search models:', error);
       throw error;
     }
   }

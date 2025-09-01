@@ -55,10 +55,8 @@ windows:
           echo ""
           cd svc/erebus
           mkdir -p logs
-          LOG_FILE="logs/erebus.log.$(date +%Y-%m-%d)"
-          touch "$LOG_FILE"
-          echo "📝 Tailing: $LOG_FILE"
-          tail -f "$LOG_FILE" 2>/dev/null || echo "⚠️ Waiting for Erebus logs..."
+          echo "📝 Tailing live Erebus logs from logs/erebus.log"
+          tail -f logs/erebus.log 2>/dev/null || echo "⚠️ Waiting for Erebus logs to appear..."
 
   - workspace:
       layout: even-horizontal

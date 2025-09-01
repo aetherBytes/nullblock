@@ -1,9 +1,10 @@
 // Agent routing endpoints for Erebus
 use axum::{
-    extract::{Path, Json},
+    extract::{Path, Json, Query},
     response::Json as ResponseJson,
     http::StatusCode,
 };
+use std::collections::HashMap;
 use serde_json::Value;
 use tracing::{info, error, warn};
 
@@ -275,6 +276,74 @@ pub async fn hecate_set_model(Json(request): Json<Value>) -> Result<ResponseJson
         }
         Err(error) => {
             error!("❌ Hecate set model request failed");
+            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            
+            let status_code = match error.code.as_str() {
+                "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
+                "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
+                "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            
+            Err((status_code, ResponseJson(error)))
+        }
+    }
+}
+
+/// Get detailed model information from Hecate agent
+pub async fn hecate_model_info() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("📋 Hecate model info request received");
+    
+    let proxy = get_hecate_proxy();
+    
+    match proxy.proxy_request("model-info", "GET", None).await {
+        Ok(response) => {
+            info!("✅ Hecate model info retrieved successfully");
+            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            Ok(ResponseJson(response))
+        }
+        Err(error) => {
+            error!("❌ Hecate model info request failed");
+            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+            
+            let status_code = match error.code.as_str() {
+                "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
+                "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
+                "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            
+            Err((status_code, ResponseJson(error)))
+        }
+    }
+}
+
+/// Search models via Hecate agent
+pub async fn hecate_search_models(Query(params): Query<HashMap<String, String>>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("🔍 Hecate search models request received");
+    info!("📝 Query parameters: {:?}", params);
+    
+    let proxy = get_hecate_proxy();
+    
+    let query_string = params.iter()
+        .map(|(k, v)| format!("{}={}", k, v))
+        .collect::<Vec<_>>()
+        .join("&");
+    
+    let endpoint = if query_string.is_empty() {
+        "search-models".to_string()
+    } else {
+        format!("search-models?{}", query_string)
+    };
+    
+    match proxy.proxy_request(&endpoint, "GET", None).await {
+        Ok(response) => {
+            info!("✅ Hecate search models retrieved successfully");
+            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            Ok(ResponseJson(response))
+        }
+        Err(error) => {
+            error!("❌ Hecate search models request failed");
             error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
             
             let status_code = match error.code.as_str() {

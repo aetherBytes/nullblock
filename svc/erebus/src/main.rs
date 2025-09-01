@@ -18,7 +18,7 @@ use tracing_appender::{rolling, non_blocking};
 mod resources;
 use resources::agents::routes::{
     agent_health, hecate_chat, hecate_status, agent_chat, agent_status,
-    hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model
+    hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model, hecate_model_info, hecate_search_models
 };
 use resources::wallets::routes::create_wallet_routes;
 use resources::WalletManager;
@@ -224,6 +224,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/agents/hecate/history", get(hecate_history))
         .route("/api/agents/hecate/available-models", get(hecate_available_models))
         .route("/api/agents/hecate/set-model", post(hecate_set_model))
+        .route("/api/agents/hecate/model-info", get(hecate_model_info))
+        .route("/api/agents/hecate/search-models", get(hecate_search_models))
         .route("/api/agents/:agent_name/chat", post(agent_chat))
         .route("/api/agents/:agent_name/status", get(agent_status))
         // Merge wallet routes
@@ -249,6 +251,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("📜 Hecate history: http://localhost:3000/api/agents/hecate/history");
     info!("🧠 Hecate available models: http://localhost:3000/api/agents/hecate/available-models");
     info!("🎯 Hecate set model: http://localhost:3000/api/agents/hecate/set-model");
+    info!("📋 Hecate model info: http://localhost:3000/api/agents/hecate/model-info");
+    info!("🔍 Hecate search models: http://localhost:3000/api/agents/hecate/search-models");
     info!("👛 Wallet endpoints: http://localhost:3000/api/wallets");
     info!("🔍 Wallet detection: http://localhost:3000/api/wallets/detect");
     info!("🔐 Wallet challenge: http://localhost:3000/api/wallets/challenge");

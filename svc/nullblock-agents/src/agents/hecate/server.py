@@ -5,6 +5,7 @@ Simple FastAPI server wrapper for the Hecate agent to enable frontend integratio
 """
 
 import asyncio
+import difflib
 import logging
 import subprocess
 import time
@@ -22,7 +23,7 @@ import os
 from .main import HecateAgent, ConversationMessage
 from ..logging_config import setup_agent_logging, log_agent_startup, log_agent_shutdown
 from ..config import get_hecate_config, config
-from ..llm_service.models import get_dynamic_models, POPULAR_MODELS
+from ..llm_service.models import get_dynamic_models, POPULAR_MODELS, ModelCapability, AVAILABLE_MODELS, get_default_hecate_model
 
 # Load environment variables from .env.dev file
 def load_env_file():
@@ -291,65 +292,146 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.get("/search-models")
-    async def search_models(request: Request, q: str = "", limit: int = 20):
-        """Search for models by name or description"""
+    async def search_models(request: Request, q: str = "", category: str = "", limit: int = 20):
+        """Search for models by name, description, or category (free, fast, premium, thinkers)"""
         if not agent:
             log_request(request, "🚫 Model search rejected - agent not initialized")
             log_response(503, "🚫 Model search failed - agent not initialized")
             raise HTTPException(status_code=503, detail="Agent not initialized")
         
         try:
-            log_request(request, "🔍 Model search requested", {"query": q, "limit": limit})
+            log_request(request, "🔍 Model search requested", {"query": q, "category": category, "limit": limit})
             
-            # Get dynamic models from OpenRouter
-            dynamic_models = await get_dynamic_models()
+            # Get available models (same data as /available-models endpoint)
+            available_models = await get_dynamic_models()
             
-            # Search through models
-            search_results = []
-            query_lower = q.lower()
+            # Filter to only available models based on API keys
+            filtered_models = {}
+            for model_name, config in available_models.items():
+                if agent.is_model_available(model_name):
+                    filtered_models[model_name] = config
             
-            for model_name, config in dynamic_models.items():
-                # Search in name, display_name, and description
-                if (query_lower in model_name.lower() or 
-                    query_lower in getattr(config, 'display_name', '').lower() or
-                    query_lower in config.description.lower()):
+            # Category mapping
+            def get_model_category(config):
+                tier = getattr(config, 'tier', None)
+                cost = getattr(config.metrics, 'cost_per_1k_tokens', 0)
+                supports_reasoning = getattr(config, 'supports_reasoning', False)
+                
+                categories = []
+                if cost == 0:
+                    categories.append("free")
+                if tier and tier.value == "fast":
+                    categories.append("fast")
+                if cost > 0.00001:  # Higher cost models are premium
+                    categories.append("premium") 
+                if supports_reasoning:
+                    categories.append("thinkers")
                     
-                    # Check if model is available
-                    is_available = agent.llm_factory.router.model_status.get(model_name, True)
+                return categories
+            
+            # Apply category filter if specified
+            if category:
+                category_lower = category.lower()
+                temp_filtered = {}
+                for model_name, config in filtered_models.items():
+                    model_categories = get_model_category(config)
+                    if category_lower in model_categories:
+                        temp_filtered[model_name] = config
+                filtered_models = temp_filtered
+            
+            # Convert to list for easier processing
+            model_list = []
+            for model_name, config in filtered_models.items():
+                display_name = getattr(config, 'display_name', config.name)
+                model_categories = get_model_category(config)
+                
+                model_data = {
+                    "name": model_name,
+                    "display_name": display_name,
+                    "icon": getattr(config, 'icon', '🤖'),
+                    "provider": config.provider.value,
+                    "available": True,
+                    "tier": config.tier.value,
+                    "context_length": config.metrics.context_window,
+                    "capabilities": [cap.value for cap in config.capabilities],
+                    "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
+                    "supports_reasoning": getattr(config, 'supports_reasoning', False),
+                    "description": config.description,
+                    "is_popular": getattr(config, 'is_popular', False),
+                    "categories": model_categories,
+                    "created": getattr(config, 'created', None)  # Use real timestamp from config
+                }
+                model_list.append(model_data)
+            
+            # If no query, return models sorted by popularity and name
+            if not q.strip():
+                search_results = sorted(model_list, key=lambda x: (-x["is_popular"], x["name"]))[:limit]
+            else:
+                # Use improved search logic
+                query_lower = q.lower().strip()
+                search_results = []
+                
+                for model in model_list:
+                    # Calculate relevance score  
+                    score = 0
+                    model_name_lower = model["name"].lower()
+                    display_name_lower = model["display_name"].lower()
+                    description_lower = model["description"].lower()
                     
-                    search_results.append({
-                        "name": model_name,
-                        "display_name": getattr(config, 'display_name', config.name),
-                        "icon": getattr(config, 'icon', '🤖'),
-                        "provider": config.provider.value,
-                        "available": is_available,
-                        "tier": config.tier.value,
-                        "context_length": config.metrics.context_window,
-                        "capabilities": [cap.value for cap in config.capabilities],
-                        "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
-                        "description": config.description
-                    })
-            
-            # Sort by relevance (exact matches first, then partial matches)
-            search_results.sort(key=lambda x: (
-                not x["name"].lower().startswith(query_lower),
-                not x["display_name"].lower().startswith(query_lower),
-                x["name"]
-            ))
-            
-            # Limit results
-            search_results = search_results[:limit]
+                    # Exact matches get highest score
+                    if query_lower == model_name_lower or query_lower == display_name_lower:
+                        score = 100
+                    # Starts with match
+                    elif model_name_lower.startswith(query_lower) or display_name_lower.startswith(query_lower):
+                        score = 90
+                    # Contains match - this should catch "claude" in "anthropic/claude-3-haiku"
+                    elif query_lower in model_name_lower or query_lower in display_name_lower:
+                        score = 80
+                    # Description match
+                    elif query_lower in description_lower:
+                        score = 70
+                    # Fuzzy matching for partial matches
+                    else:
+                        name_ratio = difflib.SequenceMatcher(None, query_lower, model_name_lower).ratio()
+                        display_ratio = difflib.SequenceMatcher(None, query_lower, display_name_lower).ratio()
+                        max_ratio = max(name_ratio, display_ratio)
+                        
+                        if max_ratio > 0.5:  # Lower threshold for broader matching
+                            score = int(max_ratio * 60)
+                        # Word-based matching in description
+                        elif len(query_lower) > 2:
+                            query_words = query_lower.split()
+                            if any(word in description_lower for word in query_words if len(word) > 2):
+                                score = 40
+                    
+                    # Boost popular models
+                    if model.get("is_popular", False):
+                        score += 5
+                    
+                    # Add to results if score is above threshold
+                    if score > 0:
+                        model_copy = model.copy()  # Make a copy to avoid modifying original
+                        model_copy["_score"] = score
+                        search_results.append(model_copy)
+                
+                # Sort by score (descending) then name
+                search_results.sort(key=lambda x: (-x.get("_score", 0), x["name"]))
+                
+                # Remove score and limit results
+                for result in search_results:
+                    result.pop("_score", None)
+                search_results = search_results[:limit]
             
             log_response(200, "🔍 Model search completed successfully", {
                 "query": q,
                 "results_count": len(search_results),
-                "total_available": len(dynamic_models)
+                "total_available": len(filtered_models)
             })
             
             return {
                 "query": q,
                 "results": search_results,
-                "total_available": len(dynamic_models)
+                "total_available": len(filtered_models)
             }
         except Exception as e:
             logger.error(f"❌ Model search failed: {e}")
@@ -387,48 +469,54 @@ def create_app() -> FastAPI:
             available_models = []
             
             # Get static models
-            from ..llm_service.models import AVAILABLE_MODELS, get_default_hecate_model
-            
             for model_name, config in AVAILABLE_MODELS.items():
-                # Check if model is available (default to config.enabled if not explicitly set)
-                is_available = agent.llm_factory.router.model_status.get(model_name, config.enabled)
+                # Check if model is truly available (API keys, etc.)
+                is_truly_available = agent.is_model_available(model_name)
                 
-                available_models.append({
-                    "name": model_name,
-                    "display_name": getattr(config, 'display_name', config.name),
-                    "icon": getattr(config, 'icon', '🤖'),
-                    "provider": config.provider.value,
-                    "available": is_available,
-                    "tier": config.tier.value,
-                    "context_length": config.metrics.context_window,
-                    "capabilities": [cap.value for cap in config.capabilities],
-                    "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
-                    "supports_reasoning": getattr(config, 'supports_reasoning', False),
-                    "description": config.description,
-                    "is_popular": model_name in POPULAR_MODELS
-                })
+                # Only include models that are actually available
+                if is_truly_available:
+                    available_models.append({
+                        "name": model_name,
+                        "display_name": getattr(config, 'display_name', config.name),
+                        "icon": getattr(config, 'icon', '🤖'),
+                        "provider": config.provider.value,
+                        "available": True,
+                        "tier": config.tier.value,
+                        "context_length": config.metrics.context_window,
+                        "capabilities": [cap.value for cap in config.capabilities],
+                        "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
+                        "pricing": getattr(config, 'pricing', None),  # OpenRouter pricing structure
+                        "supports_reasoning": getattr(config, 'supports_reasoning', False) or ModelCapability.REASONING in config.capabilities,
+                        "description": config.description,
+                        "is_popular": model_name in POPULAR_MODELS,
+                        "created": getattr(config, 'created', None)  # Use real timestamp from config
+                    })
             
             # Get dynamic models from OpenRouter (popular ones first)
             dynamic_models = await get_dynamic_models()
             
             for model_name, config in dynamic_models.items():
-                # Check if model is available
-                is_available = agent.llm_factory.router.model_status.get(model_name, True)
+                # Check if model is truly available (API keys, etc.)
+                is_truly_available = agent.is_model_available(model_name)
                 
-                available_models.append({
-                    "name": model_name,
-                    "display_name": getattr(config, 'display_name', config.name),
-                    "icon": getattr(config, 'icon', '🤖'),
-                    "provider": config.provider.value,
-                    "available": is_available,
-                    "tier": config.tier.value,
-                    "context_length": config.metrics.context_window,
-                    "capabilities": [cap.value for cap in config.capabilities],
-                    "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
-                    "supports_reasoning": getattr(config, 'supports_reasoning', False),
-                    "description": config.description,
-                    "is_popular": model_name in POPULAR_MODELS
-                })
+                # Only include models that are actually available
+                if is_truly_available:
+                    available_models.append({
+                        "name": model_name,
+                        "display_name": getattr(config, 'display_name', config.name),
+                        "icon": getattr(config, 'icon', '🤖'),
+                        "provider": config.provider.value,
+                        "available": True,
+                        "tier": config.tier.value,
+                        "context_length": config.metrics.context_window,
+                        "capabilities": [cap.value for cap in config.capabilities],
+                        "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
+                        "pricing": getattr(config, 'pricing', None),  # OpenRouter pricing structure
+                        "supports_reasoning": getattr(config, 'supports_reasoning', False) or ModelCapability.REASONING in config.capabilities,
+                        "description": config.description,
+                        "is_popular": model_name in POPULAR_MODELS,
+                        "created": getattr(config, 'created', None)  # Use real timestamp from config
+                    })
             
             # Sort by popularity first, then availability, then provider and name
             available_models.sort(key=lambda x: (
@@ -444,7 +532,7 @@ def create_app() -> FastAPI:
             # Create response
             response_data = {
                 "models": available_models,
-                "current_model": getattr(agent, 'current_model', None),
+                "current_model": getattr(agent, 'preferred_model', None),
                 "default_model": default_model,
                 "recommended_models": {
                     "free": "deepseek/deepseek-chat-v3.1:free",
@@ -533,16 +621,122 @@ def create_app() -> FastAPI:
                     "previous_model": old_model
                 }
             else:
-                log_response(400, "🎯 Model selection failed - model not available", {
+                # Get more specific error message about why model is not available
+                error_detail = agent.get_model_availability_reason(model_request.model_name)
+                log_response(400, f"🎯 Model selection failed - {error_detail}", {
                     "requested_model": model_request.model_name
                 })
-                raise HTTPException(status_code=400, detail=f"Model {model_request.model_name} is not available")
+                raise HTTPException(status_code=400, detail=error_detail)
                 
         except HTTPException:
             raise
         except Exception as e:
             logger.error(f"❌ Set model failed: {e}")
             log_response(500, "🎯 Model selection failed", {"error": str(e)})
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/model-info")
+    async def get_model_info(request: Request, model_name: str = None):
+        """Get detailed information about a specific model or current model"""
+        try:
+            if not agent:
+                log_response(503, "❌ Model info failed", {"error": "Agent not initialized"})
+                raise HTTPException(status_code=503, detail="Agent not initialized")
+
+            log_request(request, f"📋 Model info requested for: {model_name or 'current'}")
+
+            # Use current model if no specific model requested
+            if not model_name:
+                model_name = getattr(agent, 'preferred_model', None)
+                if not model_name:
+                    return {"error": "No model currently loaded", "model_name": None}
+
+            # Get model from static models first
+            
+            model_config = None
+            is_dynamic = False
+            
+            if model_name in AVAILABLE_MODELS:
+                model_config = AVAILABLE_MODELS[model_name]
+            else:
+                # Check dynamic models
+                dynamic_models = await get_dynamic_models()
+                if model_name in dynamic_models:
+                    model_config = dynamic_models[model_name]
+                    is_dynamic = True
+
+            if not model_config:
+                log_response(404, "❌ Model not found", {"model": model_name})
+                raise HTTPException(status_code=404, detail=f"Model {model_name} not found")
+
+            # Check if model is currently available
+            is_available = agent.llm_factory.router.model_status.get(model_name, getattr(model_config, 'enabled', True))
+            
+            # Get current model status if this is the active model
+            model_status = None
+            llm_stats = None
+            if model_name == getattr(agent, 'preferred_model', None):
+                try:
+                    status_info = await agent.get_model_status()
+                    model_status = status_info.get('status', 'unknown')
+                    llm_stats = status_info.get('stats', {})
+                except Exception as e:
+                    logger.warning(f"Failed to get model status: {e}")
+
+            # Build detailed model information
+            model_info = {
+                "name": model_name,
+                "display_name": getattr(model_config, 'display_name', getattr(model_config, 'name', model_name)),
+                "icon": getattr(model_config, 'icon', '🤖'),
+                "provider": model_config.provider.value if hasattr(model_config, 'provider') else 'unknown',
+                "description": getattr(model_config, 'description', 'No description available'),
+                "tier": model_config.tier.value if hasattr(model_config, 'tier') else 'standard',
+                
+                # Availability and status
+                "available": is_available,
+                "is_current": model_name == getattr(agent, 'preferred_model', None),
+                "is_dynamic": is_dynamic,
+                "status": model_status,
+                
+                # Technical specifications
+                "context_length": getattr(model_config.metrics, 'context_window', 0) if hasattr(model_config, 'metrics') else 0,
+                "max_tokens": getattr(model_config.metrics, 'max_output_tokens', 0) if hasattr(model_config, 'metrics') else 0,
+                "capabilities": [cap.value for cap in model_config.capabilities] if hasattr(model_config, 'capabilities') else [],
+                "supports_reasoning": getattr(model_config, 'supports_reasoning', False) or ModelCapability.REASONING in model_config.capabilities,
+                "supports_vision": 'vision' in [cap.value for cap in getattr(model_config, 'capabilities', [])],
+                "supports_function_calling": 'function_calling' in [cap.value for cap in getattr(model_config, 'capabilities', [])],
+                
+                # Cost information
+                "cost_per_1k_tokens": getattr(model_config.metrics, 'cost_per_1k_tokens', 0.0) if hasattr(model_config, 'metrics') else 0.0,
+                "cost_per_1m_tokens": (getattr(model_config.metrics, 'cost_per_1k_tokens', 0.0) * 1000) if hasattr(model_config, 'metrics') else 0.0,
+                
+                # Performance metrics from LLM factory if available
+                "performance_stats": llm_stats or {},
+                
+                # Usage information
+                "conversation_length": len(agent.conversation_history) if hasattr(agent, 'conversation_history') else 0,
+                "last_used": None,  # Could be enhanced to track actual usage
+            }
+            
+            # Add estimated costs for conversation if this is current model
+            if model_info["is_current"] and model_info["conversation_length"] > 0:
+                estimated_tokens = model_info["conversation_length"] * 100  # Rough estimate
+                estimated_cost = (estimated_tokens / 1000) * model_info["cost_per_1k_tokens"]
+                model_info["estimated_session_cost"] = estimated_cost
+            
+            log_response(200, "📋 Model info retrieved", {
+                "model": model_name,
+                "is_current": model_info["is_current"],
+                "available": model_info["available"]
+            })
+            
+            return model_info
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"❌ Get model info failed: {e}")
+            log_response(500, "📋 Get model info failed", {"error": str(e)})
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.post("/reset-models")
