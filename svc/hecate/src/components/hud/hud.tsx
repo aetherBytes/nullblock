@@ -146,7 +146,10 @@ const HUD: React.FC<HUDProps> = ({
   const [modelInfo, setModelInfo] = useState<any>(null);
   const [isLoadingModelInfo, setIsLoadingModelInfo] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
-  const [modelInfoActiveTab, setModelInfoActiveTab] = useState<'info' | 'selection'>('info');
+  const [showModelSelection, setShowModelSelection] = useState(false);
+
+  // Quick actions state
+  const [activeQuickAction, setActiveQuickAction] = useState<string | null>(null);
 
   // Expand states for containers
   const [isChatExpanded, setIsChatExpanded] = useState(false);
@@ -476,6 +479,13 @@ const HUD: React.FC<HUDProps> = ({
       loadModelInfo(currentSelectedModel);
     }
   }, [currentSelectedModel, activeScope]);
+
+  // Set Latest as default when showing model selection
+  useEffect(() => {
+    if (showModelSelection && activeQuickAction === null) {
+      setActiveQuickAction('latest');
+    }
+  }, [showModelSelection]);
 
   const handleMCPAuthentication = async () => {
     if (!publicKey) {
@@ -810,6 +820,112 @@ const HUD: React.FC<HUDProps> = ({
     }
   };
 
+  const getLastUpdatedModels = (models: any[], limit: number = 10) => {
+    return models
+      .filter(model => model.available && model.updated_at)
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .slice(0, limit);
+  };
+
+  const getLatestModels = (models: any[], limit: number = 10) => {
+    console.log('🔥 === LATEST MODELS DEBUG ENHANCED ===');
+    console.log('🔍 Input models array:', models);
+    console.log('📊 Input models length:', models.length);
+    
+    // Show sample of first few models with their created timestamps
+    if (models.length > 0) {
+      console.log('📋 Sample of first 3 models:');
+      models.slice(0, 3).forEach((model, i) => {
+        console.log(`  ${i + 1}. ${model?.display_name || model?.name || 'UNKNOWN'} - created: ${model?.created} (type: ${typeof model?.created})`);
+      });
+    }
+    
+    // Filter for models with valid created timestamp and available status
+    const filtered = models.filter(model => {
+      if (!model || typeof model !== 'object') return false;
+      
+      const hasCreated = model.created !== undefined && model.created !== null && model.created !== 0;
+      const isAvailable = model.available !== false;
+      
+      return hasCreated && isAvailable;
+    });
+    
+    console.log('✅ Filtered models with valid created timestamp:', filtered.length);
+    
+    if (filtered.length === 0) {
+      console.log('⚠️ No models with created timestamps found - using fallback');
+      // Return first few available models as fallback
+      const fallback = models.filter(model => model && model.available !== false).slice(0, limit);
+      console.log('🔄 Using fallback models:', fallback.length);
+      return fallback;
+    }
+    
+    // Sort by created timestamp (newest first - highest timestamp first)
+    const sorted = filtered.sort((a, b) => {
+      let aCreated = a.created;
+      let bCreated = b.created;
+      
+      // Handle string timestamps (convert to number)
+      if (typeof aCreated === 'string') aCreated = parseInt(aCreated, 10);
+      if (typeof bCreated === 'string') bCreated = parseInt(bCreated, 10);
+      
+      console.log(`🔢 Comparing: ${a.display_name || a.name} (${aCreated}) vs ${b.display_name || b.name} (${bCreated})`);
+      
+      // Newest first (higher timestamp first)
+      return bCreated - aCreated;
+    });
+    
+    const result = sorted.slice(0, limit);
+    
+    console.log('🏆 === LATEST MODELS RESULT ===');
+    console.log('📦 Returning', result.length, 'models');
+    console.log('🎯 Final sorted list (top 5):');
+    result.slice(0, 5).forEach((model, i) => {
+      const createdDate = new Date(model.created * 1000);
+      console.log(`  ${i + 1}. ${model.display_name || model.name} - Created: ${model.created} (${createdDate.toLocaleDateString()})`);
+    });
+    console.log('🔥 === END LATEST MODELS DEBUG ===');
+    
+    return result;
+  };
+
+  const getFreeModels = (models: any[], limit: number = 10) => {
+    return models
+      .filter(model => model.available && (model.tier === 'economical' || model.cost_per_1k_tokens === 0))
+      .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+      .slice(0, limit);
+  };
+
+  const getPremiumModels = (models: any[], limit: number = 10) => {
+    return models
+      .filter(model => model.available && model.tier === 'premium')
+      .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+      .slice(0, limit);
+  };
+
+  const getThinkerModels = (models: any[], limit: number = 10) => {
+    return models
+      .filter(model => {
+        if (!model.available) return false;
+        const name = (model.display_name || model.name).toLowerCase();
+        return (model.capabilities && (model.capabilities.includes('reasoning') || model.capabilities.includes('reasoning_tokens'))) ||
+               name.includes('reasoning') || name.includes('think') || name.includes('r1') || name.includes('o1');
+      })
+      .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+      .slice(0, limit);
+  };
+
+  const getInstructModels = (models: any[], limit: number = 10) => {
+    return models
+      .filter(model => {
+        if (!model.available) return false;
+        const name = (model.display_name || model.name).toLowerCase();
+        return name.includes('instruct') || name.includes('it') || name.includes('chat');
+      })
+      .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+      .slice(0, limit);
+  };
+
   const handleModelSelection = async (modelName: string) => {
     if (isModelChanging) return;
     
@@ -817,12 +933,16 @@ const HUD: React.FC<HUDProps> = ({
     if (currentSelectedModel === modelName) {
       console.log(`Already using model: ${modelName}`);
       setShowModelDropdown(false);
+      setShowModelSelection(false);
+      setActiveQuickAction(null); // Reset quick action when closing
       return;
     }
 
     try {
       setIsModelChanging(true);
       setShowModelDropdown(false);
+      setShowModelSelection(false);
+      setActiveQuickAction(null); // Reset quick action when switching models
       
       console.log(`=== MODEL SWITCH START: ${currentSelectedModel} -> ${modelName} ===`);
       setNulleyeState('thinking');
@@ -1569,110 +1689,7 @@ const HUD: React.FC<HUDProps> = ({
                     <div className={styles.hecateChat}>
                       <div className={styles.chatHeader}>
                         <div className={styles.chatTitle}>
-                          {availableModels.length > 0 ? (
-                            <div className={styles.modelSelector} ref={modelDropdownRef}>
-                              <button 
-                                className={`${styles.modelDropdownBtn} ${isModelChanging ? styles.modelChanging : ''}`}
-                                onClick={() => !isModelChanging && setShowModelDropdown(!showModelDropdown)}
-                                disabled={isModelChanging}
-                                title={isModelChanging ? "Switching models..." : "Select model"}
-                              >
-                                {isModelChanging ? (
-                                  <>⚡ Switching... <span className={styles.loadingSpinner}>⟳</span></>
-                                ) : (
-                                  <>{currentSelectedModel || 'Select Model'} <span className={styles.dropdownArrow}>▼</span></>
-                                )}
-                              </button>
-                              {showModelDropdown && !isModelChanging && (
-                                <div className={styles.modelDropdown}>
-                                  <div className={styles.dropdownHeader}>Select Model</div>
-                                  
-                                  {/* Search Input */}
-                                  <div className={styles.searchContainer}>
-                                    <input
-                                      type="text"
-                                      placeholder="Search 400+ models..."
-                                      value={modelSearchQuery}
-                                      onChange={(e) => setModelSearchQuery(e.target.value)}
-                                      className={styles.modelSearchInput}
-                                      autoFocus
-                                    />
-                                    {isSearchingModels && (
-                                      <div className={styles.searchSpinner}>⟳</div>
-                                    )}
-                                  </div>
-
-                                  {/* Search Results */}
-                                  {searchResults.length > 0 && (
-                                    <div className={styles.searchSection}>
-                                      <div className={styles.searchHeader}>
-                                        Search Results ({searchResults.length})
-                                      </div>
-                                      {searchResults.map((model, index) => (
-                                        <button
-                                          key={`search-${model.name}-${index}`}
-                                          className={`${styles.modelOption} ${model.name === currentSelectedModel ? styles.selected : ''}`}
-                                          onClick={() => handleModelSelection(model.name)}
-                                          title={`${model.display_name} (${model.provider})`}
-                                        >
-                                          <div className={styles.modelInfo}>
-                                            <span className={styles.modelIcon}>{model.icon || '🤖'}</span>
-                                            <div className={styles.modelDetails}>
-                                              <span className={styles.modelName}>{model.display_name}</span>
-                                              <span className={styles.modelProvider}>{model.provider}</span>
-                                            </div>
-                                          </div>
-                                          <div className={styles.modelBadge}>
-                                            <span className={`${styles.tierBadge} ${styles[model.tier]}`}>
-                                              {model.tier === 'economical' ? '🆓' : 
-                                               model.tier === 'fast' ? '⚡' : 
-                                               model.tier === 'standard' ? '⭐' : 
-                                               model.tier === 'premium' ? '💎' : '🤖'}
-                                            </span>
-                                            {model.name === currentSelectedModel && <span className={styles.selected}>✓</span>}
-                                          </div>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
-
-                                  {/* Popular Models */}
-                                  <div className={styles.popularSection}>
-                                    <div className={styles.sectionHeader}>
-                                      Popular Models
-                                    </div>
-                                    {availableModels.filter(model => model.available && model.is_popular).map((model, index) => (
-                                    <button
-                                      key={`popular-${model.name}-${index}`}
-                                      className={`${styles.modelOption} ${model.name === currentSelectedModel ? styles.selected : ''}`}
-                                      onClick={() => handleModelSelection(model.name)}
-                                      title={`${model.display_name} (${model.provider})`}
-                                    >
-                                      <div className={styles.modelInfo}>
-                                        <span className={styles.modelIcon}>{model.icon || '🤖'}</span>
-                                        <div className={styles.modelDetails}>
-                                          <span className={styles.modelName}>{model.display_name}</span>
-                                          <span className={styles.modelProvider}>{model.provider}</span>
-                                        </div>
-                                      </div>
-                                      <div className={styles.modelBadge}>
-                                        <span className={`${styles.tierBadge} ${styles[model.tier]}`}>
-                                          {model.tier === 'economical' ? '🆓' : 
-                                           model.tier === 'fast' ? '⚡' : 
-                                           model.tier === 'standard' ? '⭐' : 
-                                           model.tier === 'premium' ? '💎' : '🤖'}
-                                        </span>
-                                        {model.name === currentSelectedModel && <span className={styles.selected}>✓</span>}
-                                      </div>
-                                    </button>
-                                  ))}
-                                </div>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <h4>Chat with Hecate</h4>
-                          )}
+                          <h4>Chat with Hecate</h4>
                           <span className={styles.chatStatus}>Live</span>
                         </div>
                         <div className={styles.chatHeaderControls}>
@@ -1755,26 +1772,9 @@ const HUD: React.FC<HUDProps> = ({
                       <div className={styles.scopesExpanded}>
                         <div className={styles.scopesContent}>
                           <div className={styles.scopesHeader}>
-                            {activeScope === 'modelinfo' ? (
-                              <div className={styles.innerHudMenuBar}>
-                                <button 
-                                  className={`${styles.menuButton} ${modelInfoActiveTab === 'info' ? styles.active : ''}`}
-                                  onClick={() => setModelInfoActiveTab('info')}
-                                >
-                                  Model Information
-                                </button>
-                                <button 
-                                  className={`${styles.menuButton} ${modelInfoActiveTab === 'selection' ? styles.active : ''}`}
-                                  onClick={() => setModelInfoActiveTab('selection')}
-                                >
-                                  Selection
-                                </button>
-                              </div>
-                            ) : (
-                              <h5>
-                                {`${scopesOptions.find(s => s.id === activeScope)?.icon} ${activeScope.charAt(0).toUpperCase() + activeScope.slice(1)}`}
-                              </h5>
-                            )}
+                            <h5>
+                              {activeScope === 'modelinfo' ? 'Model Information' : activeScope.charAt(0).toUpperCase() + activeScope.slice(1)}
+                            </h5>
                             <div className={styles.scopesHeaderControls}>
                               <button 
                                 className={styles.expandButton}
@@ -1797,19 +1797,375 @@ const HUD: React.FC<HUDProps> = ({
 
                             {activeScope === 'modelinfo' && (
                               <div className={styles.modelInfoScope}>
-                                {modelInfoActiveTab === 'info' ? (
-                                  <>
-                                    {isLoadingModelInfo ? (
-                                      <div className={styles.modelInfoLoading}>
-                                        <p>🔄 Loading model information...</p>
+                                {isLoadingModelInfo ? (
+                                  <div className={styles.modelInfoLoading}>
+                                    <p>🔄 Loading model information...</p>
+                                  </div>
+                                ) : modelInfo?.error ? (
+                                  <div className={styles.modelInfoError}>
+                                    <h6>❌ Error Loading Model Info</h6>
+                                    <p>{modelInfo.error}</p>
+                                  </div>
+                                ) : showModelSelection ? (
+                                  <div className={styles.modelSelectionContent}>
+                                    <div className={styles.modelSelectionHeader}>
+                                      <input
+                                        type="text"
+                                        placeholder="Search LLM database..."
+                                        value={modelSearchQuery}
+                                        onChange={(e) => setModelSearchQuery(e.target.value)}
+                                        className={styles.modelSearchInput}
+                                      />
+                                      {isSearchingModels && (
+                                        <div className={styles.searchingIndicator}>⟳ Searching...</div>
+                                      )}
+                                      <button 
+                                        className={styles.backButton}
+                                        onClick={() => {
+                                          setShowModelSelection(false);
+                                          setActiveQuickAction(null);
+                                        }}
+                                        title="Back to model info"
+                                      >
+                                        ← Back
+                                      </button>
+                                    </div>
+                                    
+                                    {/* Quick Actions Menu */}
+                                    <div className={styles.quickActionsMenu}>
+                                      <button 
+                                        onClick={() => {
+                                          setModelSearchQuery('');
+                                          setActiveQuickAction('clear');
+                                          setTimeout(() => setActiveQuickAction(null), 500);
+                                        }}
+                                        className={`${styles.quickActionTab} ${activeQuickAction === 'clear' ? styles.active : ''}`}
+                                      >
+                                        Clear Search
+                                      </button>
+                                      <button 
+                                        onClick={() => {
+                                          const deepseekModel = availableModels.find(m => m.name === 'deepseek/deepseek-chat-v3.1:free');
+                                          if (deepseekModel) {
+                                            setActiveQuickAction('deepseek');
+                                            handleModelSelection(deepseekModel.name);
+                                          }
+                                        }}
+                                        className={`${styles.quickActionTab} ${activeQuickAction === 'deepseek' ? styles.active : ''}`}
+                                      >
+                                        DeepSeek Chat
+                                      </button>
+                                      <button 
+                                        onClick={() => {
+                                          setActiveQuickAction(activeQuickAction === 'latest' ? null : 'latest');
+                                          setModelSearchQuery('');
+                                        }}
+                                        className={`${styles.quickActionTab} ${activeQuickAction === 'latest' ? styles.active : ''}`}
+                                      >
+                                        Latest
+                                      </button>
+                                      <button 
+                                        onClick={() => {
+                                          setActiveQuickAction(activeQuickAction === 'free' ? null : 'free');
+                                          setModelSearchQuery('');
+                                        }}
+                                        className={`${styles.quickActionTab} ${activeQuickAction === 'free' ? styles.active : ''}`}
+                                      >
+                                        Free
+                                      </button>
+                                      <button 
+                                        onClick={() => {
+                                          setActiveQuickAction(activeQuickAction === 'premium' ? null : 'premium');
+                                          setModelSearchQuery('');
+                                        }}
+                                        className={`${styles.quickActionTab} ${activeQuickAction === 'premium' ? styles.active : ''}`}
+                                      >
+                                        Premium
+                                      </button>
+                                      <button 
+                                        onClick={() => {
+                                          setActiveQuickAction(activeQuickAction === 'thinkers' ? null : 'thinkers');
+                                          setModelSearchQuery('');
+                                        }}
+                                        className={`${styles.quickActionTab} ${activeQuickAction === 'thinkers' ? styles.active : ''}`}
+                                      >
+                                        Thinkers
+                                      </button>
+                                      <button 
+                                        onClick={() => {
+                                          setActiveQuickAction(activeQuickAction === 'instruct' ? null : 'instruct');
+                                          setModelSearchQuery('');
+                                        }}
+                                        className={`${styles.quickActionTab} ${activeQuickAction === 'instruct' ? styles.active : ''}`}
+                                      >
+                                        Instruct
+                                      </button>
+                                    </div>
+                                    
+                                    {/* Latest Models */}
+                                    {activeQuickAction === 'latest' && (
+                                      <div className={styles.modelSection}>
+                                        <h6>Latest Models ({getLatestModels(availableModels).length})</h6>
+                                        <div className={styles.modelsList}>
+                                          {getLatestModels(availableModels).map((model, index) => (
+                                            <button
+                                              key={`latest-${model.name}-${index}`}
+                                              onClick={() => handleModelSelection(model.name)}
+                                              className={`${styles.modelSelectButton} ${model.name === currentSelectedModel ? styles.currentModel : ''}`}
+                                            >
+                                              <div className={styles.modelSelectInfo}>
+                                                <span className={styles.modelSelectIcon}>{model.icon || '🤖'}</span>
+                                                <div>
+                                                  <div className={styles.modelSelectName}>{model.display_name}</div>
+                                                  <div className={styles.modelSelectProvider}>{model.provider}</div>
+                                                </div>
+                                              </div>
+                                              <div className={styles.modelSelectMeta}>
+                                                <span className={styles.modelSelectTier}>
+                                                  {model.tier === 'economical' ? '🆓' : 
+                                                   model.tier === 'fast' ? '⚡' : 
+                                                   model.tier === 'standard' ? '⭐' : 
+                                                   model.tier === 'premium' ? '💎' : '🤖'}
+                                                </span>
+                                                {model.name === currentSelectedModel && <span className={styles.currentBadge}>✓</span>}
+                                              </div>
+                                            </button>
+                                          ))}
+                                        </div>
                                       </div>
-                                    ) : modelInfo?.error ? (
-                                      <div className={styles.modelInfoError}>
-                                        <h6>❌ Error Loading Model Info</h6>
-                                        <p>{modelInfo.error}</p>
+                                    )}
+
+                                    {/* Free Models */}
+                                    {activeQuickAction === 'free' && (
+                                      <div className={styles.modelSection}>
+                                        <h6>Free Models ({getFreeModels(availableModels).length})</h6>
+                                        <div className={styles.modelsList}>
+                                          {getFreeModels(availableModels).map((model, index) => (
+                                            <button
+                                              key={`free-${model.name}-${index}`}
+                                              onClick={() => handleModelSelection(model.name)}
+                                              className={`${styles.modelSelectButton} ${model.name === currentSelectedModel ? styles.currentModel : ''}`}
+                                            >
+                                              <div className={styles.modelSelectInfo}>
+                                                <span className={styles.modelSelectIcon}>{model.icon || '🆓'}</span>
+                                                <div>
+                                                  <div className={styles.modelSelectName}>{model.display_name}</div>
+                                                  <div className={styles.modelSelectProvider}>{model.provider}</div>
+                                                </div>
+                                              </div>
+                                              <div className={styles.modelSelectMeta}>
+                                                <span className={styles.modelSelectTier}>🆓</span>
+                                                {model.name === currentSelectedModel && <span className={styles.currentBadge}>✓</span>}
+                                              </div>
+                                            </button>
+                                          ))}
+                                        </div>
                                       </div>
-                                    ) : modelInfo ? (
-                                      <div className={styles.modelInfoContent}>
+                                    )}
+
+                                    {/* Premium Models */}
+                                    {activeQuickAction === 'premium' && (
+                                      <div className={styles.modelSection}>
+                                        <h6>Premium Models ({getPremiumModels(availableModels).length})</h6>
+                                        <div className={styles.modelsList}>
+                                          {getPremiumModels(availableModels).map((model, index) => (
+                                            <button
+                                              key={`premium-${model.name}-${index}`}
+                                              onClick={() => handleModelSelection(model.name)}
+                                              className={`${styles.modelSelectButton} ${model.name === currentSelectedModel ? styles.currentModel : ''}`}
+                                            >
+                                              <div className={styles.modelSelectInfo}>
+                                                <span className={styles.modelSelectIcon}>{model.icon || '💎'}</span>
+                                                <div>
+                                                  <div className={styles.modelSelectName}>{model.display_name}</div>
+                                                  <div className={styles.modelSelectProvider}>{model.provider}</div>
+                                                </div>
+                                              </div>
+                                              <div className={styles.modelSelectMeta}>
+                                                <span className={styles.modelSelectTier}>💎</span>
+                                                {model.name === currentSelectedModel && <span className={styles.currentBadge}>✓</span>}
+                                              </div>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Thinking Models */}
+                                    {activeQuickAction === 'thinkers' && (
+                                      <div className={styles.modelSection}>
+                                        <h6>Thinking Models ({getThinkerModels(availableModels).length})</h6>
+                                        <div className={styles.modelsList}>
+                                          {getThinkerModels(availableModels).map((model, index) => (
+                                            <button
+                                              key={`thinker-${model.name}-${index}`}
+                                              onClick={() => handleModelSelection(model.name)}
+                                              className={`${styles.modelSelectButton} ${model.name === currentSelectedModel ? styles.currentModel : ''}`}
+                                            >
+                                              <div className={styles.modelSelectInfo}>
+                                                <span className={styles.modelSelectIcon}>{model.icon || '🧠'}</span>
+                                                <div>
+                                                  <div className={styles.modelSelectName}>{model.display_name}</div>
+                                                  <div className={styles.modelSelectProvider}>{model.provider}</div>
+                                                </div>
+                                              </div>
+                                              <div className={styles.modelSelectMeta}>
+                                                <span className={styles.modelSelectTier}>
+                                                  {model.tier === 'economical' ? '🆓' : 
+                                                   model.tier === 'fast' ? '⚡' : 
+                                                   model.tier === 'standard' ? '⭐' : 
+                                                   model.tier === 'premium' ? '💎' : '🧠'}
+                                                </span>
+                                                {model.name === currentSelectedModel && <span className={styles.currentBadge}>✓</span>}
+                                              </div>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Instruct Models */}
+                                    {activeQuickAction === 'instruct' && (
+                                      <div className={styles.modelSection}>
+                                        <h6>Instruct Models ({getInstructModels(availableModels).length})</h6>
+                                        <div className={styles.modelsList}>
+                                          {getInstructModels(availableModels).map((model, index) => (
+                                            <button
+                                              key={`instruct-${model.name}-${index}`}
+                                              onClick={() => handleModelSelection(model.name)}
+                                              className={`${styles.modelSelectButton} ${model.name === currentSelectedModel ? styles.currentModel : ''}`}
+                                            >
+                                              <div className={styles.modelSelectInfo}>
+                                                <span className={styles.modelSelectIcon}>{model.icon || '💬'}</span>
+                                                <div>
+                                                  <div className={styles.modelSelectName}>{model.display_name}</div>
+                                                  <div className={styles.modelSelectProvider}>{model.provider}</div>
+                                                </div>
+                                              </div>
+                                              <div className={styles.modelSelectMeta}>
+                                                <span className={styles.modelSelectTier}>
+                                                  {model.tier === 'economical' ? '🆓' : 
+                                                   model.tier === 'fast' ? '⚡' : 
+                                                   model.tier === 'standard' ? '⭐' : 
+                                                   model.tier === 'premium' ? '💎' : '💬'}
+                                                </span>
+                                                {model.name === currentSelectedModel && <span className={styles.currentBadge}>✓</span>}
+                                              </div>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Search Results */}
+                                    {searchResults.length > 0 && !activeQuickAction && (
+                                      <div className={styles.modelSection}>
+                                        <h6>Search Results ({searchResults.length})</h6>
+                                        <div className={styles.modelsList}>
+                                          {searchResults.slice(0, 5).map((model, index) => (
+                                            <button
+                                              key={`search-${model.name}-${index}`}
+                                              onClick={() => handleModelSelection(model.name)}
+                                              className={`${styles.modelSelectButton} ${model.name === currentSelectedModel ? styles.currentModel : ''}`}
+                                            >
+                                              <div className={styles.modelSelectInfo}>
+                                                <span className={styles.modelSelectIcon}>{model.icon || '🤖'}</span>
+                                                <div>
+                                                  <div className={styles.modelSelectName}>{model.display_name}</div>
+                                                  <div className={styles.modelSelectProvider}>{model.provider}</div>
+                                                </div>
+                                              </div>
+                                              <div className={styles.modelSelectMeta}>
+                                                <span className={styles.modelSelectTier}>
+                                                  {model.tier === 'economical' ? '🆓' : 
+                                                   model.tier === 'fast' ? '⚡' : 
+                                                   model.tier === 'standard' ? '⭐' : 
+                                                   model.tier === 'premium' ? '💎' : '🤖'}
+                                                </span>
+                                                {model.name === currentSelectedModel && <span className={styles.currentBadge}>✓</span>}
+                                              </div>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Model Overview */}
+                                    {!activeQuickAction && searchResults.length === 0 && (
+                                      <div className={styles.modelSection}>
+                                        <h6>Model Categories</h6>
+                                        <div className={styles.categoryOverview}>
+                                          <button 
+                                            className={styles.categoryButton}
+                                            onClick={() => setActiveQuickAction('latest')}
+                                          >
+                                            <span className={styles.categoryIcon}>🆕</span>
+                                            <div className={styles.categoryInfo}>
+                                              <div className={styles.categoryName}>Latest</div>
+                                              <div className={styles.categoryCount}>{getLatestModels(availableModels).length} models</div>
+                                            </div>
+                                          </button>
+                                          <button 
+                                            className={styles.categoryButton}
+                                            onClick={() => setActiveQuickAction('free')}
+                                          >
+                                            <span className={styles.categoryIcon}>🆓</span>
+                                            <div className={styles.categoryInfo}>
+                                              <div className={styles.categoryName}>Free</div>
+                                              <div className={styles.categoryCount}>{getFreeModels(availableModels).length} models</div>
+                                            </div>
+                                          </button>
+                                          <button 
+                                            className={styles.categoryButton}
+                                            onClick={() => setActiveQuickAction('premium')}
+                                          >
+                                            <span className={styles.categoryIcon}>💎</span>
+                                            <div className={styles.categoryInfo}>
+                                              <div className={styles.categoryName}>Premium</div>
+                                              <div className={styles.categoryCount}>{getPremiumModels(availableModels).length} models</div>
+                                            </div>
+                                          </button>
+                                          <button 
+                                            className={styles.categoryButton}
+                                            onClick={() => setActiveQuickAction('thinkers')}
+                                          >
+                                            <span className={styles.categoryIcon}>🧠</span>
+                                            <div className={styles.categoryInfo}>
+                                              <div className={styles.categoryName}>Thinkers</div>
+                                              <div className={styles.categoryCount}>{getThinkerModels(availableModels).length} models</div>
+                                            </div>
+                                          </button>
+                                          <button 
+                                            className={styles.categoryButton}
+                                            onClick={() => setActiveQuickAction('instruct')}
+                                          >
+                                            <span className={styles.categoryIcon}>💬</span>
+                                            <div className={styles.categoryInfo}>
+                                              <div className={styles.categoryName}>Instruct</div>
+                                              <div className={styles.categoryCount}>{getInstructModels(availableModels).length} models</div>
+                                            </div>
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Database Statistics */}
+                                    {!activeQuickAction && searchResults.length === 0 && (
+                                      <div className={styles.modelSection}>
+                                        <h6>Database Statistics</h6>
+                                        <div className={styles.modelCounts}>
+                                          <p>📊 Total Available: {availableModels.filter(m => m.available).length}</p>
+                                          <p>🆓 Free Models: {getFreeModels(availableModels, 999).length}</p>
+                                          <p>💎 Premium Models: {getPremiumModels(availableModels, 999).length}</p>
+                                          <p>🧠 Thinking Models: {getThinkerModels(availableModels, 999).length}</p>
+                                          <p>💬 Instruct Models: {getInstructModels(availableModels, 999).length}</p>
+                                          <p>🆕 Latest Added: {getLatestModels(availableModels, 999).length}</p>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : modelInfo ? (
+                                  <div className={styles.modelInfoContent}>
                                     <div className={styles.modelInfoHeader}>
                                       <div className={styles.modelInfoTitle}>
                                         <span className={styles.modelIcon}>{modelInfo.icon || '🤖'}</span>
@@ -1819,15 +2175,13 @@ const HUD: React.FC<HUDProps> = ({
                                         </div>
                                       </div>
                                       <div className={styles.modelStatus}>
-                                        <span className={`${styles.statusBadge} ${modelInfo.is_current ? styles.current : ''}`}>
-                                          {modelInfo.is_current ? '🟢 Active' : (modelInfo.available ? '⚪ Available' : '🔴 Unavailable')}
-                                        </span>
-                                        <span className={`${styles.tierBadge} ${styles[modelInfo.tier]}`}>
-                                          {modelInfo.tier === 'economical' ? '🆓 Free' : 
-                                           modelInfo.tier === 'fast' ? '⚡ Fast' : 
-                                           modelInfo.tier === 'standard' ? '⭐ Standard' : 
-                                           modelInfo.tier === 'premium' ? '💎 Premium' : modelInfo.tier}
-                                        </span>
+                                        <button 
+                                          className={styles.switchModelButton}
+                                          onClick={() => setShowModelSelection(true)}
+                                          title="Switch to a different model"
+                                        >
+                                          Switch Model
+                                        </button>
                                       </div>
                                     </div>
 
@@ -1960,82 +2314,7 @@ const HUD: React.FC<HUDProps> = ({
                                     <p>No model information available</p>
                                   </div>
                                 )}
-                              </>
-                            ) : (
-                              <div className={styles.modelSelectionContent}>
-                                <div className={styles.selectionHeader}>
-                                  <h6>Model Selection</h6>
-                                  <p>Choose from available models or search for specific capabilities.</p>
-                                </div>
-                                
-                                <div className={styles.selectionSection}>
-                                  <h6>Current Model</h6>
-                                  <div className={styles.currentModelInfo}>
-                                    {currentSelectedModel ? (
-                                      <div className={styles.currentModelCard}>
-                                        <span className={styles.modelIcon}>
-                                          {availableModels.find(m => m.name === currentSelectedModel)?.icon || '🤖'}
-                                        </span>
-                                        <div className={styles.currentModelDetails}>
-                                          <span className={styles.modelName}>
-                                            {availableModels.find(m => m.name === currentSelectedModel)?.display_name || currentSelectedModel}
-                                          </span>
-                                          <span className={styles.modelProvider}>
-                                            {availableModels.find(m => m.name === currentSelectedModel)?.provider || 'Unknown'}
-                                          </span>
-                                        </div>
-                                        <span className={styles.currentBadge}>Active</span>
-                                      </div>
-                                    ) : (
-                                      <div className={styles.noModelSelected}>
-                                        <p>No model currently selected</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
 
-                                <div className={styles.selectionSection}>
-                                  <h6>Quick Actions</h6>
-                                  <div className={styles.quickActions}>
-                                    <button 
-                                      className={styles.quickActionButton}
-                                      onClick={() => setShowModelDropdown(true)}
-                                    >
-                                      🔍 Browse Models
-                                    </button>
-                                    <button 
-                                      className={styles.quickActionButton}
-                                      onClick={() => {
-                                        setModelSearchQuery('');
-                                        setShowModelDropdown(true);
-                                      }}
-                                    >
-                                      ⚡ Switch Model
-                                    </button>
-                                  </div>
-                                </div>
-
-                                <div className={styles.selectionSection}>
-                                  <h6>Recent Models</h6>
-                                  <div className={styles.recentModels}>
-                                    {availableModels.filter(m => m.is_popular).slice(0, 3).map((model, index) => (
-                                      <button
-                                        key={`recent-${model.name}-${index}`}
-                                        className={`${styles.recentModelItem} ${model.name === currentSelectedModel ? styles.active : ''}`}
-                                        onClick={() => handleModelSelection(model.name)}
-                                      >
-                                        <span className={styles.modelIcon}>{model.icon || '🤖'}</span>
-                                        <div className={styles.recentModelDetails}>
-                                          <span className={styles.modelName}>{model.display_name}</span>
-                                          <span className={styles.modelProvider}>{model.provider}</span>
-                                        </div>
-                                        {model.name === currentSelectedModel && <span className={styles.activeIndicator}>✓</span>}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
                           </div>
                         )}
 
