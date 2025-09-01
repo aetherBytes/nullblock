@@ -146,6 +146,7 @@ const HUD: React.FC<HUDProps> = ({
   const [modelInfo, setModelInfo] = useState<any>(null);
   const [isLoadingModelInfo, setIsLoadingModelInfo] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [modelInfoActiveTab, setModelInfoActiveTab] = useState<'info' | 'selection'>('info');
 
   // Expand states for containers
   const [isChatExpanded, setIsChatExpanded] = useState(false);
@@ -1754,10 +1755,26 @@ const HUD: React.FC<HUDProps> = ({
                       <div className={styles.scopesExpanded}>
                         <div className={styles.scopesContent}>
                           <div className={styles.scopesHeader}>
-                            <h5>
-                              {activeScope === 'modelinfo' ? '🤖 Model Information' : 
-                               `${scopesOptions.find(s => s.id === activeScope)?.icon} ${activeScope.charAt(0).toUpperCase() + activeScope.slice(1)}`}
-                            </h5>
+                            {activeScope === 'modelinfo' ? (
+                              <div className={styles.innerHudMenuBar}>
+                                <button 
+                                  className={`${styles.menuButton} ${modelInfoActiveTab === 'info' ? styles.active : ''}`}
+                                  onClick={() => setModelInfoActiveTab('info')}
+                                >
+                                  Model Information
+                                </button>
+                                <button 
+                                  className={`${styles.menuButton} ${modelInfoActiveTab === 'selection' ? styles.active : ''}`}
+                                  onClick={() => setModelInfoActiveTab('selection')}
+                                >
+                                  Selection
+                                </button>
+                              </div>
+                            ) : (
+                              <h5>
+                                {`${scopesOptions.find(s => s.id === activeScope)?.icon} ${activeScope.charAt(0).toUpperCase() + activeScope.slice(1)}`}
+                              </h5>
+                            )}
                             <div className={styles.scopesHeaderControls}>
                               <button 
                                 className={styles.expandButton}
@@ -1780,17 +1797,19 @@ const HUD: React.FC<HUDProps> = ({
 
                             {activeScope === 'modelinfo' && (
                               <div className={styles.modelInfoScope}>
-                                {isLoadingModelInfo ? (
-                                  <div className={styles.modelInfoLoading}>
-                                    <p>🔄 Loading model information...</p>
-                                  </div>
-                                ) : modelInfo?.error ? (
-                                  <div className={styles.modelInfoError}>
-                                    <h6>❌ Error Loading Model Info</h6>
-                                    <p>{modelInfo.error}</p>
-                                  </div>
-                                ) : modelInfo ? (
-                                  <div className={styles.modelInfoContent}>
+                                {modelInfoActiveTab === 'info' ? (
+                                  <>
+                                    {isLoadingModelInfo ? (
+                                      <div className={styles.modelInfoLoading}>
+                                        <p>🔄 Loading model information...</p>
+                                      </div>
+                                    ) : modelInfo?.error ? (
+                                      <div className={styles.modelInfoError}>
+                                        <h6>❌ Error Loading Model Info</h6>
+                                        <p>{modelInfo.error}</p>
+                                      </div>
+                                    ) : modelInfo ? (
+                                      <div className={styles.modelInfoContent}>
                                     <div className={styles.modelInfoHeader}>
                                       <div className={styles.modelInfoTitle}>
                                         <span className={styles.modelIcon}>{modelInfo.icon || '🤖'}</span>
@@ -1941,8 +1960,84 @@ const HUD: React.FC<HUDProps> = ({
                                     <p>No model information available</p>
                                   </div>
                                 )}
+                              </>
+                            ) : (
+                              <div className={styles.modelSelectionContent}>
+                                <div className={styles.selectionHeader}>
+                                  <h6>Model Selection</h6>
+                                  <p>Choose from available models or search for specific capabilities.</p>
+                                </div>
+                                
+                                <div className={styles.selectionSection}>
+                                  <h6>Current Model</h6>
+                                  <div className={styles.currentModelInfo}>
+                                    {currentSelectedModel ? (
+                                      <div className={styles.currentModelCard}>
+                                        <span className={styles.modelIcon}>
+                                          {availableModels.find(m => m.name === currentSelectedModel)?.icon || '🤖'}
+                                        </span>
+                                        <div className={styles.currentModelDetails}>
+                                          <span className={styles.modelName}>
+                                            {availableModels.find(m => m.name === currentSelectedModel)?.display_name || currentSelectedModel}
+                                          </span>
+                                          <span className={styles.modelProvider}>
+                                            {availableModels.find(m => m.name === currentSelectedModel)?.provider || 'Unknown'}
+                                          </span>
+                                        </div>
+                                        <span className={styles.currentBadge}>Active</span>
+                                      </div>
+                                    ) : (
+                                      <div className={styles.noModelSelected}>
+                                        <p>No model currently selected</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className={styles.selectionSection}>
+                                  <h6>Quick Actions</h6>
+                                  <div className={styles.quickActions}>
+                                    <button 
+                                      className={styles.quickActionButton}
+                                      onClick={() => setShowModelDropdown(true)}
+                                    >
+                                      🔍 Browse Models
+                                    </button>
+                                    <button 
+                                      className={styles.quickActionButton}
+                                      onClick={() => {
+                                        setModelSearchQuery('');
+                                        setShowModelDropdown(true);
+                                      }}
+                                    >
+                                      ⚡ Switch Model
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className={styles.selectionSection}>
+                                  <h6>Recent Models</h6>
+                                  <div className={styles.recentModels}>
+                                    {availableModels.filter(m => m.is_popular).slice(0, 3).map((model, index) => (
+                                      <button
+                                        key={`recent-${model.name}-${index}`}
+                                        className={`${styles.recentModelItem} ${model.name === currentSelectedModel ? styles.active : ''}`}
+                                        onClick={() => handleModelSelection(model.name)}
+                                      >
+                                        <span className={styles.modelIcon}>{model.icon || '🤖'}</span>
+                                        <div className={styles.recentModelDetails}>
+                                          <span className={styles.modelName}>{model.display_name}</span>
+                                          <span className={styles.modelProvider}>{model.provider}</span>
+                                        </div>
+                                        {model.name === currentSelectedModel && <span className={styles.activeIndicator}>✓</span>}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
                               </div>
                             )}
+                          </div>
+                        )}
 
                             {activeScope === 'settings' && (
                               <div className={styles.settingsScope}>
