@@ -108,7 +108,7 @@ const HUD: React.FC<HUDProps> = ({
   >('base');
   const [mainHudActiveTab, setMainHudActiveTab] = useState<
     'status' | 'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate'
-  >(publicKey ? 'status' : 'status');
+  >(publicKey ? 'hecate' : 'status');
   
   // Additional state needed for tab functionality
   const [tasks, setTasks] = useState<any[]>([]);
@@ -482,12 +482,6 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [currentSelectedModel, activeScope]);
 
-  // Set Latest as default when showing model selection
-  useEffect(() => {
-    if (showModelSelection && activeQuickAction === null) {
-      setActiveQuickAction('latest');
-    }
-  }, [showModelSelection]);
 
   const handleMCPAuthentication = async () => {
     if (!publicKey) {
@@ -968,7 +962,7 @@ const HUD: React.FC<HUDProps> = ({
       setIsModelChanging(true);
       setShowModelDropdown(false);
       setShowModelSelection(false);
-      setActiveQuickAction(null); // Reset quick action when switching models
+      setActiveQuickAction(null);
       
       console.log(`=== MODEL SWITCH START: ${currentSelectedModel} -> ${modelName} ===`);
       setNulleyeState('thinking');
@@ -1725,7 +1719,7 @@ const HUD: React.FC<HUDProps> = ({
                     <div className={styles.hecateChat}>
                       <div className={styles.chatHeader}>
                         <div className={styles.chatTitle}>
-                          <h4>Chat with Hecate</h4>
+                          <h4>{currentSelectedModel ? `HECATE:${currentSelectedModel.split('/').pop()?.split(':')[0]?.toUpperCase() || 'MODEL'}` : 'HECATE:LOADING'}</h4>
                           <span className={styles.chatStatus}>Live</span>
                         </div>
                         <div className={styles.chatHeaderControls}>
@@ -2227,16 +2221,11 @@ const HUD: React.FC<HUDProps> = ({
                                       </div>
                                       <div className={styles.modelStatus}>
                                         <button 
-                                          className={styles.refreshModelButton}
-                                          onClick={() => loadModelInfo(currentSelectedModel)}
-                                          disabled={isLoadingModelInfo}
-                                          title="Refresh model information"
-                                        >
-                                          {isLoadingModelInfo ? '⟳' : '🔄'}
-                                        </button>
-                                        <button 
                                           className={styles.switchModelButton}
-                                          onClick={() => setShowModelSelection(true)}
+                                          onClick={() => {
+                                            setShowModelSelection(true);
+                                            setActiveQuickAction('latest');
+                                          }}
                                           title="Switch to a different model"
                                         >
                                           Switch Model
@@ -2578,24 +2567,39 @@ const HUD: React.FC<HUDProps> = ({
                       </div>
                     ) : (
                       <div className={`${styles.scopesScrollContainer} ${isChatExpanded ? styles.hidden : ''}`}>
-                        <div className={styles.scopesInfoPanel}>
-                          <div className={styles.scopesInfoContent}>
-                            <div className={styles.headerWithTooltip}>
-                              <h3>🎯 Scopes</h3>
-                              <div className={styles.tooltipContainer}>
-                                <div className={styles.helpIcon}>?</div>
-                                <div className={styles.tooltip}>
-                                  <div className={styles.tooltipContent}>
-                                    <h4>Scopes</h4>
-                                    <p>
-                                      Scopes are focused work environments, each tailored for specific tasks
-                                      like code generation, data analysis, automation, and more. Select a
-                                      scope to access its specialized toolset.
-                                    </p>
-                                  </div>
+                        <div className={styles.chatHeader}>
+                          <div className={styles.chatTitle}>
+                            <h4>🎯 Scopes</h4>
+                            <div className={styles.tooltipContainer}>
+                              <div className={styles.helpIcon}>?</div>
+                              <div className={styles.tooltip}>
+                                <div className={styles.tooltipContent}>
+                                  <h4>Scopes</h4>
+                                  <p>
+                                    Scopes are focused work environments, each tailored for specific tasks
+                                    like code generation, data analysis, automation, and more. Select a
+                                    scope to access its specialized toolset.
+                                  </p>
                                 </div>
                               </div>
                             </div>
+                          </div>
+                          <div className={styles.chatHeaderControls}>
+                            <button 
+                              className={styles.expandButton}
+                              onClick={() => {
+                                const newScopesExpanded = !isScopesExpanded;
+                                setIsScopesExpanded(newScopesExpanded);
+                                if (isChatExpanded) setIsChatExpanded(false); // Close chat if open
+                              }}
+                              title={isScopesExpanded ? "Exit full screen" : "Expand scopes full screen"}
+                            >
+                              {isScopesExpanded ? '⊟' : '⊞'}
+                            </button>
+                          </div>
+                        </div>
+                        <div className={styles.scopesInfoPanel}>
+                          <div className={styles.scopesInfoContent}>
 
                             <div className={styles.scopesAppsSection}>
                               <div className={styles.scopesAppsGrid}>
@@ -2621,33 +2625,33 @@ const HUD: React.FC<HUDProps> = ({
                     {/* Hecate Avatar static at bottom of scopes container */}
                     {!activeScope && (
                       <div className={styles.scopesAvatar}>
-                      <div className={styles.avatarCircle}>
-                        <div className={`${styles.nullviewAvatar} ${styles[nullviewState]} ${styles.clickableNulleye}`}>
-                          <div className={styles.pulseRingAvatar}></div>
-                          <div className={styles.dataStreamAvatar}>
-                            <div className={styles.streamLineAvatar}></div>
-                            <div className={styles.streamLineAvatar}></div>
-                            <div className={styles.streamLineAvatar}></div>
+                        <div className={styles.avatarCircle}>
+                          <div className={`${styles.nullviewAvatar} ${styles[nullviewState]} ${styles.clickableNulleye}`}>
+                            <div className={styles.pulseRingAvatar}></div>
+                            <div className={styles.dataStreamAvatar}>
+                              <div className={styles.streamLineAvatar}></div>
+                              <div className={styles.streamLineAvatar}></div>
+                              <div className={styles.streamLineAvatar}></div>
+                            </div>
+                            <div className={styles.lightningContainer}>
+                              <div className={styles.lightningArc}></div>
+                              <div className={styles.lightningArc}></div>
+                              <div className={styles.lightningArc}></div>
+                              <div className={styles.lightningArc}></div>
+                              <div className={styles.lightningArc}></div>
+                              <div className={styles.lightningArc}></div>
+                              <div className={styles.lightningArc}></div>
+                              <div className={styles.lightningArc}></div>
+                            </div>
+                            <div className={styles.staticField}></div>
+                            <div className={styles.coreNodeAvatar}></div>
                           </div>
-                          <div className={styles.lightningContainer}>
-                            <div className={styles.lightningArc}></div>
-                            <div className={styles.lightningArc}></div>
-                            <div className={styles.lightningArc}></div>
-                            <div className={styles.lightningArc}></div>
-                            <div className={styles.lightningArc}></div>
-                            <div className={styles.lightningArc}></div>
-                            <div className={styles.lightningArc}></div>
-                            <div className={styles.lightningArc}></div>
-                          </div>
-                          <div className={styles.staticField}></div>
-                          <div className={styles.coreNodeAvatar}></div>
+                        </div>
+                        <div className={styles.avatarInfo}>
+                          <h4>Hecate</h4>
+                          <p>Primary Interface Agent</p>
                         </div>
                       </div>
-                      <div className={styles.avatarInfo}>
-                        <h4>Hecate</h4>
-                        <p>Primary Interface Agent</p>
-                      </div>
-                    </div>
                     )}
                   </div>
                   </div>

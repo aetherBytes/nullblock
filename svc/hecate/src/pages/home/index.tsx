@@ -22,7 +22,14 @@ const Home: React.FC = () => {
   const [walletConnected, setWalletConnected] = useState<boolean>(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [showHUD, setShowHUD] = useState<boolean>(true);
-  const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>('dark');
+  const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>(() => {
+    // Initialize theme synchronously from localStorage to prevent flash
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('currentTheme');
+      return (savedTheme as 'null' | 'light' | 'dark') || 'dark';
+    }
+    return 'dark';
+  });
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
@@ -53,7 +60,6 @@ const Home: React.FC = () => {
     // Check if we have a saved wallet connection
     const savedPublicKey = localStorage.getItem('walletPublickey');
     const lastAuth = localStorage.getItem('lastAuthTime');
-    const savedTheme = localStorage.getItem('currentTheme');
 
     // Set initial states based on localStorage
     if (savedPublicKey && lastAuth && isSessionValid()) {
@@ -62,10 +68,6 @@ const Home: React.FC = () => {
     } else {
       setWalletConnected(false);
       setPublicKey(null);
-    }
-
-    if (savedTheme) {
-      setCurrentTheme(savedTheme as 'null' | 'light');
     }
 
     // Set initialization flag with slight delay for smooth startup
