@@ -485,6 +485,7 @@ def create_app() -> FastAPI:
                         "context_length": config.metrics.context_window,
                         "capabilities": [cap.value for cap in config.capabilities],
                         "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
+                        "pricing": getattr(config, 'pricing', None),  # OpenRouter pricing structure
                         "supports_reasoning": getattr(config, 'supports_reasoning', False) or ModelCapability.REASONING in config.capabilities,
                         "description": config.description,
                         "is_popular": model_name in POPULAR_MODELS,
@@ -510,6 +511,7 @@ def create_app() -> FastAPI:
                         "context_length": config.metrics.context_window,
                         "capabilities": [cap.value for cap in config.capabilities],
                         "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
+                        "pricing": getattr(config, 'pricing', None),  # OpenRouter pricing structure
                         "supports_reasoning": getattr(config, 'supports_reasoning', False) or ModelCapability.REASONING in config.capabilities,
                         "description": config.description,
                         "is_popular": model_name in POPULAR_MODELS,
