@@ -358,7 +358,8 @@ def create_app() -> FastAPI:
                     "supports_reasoning": getattr(config, 'supports_reasoning', False),
                     "description": config.description,
                     "is_popular": getattr(config, 'is_popular', False),
-                    "categories": model_categories
+                    "categories": model_categories,
+                    "created": getattr(config, 'created', None)  # Use real timestamp from config
                 }
                 model_list.append(model_data)
             
@@ -468,7 +469,6 @@ def create_app() -> FastAPI:
             available_models = []
             
             # Get static models
-            
             for model_name, config in AVAILABLE_MODELS.items():
                 # Check if model is truly available (API keys, etc.)
                 is_truly_available = agent.is_model_available(model_name)
@@ -487,7 +487,8 @@ def create_app() -> FastAPI:
                         "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
                         "supports_reasoning": getattr(config, 'supports_reasoning', False) or ModelCapability.REASONING in config.capabilities,
                         "description": config.description,
-                        "is_popular": model_name in POPULAR_MODELS
+                        "is_popular": model_name in POPULAR_MODELS,
+                        "created": getattr(config, 'created', None)  # Use real timestamp from config
                     })
             
             # Get dynamic models from OpenRouter (popular ones first)
@@ -511,7 +512,8 @@ def create_app() -> FastAPI:
                         "cost_per_1k_tokens": config.metrics.cost_per_1k_tokens,
                         "supports_reasoning": getattr(config, 'supports_reasoning', False) or ModelCapability.REASONING in config.capabilities,
                         "description": config.description,
-                        "is_popular": model_name in POPULAR_MODELS
+                        "is_popular": model_name in POPULAR_MODELS,
+                        "created": getattr(config, 'created', None)  # Use real timestamp from config
                     })
             
             # Sort by popularity first, then availability, then provider and name

@@ -8686,3 +8686,406 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     display: none;
   }
 }
+
+// Model Selection Styles
+.switchModelButton {
+  background: linear-gradient(135deg, rgba(0, 168, 255, 0.2) 0%, rgba(0, 168, 255, 0.1) 100%);
+  border: 1px solid rgba(0, 168, 255, 0.3);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  margin-left: 12px;
+  white-space: nowrap;
+  
+  &:hover {
+    background: linear-gradient(135deg, rgba(0, 168, 255, 0.3) 0%, rgba(0, 168, 255, 0.2) 100%);
+    border-color: rgba(0, 168, 255, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 168, 255, 0.2);
+  }
+  
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(0, 168, 255, 0.3);
+  }
+}
+
+.modelSelectionContent {
+  padding: 0;
+  max-height: 70vh;
+  overflow-y: auto;
+  
+  // Custom scrollbar styling
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 168, 255, 0.3);
+    border-radius: 3px;
+    
+    &:hover {
+      background: rgba(0, 168, 255, 0.5);
+    }
+  }
+  
+  // Firefox scrollbar styling
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 168, 255, 0.3) rgba(255, 255, 255, 0.1);
+}
+
+.modelSelectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 0 5px 0;
+  margin-bottom: 0;
+  
+  .modelSearchInput {
+    flex: 1;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    transition: all 0.2s ease;
+    
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+    
+    &:focus {
+      outline: none;
+      border-color: rgba(0, 168, 255, 0.5);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 2px rgba(0, 168, 255, 0.1);
+    }
+  }
+  
+  .searchingIndicator {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  
+  h6 {
+    color: $echo-blue;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+.backButton {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 10px 16px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.modalContent {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10, 10, 10, 0.95);
+  border: 1px solid rgba(0, 168, 255, 0.3);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  z-index: 1001;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(0, 168, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 20px 15px 20px;
+  border-bottom: 1px solid rgba(0, 168, 255, 0.2);
+  background: linear-gradient(135deg, rgba(0, 168, 255, 0.05) 0%, transparent 100%);
+  
+  h4 {
+    color: $echo-blue;
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 5px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.modalBody {
+  padding: 20px;
+  max-height: calc(80vh - 80px);
+  overflow-y: auto;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 168, 255, 0.3);
+    border-radius: 3px;
+    
+    &:hover {
+      background: rgba(0, 168, 255, 0.5);
+    }
+  }
+}
+
+.modelSearchSection {
+  margin-bottom: 25px;
+}
+
+.quickActionsMenu {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin: 2px 0 20px 0;
+  padding: 0.3rem 1rem;
+}
+
+.quickActionTab {
+  background: none;
+  border: none;
+  color: $lightning-silver;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0.3rem 0;
+  position: relative;
+  white-space: nowrap;
+  text-shadow:
+    0 0 4px rgba($lightning-silver, 0.6),
+    0 0 8px rgba($lightning-silver, 0.3),
+    0 0 12px rgba($lightning-silver, 0.1);
+
+  &:hover {
+    color: $echo-blue;
+    text-shadow:
+      0 0 6px rgba($echo-blue, 0.7),
+      0 0 12px rgba($echo-blue, 0.4),
+      0 0 18px rgba($echo-blue, 0.2);
+  }
+
+  &:active {
+    color: rgba($echo-blue, 0.9);
+    text-shadow:
+      0 0 4px rgba($echo-blue, 0.8),
+      0 0 8px rgba($echo-blue, 0.5);
+  }
+  
+  // Active state styling
+  &.active {
+    color: $echo-blue;
+    text-shadow:
+      0 0 6px rgba($echo-blue, 0.8),
+      0 0 12px rgba($echo-blue, 0.5),
+      0 0 18px rgba($echo-blue, 0.3);
+    background: rgba($echo-blue, 0.1);
+  }
+  
+  // Lightning divider after each button (except last)
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: -0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 12px;
+    background: linear-gradient(
+      45deg,
+      transparent 0%,
+      rgba($lightning-silver, 0.3) 30%,
+      rgba($echo-blue, 0.4) 50%,
+      rgba($lightning-silver, 0.3) 70%,
+      transparent 100%
+    );
+    box-shadow:
+      0 0 3px rgba($echo-blue, 0.2),
+      0 0 6px rgba($lightning-silver, 0.1);
+  }
+}
+
+.modelSection {
+  margin-bottom: 25px;
+  
+  h6 {
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.modelsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modelSelectButton {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  
+  &:hover {
+    background: rgba(0, 168, 255, 0.1);
+    border-color: rgba(0, 168, 255, 0.3);
+    transform: translateY(-1px);
+  }
+  
+  &.currentModel {
+    background: rgba(76, 175, 80, 0.1);
+    border-color: rgba(76, 175, 80, 0.5);
+  }
+}
+
+.modelSelectInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modelSelectIcon {
+  font-size: 20px;
+}
+
+.modelSelectName {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.modelSelectProvider {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.modelSelectMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modelSelectTier {
+  font-size: 16px;
+}
+
+.currentBadge {
+  color: #4CAF50;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.quickActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.quickActionButton {
+  padding: 10px 16px;
+  background: rgba(0, 168, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 168, 255, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(0, 168, 255, 0.3);
+    border-color: rgba(0, 168, 255, 0.5);
+    transform: translateY(-1px);
+  }
+}
+
+.modelCounts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  
+  p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+  }
+}
