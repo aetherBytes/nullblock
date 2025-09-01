@@ -475,7 +475,9 @@ const HUD: React.FC<HUDProps> = ({
 
   // Auto-load model info when current model changes
   useEffect(() => {
+    console.log('Model info effect triggered:', { currentSelectedModel, activeScope });
     if (currentSelectedModel && activeScope === 'modelinfo') {
+      console.log('Loading model info automatically for:', currentSelectedModel);
       loadModelInfo(currentSelectedModel);
     }
   }, [currentSelectedModel, activeScope]);
@@ -637,6 +639,9 @@ const HUD: React.FC<HUDProps> = ({
       const currentModelName = modelName || currentSelectedModel;
       
       if (!currentModelName) {
+        console.warn('No model currently selected for model info');
+        console.log('currentSelectedModel:', currentSelectedModel);
+        console.log('modelName param:', modelName);
         setModelInfo({ error: 'No model currently selected' });
         return;
       }
@@ -652,10 +657,31 @@ const HUD: React.FC<HUDProps> = ({
       // Use the rich model info from available models
       console.log('Model info loaded:', currentModelInfo);
       
+      // Debug pricing information structure
+      console.log('=== FULL MODEL DATA STRUCTURE ===');
+      console.log('Full model info:', JSON.stringify(currentModelInfo, null, 2));
+      console.log('=== PRICING ANALYSIS ===');
+      console.log('Pricing object exists:', !!currentModelInfo.pricing);
+      console.log('Pricing object:', currentModelInfo.pricing);
+      console.log('cost_per_1k_tokens:', currentModelInfo.cost_per_1k_tokens);
+      console.log('tier:', currentModelInfo.tier);
+      console.log('=== END DEBUG ===');
+      
+      // Add debugging for cost information
+      if (currentModelInfo.cost_per_1k_tokens === 0 && currentModelInfo.tier !== 'economical') {
+        console.warn(`⚠️ Model ${currentModelName} shows $0 cost but tier is ${currentModelInfo.tier} - pricing may be outdated`);
+      }
+      
+      if (!currentModelInfo.pricing && currentModelInfo.cost_per_1k_tokens === 0) {
+        console.warn(`⚠️ Model ${currentModelName} missing pricing object and shows $0 cost`);
+      }
+      
       // Add is_current field based on current selection
       const enrichedModelInfo = {
         ...currentModelInfo,
-        is_current: currentModelName === currentSelectedModel
+        is_current: currentModelName === currentSelectedModel,
+        // Add timestamp for when this info was loaded
+        info_loaded_at: new Date().toISOString()
       };
       
       setModelInfo(enrichedModelInfo);
@@ -1139,7 +1165,17 @@ const HUD: React.FC<HUDProps> = ({
     
     // Load data when specific scopes are opened
     if (newScope === 'modelinfo') {
-      loadModelInfo(currentSelectedModel);
+      console.log('Loading model info for scope click, currentSelectedModel:', currentSelectedModel);
+      if (!currentSelectedModel) {
+        console.warn('No current model selected, attempting to reload models first');
+        loadAvailableModels().then(() => {
+          if (currentSelectedModel) {
+            loadModelInfo(currentSelectedModel);
+          }
+        });
+      } else {
+        loadModelInfo(currentSelectedModel);
+      }
     }
   };
 
@@ -1805,6 +1841,21 @@ const HUD: React.FC<HUDProps> = ({
                                   <div className={styles.modelInfoError}>
                                     <h6>❌ Error Loading Model Info</h6>
                                     <p>{modelInfo.error}</p>
+                                    <div style={{marginTop: '10px', fontSize: '12px', color: '#666'}}>
+                                      <p>Debug info:</p>
+                                      <p>• Current selected model: {currentSelectedModel || 'None'}</p>
+                                      <p>• Available models: {availableModels.length}</p>
+                                      <p>• Default loaded: {defaultModelLoaded ? 'Yes' : 'No'}</p>
+                                    </div>
+                                    <button 
+                                      onClick={() => {
+                                        console.log('Manual reload triggered');
+                                        loadAvailableModels();
+                                      }}
+                                      style={{marginTop: '10px', padding: '5px 10px', border: '1px solid #ccc', borderRadius: '4px'}}
+                                    >
+                                      Reload Models
+                                    </button>
                                   </div>
                                 ) : showModelSelection ? (
                                   <div className={styles.modelSelectionContent}>
@@ -2176,6 +2227,14 @@ const HUD: React.FC<HUDProps> = ({
                                       </div>
                                       <div className={styles.modelStatus}>
                                         <button 
+                                          className={styles.refreshModelButton}
+                                          onClick={() => loadModelInfo(currentSelectedModel)}
+                                          disabled={isLoadingModelInfo}
+                                          title="Refresh model information"
+                                        >
+                                          {isLoadingModelInfo ? '⟳' : '🔄'}
+                                        </button>
+                                        <button 
                                           className={styles.switchModelButton}
                                           onClick={() => setShowModelSelection(true)}
                                           title="Switch to a different model"
@@ -2222,12 +2281,40 @@ const HUD: React.FC<HUDProps> = ({
                                           <span className={styles.specLabel}>Context Length:</span>
                                           <span className={styles.specValue}>{modelInfo.context_length?.toLocaleString() || 'N/A'} tokens</span>
                                         </div>
-                                        {modelInfo.max_tokens > 0 && (
+                                        {modelInfo.top_provider?.max_completion_tokens && (
                                           <div className={styles.specItem}>
                                             <span className={styles.specLabel}>Max Output:</span>
-                                            <span className={styles.specValue}>{modelInfo.max_tokens.toLocaleString()} tokens</span>
+                                            <span className={styles.specValue}>{modelInfo.top_provider.max_completion_tokens.toLocaleString()} tokens</span>
                                           </div>
                                         )}
+                                        {modelInfo.architecture?.tokenizer && (
+                                          <div className={styles.specItem}>
+                                            <span className={styles.specLabel}>Tokenizer:</span>
+                                            <span className={styles.specValue}>{modelInfo.architecture.tokenizer}</span>
+                                          </div>
+                                        )}
+                                        {modelInfo.architecture?.instruct_type && (
+                                          <div className={styles.specItem}>
+                                            <span className={styles.specLabel}>Instruct Type:</span>
+                                            <span className={styles.specValue}>{modelInfo.architecture.instruct_type}</span>
+                                          </div>
+                                        )}
+                                        <div className={styles.specItem}>
+                                          <span className={styles.specLabel}>Input Modalities:</span>
+                                          <span className={styles.specValue}>
+                                            {modelInfo.architecture?.input_modalities ? 
+                                              modelInfo.architecture.input_modalities.map(m => m === 'text' ? '📝' : m === 'image' ? '🖼️' : m).join(' ') : 
+                                              '📝 Text'}
+                                          </span>
+                                        </div>
+                                        <div className={styles.specItem}>
+                                          <span className={styles.specLabel}>Output Modalities:</span>
+                                          <span className={styles.specValue}>
+                                            {modelInfo.architecture?.output_modalities ? 
+                                              modelInfo.architecture.output_modalities.map(m => m === 'text' ? '📝' : m === 'image' ? '🖼️' : m).join(' ') : 
+                                              '📝 Text'}
+                                          </span>
+                                        </div>
                                         <div className={styles.specItem}>
                                           <span className={styles.specLabel}>Reasoning:</span>
                                           <span className={styles.specValue}>
@@ -2246,12 +2333,36 @@ const HUD: React.FC<HUDProps> = ({
                                         </div>
                                         <div className={styles.specItem}>
                                           <span className={styles.specLabel}>Vision:</span>
-                                          <span className={styles.specValue}>{modelInfo.supports_vision ? '✅ Yes' : '❌ No'}</span>
+                                          <span className={styles.specValue}>
+                                            {modelInfo.architecture?.input_modalities?.includes('image') ? '✅ Yes' : '❌ No'}
+                                          </span>
                                         </div>
                                         <div className={styles.specItem}>
                                           <span className={styles.specLabel}>Function Calls:</span>
                                           <span className={styles.specValue}>{modelInfo.supports_function_calling ? '✅ Yes' : '❌ No'}</span>
                                         </div>
+                                        {modelInfo.top_provider?.is_moderated !== undefined && (
+                                          <div className={styles.specItem}>
+                                            <span className={styles.specLabel}>Moderation:</span>
+                                            <span className={styles.specValue}>
+                                              {modelInfo.top_provider.is_moderated ? '🛡️ Moderated' : '🔓 Unmoderated'}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {modelInfo.created && (
+                                          <div className={styles.specItem}>
+                                            <span className={styles.specLabel}>Created:</span>
+                                            <span className={styles.specValue}>
+                                              {new Date(modelInfo.created * 1000).toLocaleDateString()}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {modelInfo.hugging_face_id && (
+                                          <div className={styles.specItem}>
+                                            <span className={styles.specLabel}>HuggingFace ID:</span>
+                                            <span className={styles.specValue}>{modelInfo.hugging_face_id}</span>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
 
@@ -2259,23 +2370,89 @@ const HUD: React.FC<HUDProps> = ({
                                       <h6>💰 Cost Information</h6>
                                       <div className={styles.costInfo}>
                                         <div className={styles.specItem}>
-                                          <span className={styles.specLabel}>Cost per 1K tokens:</span>
+                                          <span className={styles.specLabel}>Tier:</span>
                                           <span className={styles.specValue}>
-                                            {modelInfo.cost_per_1k_tokens === 0 ? '🆓 Free' : `$${modelInfo.cost_per_1k_tokens.toFixed(6)}`}
+                                            {modelInfo.tier === 'economical' ? '🆓 Free' : 
+                                             modelInfo.tier === 'fast' ? '⚡ Fast' : 
+                                             modelInfo.tier === 'standard' ? '⭐ Standard' : 
+                                             modelInfo.tier === 'premium' ? '💎 Premium' : 
+                                             modelInfo.tier || 'Unknown'}
                                           </span>
                                         </div>
-                                        <div className={styles.specItem}>
-                                          <span className={styles.specLabel}>Cost per 1M tokens:</span>
-                                          <span className={styles.specValue}>
-                                            {modelInfo.cost_per_1k_tokens === 0 ? '🆓 Free' : `$${(modelInfo.cost_per_1k_tokens * 1000).toFixed(2)}`}
-                                          </span>
-                                        </div>
+                                        {modelInfo.pricing ? (
+                                          <>
+                                            <div className={styles.specItem}>
+                                              <span className={styles.specLabel}>Input tokens (1M):</span>
+                                              <span className={styles.specValue}>
+                                                {!modelInfo.pricing.prompt || modelInfo.pricing.prompt === "0" || modelInfo.pricing.prompt === 0 
+                                                  ? '🆓 Free' 
+                                                  : `$${(parseFloat(modelInfo.pricing.prompt) * 1000000).toFixed(3)}`}
+                                              </span>
+                                            </div>
+                                            <div className={styles.specItem}>
+                                              <span className={styles.specLabel}>Output tokens (1M):</span>
+                                              <span className={styles.specValue}>
+                                                {!modelInfo.pricing.completion || modelInfo.pricing.completion === "0" || modelInfo.pricing.completion === 0
+                                                  ? '🆓 Free'
+                                                  : `$${(parseFloat(modelInfo.pricing.completion) * 1000000).toFixed(3)}`}
+                                              </span>
+                                            </div>
+                                            {modelInfo.pricing.image && modelInfo.pricing.image !== "0" && (
+                                              <div className={styles.specItem}>
+                                                <span className={styles.specLabel}>Image processing:</span>
+                                                <span className={styles.specValue}>${parseFloat(modelInfo.pricing.image).toFixed(6)} per image</span>
+                                              </div>
+                                            )}
+                                            {modelInfo.pricing.internal_reasoning && modelInfo.pricing.internal_reasoning !== "0" && (
+                                              <div className={styles.specItem}>
+                                                <span className={styles.specLabel}>Internal reasoning:</span>
+                                                <span className={styles.specValue}>${parseFloat(modelInfo.pricing.internal_reasoning).toFixed(6)} per token</span>
+                                              </div>
+                                            )}
+                                          </>
+                                        ) : modelInfo.cost_per_1k_tokens !== undefined ? (
+                                          <>
+                                            <div className={styles.specItem}>
+                                              <span className={styles.specLabel}>Combined cost (1K tokens):</span>
+                                              <span className={styles.specValue}>
+                                                {modelInfo.cost_per_1k_tokens === 0 || modelInfo.cost_per_1k_tokens === null || modelInfo.cost_per_1k_tokens === undefined
+                                                  ? (modelInfo.tier === 'economical' ? '🆓 Free' : '❓ Variable pricing') 
+                                                  : `$${Number(modelInfo.cost_per_1k_tokens).toFixed(8)}`}
+                                              </span>
+                                            </div>
+                                            <div className={styles.specItem}>
+                                              <span className={styles.specLabel}>Combined cost (1M tokens):</span>
+                                              <span className={styles.specValue}>
+                                                {modelInfo.cost_per_1k_tokens === 0 || modelInfo.cost_per_1k_tokens === null || modelInfo.cost_per_1k_tokens === undefined
+                                                  ? (modelInfo.tier === 'economical' ? '🆓 Free' : '❓ Variable pricing') 
+                                                  : `$${(Number(modelInfo.cost_per_1k_tokens) * 1000).toFixed(5)}`}
+                                              </span>
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <div className={styles.specItem}>
+                                            <span className={styles.specLabel}>⚠️ Pricing data:</span>
+                                            <span className={styles.specValue}>
+                                              <span style={{color: 'red'}}>No pricing information available</span>
+                                            </span>
+                                          </div>
+                                        )}
                                         {modelInfo.estimated_session_cost !== undefined && (
                                           <div className={styles.specItem}>
                                             <span className={styles.specLabel}>Estimated session cost:</span>
                                             <span className={styles.specValue}>${modelInfo.estimated_session_cost.toFixed(6)}</span>
                                           </div>
                                         )}
+                                        <div className={styles.costWarning}>
+                                          <p>
+                                            <strong>ℹ️ Pricing Info:</strong> Data sourced from OpenRouter API. 
+                                            Rates are updated regularly but may vary by provider and usage patterns. 
+                                            Free tier usage may have daily limits.
+                                          </p>
+                                          {modelInfo.info_loaded_at && (
+                                            <p><small>Last updated: {new Date(modelInfo.info_loaded_at).toLocaleString()}</small></p>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
 
@@ -2290,6 +2467,23 @@ const HUD: React.FC<HUDProps> = ({
                                               title={capability.replace('_', ' ')}
                                             >
                                               {capability.replace('_', ' ')}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {modelInfo.supported_parameters && modelInfo.supported_parameters.length > 0 && (
+                                      <div className={styles.modelInfoSection}>
+                                        <h6>⚙️ Supported Parameters</h6>
+                                        <div className={styles.parametersList}>
+                                          {modelInfo.supported_parameters.map((param: string) => (
+                                            <span 
+                                              key={param} 
+                                              className={styles.parameterTag}
+                                              title={`Supports ${param} parameter`}
+                                            >
+                                              {param}
                                             </span>
                                           ))}
                                         </div>
