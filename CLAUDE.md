@@ -112,67 +112,71 @@ svc/erebus/src/resources/crossroads/
 - **Social Trading**: Twitter monitoring, sentiment analysis, risk assessment
 - **Arbitrage**: Price monitoring, strategy execution with MEV protection
 
-## 🛣️ Crossroads Decentralized Marketplace System
+## 🛣️ Crossroads Marketplace System
 
-### Core Vision
-- **"Craigslist meets OpenSea meets Open Bazaar"**: Decentralized marketplace for AI agents, workflows, and MCP servers
-- **Blockchain-Based**: Tokenization and trading of agents as NFTs with smart contract integration
-- **MCP Self-Registration**: Servers can autonomously register via metadata without human intervention
-- **MCP-to-MCP Sampling**: Resource sharing between servers with tokenized incentives
-- **Agent Interoperability**: Standardized interfaces for seamless agent coordination
-- **Wealth Distribution**: Token-based reward pools for ecosystem participation
+### Core Purpose - **"Craigslist for AI Agents"**
+- **Focused Marketplace**: Simple listing and discovery of agents, workflows, tools, and MCP servers
+- **Service Discovery**: Automatic discovery and cataloging of available Nullblock services
+- **Integration Hub**: Connect with other Erebus subsystems for advanced functionality
+- **Unified Interface**: Single place to find and list AI services in the ecosystem
 
 ### Core Features
 
 #### Marketplace Operations
-- **Asset Tokenization**: Convert agents/workflows into tradeable blockchain assets
-- **Decentralized Trading**: Peer-to-peer trading with automated market makers
-- **Pricing Models**: Free, pay-per-use, subscription, token staking, revenue sharing
-- **Smart Contracts**: Automated royalty distribution and transaction execution
+- **Listing Management**: Create, update, approve, delete marketplace listings
+- **Advanced Search**: Filter by type, tags, author, rating, price with full-text search
+- **Featured Listings**: Curated showcase of premium content
+- **Service Integration**: Connects to Nullblock Agent/MCP/Orchestration services for data
 
-#### MCP Self-Registration & Discovery
-- **Autonomous Registration**: MCP servers self-describe and register automatically
-- **Metadata-Driven**: Rich protocol metadata enables discovery without human input
-- **Health Monitoring**: Continuous heartbeat and capability tracking
-- **Sampling Coordination**: Server-to-server resource sharing and sampling
-- **Verification System**: Trust levels from pending to verified/trusted
+#### Service Discovery Engine
+- **Agent Discovery**: Finds agents from Nullblock Agents service (port 9001)
+- **Workflow Discovery**: Finds workflows from Orchestration service (port 8002)
+- **MCP Server Discovery**: Finds MCP servers from MCP service (port 8001)
+- **Health Monitoring**: Continuous health checks and service availability tracking
+- **Real-time Scanning**: On-demand discovery scans with performance metrics
 
-#### Wealth Distribution System
-- **Reward Pools**: Tokenized incentive distribution based on participation
-- **Distribution Criteria**: Usage, staking, liquidity provision, contributions, governance
-- **Automated Payouts**: Scheduled distributions (daily/weekly/monthly)
-- **Multi-factor Rewards**: Combined metrics for fair value distribution
+#### Marketplace Administration
+- **Listing Moderation**: Approve, reject, and feature marketplace listings
+- **Quality Control**: Ensure marketplace integrity and content standards
+- **Admin Dashboard**: Administrative controls for marketplace management
 
-#### Agent Interoperability
-- **Capability Matrix**: Standardized agent capability descriptions
-- **Schema Definitions**: Reusable task/response/config schemas
-- **Compatibility Checking**: Automated agent interoperability verification
-- **Integration Kits**: Tools to make non-MCP agents marketplace-ready
-
-### API Categories (via Erebus port 3000)
+### API Endpoints (via Erebus port 3000)
 
 #### Core Marketplace
-- **Marketplace API** (`/api/marketplace/*`): Listings, search, stats, featured content
-- **Discovery API** (`/api/discovery/*`): Service scanning, health monitoring
+- **`/api/marketplace/listings`**: CRUD operations for listings
+- **`/api/marketplace/search`**: Advanced search functionality
+- **`/api/marketplace/featured`**: Featured content management
+- **`/api/marketplace/stats`**: Marketplace statistics and metrics
 
-#### Blockchain & Tokenization
-- **Tokenization API** (`/api/blockchain/*`): Asset tokenization, trading, portfolio management
-- **Wealth Distribution API** (`/api/wealth/*`): Reward pools, distribution triggers, user rewards
-
-#### MCP Integration
-- **MCP Registration API** (`/api/mcp/*`): Server registration, metadata, heartbeats, sampling
-- **Agent Interoperability API** (`/api/agents/*`): Interface registration, compatibility, schemas
+#### Service Discovery  
+- **`/api/discovery/agents`**: Agent discovery with Nullblock service integration
+- **`/api/discovery/workflows`**: Workflow discovery from orchestration service
+- **`/api/discovery/mcp-servers`**: MCP server discovery and scanning
+- **`/api/discovery/scan`**: Trigger full discovery scans
+- **`/api/discovery/health/:endpoint`**: Check individual service health
 
 #### Administration
-- **Admin API** (`/api/admin/*`): Listing moderation, MCP verification, system stats
-- **Health API** (`/api/crossroads/health`): Full system health monitoring
+- **`/api/admin/listings/approve/:id`**: Approve marketplace listings
+- **`/api/admin/listings/reject/:id`**: Reject marketplace listings  
+- **`/api/admin/listings/feature/:id`**: Feature marketplace listings
+
+#### Health & Status
+- **`/api/crossroads/health`**: Crossroads subsystem health monitoring
+
+### Service Integration Architecture
+Crossroads integrates with other Nullblock services for extended functionality:
+
+- **For MCP Operations**: Use MCP service endpoints (`/svc/nullblock-mcp/`)
+- **For Blockchain/Tokenization**: Use dedicated blockchain service (to be implemented)
+- **For Wealth Distribution**: Use dedicated rewards service (to be implemented)  
+- **For Agent Interoperability**: Use extended Agents service functionality
 
 ### Integration Benefits
-- **Unified Architecture**: All marketplace functions integrated into Erebus (port 3000 only)
-- **Blockchain Ready**: Built-in support for Ethereum, tokenization, and smart contracts
-- **MCP Native**: First-class Model Context Protocol support with self-registration
-- **Agent Ecosystem**: Tools and schemas for universal agent participation
-- **Economic Incentives**: Token-based rewards for ecosystem growth and participation
+- **Focused Scope**: Clean separation of marketplace vs. advanced functionality
+- **Service Composition**: Leverage other Erebus subsystems for complex operations
+- **Unified Routing**: All requests go through Erebus logging and middleware
+- **CORS Compliance**: No cross-origin issues since everything routes through port 3000
+- **Clear Responsibilities**: Marketplace discovery vs. service-specific functionality
 
 ## 📋 Common Commands
 
