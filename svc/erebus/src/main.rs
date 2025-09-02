@@ -261,13 +261,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("✅ Wallet verify: http://localhost:3000/api/wallets/verify");
     info!("🛣️  Crossroads marketplace: http://localhost:3000/api/marketplace");
     info!("🔍 Discovery service: http://localhost:3000/api/discovery");
-    info!("🌐 MCP self-registration: http://localhost:3000/api/mcp/register");
-    info!("🪙 Asset tokenization: http://localhost:3000/api/blockchain/tokenize");
-    info!("💰 Wealth distribution: http://localhost:3000/api/wealth/pools");
-    info!("🤖 Agent interoperability: http://localhost:3000/api/agents/interfaces");
     info!("⚙️  Admin panel: http://localhost:3000/api/admin");
     info!("🏥 Crossroads health: http://localhost:3000/api/crossroads/health");
-    info!("💡 Ready for decentralized marketplace, MCP sampling, and agent tokenization");
+    info!("💡 Ready for agentic workflows, marketplace operations, and service discovery");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let listener = tokio::net::TcpListener::bind(addr).await?;
