@@ -1,9 +1,10 @@
-// Resource modules for wallet interactions, MCP, agents, and other services
+// Resource modules for wallet interactions, MCP, agents, crossroads marketplace, and other services
 
 pub mod types;
 pub mod wallets;
 pub mod mcp;
 pub mod agents;
+pub mod crossroads;
 
 // Re-export commonly used types and traits
 pub use types::{
@@ -11,3 +12,4 @@ pub use types::{
     WalletVerifyRequest, WalletVerifyResponse, WalletListResponse
 };
 pub use wallets::WalletManager;
+pub use crossroads::routes::create_crossroads_routes;
