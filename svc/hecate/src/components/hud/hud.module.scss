@@ -3028,22 +3028,29 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 }
 
 .nullblockTitle {
-  position: absolute;
-  left: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
+  position: relative;
+  display: inline-block;
   font-family: 'Share Tech Mono', 'Fira Mono', 'Consolas', 'monospace';
   font-size: 1.1rem;
   font-weight: bold;
   letter-spacing: 0.18em;
   color: #00a8ff;
   z-index: 30;
-  /* background: rgba(0,0,0,0.18); */
   padding: 0.2rem 1.1rem 0.2rem 0.7rem;
   border-radius: 8px;
   box-shadow: 0 0 4px rgba(0,168,255,0.08);
   pointer-events: none;
   user-select: none;
+  margin: 0 auto;
+
+  .irisO {
+    font-size: 1.6em; /* Make the O larger */
+    font-weight: 900; /* Make it bolder */
+    color: #00d4ff; /* Slightly brighter blue for the iris */
+    text-shadow: 0 0 8px rgba(0, 212, 255, 0.6); /* Add a subtle glow */
+    position: relative;
+    z-index: 25; /* Ensure it's above the background but below the NULLEye */
+  }
 }
 
 // Add common selectors that might be missing
@@ -3922,10 +3929,13 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
 // NULLVIEW - Living system indicator
 .nullview {
-  position: relative;
+  position: absolute;
   width: 60px;
   height: 60px;
-  margin: 1rem auto;
+  /* Position over the center of the "O" in NULLBLOCK - adjusted for the correct O position */
+  left: 64%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;

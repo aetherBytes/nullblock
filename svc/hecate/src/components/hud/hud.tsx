@@ -151,6 +151,10 @@ const HUD: React.FC<HUDProps> = ({
   // Quick actions state
   const [activeQuickAction, setActiveQuickAction] = useState<string | null>(null);
 
+  // Models caching state
+  const [modelsCached, setModelsCached] = useState(false);
+  const [modelsCacheTimestamp, setModelsCacheTimestamp] = useState<Date | null>(null);
+
   // Expand states for containers
   const [isChatExpanded, setIsChatExpanded] = useState(false);
   const [isScopesExpanded, setIsScopesExpanded] = useState(false);
@@ -400,15 +404,21 @@ const HUD: React.FC<HUDProps> = ({
       isLoadingModelsRef.current = false;
       setIsChatExpanded(false);
       setIsScopesExpanded(false);
+      setModelsCached(false);
+      setModelsCacheTimestamp(null);
       return;
     }
     
     // Initialize with empty chat
     setChatMessages([]);
     
-    // Load available models when wallet connected
-    console.log('Wallet connection triggered loadAvailableModels');
-    loadAvailableModels();
+    // Load available models when wallet connected (only if not already cached)
+    if (!modelsCached) {
+      console.log('Wallet connection triggered loadAvailableModels (not cached)');
+      loadAvailableModels();
+    } else {
+      console.log('Using cached models from previous load');
+    }
     
     // Ensure we start scrolled to bottom
     setTimeout(() => {
@@ -432,14 +442,14 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [mainHudActiveTab]);
 
-  // Load models when Hecate tab becomes active (only if not already loaded)
+  // Load models when Hecate tab becomes active (only if not already cached)
   useEffect(() => {
-    if (mainHudActiveTab === 'hecate' && publicKey && availableModels.length === 0 && !isLoadingModels) {
-      // Only load models if not already loaded and not currently loading
-      console.log('Tab switch triggered loadAvailableModels');
+    if (mainHudActiveTab === 'hecate' && publicKey && !modelsCached && availableModels.length === 0 && !isLoadingModels) {
+      // Only load models if not already cached and not currently loading
+      console.log('Tab switch triggered loadAvailableModels (not cached)');
       loadAvailableModels();
     }
-  }, [mainHudActiveTab, publicKey]);
+  }, [mainHudActiveTab, publicKey, modelsCached]);
 
   // Click outside handler for model dropdown
   useEffect(() => {
@@ -628,8 +638,7 @@ const HUD: React.FC<HUDProps> = ({
         return;
       }
 
-      // Get available models to get rich descriptions
-      const modelsData = await hecateAgent.getAvailableModels();
+      // Use cached available models instead of fetching again
       const currentModelName = modelName || currentSelectedModel;
       
       if (!currentModelName) {
@@ -640,11 +649,18 @@ const HUD: React.FC<HUDProps> = ({
         return;
       }
 
-      // Find the current model in available models
-      const currentModelInfo = modelsData.models?.find((model: any) => model.name === currentModelName);
+      // Find the current model in cached available models
+      let currentModelInfo = availableModels?.find((model: any) => model.name === currentModelName);
+      
+      // If not found in cache and cache is empty, try to fetch fresh data
+      if (!currentModelInfo && availableModels.length === 0) {
+        console.log('Cache is empty, fetching fresh model data for info');
+        const modelsData = await hecateAgent.getAvailableModels();
+        currentModelInfo = modelsData.models?.find((model: any) => model.name === currentModelName);
+      }
       
       if (!currentModelInfo) {
-        setModelInfo({ error: `Model ${currentModelName} not found in available models` });
+        setModelInfo({ error: `Model ${currentModelName} not found in available models (${availableModels.length} cached)` });
         return;
       }
 
@@ -688,16 +704,16 @@ const HUD: React.FC<HUDProps> = ({
     }
   };
 
-  const loadAvailableModels = async () => {
+  const loadAvailableModels = async (forceReload = false) => {
     // Prevent concurrent executions using synchronous ref
     if (isLoadingModelsRef.current) {
       console.log('Model loading already in progress (ref guard), skipping duplicate call');
       return;
     }
 
-    // Also prevent if models are already loaded
-    if (availableModels.length > 0 && currentSelectedModel && defaultModelLoaded) {
-      console.log('Models already loaded and configured, skipping duplicate call');
+    // Also prevent if models are already cached or loaded (unless force reload)
+    if (!forceReload && (modelsCached || (availableModels.length > 0 && currentSelectedModel && defaultModelLoaded))) {
+      console.log('Models already cached or loaded, skipping duplicate call');
       return;
     }
 
@@ -801,6 +817,11 @@ const HUD: React.FC<HUDProps> = ({
       }
 
       console.log('=== LOADING MODELS END ===');
+      
+      // Mark models as cached on successful load
+      setModelsCached(true);
+      setModelsCacheTimestamp(new Date());
+      console.log('Models successfully cached at:', new Date().toISOString());
       
     } catch (error) {
       console.error('Error loading available models:', error);
@@ -919,6 +940,13 @@ const HUD: React.FC<HUDProps> = ({
   const getPremiumModels = (models: any[], limit: number = 10) => {
     return models
       .filter(model => model.available && model.tier === 'premium')
+      .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+      .slice(0, limit);
+  };
+
+  const getFastModels = (models: any[], limit: number = 10) => {
+    return models
+      .filter(model => model.available && model.tier === 'fast')
       .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
       .slice(0, limit);
   };
@@ -1161,12 +1189,15 @@ const HUD: React.FC<HUDProps> = ({
     if (newScope === 'modelinfo') {
       console.log('Loading model info for scope click, currentSelectedModel:', currentSelectedModel);
       if (!currentSelectedModel) {
-        console.warn('No current model selected, attempting to reload models first');
-        loadAvailableModels().then(() => {
-          if (currentSelectedModel) {
-            loadModelInfo(currentSelectedModel);
-          }
-        });
+        console.warn('No current model selected, checking cache first');
+        // Only load models if not cached
+        if (!modelsCached) {
+          loadAvailableModels().then(() => {
+            if (currentSelectedModel) {
+              loadModelInfo(currentSelectedModel);
+            }
+          });
+        }
       } else {
         loadModelInfo(currentSelectedModel);
       }
@@ -1486,65 +1517,154 @@ const HUD: React.FC<HUDProps> = ({
         case 'crossroads':
           return (
             <div className={styles.crossroadsTab}>
-              <h3>Crossroads</h3>
+              <h3>Crossroads Marketplace</h3>
               <div className={styles.crossroadsContent}>
                 <div className={styles.crossroadsWelcome}>
-                  <h4>Welcome back to NullBlock</h4>
-                  <p>Your agents are active and systems are operational. Explore your autonomous workflows.</p>
+                  <h4>Marketplace & Discovery Service</h4>
+                  <p>Test the new Crossroads marketplace for agents, workflows, tools, and MCP servers.</p>
                 </div>
                 
-                <div className={styles.crossroadsFeatures}>
-                  <div className={styles.featureCard}>
-                    <div className={styles.featureIcon}>📊</div>
-                    <h5>Live Tasks</h5>
-                    <p>{tasks.filter(t => t.status === 'running').length} active tasks, {tasks.filter(t => t.status === 'completed').length} completed</p>
-                  </div>
-                  
-                  <div className={styles.featureCard}>
-                    <div className={styles.featureIcon}>🔗</div>
-                    <h5>MCP Operations</h5>
-                    <p>{mcpOperations.filter(op => op.status === 'active').length} active operations, avg response: {Math.round(mcpOperations.reduce((acc, op) => acc + (op.responseTime || 0), 0) / mcpOperations.length)}ms</p>
-                  </div>
-                  
-                  <div className={styles.featureCard}>
-                    <div className={styles.featureIcon}>📝</div>
-                    <h5>System Logs</h5>
-                    <p>{logs.length} entries, {logs.filter(l => l.level === 'error').length} errors, {logs.filter(l => l.level === 'warning').length} warnings</p>
-                  </div>
-                  
-                  <div className={styles.featureCard}>
-                    <div className={styles.featureIcon}>🤖</div>
-                    <h5>Agent Status</h5>
-                    <p>All systems operational. Hecate interface ready for commands.</p>
+                <div className={styles.marketplaceTests}>
+                  <h4>API Testing</h4>
+                  <div className={styles.testGrid}>
+                    <div className={styles.testCard}>
+                      <h5>🏥 Service Health</h5>
+                      <button 
+                        className={styles.testButton}
+                        onClick={async () => {
+                          try {
+                            const response = await fetch('/api/crossroads/health');
+                            const data = await response.json();
+                            alert(`Status: ${data.status}\nService: ${data.service}\nMessage: ${data.message}`);
+                          } catch (error) {
+                            alert(`Error: ${error}`);
+                          }
+                        }}
+                      >
+                        Test Health
+                      </button>
+                    </div>
+                    
+                    <div className={styles.testCard}>
+                      <h5>📋 Get Listings</h5>
+                      <button 
+                        className={styles.testButton}
+                        onClick={async () => {
+                          try {
+                            const response = await fetch('/api/marketplace/listings');
+                            const data = await response.json();
+                            alert(`Found ${data.listings?.length || 0} listings\n\nFirst listing: ${JSON.stringify(data.listings?.[0] || 'None', null, 2)}`);
+                          } catch (error) {
+                            alert(`Error: ${error}`);
+                          }
+                        }}
+                      >
+                        Get Listings
+                      </button>
+                    </div>
+                    
+                    <div className={styles.testCard}>
+                      <h5>🤖 Discover Agents</h5>
+                      <button 
+                        className={styles.testButton}
+                        onClick={async () => {
+                          try {
+                            const response = await fetch('/api/discovery/agents');
+                            const data = await response.json();
+                            alert(`Found ${data.agents?.length || 0} agents\n\nAgents: ${JSON.stringify(data.agents || [], null, 2)}`);
+                          } catch (error) {
+                            alert(`Error: ${error}`);
+                          }
+                        }}
+                      >
+                        Discover Agents
+                      </button>
+                    </div>
+                    
+                    <div className={styles.testCard}>
+                      <h5>📊 System Stats</h5>
+                      <button 
+                        className={styles.testButton}
+                        onClick={async () => {
+                          try {
+                            const response = await fetch('/api/admin/system/stats');
+                            const data = await response.json();
+                            alert(`System Stats:\nTotal Listings: ${data.total_listings || 0}\nActive Agents: ${data.active_agents || 0}\nUptime: ${data.uptime || 'N/A'}`);
+                          } catch (error) {
+                            alert(`Error: ${error}`);
+                          }
+                        }}
+                      >
+                        Get Stats
+                      </button>
+                    </div>
                   </div>
                 </div>
                 
-                <div className={styles.crossroadsActions}>
-                  <h4>Quick Actions</h4>
-                  <div className={styles.actionButtons}>
-                    <button 
-                      className={styles.actionButton}
-                      onClick={() => setMainHudActiveTab('tasks')}
+                <div className={styles.createListing}>
+                  <h4>Create Test Listing</h4>
+                  <div className={styles.listingForm}>
+                    <select 
+                      className={styles.formSelect}
+                      defaultValue="Agent"
+                      id="listingType"
                     >
-                      📋 View Tasks
-                    </button>
+                      <option value="Agent">Agent</option>
+                      <option value="Workflow">Workflow</option>
+                      <option value="Tool">Tool</option>
+                      <option value="McpServer">MCP Server</option>
+                      <option value="Dataset">Dataset</option>
+                      <option value="Model">Model</option>
+                    </select>
+                    <input 
+                      type="text"
+                      className={styles.formInput}
+                      placeholder="Listing title..."
+                      id="listingTitle"
+                    />
+                    <textarea 
+                      className={styles.formTextarea}
+                      placeholder="Description..."
+                      rows={3}
+                      id="listingDescription"
+                    />
                     <button 
-                      className={styles.actionButton}
-                      onClick={() => setMainHudActiveTab('agents')}
+                      className={styles.createButton}
+                      onClick={async () => {
+                        const typeSelect = document.getElementById('listingType') as HTMLSelectElement;
+                        const titleInput = document.getElementById('listingTitle') as HTMLInputElement;
+                        const descriptionInput = document.getElementById('listingDescription') as HTMLTextAreaElement;
+                        
+                        if (!titleInput.value.trim()) {
+                          alert('Please enter a title');
+                          return;
+                        }
+                        
+                        try {
+                          const response = await fetch('/api/marketplace/listings', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              title: titleInput.value,
+                              description: descriptionInput.value || 'Test listing',
+                              listing_type: typeSelect?.value || 'Agent',
+                              price: 0.0,
+                              tags: ['test', 'demo']
+                            })
+                          });
+                          const data = await response.json();
+                          alert(`Listing created!\nID: ${data.listing?.id || 'N/A'}\nTitle: ${data.listing?.title || 'N/A'}`);
+                          
+                          titleInput.value = '';
+                          descriptionInput.value = '';
+                        } catch (error) {
+                          alert(`Error: ${error}`);
+                        }
+                      }}
                     >
-                      🤖 Agent Status
-                    </button>
-                    <button 
-                      className={styles.actionButton}
-                      onClick={() => setMainHudActiveTab('logs')}
-                    >
-                      📝 System Logs
-                    </button>
-                    <button 
-                      className={styles.primaryActionButton}
-                      onClick={() => setMainHudActiveTab('hecate')}
-                    >
-                      🚀 Launch Hecate
+                      🚀 Create Listing
                     </button>
                   </div>
                 </div>
@@ -1843,12 +1963,14 @@ const HUD: React.FC<HUDProps> = ({
                                     </div>
                                     <button 
                                       onClick={() => {
-                                        console.log('Manual reload triggered');
-                                        loadAvailableModels();
+                                        console.log('Manual reload triggered from error - clearing cache');
+                                        setModelsCached(false);
+                                        setModelsCacheTimestamp(null);
+                                        loadAvailableModels(true);
                                       }}
                                       style={{marginTop: '10px', padding: '5px 10px', border: '1px solid #ccc', borderRadius: '4px'}}
                                     >
-                                      Reload Models
+                                      🔄 Reload Models
                                     </button>
                                   </div>
                                 ) : showModelSelection ? (
@@ -1877,7 +1999,8 @@ const HUD: React.FC<HUDProps> = ({
                                     </div>
                                     
                                     {/* Quick Actions Menu */}
-                                    <div className={styles.quickActionsMenu}>
+                                    <div style={{overflowX: 'auto', overflowY: 'hidden', paddingBottom: '8px'}}>
+                                      <div className={styles.quickActionsMenu} style={{display: 'flex', flexWrap: 'nowrap', gap: '8px', minWidth: 'fit-content'}}>
                                       <button 
                                         onClick={() => {
                                           setModelSearchQuery('');
@@ -1920,6 +2043,15 @@ const HUD: React.FC<HUDProps> = ({
                                       </button>
                                       <button 
                                         onClick={() => {
+                                          setActiveQuickAction(activeQuickAction === 'fast' ? null : 'fast');
+                                          setModelSearchQuery('');
+                                        }}
+                                        className={`${styles.quickActionTab} ${activeQuickAction === 'fast' ? styles.active : ''}`}
+                                      >
+                                        Fast
+                                      </button>
+                                      <button 
+                                        onClick={() => {
                                           setActiveQuickAction(activeQuickAction === 'premium' ? null : 'premium');
                                           setModelSearchQuery('');
                                         }}
@@ -1945,6 +2077,7 @@ const HUD: React.FC<HUDProps> = ({
                                       >
                                         Instruct
                                       </button>
+                                      </div>
                                     </div>
                                     
                                     {/* Latest Models */}
@@ -2000,6 +2133,34 @@ const HUD: React.FC<HUDProps> = ({
                                               </div>
                                               <div className={styles.modelSelectMeta}>
                                                 <span className={styles.modelSelectTier}>🆓</span>
+                                                {model.name === currentSelectedModel && <span className={styles.currentBadge}>✓</span>}
+                                              </div>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Fast Models */}
+                                    {activeQuickAction === 'fast' && (
+                                      <div className={styles.modelSection}>
+                                        <h6>Fast Models ({getFastModels(availableModels).length})</h6>
+                                        <div className={styles.modelsList}>
+                                          {getFastModels(availableModels).map((model, index) => (
+                                            <button
+                                              key={`fast-${model.name}-${index}`}
+                                              onClick={() => handleModelSelection(model.name)}
+                                              className={`${styles.modelSelectButton} ${model.name === currentSelectedModel ? styles.currentModel : ''}`}
+                                            >
+                                              <div className={styles.modelSelectInfo}>
+                                                <span className={styles.modelSelectIcon}>{model.icon || '⚡'}</span>
+                                                <div>
+                                                  <div className={styles.modelSelectName}>{model.display_name}</div>
+                                                  <div className={styles.modelSelectProvider}>{model.provider}</div>
+                                                </div>
+                                              </div>
+                                              <div className={styles.modelSelectMeta}>
+                                                <span className={styles.modelSelectTier}>⚡</span>
                                                 {model.name === currentSelectedModel && <span className={styles.currentBadge}>✓</span>}
                                               </div>
                                             </button>
@@ -2162,6 +2323,16 @@ const HUD: React.FC<HUDProps> = ({
                                           </button>
                                           <button 
                                             className={styles.categoryButton}
+                                            onClick={() => setActiveQuickAction('fast')}
+                                          >
+                                            <span className={styles.categoryIcon}>⚡</span>
+                                            <div className={styles.categoryInfo}>
+                                              <div className={styles.categoryName}>Fast</div>
+                                              <div className={styles.categoryCount}>{getFastModels(availableModels).length} models</div>
+                                            </div>
+                                          </button>
+                                          <button 
+                                            className={styles.categoryButton}
                                             onClick={() => setActiveQuickAction('premium')}
                                           >
                                             <span className={styles.categoryIcon}>💎</span>
@@ -2201,6 +2372,7 @@ const HUD: React.FC<HUDProps> = ({
                                         <div className={styles.modelCounts}>
                                           <p>📊 Total Available: {availableModels.filter(m => m.available).length}</p>
                                           <p>🆓 Free Models: {getFreeModels(availableModels, 999).length}</p>
+                                          <p>⚡ Fast Models: {getFastModels(availableModels, 999).length}</p>
                                           <p>💎 Premium Models: {getPremiumModels(availableModels, 999).length}</p>
                                           <p>🧠 Thinking Models: {getThinkerModels(availableModels, 999).length}</p>
                                           <p>💬 Instruct Models: {getInstructModels(availableModels, 999).length}</p>
@@ -2220,16 +2392,41 @@ const HUD: React.FC<HUDProps> = ({
                                         </div>
                                       </div>
                                       <div className={styles.modelStatus}>
-                                        <button 
-                                          className={styles.switchModelButton}
-                                          onClick={() => {
-                                            setShowModelSelection(true);
-                                            setActiveQuickAction('latest');
-                                          }}
-                                          title="Switch to a different model"
-                                        >
-                                          Switch Model
-                                        </button>
+                                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                          <button 
+                                            onClick={() => {
+                                              console.log('Force reloading models - clearing cache');
+                                              setModelsCached(false);
+                                              setModelsCacheTimestamp(null);
+                                              loadAvailableModels(true);
+                                            }}
+                                            title={`Reload models (cached ${modelsCacheTimestamp ? modelsCacheTimestamp.toLocaleTimeString() : 'never'})`}
+                                            style={{
+                                              background: 'none',
+                                              border: 'none',
+                                              padding: '4px',
+                                              cursor: 'pointer',
+                                              fontSize: '16px',
+                                              lineHeight: '1',
+                                              opacity: 0.7,
+                                              transition: 'opacity 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => e.target.style.opacity = '1'}
+                                            onMouseLeave={(e) => e.target.style.opacity = '0.7'}
+                                          >
+                                            🔄
+                                          </button>
+                                          <button 
+                                            className={styles.switchModelButton}
+                                            onClick={() => {
+                                              setShowModelSelection(true);
+                                              setActiveQuickAction('latest');
+                                            }}
+                                            title="Switch to a different model"
+                                          >
+                                            Switch Model
+                                          </button>
+                                        </div>
                                       </div>
                                     </div>
 
@@ -2727,45 +2924,44 @@ const HUD: React.FC<HUDProps> = ({
   const renderControlScreen = () => (
     <nav className={styles.verticalNavbar}>
       <div className={styles.nullblockTitle}>
-        NULLBLOCK
-      </div>
+        NULLBL<span className={styles.irisO}>O</span>CK
+        <div
+          className={`${styles.nullview} ${styles[nullviewState]}`}
+          onClick={() => {
+            if (!publicKey) {
+              setNulleyeState('error');
+              setTimeout(() => setNulleyeState('base'), 1500);
+              alert(
+                '🔒 SECURE ACCESS REQUIRED\n\nConnect your Web3 wallet to unlock the NullView interface and access advanced features.',
+              );
+              return;
+            }
 
-      <div
-        className={`${styles.nullview} ${styles[nullviewState]}`}
-        onClick={() => {
-          if (!publicKey) {
-            setNulleyeState('error');
-            setTimeout(() => setNulleyeState('base'), 1500);
-            alert(
-              '🔒 SECURE ACCESS REQUIRED\n\nConnect your Web3 wallet to unlock the NullView interface and access advanced features.',
-            );
-            return;
-          }
-
-          // For connected users, navigate to hecate tab
-          setMainHudActiveTab('hecate');
-          setNulleyeState('processing');
-        }}
-        title={!publicKey ? '🔒 Connect wallet to unlock NullView' : '🔓 Access NullView Interface'}
-      >
-        <div className={styles.pulseRing}></div>
-        <div className={styles.dataStream}>
-          <div className={styles.streamLine}></div>
-          <div className={styles.streamLine}></div>
-          <div className={styles.streamLine}></div>
+            // For connected users, navigate to hecate tab
+            setMainHudActiveTab('hecate');
+            setNulleyeState('processing');
+          }}
+          title={!publicKey ? '🔒 Connect wallet to unlock NullView' : '🔓 Access NullView Interface'}
+        >
+          <div className={styles.pulseRing}></div>
+          <div className={styles.dataStream}>
+            <div className={styles.streamLine}></div>
+            <div className={styles.streamLine}></div>
+            <div className={styles.streamLine}></div>
+          </div>
+          <div className={styles.lightningContainer}>
+            <div className={styles.lightningArc}></div>
+            <div className={styles.lightningArc}></div>
+            <div className={styles.lightningArc}></div>
+            <div className={styles.lightningArc}></div>
+            <div className={styles.lightningArc}></div>
+            <div className={styles.lightningArc}></div>
+            <div className={styles.lightningArc}></div>
+            <div className={styles.lightningArc}></div>
+          </div>
+          <div className={styles.staticField}></div>
+          <div className={styles.coreNode}></div>
         </div>
-        <div className={styles.lightningContainer}>
-          <div className={styles.lightningArc}></div>
-          <div className={styles.lightningArc}></div>
-          <div className={styles.lightningArc}></div>
-          <div className={styles.lightningArc}></div>
-          <div className={styles.lightningArc}></div>
-          <div className={styles.lightningArc}></div>
-          <div className={styles.lightningArc}></div>
-          <div className={styles.lightningArc}></div>
-        </div>
-        <div className={styles.staticField}></div>
-        <div className={styles.coreNode}></div>
       </div>
 
       <div className={styles.navbarButtons}>
