@@ -5,6 +5,7 @@ pub mod wallets;
 pub mod mcp;
 pub mod agents;
 pub mod crossroads;
+pub mod external_service;
 
 // Re-export commonly used types and traits
 pub use types::{
@@ -13,3 +14,4 @@ pub use types::{
 };
 pub use wallets::WalletManager;
 pub use crossroads::routes::create_crossroads_routes;
+pub use external_service::ExternalService;

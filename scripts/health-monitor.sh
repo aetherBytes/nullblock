@@ -88,7 +88,7 @@ print_status() {
     
     # Agent Services  
     local agents_status=$(check_service "General Agents" "9001" "http://localhost:9001/health" "http")
-    local hecate_status=$(check_service "Hecate Agent" "9002" "http://localhost:9002/health" "http")
+    local hecate_status=$(check_service "Hecate Agent" "9003" "http://localhost:9003/hecate/health" "http")
     
     # Frontend & LLM
     local frontend_status=$(check_service "Frontend" "5173" "http://localhost:5173" "http")
@@ -96,7 +96,7 @@ print_status() {
     
     echo -e "${WHITE}│ Infrastructure: ${postgres15_status} PG@15 ${postgres17_status} PG@17 ${redis_status} Redis ${ipfs_status} IPFS                        │${NC}"
     echo -e "${WHITE}│ Backend:        ${mcp_status} MCP:8001 ${orch_status} Orchestration:8002 ${erebus_status} Erebus:3000            │${NC}"
-    echo -e "${WHITE}│ Agents:         ${agents_status} General:9001 ${hecate_status} Hecate:9002                              │${NC}"
+    echo -e "${WHITE}│ Agents:         ${agents_status} General:9001 ${hecate_status} Hecate:9003                              │${NC}"
     echo -e "${WHITE}│ Frontend:       ${frontend_status} Vite:5173 ${openrouter_status} OpenRouter API                        │${NC}"
     
     # Count services

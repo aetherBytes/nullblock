@@ -55,7 +55,7 @@ impl AgentProxy {
     /// Proxy chat request to Hecate agent backend
     pub async fn proxy_chat(&self, request: AgentRequest) -> Result<AgentResponse, AgentErrorResponse> {
         let client = reqwest::Client::new();
-        let url = format!("{}/chat", self.agent_base_url);
+        let url = format!("{}/hecate/chat", self.agent_base_url);
         
         info!("🤖 Proxying chat request to agent: {}", url);
         
@@ -108,7 +108,7 @@ impl AgentProxy {
     /// Get agent status and health
     pub async fn get_agent_status(&self) -> Result<AgentStatus, AgentErrorResponse> {
         let client = reqwest::Client::new();
-        let url = format!("{}/model-status", self.agent_base_url);
+        let url = format!("{}/hecate/model-status", self.agent_base_url);
         
         info!("🔍 Checking agent status: {}", url);
         
@@ -160,7 +160,7 @@ impl AgentProxy {
     /// Check if agent is healthy
     pub async fn health_check(&self) -> bool {
         let client = reqwest::Client::new();
-        let url = format!("{}/health", self.agent_base_url);
+        let url = format!("{}/hecate/health", self.agent_base_url);
         
         match client
             .get(&url)
@@ -187,7 +187,7 @@ impl AgentProxy {
     /// Proxy generic request to agent
     pub async fn proxy_request(&self, endpoint: &str, method: &str, body: Option<serde_json::Value>) -> Result<serde_json::Value, AgentErrorResponse> {
         let client = reqwest::Client::new();
-        let url = format!("{}/{}", self.agent_base_url, endpoint);
+        let url = format!("{}/hecate/{}", self.agent_base_url, endpoint);
         
         info!("🔗 Proxying {} request to agent: {}", method, url);
         

@@ -1,3 +1,0 @@
-"""
-Arbitrage trading agents
-"""

@@ -1,5 +1,5 @@
 use axum::{
-    extract::Path,
+    extract::{Path, State},
     http::StatusCode,
     response::Json,
     routing::{get, post},
@@ -8,11 +8,13 @@ use axum::{
 use serde_json::{json, Value};
 use tracing::{info, warn};
 use uuid::Uuid;
+use std::sync::Arc;
 
 use crate::resources::crossroads::models::CreateListingRequest;
 use crate::resources::crossroads::services::NullblockServiceIntegrator;
+use crate::resources::ExternalService;
 
-pub fn create_crossroads_routes() -> Router {
+pub fn create_crossroads_routes(external_service: &Arc<ExternalService>) -> Router<crate::AppState> {
     Router::new()
         // Core Marketplace API - ONLY marketplace functionality
         .route("/api/marketplace/listings", get(get_listings))
@@ -113,106 +115,95 @@ async fn get_marketplace_stats() -> Json<Value> {
 }
 
 // Discovery endpoints
-async fn discover_agents() -> Json<Value> {
+async fn discover_agents(State(app_state): State<crate::AppState>) -> Json<Value> {
     info!("🤖 Discovering available agents");
     
     let start_time = std::time::Instant::now();
-    let integrator = NullblockServiceIntegrator::new();
+    let integrator = NullblockServiceIntegrator::new(app_state.external_service.clone());
     
     let agents = match integrator.discover_agents_from_service().await {
         Ok(agents) => agents,
         Err(e) => {
-            warn!("⚠️ Failed to discover agents from service: {}", e);
+            warn!("❌ Failed to discover agents: {}", e);
             vec![]
         }
     };
     
-    let scan_duration = start_time.elapsed().as_millis();
-    
-    Json(json!({
+    let response = json!({
         "agents": agents,
-        "count": agents.len(),
-        "discovered_at": chrono::Utc::now(),
-        "scan_duration_ms": scan_duration,
-        "sources": ["nullblock_agents_service", "local_registry", "network_scan"],
-        "message": "Agent discovery with Nullblock service integration"
-    }))
+        "total_count": agents.len(),
+        "discovery_time_ms": start_time.elapsed().as_millis(),
+        "message": "Agent discovery completed"
+    });
+    
+    Json(response)
 }
 
-async fn discover_workflows() -> Json<Value> {
+async fn discover_workflows(State(app_state): State<crate::AppState>) -> Json<Value> {
     info!("🔄 Discovering available workflows");
     
     let start_time = std::time::Instant::now();
-    let integrator = NullblockServiceIntegrator::new();
+    let integrator = NullblockServiceIntegrator::new(app_state.external_service.clone());
     
     let workflows = match integrator.discover_workflows_from_service().await {
         Ok(workflows) => workflows,
         Err(e) => {
-            warn!("⚠️ Failed to discover workflows from service: {}", e);
+            warn!("❌ Failed to discover workflows: {}", e);
             vec![]
         }
     };
     
-    let scan_duration = start_time.elapsed().as_millis();
-    
-    Json(json!({
+    let response = json!({
         "workflows": workflows,
-        "count": workflows.len(),
-        "discovered_at": chrono::Utc::now(),
-        "scan_duration_ms": scan_duration,
-        "sources": ["nullblock_orchestration_service", "agent_definitions", "template_library"],
-        "message": "Workflow discovery with Nullblock service integration"
-    }))
+        "total_count": workflows.len(),
+        "discovery_time_ms": start_time.elapsed().as_millis(),
+        "message": "Workflow discovery completed"
+    });
+    
+    Json(response)
 }
 
-async fn discover_tools() -> Json<Value> {
+async fn discover_tools(State(_app_state): State<crate::AppState>) -> Json<Value> {
     info!("🔧 Discovering available tools");
     
     Json(json!({
         "tools": [],
-        "discovered_at": chrono::Utc::now(),
-        "scan_duration_ms": 0,
-        "sources": ["mcp_servers", "agent_toolkits", "standalone_tools"],
+        "total_count": 0,
         "message": "Tool discovery endpoint - integrated with Erebus"
     }))
 }
 
-async fn discover_mcp_servers() -> Json<Value> {
+async fn discover_mcp_servers(State(app_state): State<crate::AppState>) -> Json<Value> {
     info!("🌐 Discovering MCP servers");
     
     let start_time = std::time::Instant::now();
-    let integrator = NullblockServiceIntegrator::new();
+    let integrator = NullblockServiceIntegrator::new(app_state.external_service.clone());
     
     let mcp_servers = match integrator.discover_mcp_servers_from_service().await {
         Ok(servers) => servers,
         Err(e) => {
-            warn!("⚠️ Failed to discover MCP servers from service: {}", e);
+            warn!("❌ Failed to discover MCP servers: {}", e);
             vec![]
         }
     };
     
-    let scan_duration = start_time.elapsed().as_millis();
-    
-    Json(json!({
+    let response = json!({
         "mcp_servers": mcp_servers,
-        "count": mcp_servers.len(),
-        "discovered_at": chrono::Utc::now(),
-        "scan_duration_ms": scan_duration,
-        "protocol_versions": ["1.0", "0.9"],
-        "sources": ["nullblock_mcp_service", "self_registration", "network_scan"],
-        "message": "MCP server discovery with Nullblock service integration"
-    }))
+        "total_count": mcp_servers.len(),
+        "discovery_time_ms": start_time.elapsed().as_millis(),
+        "message": "MCP server discovery completed"
+    });
+    
+    Json(response)
 }
 
-async fn trigger_discovery_scan() -> Json<Value> {
+async fn trigger_discovery_scan(State(_app_state): State<crate::AppState>) -> Json<Value> {
     info!("🔍 Triggering full discovery scan");
     
     Json(json!({
-        "scan_id": Uuid::new_v4(),
-        "status": "started",
-        "estimated_duration_ms": 30000,
-        "started_at": chrono::Utc::now(),
-        "message": "Discovery scan initiated - integrated with Erebus"
+        "scan_id": uuid::Uuid::new_v4(),
+        "status": "initiated",
+        "message": "Discovery scan initiated"
     }))
 }
 
@@ -269,27 +260,11 @@ async fn feature_listing(Path(id): Path<Uuid>) -> Result<Json<Value>, StatusCode
 // - Wealth distribution should be in resources/wealth/
 // - Agent interoperability should be in resources/agents/ (extended)
 
-async fn crossroads_health() -> Json<Value> {
+async fn crossroads_health(State(app_state): State<crate::AppState>) -> Json<Value> {
     info!("🏥 Crossroads marketplace health check requested");
     
-    let integrator = NullblockServiceIntegrator::new();
+    let integrator = NullblockServiceIntegrator::new(app_state.external_service.clone());
     let services_health = integrator.check_services_health().await;
     
-    Json(json!({
-        "status": "healthy",
-        "service": "crossroads-marketplace",
-        "timestamp": chrono::Utc::now(),
-        "components": {
-            "marketplace_api": "healthy",
-            "discovery_engine": "healthy", 
-            "listing_management": "healthy",
-            "search_index": "healthy",
-            "service_integration": "healthy",
-            "erebus_integration": "healthy"
-        },
-        "integrated_services": services_health,
-        "scope": "Marketplace and service discovery only",
-        "note": "For MCP, blockchain, wealth distribution - use dedicated service endpoints",
-        "message": "Crossroads marketplace subsystem healthy - focused on marketplace and discovery"
-    }))
+    Json(services_health)
 }

@@ -40,7 +40,7 @@ NullBlock is an Agentic Platform providing resources and tooling for building, d
 - **5173**: Hecate frontend (development)
 - **8001**: MCP server
 - **9001**: General agents API
-- **9002**: Hecate agent API
+- **9003**: Hecate agent API (Rust service)
 
 ## 🏗️ Architecture
 
@@ -50,15 +50,15 @@ NullBlock is an Agentic Platform providing resources and tooling for building, d
 ```
 Frontend → Erebus → {
   Wallet operations → Internal wallet handlers
-  Agent chat → Hecate agent (port 9002)  
-  Agent search → Hecate agent (port 9002)
+  Agent chat → Hecate agent (port 9003)  
+  Agent search → Hecate agent (port 9003)
   MCP operations → MCP server (port 8001)
   Marketplace operations → Crossroads subsystem (internal)
 }
 ```
 
 **NEVER allow frontend to bypass Erebus by connecting directly to:**
-- Hecate agent (port 9002)
+- Hecate agent (port 9003)
 - MCP server (port 8001)
 - Any other backend services
 - Crossroads marketplace is now INTERNAL to Erebus (no separate port)
@@ -270,7 +270,7 @@ curl http://localhost:3000/api/discovery/agents
 - **Wallet Subsystem**: All wallets implement `WalletProvider` trait
 - **Shared Types**: Use `resources/types.rs` for cross-subsystem types
 - **Agent Timeout**: 5-minute proxy timeout for thinking models and complex agent operations
-- **Frontend Discipline**: If you see direct service calls (localhost:9002, localhost:8001) in frontend code, FIX IMMEDIATELY by routing through Erebus
+- **Frontend Discipline**: If you see direct service calls (localhost:9003, localhost:8001) in frontend code, FIX IMMEDIATELY by routing through Erebus
 
 ## 🎨 UI/UX Standards
 
