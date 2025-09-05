@@ -1,0 +1,101 @@
+use std::env;
+use std::net::SocketAddr;
+
+use axum::{
+    routing::{get, post},
+    Router,
+};
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tracing::{info, warn};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+mod agents;
+mod config;
+mod error;
+mod handlers;
+mod llm;
+mod logging;
+mod models;
+mod server;
+mod utils;
+
+use crate::config::Config;
+use crate::handlers::{arbitrage, health, hecate};
+use crate::logging::setup_logging;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    // Load environment from .env.dev if available
+    if let Err(e) = dotenv::from_filename(".env.dev") {
+        warn!("Could not load .env.dev file: {}", e);
+    }
+
+    // Setup logging
+    setup_logging()?;
+
+    // Load configuration
+    let config = Config::from_env()?;
+    info!("🔧 Configuration loaded: {}", config.service_name);
+
+    // Create the application state
+    let state = server::AppState::new(config.clone()).await?;
+
+    // Build the router
+    let app = create_router(state);
+
+    // Get port from config or environment
+    let port = env::var("AGENTS_PORT")
+        .unwrap_or_else(|_| config.server.port.to_string())
+        .parse::<u16>()
+        .unwrap_or(9001);
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+
+    info!("🚀 NullBlock Agents Rust Service starting...");
+    info!("📡 Server will bind to: {}", addr);
+    info!("🏥 Health check: http://localhost:{}/health", port);
+    info!("🤖 Hecate agent: http://localhost:{}/hecate", port);
+    info!("📊 Arbitrage: http://localhost:{}/arbitrage", port);
+    info!("📚 API docs: http://localhost:{}/docs (future)", port);
+
+    // Start the server
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    info!("✅ Server listening on {}", addr);
+
+    axum::serve(listener, app).await?;
+
+    Ok(())
+}
+
+fn create_router(state: server::AppState) -> Router {
+    Router::new()
+        // Health check
+        .route("/health", get(health::health_check))
+        // Hecate agent endpoints
+        .route("/hecate/chat", post(hecate::chat))
+        .route("/hecate/health", get(hecate::health))
+        .route("/hecate/model-status", get(hecate::model_status))
+        .route("/hecate/available-models", get(hecate::available_models))
+        .route("/hecate/search-models", get(hecate::search_models))
+        .route("/hecate/set-model", post(hecate::set_model))
+        .route("/hecate/refresh-models", post(hecate::refresh_models))
+        .route("/hecate/reset-models", post(hecate::reset_models))
+        .route("/hecate/personality", post(hecate::set_personality))
+        .route("/hecate/clear", post(hecate::clear_conversation))
+        .route("/hecate/history", get(hecate::get_history))
+        .route("/hecate/model-info", get(hecate::get_model_info))
+        // Arbitrage endpoints
+        .route("/arbitrage/opportunities", get(arbitrage::get_opportunities))
+        .route("/arbitrage/summary", get(arbitrage::get_summary))
+        .route("/arbitrage/execute", post(arbitrage::execute))
+        // Add state
+        .with_state(state)
+        // Add middleware
+        .layer(
+            CorsLayer::new()
+                .allow_origin(tower_http::cors::Any)
+                .allow_methods(tower_http::cors::Any)
+                .allow_headers(tower_http::cors::Any),
+        )
+        .layer(TraceLayer::new_for_http())
+}

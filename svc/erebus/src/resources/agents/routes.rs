@@ -10,10 +10,10 @@ use tracing::{info, error, warn};
 
 use super::proxy::{AgentProxy, AgentRequest, AgentResponse, AgentStatus, AgentErrorResponse};
 
-/// Hecate agent proxy instance
+/// Hecate agent proxy instance - now points to Rust service
 fn get_hecate_proxy() -> AgentProxy {
     let hecate_url = std::env::var("HECATE_AGENT_URL")
-        .unwrap_or_else(|_| "http://localhost:9002".to_string());
+        .unwrap_or_else(|_| "http://localhost:9003".to_string());
     AgentProxy::new(hecate_url)
 }
 

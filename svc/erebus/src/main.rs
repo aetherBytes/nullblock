@@ -8,11 +8,13 @@ use axum::{
 };
 use serde::Serialize;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tokio;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{info, error, warn};
 use tracing_subscriber::{prelude::*, EnvFilter, fmt, Layer};
 use tracing_appender::{rolling, non_blocking};
+
 
 // Import our modules
 mod resources;
@@ -21,7 +23,7 @@ use resources::agents::routes::{
     hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model, hecate_model_info, hecate_search_models
 };
 use resources::wallets::routes::create_wallet_routes;
-use resources::{WalletManager, create_crossroads_routes};
+use resources::{WalletManager, create_crossroads_routes, ExternalService};
 
 #[derive(Serialize)]
 struct StatusResponse {
@@ -29,6 +31,12 @@ struct StatusResponse {
     service: String,
     version: String,
     message: String,
+}
+
+#[derive(Clone)]
+struct AppState {
+    wallet_manager: WalletManager,
+    external_service: Arc<ExternalService>,
 }
 
 async fn health_check() -> Json<StatusResponse> {
@@ -211,6 +219,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create wallet manager
     let wallet_manager = WalletManager::new();
     
+    // Create external service
+    let external_service = Arc::new(ExternalService::new());
+
+    // Create app state
+    let app_state = AppState {
+        wallet_manager,
+        external_service,
+    };
+    
     // Create router with CORS, agent routes, wallet routes, and crossroads routes
     let app = Router::new()
         .route("/", get(root))
@@ -230,9 +247,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/agents/:agent_name/status", get(agent_status))
         // Merge wallet routes
         .merge(create_wallet_routes())
-        .with_state(wallet_manager)
         // Merge crossroads routes
-        .merge(create_crossroads_routes())
+        .merge(create_crossroads_routes(&app_state.external_service))
+        .with_state(app_state.clone())
         // Add logging middleware
         .layer(middleware::from_fn(logging_middleware))
         // Add CORS layer

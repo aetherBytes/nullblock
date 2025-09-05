@@ -7,6 +7,7 @@ use axum::{
     routing::{get, post},
 };
 
+
 use crate::resources::{
     WalletManager, WalletChallengeRequest, WalletChallengeResponse,
     WalletVerifyRequest, WalletVerifyResponse, WalletListResponse,
@@ -18,7 +19,7 @@ use crate::resources::types::{
 use super::wallet_service::WalletService;
 
 /// Create wallet routes for the main router
-pub fn create_wallet_routes() -> Router<WalletManager> {
+pub fn create_wallet_routes() -> Router<crate::AppState> {
     Router::new()
         .route("/api/wallets", get(get_supported_wallets))
         .route("/api/wallets/detect", post(detect_wallets))
@@ -55,20 +56,20 @@ async fn initiate_wallet_connection(
 
 /// Get wallet status endpoint
 async fn get_wallet_status(
-    State(wallet_manager): State<WalletManager>,
+    State(app_state): State<crate::AppState>,
 ) -> Json<WalletStatusResponse> {
     // In a real implementation, you'd get the session token from headers or cookies
     // For now, we'll return a disconnected status
-    let response = WalletService::get_wallet_status(None, &wallet_manager);
+    let response = WalletService::get_wallet_status(None, &app_state.wallet_manager);
     Json(response)
 }
 
 /// Create wallet authentication challenge endpoint
 async fn create_wallet_challenge(
-    State(wallet_manager): State<WalletManager>,
+    State(app_state): State<crate::AppState>,
     Json(request): Json<WalletChallengeRequest>,
 ) -> Result<Json<WalletChallengeResponse>, StatusCode> {
-    match wallet_manager.create_wallet_challenge(request) {
+    match app_state.wallet_manager.create_wallet_challenge(request) {
         Ok(response) => Ok(Json(response)),
         Err(error) => {
             println!("❌ Challenge creation failed: {}", error);
@@ -79,10 +80,10 @@ async fn create_wallet_challenge(
 
 /// Verify wallet signature endpoint
 async fn verify_wallet_signature(
-    State(wallet_manager): State<WalletManager>,
+    State(app_state): State<crate::AppState>,
     Json(request): Json<WalletVerifyRequest>,
 ) -> Json<WalletVerifyResponse> {
-    Json(wallet_manager.verify_wallet_signature(request))
+    Json(app_state.wallet_manager.verify_wallet_signature(request))
 }
 
 /// Get supported networks for a specific wallet type
@@ -100,38 +101,10 @@ async fn get_wallet_networks(
     }
 }
 
-/// Validate session token endpoint
-#[derive(serde::Deserialize)]
-struct SessionValidationRequest {
-    session_token: String,
-}
-
-#[derive(serde::Serialize)]
-struct SessionValidationResponse {
-    valid: bool,
-    session_info: Option<serde_json::Value>,
-    message: String,
-}
-
-async fn validate_session(
-    State(wallet_manager): State<WalletManager>,
-    Json(request): Json<SessionValidationRequest>,
-) -> Json<SessionValidationResponse> {
-    match wallet_manager.validate_session(&request.session_token) {
-        Some(session) => Json(SessionValidationResponse {
-            valid: true,
-            session_info: Some(serde_json::json!({
-                "wallet_address": session.wallet_address,
-                "wallet_type": session.wallet_type,
-                "created_at": session.created_at,
-                "expires_at": session.expires_at
-            })),
-            message: "Session is valid".to_string(),
-        }),
-        None => Json(SessionValidationResponse {
-            valid: false,
-            session_info: None,
-            message: "Invalid or expired session".to_string(),
-        }),
-    }
+/// Validate wallet session endpoint
+async fn validate_session() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "valid": false,
+        "message": "Session validation not implemented yet"
+    }))
 }

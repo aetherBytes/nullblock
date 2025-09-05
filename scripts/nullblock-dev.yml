@@ -7,56 +7,44 @@ windows:
       layout: tiled
       panes:
         - |
-          echo "🌐 OpenRouter API Logs"
-          echo "Monitoring OpenRouter API usage and agent requests..."
-          echo "Press Ctrl+C to stop"
-          echo ""
-          mkdir -p logs
-          touch logs/openrouter-api.log
-          echo "📊 Monitoring OpenRouter API requests..."
-          tail -f logs/openrouter-api.log 2>/dev/null || echo "⚠️ Waiting for OpenRouter API logs..."
-        - |
-          echo "🧠 LLM Service Health Monitor"
-          echo "Monitoring LLM service health and model availability..."
+          echo "🎯 Rust Hecate Agent Logs"
+          echo "Real-time monitoring of Rust agent activities and requests..."
+          echo "🧠 Model: deepseek/deepseek-chat-v3.1:free (default)"
+          echo "⚡ Provider: OpenRouter (cloud-based)"
           echo ""
           cd svc/nullblock-agents
+          mkdir -p logs
+          echo "📝 Monitoring live Rust agent output..."
+          tail -f logs/hecate-rust.log 2>/dev/null || echo "⚠️ Waiting for Rust agent logs..."
+        - |
+          echo "🧠 Agent Health Monitor"
+          echo "Monitoring Rust agent service health and model status..."
+          echo ""
+          mkdir -p logs
           while true; do
-            echo "$(date '+%Y-%m-%d %H:%M:%S') [LLM-HEALTH] Checking model availability..." | tee -a logs/llm-health.log
-            python scripts/health_check.py 2>&1 | tee -a logs/llm-health.log
+            echo "$(date '+%Y-%m-%d %H:%M:%S') [HEALTH] Checking Rust agent..." | tee -a logs/agent-health.log
+            if curl -s --max-time 5 "http://localhost:9003/hecate/health" > /dev/null 2>&1; then
+              echo "$(date '+%Y-%m-%d %H:%M:%S') [HEALTH] ✅ Agent healthy" | tee -a logs/agent-health.log
+              curl -s "http://localhost:9003/hecate/model-status" | jq -r '"Model: " + .current_model + " | Status: " + .status' 2>/dev/null | tee -a logs/agent-health.log
+            else
+              echo "$(date '+%Y-%m-%d %H:%M:%S') [HEALTH] ❌ Agent not responding" | tee -a logs/agent-health.log
+            fi
             sleep 30
           done
-        - |
-          echo "🎯 Hecate Agent Logs"
-          echo "Monitoring Hecate agent server and client logs..."
-          echo ""
-          mkdir -p svc/nullblock-agents/logs
-          touch svc/nullblock-agents/logs/hecate-server.log
-          tail -f svc/nullblock-agents/logs/hecate-server.log 2>/dev/null || echo "⚠️ Waiting for Hecate logs..."
-        - |
-          echo "💬 Chat Conversations"
-          echo "Real-time monitoring of chat conversations with Hecate..."
-          echo "View your conversations and model responses as they happen"
-          echo ""
-          mkdir -p svc/nullblock-agents/logs/chats
-          touch svc/nullblock-agents/logs/chats/hecate-chat.log
-          echo "📝 Monitoring chat log: logs/chats/hecate-chat.log"
-          tail -f svc/nullblock-agents/logs/chats/hecate-chat.log 2>/dev/null || echo "⚠️ Waiting for chat conversations..."
         - ~/nullblock/scripts/health-monitor.sh
         - |
           echo "🌐 MCP Server Logs"
           echo "Monitoring MCP server logs..."
           echo ""
           mkdir -p svc/nullblock-mcp/logs
-          touch svc/nullblock-mcp/logs/mcp-server.log
           tail -f svc/nullblock-mcp/logs/mcp-server.log 2>/dev/null || echo "⚠️ Waiting for MCP logs..."
         - |
           echo "🔗 Erebus Server Logs"
-          echo "Monitoring Erebus wallet server logs..."
+          echo "Monitoring Erebus unified router logs..."
           echo ""
           cd svc/erebus
           mkdir -p logs
-          echo "📝 Tailing live Erebus logs from logs/erebus.log"
-          tail -f logs/erebus.log 2>/dev/null || echo "⚠️ Waiting for Erebus logs to appear..."
+          tail -f logs/erebus.log 2>/dev/null || echo "⚠️ Waiting for Erebus logs..."
 
   - workspace:
       layout: even-horizontal
@@ -132,29 +120,26 @@ windows:
         fi
       panes:
         - |
-          echo "🤖 Starting Nullblock Agents Server..."
+          echo "🤖 Starting General Agents Server (Python)..."
           cd svc/nullblock-agents
           echo "Installing/updating dependencies with hatch..."
           hatch -e default run pip install -e .
-          echo "Creating logs directory..."
           mkdir -p logs
           export AGENTS_HOST=0.0.0.0
           export AGENTS_PORT=9001
           echo "🚀 Starting general agents server on port 9001..."
-          echo "📝 Logs will be written to logs/agents.log"
-          echo "💡 Use 'tail -f logs/agents.log' to monitor logs"
           hatch run python3 -m agents
         - |
-          echo "🎯 Starting Hecate Agent Server with OpenRouter..."
-          echo "📋 Using OpenRouter for LLM services (no local dependencies)"
+          echo "🎯 Starting Hecate Agent Server (Rust)..."
+          echo "🦀 High-performance Rust implementation with OpenRouter"
           echo ""
           cd svc/nullblock-agents
           mkdir -p logs
-          export HECATE_PORT=9002
-          echo "🚀 Starting Hecate agent server on port 9002..."
-          echo "📝 Logs will be written to logs/hecate-server.log"
+          export AGENTS_PORT=9003
+          echo "🚀 Starting Rust agents service on port 9003..."
+          echo "📝 Logs will be written to logs/hecate-rust.log"
           echo "🌐 Using OpenRouter API for model access"
-          hatch run python -m agents.hecate.server 2>&1 | tee logs/hecate-server.log
+          cargo run --release 2>&1 | tee logs/hecate-rust.log
 
   - frontend:
       panes:
@@ -167,89 +152,97 @@ windows:
           export VITE_EREBUS_API_URL=http://localhost:3000
           export VITE_ORCHESTRATION_API_URL=http://localhost:8002
           export VITE_AGENTS_API_URL=http://localhost:9001
-          export VITE_HECATE_API_URL=http://localhost:9002
+          export VITE_HECATE_API_URL=http://localhost:9003
           npm run develop
 
-  - llm:
-      layout: even-horizontal
+  - monitoring:
+      layout: tiled
       panes:
         - |
-          echo "🌐 OpenRouter Integration Status"
-          echo "Monitoring OpenRouter API connectivity and model availability..."
+          echo "🌐 OpenRouter & Model Performance"
+          echo "Monitoring OpenRouter connectivity and model performance..."
           echo ""
           mkdir -p logs
-          touch logs/openrouter-status.log
           echo "✅ OpenRouter is cloud-based - no local server needed"
           echo "🔑 API Key configured via .env.dev"
-          echo "📊 Available models:"
-          echo "   - deepseek/deepseek-chat-v3.1:free (default, $0.00)"
-          echo "   - deepseek/deepseek-r1 (reasoning, ~$0.0014)"
-          echo "   - openai/gpt-4o (premium, ~$0.005)"
-          echo "   - anthropic/claude-3.5-sonnet (premium, ~$0.003)"
-          echo ""
-          echo "📡 Testing OpenRouter connectivity..."
-          cd svc/nullblock-agents
-          python scripts/health_check.py | tee logs/openrouter-status.log
-        - |
-          echo "🧠 Model Performance Monitor"
-          echo "Real-time monitoring of LLM requests and costs..."
-          echo ""
-          cd svc/nullblock-agents
-          mkdir -p logs
+          echo "📊 Testing connectivity and monitoring performance..."
           while true; do
-            echo "$(date '+%Y-%m-%d %H:%M:%S') [MODEL-PERF] Checking usage stats..." | tee -a logs/model-performance.log
-            python scripts/get_stats.py 2>&1 | tee -a logs/model-performance.log
+            echo "$(date '+%Y-%m-%d %H:%M:%S') [OPENROUTER] Checking connectivity..." | tee -a logs/openrouter-performance.log
+            if curl -s --max-time 5 "http://localhost:9003/hecate/available-models" > /dev/null 2>&1; then
+              echo "✅ Connected - Getting model stats..." | tee -a logs/openrouter-performance.log
+              curl -s "http://localhost:9003/hecate/model-status" | jq -r '.stats.cost_tracking // {} | to_entries[] | "\(.key): $\(.value)"' 2>/dev/null | tee -a logs/openrouter-performance.log
+            else
+              echo "❌ Connection failed" | tee -a logs/openrouter-performance.log
+            fi
             sleep 60
           done
         - |
-          echo "🔍 Reasoning Tokens Monitor"
-          echo "Monitoring reasoning model usage and token consumption..."
+          echo "🧠 Available Models & Capabilities"
+          echo "Monitoring available models and their capabilities..."
           echo ""
-          cd svc/nullblock-agents
           mkdir -p logs
-          touch logs/reasoning-monitor.log
-          echo "🧠 Reasoning models available:"
-          python scripts/get_reasoning_models.py | tee logs/reasoning-monitor.log
-          echo ""
-          echo "📊 Monitor logs: tail -f logs/reasoning-monitor.log"
-          tail -f logs/reasoning-monitor.log 2>/dev/null || echo "⚠️ Waiting for reasoning logs..."
+          while true; do
+            echo "$(date '+%Y-%m-%d %H:%M:%S') [MODELS] Updating model info..." | tee -a logs/model-info.log
+            if curl -s --max-time 5 "http://localhost:9003/hecate/model-info" > /dev/null 2>&1; then
+              curl -s "http://localhost:9003/hecate/model-info" | jq -r '. | "Current: \(.current_model // "unknown")"' 2>/dev/null | tee -a logs/model-info.log
+              echo "🔍 Available models:" | tee -a logs/model-info.log
+              echo "   - deepseek/deepseek-chat-v3.1:free ($0.00)" | tee -a logs/model-info.log
+              echo "   - deepseek/deepseek-r1 (~$0.0014)" | tee -a logs/model-info.log
+              echo "   - openai/gpt-4o (~$0.005)" | tee -a logs/model-info.log
+              echo "   - anthropic/claude-3.5-sonnet (~$0.003)" | tee -a logs/model-info.log
+            else
+              echo "❌ Could not get model info" | tee -a logs/model-info.log
+            fi
+            sleep 120
+          done
 
 on_project_start: |
   if [ ! -f .env.dev ]; then
     echo "Creating .env.dev file..."
     echo "# Nullblock Development Environment" > .env.dev
     echo "ETHEREUM_RPC_URL=https://eth-sepolia.alchemyapi.io/v2/your-key" >> .env.dev
+    echo "OPENROUTER_API_KEY=your-openrouter-key-here" >> .env.dev
     echo "Please edit .env.dev with your actual API keys"
   fi
-  echo "📁 Creating comprehensive log directory structure..."
+  echo "📁 Creating log directory structure..."
   mkdir -p logs
   mkdir -p svc/nullblock-agents/logs
-  mkdir -p svc/nullblock-agents/logs/chats
   mkdir -p svc/nullblock-mcp/logs
   mkdir -p svc/nullblock-orchestration/logs
   mkdir -p svc/erebus/logs
   mkdir -p svc/hecate/logs
-  echo "✅ Log directories created with archival support"
-  echo "🚀 Nullblock development environment ready!"
-  echo "🤖 Agents tab: General agents (9001) + Hecate server (9002) with OpenRouter integration"
-  echo "🛣️  Crossroads: Marketplace and discovery integrated into Erebus (port 3000)"
-  echo "🌐 Frontend connects to Hecate agent for chat functionality"
-  echo "🧠 LLM tab: OpenRouter API monitoring + reasoning tokens + model performance"
-  echo "📝 All services now have persistent log files with rotation"
-  echo "💡 Unified logs tab shows OpenRouter API usage, agent logs, and chat conversations"
-  echo "💬 Chat logs: Real-time conversation monitoring with timestamps and model info"
-  echo "🗂️  Log locations:"
-  echo "   - Main: logs/ (OpenRouter API, health checks)"
-  echo "   - Agents: svc/nullblock-agents/logs/ (Hecate, LLM service, reasoning)"
-  echo "   - Chat conversations: svc/nullblock-agents/logs/chats/ (session logs + main chat.log)"
-  echo "   - MCP: svc/nullblock-mcp/logs/"
-  echo "   - Orchestration: svc/nullblock-orchestration/logs/"
-  echo "   - Erebus: svc/erebus/logs/ (includes Crossroads marketplace)"
-  echo "📊 OpenRouter Models:"
-  echo "   - DeepSeek Chat Free (default): $0.00 per request"
-  echo "   - DeepSeek-R1 (reasoning): ~$0.0014 per request"
-  echo "   - GPT-4o (premium): ~$0.005 per request"
-  echo "   - Claude 3.5 Sonnet (premium): ~$0.003 per request"
+  echo "✅ Log directories created"
+  echo ""
+  echo "🚀 Nullblock Development Environment Ready!"
+  echo "================================================"
+  echo "🏗️  Architecture: Client ↔ Erebus ↔ Services"
+  echo "🛡️  Security: All frontend requests route through Erebus (port 3000)"
+  echo ""
+  echo "📡 Service Ports:"
+  echo "   🌐 Erebus (unified router): http://localhost:3000"
+  echo "   🧠 MCP Server: http://localhost:8001"
+  echo "   🔄 Orchestration: http://localhost:8002"
+  echo "   🤖 General Agents: http://localhost:9001" 
+  echo "   🎯 Hecate Agent (Rust): http://localhost:9003"
+  echo "   🎨 Frontend: http://localhost:5173"
+  echo ""
+  echo "🦀 Rust Services:"
+  echo "   ✅ Hecate Agent - High-performance conversational AI"
+  echo "   ✅ Erebus Router - Unified request routing & logging"
+  echo ""
+  echo "🧠 LLM Integration:"
+  echo "   ⚡ Provider: OpenRouter (cloud-based)"
+  echo "   🎯 Default Model: deepseek/deepseek-chat-v3.1:free ($0.00)"
+  echo "   💰 Cost Tracking: Real-time monitoring & analytics"
+  echo ""
+  echo "📊 Tabs Overview:"
+  echo "   📝 logs - Real-time service logs & health monitoring"
+  echo "   💻 workspace - Development commands & SDK tools"
+  echo "   🏗️  infrastructure - PostgreSQL, Redis, IPFS"
+  echo "   🔧 backend - MCP, Orchestration, Erebus services"
+  echo "   🤖 agents - General + Hecate (Rust) agent servers"
+  echo "   🎨 frontend - React development server"
+  echo "   📊 monitoring - OpenRouter & model performance analytics"
 
 on_project_stop: |
   echo "Stopping development services..."
