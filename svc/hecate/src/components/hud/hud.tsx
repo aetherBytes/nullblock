@@ -799,6 +799,9 @@ const HUD: React.FC<HUDProps> = ({
 
   const scopesOptions = [
     { id: 'modelinfo', icon: '🤖', title: 'Model Info', description: 'Current model details', color: '#ff6b6b' },
+    { id: 'tasks', icon: '📋', title: 'Tasks', description: 'Active agent tasks', color: '#4ecdc4' },
+    { id: 'agents', icon: '🤖', title: 'Agents', description: 'Agent monitoring', color: '#45b7d1' },
+    { id: 'logs', icon: '📄', title: 'Logs', description: 'System logs', color: '#96ceb4' },
     { id: 'settings', icon: '⚙️', title: 'Settings', description: 'Theme & social links', color: '#747d8c' },
   ];
 
@@ -1789,164 +1792,6 @@ const HUD: React.FC<HUDProps> = ({
               </div>
             </div>
           );
-        case 'tasks':
-          return (
-            <div className={styles.tasksContainer}>
-              <div className={styles.tasksHeader}>
-                <h3>Active Tasks</h3>
-                <div className={styles.taskStats}>
-                  <span className={styles.stat}>
-                    Running: {tasks.filter((t) => t.status === 'running').length}
-                  </span>
-                  <span className={styles.stat}>
-                    Completed: {tasks.filter((t) => t.status === 'completed').length}
-                  </span>
-                  <span className={styles.stat}>
-                    Failed: {tasks.filter((t) => t.status === 'failed').length}
-                  </span>
-                </div>
-              </div>
-              <div className={styles.tasksList}>
-                {tasks.map((task) => (
-                  <div key={task.id} className={`${styles.taskItem} ${getStatusColor(task.status)}`}>
-                    <div className={styles.taskHeader}>
-                      <div className={styles.taskInfo}>
-                        <span className={styles.taskName}>{task.name}</span>
-                        <span className={styles.taskType}>{task.type}</span>
-                      </div>
-                      <div className={styles.taskStatus}>
-                        <span className={styles.statusDot}></span>
-                        {task.status}
-                      </div>
-                    </div>
-                    <div className={styles.taskDescription}>{task.description}</div>
-                    {task.progress !== undefined && (
-                      <div className={styles.progressBar}>
-                        <div className={styles.progressFill} style={{ width: `${task.progress}%` }}></div>
-                        <span className={styles.progressText}>{Math.round(task.progress)}%</span>
-                      </div>
-                    )}
-                    <div className={styles.taskTiming}>
-                      <span>Started: {task.startTime.toLocaleTimeString()}</span>
-                      {task.endTime && <span>Ended: {task.endTime.toLocaleTimeString()}</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        case 'agents':
-          return (
-            <div className={styles.agentsContainer}>
-              <div className={styles.agentsHeader}>
-                <h3>Active Agents</h3>
-              </div>
-              <div className={styles.agentsList}>
-                <div className={styles.agentItem}>
-                  <div className={styles.agentInfo}>
-                    <span className={styles.agentName}>Arbitrage Agent</span>
-                    <span className={styles.agentStatus}>Active</span>
-                  </div>
-                  <div className={styles.agentMetrics}>
-                    <span>Opportunities Found: 12</span>
-                    <span>Executed Trades: 8</span>
-                    <span>Success Rate: 92%</span>
-                  </div>
-                </div>
-                <div className={styles.agentItem}>
-                  <div className={styles.agentInfo}>
-                    <span className={styles.agentName}>Social Trading Agent</span>
-                    <span className={styles.agentStatus}>Active</span>
-                  </div>
-                  <div className={styles.agentMetrics}>
-                    <span>Signals Generated: 45</span>
-                    <span>Accuracy: 78%</span>
-                    <span>Last Update: 2m ago</span>
-                  </div>
-                </div>
-                <div className={styles.agentItem}>
-                  <div className={styles.agentInfo}>
-                    <span className={styles.agentName}>Portfolio Manager</span>
-                    <span className={styles.agentStatus}>Idle</span>
-                  </div>
-                  <div className={styles.agentMetrics}>
-                    <span>Rebalancing Events: 3</span>
-                    <span>Risk Score: 0.23</span>
-                    <span>Last Action: 15m ago</span>
-                  </div>
-                </div>
-                <div className={styles.agentItem}>
-                  <div className={styles.agentInfo}>
-                    <span className={styles.agentName}>MCP Operations</span>
-                    <span className={styles.agentStatus}>Active</span>
-                  </div>
-                  <div className={styles.agentMetrics}>
-                    <span>Active Operations: {mcpOperations.filter(op => op.status === 'active').length}</span>
-                    <span>Avg Response: {Math.round(mcpOperations.reduce((acc, op) => acc + (op.responseTime || 0), 0) / mcpOperations.length)}ms</span>
-                    <span>Uptime: 99.8%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        case 'logs':
-          return (
-            <div className={styles.logsContainer}>
-              <div className={styles.logsHeader}>
-                <h3>System Logs</h3>
-                <div className={styles.logsControls}>
-                  <input
-                    type="text"
-                    placeholder="Search logs..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className={styles.searchInput}
-                  />
-                  <select
-                    value={logFilter}
-                    onChange={(e) => setLogFilter(e.target.value as any)}
-                    className={styles.filterSelect}
-                  >
-                    <option value="all">All Levels</option>
-                    <option value="info">Info</option>
-                    <option value="warning">Warning</option>
-                    <option value="error">Error</option>
-                    <option value="success">Success</option>
-                    <option value="debug">Debug</option>
-                  </select>
-                  <label className={styles.autoScrollLabel}>
-                    <input
-                      type="checkbox"
-                      checked={autoScroll}
-                      onChange={(e) => setAutoScroll(e.target.checked)}
-                    />
-                    Auto-scroll
-                  </label>
-                </div>
-              </div>
-              <div className={styles.logsContent}>
-                {filteredLogs.map((log) => (
-                  <div key={log.id} className={`${styles.logEntry} ${getLogLevelColor(log.level)}`}>
-                    <div className={styles.logTimestamp}>{log.timestamp.toLocaleTimeString()}</div>
-                    <div className={styles.logLevel}>{log.level.toUpperCase()}</div>
-                    <div className={styles.logSource}>{log.source}</div>
-                    <div className={styles.logMessage}>
-                      {log.message}
-                      {log.data && (
-                        <details className={styles.logDetails}>
-                          <summary className={styles.logSummary}>📊 Data</summary>
-                          <pre className={styles.logData}>
-                            {JSON.stringify(log.data, null, 2)}
-                          </pre>
-                        </details>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                <div ref={logsEndRef} />
-              </div>
-            </div>
-          );
         case 'hecate':
           return (
             <div className={`${styles.hecateContainer} ${isChatExpanded ? styles.chatExpanded : ''} ${isScopesExpanded ? styles.scopesExpanded : ''}`}>
@@ -2844,6 +2689,163 @@ const HUD: React.FC<HUDProps> = ({
                           </div>
                         )}
 
+                            {activeScope === 'tasks' && (
+                              <div className={styles.tasksScope}>
+                                <div className={styles.tasksHeader}>
+                                  <h6>📋 Active Tasks</h6>
+                                  <div className={styles.taskStats}>
+                                    <span className={styles.stat}>
+                                      Running: {tasks.filter((t) => t.status === 'running').length}
+                                    </span>
+                                    <span className={styles.stat}>
+                                      Completed: {tasks.filter((t) => t.status === 'completed').length}
+                                    </span>
+                                    <span className={styles.stat}>
+                                      Failed: {tasks.filter((t) => t.status === 'failed').length}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className={styles.tasksList}>
+                                  {tasks.map((task) => (
+                                    <div key={task.id} className={`${styles.taskItem} ${getStatusColor(task.status)}`}>
+                                      <div className={styles.taskHeader}>
+                                        <div className={styles.taskInfo}>
+                                          <span className={styles.taskName}>{task.name}</span>
+                                          <span className={styles.taskType}>{task.type}</span>
+                                        </div>
+                                        <div className={styles.taskStatus}>
+                                          <span className={styles.statusDot}></span>
+                                          {task.status}
+                                        </div>
+                                      </div>
+                                      <div className={styles.taskDescription}>{task.description}</div>
+                                      {task.progress !== undefined && (
+                                        <div className={styles.taskProgress}>
+                                          <div className={styles.progressBar}>
+                                            <div 
+                                              className={styles.progressFill} 
+                                              style={{ width: `${task.progress}%` }}
+                                            ></div>
+                                          </div>
+                                          <span className={styles.progressText}>{Math.round(task.progress)}%</span>
+                                        </div>
+                                      )}
+                                      <div className={styles.taskMetadata}>
+                                        <span className={styles.taskTime}>
+                                          Started: {task.startTime.toLocaleTimeString()}
+                                        </span>
+                                        {task.endTime && (
+                                          <span className={styles.taskTime}>
+                                            Ended: {task.endTime.toLocaleTimeString()}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {activeScope === 'agents' && (
+                              <div className={styles.agentsScope}>
+                                <div className={styles.agentsHeader}>
+                                  <h6>🤖 Active Agents</h6>
+                                </div>
+                                <div className={styles.agentsList}>
+                                  <div className={styles.agentItem}>
+                                    <div className={styles.agentInfo}>
+                                      <span className={styles.agentName}>Arbitrage Agent</span>
+                                      <span className={styles.agentStatus}>Active</span>
+                                    </div>
+                                    <div className={styles.agentMetrics}>
+                                      <span>Opportunities Found: 12</span>
+                                      <span>Executed Trades: 8</span>
+                                      <span>Success Rate: 92%</span>
+                                    </div>
+                                  </div>
+                                  <div className={styles.agentItem}>
+                                    <div className={styles.agentInfo}>
+                                      <span className={styles.agentName}>Social Trading Agent</span>
+                                      <span className={styles.agentStatus}>Active</span>
+                                    </div>
+                                    <div className={styles.agentMetrics}>
+                                      <span>Signals Generated: 45</span>
+                                      <span>Accuracy: 78%</span>
+                                      <span>Last Update: 2m ago</span>
+                                    </div>
+                                  </div>
+                                  <div className={styles.agentItem}>
+                                    <div className={styles.agentInfo}>
+                                      <span className={styles.agentName}>Portfolio Manager</span>
+                                      <span className={styles.agentStatus}>Monitoring</span>
+                                    </div>
+                                    <div className={styles.agentMetrics}>
+                                      <span>Assets Under Management: $12,450</span>
+                                      <span>24h Performance: +2.3%</span>
+                                      <span>Risk Level: Medium</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {activeScope === 'logs' && (
+                              <div className={styles.logsScope}>
+                                <div className={styles.logsHeader}>
+                                  <h6>📄 System Logs</h6>
+                                  <div className={styles.logsControls}>
+                                    <input
+                                      type="text"
+                                      placeholder="Search logs..."
+                                      value={searchTerm}
+                                      onChange={(e) => setSearchTerm(e.target.value)}
+                                      className={styles.searchInput}
+                                    />
+                                    <select
+                                      value={logFilter}
+                                      onChange={(e) => setLogFilter(e.target.value as any)}
+                                      className={styles.filterSelect}
+                                    >
+                                      <option value="all">All Levels</option>
+                                      <option value="info">Info</option>
+                                      <option value="warning">Warning</option>
+                                      <option value="error">Error</option>
+                                      <option value="success">Success</option>
+                                      <option value="debug">Debug</option>
+                                    </select>
+                                    <label className={styles.autoScrollLabel}>
+                                      <input
+                                        type="checkbox"
+                                        checked={autoScroll}
+                                        onChange={(e) => setAutoScroll(e.target.checked)}
+                                      />
+                                      Auto-scroll
+                                    </label>
+                                  </div>
+                                </div>
+                                <div className={styles.logsContainer}>
+                                  {filteredLogs.map((log) => (
+                                    <div key={log.id} className={`${styles.logEntry} ${getLogLevelColor(log.level)}`}>
+                                      <div className={styles.logHeader}>
+                                        <span className={styles.logTimestamp}>
+                                          {log.timestamp.toLocaleTimeString()}
+                                        </span>
+                                        <span className={styles.logLevel}>[{log.level.toUpperCase()}]</span>
+                                        <span className={styles.logSource}>{log.source}</span>
+                                      </div>
+                                      <div className={styles.logMessage}>{log.message}</div>
+                                      {log.data && (
+                                        <div className={styles.logData}>
+                                          <pre>{JSON.stringify(log.data, null, 2)}</pre>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                  <div ref={logsEndRef} />
+                                </div>
+                              </div>
+                            )}
+
                             {activeScope === 'settings' && (
                               <div className={styles.settingsScope}>
                                 <div className={styles.settingsSection}>
@@ -3024,24 +3026,6 @@ const HUD: React.FC<HUDProps> = ({
         
         {publicKey && (
           <>
-            <button 
-              className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'tasks' ? styles.active : ''}`}
-              onClick={() => setMainHudActiveTab('tasks')}
-            >
-              Tasks
-            </button>
-            <button 
-              className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'agents' ? styles.active : ''}`}
-              onClick={() => setMainHudActiveTab('agents')}
-            >
-              Agents
-            </button>
-            <button 
-              className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'logs' ? styles.active : ''}`}
-              onClick={() => setMainHudActiveTab('logs')}
-            >
-              Logs
-            </button>
             <button 
               className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
               onClick={() => setMainHudActiveTab('hecate')}
