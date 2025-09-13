@@ -5867,12 +5867,26 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     overflow-wrap: break-word;
     word-wrap: break-word;
     
+    // Adjust code block wrapper for chat
+    .codeBlockWrapper {
+      margin: 0.5rem 0;
+      
+      .copyButton {
+        top: 0.25rem;
+        right: 0.25rem;
+        font-size: 0.75rem;
+        min-width: 1.75rem;
+        height: 1.25rem;
+        opacity: 1; // Always visible in chat too
+      }
+    }
+    
     // Adjust code block sizing for chat
     .codeBlock {
       max-width: 100%;
       font-size: 0.85rem;
       padding: 0.75rem;
-      margin: 0.5rem 0;
+      margin: 0;
       text-align: left;
       white-space: pre;
       direction: ltr;

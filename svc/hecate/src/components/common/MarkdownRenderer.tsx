@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 
@@ -153,6 +153,31 @@ interface MarkdownRendererProps {
   className?: string;
 }
 
+// Copy button component
+const CopyButton: React.FC<{ code: string }> = ({ code }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy code:', err);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className={styles.copyButton}
+      title={copied ? 'Copied!' : 'Copy code'}
+    >
+      {copied ? '✓' : '📋'}
+    </button>
+  );
+};
+
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className }) => {
   return (
     <div className={`${styles.markdownContainer} ${className || ''}`}>
@@ -180,28 +205,32 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
             const normalizedLanguage = languageMap[language] || language;
             
             if (!inline && normalizedLanguage) {
+              const codeString = String(children).replace(/\n$/, '');
               return (
-                <SyntaxHighlighter
-                  style={customTheme}
-                  language={normalizedLanguage}
-                  PreTag="div"
-                  className={styles.codeBlock}
-                  customStyle={{
-                    margin: '1rem 0',
-                    borderRadius: '8px',
-                    fontSize: '0.9rem',
-                    lineHeight: '1.4',
-                    textAlign: 'left',
-                    background: 'rgba(185, 103, 255, 0.1)',
-                    border: '1px solid rgba(185, 103, 255, 0.2)',
-                  }}
-                  showLineNumbers={false}
-                  wrapLines={true}
-                  wrapLongLines={true}
-                  {...props}
-                >
-                  {String(children).replace(/\n$/, '')}
-                </SyntaxHighlighter>
+                <div className={styles.codeBlockWrapper}>
+                  <CopyButton code={codeString} />
+                  <SyntaxHighlighter
+                    style={customTheme}
+                    language={normalizedLanguage}
+                    PreTag="div"
+                    className={styles.codeBlock}
+                    customStyle={{
+                      margin: '1rem 0',
+                      borderRadius: '8px',
+                      fontSize: '0.9rem',
+                      lineHeight: '1.4',
+                      textAlign: 'left',
+                      background: 'rgba(185, 103, 255, 0.1)',
+                      border: '1px solid rgba(185, 103, 255, 0.2)',
+                    }}
+                    showLineNumbers={false}
+                    wrapLines={true}
+                    wrapLongLines={true}
+                    {...props}
+                  >
+                    {codeString}
+                  </SyntaxHighlighter>
+                </div>
               );
             }
             
