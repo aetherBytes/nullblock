@@ -141,6 +141,7 @@ class HecateAgentService {
     }
 
     try {
+      console.log('🔄 Requesting available models from backend via Erebus:', `${this.erebusUrl}/api/agents/hecate/available-models`);
       const response = await fetch(`${this.erebusUrl}/api/agents/hecate/available-models`);
       
       if (!response.ok) {
@@ -148,6 +149,16 @@ class HecateAgentService {
       }
 
       const data = await response.json();
+      console.log('✅ Received models from backend:', {
+        totalModels: data.models?.length || 0,
+        currentModel: data.current_model,
+        sampleModels: data.models?.slice(0, 3).map((m: any) => ({
+          id: m.id,
+          name: m.display_name || m.name,
+          created: m.created,
+          created_at: m.created_at
+        }))
+      });
       return data;
     } catch (error) {
       console.error('Failed to get available models:', error);
