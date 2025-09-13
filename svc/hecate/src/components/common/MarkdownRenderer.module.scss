@@ -188,57 +188,235 @@ $text-color: #c8c8d0;
     font-style: italic;
   }
   
-  // JSON specific styling
+  // Universal token styling for all languages
+  .token.comment,
+  .token.prolog,
+  .token.doctype,
+  .token.cdata {
+    color: #6a9955;
+    font-style: italic;
+  }
+
+  .token.punctuation {
+    color: #d4d4d4;
+  }
+
+  .token.property,
+  .token.tag,
+  .token.constant,
+  .token.symbol,
+  .token.deleted {
+    color: #f92672;
+  }
+
+  .token.boolean,
+  .token.number {
+    color: #b5cea8;
+  }
+
+  .token.selector,
+  .token.attr-name,
+  .token.string,
+  .token.char,
+  .token.builtin,
+  .token.inserted {
+    color: #ce9178;
+  }
+
+  .token.operator,
+  .token.entity,
+  .token.url,
+  .language-css .token.string,
+  .style .token.string,
+  .token.variable {
+    color: #d4d4d4;
+  }
+
+  .token.atrule,
+  .token.attr-value,
+  .token.function,
+  .token.class-name {
+    color: #dcdcaa;
+  }
+
+  .token.keyword {
+    color: #569cd6;
+  }
+
+  .token.regex,
+  .token.important {
+    color: #d16969;
+  }
+
+  .token.important,
+  .token.bold {
+    font-weight: bold;
+  }
+
+  .token.italic {
+    font-style: italic;
+  }
+
+  .token.entity {
+    cursor: help;
+  }
+
+  // Language-specific enhancements
+  
+  // Python
+  .language-python {
+    .token.function {
+      color: #4ec9b0;
+    }
+    .token.class-name {
+      color: #4ec9b0;
+    }
+    .token.decorator {
+      color: #dcdcaa;
+    }
+  }
+
+  // Rust
+  .language-rust {
+    .token.lifetime {
+      color: #569cd6;
+    }
+    .token.macro {
+      color: #dcdcaa;
+    }
+  }
+
+  // JavaScript/TypeScript
+  .language-javascript, .language-typescript {
+    .token.template-string {
+      color: #ce9178;
+    }
+    .token.template-punctuation {
+      color: #d4d4d4;
+    }
+  }
+
+  // Go
+  .language-go {
+    .token.function {
+      color: #4ec9b0;
+    }
+    .token.package {
+      color: #569cd6;
+    }
+  }
+
+  // Java
+  .language-java {
+    .token.annotation {
+      color: #dcdcaa;
+    }
+    .token.import {
+      color: #569cd6;
+    }
+  }
+
+  // C/C++
+  .language-c, .language-cpp {
+    .token.preprocessor {
+      color: #569cd6;
+    }
+    .token.macro {
+      color: #dcdcaa;
+    }
+  }
+
+  // C#
+  .language-csharp {
+    .token.namespace {
+      color: #569cd6;
+    }
+    .token.using {
+      color: #569cd6;
+    }
+  }
+
+  // PHP
+  .language-php {
+    .token.variable {
+      color: #9cdcfe;
+    }
+    .token.function {
+      color: #dcdcaa;
+    }
+  }
+
+  // Ruby
+  .language-ruby {
+    .token.symbol {
+      color: #4ec9b0;
+    }
+    .token.class-name {
+      color: #4ec9b0;
+    }
+  }
+
+  // JSON
   .language-json {
     .token.property {
-      color: #f8f8f2;
+      color: #9cdcfe;
     }
     .token.string {
-      color: #a6e22e;
+      color: #ce9178;
     }
     .token.number {
-      color: #ae81ff;
+      color: #b5cea8;
     }
     .token.boolean {
-      color: #66d9ef;
+      color: #569cd6;
     }
     .token.null {
       color: #f92672;
     }
   }
-  
-  // Python specific styling
-  .language-python {
-    .token.keyword {
-      color: #f92672;
-    }
-    .token.string {
-      color: #a6e22e;
-    }
-    .token.number {
-      color: #ae81ff;
-    }
+
+  // Bash/Shell
+  .language-bash, .language-shell {
     .token.function {
-      color: #66d9ef;
+      color: #dcdcaa;
+    }
+    .token.variable {
+      color: #9cdcfe;
     }
   }
-  
-  // JavaScript/TypeScript specific styling
-  .language-javascript, .language-typescript {
+
+  // SQL
+  .language-sql {
     .token.keyword {
-      color: #f92672;
-    }
-    .token.string {
-      color: #a6e22e;
-    }
-    .token.number {
-      color: #ae81ff;
+      color: #569cd6;
     }
     .token.function {
-      color: #66d9ef;
+      color: #dcdcaa;
     }
-    .token.operator {
-      color: #f8f8f2;
+  }
+
+  // YAML
+  .language-yaml {
+    .token.key {
+      color: #9cdcfe;
+    }
+    .token.string {
+      color: #ce9178;
+    }
+  }
+
+  // Markdown
+  .language-markdown {
+    .token.header {
+      color: #569cd6;
+    }
+    .token.bold {
+      color: #dcdcaa;
+      font-weight: bold;
+    }
+    .token.italic {
+      color: #dcdcaa;
+      font-style: italic;
     }
   }
 }
