@@ -22,14 +22,7 @@ const Home: React.FC = () => {
   const [walletConnected, setWalletConnected] = useState<boolean>(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [showHUD, setShowHUD] = useState<boolean>(true);
-  const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>(() => {
-    // Initialize theme synchronously from localStorage to prevent flash
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('currentTheme');
-      return (savedTheme as 'null' | 'light' | 'dark') || 'dark';
-    }
-    return 'dark';
-  });
+  const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>('dark');
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
@@ -54,6 +47,14 @@ const Home: React.FC = () => {
     hecate: true, // Frontend is running
     erebus: true, // Contracts are running
   });
+
+  // Initialize theme immediately to prevent flash
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('currentTheme');
+    if (savedTheme) {
+      setCurrentTheme(savedTheme as 'null' | 'light' | 'dark');
+    }
+  }, []);
 
   // Initialize state from localStorage on component mount
   useEffect(() => {

@@ -120,6 +120,10 @@ const HUD: React.FC<HUDProps> = ({
   const [logFilter, setLogFilter] = useState<'all' | 'info' | 'warning' | 'error' | 'success' | 'debug'>('all');
   const logsEndRef = useRef<HTMLDivElement>(null);
   
+  // Model category state for fresh data
+  const [categoryModels, setCategoryModels] = useState<any[]>([]);
+  const [isLoadingCategory, setIsLoadingCategory] = useState(false);
+  
   // Hecate specific state
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -154,6 +158,10 @@ const HUD: React.FC<HUDProps> = ({
   // Models caching state
   const [modelsCached, setModelsCached] = useState(false);
   const [modelsCacheTimestamp, setModelsCacheTimestamp] = useState<Date | null>(null);
+  
+  // Category-specific caching to avoid repeated API calls
+  const [categoryCacheTimestamp, setCategoryCacheTimestamp] = useState<{[key: string]: Date}>({});
+  const [lastLoginTime] = useState<Date>(new Date()); // Track when user logged in
 
   // Expand states for containers
   const [isChatExpanded, setIsChatExpanded] = useState(false);
@@ -412,13 +420,9 @@ const HUD: React.FC<HUDProps> = ({
     // Initialize with empty chat
     setChatMessages([]);
     
-    // Load available models when wallet connected (only if not already cached)
-    if (!modelsCached) {
-      console.log('Wallet connection triggered loadAvailableModels (not cached)');
-      loadAvailableModels();
-    } else {
-      console.log('Using cached models from previous load');
-    }
+    // Always force a fresh reload on wallet connection to get latest OpenRouter data
+    console.log('Wallet connection triggered loadAvailableModels (forcing fresh reload)');
+    loadAvailableModels(true); // Force reload
     
     // Ensure we start scrolled to bottom
     setTimeout(() => {
@@ -442,14 +446,14 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [mainHudActiveTab]);
 
-  // Load models when Hecate tab becomes active (only if not already cached)
+  // Load models when Hecate tab becomes active (force fresh data)
   useEffect(() => {
-    if (mainHudActiveTab === 'hecate' && publicKey && !modelsCached && availableModels.length === 0 && !isLoadingModels) {
-      // Only load models if not already cached and not currently loading
-      console.log('Tab switch triggered loadAvailableModels (not cached)');
-      loadAvailableModels();
+    if (mainHudActiveTab === 'hecate' && publicKey && availableModels.length === 0 && !isLoadingModels) {
+      // Force fresh load when switching to Hecate tab
+      console.log('Tab switch triggered loadAvailableModels (forcing fresh data)');
+      loadAvailableModels(true);
     }
-  }, [mainHudActiveTab, publicKey, modelsCached]);
+  }, [mainHudActiveTab, publicKey]);
 
   // Click outside handler for model dropdown
   useEffect(() => {
@@ -711,6 +715,17 @@ const HUD: React.FC<HUDProps> = ({
       return;
     }
 
+    // Force reload if cache is old (force fresh OpenRouter data)
+    const cacheAge = modelsCacheTimestamp ? Date.now() - modelsCacheTimestamp.getTime() : Infinity;
+    const cacheExpiredMinutes = 5; // Cache expires after 5 minutes
+    const isCacheExpired = cacheAge > (cacheExpiredMinutes * 60 * 1000);
+    
+    if (isCacheExpired) {
+      console.log(`🔄 Model cache expired (${Math.round(cacheAge / 60000)}min old), forcing fresh load`);
+      forceReload = true;
+      setModelsCached(false);
+    }
+
     // Also prevent if models are already cached or loaded (unless force reload)
     if (!forceReload && (modelsCached || (availableModels.length > 0 && currentSelectedModel && defaultModelLoaded))) {
       console.log('Models already cached or loaded, skipping duplicate call');
@@ -745,6 +760,47 @@ const HUD: React.FC<HUDProps> = ({
       
       console.log('Available models loaded:', modelsData.models?.length || 0);
       console.log('Current model from backend:', modelsData.current_model);
+      
+      // Debug: Check for models with created timestamps for latest filtering
+      const modelsWithTimestamps = (modelsData.models || []).filter(m => m.created || m.created_at);
+      console.log(`🔍 Models with timestamps: ${modelsWithTimestamps.length} out of ${modelsData.models?.length || 0}`);
+      
+      // Check for specific newer models the user mentioned
+      const newerModelKeywords = ['sonoma', 'qwen', 'kimi', 'dusk', 'sky'];
+      const foundNewerModels = (modelsData.models || []).filter((model: any) => {
+        const name = (model.display_name || model.name || '').toLowerCase();
+        const id = (model.id || '').toLowerCase();
+        return newerModelKeywords.some(keyword => name.includes(keyword) || id.includes(keyword));
+      });
+      
+      console.log('🔍 Frontend check - Models matching newer keywords (sonoma, qwen, kimi, dusk, sky):', foundNewerModels.length);
+      if (foundNewerModels.length > 0) {
+        console.log('📋 Found newer models in frontend:');
+        foundNewerModels.slice(0, 5).forEach((model: any, i) => {
+          console.log(`  ${i + 1}. ${model.display_name || model.name} (${model.id})`);
+          console.log(`     - created: ${model.created} (${typeof model.created})`);
+          console.log(`     - created_at: ${model.created_at}`);
+        });
+      } else {
+        console.log('⚠️ No newer models (Sonoma, Qwen, Kimi, Dusk, Sky) found in frontend response');
+        console.log('📋 Sample of what we got instead (first 5):');
+        (modelsData.models || []).slice(0, 5).forEach((model: any, i) => {
+          console.log(`  ${i + 1}. ${model.display_name || model.name} (${model.id})`);
+        });
+      }
+      
+      if (modelsWithTimestamps.length > 0) {
+        console.log('📋 Sample models with timestamps:');
+        modelsWithTimestamps.slice(0, 3).forEach((model, i) => {
+          console.log(`  ${i + 1}. ${model.display_name || model.name}:`);
+          console.log(`     - created: ${model.created} (${typeof model.created})`);
+          console.log(`     - created_at: ${model.created_at} (${typeof model.created_at})`);
+          if (model.created) {
+            const date = new Date(typeof model.created === 'number' ? model.created * 1000 : model.created);
+            console.log(`     - date: ${date.toLocaleDateString()}`);
+          }
+        });
+      }
       
       // If a model is already set, just update the UI state
       if (modelsData.current_model) {
@@ -861,6 +917,150 @@ const HUD: React.FC<HUDProps> = ({
     }
   };
 
+  const loadCategoryModels = async (category: string) => {
+    if (isLoadingCategory) return;
+    
+    try {
+      setIsLoadingCategory(true);
+      console.log(`Loading fresh ${category} models from OpenRouter via Hecate agent`);
+      
+      // Import the hecate agent service
+      const { hecateAgent } = await import('../../common/services/hecate-agent');
+      
+      // Ensure connection to Hecate agent
+      const connected = await hecateAgent.connect();
+      if (!connected) {
+        console.warn('Failed to connect to Hecate agent for category models');
+        setCategoryModels([]);
+        return;
+      }
+
+      // Get fresh models data from OpenRouter
+      const modelsData = await hecateAgent.getAvailableModels();
+      const allModels = modelsData.models || [];
+      
+      console.log(`Received ${allModels.length} models from OpenRouter API`);
+      
+      // Debug: Log sample models to see timestamp structure
+      if (category === 'latest' && allModels.length > 0) {
+        console.log('🔍 Sample models for Latest sorting:');
+        allModels.slice(0, 3).forEach((model, i) => {
+          console.log(`  ${i + 1}. ${model?.display_name || model?.name || 'UNKNOWN'}:`);
+          console.log(`     - created_at: ${model?.created_at} (type: ${typeof model?.created_at})`);
+          console.log(`     - created: ${model?.created} (type: ${typeof model?.created})`);
+          console.log(`     - available: ${model?.available}`);
+        });
+      }
+      
+      // Filter models based on category
+      let filteredModels: any[] = [];
+      
+      switch (category) {
+        case 'latest':
+          filteredModels = allModels
+            .filter(model => {
+              if (!model || !model.available) return false;
+              // Check for both created_at and created fields
+              const hasCreatedAt = model.created_at !== undefined && model.created_at !== null;
+              const hasCreated = model.created !== undefined && model.created !== null && model.created !== 0;
+              return hasCreatedAt || hasCreated;
+            })
+            .sort((a, b) => {
+              // Get the created timestamp, prioritizing created_at over created
+              let aCreated = a.created_at || a.created;
+              let bCreated = b.created_at || b.created;
+              
+              // Convert ISO date strings to timestamps for comparison
+              if (typeof aCreated === 'string') {
+                aCreated = new Date(aCreated).getTime();
+              }
+              if (typeof bCreated === 'string') {
+                bCreated = new Date(bCreated).getTime();
+              }
+              
+              // Ensure we have valid numbers
+              if (isNaN(aCreated) || isNaN(bCreated)) {
+                return 0; // Keep original order if timestamps are invalid
+              }
+              
+              return bCreated - aCreated; // Newest first (higher timestamp first)
+            })
+            .slice(0, 15);
+          
+          console.log(`🔍 Latest models filtering result:`);
+          console.log(`  - Total models: ${allModels.length}`);
+          console.log(`  - Models with timestamps: ${allModels.filter(m => m && (m.created_at || m.created)).length}`);
+          console.log(`  - Final filtered models: ${filteredModels.length}`);
+          if (filteredModels.length > 0) {
+            console.log('  - Top 3 results:');
+            filteredModels.slice(0, 3).forEach((model, i) => {
+              const timestamp = model.created_at || model.created;
+              const date = typeof timestamp === 'string' ? new Date(timestamp) : new Date(timestamp);
+              console.log(`    ${i + 1}. ${model.display_name}: ${timestamp} (${date.toLocaleDateString()})`);
+            });
+          }
+          break;
+            
+        case 'free':
+          filteredModels = allModels
+            .filter(model => model && model.available && (model.tier === 'economical' || model.cost_per_1k_tokens === 0))
+            .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+            .slice(0, 15);
+          break;
+            
+        case 'premium':
+          filteredModels = allModels
+            .filter(model => model && model.available && model.tier === 'premium')
+            .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+            .slice(0, 15);
+          break;
+            
+        case 'fast':
+          filteredModels = allModels
+            .filter(model => model && model.available && model.tier === 'fast')
+            .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+            .slice(0, 15);
+          break;
+            
+        case 'thinkers':
+          filteredModels = allModels
+            .filter(model => {
+              if (!model || !model.available) return false;
+              const name = (model.display_name || model.name).toLowerCase();
+              return (model.capabilities && (model.capabilities.includes('reasoning') || model.capabilities.includes('reasoning_tokens'))) ||
+                     name.includes('reasoning') || name.includes('think') || name.includes('r1') || name.includes('o1');
+            })
+            .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+            .slice(0, 15);
+          break;
+            
+        case 'instruct':
+          filteredModels = allModels
+            .filter(model => {
+              if (!model || !model.available) return false;
+              const name = (model.display_name || model.name).toLowerCase();
+              return name.includes('instruct') || name.includes('it') || name.includes('chat');
+            })
+            .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+            .slice(0, 15);
+          break;
+          
+        default:
+          filteredModels = allModels.filter(model => model && model.available).slice(0, 15);
+      }
+      
+      console.log(`Filtered to ${filteredModels.length} ${category} models`);
+      setCategoryModels(filteredModels);
+      
+    } catch (error) {
+      console.error(`Error loading ${category} models:`, error);
+      setCategoryModels([]);
+    } finally {
+      setIsLoadingCategory(false);
+    }
+  };
+  
+  // Legacy functions for stats display (using cached data)
   const getLastUpdatedModels = (models: any[], limit: number = 10) => {
     return models
       .filter(model => model.available && model.updated_at)
@@ -869,65 +1069,41 @@ const HUD: React.FC<HUDProps> = ({
   };
 
   const getLatestModels = (models: any[], limit: number = 10) => {
-    console.log('🔥 === LATEST MODELS DEBUG ENHANCED ===');
-    console.log('🔍 Input models array:', models);
-    console.log('📊 Input models length:', models.length);
-    
-    // Show sample of first few models with their created timestamps
-    if (models.length > 0) {
-      console.log('📋 Sample of first 3 models:');
-      models.slice(0, 3).forEach((model, i) => {
-        console.log(`  ${i + 1}. ${model?.display_name || model?.name || 'UNKNOWN'} - created: ${model?.created} (type: ${typeof model?.created})`);
-      });
-    }
-    
-    // Filter for models with valid created timestamp and available status
     const filtered = models.filter(model => {
       if (!model || typeof model !== 'object') return false;
-      
+      // Check for both created_at and created fields
+      const hasCreatedAt = model.created_at !== undefined && model.created_at !== null;
       const hasCreated = model.created !== undefined && model.created !== null && model.created !== 0;
       const isAvailable = model.available !== false;
-      
-      return hasCreated && isAvailable;
+      return (hasCreatedAt || hasCreated) && isAvailable;
     });
-    
-    console.log('✅ Filtered models with valid created timestamp:', filtered.length);
     
     if (filtered.length === 0) {
-      console.log('⚠️ No models with created timestamps found - using fallback');
-      // Return first few available models as fallback
-      const fallback = models.filter(model => model && model.available !== false).slice(0, limit);
-      console.log('🔄 Using fallback models:', fallback.length);
-      return fallback;
+      return models.filter(model => model && model.available !== false).slice(0, limit);
     }
     
-    // Sort by created timestamp (newest first - highest timestamp first)
     const sorted = filtered.sort((a, b) => {
-      let aCreated = a.created;
-      let bCreated = b.created;
+      // Get the created timestamp, prioritizing created_at over created
+      let aCreated = a.created_at || a.created;
+      let bCreated = b.created_at || b.created;
       
-      // Handle string timestamps (convert to number)
-      if (typeof aCreated === 'string') aCreated = parseInt(aCreated, 10);
-      if (typeof bCreated === 'string') bCreated = parseInt(bCreated, 10);
+      // Convert ISO date strings to timestamps for comparison
+      if (typeof aCreated === 'string') {
+        aCreated = new Date(aCreated).getTime();
+      }
+      if (typeof bCreated === 'string') {
+        bCreated = new Date(bCreated).getTime();
+      }
       
-      console.log(`🔢 Comparing: ${a.display_name || a.name} (${aCreated}) vs ${b.display_name || b.name} (${bCreated})`);
+      // Ensure we have valid numbers
+      if (isNaN(aCreated) || isNaN(bCreated)) {
+        return 0;
+      }
       
-      // Newest first (higher timestamp first)
-      return bCreated - aCreated;
+      return bCreated - aCreated; // Newest first
     });
     
-    const result = sorted.slice(0, limit);
-    
-    console.log('🏆 === LATEST MODELS RESULT ===');
-    console.log('📦 Returning', result.length, 'models');
-    console.log('🎯 Final sorted list (top 5):');
-    result.slice(0, 5).forEach((model, i) => {
-      const createdDate = new Date(model.created * 1000);
-      console.log(`  ${i + 1}. ${model.display_name || model.name} - Created: ${model.created} (${createdDate.toLocaleDateString()})`);
-    });
-    console.log('🔥 === END LATEST MODELS DEBUG ===');
-    
-    return result;
+    return sorted.slice(0, limit);
   };
 
   const getFreeModels = (models: any[], limit: number = 10) => {
@@ -2025,8 +2201,12 @@ const HUD: React.FC<HUDProps> = ({
                                       </button>
                                       <button 
                                         onClick={() => {
-                                          setActiveQuickAction(activeQuickAction === 'latest' ? null : 'latest');
+                                          const newAction = activeQuickAction === 'latest' ? null : 'latest';
+                                          setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
+                                          if (newAction === 'latest') {
+                                            loadCategoryModels('latest');
+                                          }
                                         }}
                                         className={`${styles.quickActionTab} ${activeQuickAction === 'latest' ? styles.active : ''}`}
                                       >
@@ -2034,8 +2214,12 @@ const HUD: React.FC<HUDProps> = ({
                                       </button>
                                       <button 
                                         onClick={() => {
-                                          setActiveQuickAction(activeQuickAction === 'free' ? null : 'free');
+                                          const newAction = activeQuickAction === 'free' ? null : 'free';
+                                          setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
+                                          if (newAction === 'free') {
+                                            loadCategoryModels('free');
+                                          }
                                         }}
                                         className={`${styles.quickActionTab} ${activeQuickAction === 'free' ? styles.active : ''}`}
                                       >
@@ -2043,8 +2227,12 @@ const HUD: React.FC<HUDProps> = ({
                                       </button>
                                       <button 
                                         onClick={() => {
-                                          setActiveQuickAction(activeQuickAction === 'fast' ? null : 'fast');
+                                          const newAction = activeQuickAction === 'fast' ? null : 'fast';
+                                          setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
+                                          if (newAction === 'fast') {
+                                            loadCategoryModels('fast');
+                                          }
                                         }}
                                         className={`${styles.quickActionTab} ${activeQuickAction === 'fast' ? styles.active : ''}`}
                                       >
@@ -2052,8 +2240,12 @@ const HUD: React.FC<HUDProps> = ({
                                       </button>
                                       <button 
                                         onClick={() => {
-                                          setActiveQuickAction(activeQuickAction === 'premium' ? null : 'premium');
+                                          const newAction = activeQuickAction === 'premium' ? null : 'premium';
+                                          setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
+                                          if (newAction === 'premium') {
+                                            loadCategoryModels('premium');
+                                          }
                                         }}
                                         className={`${styles.quickActionTab} ${activeQuickAction === 'premium' ? styles.active : ''}`}
                                       >
@@ -2061,8 +2253,12 @@ const HUD: React.FC<HUDProps> = ({
                                       </button>
                                       <button 
                                         onClick={() => {
-                                          setActiveQuickAction(activeQuickAction === 'thinkers' ? null : 'thinkers');
+                                          const newAction = activeQuickAction === 'thinkers' ? null : 'thinkers';
+                                          setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
+                                          if (newAction === 'thinkers') {
+                                            loadCategoryModels('thinkers');
+                                          }
                                         }}
                                         className={`${styles.quickActionTab} ${activeQuickAction === 'thinkers' ? styles.active : ''}`}
                                       >
@@ -2070,8 +2266,12 @@ const HUD: React.FC<HUDProps> = ({
                                       </button>
                                       <button 
                                         onClick={() => {
-                                          setActiveQuickAction(activeQuickAction === 'instruct' ? null : 'instruct');
+                                          const newAction = activeQuickAction === 'instruct' ? null : 'instruct';
+                                          setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
+                                          if (newAction === 'instruct') {
+                                            loadCategoryModels('instruct');
+                                          }
                                         }}
                                         className={`${styles.quickActionTab} ${activeQuickAction === 'instruct' ? styles.active : ''}`}
                                       >
@@ -2083,11 +2283,23 @@ const HUD: React.FC<HUDProps> = ({
                                     {/* Latest Models */}
                                     {activeQuickAction === 'latest' && (
                                       <div className={styles.modelSection}>
-                                        <h6>Latest Models ({getLatestModels(availableModels).length})</h6>
+                                        <h6>
+                                          Latest Models ({isLoadingCategory ? '...' : categoryModels.length})
+                                          {categoryCacheTimestamp.latest && (
+                                            <span style={{fontSize: '10px', opacity: 0.7, marginLeft: '8px'}}>
+                                              Updated {Math.round((Date.now() - categoryCacheTimestamp.latest.getTime()) / 1000)}s ago
+                                            </span>
+                                          )}
+                                        </h6>
+                                        {isLoadingCategory ? (
+                                          <div style={{textAlign: 'center', padding: '20px', opacity: 0.7}}>
+                                            🔄 Loading latest models from OpenRouter...
+                                          </div>
+                                        ) : (
                                         <div className={styles.modelsList}>
-                                          {getLatestModels(availableModels).map((model, index) => (
+                                          {categoryModels.map((model, index) => (
                                             <button
-                                              key={`latest-${model.name}-${index}`}
+                                              key={`category-${model.name}-${index}`}
                                               onClick={() => handleModelSelection(model.name)}
                                               className={`${styles.modelSelectButton} ${model.name === currentSelectedModel ? styles.currentModel : ''}`}
                                             >
@@ -2110,6 +2322,7 @@ const HUD: React.FC<HUDProps> = ({
                                             </button>
                                           ))}
                                         </div>
+                                        )}
                                       </div>
                                     )}
 
