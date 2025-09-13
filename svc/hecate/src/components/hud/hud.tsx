@@ -2324,18 +2324,6 @@ const HUD: React.FC<HUDProps> = ({
                                       </button>
                                       <button 
                                         onClick={() => {
-                                          const deepseekModel = availableModels.find(m => m.name === 'deepseek/deepseek-chat-v3.1:free');
-                                          if (deepseekModel) {
-                                            setActiveQuickAction('deepseek');
-                                            handleModelSelection(deepseekModel.name);
-                                          }
-                                        }}
-                                        className={`${styles.quickActionTab} ${activeQuickAction === 'deepseek' ? styles.active : ''}`}
-                                      >
-                                        DeepSeek Chat
-                                      </button>
-                                      <button 
-                                        onClick={() => {
                                           const newAction = activeQuickAction === 'latest' ? null : 'latest';
                                           setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
