@@ -145,6 +145,7 @@ const HUD: React.FC<HUDProps> = ({
   const [lastStatusMessageModel, setLastStatusMessageModel] = useState<string | null>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const isLoadingModelsRef = useRef(false);
+  const defaultModelLoadingRef = useRef(false);
 
   // Model info state
   const [modelInfo, setModelInfo] = useState<any>(null);
@@ -418,9 +419,12 @@ const HUD: React.FC<HUDProps> = ({
     // Initialize with empty chat
     setChatMessages([]);
     
-    // Set initial loading state when wallet connects
+    // Set initial loading state when wallet connects ONLY if no model is ready
     if (!defaultModelReady && !currentSelectedModel) {
       setNulleyeState('thinking');
+    } else {
+      // If model is already ready, go straight to base state
+      setNulleyeState('base');
     }
     
     // Load default model immediately for instant chat availability
@@ -459,10 +463,15 @@ const HUD: React.FC<HUDProps> = ({
 
   // Load models when Hecate tab becomes active (use cached data)
   useEffect(() => {
-    if (mainHudActiveTab === 'hecate' && publicKey && !defaultModelReady && !currentSelectedModel) {
-      // Load default model immediately when switching to Hecate tab
-      console.log('Tab switch triggered default model loading');
-      loadDefaultModel();
+    if (mainHudActiveTab === 'hecate' && publicKey) {
+      // If model is already ready when switching to Hecate tab, ensure base state
+      if (defaultModelReady && currentSelectedModel) {
+        setNulleyeState('base');
+      } else if (!defaultModelReady && !currentSelectedModel) {
+        // Load default model immediately when switching to Hecate tab
+        console.log('Tab switch triggered default model loading');
+        loadDefaultModel();
+      }
     }
     
     if (mainHudActiveTab === 'hecate' && publicKey && availableModels.length === 0 && !isLoadingModels && !modelsCached) {
@@ -514,6 +523,46 @@ const HUD: React.FC<HUDProps> = ({
       loadModelInfo(currentSelectedModel);
     }
   }, [currentSelectedModel, activeScope]);
+
+  // Safety effect to ensure NullEye returns to base state when ready
+  useEffect(() => {
+    if (defaultModelReady && currentSelectedModel && publicKey && mainHudActiveTab === 'hecate') {
+      // If everything is ready but we're still in thinking state, force return to base
+      if (nullviewState === 'thinking' && !isModelChanging && !isLoadingModels) {
+        console.log('🔧 Forcing NullEye to base state - model ready but stuck in thinking');
+        setNulleyeState('base');
+      }
+    }
+  }, [defaultModelReady, currentSelectedModel, publicKey, mainHudActiveTab, nullviewState, isModelChanging, isLoadingModels]);
+
+  // Additional safety check - if model is ready and nothing is loading, ensure base state
+  useEffect(() => {
+    if (
+      publicKey && 
+      mainHudActiveTab === 'hecate' && 
+      defaultModelReady && 
+      currentSelectedModel && 
+      !isModelChanging && 
+      !isLoadingModels && 
+      !defaultModelLoadingRef.current &&
+      nullviewState === 'thinking'
+    ) {
+      console.log('🚨 Emergency NullEye state reset - everything ready but stuck in thinking');
+      const timer = setTimeout(() => {
+        setNulleyeState('base');
+      }, 500); // Slightly longer delay for emergency reset
+      
+      return () => clearTimeout(timer);
+    }
+  }, [
+    publicKey, 
+    mainHudActiveTab, 
+    defaultModelReady, 
+    currentSelectedModel, 
+    isModelChanging, 
+    isLoadingModels, 
+    nullviewState
+  ]);
 
 
   const handleMCPAuthentication = async () => {
@@ -628,6 +677,10 @@ const HUD: React.FC<HUDProps> = ({
   // Load default model immediately for instant chat availability
   const loadDefaultModel = async () => {
     if (defaultModelReady || !publicKey || defaultModelLoadingRef.current) {
+      // If model is already ready, ensure we're in base state
+      if (defaultModelReady && currentSelectedModel) {
+        setNulleyeState('base');
+      }
       return;
     }
     
@@ -635,7 +688,6 @@ const HUD: React.FC<HUDProps> = ({
 
     try {
       console.log('🚀 Loading default model immediately...');
-      setNulleyeState('thinking'); // Set NullEye to thinking state during model loading
       
       const { hecateAgent } = await import('../../common/services/hecate-agent');
       
@@ -654,7 +706,6 @@ const HUD: React.FC<HUDProps> = ({
         console.log('✅ Model already loaded on backend:', status.current_model);
         setCurrentSelectedModel(status.current_model);
         setDefaultModelReady(true);
-        setNulleyeState('success'); // Model ready - show success state
         
         // Only show message if we haven't shown it yet
         if (lastStatusMessageModel !== status.current_model) {
@@ -669,10 +720,13 @@ const HUD: React.FC<HUDProps> = ({
           setLastStatusMessageModel(status.current_model);
         }
         
-        // Return to base state after showing success
-        setTimeout(() => setNulleyeState('base'), 2000);
+        // Go directly to base state since model is already ready
+        setNulleyeState('base');
         return;
       }
+
+      // Only set thinking state if we actually need to load a new model
+      setNulleyeState('thinking');
 
       // Load DeepSeek Chat as default (fastest free model)
       const defaultModelName = 'deepseek/deepseek-chat-v3.1:free';
@@ -849,7 +903,7 @@ const HUD: React.FC<HUDProps> = ({
       setIsLoadingModels(true);
       
       // Only show loading state if default model isn't ready yet
-      if (!defaultModelReady) {
+      if (!defaultModelReady && !currentSelectedModel) {
         setNulleyeState('thinking');
       }
 
@@ -931,10 +985,13 @@ const HUD: React.FC<HUDProps> = ({
       setModelsCached(true);
       console.log('Models successfully cached for session started at:', sessionStartTime.toISOString());
       
-      // Show subtle success state if default model is already ready
-      if (defaultModelReady) {
-        setNulleyeState('success');
-        setTimeout(() => setNulleyeState('base'), 1000);
+      // Ensure NullEye returns to proper state after models are loaded
+      if (defaultModelReady && currentSelectedModel) {
+        // Model is ready, go directly to base state
+        setNulleyeState('base');
+      } else if (!defaultModelReady && !currentSelectedModel) {
+        // No model ready yet, keep current state (likely thinking from default model loading)
+        console.log('Models catalog loaded but no default model ready yet');
       }
       
     } catch (error) {
@@ -1305,6 +1362,15 @@ const HUD: React.FC<HUDProps> = ({
 
     // Block submission if model is changing, Hecate is thinking, or no model is ready
     if (isModelChanging || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)) {
+      console.log('🚫 Chat submission blocked:', {
+        isModelChanging,
+        nullviewState,
+        defaultModelReady,
+        currentSelectedModel,
+        blockReason: isModelChanging ? 'Model changing' : 
+                    nullviewState === 'thinking' ? 'NullEye thinking' : 
+                    'No model ready'
+      });
       return;
     }
 
