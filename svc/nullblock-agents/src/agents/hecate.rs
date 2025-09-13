@@ -449,19 +449,11 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
 
     async fn orchestrate_workflow(
         &self,
-        message: &str,
+        _message: &str,
         _user_context: &Option<HashMap<String, serde_json::Value>>,
     ) -> Option<String> {
-        // Simple keyword-based orchestration detection
-        let message_lower = message.to_lowercase();
-        
-        if message_lower.contains("trade") || message_lower.contains("arbitrage") {
-            Some("I understand you're interested in trading and arbitrage. The orchestration system is evolving to coordinate specialized trading agents, but for now I'm ready to help with your trading questions directly.".to_string())
-        } else if message_lower.contains("analyze") || message_lower.contains("data") {
-            Some("I can help with analysis! The multi-agent orchestration system is being developed to coordinate specialized analysis agents, but I'm ready to assist with your analysis needs.".to_string())
-        } else {
-            None // Use normal chat flow
-        }
+        // Orchestration workflow disabled for now - all requests go to LLM
+        None
     }
 
     async fn build_conversation_context(&self, user_context: &Option<HashMap<String, serde_json::Value>>) -> ConversationContext {
