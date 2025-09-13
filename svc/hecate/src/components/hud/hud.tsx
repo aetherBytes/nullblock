@@ -564,6 +564,14 @@ const HUD: React.FC<HUDProps> = ({
     nullviewState
   ]);
 
+  // Auto-load Latest models when model selection opens
+  useEffect(() => {
+    if (showModelSelection && activeQuickAction === 'latest' && categoryModels.length === 0 && !isLoadingCategory) {
+      console.log('🔄 Auto-loading Latest models for model selection');
+      loadCategoryModels('latest');
+    }
+  }, [showModelSelection, activeQuickAction, categoryModels.length, isLoadingCategory]);
+
 
   const handleMCPAuthentication = async () => {
     if (!publicKey) {
@@ -2332,6 +2340,7 @@ const HUD: React.FC<HUDProps> = ({
                                           setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
                                           if (newAction === 'latest') {
+                                            setCategoryModels([]); // Clear previous data
                                             loadCategoryModels('latest');
                                           }
                                         }}
@@ -2345,6 +2354,7 @@ const HUD: React.FC<HUDProps> = ({
                                           setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
                                           if (newAction === 'free') {
+                                            setCategoryModels([]); // Clear previous data
                                             loadCategoryModels('free');
                                           }
                                         }}
@@ -2358,6 +2368,7 @@ const HUD: React.FC<HUDProps> = ({
                                           setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
                                           if (newAction === 'fast') {
+                                            setCategoryModels([]); // Clear previous data
                                             loadCategoryModels('fast');
                                           }
                                         }}
@@ -2371,6 +2382,7 @@ const HUD: React.FC<HUDProps> = ({
                                           setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
                                           if (newAction === 'premium') {
+                                            setCategoryModels([]); // Clear previous data
                                             loadCategoryModels('premium');
                                           }
                                         }}
@@ -2384,6 +2396,7 @@ const HUD: React.FC<HUDProps> = ({
                                           setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
                                           if (newAction === 'thinkers') {
+                                            setCategoryModels([]); // Clear previous data
                                             loadCategoryModels('thinkers');
                                           }
                                         }}
@@ -2397,6 +2410,7 @@ const HUD: React.FC<HUDProps> = ({
                                           setActiveQuickAction(newAction);
                                           setModelSearchQuery('');
                                           if (newAction === 'instruct') {
+                                            setCategoryModels([]); // Clear previous data
                                             loadCategoryModels('instruct');
                                           }
                                         }}
@@ -2755,6 +2769,8 @@ const HUD: React.FC<HUDProps> = ({
                                             onClick={() => {
                                               setShowModelSelection(true);
                                               setActiveQuickAction('latest');
+                                              setCategoryModels([]); // Clear any existing data
+                                              loadCategoryModels('latest');
                                             }}
                                             title="Switch to a different model"
                                           >
