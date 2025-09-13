@@ -107,8 +107,8 @@ const HUD: React.FC<HUDProps> = ({
     | 'idle'
   >('base');
   const [mainHudActiveTab, setMainHudActiveTab] = useState<
-    'status' | 'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate'
-  >(publicKey ? 'hecate' : 'status');
+    'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate'
+  >(publicKey ? 'hecate' : 'crossroads');
   
   // Additional state needed for tab functionality
   const [tasks, setTasks] = useState<any[]>([]);
@@ -1552,88 +1552,8 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderTabContent = () => {
     if (!publicKey) {
-      // Non-authenticated user sees only Status and Crossroads tabs
+      // Non-authenticated user sees only Crossroads tab
       switch (mainHudActiveTab) {
-        case 'status':
-          return (
-            <div className={styles.statusTab}>
-              <h3>System Status</h3>
-              <div className={styles.statusGrid}>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>HUD:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.hud ? styles.online : styles.offline}`}>
-                    {systemStatus.hud ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>MCP:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.mcp ? styles.online : styles.offline}`}>
-                    {systemStatus.mcp ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Orchestration:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.orchestration ? styles.online : styles.offline}`}>
-                    {systemStatus.orchestration ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Agents:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.agents ? styles.online : styles.offline}`}>
-                    {systemStatus.agents ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Portfolio:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.portfolio ? styles.online : styles.offline}`}>
-                    {systemStatus.portfolio ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>DeFi:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.defi ? styles.online : styles.offline}`}>
-                    {systemStatus.defi ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Social:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.social ? styles.online : styles.offline}`}>
-                    {systemStatus.social ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Arbitrage:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.arbitrage ? styles.online : styles.offline}`}>
-                    {systemStatus.arbitrage ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Hecate:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.hecate ? styles.online : styles.offline}`}>
-                    {systemStatus.hecate ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Erebus:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.erebus ? styles.online : styles.offline}`}>
-                    {systemStatus.erebus ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-              </div>
-              <div className={styles.connectionPrompt}>
-                <div className={styles.walletRequired}>
-                  <h4>🔒 Wallet Connection Required</h4>
-                  <p>Connect your Web3 wallet to access the full NullBlock interface and agent features.</p>
-                  <button 
-                    className={styles.connectPromptButton}
-                    onClick={() => onConnectWallet()}
-                  >
-                    Connect Wallet
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
         case 'crossroads':
           return (
             <div className={styles.crossroadsTab}>
@@ -1712,118 +1632,6 @@ const HUD: React.FC<HUDProps> = ({
     } else {
       // Authenticated user gets individual tabs
       switch (mainHudActiveTab) {
-        case 'status':
-          return (
-            <div className={styles.statusTab}>
-              <h3>System Status</h3>
-              <div className={styles.statusGrid}>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>HUD:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.hud ? styles.online : styles.offline}`}>
-                    {systemStatus.hud ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>MCP:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.mcp ? styles.online : styles.offline}`}>
-                    {systemStatus.mcp ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Orchestration:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.orchestration ? styles.online : styles.offline}`}>
-                    {systemStatus.orchestration ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Agents:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.agents ? styles.online : styles.offline}`}>
-                    {systemStatus.agents ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Portfolio:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.portfolio ? styles.online : styles.offline}`}>
-                    {systemStatus.portfolio ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>DeFi:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.defi ? styles.online : styles.offline}`}>
-                    {systemStatus.defi ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Social:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.social ? styles.online : styles.offline}`}>
-                    {systemStatus.social ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Arbitrage:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.arbitrage ? styles.online : styles.offline}`}>
-                    {systemStatus.arbitrage ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Hecate:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.hecate ? styles.online : styles.offline}`}>
-                    {systemStatus.hecate ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-                <div className={styles.statusItem}>
-                  <span className={styles.statusLabel}>Erebus:</span>
-                  <span className={`${styles.statusValue} ${systemStatus.erebus ? styles.online : styles.offline}`}>
-                    {systemStatus.erebus ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-              </div>
-              <div className={styles.userInfo}>
-                <h4>User Profile</h4>
-                <div className={styles.profileInfo}>
-                  <div className={styles.profileItem}>
-                    <span className={styles.profileLabel}>ID:</span>
-                    <span className={styles.profileValue}>{userProfile.id}</span>
-                  </div>
-                  <div className={styles.profileItem}>
-                    <span className={styles.profileLabel}>Ascent Level:</span>
-                    <span className={styles.profileValue}>{userProfile.ascent}</span>
-                  </div>
-                  <div className={styles.profileItem}>
-                    <span className={styles.profileLabel}>Cache Value:</span>
-                    <span className={styles.profileValue}>{userProfile.cacheValue}</span>
-                  </div>
-                  <div className={styles.profileItem}>
-                    <span className={styles.profileLabel}>Memories:</span>
-                    <span className={styles.profileValue}>{userProfile.memories}</span>
-                  </div>
-                </div>
-              </div>
-              <div className={styles.sessionInfo}>
-                <h4>Session Details</h4>
-                <div className={styles.profileInfo}>
-                  <div className={styles.profileItem}>
-                    <span className={styles.profileLabel}>Wallet Identity:</span>
-                    <span className={styles.profileValue}>
-                      {getUserStats().walletName || getUserStats().walletAddress}
-                    </span>
-                  </div>
-                  <div className={styles.profileItem}>
-                    <span className={styles.profileLabel}>Wallet Type:</span>
-                    <span className={styles.profileValue}>{getUserStats().walletType}</span>
-                  </div>
-                  <div className={styles.profileItem}>
-                    <span className={styles.profileLabel}>Session Time:</span>
-                    <span className={styles.profileValue}>{getUserStats().sessionDuration}</span>
-                  </div>
-                  <div className={styles.profileItem}>
-                    <span className={styles.profileLabel}>Connection Status:</span>
-                    <span className={styles.profileValue}>{getUserStats().connectionStatus}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
         case 'crossroads':
           return (
             <div className={styles.crossroadsTab}>
@@ -3207,12 +3015,6 @@ const HUD: React.FC<HUDProps> = ({
   const renderHomeScreen = () => (
     <div className={styles.hudScreen}>
       <div className={styles.innerHudMenuBar}>
-        <button 
-          className={`${styles.menuButton} ${mainHudActiveTab === 'status' ? styles.active : ''}`}
-          onClick={() => setMainHudActiveTab('status')}
-        >
-          Status
-        </button>
         <button 
           className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
           onClick={() => setMainHudActiveTab('crossroads')}
