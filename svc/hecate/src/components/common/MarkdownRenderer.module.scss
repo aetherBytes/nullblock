@@ -38,13 +38,51 @@ $text-color: #c8c8d0;
     color: $text-color;
   }
   
+  // Code block wrapper with copy button
+  .codeBlockWrapper {
+    position: relative;
+    margin: 1rem 0;
+  }
+
+  // Copy button - always visible
+  .copyButton {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba($echo-purple, 0.8);
+    border: 1px solid rgba($echo-purple, 0.3);
+    border-radius: 4px;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    opacity: 1;
+    transition: all 0.2s ease;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 1.5rem;
+    
+    &:hover {
+      background: rgba($echo-purple, 1);
+      border-color: $echo-purple;
+      transform: scale(1.05);
+    }
+    
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
   // Code blocks
   .codeBlock {
     background: rgba($echo-purple, 0.1);
     border: 1px solid rgba($echo-purple, 0.2);
     border-radius: 8px;
     padding: 1rem;
-    margin: 1rem 0;
+    margin: 0;
     overflow-x: auto;
     font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
     font-size: 0.9rem;
