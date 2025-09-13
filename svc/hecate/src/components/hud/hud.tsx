@@ -128,6 +128,7 @@ const HUD: React.FC<HUDProps> = ({
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [activeScope, setActiveLens] = useState<string | null>(null);
+  const [isProcessingChat, setIsProcessingChat] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const [chatAutoScroll, setChatAutoScroll] = useState(true);
@@ -528,12 +529,13 @@ const HUD: React.FC<HUDProps> = ({
   useEffect(() => {
     if (defaultModelReady && currentSelectedModel && publicKey && mainHudActiveTab === 'hecate') {
       // If everything is ready but we're still in thinking state, force return to base
-      if (nullviewState === 'thinking' && !isModelChanging && !isLoadingModels) {
+      // BUT NOT if we're actively processing a chat message
+      if (nullviewState === 'thinking' && !isModelChanging && !isLoadingModels && !isProcessingChat) {
         console.log('🔧 Forcing NullEye to base state - model ready but stuck in thinking');
         setNulleyeState('base');
       }
     }
-  }, [defaultModelReady, currentSelectedModel, publicKey, mainHudActiveTab, nullviewState, isModelChanging, isLoadingModels]);
+  }, [defaultModelReady, currentSelectedModel, publicKey, mainHudActiveTab, nullviewState, isModelChanging, isLoadingModels, isProcessingChat]);
 
   // Additional safety check - if model is ready and nothing is loading, ensure base state
   useEffect(() => {
@@ -545,6 +547,7 @@ const HUD: React.FC<HUDProps> = ({
       !isModelChanging && 
       !isLoadingModels && 
       !defaultModelLoadingRef.current &&
+      !isProcessingChat &&
       nullviewState === 'thinking'
     ) {
       console.log('🚨 Emergency NullEye state reset - everything ready but stuck in thinking');
@@ -561,6 +564,7 @@ const HUD: React.FC<HUDProps> = ({
     currentSelectedModel, 
     isModelChanging, 
     isLoadingModels, 
+    isProcessingChat,
     nullviewState
   ]);
 
@@ -1372,13 +1376,15 @@ const HUD: React.FC<HUDProps> = ({
     e.preventDefault();
 
     // Block submission if model is changing, Hecate is thinking, or no model is ready
-    if (isModelChanging || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)) {
+    if (isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)) {
       console.log('🚫 Chat submission blocked:', {
         isModelChanging,
+        isProcessingChat,
         nullviewState,
         defaultModelReady,
         currentSelectedModel,
         blockReason: isModelChanging ? 'Model changing' : 
+                    isProcessingChat ? 'Chat processing' :
                     nullviewState === 'thinking' ? 'NullEye thinking' : 
                     'No model ready'
       });
@@ -1398,6 +1404,8 @@ const HUD: React.FC<HUDProps> = ({
       setChatInput('');
 
       setNulleyeState('thinking');
+      setIsProcessingChat(true);
+      console.log('🧠 Thinking state set, starting async response...');
 
       // Send real message to Hecate agent
       handleRealChatResponse(userMessage.message);
@@ -1415,12 +1423,14 @@ const HUD: React.FC<HUDProps> = ({
         throw new Error('Failed to connect to Hecate agent');
       }
 
-      // Send message and get response
+      // Send message and get response - thinking state remains active during this entire operation
+      console.log('🔄 Sending message to Hecate agent, thinking state should be active...');
       const response = await hecateAgent.sendMessage(message, {
         wallet_address: publicKey || undefined,
         wallet_type: localStorage.getItem('walletType') || undefined,
         session_time: new Date().toISOString()
       });
+      console.log('✅ Received response from Hecate, changing from thinking state...');
 
       // Create Hecate response message
       const hecateMessage = {
@@ -1435,7 +1445,8 @@ const HUD: React.FC<HUDProps> = ({
 
       setChatMessages((prev) => [...prev, hecateMessage]);
 
-      // Set NullView state based on response confidence/quality
+      // Clear processing flag and change from thinking to appropriate response state
+      setIsProcessingChat(false);
       if (response.confidence_score > 0.8) {
         setNulleyeState('success');
       } else if (response.metadata?.finish_reason === 'question') {
@@ -1483,6 +1494,7 @@ const HUD: React.FC<HUDProps> = ({
       };
 
       setChatMessages((prev) => [...prev, errorMessage]);
+      setIsProcessingChat(false);
       setNulleyeState('error');
       setTimeout(() => setNulleyeState('base'), 3000);
     }
@@ -1833,7 +1845,7 @@ const HUD: React.FC<HUDProps> = ({
                               <span className={styles.messageSender}>
                                 {message.sender === 'hecate' ? (
                                   <span className={styles.hecateMessageSender}>
-                                    <div className={`${styles.nullviewChat} ${styles[`chat-${message.type || 'base'}`]} ${styles.clickableNulleyeChat}`}>
+                                    <div className={`${styles.nullviewChat} ${styles[`chat-${nullviewState === 'thinking' ? 'thinking' : (message.type || 'base')}`]} ${styles.clickableNulleyeChat}`}>
                                       <div className={styles.staticFieldChat}></div>
                                       <div className={styles.coreNodeChat}></div>
                                       <div className={styles.streamLineChat}></div>
@@ -1852,6 +1864,37 @@ const HUD: React.FC<HUDProps> = ({
                             <div className={styles.messageContent}>{message.message}</div>
                           </div>
                         ))}
+                        
+                        {/* Show thinking indicator when Hecate is processing */}
+                        {nullviewState === 'thinking' && (
+                          <div className={`${styles.chatMessage} ${styles['message-hecate']} ${styles['type-thinking']}`}>
+                            <div className={styles.messageHeader}>
+                              <span className={styles.messageSender}>
+                                <span className={styles.hecateMessageSender}>
+                                  <div className={`${styles.nullviewChat} ${styles['chat-thinking']} ${styles.clickableNulleyeChat}`}>
+                                    <div className={styles.staticFieldChat}></div>
+                                    <div className={styles.coreNodeChat}></div>
+                                    <div className={styles.streamLineChat}></div>
+                                    <div className={styles.lightningSparkChat}></div>
+                                  </div>
+                                  Hecate
+                                </span>
+                              </span>
+                              <span className={styles.messageTime}>
+                                {new Date().toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <div className={styles.messageContent}>
+                              <div className={styles.thinkingIndicator}>
+                                <span className={styles.thinkingDots}>●</span>
+                                <span className={styles.thinkingDots}>●</span>
+                                <span className={styles.thinkingDots}>●</span>
+                                <span className={styles.thinkingText}>Thinking...</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
                         <div ref={chatEndRef} />
                       </div>
 
@@ -1863,17 +1906,17 @@ const HUD: React.FC<HUDProps> = ({
                           placeholder={
                             isModelChanging 
                               ? "Switching models..." 
-                              : nullviewState === 'thinking' 
+                              : isProcessingChat || nullviewState === 'thinking'
                                 ? "Hecate is thinking..." 
                                 : "Ask Hecate anything..."
                           }
                           className={styles.chatInputField}
-                          disabled={isModelChanging || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
+                          disabled={isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
                         />
                         <button 
                           type="submit" 
                           className={styles.chatSendButton}
-                          disabled={isModelChanging || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
+                          disabled={isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
                         >
                           <span>➤</span>
                         </button>
