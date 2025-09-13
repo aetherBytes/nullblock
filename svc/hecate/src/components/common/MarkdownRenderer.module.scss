@@ -1,0 +1,244 @@
+// Color Variables (matching hud.module.scss)
+$background-dark: #0a0a0a;
+$echo-blue: #00a8ff;
+$echo-blue-dark: #005a8c;
+$echo-purple: #b967ff;
+$echo-red: #ff3333;
+$echo-orange: #ff7f00;
+$echo-green: #00ff9d;
+$echo-gray: #808080;
+$lightning-blue: #00d4ff;
+$lightning-silver: #e8e8e8;
+$lightning-gold: #e6c200;
+$lightning-green: #00ff9d;
+$lightning-red: #ff3333;
+$lightning-purple: #b967ff;
+$text-color: #c8c8d0;
+
+.markdownContainer {
+  line-height: 1.6;
+  color: $text-color;
+  
+  // Headings
+  h1, h2, h3, h4, h5, h6 {
+    color: $echo-purple;
+    margin: 1rem 0 0.5rem 0;
+    font-weight: 600;
+  }
+  
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.3rem; }
+  h3 { font-size: 1.2rem; }
+  h4 { font-size: 1.1rem; }
+  h5, h6 { font-size: 1rem; }
+  
+  // Paragraphs
+  p {
+    margin: 0.75rem 0;
+    color: $text-color;
+  }
+  
+  // Code blocks
+  .codeBlock {
+    background: rgba($echo-purple, 0.1);
+    border: 1px solid rgba($echo-purple, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    overflow-x: auto;
+    font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    text-align: left;
+    white-space: pre;
+    direction: ltr;
+    
+    code {
+      background: transparent;
+      padding: 0;
+      border: none;
+      color: $text-color;
+      text-align: left;
+      white-space: pre;
+      display: block;
+      width: 100%;
+      overflow-x: auto;
+    }
+  }
+  
+  // Inline code
+  .inlineCode {
+    background: rgba($echo-purple, 0.15);
+    color: $echo-purple;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
+    font-size: 0.9em;
+    border: 1px solid rgba($echo-purple, 0.2);
+  }
+  
+  // Pre wrapper for code blocks
+  .preWrapper {
+    margin: 1rem 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-align: left;
+    direction: ltr;
+    
+    pre {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      text-align: left;
+      white-space: pre;
+      overflow-x: auto;
+    }
+  }
+  
+  // Blockquotes
+  .blockquote {
+    border-left: 4px solid $echo-purple;
+    background: rgba($echo-purple, 0.05);
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+    color: rgba($text-color, 0.8);
+  }
+  
+  // Lists
+  .list, .orderedList {
+    margin: 0.75rem 0;
+    padding-left: 1.5rem;
+    
+    li {
+      margin: 0.25rem 0;
+      color: $text-color;
+    }
+  }
+  
+  .orderedList {
+    list-style-type: decimal;
+  }
+  
+  .list {
+    list-style-type: disc;
+  }
+  
+  // Links
+  .link {
+    color: $echo-purple;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      border-bottom-color: $echo-purple;
+      color: lighten($echo-purple, 10%);
+    }
+  }
+  
+  // Tables
+  .tableWrapper {
+    margin: 1rem 0;
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid rgba($echo-purple, 0.2);
+  }
+  
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba($echo-purple, 0.02);
+    
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid rgba($echo-purple, 0.1);
+    }
+    
+    th {
+      background: rgba($echo-purple, 0.1);
+      color: $echo-purple;
+      font-weight: 600;
+    }
+    
+    tr:hover {
+      background: rgba($echo-purple, 0.05);
+    }
+  }
+  
+  // Horizontal rules
+  hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, $echo-purple, transparent);
+    margin: 2rem 0;
+  }
+  
+  // Strong and emphasis
+  strong {
+    color: $echo-purple;
+    font-weight: 600;
+  }
+  
+  em {
+    color: rgba($text-color, 0.8);
+    font-style: italic;
+  }
+  
+  // JSON specific styling
+  .language-json {
+    .token.property {
+      color: #f8f8f2;
+    }
+    .token.string {
+      color: #a6e22e;
+    }
+    .token.number {
+      color: #ae81ff;
+    }
+    .token.boolean {
+      color: #66d9ef;
+    }
+    .token.null {
+      color: #f92672;
+    }
+  }
+  
+  // Python specific styling
+  .language-python {
+    .token.keyword {
+      color: #f92672;
+    }
+    .token.string {
+      color: #a6e22e;
+    }
+    .token.number {
+      color: #ae81ff;
+    }
+    .token.function {
+      color: #66d9ef;
+    }
+  }
+  
+  // JavaScript/TypeScript specific styling
+  .language-javascript, .language-typescript {
+    .token.keyword {
+      color: #f92672;
+    }
+    .token.string {
+      color: #a6e22e;
+    }
+    .token.number {
+      color: #ae81ff;
+    }
+    .token.function {
+      color: #66d9ef;
+    }
+    .token.operator {
+      color: #f8f8f2;
+    }
+  }
+}
