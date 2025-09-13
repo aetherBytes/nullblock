@@ -45,6 +45,11 @@ windows:
           cd svc/erebus
           mkdir -p logs
           tail -f logs/erebus.log 2>/dev/null || echo "⚠️ Waiting for Erebus logs..."
+        - |
+          echo "💻 Nullblock Root Terminal"
+          echo "Blank terminal for manual commands and debugging..."
+          echo ""
+          cd ~/nullblock
 
   - workspace:
       layout: even-horizontal

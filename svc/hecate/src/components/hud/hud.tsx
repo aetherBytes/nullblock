@@ -131,6 +131,7 @@ const HUD: React.FC<HUDProps> = ({
   const [isProcessingChat, setIsProcessingChat] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
   const [chatAutoScroll, setChatAutoScroll] = useState(true);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -575,6 +576,33 @@ const HUD: React.FC<HUDProps> = ({
       loadCategoryModels('latest');
     }
   }, [showModelSelection, activeQuickAction, categoryModels.length, isLoadingCategory]);
+
+  // Auto-focus input when Hecate tab becomes active and model is ready
+  useEffect(() => {
+    if (mainHudActiveTab === 'hecate' && publicKey && defaultModelReady && currentSelectedModel && !isProcessingChat) {
+      // Small delay to ensure the input is rendered and enabled
+      const timer = setTimeout(() => {
+        if (chatInputRef.current) {
+          chatInputRef.current.focus();
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [mainHudActiveTab, publicKey, defaultModelReady, currentSelectedModel, isProcessingChat]);
+
+  // Auto-focus input when chat is expanded
+  useEffect(() => {
+    if (isChatExpanded && !isProcessingChat) {
+      const timer = setTimeout(() => {
+        if (chatInputRef.current) {
+          chatInputRef.current.focus();
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isChatExpanded, isProcessingChat]);
 
 
   const handleMCPAuthentication = async () => {
@@ -1407,6 +1435,13 @@ const HUD: React.FC<HUDProps> = ({
       setIsProcessingChat(true);
       console.log('🧠 Thinking state set, starting async response...');
 
+      // Restore focus to input after clearing it
+      setTimeout(() => {
+        if (chatInputRef.current) {
+          chatInputRef.current.focus();
+        }
+      }, 0);
+
       // Send real message to Hecate agent
       handleRealChatResponse(userMessage.message);
     }
@@ -1455,6 +1490,13 @@ const HUD: React.FC<HUDProps> = ({
         setNulleyeState('response');
       }
 
+      // Restore focus to input when response is received
+      setTimeout(() => {
+        if (chatInputRef.current) {
+          chatInputRef.current.focus();
+        }
+      }, 100);
+
       // Return to base state after a delay
       setTimeout(() => {
         setNulleyeState('base');
@@ -1496,6 +1538,14 @@ const HUD: React.FC<HUDProps> = ({
       setChatMessages((prev) => [...prev, errorMessage]);
       setIsProcessingChat(false);
       setNulleyeState('error');
+      
+      // Restore focus to input when error occurs
+      setTimeout(() => {
+        if (chatInputRef.current) {
+          chatInputRef.current.focus();
+        }
+      }, 100);
+      
       setTimeout(() => setNulleyeState('base'), 3000);
     }
   };
@@ -1900,6 +1950,7 @@ const HUD: React.FC<HUDProps> = ({
 
                       <form className={styles.chatInput} onSubmit={handleChatSubmit}>
                         <input
+                          ref={chatInputRef}
                           type="text"
                           value={chatInput}
                           onChange={handleChatInputChange}
