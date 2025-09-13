@@ -8558,6 +8558,60 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+.parametersList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  max-width: 100%;
+
+  .parameterTag {
+    background: rgba($echo-green, 0.15);
+    color: $echo-green;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.65rem;
+    font-weight: 500;
+    border: 1px solid rgba($echo-green, 0.3);
+    transition: all 0.3s ease;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-break: break-all;
+
+    &:hover {
+      background: rgba($echo-green, 0.25);
+      border-color: rgba($echo-green, 0.5);
+      transform: translateY(-1px);
+      position: relative;
+      max-width: none;
+      white-space: normal;
+      word-break: normal;
+      z-index: 10;
+
+      &::after {
+        content: attr(title);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba($background-dark, 0.95);
+        color: $echo-green;
+        padding: 0.4rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        white-space: nowrap;
+        z-index: 1000;
+        border: 1px solid rgba($echo-green, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+        margin-bottom: 4px;
+      }
+    }
+  }
+}
+
 .sessionStats {
   display: flex;
   flex-direction: column;

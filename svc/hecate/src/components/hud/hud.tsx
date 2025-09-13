@@ -120,7 +120,7 @@ const HUD: React.FC<HUDProps> = ({
   const [logFilter, setLogFilter] = useState<'all' | 'info' | 'warning' | 'error' | 'success' | 'debug'>('all');
   const logsEndRef = useRef<HTMLDivElement>(null);
   
-  // Model category state for fresh data
+  // Model category state for cached data
   const [categoryModels, setCategoryModels] = useState<any[]>([]);
   const [isLoadingCategory, setIsLoadingCategory] = useState(false);
   
@@ -155,13 +155,9 @@ const HUD: React.FC<HUDProps> = ({
   // Quick actions state
   const [activeQuickAction, setActiveQuickAction] = useState<string | null>(null);
 
-  // Models caching state
+  // Session-based models caching state (only refresh on page reload)
   const [modelsCached, setModelsCached] = useState(false);
-  const [modelsCacheTimestamp, setModelsCacheTimestamp] = useState<Date | null>(null);
-  
-  // Category-specific caching to avoid repeated API calls
-  const [categoryCacheTimestamp, setCategoryCacheTimestamp] = useState<{[key: string]: Date}>({});
-  const [lastLoginTime] = useState<Date>(new Date()); // Track when user logged in
+  const [sessionStartTime] = useState<Date>(new Date());
 
   // Expand states for containers
   const [isChatExpanded, setIsChatExpanded] = useState(false);
@@ -413,16 +409,17 @@ const HUD: React.FC<HUDProps> = ({
       setIsChatExpanded(false);
       setIsScopesExpanded(false);
       setModelsCached(false);
-      setModelsCacheTimestamp(null);
       return;
     }
     
     // Initialize with empty chat
     setChatMessages([]);
     
-    // Always force a fresh reload on wallet connection to get latest OpenRouter data
-    console.log('Wallet connection triggered loadAvailableModels (forcing fresh reload)');
-    loadAvailableModels(true); // Force reload
+    // Load models once per session (only if not already cached)
+    if (!modelsCached) {
+      console.log('Session started - loading models once');
+      loadAvailableModels();
+    }
     
     // Ensure we start scrolled to bottom
     setTimeout(() => {
@@ -436,7 +433,7 @@ const HUD: React.FC<HUDProps> = ({
         clearTimeout(userScrollTimeoutRef.current);
       }
     };
-  }, [publicKey]);
+  }, [publicKey, modelsCached]);
 
   // Reset expanded states when switching away from Hecate tab
   useEffect(() => {
@@ -446,14 +443,14 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [mainHudActiveTab]);
 
-  // Load models when Hecate tab becomes active (force fresh data)
+  // Load models when Hecate tab becomes active (use cached data)
   useEffect(() => {
-    if (mainHudActiveTab === 'hecate' && publicKey && availableModels.length === 0 && !isLoadingModels) {
-      // Force fresh load when switching to Hecate tab
-      console.log('Tab switch triggered loadAvailableModels (forcing fresh data)');
-      loadAvailableModels(true);
+    if (mainHudActiveTab === 'hecate' && publicKey && availableModels.length === 0 && !isLoadingModels && !modelsCached) {
+      // Only load if not cached yet
+      console.log('Tab switch triggered loadAvailableModels (using cache if available)');
+      loadAvailableModels();
     }
-  }, [mainHudActiveTab, publicKey]);
+  }, [mainHudActiveTab, publicKey, modelsCached]);
 
   // Click outside handler for model dropdown
   useEffect(() => {
@@ -656,11 +653,11 @@ const HUD: React.FC<HUDProps> = ({
       // Find the current model in cached available models
       let currentModelInfo = availableModels?.find((model: any) => model.name === currentModelName);
       
-      // If not found in cache and cache is empty, try to fetch fresh data
+      // If not found in cache and cache is empty, load models first
       if (!currentModelInfo && availableModels.length === 0) {
-        console.log('Cache is empty, fetching fresh model data for info');
-        const modelsData = await hecateAgent.getAvailableModels();
-        currentModelInfo = modelsData.models?.find((model: any) => model.name === currentModelName);
+        console.log('Cache is empty, loading models for info');
+        await loadAvailableModels();
+        currentModelInfo = availableModels?.find((model: any) => model.name === currentModelName);
       }
       
       if (!currentModelInfo) {
@@ -702,33 +699,22 @@ const HUD: React.FC<HUDProps> = ({
       
     } catch (error) {
       console.error('Error loading model info:', error);
-      setModelInfo({ error: error.message });
+      setModelInfo({ error: (error as Error).message });
     } finally {
       setIsLoadingModelInfo(false);
     }
   };
 
-  const loadAvailableModels = async (forceReload = false) => {
+  const loadAvailableModels = async () => {
     // Prevent concurrent executions using synchronous ref
     if (isLoadingModelsRef.current) {
       console.log('Model loading already in progress (ref guard), skipping duplicate call');
       return;
     }
 
-    // Force reload if cache is old (force fresh OpenRouter data)
-    const cacheAge = modelsCacheTimestamp ? Date.now() - modelsCacheTimestamp.getTime() : Infinity;
-    const cacheExpiredMinutes = 5; // Cache expires after 5 minutes
-    const isCacheExpired = cacheAge > (cacheExpiredMinutes * 60 * 1000);
-    
-    if (isCacheExpired) {
-      console.log(`🔄 Model cache expired (${Math.round(cacheAge / 60000)}min old), forcing fresh load`);
-      forceReload = true;
-      setModelsCached(false);
-    }
-
-    // Also prevent if models are already cached or loaded (unless force reload)
-    if (!forceReload && (modelsCached || (availableModels.length > 0 && currentSelectedModel && defaultModelLoaded))) {
-      console.log('Models already cached or loaded, skipping duplicate call');
+    // Skip if models are already cached for this session
+    if (modelsCached && availableModels.length > 0) {
+      console.log('Models already cached for this session, skipping API call');
       return;
     }
 
@@ -874,10 +860,9 @@ const HUD: React.FC<HUDProps> = ({
 
       console.log('=== LOADING MODELS END ===');
       
-      // Mark models as cached on successful load
+      // Mark models as cached for this session
       setModelsCached(true);
-      setModelsCacheTimestamp(new Date());
-      console.log('Models successfully cached at:', new Date().toISOString());
+      console.log('Models successfully cached for session started at:', sessionStartTime.toISOString());
       
     } catch (error) {
       console.error('Error loading available models:', error);
@@ -897,20 +882,32 @@ const HUD: React.FC<HUDProps> = ({
 
     try {
       setIsSearchingModels(true);
-      const { hecateAgent } = await import('../../common/services/hecate-agent');
       
-      // Ensure connection to Hecate agent
-      const connected = await hecateAgent.connect();
-      if (!connected) {
-        console.warn('Failed to connect to Hecate agent for model search');
-        return;
+      // Use cached models for search instead of API call
+      let searchableModels = availableModels;
+      
+      // If no cached models, load them first
+      if (searchableModels.length === 0) {
+        await loadAvailableModels();
+        searchableModels = availableModels;
       }
-
-      // Search models via hecateAgent service (which routes through Erebus)
-      const data = await hecateAgent.searchModels(query, 20);
-      setSearchResults(data.results || []);
+      
+      // Perform client-side search on cached models
+      const queryLower = query.toLowerCase();
+      const results = searchableModels.filter((model: any) => {
+        const name = (model.name || '').toLowerCase();
+        const displayName = (model.display_name || '').toLowerCase();
+        const description = (model.description || '').toLowerCase();
+        
+        return name.includes(queryLower) || 
+               displayName.includes(queryLower) || 
+               description.includes(queryLower);
+      }).slice(0, 20);
+      
+      setSearchResults(results);
+      console.log(`Found ${results.length} models matching "${query}" in cached data`);
     } catch (error) {
-      console.error('Error searching models:', error);
+      console.error('Error searching cached models:', error);
       setSearchResults([]);
     } finally {
       setIsSearchingModels(false);
@@ -922,35 +919,19 @@ const HUD: React.FC<HUDProps> = ({
     
     try {
       setIsLoadingCategory(true);
-      console.log(`Loading fresh ${category} models from OpenRouter via Hecate agent`);
+      console.log(`Filtering cached models for ${category} category`);
       
-      // Import the hecate agent service
-      const { hecateAgent } = await import('../../common/services/hecate-agent');
+      // Use cached models instead of making a fresh API call
+      let allModels = availableModels;
       
-      // Ensure connection to Hecate agent
-      const connected = await hecateAgent.connect();
-      if (!connected) {
-        console.warn('Failed to connect to Hecate agent for category models');
-        setCategoryModels([]);
-        return;
+      // If no cached models available, load them first
+      if (allModels.length === 0) {
+        console.log('No cached models available, loading first...');
+        await loadAvailableModels();
+        allModels = availableModels;
       }
-
-      // Get fresh models data from OpenRouter
-      const modelsData = await hecateAgent.getAvailableModels();
-      const allModels = modelsData.models || [];
       
-      console.log(`Received ${allModels.length} models from OpenRouter API`);
-      
-      // Debug: Log sample models to see timestamp structure
-      if (category === 'latest' && allModels.length > 0) {
-        console.log('🔍 Sample models for Latest sorting:');
-        allModels.slice(0, 3).forEach((model, i) => {
-          console.log(`  ${i + 1}. ${model?.display_name || model?.name || 'UNKNOWN'}:`);
-          console.log(`     - created_at: ${model?.created_at} (type: ${typeof model?.created_at})`);
-          console.log(`     - created: ${model?.created} (type: ${typeof model?.created})`);
-          console.log(`     - available: ${model?.available}`);
-        });
-      }
+      console.log(`Using ${allModels.length} cached models for ${category} filtering`);
       
       // Filter models based on category
       let filteredModels: any[] = [];
@@ -1053,7 +1034,7 @@ const HUD: React.FC<HUDProps> = ({
       setCategoryModels(filteredModels);
       
     } catch (error) {
-      console.error(`Error loading ${category} models:`, error);
+      console.error(`Error filtering ${category} models:`, error);
       setCategoryModels([]);
     } finally {
       setIsLoadingCategory(false);
@@ -1228,7 +1209,7 @@ const HUD: React.FC<HUDProps> = ({
         id: (Date.now() + 1).toString(),
         timestamp: new Date(),
         sender: 'hecate',
-        message: `❌ Failed to switch to ${modelName}: ${error.message}`,
+        message: `❌ Failed to switch to ${modelName}: ${(error as Error).message}`,
         type: 'error'
       };
       setChatMessages(prev => [...prev, errorMessage]);
@@ -1366,7 +1347,7 @@ const HUD: React.FC<HUDProps> = ({
       console.log('Loading model info for scope click, currentSelectedModel:', currentSelectedModel);
       if (!currentSelectedModel) {
         console.warn('No current model selected, checking cache first');
-        // Only load models if not cached
+        // Load models if not cached
         if (!modelsCached) {
           loadAvailableModels().then(() => {
             if (currentSelectedModel) {
@@ -2141,8 +2122,7 @@ const HUD: React.FC<HUDProps> = ({
                                       onClick={() => {
                                         console.log('Manual reload triggered from error - clearing cache');
                                         setModelsCached(false);
-                                        setModelsCacheTimestamp(null);
-                                        loadAvailableModels(true);
+                                        loadAvailableModels();
                                       }}
                                       style={{marginTop: '10px', padding: '5px 10px', border: '1px solid #ccc', borderRadius: '4px'}}
                                     >
@@ -2285,11 +2265,6 @@ const HUD: React.FC<HUDProps> = ({
                                       <div className={styles.modelSection}>
                                         <h6>
                                           Latest Models ({isLoadingCategory ? '...' : categoryModels.length})
-                                          {categoryCacheTimestamp.latest && (
-                                            <span style={{fontSize: '10px', opacity: 0.7, marginLeft: '8px'}}>
-                                              Updated {Math.round((Date.now() - categoryCacheTimestamp.latest.getTime()) / 1000)}s ago
-                                            </span>
-                                          )}
                                         </h6>
                                         {isLoadingCategory ? (
                                           <div style={{textAlign: 'center', padding: '20px', opacity: 0.7}}>
@@ -2610,10 +2585,9 @@ const HUD: React.FC<HUDProps> = ({
                                             onClick={() => {
                                               console.log('Force reloading models - clearing cache');
                                               setModelsCached(false);
-                                              setModelsCacheTimestamp(null);
-                                              loadAvailableModels(true);
+                                              loadAvailableModels();
                                             }}
-                                            title={`Reload models (cached ${modelsCacheTimestamp ? modelsCacheTimestamp.toLocaleTimeString() : 'never'})`}
+                                            title="Reload models (forces fresh API call)"
                                             style={{
                                               background: 'none',
                                               border: 'none',
@@ -2624,8 +2598,8 @@ const HUD: React.FC<HUDProps> = ({
                                               opacity: 0.7,
                                               transition: 'opacity 0.2s'
                                             }}
-                                            onMouseEnter={(e) => e.target.style.opacity = '1'}
-                                            onMouseLeave={(e) => e.target.style.opacity = '0.7'}
+                                            onMouseEnter={(e) => (e.target as HTMLElement).style.opacity = '1'}
+                                            onMouseLeave={(e) => (e.target as HTMLElement).style.opacity = '0.7'}
                                           >
                                             🔄
                                           </button>
@@ -2702,7 +2676,7 @@ const HUD: React.FC<HUDProps> = ({
                                           <span className={styles.specLabel}>Input Modalities:</span>
                                           <span className={styles.specValue}>
                                             {modelInfo.architecture?.input_modalities ? 
-                                              modelInfo.architecture.input_modalities.map(m => m === 'text' ? '📝' : m === 'image' ? '🖼️' : m).join(' ') : 
+                                              modelInfo.architecture.input_modalities.map((m: string) => m === 'text' ? '📝' : m === 'image' ? '🖼️' : m).join(' ') : 
                                               '📝 Text'}
                                           </span>
                                         </div>
@@ -2710,7 +2684,7 @@ const HUD: React.FC<HUDProps> = ({
                                           <span className={styles.specLabel}>Output Modalities:</span>
                                           <span className={styles.specValue}>
                                             {modelInfo.architecture?.output_modalities ? 
-                                              modelInfo.architecture.output_modalities.map(m => m === 'text' ? '📝' : m === 'image' ? '🖼️' : m).join(' ') : 
+                                              modelInfo.architecture.output_modalities.map((m: string) => m === 'text' ? '📝' : m === 'image' ? '🖼️' : m).join(' ') : 
                                               '📝 Text'}
                                           </span>
                                         </div>
