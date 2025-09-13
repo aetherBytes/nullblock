@@ -4185,12 +4185,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 // 🔵 BASE STATE - Calm blue theme (default/idle)
 .nullview.base {
   .pulseRing {
-    animation: basePulse 3s ease-in-out infinite;
+    animation: basePulse 4.5s ease-in-out infinite;
     border-color: $echo-blue;
   }
 
   .streamLine {
-    animation: baseStream 2.5s ease-in-out infinite;
+    animation: baseStream 4s ease-in-out infinite;
     background: linear-gradient(90deg, transparent, $echo-blue, transparent);
   }
 
@@ -5465,7 +5465,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   height: 70px;
   border: 2px solid rgba(255, 255, 255, 0.6);
   border-radius: 50%;
-  animation: pulseRingAvatar 2s ease-in-out infinite;
+  animation: pulseRingAvatar 3s ease-in-out infinite;
   opacity: 0.8;
 }
 
@@ -5484,7 +5484,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   width: 28px;
   height: 3px;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
-  animation: dataFlowAvatar 1.5s ease-in-out infinite;
+  animation: dataFlowAvatar 2.25s ease-in-out infinite;
 
   &:nth-child(1) {
     animation-delay: 0s;
