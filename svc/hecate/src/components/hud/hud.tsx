@@ -16,6 +16,7 @@ import {
   checkMCPHealth,
 } from '../../common/services/mcp-api';
 import { hecateAgent, type ChatMessage as HecateChatMessage, type HecateResponse } from '../../common/services/hecate-agent';
+import MarkdownRenderer from '../common/MarkdownRenderer';
 import styles from './hud.module.scss';
 
 type Theme = 'null' | 'light' | 'dark';
@@ -1911,7 +1912,9 @@ const HUD: React.FC<HUDProps> = ({
                                 {message.timestamp.toLocaleTimeString()}
                               </span>
                             </div>
-                            <div className={styles.messageContent}>{message.message}</div>
+                            <div className={styles.messageContent}>
+                              <MarkdownRenderer content={message.message} />
+                            </div>
                           </div>
                         ))}
                         

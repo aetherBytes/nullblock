@@ -5860,6 +5860,56 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .messageContent {
   color: $text-color;
   line-height: 1.4;
+  
+  // Ensure markdown content fits within chat messages
+  .markdownContainer {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    
+    // Adjust code block sizing for chat
+    .codeBlock {
+      max-width: 100%;
+      font-size: 0.85rem;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      text-align: left;
+      white-space: pre;
+      direction: ltr;
+      overflow-x: auto;
+      
+      code {
+        text-align: left;
+        white-space: pre;
+        display: block;
+        width: 100%;
+      }
+    }
+    
+    // Adjust inline code for chat
+    .inlineCode {
+      font-size: 0.85em;
+      padding: 0.15rem 0.3rem;
+    }
+    
+    // Adjust table sizing for chat
+    .tableWrapper {
+      font-size: 0.85rem;
+      margin: 0.5rem 0;
+    }
+    
+    // Adjust list spacing for chat
+    .list, .orderedList {
+      margin: 0.5rem 0;
+      padding-left: 1.25rem;
+    }
+    
+    // Adjust blockquote for chat
+    .blockquote {
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+    }
+  }
 }
 
 // Thinking indicator styles
