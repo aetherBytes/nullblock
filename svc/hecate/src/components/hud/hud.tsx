@@ -1901,7 +1901,7 @@ const HUD: React.FC<HUDProps> = ({
                               {activeScope === 'modelinfo' ? 'Model Information' : activeScope.charAt(0).toUpperCase() + activeScope.slice(1)}
                             </h5>
                             <div className={styles.scopesHeaderControls}>
-                              <button 
+                              <button
                                 className={styles.expandButton}
                                 onClick={() => {
                                   setIsScopesExpanded(false);
@@ -1910,7 +1910,13 @@ const HUD: React.FC<HUDProps> = ({
                               >
                                 ⊟
                               </button>
-                              <button className={styles.closeScopes} onClick={() => setActiveLens(null)}>
+                              <button className={styles.closeScopes} onClick={() => {
+                                setActiveLens(null);
+                                // If in expanded mode and closing scope, collapse to normal view
+                                if (isScopesExpanded) {
+                                  setIsScopesExpanded(false);
+                                }
+                              }}>
                                 ×
                               </button>
                             </div>
