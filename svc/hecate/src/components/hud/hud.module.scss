@@ -5723,6 +5723,18 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   background: rgba($background-dark, 0.3);
   border-radius: 0;
   overflow: hidden;
+
+  // When in expanded mode, ensure full height usage
+  .chatSection.expanded & {
+    height: 100vh !important;
+    background: transparent !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
 }
 
 .chatHeader {
@@ -5731,6 +5743,15 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   align-items: center;
   padding: 0.75rem 1rem;
   background: rgba($background-dark, 0.5);
+  flex-shrink: 0; // Prevent header from shrinking
+  min-height: 60px; // Ensure minimum height
+
+  // When in expanded mode, ensure proper positioning
+  .chatSection.expanded & {
+    background: rgba($background-dark, 0.8);
+    backdrop-filter: blur(5px);
+    border-bottom: 1px solid rgba($echo-blue, 0.2);
+  }
   border-bottom: 1px solid rgba($echo-blue, 0.2);
   min-height: 60px; // Slightly thinner header height
 
@@ -5796,6 +5817,14 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   padding: 1rem;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  max-height: calc(100vh - 120px); // Account for header and input
+
+  // When in expanded mode, ensure proper height constraints
+  .chatSection.expanded & {
+    max-height: calc(100vh - 120px);
+    min-height: 0;
+  }
   gap: 1rem;
   border: 1px solid rgba($echo-blue, 0.3);
   margin: 0.5rem;
@@ -5971,6 +6000,16 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   background: rgba($background-dark, 0.5);
   border-top: 1px solid rgba($echo-blue, 0.2);
   gap: 0.5rem;
+  flex-shrink: 0; // Prevent input from shrinking
+  min-height: 60px; // Ensure minimum height
+
+  // When in expanded mode, ensure proper positioning
+  .chatSection.expanded & {
+    position: sticky;
+    bottom: 0;
+    background: rgba($background-dark, 0.8);
+    backdrop-filter: blur(5px);
+  }
 }
 
 .chatInputField {
@@ -6593,12 +6632,36 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   min-height: 0;
+
+  // When in expanded mode, ensure full height usage
+  .scopesSection.expanded & {
+    height: 100vh !important;
+    background: transparent !important;
+    border: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
 }
 
 .scopesContentExpanded {
   height: 100%;
   display: flex;
   flex-direction: column;
+
+  // When in expanded mode, ensure full height usage
+  .scopesSection.expanded & {
+    height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
 }
 
 .scopesContentHeader {
@@ -6607,6 +6670,15 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   align-items: center;
   padding: 1rem;
   background: rgba($background-dark, 0.5);
+  flex-shrink: 0; // Prevent header from shrinking
+  min-height: 60px; // Ensure minimum height
+
+  // When in expanded mode, ensure proper positioning
+  .scopesSection.expanded & {
+    background: rgba($background-dark, 0.8);
+    backdrop-filter: blur(5px);
+    border-bottom: 1px solid rgba($echo-blue, 0.2);
+  }
   border-bottom: 1px solid rgba($echo-blue, 0.2);
 
   h4 {
@@ -6636,6 +6708,15 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   color: $text-color;
   overflow-y: auto;
   min-height: 0;
+  max-height: calc(100vh - 120px); // Account for header
+
+  // When in expanded mode, ensure proper spacing
+  .scopesSection.expanded & {
+    flex: 1;
+    min-height: 0;
+    max-height: calc(100vh - 120px);
+    padding: 2rem;
+  }
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -8891,6 +8972,20 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     border-color: rgba($echo-blue, 0.6);
     transform: translateY(-1px);
   }
+
+  // Enhanced styles for expanded state
+  .chatSection.expanded &,
+  .scopesSection.expanded & {
+    background: rgba($echo-red, 0.2);
+    border-color: rgba($echo-red, 0.4);
+    color: $echo-red;
+
+    &:hover {
+      background: rgba($echo-red, 0.3);
+      border-color: rgba($echo-red, 0.6);
+      color: lighten($echo-red, 10%);
+    }
+  }
 }
 
 .scopesHeaderControls {
@@ -8904,6 +8999,21 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   &.chatExpanded {
     .chatSection {
       width: 100% !important;
+      height: 100vh !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 100000 !important;
+      background: rgba($background-dark, 0.95) !important;
+      backdrop-filter: blur(10px) !important;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important;
+      transition: all 0.3s ease-in-out;
+      padding: 0 !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
     }
 
     .scopesSection {
@@ -8914,6 +9024,21 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   &.scopesExpanded {
     .scopesSection {
       width: 100% !important;
+      height: 100vh !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 100000 !important;
+      background: rgba($background-dark, 0.95) !important;
+      backdrop-filter: blur(10px) !important;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important;
+      transition: all 0.3s ease-in-out;
+      padding: 0 !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
     }
 
     .chatSection {
@@ -8922,10 +9047,47 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+// Full-screen overlay for expanded containers
+.fullscreenOverlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+  background: rgba($background-dark, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  pointer-events: auto !important;
+  isolation: isolate !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
 // Section expand states
 .chatSection {
+  transition: all 0.3s ease-in-out;
+
   &.expanded {
+    // Remove all positioning and let the overlay handle it
+    position: static !important;
     width: 100% !important;
+    height: 100% !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    pointer-events: auto !important;
+    z-index: auto !important;
   }
 
   &.hidden {
@@ -8934,8 +9096,22 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 }
 
 .scopesSection {
+  transition: all 0.3s ease-in-out;
+
   &.expanded {
+    // Remove all positioning and let the overlay handle it
+    position: static !important;
     width: 100% !important;
+    height: 100% !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    pointer-events: auto !important;
+    z-index: auto !important;
   }
 
   &.hidden {
