@@ -1883,7 +1883,97 @@ const HUD: React.FC<HUDProps> = ({
                           </button>
                         </div>
                       </div>
-                      {/* Chat content will be rendered here */}
+
+                      <div className={styles.chatMessages} ref={chatMessagesRef} onScroll={handleChatScroll}>
+                        {chatMessages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`${styles.chatMessage} ${styles[`message-${message.sender}`]} ${message.type ? styles[`type-${message.type}`] : ''}`}
+                          >
+                            <div className={styles.messageHeader}>
+                              <span className={styles.messageSender}>
+                                {message.sender === 'hecate' ? (
+                                  <span className={styles.hecateMessageSender}>
+                                    <div className={`${styles.nullviewChat} ${styles[`chat-${nullviewState === 'thinking' ? 'thinking' : (message.type || 'base')}`]} ${styles.clickableNulleyeChat}`}>
+                                      <div className={styles.staticFieldChat}></div>
+                                      <div className={styles.coreNodeChat}></div>
+                                      <div className={styles.streamLineChat}></div>
+                                      <div className={styles.lightningSparkChat}></div>
+                                    </div>
+                                    Hecate
+                                  </span>
+                                ) : (
+                                  '👤 You'
+                                )}
+                              </span>
+                              <span className={styles.messageTime}>
+                                {message.timestamp.toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <div className={styles.messageContent}>
+                              <MarkdownRenderer content={message.message} />
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Show thinking indicator when Hecate is processing */}
+                        {nullviewState === 'thinking' && (
+                          <div className={`${styles.chatMessage} ${styles['message-hecate']} ${styles['type-thinking']}`}>
+                            <div className={styles.messageHeader}>
+                              <span className={styles.messageSender}>
+                                <span className={styles.hecateMessageSender}>
+                                  <div className={`${styles.nullviewChat} ${styles['chat-thinking']} ${styles.clickableNulleyeChat}`}>
+                                    <div className={styles.staticFieldChat}></div>
+                                    <div className={styles.coreNodeChat}></div>
+                                    <div className={styles.streamLineChat}></div>
+                                    <div className={styles.lightningSparkChat}></div>
+                                  </div>
+                                  Hecate
+                                </span>
+                              </span>
+                              <span className={styles.messageTime}>
+                                {new Date().toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <div className={styles.messageContent}>
+                              <div className={styles.thinkingIndicator}>
+                                <span className={styles.thinkingDots}>●</span>
+                                <span className={styles.thinkingDots}>●</span>
+                                <span className={styles.thinkingDots}>●</span>
+                                <span className={styles.thinkingText}>Thinking...</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div ref={chatEndRef} />
+                      </div>
+
+                      <form className={styles.chatInput} onSubmit={handleChatSubmit}>
+                        <input
+                          ref={chatInputRef}
+                          type="text"
+                          value={chatInput}
+                          onChange={handleChatInputChange}
+                          placeholder={
+                            isModelChanging
+                              ? "Switching models..."
+                              : isProcessingChat || nullviewState === 'thinking'
+                                ? "Hecate is thinking..."
+                                : "Ask Hecate anything..."
+                          }
+                          className={styles.chatInputField}
+                          disabled={isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
+                        />
+                        <button
+                          type="submit"
+                          className={styles.chatSendButton}
+                          disabled={isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
+                        >
+                          <span>➤</span>
+                        </button>
+                      </form>
+
                     </div>
                   </div>
                 </div>
@@ -1921,7 +2011,319 @@ const HUD: React.FC<HUDProps> = ({
                               </button>
                             </div>
                           </div>
-                          {/* Scopes content will be rendered here */}
+                          <div className={styles.scopesContent}>
+
+                            {activeScope === 'modelinfo' && (
+                              <div className={styles.modelInfoScope}>
+                                {isLoadingModelInfo ? (
+                                  <div className={styles.modelInfoLoading}>
+                                    <p>🔄 Loading model information...</p>
+                                  </div>
+                                ) : modelInfo?.error ? (
+                                  <div className={styles.modelInfoError}>
+                                    <h6>❌ Error Loading Model Info</h6>
+                                    <p>{modelInfo.error}</p>
+                                    <div style={{marginTop: '10px', fontSize: '12px', color: '#666'}}>
+                                      <p>Debug info:</p>
+                                      <p>• Current selected model: {currentSelectedModel || 'None'}</p>
+                                      <p>• Available models: {availableModels.length}</p>
+                                      <p>• Default loaded: {defaultModelLoaded ? 'Yes' : 'No'}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        console.log('Manual reload triggered from error - clearing cache');
+                                        setModelsCached(false);
+                                        loadAvailableModels();
+                                      }}
+                                      style={{marginTop: '10px', padding: '5px 10px', border: '1px solid #ccc', borderRadius: '4px'}}
+                                    >
+                                      🔄 Reload Models
+                                    </button>
+                                  </div>
+                                ) : modelInfo ? (
+                                  <div className={styles.modelInfoContent}>
+                                    <div className={styles.modelInfoHeader}>
+                                      <div className={styles.modelInfoTitle}>
+                                        <span className={styles.modelIcon}>{modelInfo.icon || '🤖'}</span>
+                                        <div>
+                                          <h6>{modelInfo.display_name || modelInfo.name}</h6>
+                                          <span className={styles.modelProvider}>{modelInfo.provider}</span>
+                                        </div>
+                                      </div>
+                                      <div className={styles.modelStatus}>
+                                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                          <button
+                                            onClick={() => {
+                                              console.log('Force reloading models - clearing cache');
+                                              setModelsCached(false);
+                                              loadAvailableModels();
+                                            }}
+                                            title="Reload models (forces fresh API call)"
+                                            style={{
+                                              background: 'none',
+                                              border: 'none',
+                                              padding: '4px',
+                                              cursor: 'pointer',
+                                              fontSize: '16px',
+                                              lineHeight: '1',
+                                              opacity: 0.7,
+                                              transition: 'opacity 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => (e.target as HTMLElement).style.opacity = '1'}
+                                            onMouseLeave={(e) => (e.target as HTMLElement).style.opacity = '0.7'}
+                                          >
+                                            🔄
+                                          </button>
+                                          <button
+                                            className={styles.switchModelButton}
+                                            onClick={() => {
+                                              setShowModelSelection(true);
+                                              setActiveQuickAction('latest');
+                                              setCategoryModels([]); // Clear any existing data
+                                              loadCategoryModels('latest');
+                                            }}
+                                            title="Switch to a different model"
+                                          >
+                                            Switch Model
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Model info content sections would continue here... */}
+                                    <div className={styles.modelInfoEmpty}>
+                                      <p>Model information content available in expanded mode</p>
+                                    </div>
+
+                                  </div>
+                                ) : (
+                                  <div className={styles.modelInfoEmpty}>
+                                    <p>No model information available</p>
+                                  </div>
+                                )}
+
+                          </div>
+                        )}
+
+                            {activeScope === 'tasks' && (
+                              <div className={styles.tasksScope}>
+                                <div className={styles.tasksHeader}>
+                                  <h6>📋 Active Tasks</h6>
+                                  <div className={styles.taskStats}>
+                                    <span className={styles.stat}>
+                                      Running: {tasks.filter((t) => t.status === 'running').length}
+                                    </span>
+                                    <span className={styles.stat}>
+                                      Completed: {tasks.filter((t) => t.status === 'completed').length}
+                                    </span>
+                                    <span className={styles.stat}>
+                                      Failed: {tasks.filter((t) => t.status === 'failed').length}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className={styles.tasksList}>
+                                  {tasks.map((task) => (
+                                    <div key={task.id} className={`${styles.taskItem} ${getStatusColor(task.status)}`}>
+                                      <div className={styles.taskHeader}>
+                                        <div className={styles.taskInfo}>
+                                          <span className={styles.taskName}>{task.name}</span>
+                                          <span className={styles.taskType}>{task.type}</span>
+                                        </div>
+                                        <div className={styles.taskStatus}>
+                                          <span className={styles.statusDot}></span>
+                                          {task.status}
+                                        </div>
+                                      </div>
+                                      <div className={styles.taskDescription}>{task.description}</div>
+                                      {task.progress !== undefined && (
+                                        <div className={styles.taskProgress}>
+                                          <div className={styles.progressBar}>
+                                            <div
+                                              className={styles.progressFill}
+                                              style={{ width: `${task.progress}%` }}
+                                            ></div>
+                                          </div>
+                                          <span className={styles.progressText}>{Math.round(task.progress)}%</span>
+                                        </div>
+                                      )}
+                                      <div className={styles.taskMetadata}>
+                                        <span className={styles.taskTime}>
+                                          Started: {task.startTime.toLocaleTimeString()}
+                                        </span>
+                                        {task.endTime && (
+                                          <span className={styles.taskTime}>
+                                            Ended: {task.endTime.toLocaleTimeString()}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {activeScope === 'agents' && (
+                              <div className={styles.agentsScope}>
+                                <div className={styles.agentsHeader}>
+                                  <h6>🤖 Active Agents</h6>
+                                </div>
+                                <div className={styles.agentsList}>
+                                  <div className={styles.agentItem}>
+                                    <div className={styles.agentInfo}>
+                                      <span className={styles.agentName}>Arbitrage Agent</span>
+                                      <span className={styles.agentStatus}>Active</span>
+                                    </div>
+                                    <div className={styles.agentMetrics}>
+                                      <span>Opportunities Found: 12</span>
+                                      <span>Executed Trades: 8</span>
+                                      <span>Success Rate: 92%</span>
+                                    </div>
+                                  </div>
+                                  <div className={styles.agentItem}>
+                                    <div className={styles.agentInfo}>
+                                      <span className={styles.agentName}>Social Trading Agent</span>
+                                      <span className={styles.agentStatus}>Active</span>
+                                    </div>
+                                    <div className={styles.agentMetrics}>
+                                      <span>Signals Generated: 45</span>
+                                      <span>Accuracy: 78%</span>
+                                      <span>Last Update: 2m ago</span>
+                                    </div>
+                                  </div>
+                                  <div className={styles.agentItem}>
+                                    <div className={styles.agentInfo}>
+                                      <span className={styles.agentName}>Portfolio Manager</span>
+                                      <span className={styles.agentStatus}>Monitoring</span>
+                                    </div>
+                                    <div className={styles.agentMetrics}>
+                                      <span>Assets Under Management: $12,450</span>
+                                      <span>24h Performance: +2.3%</span>
+                                      <span>Risk Level: Medium</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {activeScope === 'logs' && (
+                              <div className={styles.logsScope}>
+                                <div className={styles.logsHeader}>
+                                  <h6>📄 System Logs</h6>
+                                  <div className={styles.logsControls}>
+                                    <input
+                                      type="text"
+                                      placeholder="Search logs..."
+                                      value={searchTerm}
+                                      onChange={(e) => setSearchTerm(e.target.value)}
+                                      className={styles.searchInput}
+                                    />
+                                    <select
+                                      value={logFilter}
+                                      onChange={(e) => setLogFilter(e.target.value as any)}
+                                      className={styles.filterSelect}
+                                    >
+                                      <option value="all">All Levels</option>
+                                      <option value="info">Info</option>
+                                      <option value="warning">Warning</option>
+                                      <option value="error">Error</option>
+                                      <option value="success">Success</option>
+                                      <option value="debug">Debug</option>
+                                    </select>
+                                    <label className={styles.autoScrollLabel}>
+                                      <input
+                                        type="checkbox"
+                                        checked={autoScroll}
+                                        onChange={(e) => setAutoScroll(e.target.checked)}
+                                      />
+                                      Auto-scroll
+                                    </label>
+                                  </div>
+                                </div>
+                                <div className={styles.logsContainer}>
+                                  {filteredLogs.map((log) => (
+                                    <div key={log.id} className={`${styles.logEntry} ${getLogLevelColor(log.level)}`}>
+                                      <div className={styles.logHeader}>
+                                        <span className={styles.logTimestamp}>
+                                          {log.timestamp.toLocaleTimeString()}
+                                        </span>
+                                        <span className={styles.logLevel}>[{log.level.toUpperCase()}]</span>
+                                        <span className={styles.logSource}>{log.source}</span>
+                                      </div>
+                                      <div className={styles.logMessage}>{log.message}</div>
+                                      {log.data && (
+                                        <div className={styles.logData}>
+                                          <pre>{JSON.stringify(log.data, null, 2)}</pre>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                  <div ref={logsEndRef} />
+                                </div>
+                              </div>
+                            )}
+
+                            {activeScope === 'settings' && (
+                              <div className={styles.settingsScope}>
+                                <div className={styles.settingsSection}>
+                                  <h6>🎨 Theme</h6>
+                                  <div className={styles.themeSelector}>
+                                    <button
+                                      className={`${styles.themeButton} ${theme === 'dark' ? styles.active : ''}`}
+                                      onClick={() => onThemeChange('dark')}
+                                    >
+                                      🌙 Dark
+                                    </button>
+                                    <button
+                                      className={`${styles.themeButton} ${theme === 'light' ? styles.active : ''}`}
+                                      onClick={() => onThemeChange('light')}
+                                    >
+                                      ☀️ Light
+                                    </button>
+                                    <button
+                                      className={`${styles.themeButton} ${theme === 'null' ? styles.active : ''}`}
+                                      onClick={() => onThemeChange('null')}
+                                    >
+                                      ⚡ Cyber
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className={styles.settingsSection}>
+                                  <h6>ℹ️ Version Info</h6>
+                                  <div className={styles.versionInfo}>
+                                    <p><strong>NullBlock Platform:</strong> v1.0.0-beta</p>
+                                    <p><strong>Hecate Agent:</strong> v0.8.2</p>
+                                    <p><strong>MCP Protocol:</strong> v0.1.0</p>
+                                    <p><strong>Build:</strong> {new Date().toLocaleDateString()}</p>
+                                  </div>
+                                </div>
+
+                                <div className={styles.settingsSection}>
+                                  <h6>🔗 Social Links</h6>
+                                  <div className={styles.socialLinks}>
+                                    <button
+                                      onClick={() => window.open('https://x.com/Nullblock_io', '_blank')}
+                                      className={styles.socialButton}
+                                    >
+                                      🐦 𝕏
+                                    </button>
+                                    <button
+                                      onClick={() => window.open('https://discord.gg/nullblock', '_blank')}
+                                      className={styles.socialButton}
+                                    >
+                                      💬 Discord
+                                    </button>
+                                    <button
+                                      onClick={() => window.open('https://aetherbytes.github.io/nullblock-sdk/', '_blank')}
+                                      className={styles.socialButton}
+                                    >
+                                      📚 Docs
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ) : (
@@ -1942,7 +2344,25 @@ const HUD: React.FC<HUDProps> = ({
                             </button>
                           </div>
                         </div>
-                        {/* Scopes content will be rendered here */}
+                        <div className={styles.scopesInfoPanel}>
+                          <div className={styles.scopesInfoContent}>
+                            <div className={styles.scopesAppsSection}>
+                              <div className={styles.scopesAppsGrid}>
+                                {scopesOptions.map((scope) => (
+                                  <button
+                                    key={scope.id}
+                                    className={styles.scopesAppButton}
+                                    onClick={() => handleScopesClick(scope.id)}
+                                    style={{ '--scopes-color': scope.color } as React.CSSProperties}
+                                  >
+                                    <span className={styles.scopesAppIcon}>{scope.icon}</span>
+                                    <span className={styles.scopesAppTitle}>{scope.title}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
