@@ -1857,11 +1857,98 @@ const HUD: React.FC<HUDProps> = ({
           );
         case 'hecate':
           return (
-            <div className={`${styles.hecateContainer} ${isChatExpanded ? styles.chatExpanded : ''} ${isScopesExpanded ? styles.scopesExpanded : ''}`}>
-              <div className={styles.hecateContent}>
-                <div className={styles.hecateMain}>
-                  <div className={styles.hecateInterface}>
-                  <div className={`${styles.chatSection} ${isChatExpanded ? styles.expanded : ''} ${isScopesExpanded ? styles.hidden : ''}`}>
+            <>
+              {/* Full-screen overlay for expanded chat */}
+              {isChatExpanded && (
+                <div className={styles.fullscreenOverlay}>
+                  <div className={`${styles.chatSection} ${styles.expanded}`}>
+                    <div className={styles.hecateChat}>
+                      <div className={styles.chatHeader}>
+                        <div className={styles.chatTitle}>
+                          <h4>💬 Hecate Chat</h4>
+                          <span className={styles.modelStatus}>
+                            {defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}
+                          </span>
+                        </div>
+                        <div className={styles.chatHeaderControls}>
+                          <button 
+                            className={styles.expandButton}
+                            onClick={() => {
+                              setIsChatExpanded(false);
+                              if (activeScope) setActiveLens(null);
+                            }}
+                            title="Exit full screen"
+                          >
+                            ⊟
+                          </button>
+                        </div>
+                      </div>
+                      {/* Chat content will be rendered here */}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Full-screen overlay for expanded scopes */}
+              {isScopesExpanded && (
+                <div className={styles.fullscreenOverlay}>
+                  <div className={`${styles.scopesSection} ${styles.expanded}`}>
+                    {activeScope ? (
+                      <div className={styles.scopesExpanded}>
+                        <div className={styles.scopesContent}>
+                          <div className={styles.scopesContentHeader}>
+                            <h5>
+                              {activeScope === 'modelinfo' ? 'Model Information' : activeScope.charAt(0).toUpperCase() + activeScope.slice(1)}
+                            </h5>
+                            <div className={styles.scopesHeaderControls}>
+                              <button 
+                                className={styles.expandButton}
+                                onClick={() => {
+                                  setIsScopesExpanded(false);
+                                }}
+                                title="Exit full screen"
+                              >
+                                ⊟
+                              </button>
+                              <button className={styles.closeScopes} onClick={() => setActiveLens(null)}>
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                          {/* Scopes content will be rendered here */}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={styles.scopesScrollContainer}>
+                        <div className={styles.chatHeader}>
+                          <div className={styles.chatTitle}>
+                            <h4>🎯 Scopes</h4>
+                          </div>
+                          <div className={styles.chatHeaderControls}>
+                            <button 
+                              className={styles.expandButton}
+                              onClick={() => {
+                                setIsScopesExpanded(false);
+                              }}
+                              title="Exit full screen"
+                            >
+                              ⊟
+                            </button>
+                          </div>
+                        </div>
+                        {/* Scopes content will be rendered here */}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Regular HUD content */}
+              <div className={`${styles.hecateContainer} ${isChatExpanded ? styles.chatExpanded : ''} ${isScopesExpanded ? styles.scopesExpanded : ''}`}>
+                <div className={styles.hecateContent}>
+                  <div className={styles.hecateMain}>
+                    <div className={styles.hecateInterface}>
+                    <div className={`${styles.chatSection} ${isChatExpanded ? styles.hidden : ''} ${isScopesExpanded ? styles.hidden : ''}`}>
                     <div className={styles.hecateChat}>
                       <div className={styles.chatHeader}>
                         <div className={styles.chatTitle}>
@@ -3100,6 +3187,7 @@ const HUD: React.FC<HUDProps> = ({
                 </div>
               </div>
             </div>
+            </>
           );
         default:
           return (
