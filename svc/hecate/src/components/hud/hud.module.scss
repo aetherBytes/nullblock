@@ -5752,6 +5752,14 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(5px);
     border-bottom: 1px solid rgba($echo-blue, 0.2);
   }
+
+  // When scopes are expanded, need extra right padding like scopesContentHeader
+  .scopesSection.expanded & {
+    background: rgba($background-dark, 0.8);
+    backdrop-filter: blur(5px);
+    border-bottom: 1px solid rgba($echo-blue, 0.2);
+    padding-right: 2rem; // Extra right padding in expanded mode for scrollbar/edge clearance
+  }
   border-bottom: 1px solid rgba($echo-blue, 0.2);
   min-height: 60px; // Slightly thinner header height
 
@@ -6668,16 +6676,19 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 1rem 1rem 1rem 0.5rem; // More generous right padding to contain buttons
   background: rgba($background-dark, 0.5);
   flex-shrink: 0; // Prevent header from shrinking
   min-height: 60px; // Ensure minimum height
+  box-sizing: border-box; // Ensure padding doesn't cause overflow
+  width: 100%; // Explicit width constraint
 
   // When in expanded mode, ensure proper positioning
   .scopesSection.expanded & {
     background: rgba($background-dark, 0.8);
     backdrop-filter: blur(5px);
     border-bottom: 1px solid rgba($echo-blue, 0.2);
+    padding-right: 2rem; // Extra right padding in expanded mode for scrollbar/edge clearance
   }
   border-bottom: 1px solid rgba($echo-blue, 0.2);
 
@@ -7022,29 +7033,43 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     font-family: 'Courier New', monospace;
     text-shadow: 0 0 8px rgba($lightning-silver, 0.5);
     line-height: 1.2; // Match h4 line height
+    flex: 1; // Allow title to grow but not push buttons out
+    min-width: 0; // Allow title to shrink if needed
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: calc(100% - 120px); // Reserve space for buttons (2 x 32px + gaps + padding)
   }
 
   .closeScopes {
-    background: rgba($echo-blue, 0.2);
-    border: 1px solid rgba($echo-blue, 0.4);
-    color: $echo-blue;
+    background: rgba($echo-red, 0.3);
+    border: 2px solid rgba($echo-red, 0.6);
+    color: lighten($echo-red, 20%);
     padding: 0.4rem;
     border-radius: 4px;
     font-family: 'Courier New', monospace;
-    font-size: 0.9rem;
+    font-size: 1.1rem;
+    font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-left: 0.5rem;
-    min-width: 24px;
-    height: 24px;
+    min-width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: 0 4px 12px rgba($echo-red, 0.4);
 
     &:hover {
-      background: rgba($echo-blue, 0.3);
-      border-color: rgba($echo-blue, 0.6);
-      color: $lightning-silver;
+      background: rgba($echo-red, 0.5);
+      border-color: rgba($echo-red, 0.8);
+      color: lighten($echo-red, 30%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba($echo-red, 0.6);
+    }
+
+    &:active {
+      transform: translateY(0);
+      background: rgba($echo-red, 0.6);
     }
   }
 }
@@ -8960,7 +8985,6 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-left: 0.5rem;
   min-width: 24px;
   height: 24px;
   display: flex;
@@ -8973,17 +8997,23 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     transform: translateY(-1px);
   }
 
-  // Enhanced styles for expanded state
+  // Enhanced styles for expanded state - much more visible
   .chatSection.expanded &,
   .scopesSection.expanded & {
-    background: rgba($echo-red, 0.2);
-    border-color: rgba($echo-red, 0.4);
-    color: $echo-red;
+    background: rgba($echo-red, 0.4);
+    border: 2px solid rgba($echo-red, 0.7);
+    color: lighten($echo-red, 20%);
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba($echo-red, 0.5);
+    min-width: 32px;
+    height: 32px;
 
     &:hover {
-      background: rgba($echo-red, 0.3);
-      border-color: rgba($echo-red, 0.6);
-      color: lighten($echo-red, 10%);
+      background: rgba($echo-red, 0.6);
+      border-color: rgba($echo-red, 0.9);
+      color: lighten($echo-red, 30%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba($echo-red, 0.6);
     }
   }
 }
@@ -8992,6 +9022,33 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0; // Prevent buttons from shrinking
+  margin-left: auto; // Push buttons to right but keep in bounds
+  max-width: calc(100% - 2rem); // Ensure buttons don't overflow container
+  overflow: visible; // Allow shadow effects to show
+
+  // In expanded mode, provide more clearance from right edge
+  .scopesSection.expanded & {
+    margin-right: 1rem; // Pull buttons further left from right edge
+    max-width: calc(100% - 4rem); // Account for extra padding in expanded mode
+  }
+}
+
+.chatHeaderControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0; // Prevent buttons from shrinking
+  margin-left: auto; // Push buttons to right but keep in bounds
+  max-width: calc(100% - 2rem); // Ensure buttons don't overflow container
+  overflow: visible; // Allow shadow effects to show
+
+  // In expanded mode, provide more clearance from right edge
+  .chatSection.expanded &,
+  .scopesSection.expanded & {
+    margin-right: 1rem; // Pull buttons further left from right edge
+    max-width: calc(100% - 4rem); // Account for extra padding in expanded mode
+  }
 }
 
 // Container expand states
