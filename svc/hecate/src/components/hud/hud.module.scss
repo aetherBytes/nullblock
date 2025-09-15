@@ -5902,12 +5902,14 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .messageContent {
   color: $text-color;
   line-height: 1.4;
-  
+  text-align: left;
+
   // Ensure markdown content fits within chat messages
   .markdownContainer {
     max-width: 100%;
     overflow-wrap: break-word;
     word-wrap: break-word;
+    text-align: left;
     
     // Adjust code block wrapper for chat
     .codeBlockWrapper {

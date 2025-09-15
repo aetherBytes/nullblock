@@ -739,15 +739,28 @@ const HUD: React.FC<HUDProps> = ({
   useEffect(() => {
     const currentMessageCount = chatMessages.length;
     const prevMessageCount = prevMessageCountRef.current;
-    
+
     // Only auto-scroll if new messages were added and auto-scroll is enabled
     if (chatAutoScroll && currentMessageCount > prevMessageCount && chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'auto' });
     }
-    
+
     // Update the previous message count
     prevMessageCountRef.current = currentMessageCount;
   }, [chatMessages, chatAutoScroll]);
+
+  // Auto-scroll effect for thinking indicator - scroll when thinking state changes
+  useEffect(() => {
+    // Auto-scroll when thinking indicator appears or disappears
+    if (chatAutoScroll && chatEndRef.current) {
+      // Small delay to ensure the thinking indicator has rendered
+      setTimeout(() => {
+        if (chatEndRef.current) {
+          chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [nullviewState, chatAutoScroll]);
 
   // Helper functions for Hecate functionality
   // Load default model immediately for instant chat availability
