@@ -526,6 +526,13 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [logs, autoScroll]);
 
+  // Auto-scroll effect for chat messages
+  useEffect(() => {
+    if (chat.chatAutoScroll && chat.chatEndRef.current) {
+      chat.chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chat.chatMessages, chat.chatAutoScroll]);
+
 
   const loadModelInfo = async (modelName?: string) => {
     if (isLoadingModelInfo) {
