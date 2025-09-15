@@ -9061,6 +9061,175 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+// Scope dropdown styles
+.scopeDropdownContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.scopeDropdownButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba($echo-blue, 0.2);
+  border: 1px solid rgba($echo-blue, 0.4);
+  color: $lightning-silver;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 160px;
+  justify-content: space-between;
+
+  &:hover {
+    background: rgba($echo-blue, 0.3);
+    border-color: rgba($echo-blue, 0.6);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.scopeDropdownButtonAsTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  color: $lightning-silver;
+  padding: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-shadow: 0 0 8px rgba($lightning-silver, 0.5);
+  min-width: 220px; // Increased from default to accommodate longer scope names
+
+  &:hover {
+    color: lighten($lightning-silver, 10%);
+    text-shadow: 0 0 12px rgba($lightning-silver, 0.7);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  .scopeDropdownArrow {
+    margin-left: 0.5rem;
+    font-size: 0.9rem;
+    opacity: 0.8;
+  }
+}
+
+.scopeDropdownIcon {
+  font-size: 1.1rem;
+}
+
+.scopeDropdownTitle {
+  flex: 1;
+  text-align: left;
+}
+
+.scopeDropdownArrow {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+
+.scopeDropdownMenu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 280px; // Wider menu to accommodate content with descriptions
+  background: rgba($background-dark, 0.95);
+  border: 1px solid rgba($echo-blue, 0.4);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  margin-top: 4px;
+  overflow: hidden;
+  animation: scopeDropdownFadeIn 0.2s ease-out;
+}
+
+@keyframes scopeDropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scopeDropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 1rem 1.25rem; // Increased padding for wider layout
+  background: transparent;
+  border: none;
+  color: $text-color;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  border-bottom: 1px solid rgba($echo-blue, 0.1);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: rgba($echo-blue, 0.2);
+    color: $lightning-silver;
+  }
+
+  &.active {
+    background: rgba(var(--scope-color), 0.3);
+    color: $lightning-silver;
+    font-weight: bold;
+  }
+}
+
+.scopeItemIcon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.scopeItemContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+}
+
+.scopeItemTitle {
+  font-weight: bold;
+  color: inherit;
+}
+
+.scopeItemDescription {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  color: inherit;
+}
+
+.scopeHeaderWithDropdown {
+  padding: 1rem 1rem 0.5rem 1rem;
+  border-bottom: 1px solid rgba($echo-blue, 0.2);
+  margin-bottom: 1rem;
+}
+
 // Container expand states
 .hecateContainer {
   &.chatExpanded {

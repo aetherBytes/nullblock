@@ -168,6 +168,10 @@ const HUD: React.FC<HUDProps> = ({
   const [isChatExpanded, setIsChatExpanded] = useState(false);
   const [isScopesExpanded, setIsScopesExpanded] = useState(false);
 
+  // Scope dropdown state
+  const [showScopeDropdown, setShowScopeDropdown] = useState(false);
+  const scopeDropdownRef = useRef<HTMLDivElement>(null);
+
 
 
   // MCP initialization effect
@@ -461,12 +465,19 @@ const HUD: React.FC<HUDProps> = ({
     if (mainHudActiveTab !== 'hecate') {
       setIsChatExpanded(false);
       setIsScopesExpanded(false);
+      // Reset scope to null when leaving Hecate tab
+      setActiveLens(null);
     }
   }, [mainHudActiveTab]);
 
   // Load models when Hecate tab becomes active (use cached data)
   useEffect(() => {
     if (mainHudActiveTab === 'hecate' && publicKey) {
+      // Set tasks as default active scope when switching to Hecate tab
+      if (!activeScope) {
+        setActiveLens('tasks');
+      }
+
       // If model is already ready when switching to Hecate tab, ensure base state
       if (defaultModelReady && currentSelectedModel) {
         setNulleyeState('base');
@@ -484,7 +495,14 @@ const HUD: React.FC<HUDProps> = ({
         loadAvailableModels();
       }, 500);
     }
-  }, [mainHudActiveTab, publicKey, modelsCached, defaultModelReady, currentSelectedModel]);
+  }, [mainHudActiveTab, publicKey, modelsCached, defaultModelReady, currentSelectedModel, activeScope]);
+
+  // Set tasks as default scope when wallet is initially connected and Hecate tab is default
+  useEffect(() => {
+    if (publicKey && mainHudActiveTab === 'hecate' && !activeScope) {
+      setActiveLens('tasks');
+    }
+  }, [publicKey, mainHudActiveTab, activeScope]);
 
   // Click outside handler for model dropdown
   useEffect(() => {
@@ -504,6 +522,23 @@ const HUD: React.FC<HUDProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showModelDropdown]);
+
+  // Click outside handler for scope dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (scopeDropdownRef.current && !scopeDropdownRef.current.contains(event.target as Node)) {
+        setShowScopeDropdown(false);
+      }
+    };
+
+    if (showScopeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showScopeDropdown]);
 
   // Debounced search effect
   useEffect(() => {
@@ -837,6 +872,10 @@ const HUD: React.FC<HUDProps> = ({
     { id: 'logs', icon: '📄', title: 'Logs', description: 'System logs', color: '#96ceb4' },
     { id: 'settings', icon: '⚙️', title: 'Settings', description: 'Theme & social links', color: '#747d8c' },
   ];
+
+  const getCurrentScopeInfo = () => {
+    return scopesOptions.find(scope => scope.id === activeScope) || scopesOptions[1]; // Default to tasks
+  };
 
   const loadModelInfo = async (modelName?: string) => {
     if (isLoadingModelInfo) {
@@ -1987,9 +2026,38 @@ const HUD: React.FC<HUDProps> = ({
                       <div className={styles.scopesExpanded}>
                         <div className={styles.scopesContent}>
                           <div className={styles.scopesContentHeader}>
-                            <h5>
-                              {activeScope === 'modelinfo' ? 'Model Information' : activeScope.charAt(0).toUpperCase() + activeScope.slice(1)}
-                            </h5>
+                            <div className={styles.scopeDropdownContainer} ref={scopeDropdownRef}>
+                              <button
+                                className={styles.scopeDropdownButtonAsTitle}
+                                onClick={() => setShowScopeDropdown(!showScopeDropdown)}
+                              >
+                                <span className={styles.scopeDropdownIcon}>{getCurrentScopeInfo().icon}</span>
+                                <span className={styles.scopeDropdownTitle}>{getCurrentScopeInfo().title}</span>
+                                <span className={styles.scopeDropdownArrow}>{showScopeDropdown ? '▲' : '▼'}</span>
+                              </button>
+
+                              {showScopeDropdown && (
+                                <div className={styles.scopeDropdownMenu}>
+                                  {scopesOptions.map((scope) => (
+                                    <button
+                                      key={scope.id}
+                                      className={`${styles.scopeDropdownItem} ${activeScope === scope.id ? styles.active : ''}`}
+                                      onClick={() => {
+                                        handleScopesClick(scope.id);
+                                        setShowScopeDropdown(false);
+                                      }}
+                                      style={{ '--scope-color': scope.color } as React.CSSProperties}
+                                    >
+                                      <span className={styles.scopeItemIcon}>{scope.icon}</span>
+                                      <div className={styles.scopeItemContent}>
+                                        <span className={styles.scopeItemTitle}>{scope.title}</span>
+                                        <span className={styles.scopeItemDescription}>{scope.description}</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                             <div className={styles.scopesHeaderControls}>
                               <button
                                 className={styles.expandButton}
@@ -1999,15 +2067,6 @@ const HUD: React.FC<HUDProps> = ({
                                 title="Exit full screen"
                               >
                                 ⊟
-                              </button>
-                              <button className={styles.closeScopes} onClick={() => {
-                                setActiveLens(null);
-                                // If in expanded mode and closing scope, collapse to normal view
-                                if (isScopesExpanded) {
-                                  setIsScopesExpanded(false);
-                                }
-                              }}>
-                                ×
                               </button>
                             </div>
                           </div>
@@ -2108,7 +2167,6 @@ const HUD: React.FC<HUDProps> = ({
                             {activeScope === 'tasks' && (
                               <div className={styles.tasksScope}>
                                 <div className={styles.tasksHeader}>
-                                  <h6>📋 Active Tasks</h6>
                                   <div className={styles.taskStats}>
                                     <span className={styles.stat}>
                                       Running: {tasks.filter((t) => t.status === 'running').length}
@@ -2330,7 +2388,38 @@ const HUD: React.FC<HUDProps> = ({
                       <div className={styles.scopesScrollContainer}>
                         <div className={styles.chatHeader}>
                           <div className={styles.chatTitle}>
-                            <h4>🎯 Scopes</h4>
+                            <div className={styles.scopeDropdownContainer} ref={scopeDropdownRef}>
+                              <button
+                                className={styles.scopeDropdownButtonAsTitle}
+                                onClick={() => setShowScopeDropdown(!showScopeDropdown)}
+                              >
+                                <span className={styles.scopeDropdownIcon}>🎯</span>
+                                <span className={styles.scopeDropdownTitle}>Scopes</span>
+                                <span className={styles.scopeDropdownArrow}>{showScopeDropdown ? '▲' : '▼'}</span>
+                              </button>
+
+                              {showScopeDropdown && (
+                                <div className={styles.scopeDropdownMenu}>
+                                  {scopesOptions.map((scope) => (
+                                    <button
+                                      key={scope.id}
+                                      className={`${styles.scopeDropdownItem} ${activeScope === scope.id ? styles.active : ''}`}
+                                      onClick={() => {
+                                        handleScopesClick(scope.id);
+                                        setShowScopeDropdown(false);
+                                      }}
+                                      style={{ '--scope-color': scope.color } as React.CSSProperties}
+                                    >
+                                      <span className={styles.scopeItemIcon}>{scope.icon}</span>
+                                      <div className={styles.scopeItemContent}>
+                                        <span className={styles.scopeItemTitle}>{scope.title}</span>
+                                        <span className={styles.scopeItemDescription}>{scope.description}</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <div className={styles.chatHeaderControls}>
                             <button 
@@ -2497,9 +2586,38 @@ const HUD: React.FC<HUDProps> = ({
                       <div className={styles.scopesExpanded}>
                         <div className={styles.scopesContent}>
                           <div className={styles.scopesHeader}>
-                            <h5>
-                              {activeScope === 'modelinfo' ? 'Model Information' : activeScope.charAt(0).toUpperCase() + activeScope.slice(1)}
-                            </h5>
+                            <div className={styles.scopeDropdownContainer} ref={scopeDropdownRef}>
+                              <button
+                                className={styles.scopeDropdownButtonAsTitle}
+                                onClick={() => setShowScopeDropdown(!showScopeDropdown)}
+                              >
+                                <span className={styles.scopeDropdownIcon}>{getCurrentScopeInfo().icon}</span>
+                                <span className={styles.scopeDropdownTitle}>{getCurrentScopeInfo().title}</span>
+                                <span className={styles.scopeDropdownArrow}>{showScopeDropdown ? '▲' : '▼'}</span>
+                              </button>
+
+                              {showScopeDropdown && (
+                                <div className={styles.scopeDropdownMenu}>
+                                  {scopesOptions.map((scope) => (
+                                    <button
+                                      key={scope.id}
+                                      className={`${styles.scopeDropdownItem} ${activeScope === scope.id ? styles.active : ''}`}
+                                      onClick={() => {
+                                        handleScopesClick(scope.id);
+                                        setShowScopeDropdown(false);
+                                      }}
+                                      style={{ '--scope-color': scope.color } as React.CSSProperties}
+                                    >
+                                      <span className={styles.scopeItemIcon}>{scope.icon}</span>
+                                      <div className={styles.scopeItemContent}>
+                                        <span className={styles.scopeItemTitle}>{scope.title}</span>
+                                        <span className={styles.scopeItemDescription}>{scope.description}</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                             <div className={styles.scopesHeaderControls}>
                               <button 
                                 className={styles.expandButton}
@@ -2512,9 +2630,6 @@ const HUD: React.FC<HUDProps> = ({
                                 title={isScopesExpanded ? "Exit full screen" : "Expand scopes full screen"}
                               >
                                 {isScopesExpanded ? '⊟' : '⊞'}
-                              </button>
-                              <button className={styles.closeScopes} onClick={() => setActiveLens(null)}>
-                                ×
                               </button>
                             </div>
                           </div>
@@ -3302,7 +3417,6 @@ const HUD: React.FC<HUDProps> = ({
                             {activeScope === 'tasks' && (
                               <div className={styles.tasksScope}>
                                 <div className={styles.tasksHeader}>
-                                  <h6>📋 Active Tasks</h6>
                                   <div className={styles.taskStats}>
                                     <span className={styles.stat}>
                                       Running: {tasks.filter((t) => t.status === 'running').length}
@@ -3524,7 +3638,38 @@ const HUD: React.FC<HUDProps> = ({
                       <div className={`${styles.scopesScrollContainer} ${isChatExpanded ? styles.hidden : ''}`}>
                         <div className={styles.chatHeader}>
                           <div className={styles.chatTitle}>
-                            <h4>🎯 Scopes</h4>
+                            <div className={styles.scopeDropdownContainer} ref={scopeDropdownRef}>
+                              <button
+                                className={styles.scopeDropdownButtonAsTitle}
+                                onClick={() => setShowScopeDropdown(!showScopeDropdown)}
+                              >
+                                <span className={styles.scopeDropdownIcon}>🎯</span>
+                                <span className={styles.scopeDropdownTitle}>Scopes</span>
+                                <span className={styles.scopeDropdownArrow}>{showScopeDropdown ? '▲' : '▼'}</span>
+                              </button>
+
+                              {showScopeDropdown && (
+                                <div className={styles.scopeDropdownMenu}>
+                                  {scopesOptions.map((scope) => (
+                                    <button
+                                      key={scope.id}
+                                      className={`${styles.scopeDropdownItem} ${activeScope === scope.id ? styles.active : ''}`}
+                                      onClick={() => {
+                                        handleScopesClick(scope.id);
+                                        setShowScopeDropdown(false);
+                                      }}
+                                      style={{ '--scope-color': scope.color } as React.CSSProperties}
+                                    >
+                                      <span className={styles.scopeItemIcon}>{scope.icon}</span>
+                                      <div className={styles.scopeItemContent}>
+                                        <span className={styles.scopeItemTitle}>{scope.title}</span>
+                                        <span className={styles.scopeItemDescription}>{scope.description}</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                             <div className={styles.tooltipContainer}>
                               <div className={styles.helpIcon}>?</div>
                               <div className={styles.tooltip}>
