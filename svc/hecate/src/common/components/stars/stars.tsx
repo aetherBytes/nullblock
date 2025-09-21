@@ -7,7 +7,7 @@ import { Group } from 'three';
 import styles from './stars.module.scss';
 
 interface StarsProps {
-  theme?: 'null' | 'matrix' | 'cyber' | 'light';
+  theme?: 'null' | 'matrix' | 'light';
 }
 
 const Stars = ({ theme = 'light' }: StarsProps) => {
@@ -93,8 +93,6 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
         return '#000000';
       case 'matrix':
         return '#00ff00';
-      case 'cyber':
-        return '#00ffff';
       default:
         return '#f272c8';
     }
@@ -122,7 +120,7 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
 };
 
 interface StarsCanvasProps {
-  theme?: 'null' | 'matrix' | 'cyber' | 'light';
+  theme?: 'null' | 'matrix' | 'light';
 }
 
 const StarsCanvas = ({ theme = 'light' }: StarsCanvasProps) => (

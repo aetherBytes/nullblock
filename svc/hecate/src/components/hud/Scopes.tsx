@@ -26,7 +26,7 @@ interface ScopesProps {
   setAutoScroll: (scroll: boolean) => void;
   logsEndRef: React.RefObject<HTMLDivElement>;
   theme: string;
-  onThemeChange: (theme: 'null' | 'cyber' | 'light' | 'dark') => void;
+  onThemeChange: (theme: 'null' | 'light' | 'dark') => void;
   // Model info props
   isLoadingModelInfo: boolean;
   modelInfo: any;
@@ -442,12 +442,6 @@ const Scopes: React.FC<ScopesProps> = ({
                   onClick={() => onThemeChange('light')}
                 >
                   ☀️ Light
-                </button>
-                <button
-                  className={`${styles.themeButton} ${theme === 'null' ? styles.active : ''}`}
-                  onClick={() => onThemeChange('null')}
-                >
-                  ⚡ Cyber
                 </button>
               </div>
             </div>
