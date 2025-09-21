@@ -9,6 +9,7 @@ export const useModelManagement = (publicKey: string | null) => {
   const [modelsCached, setModelsCached] = useState(false);
   const [lastStatusMessageModel, setLastStatusMessageModel] = useState<string | null>(null);
   const [isModelChanging, setIsModelChanging] = useState(false);
+  const [agentHealthStatus, setAgentHealthStatus] = useState<'healthy' | 'unhealthy' | 'unknown'>('unknown');
   const [sessionStartTime] = useState<Date>(new Date());
 
   const isLoadingModelsRef = useRef(false);
@@ -36,7 +37,12 @@ export const useModelManagement = (publicKey: string | null) => {
       }
 
       const status = await hecateAgent.getModelStatus();
-      if (status.current_model) {
+
+      // Check agent health status
+      const healthStatus = status.status || status.health?.overall_status;
+      setAgentHealthStatus(healthStatus === 'healthy' ? 'healthy' : 'unhealthy');
+
+      if (status.current_model && healthStatus === 'healthy') {
         console.log('✅ Model already loaded on backend:', status.current_model);
         setCurrentSelectedModel(status.current_model);
         setDefaultModelReady(true);
@@ -45,6 +51,11 @@ export const useModelManagement = (publicKey: string | null) => {
           setLastStatusMessageModel(status.current_model);
         }
 
+        return;
+      } else if (healthStatus !== 'healthy') {
+        console.warn('⚠️ Agent is unhealthy, models not available');
+        setDefaultModelReady(false);
+        setCurrentSelectedModel(null);
         return;
       }
 
@@ -180,6 +191,8 @@ export const useModelManagement = (publicKey: string | null) => {
     setLastStatusMessageModel,
     isModelChanging,
     setIsModelChanging,
+    agentHealthStatus,
+    setAgentHealthStatus,
     sessionStartTime,
     loadDefaultModel,
     loadAvailableModels,
