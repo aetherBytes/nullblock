@@ -38,6 +38,15 @@ $accent-purple: rgba(138, 43, 226, 0.12);
 $accent-blue: rgba(72, 144, 226, 0.08);
 $accent-gold: rgba(255, 215, 0, 0.06);
 
+/* Retro TV / Nullblock colors */
+$retro-primary: #00d4ff;      // Lightning blue (main accent)
+$retro-secondary: #b967ff;    // Lightning purple (secondary)
+$retro-accent: #e6c200;       // Lightning gold (highlights)
+$retro-screen: #0a1419;       // Dark blue-black screen
+$retro-glow: rgba(0, 212, 255, 0.4);     // Blue glow
+$retro-scan: rgba(0, 212, 255, 0.15);    // Blue scan lines
+$retro-border: #1a3544;       // Dark blue border
+
 html, body {
   height: 100%;
   margin: 0;
@@ -60,6 +69,27 @@ html, body {
   75% {
     filter: hue-rotate(3deg) brightness(1.02);
     opacity: 0.9;
+  }
+}
+
+@keyframes retro-scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+@keyframes retro-flicker {
+  0%, 98% {
+    opacity: 1;
+  }
+  99% {
+    opacity: 0.98;
+  }
+  100% {
+    opacity: 1;
   }
 }
 
