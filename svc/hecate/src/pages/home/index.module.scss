@@ -513,18 +513,18 @@ h1, h2, h3, h4, h5, h6 {
 
 .theme-dark {
   .appContainer {
-    background-color: transparent;
-    color: #e0e0e0;
+    background-color: $background-dark;
+    color: $text-color;
   }
-  
+
   .backgroundImage {
-    background-color: transparent;
-    
+    background-color: $background-dark;
+
     &::after {
       background: linear-gradient(to bottom,
-        rgba(5, 5, 15, 0.1) 0%,
-        rgba(10, 10, 20, 0.2) 50%,
-        rgba(5, 5, 15, 0.3) 100%);
+        rgba(10, 20, 30, 0.4) 0%,
+        rgba(15, 25, 35, 0.6) 50%,
+        rgba(5, 15, 25, 0.8) 100%);
     }
   }
   
