@@ -129,7 +129,12 @@ export const useChat = (publicKey: string | null) => {
       if (error instanceof Error) {
         const errorMsg = error.message.toLowerCase();
 
-        if (errorMsg.includes('lm studio') || errorMsg.includes('localhost:1234')) {
+        // Check for API key configuration errors first
+        if (errorMsg.includes('api key') || errorMsg.includes('openrouter') ||
+            errorMsg.includes('config_required') || errorMsg.includes('no working models') ||
+            errorMsg.includes('provider not available') || errorMsg.includes('no llm api keys detected')) {
+          userFriendlyMessage = "🔑 I need API keys to work properly. Please configure your OpenRouter API key in settings. Visit https://openrouter.ai/ to get a free API key.";
+        } else if (errorMsg.includes('lm studio') || errorMsg.includes('localhost:1234')) {
           userFriendlyMessage = "I'm currently offline. Please check that the local AI service is running and try again.";
         } else if (errorMsg.includes('connection') || errorMsg.includes('network')) {
           userFriendlyMessage = "I'm having connection issues. Please check your network and try again.";

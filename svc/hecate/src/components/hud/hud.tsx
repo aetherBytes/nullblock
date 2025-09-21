@@ -860,6 +860,7 @@ const HUD: React.FC<HUDProps> = ({
                         isProcessingChat={chat.isProcessingChat}
                         defaultModelReady={modelManagement.defaultModelReady}
                         currentSelectedModel={modelManagement.currentSelectedModel}
+                        agentHealthStatus={modelManagement.agentHealthStatus}
                         isChatExpanded={isChatExpanded}
                         setIsChatExpanded={setIsChatExpanded}
                         isScopesExpanded={isScopesExpanded}

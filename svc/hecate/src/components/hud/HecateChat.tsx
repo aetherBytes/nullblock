@@ -24,6 +24,7 @@ interface HecateChatProps {
   isProcessingChat: boolean;
   defaultModelReady: boolean;
   currentSelectedModel: string | null;
+  agentHealthStatus?: 'healthy' | 'unhealthy' | 'unknown';
   isChatExpanded: boolean;
   setIsChatExpanded: (expanded: boolean) => void;
   isScopesExpanded: boolean;
@@ -47,6 +48,7 @@ const HecateChat: React.FC<HecateChatProps> = ({
   isProcessingChat,
   defaultModelReady,
   currentSelectedModel,
+  agentHealthStatus = 'unknown',
   isChatExpanded,
   setIsChatExpanded,
   isScopesExpanded,
@@ -125,7 +127,8 @@ const HecateChat: React.FC<HecateChatProps> = ({
             <div className={styles.chatTitle}>
               <h4>💬 Hecate Chat</h4>
               <span className={styles.modelStatus}>
-                {defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}
+                {agentHealthStatus === 'unhealthy' ? '⚠️ API Keys Required' :
+                 defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}
               </span>
             </div>
             <div className={styles.chatHeaderControls}>
@@ -155,19 +158,21 @@ const HecateChat: React.FC<HecateChatProps> = ({
               value={chatInput}
               onChange={onChatInputChange}
               placeholder={
-                isModelChanging
-                  ? "Switching models..."
-                  : isProcessingChat || nullviewState === 'thinking'
-                    ? "Hecate is thinking..."
-                    : "Ask Hecate anything..."
+                agentHealthStatus === 'unhealthy'
+                  ? "⚠️ Configure API keys in settings first..."
+                  : isModelChanging
+                    ? "Switching models..."
+                    : isProcessingChat || nullviewState === 'thinking'
+                      ? "Hecate is thinking..."
+                      : "Ask Hecate anything..."
               }
               className={styles.chatInputField}
-              disabled={isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
+              disabled={agentHealthStatus === 'unhealthy' || isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
             />
             <button
               type="submit"
               className={styles.chatSendButton}
-              disabled={isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
+              disabled={agentHealthStatus === 'unhealthy' || isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
             >
               <span>➤</span>
             </button>
@@ -184,7 +189,8 @@ const HecateChat: React.FC<HecateChatProps> = ({
           <div className={styles.chatTitle}>
             <h4>{currentSelectedModel ? `HECATE:${currentSelectedModel.split('/').pop()?.split(':')[0]?.toUpperCase() || 'MODEL'}` : 'HECATE:LOADING'}</h4>
             <span className={styles.chatStatus}>
-              {defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}
+              {agentHealthStatus === 'unhealthy' ? '⚠️ API Keys Required' :
+               defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}
             </span>
           </div>
           <div className={styles.chatHeaderControls}>
@@ -216,19 +222,21 @@ const HecateChat: React.FC<HecateChatProps> = ({
             value={chatInput}
             onChange={onChatInputChange}
             placeholder={
-              isModelChanging
-                ? "Switching models..."
-                : isProcessingChat || nullviewState === 'thinking'
-                  ? "Hecate is thinking..."
-                  : "Ask Hecate anything..."
+              agentHealthStatus === 'unhealthy'
+                ? "⚠️ Configure API keys in settings first..."
+                : isModelChanging
+                  ? "Switching models..."
+                  : isProcessingChat || nullviewState === 'thinking'
+                    ? "Hecate is thinking..."
+                    : "Ask Hecate anything..."
             }
             className={styles.chatInputField}
-            disabled={isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
+            disabled={agentHealthStatus === 'unhealthy' || isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
           />
           <button
             type="submit"
             className={styles.chatSendButton}
-            disabled={isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
+            disabled={agentHealthStatus === 'unhealthy' || isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
           >
             <span>➤</span>
           </button>
