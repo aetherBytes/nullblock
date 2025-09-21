@@ -38,8 +38,15 @@ export const useModelManagement = (publicKey: string | null) => {
 
       const status = await hecateAgent.getModelStatus();
 
-      // Check agent health status
-      const healthStatus = status.status || status.health?.overall_status;
+      // Check agent health status - prioritize health.overall_status over status
+      const healthStatus = status.health?.overall_status || status.status;
+      console.log('🔍 Agent health check:', {
+        rawHealthStatus: status.health?.overall_status,
+        rawStatus: status.status,
+        finalHealthStatus: healthStatus,
+        modelsAvailable: status.health?.models_available || status.models_available
+      });
+
       setAgentHealthStatus(healthStatus === 'healthy' ? 'healthy' : 'unhealthy');
 
       if (status.current_model && healthStatus === 'healthy') {
