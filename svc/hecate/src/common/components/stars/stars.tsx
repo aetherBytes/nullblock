@@ -94,7 +94,7 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
       case 'matrix':
         return '#00ff00';
       default:
-        return '#f272c8';
+        return '#c8a2c8';
     }
   };
 
