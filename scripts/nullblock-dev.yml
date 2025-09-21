@@ -75,11 +75,30 @@ windows:
       panes:
         - |
           echo "Starting PostgreSQL..."
-          brew services start postgresql@17
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            brew services start postgresql@17
+          elif command -v systemctl &> /dev/null; then
+            sudo systemctl start postgresql
+            sudo systemctl enable postgresql
+          else
+            echo "Please start PostgreSQL manually using your system's service manager"
+          fi
           echo "PostgreSQL started"
         - |
-          echo "Starting Redis..."  
-          brew services start redis
+          echo "Starting Redis..."
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            brew services start redis
+          elif command -v systemctl &> /dev/null; then
+            if command -v pacman &> /dev/null; then
+              sudo systemctl start redis
+              sudo systemctl enable redis
+            else
+              sudo systemctl start redis-server
+              sudo systemctl enable redis-server
+            fi
+          else
+            echo "Please start Redis manually using your system's service manager"
+          fi
           echo "Redis started"
         - |
           echo "Starting IPFS..."
@@ -251,6 +270,15 @@ on_project_start: |
 
 on_project_stop: |
   echo "Stopping development services..."
-  brew services stop postgresql@17 2>/dev/null || true
-  brew services stop redis 2>/dev/null || true
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    brew services stop postgresql@17 2>/dev/null || true
+    brew services stop redis 2>/dev/null || true
+  elif command -v systemctl &> /dev/null; then
+    sudo systemctl stop postgresql 2>/dev/null || true
+    if command -v pacman &> /dev/null; then
+      sudo systemctl stop redis 2>/dev/null || true
+    else
+      sudo systemctl stop redis-server 2>/dev/null || true
+    fi
+  fi
   pkill -f "ipfs daemon" 2>/dev/null || true
