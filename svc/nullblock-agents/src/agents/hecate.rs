@@ -328,17 +328,29 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
             let health = factory.health_check().await?;
             let stats = factory.get_stats().await;
 
+            // Check if models are actually available
+            let models_available = health["models_available"].as_u64().unwrap_or(0);
+            let llm_status = health["overall_status"].as_str().unwrap_or("unknown");
+
+            let agent_status = if models_available == 0 || llm_status == "unhealthy" {
+                "unhealthy"
+            } else {
+                "ready"
+            };
+
             Ok(json!({
-                "status": "running",
+                "status": agent_status,
                 "current_model": self.current_model,
                 "health": health,
                 "stats": stats,
-                "conversation_length": self.conversation_history.read().await.len()
+                "conversation_length": self.conversation_history.read().await.len(),
+                "models_available": models_available
             }))
         } else {
             Ok(json!({
                 "status": "not_started",
-                "current_model": null
+                "current_model": null,
+                "models_available": 0
             }))
         }
     }
@@ -387,7 +399,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
     }
 
     pub fn is_model_available(&self, model_name: &str, api_keys: &ApiKeys) -> bool {
-        if let Some(llm_factory) = &self.llm_factory {
+        if let Some(_llm_factory) = &self.llm_factory {
             // Use a simple check for now - in reality we'd check the factory's model registry
             model_name == "deepseek/deepseek-chat-v3.1:free" && api_keys.openrouter.is_some()
                 || (model_name.contains("/") || model_name.contains(":")) && api_keys.openrouter.is_some()
@@ -397,7 +409,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
     }
 
     pub fn get_model_availability_reason(&self, model_name: &str, api_keys: &ApiKeys) -> String {
-        if let Some(llm_factory) = &self.llm_factory {
+        if let Some(_llm_factory) = &self.llm_factory {
             // In a real implementation, we'd delegate to the factory
             if !self.is_model_available(model_name, api_keys) {
                 format!("Model '{}' is not available. Check API keys and try again.", model_name)

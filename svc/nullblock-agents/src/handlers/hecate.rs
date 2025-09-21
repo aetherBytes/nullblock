@@ -41,13 +41,33 @@ pub async fn chat(
 
 pub async fn health(State(state): State<AppState>) -> Result<Json<serde_json::Value>, AppError> {
     let agent = state.hecate_agent.read().await;
-    
+
     if !agent.running {
         return Err(AppError::AgentNotRunning);
     }
 
+    // Check if LLM models are available
+    if let Some(llm_factory) = &agent.llm_factory {
+        let factory = llm_factory.read().await;
+        match factory.health_check().await {
+            Ok(health_info) => {
+                let models_available = health_info["models_available"].as_u64().unwrap_or(0);
+                let llm_status = health_info["overall_status"].as_str().unwrap_or("unknown");
+
+                if models_available == 0 || llm_status == "unhealthy" {
+                    return Err(AppError::LLMRequestFailed("No working LLM models available. Please check your OpenRouter API key configuration in .env.dev and restart the service. Visit https://openrouter.ai/ to get a free API key.".to_string()));
+                }
+            }
+            Err(e) => {
+                return Err(AppError::LLMRequestFailed(format!("LLM service health check failed: {}. Please check your API key configuration.", e)));
+            }
+        }
+    } else {
+        return Err(AppError::AgentNotInitialized);
+    }
+
     let status = agent.get_model_status().await?;
-    
+
     Ok(Json(json!({
         "status": "healthy",
         "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -478,7 +498,7 @@ pub async fn search_models(
     State(state): State<AppState>,
     Query(params): Query<SearchModelsQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let agent = state.hecate_agent.read().await;
+    let _agent = state.hecate_agent.read().await;
     let api_keys = state.config.get_api_keys();
     
     // Get available models (same source as available_models endpoint)
