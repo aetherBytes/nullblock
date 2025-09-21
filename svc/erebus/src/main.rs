@@ -1,7 +1,7 @@
 use axum::{
     extract::Request,
     response::Json,
-    routing::{get, post},
+    routing::{get, post, put, delete},
     Router,
     middleware::{self, Next},
     http::StatusCode,
@@ -20,7 +20,14 @@ use tracing_appender::{rolling, non_blocking};
 mod resources;
 use resources::agents::routes::{
     agent_health, hecate_chat, hecate_status, agent_chat, agent_status,
-    hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model, hecate_model_info, hecate_search_models
+    hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model, hecate_model_info, hecate_search_models,
+    // Task management routes
+    create_task, get_tasks, get_task, update_task, delete_task,
+    start_task, pause_task, resume_task, cancel_task, retry_task,
+    get_task_queues, get_task_templates, create_task_from_template,
+    get_task_stats, get_task_notifications, mark_notification_read, handle_notification_action,
+    get_task_events, publish_task_event, get_motivation_state, update_motivation_state,
+    get_task_suggestions, learn_from_task
 };
 use resources::wallets::routes::create_wallet_routes;
 use resources::{WalletManager, create_crossroads_routes, ExternalService};
@@ -245,6 +252,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/agents/hecate/search-models", get(hecate_search_models))
         .route("/api/agents/:agent_name/chat", post(agent_chat))
         .route("/api/agents/:agent_name/status", get(agent_status))
+        // Task management endpoints
+        .route("/api/agents/tasks", post(create_task))
+        .route("/api/agents/tasks", get(get_tasks))
+        .route("/api/agents/tasks/:task_id", get(get_task))
+        .route("/api/agents/tasks/:task_id", put(update_task))
+        .route("/api/agents/tasks/:task_id", delete(delete_task))
+        .route("/api/agents/tasks/:task_id/start", post(start_task))
+        .route("/api/agents/tasks/:task_id/pause", post(pause_task))
+        .route("/api/agents/tasks/:task_id/resume", post(resume_task))
+        .route("/api/agents/tasks/:task_id/cancel", post(cancel_task))
+        .route("/api/agents/tasks/:task_id/retry", post(retry_task))
+        .route("/api/agents/tasks/queues", get(get_task_queues))
+        .route("/api/agents/tasks/templates", get(get_task_templates))
+        .route("/api/agents/tasks/from-template", post(create_task_from_template))
+        .route("/api/agents/tasks/stats", get(get_task_stats))
+        .route("/api/agents/tasks/notifications", get(get_task_notifications))
+        .route("/api/agents/tasks/notifications/:notification_id/read", post(mark_notification_read))
+        .route("/api/agents/tasks/notifications/:notification_id/action", post(handle_notification_action))
+        .route("/api/agents/tasks/events", get(get_task_events))
+        .route("/api/agents/tasks/events", post(publish_task_event))
+        .route("/api/agents/tasks/motivation", get(get_motivation_state))
+        .route("/api/agents/tasks/motivation", put(update_motivation_state))
+        .route("/api/agents/tasks/suggestions", post(get_task_suggestions))
+        .route("/api/agents/tasks/:task_id/learn", post(learn_from_task))
         // Merge wallet routes
         .merge(create_wallet_routes())
         // Merge crossroads routes
@@ -272,6 +303,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🎯 Hecate set model: http://localhost:3000/api/agents/hecate/set-model");
     info!("📋 Hecate model info: http://localhost:3000/api/agents/hecate/model-info");
     info!("🔍 Hecate search models: http://localhost:3000/api/agents/hecate/search-models");
+    info!("📋 Task management: http://localhost:3000/api/agents/tasks");
+    info!("⚡ Task events: http://localhost:3000/api/agents/tasks/events");
+    info!("🧠 Task motivation: http://localhost:3000/api/agents/tasks/motivation");
+    info!("💡 Task suggestions: http://localhost:3000/api/agents/tasks/suggestions");
     info!("👛 Wallet endpoints: http://localhost:3000/api/wallets");
     info!("🔍 Wallet detection: http://localhost:3000/api/wallets/detect");
     info!("🔐 Wallet challenge: http://localhost:3000/api/wallets/challenge");

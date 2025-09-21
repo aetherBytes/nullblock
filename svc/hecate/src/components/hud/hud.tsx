@@ -2,10 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useModelManagement } from '../../hooks/useModelManagement';
 import { useChat } from '../../hooks/useChat';
 import { useAuthentication } from '../../hooks/useAuthentication';
+import { useTaskManagement } from '../../hooks/useTaskManagement';
+import { useEventSystem } from '../../hooks/useEventSystem';
 import Crossroads from './Crossroads';
 import HecateChat from './HecateChat';
 import Scopes from './Scopes';
 import styles from './hud.module.scss';
+import { Task, TaskCreationRequest } from '../../types/tasks';
 
 type Theme = 'null' | 'light' | 'dark';
 
@@ -67,7 +70,6 @@ const HUD: React.FC<HUDProps> = ({
   >(publicKey ? 'hecate' : 'crossroads');
 
   // Tab functionality state
-  const [tasks, setTasks] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -96,6 +98,19 @@ const HUD: React.FC<HUDProps> = ({
   // Use custom hooks
   const modelManagement = useModelManagement(publicKey);
   const chat = useChat(publicKey);
+  const taskManagement = useTaskManagement(publicKey);
+  const eventSystem = useEventSystem(true, 3000);
+
+  // Debug: Log task management state
+  useEffect(() => {
+    console.log('🔍 Task Management State Update:', {
+      tasksCount: taskManagement.tasks.length,
+      filteredTasksCount: taskManagement.filteredTasks.length,
+      isLoading: taskManagement.isLoading,
+      error: taskManagement.error,
+      walletConnected: !!publicKey
+    });
+  }, [taskManagement.tasks, taskManagement.filteredTasks, taskManagement.isLoading, taskManagement.error, publicKey]);
 
   // MCP initialization is now handled by useAuthentication hook
   useEffect(() => {
@@ -336,102 +351,11 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [isChatExpanded, chat.isProcessingChat]);
 
-  // Initialize mock data and live updates for tabs
+  // Initialize demo tasks and live updates for logs
   useEffect(() => {
     if (!publicKey) return;
 
-    const mockTasks = [
-      {
-        id: '1',
-        name: 'Arbitrage Opportunity Scan',
-        status: 'running',
-        type: 'trading',
-        description: 'Scanning DEXes for arbitrage opportunities across Uniswap V3, SushiSwap, and PancakeSwap',
-        startTime: new Date(Date.now() - 300000),
-        progress: 65,
-        logs: [],
-      },
-      {
-        id: '2',
-        name: 'Social Sentiment Analysis',
-        status: 'completed',
-        type: 'agent',
-        description: 'Analyzing social media sentiment for trading signals from Twitter, Reddit, and Discord',
-        startTime: new Date(Date.now() - 600000),
-        endTime: new Date(Date.now() - 300000),
-        progress: 100,
-        logs: [],
-      },
-      {
-        id: '3',
-        name: 'Portfolio Rebalancing',
-        status: 'pending',
-        type: 'system',
-        description: 'Automated portfolio rebalancing based on market conditions and risk parameters',
-        startTime: new Date(Date.now() - 100000),
-        logs: [],
-      },
-      {
-        id: '4',
-        name: 'Flashbots Bundle Construction',
-        status: 'running',
-        type: 'mcp',
-        description: 'Building MEV-protected transaction bundle for optimal execution',
-        startTime: new Date(Date.now() - 150000),
-        progress: 45,
-        logs: [],
-      },
-    ];
-
-    const mockMcpOperations = [
-      {
-        id: '1',
-        name: 'Flashbots Bundle',
-        status: 'active',
-        endpoint: '/flashbots/bundle',
-        lastActivity: new Date(),
-        responseTime: 150,
-      },
-      {
-        id: '2',
-        name: 'MEV Protection',
-        status: 'active',
-        endpoint: '/mev/protect',
-        lastActivity: new Date(Date.now() - 5000),
-        responseTime: 89,
-      },
-      {
-        id: '3',
-        name: 'Social Trading Signals',
-        status: 'idle',
-        endpoint: '/social/signals',
-        lastActivity: new Date(Date.now() - 30000),
-      },
-      {
-        id: '4',
-        name: 'Portfolio Analytics',
-        status: 'active',
-        endpoint: '/portfolio/analytics',
-        lastActivity: new Date(Date.now() - 2000),
-        responseTime: 234,
-      },
-      {
-        id: '5',
-        name: 'Risk Assessment',
-        status: 'active',
-        endpoint: '/risk/assessment',
-        lastActivity: new Date(Date.now() - 1000),
-        responseTime: 67,
-      },
-      {
-        id: '6',
-        name: 'Market Data Feed',
-        status: 'active',
-        endpoint: '/market/feed',
-        lastActivity: new Date(),
-        responseTime: 12,
-      },
-    ];
+    // Demo task creation is now handled by the useTaskManagement hook fallback
 
     const mockLogs = [
       {
@@ -476,7 +400,6 @@ const HUD: React.FC<HUDProps> = ({
       },
     ];
 
-    setTasks(mockTasks);
     setLogs(mockLogs);
 
     const interval = setInterval(() => {
@@ -499,25 +422,99 @@ const HUD: React.FC<HUDProps> = ({
       setLogs((prev) => [...prev, newLog]);
     }, 4000);
 
-    const progressInterval = setInterval(() => {
-      setTasks((prev) =>
-        prev.map((task) => {
-          if (task.status === 'running' && task.progress !== undefined && task.progress < 100) {
-            return {
-              ...task,
-              progress: Math.min(100, task.progress + Math.random() * 5),
-            };
-          }
-          return task;
-        }),
-      );
-    }, 5000);
-
     return () => {
       clearInterval(interval);
-      clearInterval(progressInterval);
     };
   }, [publicKey]);
+
+  // Event-driven motivation system demo
+  useEffect(() => {
+    if (!publicKey) return;
+
+    // Simulate market events that drive Hecate's motivation
+    const marketEventInterval = setInterval(() => {
+      const events = [
+        {
+          type: 'price_change',
+          symbol: 'ETH',
+          price: `$${(2800 + Math.random() * 200).toFixed(2)}`,
+          change: `${(Math.random() * 10 - 5).toFixed(2)}%`
+        },
+        {
+          type: 'market_opportunity',
+          opportunityType: 'arbitrage',
+          symbol: 'BTC',
+          profit: Math.random() * 2,
+          exchanges: ['uniswap', 'sushiswap']
+        },
+        {
+          type: 'threshold_breach',
+          metric: 'portfolio_variance',
+          value: 5.2,
+          threshold: 5.0
+        }
+      ];
+
+      const randomEvent = events[Math.floor(Math.random() * events.length)];
+
+      switch (randomEvent.type) {
+        case 'price_change':
+          eventSystem.publishPriceChange(randomEvent.symbol, randomEvent.price, randomEvent.change);
+          break;
+        case 'market_opportunity':
+          eventSystem.publishMarketOpportunity(randomEvent.opportunityType, {
+            symbol: randomEvent.symbol,
+            profit: randomEvent.profit,
+            exchanges: randomEvent.exchanges,
+            urgency: randomEvent.profit > 1 ? 'high' : 'medium'
+          });
+          break;
+        case 'threshold_breach':
+          eventSystem.publishThresholdBreach(randomEvent.metric, randomEvent.value, randomEvent.threshold);
+          break;
+      }
+    }, 15000); // Every 15 seconds
+
+    // Publish user interaction events when chat messages are sent
+    const userInteractionSubscription = eventSystem.subscribe('user_interaction', (event) => {
+      console.log('🧠 Hecate processing user interaction:', event.data);
+
+      // This is where Hecate's motivation system would analyze user intent
+      // and potentially create tasks based on conversation context
+      if (event.data.action === 'chat_message') {
+        const message = event.data.context?.message?.toLowerCase() || '';
+
+        // Simple intent detection for demo
+        if (message.includes('arbitrage') || message.includes('trading')) {
+          console.log('💡 Hecate detected trading interest - suggesting arbitrage tasks');
+        } else if (message.includes('portfolio') || message.includes('balance')) {
+          console.log('💡 Hecate detected portfolio interest - suggesting rebalancing tasks');
+        } else if (message.includes('social') || message.includes('sentiment')) {
+          console.log('💡 Hecate detected social trading interest - suggesting sentiment analysis');
+        }
+      }
+    });
+
+    return () => {
+      clearInterval(marketEventInterval);
+      eventSystem.unsubscribe(userInteractionSubscription);
+    };
+  }, [publicKey, eventSystem.publishPriceChange, eventSystem.publishMarketOpportunity, eventSystem.publishThresholdBreach, eventSystem.subscribe, eventSystem.unsubscribe]);
+
+  // Integrate chat system with event system
+  useEffect(() => {
+    // Publish user interaction events when chat messages are sent
+    if (chat.chatMessages.length > 0) {
+      const lastMessage = chat.chatMessages[chat.chatMessages.length - 1];
+      if (lastMessage.sender === 'user') {
+        eventSystem.publishUserInteraction('chat_message', {
+          message: lastMessage.message,
+          timestamp: lastMessage.timestamp,
+          conversationLength: chat.chatMessages.length
+        });
+      }
+    }
+  }, [chat.chatMessages, eventSystem.publishUserInteraction]);
 
   // Auto-scroll effect for logs
   useEffect(() => {
@@ -885,7 +882,8 @@ const HUD: React.FC<HUDProps> = ({
                           setShowScopeDropdown={setShowScopeDropdown}
                           scopeDropdownRef={scopeDropdownRef}
                           nullviewState={nullviewState}
-                          tasks={tasks}
+                          tasks={taskManagement.filteredTasks}
+                          taskManagement={taskManagement}
                           logs={logs}
                           searchTerm={searchTerm}
                           setSearchTerm={setSearchTerm}
@@ -941,80 +939,72 @@ const HUD: React.FC<HUDProps> = ({
     }
   };
 
-  const renderHomeScreen = () => (
-    <div className={styles.hudScreen}>
-      <div className={styles.innerHudMenuBar}>
+  const renderUnifiedNavigation = () => (
+    <div className={styles.unifiedNavbar}>
+      {/* Left side - Brand and NullView */}
+      <div className={styles.navbarLeft}>
+        <div className={styles.nullblockTitle}>
+          NULLBL<span className={styles.irisO}>O</span>CK
+          <div
+            className={`${styles.nullview} ${styles[nullviewState]}`}
+            onClick={() => {
+              if (!publicKey) {
+                setNulleyeState('error');
+                setTimeout(() => setNulleyeState('base'), 1500);
+                alert(
+                  '🔒 SECURE ACCESS REQUIRED\n\nConnect your Web3 wallet to unlock the NullView interface and access advanced features.',
+                );
+                return;
+              }
+
+              setMainHudActiveTab('hecate');
+              setNulleyeState('thinking');
+            }}
+            title={!publicKey ? '🔒 Connect wallet to unlock NullView' : '🔓 Access NullView Interface'}
+          >
+            <div className={styles.pulseRing}></div>
+            <div className={styles.dataStream}>
+              <div className={styles.streamLine}></div>
+              <div className={styles.streamLine}></div>
+              <div className={styles.streamLine}></div>
+            </div>
+            <div className={styles.lightningContainer}>
+              <div className={styles.lightningArc}></div>
+              <div className={styles.lightningArc}></div>
+              <div className={styles.lightningArc}></div>
+              <div className={styles.lightningArc}></div>
+              <div className={styles.lightningArc}></div>
+              <div className={styles.lightningArc}></div>
+              <div className={styles.lightningArc}></div>
+              <div className={styles.lightningArc}></div>
+            </div>
+            <div className={styles.staticField}></div>
+            <div className={styles.coreNode}></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Center - Navigation Tabs */}
+      <div className={styles.navbarCenter}>
         <button
           className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
           onClick={() => setMainHudActiveTab('crossroads')}
         >
-          Crossroads
+          CROSSROADS
         </button>
 
         {publicKey && (
-          <>
-            <button
-              className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
-              onClick={() => setMainHudActiveTab('hecate')}
-            >
-              Hecate
-            </button>
-          </>
+          <button
+            className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
+            onClick={() => setMainHudActiveTab('hecate')}
+          >
+            HECATE
+          </button>
         )}
       </div>
-      <div className={styles.homeContent}>
-        <div className={styles.landingContent}>
-          <div className={styles.mainHudContent}>
-            {renderTabContent()}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
-  const renderControlScreen = () => (
-    <nav className={styles.verticalNavbar}>
-      <div className={styles.nullblockTitle}>
-        NULLBL<span className={styles.irisO}>O</span>CK
-        <div
-          className={`${styles.nullview} ${styles[nullviewState]}`}
-          onClick={() => {
-            if (!publicKey) {
-              setNulleyeState('error');
-              setTimeout(() => setNulleyeState('base'), 1500);
-              alert(
-                '🔒 SECURE ACCESS REQUIRED\n\nConnect your Web3 wallet to unlock the NullView interface and access advanced features.',
-              );
-              return;
-            }
-
-            setMainHudActiveTab('hecate');
-            setNulleyeState('thinking');
-          }}
-          title={!publicKey ? '🔒 Connect wallet to unlock NullView' : '🔓 Access NullView Interface'}
-        >
-          <div className={styles.pulseRing}></div>
-          <div className={styles.dataStream}>
-            <div className={styles.streamLine}></div>
-            <div className={styles.streamLine}></div>
-            <div className={styles.streamLine}></div>
-          </div>
-          <div className={styles.lightningContainer}>
-            <div className={styles.lightningArc}></div>
-            <div className={styles.lightningArc}></div>
-            <div className={styles.lightningArc}></div>
-            <div className={styles.lightningArc}></div>
-            <div className={styles.lightningArc}></div>
-            <div className={styles.lightningArc}></div>
-            <div className={styles.lightningArc}></div>
-            <div className={styles.lightningArc}></div>
-          </div>
-          <div className={styles.staticField}></div>
-          <div className={styles.coreNode}></div>
-        </div>
-      </div>
-
-      <div className={styles.navbarButtons}>
+      {/* Right side - Action Buttons */}
+      <div className={styles.navbarRight}>
         <button
           className={`${styles.walletMenuButton} ${publicKey ? styles.connected : ''}`}
           onClick={publicKey ? onDisconnect : () => onConnectWallet()}
@@ -1030,13 +1020,19 @@ const HUD: React.FC<HUDProps> = ({
           <span className={styles.docsMenuText}>Docs</span>
         </button>
       </div>
-    </nav>
+    </div>
+  );
+
+  const renderMainContent = () => (
+    <div className={styles.mainContent}>
+      {renderTabContent()}
+    </div>
   );
 
   return (
     <div className={`${styles.echoContainer} ${styles[theme]}`}>
-      {renderControlScreen()}
-      {renderHomeScreen()}
+      {renderUnifiedNavigation()}
+      {renderMainContent()}
     </div>
   );
 };

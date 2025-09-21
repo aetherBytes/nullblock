@@ -187,7 +187,12 @@ impl AgentProxy {
     /// Proxy generic request to agent
     pub async fn proxy_request(&self, endpoint: &str, method: &str, body: Option<serde_json::Value>) -> Result<serde_json::Value, AgentErrorResponse> {
         let client = reqwest::Client::new();
-        let url = format!("{}/hecate/{}", self.agent_base_url, endpoint);
+        // Task endpoints are at root level, Hecate-specific endpoints are under /hecate
+        let url = if endpoint.starts_with("tasks") {
+            format!("{}/{}", self.agent_base_url, endpoint)
+        } else {
+            format!("{}/hecate/{}", self.agent_base_url, endpoint)
+        };
         
         info!("🔗 Proxying {} request to agent: {}", method, url);
         
