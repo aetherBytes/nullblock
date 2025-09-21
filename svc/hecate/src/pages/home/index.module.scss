@@ -8,16 +8,16 @@ $base-font-size-title: 24px;
 $base-font-size: 18px;
 
 /* Theme colors */
-$background-dark: #0a0a0a;
+$background-dark: #1a1a1a;
 $fog-color: rgba(20, 20, 20, 0.5);
 $accent-color: #2a4a6a;
 $echo-blue: #4a90e2;
 $echo-green: #00ff9d;
 $echo-orange: #ff7f00;
 $echo-gray: #b0b0b0;
-$echo-border: #3a3a3a;
-$text-color: #b0b0b0;
-$button-text: #d0d0d0;
+$echo-border: #4a4a4a;
+$text-color: #d4d4d8;
+$button-text: #e4e4e7;
 $alert-color: #ff4500;
 $black-glow: rgba(0, 0, 0, 0.8);
 $flame-glow: rgba(40, 10, 0, 0.25);
@@ -522,9 +522,9 @@ h1, h2, h3, h4, h5, h6 {
 
     &::after {
       background: linear-gradient(to bottom,
-        rgba(10, 20, 30, 0.4) 0%,
-        rgba(15, 25, 35, 0.6) 50%,
-        rgba(5, 15, 25, 0.8) 100%);
+        rgba(32, 28, 36, 0.2) 0%,
+        rgba(28, 25, 32, 0.3) 50%,
+        rgba(24, 22, 28, 0.4) 100%);
     }
   }
   
