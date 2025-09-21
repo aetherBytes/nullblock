@@ -78,8 +78,7 @@ windows:
           if [[ "$OSTYPE" == "darwin"* ]]; then
             brew services start postgresql@17
           elif command -v systemctl &> /dev/null; then
-            sudo systemctl start postgresql
-            sudo systemctl enable postgresql
+            systemctl --user start postgresql || echo "PostgreSQL service not available in user mode"
           else
             echo "Please start PostgreSQL manually using your system's service manager"
           fi
@@ -90,11 +89,9 @@ windows:
             brew services start redis
           elif command -v systemctl &> /dev/null; then
             if command -v pacman &> /dev/null; then
-              sudo systemctl start redis
-              sudo systemctl enable redis
+              systemctl --user start redis || echo "Redis service not available in user mode"
             else
-              sudo systemctl start redis-server
-              sudo systemctl enable redis-server
+              systemctl --user start redis-server || echo "Redis service not available in user mode"
             fi
           else
             echo "Please start Redis manually using your system's service manager"
@@ -274,11 +271,11 @@ on_project_stop: |
     brew services stop postgresql@17 2>/dev/null || true
     brew services stop redis 2>/dev/null || true
   elif command -v systemctl &> /dev/null; then
-    sudo systemctl stop postgresql 2>/dev/null || true
+    systemctl --user stop postgresql 2>/dev/null || true
     if command -v pacman &> /dev/null; then
-      sudo systemctl stop redis 2>/dev/null || true
+      systemctl --user stop redis 2>/dev/null || true
     else
-      sudo systemctl stop redis-server 2>/dev/null || true
+      systemctl --user stop redis-server 2>/dev/null || true
     fi
   fi
   pkill -f "ipfs daemon" 2>/dev/null || true

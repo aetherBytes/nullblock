@@ -54,43 +54,28 @@ kill_services() {
 
     echo "💀 Killing all development services..."
 
-    # Stop PostgreSQL
+    # Stop PostgreSQL (user mode)
     echo "Stopping PostgreSQL..."
     case $OS in
         "macos")
             brew services stop postgresql@17 2>/dev/null || true
             ;;
-        "arch")
-            sudo systemctl stop postgresql 2>/dev/null || true
-            ;;
-        "ubuntu")
-            sudo systemctl stop postgresql 2>/dev/null || true
-            ;;
-        "fedora")
-            sudo systemctl stop postgresql 2>/dev/null || true
-            ;;
         *)
-            print_warning "Unknown OS, skipping PostgreSQL stop"
+            systemctl --user stop postgresql 2>/dev/null || true
             ;;
     esac
 
-    # Stop Redis
+    # Stop Redis (user mode)
     echo "Stopping Redis..."
     case $OS in
         "macos")
             brew services stop redis 2>/dev/null || true
             ;;
         "arch")
-            sudo systemctl stop redis 2>/dev/null || true
-            ;;
-        "ubuntu")
-            sudo systemctl stop redis-server 2>/dev/null || true
-            ;;
-        "fedora")
-            sudo systemctl stop redis 2>/dev/null || true
+            systemctl --user stop redis 2>/dev/null || true
             ;;
         *)
-            print_warning "Unknown OS, skipping Redis stop"
+            systemctl --user stop redis-server 2>/dev/null || true
             ;;
     esac
 
