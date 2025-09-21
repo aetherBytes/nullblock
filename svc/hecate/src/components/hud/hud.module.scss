@@ -10580,17 +10580,18 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     }
   }
 
-  // Scopes content area - terminal style
+  // Scopes content area - terminal style with transparency for star visibility
   .scopesContainer, .hecateInterface, .hecateContent, .scopesContent {
     background: linear-gradient(135deg,
-      $retro-screen 0%,
-      rgba(5, 18, 25, 0.9) 100%);
+      rgba(10, 20, 25, 0.15) 0%,
+      rgba(5, 18, 25, 0.2) 100%);
     border: 1px solid rgba(0, 212, 255, 0.4);
     border-radius: 6px;
     box-shadow:
       0 0 20px $retro-glow,
-      inset 0 0 20px rgba(0, 0, 0, 0.5);
+      inset 0 0 20px rgba(0, 0, 0, 0.3);
     position: relative;
+    backdrop-filter: blur(1px);
 
     &::before {
       content: '';
@@ -10607,11 +10608,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     }
   }
 
-  // Content panels and text
+  // Content panels and text - more transparent for star visibility
   .contentPanel, .tasksList, .logsList, .modelInfoContainer {
-    background: rgba(10, 20, 35, 0.8);
+    background: rgba(10, 20, 35, 0.3);
     border: 1px solid rgba(0, 212, 255, 0.3);
     color: $retro-primary;
+    backdrop-filter: blur(2px);
 
     h1, h2, h3, h4, h5, h6 {
       color: $retro-accent;

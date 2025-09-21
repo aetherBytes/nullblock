@@ -590,13 +590,13 @@ h1, h2, h3, h4, h5, h6 {
       right: 0;
       bottom: 0;
       background: radial-gradient(ellipse at 25% 25%,
-        $accent-purple 0%,
+        rgba(138, 43, 226, 0.02) 0%,
         transparent 50%),
       radial-gradient(ellipse at 75% 75%,
-        $accent-blue 0%,
+        rgba(72, 144, 226, 0.02) 0%,
         transparent 50%),
       radial-gradient(ellipse at 50% 90%,
-        $accent-gold 0%,
+        rgba(255, 215, 0, 0.01) 0%,
         transparent 40%);
       pointer-events: none;
       animation: subtle-shift 20s ease-in-out infinite;
@@ -604,11 +604,11 @@ h1, h2, h3, h4, h5, h6 {
 
     &::after {
       background: linear-gradient(45deg,
-        rgba(42, 35, 48, 0.3) 0%,
-        rgba(35, 28, 42, 0.2) 25%,
-        rgba(28, 35, 45, 0.25) 50%,
-        rgba(38, 32, 46, 0.3) 75%,
-        rgba(32, 28, 40, 0.35) 100%);
+        rgba(42, 35, 48, 0.05) 0%,
+        rgba(35, 28, 42, 0.03) 25%,
+        rgba(28, 35, 45, 0.04) 50%,
+        rgba(38, 32, 46, 0.05) 75%,
+        rgba(32, 28, 40, 0.06) 100%);
     }
   }
   
