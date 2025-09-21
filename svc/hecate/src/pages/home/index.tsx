@@ -51,8 +51,12 @@ const Home: React.FC = () => {
   // Initialize theme immediately to prevent flash
   useEffect(() => {
     const savedTheme = localStorage.getItem('currentTheme');
-    if (savedTheme) {
+    if (savedTheme && (savedTheme === 'null' || savedTheme === 'light' || savedTheme === 'dark')) {
       setCurrentTheme(savedTheme as 'null' | 'light' | 'dark');
+    } else {
+      // Set default dark theme if no valid saved theme
+      setCurrentTheme('dark');
+      localStorage.setItem('currentTheme', 'dark');
     }
   }, []);
 
@@ -612,7 +616,7 @@ const Home: React.FC = () => {
       className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]} ${isInitialized ? styles.initialized : ''}`}
     >
       <div className={styles.backgroundImage} />
-      <StarsCanvas theme={currentTheme === 'dark' ? 'null' : currentTheme} />
+      <StarsCanvas theme={currentTheme === 'light' ? 'light' : 'null'} />
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`}>
         {/* System status panel moved to HUD component */}
       </div>
@@ -627,11 +631,8 @@ const Home: React.FC = () => {
             setShowHUD(false);
           }}
           onThemeChange={(theme) => {
-            if (theme === 'cyber') {
-              setCurrentTheme('null');
-              localStorage.setItem('currentTheme', 'null');
-            } else {
-              setCurrentTheme(theme as 'null' | 'light' | 'dark');
+            if (theme === 'null' || theme === 'light' || theme === 'dark') {
+              setCurrentTheme(theme);
               localStorage.setItem('currentTheme', theme);
             }
           }}

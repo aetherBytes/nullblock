@@ -31,7 +31,7 @@ interface HUDProps {
   onConnectWallet: (walletType?: 'phantom' | 'metamask') => void;
   theme?: Theme;
   onClose: () => void;
-  onThemeChange: (theme: 'null' | 'cyber' | 'light' | 'dark') => void;
+  onThemeChange: (theme: 'null' | 'light' | 'dark') => void;
   systemStatus: SystemStatus;
 }
 

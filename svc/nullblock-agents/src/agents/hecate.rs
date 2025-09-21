@@ -95,7 +95,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         Self {
             personality,
             running: false,
-            preferred_model: "deepseek/deepseek-chat-v3.1:free".to_string(),
+            preferred_model: "x-ai/grok-4-fast:free".to_string(),
             current_model: None,
             conversation_history: Arc::new(RwLock::new(Vec::new())),
             llm_factory: None,
@@ -401,7 +401,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
     pub fn is_model_available(&self, model_name: &str, api_keys: &ApiKeys) -> bool {
         if let Some(_llm_factory) = &self.llm_factory {
             // Use a simple check for now - in reality we'd check the factory's model registry
-            model_name == "deepseek/deepseek-chat-v3.1:free" && api_keys.openrouter.is_some()
+            model_name == "x-ai/grok-4-fast:free" && api_keys.openrouter.is_some()
                 || (model_name.contains("/") || model_name.contains(":")) && api_keys.openrouter.is_some()
         } else {
             false
