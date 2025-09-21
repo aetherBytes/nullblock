@@ -95,10 +95,31 @@ impl AgentProxy {
             }
             Err(e) => {
                 error!("❌ Failed to connect to agent: {}", e);
+
+                // Check if this is likely an API key issue vs agent unavailable
+                let error_str = e.to_string().to_lowercase();
+                let (message, code) = if error_str.contains("connection refused") {
+                    // Agent is not running - likely API key configuration issue
+                    (
+                        "🔑 Hecate agent is not running. This is usually caused by missing or invalid LLM API keys. Please check your OpenRouter API key configuration in .env.dev and restart the service. Visit https://openrouter.ai/ to get a free API key.".to_string(),
+                        "AGENT_CONFIG_REQUIRED".to_string()
+                    )
+                } else if error_str.contains("timeout") {
+                    (
+                        "⏰ The agent service is taking too long to respond. This may indicate an API key or network issue. Please check your configuration and try again.".to_string(),
+                        "AGENT_TIMEOUT".to_string()
+                    )
+                } else {
+                    (
+                        format!("🌐 Unable to connect to the agent service: {}. Please check that your API keys are configured in .env.dev and the service is running.", e),
+                        "AGENT_UNAVAILABLE".to_string()
+                    )
+                };
+
                 Err(AgentErrorResponse {
                     error: "connection_error".to_string(),
-                    code: "AGENT_UNAVAILABLE".to_string(),
-                    message: format!("Agent service unavailable: {}", e),
+                    code,
+                    message,
                     agent_available: false,
                 })
             }
@@ -247,10 +268,31 @@ impl AgentProxy {
             }
             Err(e) => {
                 error!("❌ Failed to connect to agent: {}", e);
+
+                // Check if this is likely an API key issue vs agent unavailable
+                let error_str = e.to_string().to_lowercase();
+                let (message, code) = if error_str.contains("connection refused") {
+                    // Agent is not running - likely API key configuration issue
+                    (
+                        "🔑 Hecate agent is not running. This is usually caused by missing or invalid LLM API keys. Please check your OpenRouter API key configuration in .env.dev and restart the service. Visit https://openrouter.ai/ to get a free API key.".to_string(),
+                        "AGENT_CONFIG_REQUIRED".to_string()
+                    )
+                } else if error_str.contains("timeout") {
+                    (
+                        "⏰ The agent service is taking too long to respond. This may indicate an API key or network issue. Please check your configuration and try again.".to_string(),
+                        "AGENT_TIMEOUT".to_string()
+                    )
+                } else {
+                    (
+                        format!("🌐 Unable to connect to the agent service: {}. Please check that your API keys are configured in .env.dev and the service is running.", e),
+                        "AGENT_UNAVAILABLE".to_string()
+                    )
+                };
+
                 Err(AgentErrorResponse {
                     error: "connection_error".to_string(),
-                    code: "AGENT_UNAVAILABLE".to_string(),
-                    message: format!("Agent service unavailable: {}", e),
+                    code,
+                    message,
                     agent_available: false,
                 })
             }

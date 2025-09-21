@@ -110,8 +110,10 @@ impl AppError {
                 format!("🧠 The model '{}' is not currently available. Please select a different model or check your API keys.", model)
             }
             AppError::LLMRequestFailed(details) => {
-                if details.to_lowercase().contains("api key") {
-                    "🔑 Authentication issue with the AI service. Please check your API keys.".to_string()
+                if details.to_lowercase().contains("no auth credentials") ||
+                   details.to_lowercase().contains("401 unauthorized") ||
+                   details.to_lowercase().contains("api key") {
+                    "🔑 No LLM API keys detected. Please check your OpenRouter API key configuration in .env.dev and restart the service. Visit https://openrouter.ai/ to get a free API key.".to_string()
                 } else if details.to_lowercase().contains("timeout") {
                     "⏰ The AI service is taking too long to respond. Please try again in a moment.".to_string()
                 } else if details.to_lowercase().contains("rate limit") {
