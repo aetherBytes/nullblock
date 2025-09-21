@@ -10476,3 +10476,225 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     }
   }
 }
+
+/* Retro TV / Pip-Boy Dark Theme Styling */
+.echoContainer.dark {
+
+  // Retro scan line effect overlay
+  &::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      $retro-scan 2px,
+      $retro-scan 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+    animation: retro-flicker 4s infinite;
+  }
+
+  // Main navigation bar - Pip-Boy style
+  .unifiedNavbar {
+    background: linear-gradient(180deg,
+      rgba(10, 20, 25, 0.95) 0%,
+      rgba(8, 15, 20, 0.95) 100%);
+    border-bottom: 2px solid $retro-primary;
+    border-top: 1px solid $retro-glow;
+    box-shadow:
+      0 0 20px $retro-glow,
+      inset 0 1px 0 $retro-scan;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(180deg,
+        $retro-scan 0%,
+        transparent 50%,
+        rgba(0, 212, 255, 0.05) 100%);
+      pointer-events: none;
+    }
+
+    .menuButton {
+      color: $retro-primary !important;
+      font-family: 'Courier New', monospace;
+      text-shadow:
+        0 0 5px $retro-glow,
+        0 0 10px rgba(0, 212, 255, 0.4),
+        0 0 15px rgba(0, 212, 255, 0.2);
+      border: 1px solid transparent;
+      border-radius: 3px;
+      padding: 0.5rem 1rem;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: $retro-scan;
+        border-color: rgba(0, 212, 255, 0.5);
+        box-shadow:
+          0 0 10px $retro-glow,
+          inset 0 0 10px $retro-scan;
+      }
+
+      &.active {
+        background: rgba(0, 212, 255, 0.2);
+        border-color: $retro-primary;
+        box-shadow:
+          0 0 15px rgba(0, 212, 255, 0.8),
+          inset 0 0 15px rgba(0, 212, 255, 0.15);
+      }
+    }
+
+    // Wallet and docs buttons
+    .walletMenuButton, .docsMenuButton {
+      color: $retro-primary !important;
+      font-family: 'Courier New', monospace;
+      text-shadow: 0 0 5px $retro-glow;
+      background: linear-gradient(180deg,
+        rgba(0, 212, 255, 0.1) 0%,
+        rgba(0, 212, 255, 0.05) 100%);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      border-radius: 3px;
+
+      &:hover {
+        background: linear-gradient(180deg,
+          rgba(0, 212, 255, 0.2) 0%,
+          rgba(0, 212, 255, 0.1) 100%);
+        box-shadow: 0 0 10px $retro-glow;
+      }
+
+      .walletMenuText, .docsMenuText {
+        color: $retro-primary !important;
+        text-shadow: 0 0 5px $retro-glow !important;
+      }
+    }
+  }
+
+  // Scopes content area - terminal style
+  .scopesContainer, .hecateInterface, .hecateContent, .scopesContent {
+    background: linear-gradient(135deg,
+      $retro-screen 0%,
+      rgba(5, 18, 25, 0.9) 100%);
+    border: 1px solid rgba(0, 212, 255, 0.4);
+    border-radius: 6px;
+    box-shadow:
+      0 0 20px $retro-glow,
+      inset 0 0 20px rgba(0, 0, 0, 0.5);
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg,
+        transparent,
+        $retro-glow,
+        transparent);
+      animation: retro-scan 3s linear infinite;
+    }
+  }
+
+  // Content panels and text
+  .contentPanel, .tasksList, .logsList, .modelInfoContainer {
+    background: rgba(10, 20, 35, 0.8);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    color: $retro-primary;
+
+    h1, h2, h3, h4, h5, h6 {
+      color: $retro-accent;
+      text-shadow: 0 0 8px rgba(230, 194, 0, 0.6);
+      font-family: 'Courier New', monospace;
+    }
+
+    p, span, div, label {
+      color: $retro-primary;
+      text-shadow: 0 0 3px $retro-glow;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+  }
+
+  // Chat area
+  .chatContainer, .chatMessages {
+    background: $retro-screen;
+    border: 1px solid $retro-border;
+
+    .message {
+      color: $retro-primary;
+      text-shadow: 0 0 2px $retro-glow;
+      font-family: 'Courier New', monospace;
+
+      &.user {
+        color: $retro-accent;
+      }
+    }
+  }
+
+  // Buttons
+  button {
+    background: linear-gradient(180deg,
+      rgba(0, 212, 255, 0.2) 0%,
+      rgba(0, 212, 255, 0.1) 100%);
+    border: 1px solid rgba(0, 212, 255, 0.5);
+    color: $retro-primary;
+    text-shadow: 0 0 5px $retro-glow;
+    font-family: 'Courier New', monospace;
+    border-radius: 2px;
+
+    &:hover {
+      background: linear-gradient(180deg,
+        rgba(0, 212, 255, 0.3) 0%,
+        rgba(0, 212, 255, 0.15) 100%);
+      box-shadow: 0 0 10px $retro-glow;
+    }
+
+    &:active {
+      box-shadow: inset 0 0 10px $retro-glow;
+    }
+  }
+
+  // Input fields
+  input, textarea {
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(0, 212, 255, 0.4);
+    color: $retro-primary;
+    font-family: 'Courier New', monospace;
+    border-radius: 2px;
+
+    &:focus {
+      border-color: $retro-primary;
+      box-shadow: 0 0 10px $retro-glow;
+      outline: none;
+    }
+
+    &::placeholder {
+      color: rgba(0, 212, 255, 0.5);
+    }
+  }
+
+  // Theme buttons specifically
+  .themeButton {
+    background: $retro-screen;
+    border: 1px solid $retro-border;
+    color: $retro-primary;
+
+    &.active {
+      background: $retro-glow;
+      color: $retro-screen;
+      box-shadow: 0 0 15px $retro-glow;
+    }
+  }
+}
