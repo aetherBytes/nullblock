@@ -196,35 +196,26 @@ kill_existing_services() {
     else
         print_warning "No kill script found, performing manual cleanup..."
         # Manual cleanup if just is not available
-        print_status "Stopping PostgreSQL..."
+        print_status "Stopping PostgreSQL (user mode)..."
         case $OS in
             "macos")
                 brew services stop postgresql@17 2>/dev/null || true
                 ;;
-            "arch")
-                sudo systemctl stop postgresql 2>/dev/null || true
-                ;;
-            "ubuntu")
-                sudo systemctl stop postgresql 2>/dev/null || true
-                ;;
-            "fedora")
-                sudo systemctl stop postgresql 2>/dev/null || true
+            *)
+                systemctl --user stop postgresql 2>/dev/null || true
                 ;;
         esac
 
-        print_status "Stopping Redis..."
+        print_status "Stopping Redis (user mode)..."
         case $OS in
             "macos")
                 brew services stop redis 2>/dev/null || true
                 ;;
             "arch")
-                sudo systemctl stop redis 2>/dev/null || true
+                systemctl --user stop redis 2>/dev/null || true
                 ;;
-            "ubuntu")
-                sudo systemctl stop redis-server 2>/dev/null || true
-                ;;
-            "fedora")
-                sudo systemctl stop redis 2>/dev/null || true
+            *)
+                systemctl --user stop redis-server 2>/dev/null || true
                 ;;
         esac
 
