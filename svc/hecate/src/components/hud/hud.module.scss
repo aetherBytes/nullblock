@@ -25,7 +25,7 @@ $border-color: rgba(255, 255, 255, 0.1);
 // Theme Variables
 $null-bg: rgba(0, 0, 0, 0.9);
 $null-border: $echo-blue;
-$null-text: $text-color;
+$nell-text: $text-color;
 
 $matrix-bg: rgba(0, 0, 0, 0.95);
 $matrix-border: #00ff00;
@@ -3015,6 +3015,144 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+// Unified Navigation Bar
+.unifiedNavbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: rgba($background-dark, 0.95);
+  border-bottom: 1px solid rgba($echo-blue, 0.2);
+  backdrop-filter: blur(10px);
+  position: relative;
+  width: calc(100% - 2rem);
+  margin: 0 auto;
+  z-index: 100;
+  min-height: 60px;
+  flex-shrink: 0;
+
+  .navbarLeft {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+  }
+
+  .navbarCenter {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    justify-content: center;
+
+    .menuButton {
+      background: none;
+      border: none;
+      color: $lightning-silver;
+      font-family: 'Courier New', monospace;
+      font-size: 1.1rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      padding: 0.5rem 1rem;
+      position: relative;
+      white-space: nowrap;
+      text-shadow:
+        0 0 6px rgba($lightning-silver, 0.7),
+        0 0 12px rgba($lightning-silver, 0.4),
+        0 0 18px rgba($lightning-silver, 0.2);
+
+      &:hover {
+        color: $echo-blue;
+        text-shadow:
+          0 0 8px rgba($echo-blue, 0.8),
+          0 0 16px rgba($echo-blue, 0.5),
+          0 0 24px rgba($echo-blue, 0.3);
+      }
+
+      &:active {
+        color: rgba($echo-blue, 0.9);
+        text-shadow:
+          0 0 6px rgba($echo-blue, 0.9),
+          0 0 12px rgba($echo-blue, 0.6);
+      }
+
+      &.active {
+        color: $echo-blue;
+        text-shadow:
+          0 0 6px rgba($echo-blue, 0.8),
+          0 0 12px rgba($echo-blue, 0.5),
+          0 0 18px rgba($echo-blue, 0.3);
+      }
+
+      &.fadeIn {
+        animation: fadeInButton 0.8s ease-out forwards;
+        opacity: 0;
+      }
+
+      // Lightning divider after each button (except last)
+      &:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        right: -0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1px;
+        height: 16px;
+        background: linear-gradient(
+          45deg,
+          transparent 0%,
+          $lightning-silver 20%,
+          $lightning-blue  50%,
+          $lightning-silver 80%,
+          transparent 100%
+        );
+        box-shadow:
+          0 0 4px rgba($lightning-blue, 0.8),
+          0 0 8px rgba($lightning-silver, 0.4);
+        animation: lightningFlicker 2s ease-in-out infinite;
+      }
+    }
+  }
+
+  .navbarRight {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 0 0 auto;
+  }
+}
+
+// Main Content Area
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+}
+
+// Default Tab Content
+.defaultTab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  padding: 2rem;
+  text-align: center;
+
+  p {
+    color: $text-secondary;
+    font-size: 1.1rem;
+    margin: 0;
+  }
+}
+
 .verticalNavbar {
   position: relative;
 }
@@ -4784,7 +4922,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     border: none;
     color: $lightning-silver;
     font-family: 'Courier New', monospace;
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -4855,6 +4993,154 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         0 0 4px rgba($lightning-blue, 0.8),
         0 0 8px rgba($lightning-silver, 0.4);
       animation: lightningFlicker 2s ease-in-out infinite;
+    }
+  }
+
+  // Enhanced button layouts
+  .crossroadsButton,
+  .hecateButton {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.6rem 1.2rem;
+    position: relative;
+    border: 1px solid rgba($lightning-silver, 0.3);
+    border-radius: 6px;
+    background: linear-gradient(
+      135deg,
+      rgba($background-dark, 0.8) 0%,
+      rgba($background-dark, 0.6) 50%,
+      rgba($background-dark, 0.8) 100%
+    );
+    backdrop-filter: blur(2px);
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+
+    .buttonIcon {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: $lightning-silver;
+      text-shadow: 0 0 8px rgba($lightning-silver, 0.6);
+      transition: all 0.3s ease;
+    }
+
+    .buttonText {
+      font-size: 0.9rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      line-height: 1;
+    }
+
+    .buttonSubtext {
+      font-size: 0.65rem;
+      font-weight: normal;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      opacity: 0.7;
+      color: rgba($lightning-silver, 0.8);
+      line-height: 1;
+    }
+
+    &:hover {
+      border-color: rgba($echo-blue, 0.6);
+      background: linear-gradient(
+        135deg,
+        rgba($echo-blue, 0.1) 0%,
+        rgba($background-dark, 0.7) 50%,
+        rgba($echo-blue, 0.1) 100%
+      );
+      transform: translateY(-2px);
+      box-shadow:
+        0 4px 12px rgba($echo-blue, 0.3),
+        0 0 20px rgba($echo-blue, 0.2);
+
+      .buttonIcon {
+        color: $echo-blue;
+        text-shadow:
+          0 0 10px rgba($echo-blue, 0.8),
+          0 0 20px rgba($echo-blue, 0.4);
+        transform: scale(1.1);
+      }
+
+      .buttonSubtext {
+        opacity: 1;
+        color: rgba($echo-blue, 0.9);
+      }
+    }
+
+    &.active {
+      border-color: $echo-blue;
+      background: linear-gradient(
+        135deg,
+        rgba($echo-blue, 0.2) 0%,
+        rgba($background-dark, 0.8) 50%,
+        rgba($echo-blue, 0.2) 100%
+      );
+      box-shadow:
+        0 2px 8px rgba($echo-blue, 0.4),
+        0 0 16px rgba($echo-blue, 0.3),
+        inset 0 0 12px rgba($echo-blue, 0.1);
+
+      .buttonIcon {
+        color: $echo-blue;
+        text-shadow:
+          0 0 12px rgba($echo-blue, 0.9),
+          0 0 24px rgba($echo-blue, 0.5);
+      }
+
+      .buttonText {
+        color: $echo-blue;
+      }
+
+      .buttonSubtext {
+        color: rgba($echo-blue, 0.8);
+        opacity: 1;
+      }
+    }
+  }
+
+  // Specific styling for Crossroads button
+  .crossroadsButton {
+    .buttonIcon {
+      color: #ff6b35; // Warm orange for marketplace
+      text-shadow: 0 0 8px rgba(255, 107, 53, 0.6);
+    }
+
+    &:hover .buttonIcon {
+      color: #ff8c42;
+      text-shadow:
+        0 0 10px rgba(255, 140, 66, 0.8),
+        0 0 20px rgba(255, 140, 66, 0.4);
+    }
+
+    &.active .buttonIcon {
+      color: #ff8c42;
+      text-shadow:
+        0 0 12px rgba(255, 140, 66, 0.9),
+        0 0 24px rgba(255, 140, 66, 0.5);
+    }
+  }
+
+  // Specific styling for Hecate button
+  .hecateButton {
+    .buttonIcon {
+      color: #00d4aa; // Cyan-green for AI/neural
+      text-shadow: 0 0 8px rgba(0, 212, 170, 0.6);
+    }
+
+    &:hover .buttonIcon {
+      color: #00f5cc;
+      text-shadow:
+        0 0 10px rgba(0, 245, 204, 0.8),
+        0 0 20px rgba(0, 245, 204, 0.4);
+    }
+
+    &.active .buttonIcon {
+      color: #00f5cc;
+      text-shadow:
+        0 0 12px rgba(0, 245, 204, 0.9),
+        0 0 24px rgba(0, 245, 204, 0.5);
     }
   }
 }
@@ -5229,6 +5515,101 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+// Task actions and controls
+.taskActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.taskActionButton {
+  background: rgba($background-dark, 0.6);
+  border: 1px solid rgba($echo-blue, 0.3);
+  color: $text-color;
+  padding: 0.3rem 0.6rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+
+  &:hover {
+    background: rgba($echo-blue, 0.1);
+    border-color: rgba($echo-blue, 0.5);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    &:hover {
+      transform: none;
+      background: rgba($background-dark, 0.6);
+      border-color: rgba($echo-blue, 0.3);
+    }
+  }
+}
+
+.taskMetadata {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: rgba($text-color, 0.6);
+
+  .taskTime {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .taskPriority {
+    color: $echo-blue;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.taskProgress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+
+  .progressBar {
+    flex: 1;
+    height: 6px;
+    background: rgba($background-dark, 0.5);
+    border-radius: 3px;
+    overflow: hidden;
+
+    .progressFill {
+      height: 100%;
+      background: linear-gradient(90deg, $echo-blue, $lightning-blue);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+  }
+
+  .progressText {
+    font-size: 0.8rem;
+    color: $echo-blue;
+    min-width: 3rem;
+    text-align: right;
+  }
+}
+
 // Logs specific styles
 .logsControls {
   display: flex;
@@ -5375,8 +5756,10 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  padding: 0 1rem;
+  padding: 0;
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
 }
 
 .hecateMain {
@@ -5695,6 +6078,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   padding: 1rem;
   min-height: 0;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
 }
 
@@ -5910,11 +6294,11 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     overflow-wrap: break-word;
     word-wrap: break-word;
     text-align: left;
-    
+
     // Adjust code block wrapper for chat
     .codeBlockWrapper {
       margin: 0.5rem 0;
-      
+
       .copyButton {
         top: 0.25rem;
         right: 0.25rem;
@@ -5924,7 +6308,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         opacity: 1; // Always visible in chat too
       }
     }
-    
+
     // Adjust code block sizing for chat
     .codeBlock {
       max-width: 100%;
@@ -5935,7 +6319,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       white-space: pre;
       direction: ltr;
       overflow-x: auto;
-      
+
       code {
         text-align: left;
         white-space: pre;
@@ -5943,25 +6327,25 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         width: 100%;
       }
     }
-    
+
     // Adjust inline code for chat
     .inlineCode {
       font-size: 0.85em;
       padding: 0.15rem 0.3rem;
     }
-    
+
     // Adjust table sizing for chat
     .tableWrapper {
       font-size: 0.85rem;
       margin: 0.5rem 0;
     }
-    
+
     // Adjust list spacing for chat
     .list, .orderedList {
       margin: 0.5rem 0;
       padding-left: 1.25rem;
     }
-    
+
     // Adjust blockquote for chat
     .blockquote {
       margin: 0.5rem 0;
@@ -5982,7 +6366,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .thinkingDots {
   animation: thinkingDotPulse 1.5s ease-in-out infinite;
   color: $echo-purple;
-  
+
   &:nth-child(1) { animation-delay: 0s; }
   &:nth-child(2) { animation-delay: 0.2s; }
   &:nth-child(3) { animation-delay: 0.4s; }
@@ -6003,7 +6387,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .chatMessage.type-thinking {
   border-color: rgba($echo-purple, 0.3);
   background: rgba($echo-purple, 0.05);
-  
+
   .messageContent {
     color: rgba($echo-purple, 0.8);
   }
@@ -6879,19 +7263,19 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     animation: staticFieldChatThinking 1.8s ease-in-out infinite;
     opacity: 0.8;
   }
-  
+
   .coreNodeChat {
     background: rgba($echo-purple, 0.9);
     box-shadow: 0 0 8px rgba($echo-purple, 0.6);
     animation: coreNodeChatThinking 2.2s ease-in-out infinite;
   }
-  
+
   .streamLineChat {
     background: linear-gradient(90deg, transparent, rgba($echo-purple, 0.8), transparent);
     animation: streamLineChatThinking 1.4s ease-in-out infinite;
     opacity: 0.9;
   }
-  
+
   .lightningSparkChat {
     background: linear-gradient(180deg, transparent, rgba($echo-purple, 0.9), transparent);
     animation: lightningSparkChatThinking 2s ease-in-out infinite;
@@ -9631,29 +10015,29 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       0 0 6px rgba($echo-blue, 0.8),
       0 0 12px rgba($echo-blue, 0.5),
       0 0 18px rgba($echo-blue, 0.3);
-    background: rgba($echo-blue, 0.1);
   }
 
   // Lightning divider after each button (except last)
   &:not(:last-child)::after {
     content: '';
     position: absolute;
-    right: -0.75rem;
+    right: -1rem;
     top: 50%;
     transform: translateY(-50%);
     width: 1px;
-    height: 12px;
+    height: 16px;
     background: linear-gradient(
       45deg,
       transparent 0%,
-      rgba($lightning-silver, 0.3) 30%,
-      rgba($echo-blue, 0.4) 50%,
-      rgba($lightning-silver, 0.3) 70%,
+      $lightning-silver 20%,
+      $lightning-blue  50%,
+      $lightning-silver 80%,
       transparent 100%
     );
     box-shadow:
-      0 0 3px rgba($echo-blue, 0.2),
-      0 0 6px rgba($lightning-silver, 0.1);
+      0 0 4px rgba($lightning-blue, 0.8),
+      0 0 8px rgba($lightning-silver, 0.4);
+    animation: lightningFlicker 2s ease-in-out infinite;
   }
 }
 
@@ -9773,5 +10157,322 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     margin: 0;
     color: rgba(255, 255, 255, 0.7);
     font-size: 13px;
+  }
+}
+
+// Tasks Scope Styles
+.tasksScope {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 500px;
+  overflow: hidden;
+
+  .tasksHeader {
+    flex-shrink: 0;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba($echo-blue, 0.2);
+  }
+}
+
+// Dedicated scroll container for tasks - completely unique to avoid conflicts
+.taskScrollContainer {
+  position: relative !important;
+  width: 100% !important;
+  height: 250px !important;
+  max-height: 250px !important;
+  min-height: 250px !important;
+  overflow-y: scroll !important;
+  overflow-x: hidden !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 8px !important;
+  margin: 0 !important;
+  display: block !important;
+  box-sizing: border-box !important;
+
+  // Force scrollbar to always show
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba($echo-blue, 0.4) rgba($background-dark, 0.3);
+
+  &::-webkit-scrollbar {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba($background-dark, 0.3) !important;
+    border-radius: 6px !important;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.6) !important;
+    border-radius: 6px !important;
+    border: 2px solid rgba($background-dark, 0.3) !important;
+
+    &:hover {
+      background: rgba($echo-blue, 0.8) !important;
+    }
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: rgba($background-dark, 0.3) !important;
+  }
+
+  // Override any inherited styles
+  * {
+    box-sizing: border-box;
+  }
+
+  // Task items within scroll container
+  .taskItem {
+    margin-bottom: 1rem !important;
+    padding: 1rem !important;
+    background: rgba($background-dark, 0.4) !important;
+    border: 1px solid rgba($echo-blue, 0.2) !important;
+    border-radius: 4px !important;
+    min-height: 120px !important;
+    width: 100% !important;
+    display: block !important;
+    position: relative !important;
+  }
+}
+
+// Task Creation Form Styles
+.taskCreationForm {
+  background: rgba($background-dark, 0.95);
+  border: 1px solid rgba($echo-blue, 0.3);
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 10;
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  // Embedded variant - no border when used inside other containers
+  &.embeddedForm {
+    border: none !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    margin-bottom: 0.5rem !important;
+    padding: 0.5rem !important;
+  }
+
+  // Scrollbar for form
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba($background-dark, 0.3);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.4);
+    border-radius: 4px;
+
+    &:hover {
+      background: rgba($echo-blue, 0.6);
+    }
+  }
+
+  .formHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba($echo-blue, 0.2);
+
+    h5 {
+      margin: 0;
+      color: $text-primary;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+    }
+
+    .closeButton {
+      background: transparent;
+      border: 1px solid rgba($echo-red, 0.4);
+      color: $echo-red;
+      width: 24px;
+      height: 24px;
+      border-radius: 3px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: rgba($echo-red, 0.1);
+        border-color: $echo-red;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .formRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .formLabel {
+    color: $text-secondary;
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-family: 'Courier New', monospace;
+  }
+
+  .formInput, .formTextarea, .formSelect {
+    background: rgba($background-dark, 0.8);
+    border: 1px solid rgba($echo-blue, 0.3);
+    color: $text-primary;
+    padding: 0.6rem;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: $echo-blue;
+      background: rgba($background-dark, 0.9);
+      box-shadow: 0 0 0 2px rgba($echo-blue, 0.1);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &::placeholder {
+      color: rgba($text-secondary, 0.6);
+    }
+  }
+
+  .formTextarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .formSelect {
+    cursor: pointer;
+
+    option {
+      background: $background-dark;
+      color: $text-primary;
+    }
+  }
+
+  .formCheckboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: $text-secondary;
+    font-size: 0.85rem;
+    cursor: pointer;
+
+    input[type="checkbox"] {
+      accent-color: $echo-blue;
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    .checkboxText {
+      font-family: 'Courier New', monospace;
+    }
+  }
+
+  .formError {
+    background: rgba($echo-red, 0.1);
+    border: 1px solid rgba($echo-red, 0.3);
+    color: $echo-red;
+    padding: 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-family: 'Courier New', monospace;
+  }
+
+  .formActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+
+    .cancelButton, .submitButton {
+      padding: 0.6rem 1rem;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    .cancelButton {
+      background: transparent;
+      border: 1px solid rgba($echo-gray, 0.4);
+      color: $echo-gray;
+
+      &:hover:not(:disabled) {
+        background: rgba($echo-gray, 0.1);
+        border-color: $echo-gray;
+      }
+    }
+
+    .submitButton {
+      background: rgba($echo-blue, 0.2);
+      border: 1px solid rgba($echo-blue, 0.4);
+      color: $echo-blue;
+
+      &:hover:not(:disabled) {
+        background: rgba($echo-blue, 0.3);
+        border-color: $echo-blue;
+        transform: translateY(-1px);
+      }
+
+      &:active:not(:disabled) {
+        transform: translateY(0);
+      }
+    }
   }
 }

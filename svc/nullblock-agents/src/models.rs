@@ -323,3 +323,129 @@ impl ErrorResponse {
         self
     }
 }
+
+// ==================== Task Management Types ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskStatus {
+    Created,
+    Running,
+    Paused,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskPriority {
+    Low,
+    Medium,
+    High,
+    Urgent,
+    Critical,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskType {
+    Arbitrage,
+    Social,
+    Portfolio,
+    Mcp,
+    System,
+    UserAssigned,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskCategory {
+    Autonomous,
+    UserAssigned,
+    SystemGenerated,
+    EventTriggered,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Task {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub task_type: TaskType,
+    pub category: TaskCategory,
+    pub status: TaskStatus,
+    pub priority: TaskPriority,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub progress: u8,
+    pub estimated_duration: Option<u64>,
+    pub actual_duration: Option<u64>,
+    pub sub_tasks: Vec<String>,
+    pub dependencies: Vec<String>,
+    pub context: HashMap<String, serde_json::Value>,
+    pub parameters: HashMap<String, serde_json::Value>,
+    pub outcome: Option<TaskOutcome>,
+    pub logs: Vec<String>,
+    pub triggers: Vec<String>,
+    pub assigned_agent: Option<String>,
+    pub auto_retry: bool,
+    pub max_retries: u32,
+    pub current_retries: u32,
+    pub required_capabilities: Vec<String>,
+    pub user_approval_required: bool,
+    pub user_notifications: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskOutcome {
+    pub success: bool,
+    pub result: Option<serde_json::Value>,
+    pub error: Option<String>,
+    pub metrics: Option<HashMap<String, serde_json::Value>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateTaskRequest {
+    pub name: String,
+    pub description: String,
+    pub task_type: TaskType,
+    pub category: Option<TaskCategory>,
+    pub priority: Option<TaskPriority>,
+    pub parameters: Option<HashMap<String, serde_json::Value>>,
+    pub dependencies: Option<Vec<String>>,
+    pub auto_start: Option<bool>,
+    pub user_approval_required: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateTaskRequest {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub status: Option<TaskStatus>,
+    pub priority: Option<TaskPriority>,
+    pub progress: Option<u8>,
+    pub parameters: Option<HashMap<String, serde_json::Value>>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub outcome: Option<TaskOutcome>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TaskResponse {
+    pub success: bool,
+    pub data: Option<Task>,
+    pub error: Option<String>,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TaskListResponse {
+    pub success: bool,
+    pub data: Option<Vec<Task>>,
+    pub total: usize,
+    pub error: Option<String>,
+    pub timestamp: DateTime<Utc>,
+}

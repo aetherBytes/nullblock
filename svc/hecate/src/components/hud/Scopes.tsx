@@ -1,6 +1,8 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import ModelInfo from './ModelInfo';
+import TaskCreationForm from './TaskCreationForm';
 import styles from './hud.module.scss';
+import { Task } from '../../types/tasks';
 
 interface ScopesProps {
   activeScope: string | null;
@@ -13,7 +15,8 @@ interface ScopesProps {
   setShowScopeDropdown: (show: boolean) => void;
   scopeDropdownRef: React.RefObject<HTMLDivElement>;
   nullviewState: string;
-  tasks: any[];
+  tasks: Task[];
+  taskManagement: any;
   logs: any[];
   searchTerm: string;
   setSearchTerm: (term: string) => void;
@@ -67,6 +70,7 @@ const Scopes: React.FC<ScopesProps> = ({
   scopeDropdownRef,
   nullviewState,
   tasks,
+  taskManagement,
   logs,
   searchTerm,
   setSearchTerm,
@@ -79,6 +83,7 @@ const Scopes: React.FC<ScopesProps> = ({
   onThemeChange,
   ...modelInfoProps
 }) => {
+  const [showTaskForm, setShowTaskForm] = useState(false);
   const scopesOptions = [
     { id: 'modelinfo', icon: '🤖', title: 'Model Info', description: 'Current model details', color: '#ff6b6b' },
     { id: 'tasks', icon: '📋', title: 'Tasks', description: 'Active agent tasks', color: '#4ecdc4' },
@@ -184,6 +189,9 @@ const Scopes: React.FC<ScopesProps> = ({
             <div className={styles.tasksHeader}>
               <div className={styles.taskStats}>
                 <span className={styles.stat}>
+                  Total: {tasks.length}
+                </span>
+                <span className={styles.stat}>
                   Running: {tasks.filter((t) => t.status === 'running').length}
                 </span>
                 <span className={styles.stat}>
@@ -193,9 +201,26 @@ const Scopes: React.FC<ScopesProps> = ({
                   Failed: {tasks.filter((t) => t.status === 'failed').length}
                 </span>
               </div>
+              <button
+                onClick={() => setShowTaskForm(true)}
+                className={styles.taskActionButton}
+                title="Create Custom Task"
+                disabled={showTaskForm}
+              >
+                ➕ Create Task
+              </button>
             </div>
-            <div className={styles.tasksList}>
-              {tasks.map((task) => (
+            {showTaskForm && (
+              <TaskCreationForm
+                onCreateTask={taskManagement.createTask}
+                isLoading={taskManagement.isLoading}
+                onCancel={() => setShowTaskForm(false)}
+                variant="embedded"
+              />
+            )}
+            {!showTaskForm && (
+              <div className={styles.taskScrollContainer}>
+                {tasks.map((task) => (
                 <div key={task.id} className={`${styles.taskItem} ${getStatusColor(task.status)}`}>
                   <div className={styles.taskHeader}>
                     <div className={styles.taskInfo}>
@@ -221,17 +246,80 @@ const Scopes: React.FC<ScopesProps> = ({
                   )}
                   <div className={styles.taskMetadata}>
                     <span className={styles.taskTime}>
-                      Started: {task.startTime.toLocaleTimeString()}
+                      Created: {new Date(task.createdAt).toLocaleTimeString()}
                     </span>
-                    {task.endTime && (
+                    {task.startedAt && (
                       <span className={styles.taskTime}>
-                        Ended: {task.endTime.toLocaleTimeString()}
+                        Started: {new Date(task.startedAt).toLocaleTimeString()}
                       </span>
                     )}
+                    {task.completedAt && (
+                      <span className={styles.taskTime}>
+                        Completed: {new Date(task.completedAt).toLocaleTimeString()}
+                      </span>
+                    )}
+                    <span className={styles.taskPriority}>
+                      Priority: {task.priority}
+                    </span>
+                  </div>
+                  <div className={styles.taskActions}>
+                    {task.status === 'created' && (
+                      <button
+                        onClick={() => taskManagement.startTask(task.id)}
+                        className={styles.taskActionButton}
+                        title="Start Task"
+                      >
+                        ▶️ Start
+                      </button>
+                    )}
+                    {task.status === 'running' && (
+                      <>
+                        <button
+                          onClick={() => taskManagement.pauseTask(task.id)}
+                          className={styles.taskActionButton}
+                          title="Pause Task"
+                        >
+                          ⏸️ Pause
+                        </button>
+                        <button
+                          onClick={() => taskManagement.cancelTask(task.id)}
+                          className={styles.taskActionButton}
+                          title="Cancel Task"
+                        >
+                          ❌ Cancel
+                        </button>
+                      </>
+                    )}
+                    {task.status === 'paused' && (
+                      <button
+                        onClick={() => taskManagement.resumeTask(task.id)}
+                        className={styles.taskActionButton}
+                        title="Resume Task"
+                      >
+                        ▶️ Resume
+                      </button>
+                    )}
+                    {task.status === 'failed' && (
+                      <button
+                        onClick={() => taskManagement.retryTask(task.id)}
+                        className={styles.taskActionButton}
+                        title="Retry Task"
+                      >
+                        🔄 Retry
+                      </button>
+                    )}
+                    <button
+                      onClick={() => taskManagement.selectTask(task.id)}
+                      className={styles.taskActionButton}
+                      title="View Details"
+                    >
+                      👁️ Details
+                    </button>
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            )}
           </div>
         );
 

@@ -2,7 +2,7 @@ use std::env;
 use std::net::SocketAddr;
 
 use axum::{
-    routing::{get, post},
+    routing::{get, post, put, delete},
     Router,
 };
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -20,7 +20,7 @@ mod server;
 mod utils;
 
 use crate::config::Config;
-use crate::handlers::{arbitrage, health, hecate};
+use crate::handlers::{arbitrage, health, hecate, tasks};
 use crate::logging::setup_logging;
 
 #[tokio::main]
@@ -88,6 +88,17 @@ fn create_router(state: server::AppState) -> Router {
         .route("/arbitrage/opportunities", get(arbitrage::get_opportunities))
         .route("/arbitrage/summary", get(arbitrage::get_summary))
         .route("/arbitrage/execute", post(arbitrage::execute))
+        // Task management endpoints
+        .route("/tasks", post(tasks::create_task))
+        .route("/tasks", get(tasks::get_tasks))
+        .route("/tasks/:task_id", get(tasks::get_task))
+        .route("/tasks/:task_id", put(tasks::update_task))
+        .route("/tasks/:task_id", delete(tasks::delete_task))
+        .route("/tasks/:task_id/start", post(tasks::start_task))
+        .route("/tasks/:task_id/pause", post(tasks::pause_task))
+        .route("/tasks/:task_id/resume", post(tasks::resume_task))
+        .route("/tasks/:task_id/cancel", post(tasks::cancel_task))
+        .route("/tasks/:task_id/retry", post(tasks::retry_task))
         // Add state
         .with_state(state)
         // Add middleware
