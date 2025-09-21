@@ -94,7 +94,16 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
       case 'matrix':
         return '#00ff00';
       default:
-        return '#c8a2c8';
+        // Create variety in star colors for more visual interest
+        const colors = [
+          '#c8a2c8',  // Soft purple
+          '#a8c2d8',  // Soft blue
+          '#d8c2a8',  // Soft gold
+          '#b8d8c2',  // Soft mint
+          '#d8a8c2',  // Soft pink
+          '#c2d8b8',  // Soft green
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
     }
   };
 

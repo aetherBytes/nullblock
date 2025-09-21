@@ -30,10 +30,37 @@ $light-bg: #fff;
 $light-text: #000;
 $light-accent: #2a4a6a;
 
+/* Dark theme variety colors */
+$dark-purple: #1e1a24;
+$dark-blue: #1a1d28;
+$dark-violet: #1c1a26;
+$accent-purple: rgba(138, 43, 226, 0.12);
+$accent-blue: rgba(72, 144, 226, 0.08);
+$accent-gold: rgba(255, 215, 0, 0.06);
+
 html, body {
   height: 100%;
   margin: 0;
   overflow: hidden;
+}
+
+@keyframes subtle-shift {
+  0%, 100% {
+    filter: hue-rotate(0deg) brightness(1);
+    opacity: 0.8;
+  }
+  25% {
+    filter: hue-rotate(5deg) brightness(1.05);
+    opacity: 0.9;
+  }
+  50% {
+    filter: hue-rotate(-5deg) brightness(0.95);
+    opacity: 0.85;
+  }
+  75% {
+    filter: hue-rotate(3deg) brightness(1.02);
+    opacity: 0.9;
+  }
 }
 
 /* Background for dark void/forest */
@@ -518,13 +545,40 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .backgroundImage {
-    background-color: $background-dark;
+    background: linear-gradient(135deg,
+      $background-dark 0%,
+      $dark-purple 25%,
+      $dark-blue 50%,
+      $dark-violet 75%,
+      $background-dark 100%);
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(ellipse at 25% 25%,
+        $accent-purple 0%,
+        transparent 50%),
+      radial-gradient(ellipse at 75% 75%,
+        $accent-blue 0%,
+        transparent 50%),
+      radial-gradient(ellipse at 50% 90%,
+        $accent-gold 0%,
+        transparent 40%);
+      pointer-events: none;
+      animation: subtle-shift 20s ease-in-out infinite;
+    }
 
     &::after {
-      background: linear-gradient(to bottom,
-        rgba(32, 28, 36, 0.2) 0%,
-        rgba(28, 25, 32, 0.3) 50%,
-        rgba(24, 22, 28, 0.4) 100%);
+      background: linear-gradient(45deg,
+        rgba(42, 35, 48, 0.3) 0%,
+        rgba(35, 28, 42, 0.2) 25%,
+        rgba(28, 35, 45, 0.25) 50%,
+        rgba(38, 32, 46, 0.3) 75%,
+        rgba(32, 28, 40, 0.35) 100%);
     }
   }
   
