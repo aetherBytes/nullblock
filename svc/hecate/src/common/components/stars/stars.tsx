@@ -3,7 +3,6 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import * as random from 'maath/random';
 import { useState, useRef, Suspense } from 'react';
 import type { Points as ThreePoints } from 'three';
-import { Group } from 'three';
 import styles from './stars.module.scss';
 
 interface StarsProps {
@@ -72,7 +71,7 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
     return positions;
   });
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (ref.current && isFinite(delta)) {
       const rotationX = delta / 120;
       const rotationY = delta / 180;
@@ -90,16 +89,16 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
   const getStarColor = () => {
     switch (theme) {
       case 'light':
-        // Use white colors that will be visible against black background
-        const whiteColors = [
-          '#ffffff',  // Pure white
-          '#f8f8f8',  // Off-white
-          '#e8e8e8',  // Light gray
-          '#f0f0f0',  // Very light gray
-          '#ffffff',  // Pure white
-          '#f5f5f5',  // White smoke
+        // Use black/dark colors that will be visible against white background
+        const blackColors = [
+          '#000000',  // Pure black
+          '#1a1a1a',  // Very dark gray
+          '#2a2a2a',  // Dark gray
+          '#333333',  // Charcoal
+          '#000000',  // Pure black
+          '#1f1f1f',  // Dark gray
         ];
-        return whiteColors[Math.floor(Math.random() * whiteColors.length)];
+        return blackColors[Math.floor(Math.random() * blackColors.length)];
       case 'null':
         // Matrix-style green colors for null theme
         const matrixColors = [
@@ -137,7 +136,7 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
         <PointMaterial
           transparent
           color={getStarColor()}
-          size={theme === 'light' ? 0.003 : (theme === 'null' ? 0.003 : 0.002)}
+          size={theme === 'light' ? 0.004 : (theme === 'null' ? 0.003 : 0.002)}
           sizeAttenuation
           depthWrite={false}
         />
