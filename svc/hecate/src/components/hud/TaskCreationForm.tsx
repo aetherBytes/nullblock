@@ -6,7 +6,7 @@ interface TaskCreationFormProps {
   onCreateTask: (request: TaskCreationRequest) => Promise<boolean>;
   isLoading: boolean;
   onCancel: () => void;
-  variant?: 'default' | 'embedded';
+  variant?: 'default' | 'embedded' | 'fullscreen';
 }
 
 const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
@@ -90,18 +90,23 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
   };
 
   return (
-    <div className={`${styles.taskCreationForm} ${variant === 'embedded' ? styles.embeddedForm : ''}`}>
-      <div className={styles.formHeader}>
-        <h5>📋 Create New Task</h5>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={styles.closeButton}
-          disabled={isLoading}
-        >
-          ✕
-        </button>
-      </div>
+    <div className={`${styles.taskCreationForm} ${
+      variant === 'embedded' ? styles.embeddedForm : 
+      variant === 'fullscreen' ? styles.fullscreenForm : ''
+    }`}>
+      {variant !== 'fullscreen' && (
+        <div className={styles.formHeader}>
+          <h5>📋 Create New Task</h5>
+          <button
+            type="button"
+            onClick={onCancel}
+            className={styles.closeButton}
+            disabled={isLoading}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className={styles.formGroup}>

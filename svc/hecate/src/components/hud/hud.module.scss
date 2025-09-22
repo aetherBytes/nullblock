@@ -10392,6 +10392,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   max-height: 500px;
   overflow: hidden;
 
+  // When showing task form, allow full height
+  &.showingTaskForm {
+    max-height: none;
+    height: 100%;
+  }
+
   .tasksHeader {
     flex-shrink: 0;
     margin-bottom: 1rem;
@@ -10412,41 +10418,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   background: transparent !important;
   border: none !important;
   border-radius: 0 !important;
-  padding: 8px !important;
-  margin: 0 !important;
-  display: block !important;
-  box-sizing: border-box !important;
 
-  // Force scrollbar to always show
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: rgba($echo-blue, 0.4) rgba($background-dark, 0.3);
-
-  &::-webkit-scrollbar {
-    width: 12px !important;
-    height: 12px !important;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: rgba($background-dark, 0.3) !important;
-    border-radius: 6px !important;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba($echo-blue, 0.6) !important;
-    border-radius: 6px !important;
-    border: 2px solid rgba($background-dark, 0.3) !important;
-
-    &:hover {
-      background: rgba($echo-blue, 0.8) !important;
-    }
-  }
-
-  &::-webkit-scrollbar-corner {
-    background: rgba($background-dark, 0.3) !important;
-  }
-
-  // Override any inherited styles
   * {
     box-sizing: border-box;
   }
@@ -10462,6 +10434,55 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     width: 100% !important;
     display: block !important;
     position: relative !important;
+  }
+}
+
+// Task Form Container - for fullscreen task creation
+.taskFormContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  flex: 1;
+
+  .taskFormHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba($echo-blue, 0.2);
+    flex-shrink: 0;
+
+    h3 {
+      margin: 0;
+      color: $text-primary;
+      font-family: 'Courier New', monospace;
+      font-size: 1.2rem;
+    }
+
+    .backButton {
+      background: rgba($echo-blue, 0.1);
+      border: 1px solid rgba($echo-blue, 0.3);
+      color: $text-primary;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: rgba($echo-blue, 0.2);
+        border-color: $echo-blue;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
   }
 }
 
@@ -10486,6 +10507,19 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     backdrop-filter: none !important;
     margin-bottom: 0.5rem !important;
     padding: 0.5rem !important;
+  }
+
+  // Fullscreen variant - fills the entire content area
+  &.fullscreenForm {
+    border: none !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    margin-bottom: 0 !important;
+    padding: 1rem !important;
+    max-height: none !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
   }
 
   // Scrollbar for form

@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NullBlock is an Agentic Platform providing resources and tooling for building, deploying, and monetizing intelligent agent workflows. Built on Model Context Protocol (MCP) architecture, it enables agents to interact with various systems through standardized interfaces.
+**NullBlock: Unleashing Agentic Potential**
+
+NullBlock, built on Rust, empowers users to create, deploy, and monetize intelligent agent workflows. Its protocol-agnostic design ensures seamless collaboration across MCP, A2A, or any protocol, delivering universal compatibility and future-ready flexibility. Hecate, NullBlock's core, orchestrates multi-model LLMs for precise workflow management. Crossroads, a self-discovering network of endless possibilities, empowers users to monetize custom workflows and templates while connecting with a thriving ecosystem of AI services and tools. Join NullBlock to build and profit from your AI innovations!
 
 **Core Architecture**: Client ↔ NullBlock (Agentic Platform) ↔ Server (Web3 wallets, APIs, etc.)
 
