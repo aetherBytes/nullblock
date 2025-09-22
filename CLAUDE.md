@@ -24,6 +24,14 @@ Together, we shape the future of autonomous commerce.
 
 **NullBlock** is a revolutionary agentic platform that democratizes AI automation. Built on Rust for performance and reliability, it enables users to create, deploy, and monetize intelligent agent workflows without complex infrastructure. Whether you're automating DeFi trading, content creation, or data analysis, NullBlock's protocol-agnostic design seamlessly integrates with any system - from MCP servers to custom APIs.
 
+### 🚧 Current Development Focus
+
+**Next 3 Priority Items:**
+
+1. **Task & Scheduling Infrastructure** - Building robust task management service with persistent storage, scheduling capabilities, and lifecycle management
+2. **Agent Service Integration** - Establishing seamless communication protocols between task service and agent orchestration system
+3. **Automated Workflow Execution** - Implementing intelligent task distribution, dependency resolution, and execution monitoring across agent network
+
 ## 🎨 Visual Overview
 
 ![NullBlock Logo](https://img.shields.io/badge/NullBlock-Agentic%20Platform-00d4aa?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBzdHJva2U9IiNlNmMyMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0iIzAwZDRhYSIvPgo8L3N2Zz4K)
