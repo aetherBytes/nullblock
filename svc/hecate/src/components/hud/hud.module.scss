@@ -162,15 +162,22 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 
   &.light {
-    @include theme-colors(rgba(5, 5, 15, 0.02), #4a90e2, #e0e0e0, #4a90e2, rgba(74, 144, 226, 0.02), rgba(224, 224, 224, 0.5), rgba(74, 144, 226, 0.08));
+    @include theme-colors(rgba(248, 249, 250, 0.95), #2a4a6a, #1a1a1a, #2a4a6a, rgba(42, 74, 106, 0.1), rgba(26, 26, 26, 0.7), rgba(42, 74, 106, 0.2));
 
     .hudWindow {
-      background-color: transparent;
-      background-image: linear-gradient(rgba(74, 144, 226, 0.001) 2px, transparent 2px),
-                        linear-gradient(90deg, rgba(74, 144, 226, 0.001) 2px, transparent 2px),
-                        radial-gradient(circle at 50% 50%, rgba(74, 144, 226, 0.001) 0%, transparent 70%);
-      backdrop-filter: blur(0.5px);
-      border: 1px solid rgba(74, 144, 226, 0.05);
+      background-color: rgba(248, 249, 250, 0.95);
+      background-image: 
+        linear-gradient(rgba(42, 74, 106, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(42, 74, 106, 0.1) 1px, transparent 1px),
+        linear-gradient(135deg, rgba(42, 74, 106, 0.05) 1px, transparent 1px),
+        linear-gradient(45deg, rgba(42, 74, 106, 0.05) 1px, transparent 1px);
+      background-size: 20px 20px, 20px 20px, 10px 10px, 10px 10px;
+      background-position: 0 0, 0 0, 0 0, 0 0;
+      border: 2px solid rgba(42, 74, 106, 0.3);
+      box-shadow: 
+        0 0 20px rgba(42, 74, 106, 0.2),
+        inset 0 0 20px rgba(42, 74, 106, 0.1);
+      backdrop-filter: blur(1px);
     }
   }
 
@@ -3849,21 +3856,31 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
-// Light theme overrides for transparency
+// Light theme overrides for Pip-Boy aesthetic
 .echoContainer.light {
   .hudScreen {
-    background-color: transparent;
-    background-image: linear-gradient(rgba(74, 144, 226, 0.001) 2px, transparent 2px),
-                      linear-gradient(90deg, rgba(74, 144, 226, 0.001) 2px, transparent 2px),
-                      radial-gradient(circle at 50% 50%, rgba(74, 144, 226, 0.001) 0%, transparent 70%);
-    backdrop-filter: blur(0.5px);
-    border: 1px solid rgba(74, 144, 226, 0.05);
-    box-shadow: inset 0 0 20px rgba(74, 144, 226, 0.015);
+    background-color: rgba(248, 249, 250, 0.95);
+    background-image: 
+      linear-gradient(rgba(42, 74, 106, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(42, 74, 106, 0.1) 1px, transparent 1px),
+      linear-gradient(135deg, rgba(42, 74, 106, 0.05) 1px, transparent 1px),
+      linear-gradient(45deg, rgba(42, 74, 106, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px, 20px 20px, 10px 10px, 10px 10px;
+    background-position: 0 0, 0 0, 0 0, 0 0;
+    border: 2px solid rgba(42, 74, 106, 0.3);
+    box-shadow: 
+      0 0 20px rgba(42, 74, 106, 0.2),
+      inset 0 0 20px rgba(42, 74, 106, 0.1);
+    backdrop-filter: blur(1px);
   }
 
   .diagnosticsContainer, .campAnalysis, .campStatus {
-    background: rgba(5, 5, 15, 0.12);
-    border-color: rgba(74, 144, 226, 0.15);
+    background: rgba(248, 249, 250, 0.9);
+    border: 2px solid rgba(42, 74, 106, 0.3);
+    color: #1a1a1a;
+    box-shadow: 
+      0 0 15px rgba(42, 74, 106, 0.2),
+      inset 0 0 15px rgba(42, 74, 106, 0.1);
   }
 
   .statusCard {
@@ -3918,41 +3935,154 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
-// Light theme overrides for better text readability
+// Light theme overrides for better text readability and Pip-Boy aesthetic
 .echoContainer.light {
   .landingContent {
     h3 {
-      color: #2a4a6a;
-      text-shadow: 0 0 15px rgba(42, 74, 106, 0.3);
+      color: #1a1a1a;
+      text-shadow: 0 0 10px rgba(42, 74, 106, 0.4);
+      font-weight: 700;
     }
 
     p {
-      color: #333;
+      color: #2a2a2a;
       font-weight: 500;
     }
   }
 
   .navbarButtons {
     .walletButton, .docsButton, .themeButton, .socialButton {
-      box-shadow: 0 0 15px rgba(42, 74, 106, 0.3);
-      background: radial-gradient(circle at 50% 50%, rgba(42, 74, 106, 0.25) 0%, rgba(42, 74, 106, 0.10) 40%, rgba(0,0,0,0.0) 80%);
+      background: rgba(248, 249, 250, 0.9);
+      border: 2px solid rgba(42, 74, 106, 0.3);
+      box-shadow: 
+        0 0 15px rgba(42, 74, 106, 0.2),
+        inset 0 0 15px rgba(42, 74, 106, 0.1);
+      color: #1a1a1a;
 
       &:hover {
-        box-shadow: 0 0 24px rgba(42, 74, 106, 0.5);
-        background-color: rgba(42, 74, 106, 0.1);
+        background: rgba(42, 74, 106, 0.1);
+        border-color: rgba(42, 74, 106, 0.5);
+        box-shadow: 
+          0 0 20px rgba(42, 74, 106, 0.3),
+          inset 0 0 20px rgba(42, 74, 106, 0.15);
       }
     }
 
     .walletIcon, .docsIcon, .themeIcon {
-      text-shadow: 0 0 15px rgba(42, 74, 106, 0.6);
-      filter: drop-shadow(0 0 8px rgba(42, 74, 106, 0.5));
+      color: #2a4a6a;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
     }
 
     .walletButton:hover .walletIcon,
     .docsButton:hover .docsIcon,
     .themeButton:hover .themeIcon {
-      text-shadow: 0 0 20px rgba(42, 74, 106, 0.8);
-      filter: drop-shadow(0 0 12px rgba(42, 74, 106, 0.7));
+      color: #1a1a1a;
+      text-shadow: 0 0 8px rgba(42, 74, 106, 0.6);
+      filter: drop-shadow(0 0 6px rgba(42, 74, 106, 0.4));
+    }
+  }
+
+  // Scopes/Lens styling for light theme
+  .scopesInfoPanel, .scopesExpanded, .scopesContent {
+    background: rgba(248, 249, 250, 0.95);
+    border: 2px solid rgba(42, 74, 106, 0.3);
+    color: #1a1a1a;
+    box-shadow: 
+      0 0 20px rgba(42, 74, 106, 0.2),
+      inset 0 0 20px rgba(42, 74, 106, 0.1);
+  }
+
+  .scopesContentHeader {
+    background: rgba(248, 249, 250, 0.9);
+    border-bottom: 2px solid rgba(42, 74, 106, 0.3);
+    color: #1a1a1a;
+  }
+
+  .scopesContentBody {
+    background: rgba(248, 249, 250, 0.9);
+    color: #1a1a1a;
+  }
+
+  .scopesAppButton {
+    background: rgba(248, 249, 250, 0.9);
+    border: 2px solid rgba(42, 74, 106, 0.3);
+    color: #1a1a1a;
+    box-shadow: 
+      0 0 10px rgba(42, 74, 106, 0.1),
+      inset 0 0 10px rgba(42, 74, 106, 0.05);
+
+    &:hover {
+      background: rgba(42, 74, 106, 0.1);
+      border-color: rgba(42, 74, 106, 0.5);
+      box-shadow: 
+        0 0 15px rgba(42, 74, 106, 0.2),
+        inset 0 0 15px rgba(42, 74, 106, 0.1);
+    }
+  }
+
+  .scopesAppTitle {
+    color: #1a1a1a;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .scopesCloseButton {
+    color: #1a1a1a;
+    background: rgba(42, 74, 106, 0.1);
+    border: 1px solid rgba(42, 74, 106, 0.3);
+
+    &:hover {
+      background: rgba(42, 74, 106, 0.2);
+      border-color: rgba(42, 74, 106, 0.5);
+    }
+  }
+
+  // Additional Pip-Boy styling for form elements and other components
+  input, textarea, select {
+    background: rgba(248, 249, 250, 0.9);
+    border: 2px solid rgba(42, 74, 106, 0.3);
+    color: #1a1a1a;
+    box-shadow: 
+      0 0 10px rgba(42, 74, 106, 0.1),
+      inset 0 0 10px rgba(42, 74, 106, 0.05);
+
+    &:focus {
+      border-color: rgba(42, 74, 106, 0.5);
+      box-shadow: 
+        0 0 15px rgba(42, 74, 106, 0.2),
+        inset 0 0 15px rgba(42, 74, 106, 0.1);
+    }
+  }
+
+  button {
+    background: rgba(248, 249, 250, 0.9);
+    border: 2px solid rgba(42, 74, 106, 0.3);
+    color: #1a1a1a;
+    box-shadow: 
+      0 0 10px rgba(42, 74, 106, 0.1),
+      inset 0 0 10px rgba(42, 74, 106, 0.05);
+
+    &:hover {
+      background: rgba(42, 74, 106, 0.1);
+      border-color: rgba(42, 74, 106, 0.5);
+      box-shadow: 
+        0 0 15px rgba(42, 74, 106, 0.2),
+        inset 0 0 15px rgba(42, 74, 106, 0.1);
+    }
+  }
+
+  // Task and log styling for light theme
+  .taskItem, .logItem {
+    background: rgba(248, 249, 250, 0.9);
+    border: 1px solid rgba(42, 74, 106, 0.3);
+    color: #1a1a1a;
+    box-shadow: 
+      0 0 5px rgba(42, 74, 106, 0.1),
+      inset 0 0 5px rgba(42, 74, 106, 0.05);
+
+    &:hover {
+      background: rgba(42, 74, 106, 0.05);
+      border-color: rgba(42, 74, 106, 0.4);
     }
   }
 }
