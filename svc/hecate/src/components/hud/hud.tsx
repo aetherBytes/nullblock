@@ -166,11 +166,12 @@ const HUD: React.FC<HUDProps> = ({
       }, 500);
     }
 
-    setTimeout(() => {
-      if (chat.chatEndRef.current) {
-        chat.chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100);
+    // Auto-scroll disabled to prevent forced scrolling
+    // setTimeout(() => {
+    //   if (chat.chatEndRef.current) {
+    //     chat.chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    //   }
+    // }, 100);
 
     return () => {
       if (chat.userScrollTimeoutRef.current) {
@@ -523,12 +524,13 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [logs, autoScroll]);
 
-  // Auto-scroll effect for chat messages
-  useEffect(() => {
-    if (chat.chatAutoScroll && chat.chatEndRef.current) {
-      chat.chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [chat.chatMessages, chat.chatAutoScroll]);
+  // Auto-scroll effect for chat messages - DISABLED to prevent forced scrolling
+  // Users can manually scroll to bottom using the scroll button
+  // useEffect(() => {
+  //   if (chat.chatAutoScroll && !chat.isUserScrolling && chat.chatEndRef.current) {
+  //     chat.chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  //   }
+  // }, [chat.chatMessages, chat.chatAutoScroll, chat.isUserScrolling]);
 
 
   const loadModelInfo = async (modelName?: string) => {
@@ -870,6 +872,9 @@ const HUD: React.FC<HUDProps> = ({
                         onChatSubmit={(e) => chat.handleChatSubmit(e, modelManagement.isModelChanging, nullviewState, modelManagement.defaultModelReady, modelManagement.currentSelectedModel, (state: string) => setNulleyeState(state as any))}
                         onChatInputChange={chat.handleChatInputChange}
                         onChatScroll={chat.handleChatScroll}
+                        scrollToBottom={chat.scrollToBottom}
+                        isUserScrolling={chat.isUserScrolling}
+                        chatAutoScroll={chat.chatAutoScroll}
                       />
 
                       <Scopes

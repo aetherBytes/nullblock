@@ -34,6 +34,9 @@ interface HecateChatProps {
   onChatSubmit: (e: React.FormEvent) => void;
   onChatInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onChatScroll: (e: React.UIEvent<HTMLDivElement>) => void;
+  scrollToBottom: () => void;
+  isUserScrolling: boolean;
+  chatAutoScroll: boolean;
 }
 
 const HecateChat: React.FC<HecateChatProps> = ({
@@ -57,7 +60,10 @@ const HecateChat: React.FC<HecateChatProps> = ({
   setActiveLens,
   onChatSubmit,
   onChatInputChange,
-  onChatScroll
+  onChatScroll,
+  scrollToBottom,
+  isUserScrolling,
+  chatAutoScroll
 }) => {
   const renderThinkingIndicator = () => (
     <div className={`${styles.chatMessage} ${styles['message-hecate']} ${styles['type-thinking']}`}>
@@ -213,6 +219,17 @@ const HecateChat: React.FC<HecateChatProps> = ({
           {chatMessages.map(renderChatMessage)}
           {nullviewState === 'thinking' && renderThinkingIndicator()}
           <div ref={chatEndRef} />
+          
+          {/* Scroll to bottom button - show when user has scrolled up or when there are messages */}
+          {(isUserScrolling || chatMessages.length > 0) && (
+            <button
+              className={styles.scrollToBottomButton}
+              onClick={scrollToBottom}
+              title="Scroll to bottom"
+            >
+              ↓
+            </button>
+          )}
         </div>
 
         <form className={styles.chatInput} onSubmit={onChatSubmit}>

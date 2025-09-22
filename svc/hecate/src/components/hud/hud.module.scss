@@ -6384,6 +6384,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   flex-direction: column;
   min-height: 0;
   max-height: calc(100vh - 120px); // Account for header and input
+  position: relative;
 
   // When in expanded mode, ensure proper height constraints
   .chatSection.expanded & {
@@ -10312,6 +10313,37 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   letter-spacing: 0.5px;
   margin-left: 0.3rem;
   font-family: 'Courier New', monospace;
+}
+
+.scrollToBottomButton {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  background: rgba($echo-blue, 0.9);
+  color: white;
+  border: 1px solid rgba($echo-blue, 1);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba($echo-blue, 0.3);
+  z-index: 10;
+
+  &:hover {
+    background: rgba($echo-blue, 1);
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba($echo-blue, 0.4);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
 }
 
 .quickActions {
