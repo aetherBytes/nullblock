@@ -570,45 +570,19 @@ h1, h2, h3, h4, h5, h6 {
 
 .theme-dark {
   .appContainer {
-    background-color: $background-dark;
+    background-color: transparent;
     color: $text-color;
   }
 
   .backgroundImage {
-    background: linear-gradient(135deg,
-      $background-dark 0%,
-      $dark-purple 25%,
-      $dark-blue 50%,
-      $dark-violet 75%,
-      $background-dark 100%);
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(ellipse at 25% 25%,
-        rgba(138, 43, 226, 0.02) 0%,
-        transparent 50%),
-      radial-gradient(ellipse at 75% 75%,
-        rgba(72, 144, 226, 0.02) 0%,
-        transparent 50%),
-      radial-gradient(ellipse at 50% 90%,
-        rgba(255, 215, 0, 0.01) 0%,
-        transparent 40%);
-      pointer-events: none;
-      animation: subtle-shift 20s ease-in-out infinite;
-    }
-
+    background-color: #000000;
+    
     &::after {
-      background: linear-gradient(45deg,
-        rgba(42, 35, 48, 0.05) 0%,
-        rgba(35, 28, 42, 0.03) 25%,
-        rgba(28, 35, 45, 0.04) 50%,
-        rgba(38, 32, 46, 0.05) 75%,
-        rgba(32, 28, 40, 0.06) 100%);
+      background: transparent;
+    }
+    
+    &::before {
+      background: transparent;
     }
   }
   
