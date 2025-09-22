@@ -10299,6 +10299,21 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   font-size: 16px;
 }
 
+.wipBadge {
+  display: inline-block;
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  border-radius: 3px;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.6rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 0.3rem;
+  font-family: 'Courier New', monospace;
+}
+
 .quickActions {
   display: flex;
   gap: 12px;

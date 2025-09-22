@@ -1293,12 +1293,14 @@ const HecateHud: React.FC<HecateHudProps> = ({
                     onClick={() => onThemeChange && onThemeChange('light')}
                   >
                     ☀️ Light
+                    <span className={styles.wipBadge}>WIP</span>
                   </button>
                   <button
                     className={`${styles.themeControlBtn} ${theme === 'null' ? styles.active : ''}`}
                     onClick={() => onThemeChange && onThemeChange('null')}
                   >
                     🌙 Dark
+                    <span className={styles.wipBadge}>WIP</span>
                   </button>
                   <button
                     className={`${styles.themeControlBtn} ${theme === 'dark' ? styles.active : ''}`}
