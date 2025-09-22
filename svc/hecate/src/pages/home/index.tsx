@@ -22,7 +22,7 @@ const Home: React.FC = () => {
   const [walletConnected, setWalletConnected] = useState<boolean>(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [showHUD, setShowHUD] = useState<boolean>(true);
-  const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>('dark');
+  const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>('null');
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
@@ -54,9 +54,9 @@ const Home: React.FC = () => {
     if (savedTheme && (savedTheme === 'null' || savedTheme === 'light' || savedTheme === 'dark')) {
       setCurrentTheme(savedTheme as 'null' | 'light' | 'dark');
     } else {
-      // Set default dark theme if no valid saved theme
-      setCurrentTheme('dark');
-      localStorage.setItem('currentTheme', 'dark');
+      // Set default null theme if no valid saved theme
+      setCurrentTheme('null');
+      localStorage.setItem('currentTheme', 'null');
     }
   }, []);
 
@@ -616,7 +616,7 @@ const Home: React.FC = () => {
       className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]} ${isInitialized ? styles.initialized : ''}`}
     >
       <div className={styles.backgroundImage} />
-      <StarsCanvas theme={currentTheme === 'light' ? 'light' : 'null'} />
+      <StarsCanvas theme={currentTheme === 'light' ? 'light' : (currentTheme === 'null' ? 'null' : 'null')} />
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`}>
         {/* System status panel moved to HUD component */}
       </div>

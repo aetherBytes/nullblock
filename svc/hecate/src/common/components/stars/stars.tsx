@@ -100,8 +100,17 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
           '#f5f5f5',  // White smoke
         ];
         return whiteColors[Math.floor(Math.random() * whiteColors.length)];
-      case 'matrix':
-        return '#00ff00';
+      case 'null':
+        // Matrix-style green colors for null theme
+        const matrixColors = [
+          '#00ff00',  // Pure green
+          '#00ff41',  // Bright green
+          '#00ff9d',  // Echo green
+          '#00ff88',  // Light green
+          '#00ff00',  // Pure green
+          '#00ff44',  // Cyan-green
+        ];
+        return matrixColors[Math.floor(Math.random() * matrixColors.length)];
       default:
         // Use white colors that will be visible against black background
         const defaultWhiteColors = [

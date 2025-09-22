@@ -30,6 +30,11 @@ $light-bg: #fff;
 $light-text: #000;
 $light-accent: #2a4a6a;
 
+/* Matrix theme variables */
+$matrix-bg: rgba(0, 0, 0, 0.95);
+$matrix-border: #00ff00;
+$matrix-text: #00ff00;
+
 /* Dark theme variety colors */
 $dark-purple: #1e1a24;
 $dark-blue: #1a1d28;
@@ -242,20 +247,20 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .theme-light {
+  .appContainer {
+    background-color: transparent;
+    color: $light-text;
+  }
+
   .backgroundImage {
-    background-color: #f0f0f0;
+    background-color: #000000;
     
     &::after {
-      background: linear-gradient(to bottom,
-        transparent,
-        rgba(0, 0, 0, 0.05) 20%,
-        rgba(0, 0, 0, 0.05) 80%,
-        transparent
-      );
+      background: transparent;
     }
     
     &::before {
-      background: radial-gradient(ellipse at center, rgba(42, 74, 106, 0.15) 0%, transparent 70%);
+      background: transparent;
     }
   }
   
@@ -513,8 +518,8 @@ h1, h2, h3, h4, h5, h6 {
 // Theme variations for consistency
 .theme-null {
   .appContainer {
-    background-color: $null-bg;
-    color: $null-text;
+    background-color: $matrix-bg;
+    color: $matrix-text;
   }
   
   .hudActive {
@@ -524,18 +529,18 @@ h1, h2, h3, h4, h5, h6 {
   }
   
   .statusDot {
-    background: $null-text;
-    box-shadow: 0 0 5px rgba($null-text, 0.5);
+    background: $matrix-text;
+    box-shadow: 0 0 5px rgba($matrix-text, 0.5);
   }
   
   .statusText {
-    color: $null-text;
-    text-shadow: 0 0 5px rgba($null-text, 0.3);
+    color: $matrix-text;
+    text-shadow: 0 0 5px rgba($matrix-text, 0.3);
   }
   
   .systemStatus {
-    border-color: $null-text;
-    box-shadow: 0 0 15px rgba($null-text, 0.3);
+    border-color: $matrix-text;
+    box-shadow: 0 0 15px rgba($matrix-text, 0.3);
   }
 }
 
@@ -605,10 +610,10 @@ h1, h2, h3, h4, h5, h6 {
   .systemStatus {
     background: rgba(5, 5, 15, 0.3);
     border-color: #4a90e2;
-    box-shadow: 0 0 20px rgba(74, 144, 226, 0.4);
-    backdrop-filter: blur(2px);
+    box-shadow: 0 0 15px rgba(74, 144, 226, 0.3);
   }
 }
+
 
 /* Wallet Modal Styles */
 .modalOverlay {
