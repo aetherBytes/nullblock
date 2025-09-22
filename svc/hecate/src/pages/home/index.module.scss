@@ -248,19 +248,24 @@ h1, h2, h3, h4, h5, h6 {
 
 .theme-light {
   .appContainer {
-    background-color: transparent;
+    background-color: #f8f9fa;
     color: $light-text;
   }
 
   .backgroundImage {
-    background-color: #000000;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 50%, #e9ecef 100%);
     
     &::after {
-      background: transparent;
+      background: linear-gradient(to bottom,
+        transparent,
+        rgba(248, 249, 250, 0.3) 20%,
+        rgba(233, 236, 239, 0.4) 80%,
+        transparent
+      );
     }
     
     &::before {
-      background: transparent;
+      background: radial-gradient(ellipse at center, rgba(108, 117, 125, 0.1) 0%, transparent 70%);
     }
   }
   
@@ -546,7 +551,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .theme-light {
   .appContainer {
-    background-color: $light-bg;
+    background-color: #f8f9fa;
     color: $light-text;
   }
   
