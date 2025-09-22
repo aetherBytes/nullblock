@@ -90,20 +90,29 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
   const getStarColor = () => {
     switch (theme) {
       case 'light':
-        return '#000000';
+        // Use white colors that will be visible against black background
+        const whiteColors = [
+          '#ffffff',  // Pure white
+          '#f8f8f8',  // Off-white
+          '#e8e8e8',  // Light gray
+          '#f0f0f0',  // Very light gray
+          '#ffffff',  // Pure white
+          '#f5f5f5',  // White smoke
+        ];
+        return whiteColors[Math.floor(Math.random() * whiteColors.length)];
       case 'matrix':
         return '#00ff00';
       default:
-        // Create variety in star colors for more visual interest
-        const colors = [
-          '#c8a2c8',  // Soft purple
-          '#a8c2d8',  // Soft blue
-          '#d8c2a8',  // Soft gold
-          '#b8d8c2',  // Soft mint
-          '#d8a8c2',  // Soft pink
-          '#c2d8b8',  // Soft green
+        // Use white colors that will be visible against black background
+        const defaultWhiteColors = [
+          '#ffffff',  // Pure white
+          '#f8f8f8',  // Off-white
+          '#e8e8e8',  // Light gray
+          '#f0f0f0',  // Very light gray
+          '#ffffff',  // Pure white
+          '#f5f5f5',  // White smoke
         ];
-        return colors[Math.floor(Math.random() * colors.length)];
+        return defaultWhiteColors[Math.floor(Math.random() * defaultWhiteColors.length)];
     }
   };
 
@@ -119,7 +128,7 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
         <PointMaterial
           transparent
           color={getStarColor()}
-          size={theme === 'light' ? 0.003 : 0.002}
+          size={theme === 'light' ? 0.003 : (theme === 'null' ? 0.003 : 0.002)}
           sizeAttenuation
           depthWrite={false}
         />
