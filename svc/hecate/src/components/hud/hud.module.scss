@@ -10582,16 +10582,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
   // Scopes content area - terminal style with transparency for star visibility
   .scopesContainer, .hecateInterface, .hecateContent, .scopesContent {
-    background: linear-gradient(135deg,
-      rgba(10, 20, 25, 0.15) 0%,
-      rgba(5, 18, 25, 0.2) 100%);
-    border: 1px solid rgba(0, 212, 255, 0.4);
+    background: transparent;
+    border: 1px solid rgba(0, 212, 255, 0.1);
     border-radius: 6px;
-    box-shadow:
-      0 0 20px $retro-glow,
-      inset 0 0 20px rgba(0, 0, 0, 0.3);
+    box-shadow: none;
     position: relative;
-    backdrop-filter: blur(1px);
+    backdrop-filter: blur(0.5px);
 
     &::before {
       content: '';
@@ -10599,10 +10595,10 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       top: 0;
       left: 0;
       right: 0;
-      height: 2px;
+      height: 1px;
       background: linear-gradient(90deg,
         transparent,
-        $retro-glow,
+        rgba(0, 212, 255, 0.1),
         transparent);
       animation: retro-scan 3s linear infinite;
     }
@@ -10610,10 +10606,10 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
   // Content panels and text - more transparent for star visibility
   .contentPanel, .tasksList, .logsList, .modelInfoContainer {
-    background: rgba(10, 20, 35, 0.3);
-    border: 1px solid rgba(0, 212, 255, 0.3);
+    background: rgba(10, 20, 35, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.05);
     color: $retro-primary;
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(0.5px);
 
     h1, h2, h3, h4, h5, h6 {
       color: $retro-accent;
