@@ -1,18 +1,59 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+```
+ _   _       _ _ ____  _            _
+| \ | |_   _| | | __ )| | ___   ___| | __
+|  \| | | | | | |  _ \| |/ _ \ / __| |/ /
+| |\  | |_| | | | |_) | | (_) | (__|   <
+|_| \_|\__,_|_|_|____/|_|\___/ \___|_|\_\
+```
 
-## Project Overview
+**🎯 Mission**: In a rapidly expanding onchain automated world, we are building the picks and axes for this digital gold rush. NullBlock empowers builders with the essential tools to create, deploy, and profit from intelligent agent workflows that shape the future of autonomous commerce.
 
-**NullBlock: Unleashing Agentic Potential**
+## 🌐 Connect & Follow
 
-NullBlock, built on Rust, empowers users to create, deploy, and monetize intelligent agent workflows. Its protocol-agnostic design ensures seamless collaboration across MCP, A2A, or any protocol, delivering universal compatibility and future-ready flexibility. Hecate, NullBlock's core, orchestrates multi-model LLMs for precise workflow management. Crossroads, a self-discovering network of endless possibilities, empowers users to monetize custom workflows and templates while connecting with a thriving ecosystem of AI services and tools. Join NullBlock to build and profit from your AI innovations!
+**🧑‍💻 Developer**: [@pervySoftware](https://x.com/pervySoftware) | **🏢 Official**: [@Nullblock_io](https://x.com/Nullblock_io) | **📦 SDK**: [nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk) | **🌍 Site**: NullBlock.io *(Coming Soon)*
+
+### What is NullBlock?
+
+**NullBlock** is a revolutionary agentic platform that democratizes AI automation. Built on Rust for performance and reliability, it enables users to create, deploy, and monetize intelligent agent workflows without complex infrastructure. Whether you're automating DeFi trading, content creation, or data analysis, NullBlock's protocol-agnostic design seamlessly integrates with any system - from MCP servers to custom APIs.
+
+## 🎨 Visual Overview
+
+![NullBlock Logo](https://img.shields.io/badge/NullBlock-Agentic%20Platform-00d4aa?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBzdHJva2U9IiNlNmMyMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0iIzAwZDRhYSIvPgo8L3N2Zz4K)
+![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)
+![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+
+### Architecture Overview
+```
+┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
+│   Frontend  │    │    Erebus    │    │   Backend       │
+│   (Hecate)  │◄──►│   Router     │◄──►│   Services      │
+│   Port 5173 │    │   Port 3000  │    │   Various Ports │
+└─────────────┘    └──────────────┘    └─────────────────┘
+                           │
+                   ┌───────┴────────┐
+                   │   Crossroads   │
+                   │  Marketplace   │
+                   │   (Internal)   │
+                   └────────────────┘
+```
+
+### 🚀 Key Features
+- **🤖 Agent Orchestration**: Multi-model LLM coordination via Hecate
+- **🛣️ Unified Router**: Single entry point through Erebus (Port 3000)
+- **💰 Marketplace**: Crossroads AI service discovery and monetization
+- **🔗 Protocol Agnostic**: MCP, A2A, and custom protocol support
+- **⚡ Real-time**: WebSocket chat, live task management, instant feedback
 
 **Core Architecture**: Client ↔ NullBlock (Agentic Platform) ↔ Server (Web3 wallets, APIs, etc.)
 
 ## 🎯 Current System Status
 
 ### Production-Ready Components ✅
+
 - **NullBlock.mcp** (`/svc/nullblock-mcp/`): Complete MCP server with authentication, context storage, security middleware
 - **NullBlock.agents** (`/svc/nullblock-agents/`): Agent suite including Hecate orchestrator, trading, monitoring, LLM coordination
 - **Erebus** (`/svc/erebus/`): Unified routing server for wallet interactions and agent communication
@@ -20,24 +61,27 @@ NullBlock, built on Rust, empowers users to create, deploy, and monetize intelli
 - **Hecate Frontend** (`/svc/hecate/`): React interface with agent integration
 
 ### Legacy Components (Transitioning)
+
 - **Helios** (`/svc/helios/`): Original FastAPI backend → **Replaced by NullBlock.mcp**
 - **NullBlock.orchestration** (`/svc/nullblock-orchestration/`): Workflow engine → **Integrated into agents**
 
 ## 🚀 Quick Start
 
 ### Complete Development Environment
+
 ```bash
 # Start all services with tmux
 ./scripts/dev-tmux
 
 # Individual service startup:
 # - MCP Server: cd svc/nullblock-mcp && python -m mcp.server
-# - Hecate Agent: cd svc/nullblock-agents && python -m agents.hecate.server  
+# - Hecate Agent: cd svc/nullblock-agents && python -m agents.hecate.server
 # - Erebus Server: cd svc/erebus && cargo run
 # - Frontend: cd svc/hecate && npm run develop
 ```
 
 ### Key Ports
+
 - **3000**: Erebus (unified backend router + Crossroads marketplace)
 - **5173**: Hecate frontend (development)
 - **8001**: MCP server
@@ -47,12 +91,13 @@ NullBlock, built on Rust, empowers users to create, deploy, and monetize intelli
 ## 🏗️ Architecture
 
 ### Erebus Unified Router (Port 3000) - GOLDEN RULE
+
 🚨 **CRITICAL ARCHITECTURE RULE**: ALL frontend communication MUST route through Erebus. NO direct service connections allowed.
 
 ```
 Frontend → Erebus → {
   Wallet operations → Internal wallet handlers
-  Agent chat → Hecate agent (port 9003)  
+  Agent chat → Hecate agent (port 9003)
   Agent search → Hecate agent (port 9003)
   MCP operations → MCP server (port 8001)
   Marketplace operations → Crossroads subsystem (internal)
@@ -60,6 +105,7 @@ Frontend → Erebus → {
 ```
 
 **NEVER allow frontend to bypass Erebus by connecting directly to:**
+
 - Hecate agent (port 9003)
 - MCP server (port 8001)
 - Any other backend services
@@ -68,6 +114,7 @@ Frontend → Erebus → {
 **This prevents CORS issues and maintains proper request routing/logging.**
 
 ### Key API Endpoints
+
 - **Wallets**: `/api/wallets/*` - Authentication, session management
 - **Agents**: `/api/agents/*` - Chat, status, orchestration
 - **Tasks**: `/api/agents/tasks/*` - Task management, lifecycle operations
@@ -78,6 +125,7 @@ Frontend → Erebus → {
 - **Health**: `/health` - Service status
 
 ### Directory Structure
+
 ```
 svc/erebus/src/resources/
 ├── wallets/          # 👛 Wallet subsystem (MetaMask, Phantom)
@@ -87,7 +135,7 @@ svc/erebus/src/resources/
 └── definitions/      # 🔒 RESERVED - MCP schemas
 
 svc/erebus/src/resources/crossroads/
-├── routes.rs         # 🛣️ API endpoints (marketplace, discovery, admin)  
+├── routes.rs         # 🛣️ API endpoints (marketplace, discovery, admin)
 ├── services/         # 📦 Business logic (marketplace, discovery, health)
 ├── models.rs         # 🗂️ Data structures and types
 └── mod.rs            # 📦 Module integration
@@ -96,6 +144,7 @@ svc/erebus/src/resources/crossroads/
 ## 🤖 Agent System
 
 ### Hecate Agent (Primary Interface)
+
 - **Purpose**: Main conversational interface and orchestration engine
 - **Default Model**: DeepSeek Chat v3.1 Free (cost: $0.00) for all conversations
 - **Features**: Multi-model LLM support, intent analysis, agent delegation, task management
@@ -105,6 +154,7 @@ svc/erebus/src/resources/crossroads/
 - **Logging**: Standardized cyberpunk-themed logs in `logs/` directory
 
 ### LLM Service Factory
+
 - **Cloud Models**: OpenRouter (DeepSeek, GPT-4o, Claude), OpenAI, Anthropic, Groq, HuggingFace
 - **Default Model**: DeepSeek Chat v3.1 Free ($0.00/request) for cost-effective testing
 - **Routing**: Automatic model selection based on task requirements
@@ -112,6 +162,7 @@ svc/erebus/src/resources/crossroads/
 - **Timeout Configuration**: 5-minute timeout for thinking models (DeepSeek-R1, etc.) to handle complex reasoning
 
 ### Specialized Agents
+
 - **Information Gathering**: Market data, DeFi protocols, social sentiment
 - **Social Trading**: Twitter monitoring, sentiment analysis, risk assessment
 - **Arbitrage**: Price monitoring, strategy execution with MEV protection
@@ -119,6 +170,7 @@ svc/erebus/src/resources/crossroads/
 ## 📋 Task Management System
 
 ### Current Implementation ✅
+
 - **Session-based Storage**: Tasks stored in-memory during agent service session
 - **User Generated Tasks**: Frontend form allows creating basic tasks with name, description, priority
 - **Task Categories**: Currently supports "User Generated" category (user_assigned backend type)
@@ -127,6 +179,7 @@ svc/erebus/src/resources/crossroads/
 - **Data Flow**: Frontend → Erebus → Hecate Agent (port 9003) → In-memory storage
 
 ### API Endpoints (via Erebus port 3000)
+
 - **`/api/agents/tasks`**: GET (list), POST (create)
 - **`/api/agents/tasks/:id`**: GET (single), PUT (update), DELETE (remove)
 - **`/api/agents/tasks/:id/start`**: POST - Start task execution
@@ -136,6 +189,7 @@ svc/erebus/src/resources/crossroads/
 - **`/api/agents/tasks/:id/retry`**: POST - Retry failed task
 
 ### Task Data Structure
+
 ```json
 {
   "id": "task_1",
@@ -156,12 +210,14 @@ svc/erebus/src/resources/crossroads/
 ```
 
 ### Frontend Components
+
 - **TaskCreationForm.tsx**: Simple form for creating User Generated tasks
 - **useTaskManagement.ts**: React hook handling task operations and state
 - **task-service.tsx**: Service layer handling API communication with data transformation
 - **Scopes.tsx**: Contains tasks scope displaying task list and management UI
 
 ### Development Notes
+
 - **Data Transformation**: Frontend uses kebab-case, backend expects snake_case (handled in task-service.tsx)
 - **Session Persistence**: Tasks persist until Hecate agent service restart
 - **Ready for Database**: Current structure designed to easily integrate with persistent storage
@@ -170,6 +226,7 @@ svc/erebus/src/resources/crossroads/
 ## 🛣️ Crossroads Marketplace System
 
 ### Core Purpose - **"Craigslist for AI Agents"**
+
 - **Focused Marketplace**: Simple listing and discovery of agents, workflows, tools, and MCP servers
 - **Service Discovery**: Automatic discovery and cataloging of available Nullblock services
 - **Integration Hub**: Connect with other Erebus subsystems for advanced functionality
@@ -178,12 +235,14 @@ svc/erebus/src/resources/crossroads/
 ### Core Features
 
 #### Marketplace Operations
+
 - **Listing Management**: Create, update, approve, delete marketplace listings
 - **Advanced Search**: Filter by type, tags, author, rating, price with full-text search
 - **Featured Listings**: Curated showcase of premium content
 - **Service Integration**: Connects to Nullblock Agent/MCP/Orchestration services for data
 
 #### Service Discovery Engine
+
 - **Agent Discovery**: Finds agents from Nullblock Agents service (port 9001)
 - **Workflow Discovery**: Finds workflows from Orchestration service (port 8002)
 - **MCP Server Discovery**: Finds MCP servers from MCP service (port 8001)
@@ -191,6 +250,7 @@ svc/erebus/src/resources/crossroads/
 - **Real-time Scanning**: On-demand discovery scans with performance metrics
 
 #### Marketplace Administration
+
 - **Listing Moderation**: Approve, reject, and feature marketplace listings
 - **Quality Control**: Ensure marketplace integrity and content standards
 - **Admin Dashboard**: Administrative controls for marketplace management
@@ -198,12 +258,14 @@ svc/erebus/src/resources/crossroads/
 ### API Endpoints (via Erebus port 3000)
 
 #### Core Marketplace
+
 - **`/api/marketplace/listings`**: CRUD operations for listings
 - **`/api/marketplace/search`**: Advanced search functionality
 - **`/api/marketplace/featured`**: Featured content management
 - **`/api/marketplace/stats`**: Marketplace statistics and metrics
 
-#### Service Discovery  
+#### Service Discovery
+
 - **`/api/discovery/agents`**: Agent discovery with Nullblock service integration
 - **`/api/discovery/workflows`**: Workflow discovery from orchestration service
 - **`/api/discovery/mcp-servers`**: MCP server discovery and scanning
@@ -211,22 +273,26 @@ svc/erebus/src/resources/crossroads/
 - **`/api/discovery/health/:endpoint`**: Check individual service health
 
 #### Administration
+
 - **`/api/admin/listings/approve/:id`**: Approve marketplace listings
-- **`/api/admin/listings/reject/:id`**: Reject marketplace listings  
+- **`/api/admin/listings/reject/:id`**: Reject marketplace listings
 - **`/api/admin/listings/feature/:id`**: Feature marketplace listings
 
 #### Health & Status
+
 - **`/api/crossroads/health`**: Crossroads subsystem health monitoring
 
 ### Service Integration Architecture
+
 Crossroads integrates with other Nullblock services for extended functionality:
 
 - **For MCP Operations**: Use MCP service endpoints (`/svc/nullblock-mcp/`)
 - **For Blockchain/Tokenization**: Use dedicated blockchain service (to be implemented)
-- **For Wealth Distribution**: Use dedicated rewards service (to be implemented)  
+- **For Wealth Distribution**: Use dedicated rewards service (to be implemented)
 - **For Agent Interoperability**: Use extended Agents service functionality
 
 ### Integration Benefits
+
 - **Focused Scope**: Clean separation of marketplace vs. advanced functionality
 - **Service Composition**: Leverage other Erebus subsystems for complex operations
 - **Unified Routing**: All requests go through Erebus logging and middleware
@@ -236,6 +302,7 @@ Crossroads integrates with other Nullblock services for extended functionality:
 ## 📋 Common Commands
 
 ### Service Management
+
 ```bash
 # Code quality (all Python services)
 ruff format . && ruff check . --fix && mypy .
@@ -249,12 +316,13 @@ cargo test                   # Rust services
 ```
 
 ### Development Servers
+
 ```bash
 # Python services
 python -m [service_name]
 uvicorn [module]:app --reload
 
-# Rust services  
+# Rust services
 cargo run
 cargo watch -x run          # Auto-reload
 
@@ -264,6 +332,7 @@ ssr-boost dev
 ```
 
 ### Agent Development
+
 ```bash
 # Start Hecate agent server (Rust service)
 cd svc/nullblock-agents && cargo run
@@ -283,6 +352,7 @@ cat svc/nullblock-agents/logs/chats/session_*.jsonl
 ```
 
 ### Task Management Development
+
 ```bash
 # Test task creation via Erebus (end-to-end)
 curl -X POST http://localhost:3000/api/agents/tasks \
@@ -300,6 +370,7 @@ curl -X DELETE http://localhost:3000/api/agents/tasks/task_1
 ```
 
 ### Crossroads Marketplace Development
+
 ```bash
 # Start Erebus server (includes Crossroads)
 cd svc/erebus && cargo run
@@ -314,6 +385,7 @@ curl http://localhost:3000/api/discovery/agents
 ```
 
 ### Chat Logging Structure
+
 - **Real-time Chat Log**: `svc/nullblock-agents/logs/chats/hecate-chat.log`
   - Human-readable format with timestamps, emojis, and model info
   - Continuous log of all conversations across sessions
@@ -325,10 +397,12 @@ curl http://localhost:3000/api/discovery/agents
 ## ⚠️ Organizational Rules
 
 ### Reserved Directories (Do Not Modify)
+
 - `svc/erebus/src/resources/templates/` - MCP template definitions
 - `svc/erebus/src/resources/definitions/` - MCP type definitions and schemas
 
 ### Code Standards
+
 - **NEVER** add comments unless explicitly requested
 - **ALWAYS** prefer editing existing files over creating new ones
 - **NEVER** proactively create documentation files
@@ -336,6 +410,7 @@ curl http://localhost:3000/api/discovery/agents
 - Use existing libraries already present in the codebase
 
 ### Erebus Architecture Rules
+
 - **GOLDEN RULE**: ALL frontend requests MUST route through Erebus (port 3000) - NO EXCEPTIONS
 - **main.rs**: Only subsystem entry points and core routes
 - **Subsystem Organization**: Each feature gets own directory (wallets/, mcp/, agents/)
@@ -347,12 +422,14 @@ curl http://localhost:3000/api/discovery/agents
 ## 🎨 UI/UX Standards
 
 ### Visual Design
+
 - **NullEye Animations**: 8 randomized lightning arcs with silver-gold effects (#e8e8e8, #e6c200)
 - **State-Responsive**: Colors change based on agent state, red/dimmed when offline
 - **Responsive Design**: 4-column grids optimized for small screens
 - **Gentle Messaging**: Blue info (#4a90e2), red errors (#ff3333), no aggressive animations
 
 ### User Interface
+
 - **Command Lens**: Compact grid with instant access styling
 - **Intelligent Tooltips**: Hover-based help system
 - **HecateHud**: Personalized user stats (wallet info, session time, connection status)
@@ -361,13 +438,14 @@ curl http://localhost:3000/api/discovery/agents
 ## 🔧 Environment Setup
 
 ### Required Environment Variables
+
 ```bash
 # MCP Server
 ETHEREUM_RPC_URL=
 FLASHBOTS_PRIVATE_KEY=
 IPFS_API=
 
-# Frontend  
+# Frontend
 VITE_FAST_API_BACKEND_URL=http://localhost:3000
 
 # Optional LLM APIs
@@ -376,7 +454,9 @@ ANTHROPIC_API_KEY=
 ```
 
 ### Health Monitoring
+
 All services implement `/health` endpoints with standardized JSON responses:
+
 ```json
 {
   "status": "healthy|unhealthy",
@@ -389,16 +469,18 @@ All services implement `/health` endpoints with standardized JSON responses:
 ## 💰 Monetization Strategy
 
 ### Revenue Streams
+
 - **Financial Automation**: 0.5-1% fees on trading, portfolio management
 - **Content & Communication**: $10-$100/month subscriptions
 - **Data Intelligence**: $50-$500/month for analysis and insights
 - **Workflow Automation**: $25-$250/month for complex agent workflows
 
 ### Platform Revenue
+
 - **Marketplace Fee**: 5-10% of user-created agent revenue
 - **Task Execution**: $0.01-$0.05 per automated task
 - **Premium Hosting**: $10-$100/month for advanced features
 
 ---
 
-*NullBlock implements a cyberpunk aesthetic with neon styling and maintains immersive error messages throughout the user experience while building toward a comprehensive MCP-powered agentic ecosystem.*
+_NullBlock implements a cyberpunk aesthetic with neon styling and maintains immersive error messages throughout the user experience while building toward a comprehensive MCP-powered agentic ecosystem._
