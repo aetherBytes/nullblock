@@ -6242,17 +6242,20 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 }
 
 .chatMessage {
-  background: rgba($background-dark, 0.4);
-  border: 1px solid rgba($echo-blue, 0.1);
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba($echo-blue, 0.3);
   border-radius: 8px;
   padding: 1rem;
+  margin-bottom: 1rem;
 
   &.message-hecate {
-    border-color: rgba($echo-blue, 0.3);
+    border-color: rgba($echo-blue, 0.5);
+    background: rgba(0, 0, 0, 0.8);
   }
 
   &.message-user {
-    border-color: rgba($lightning-silver, 0.2);
+    border-color: rgba($lightning-silver, 0.4);
+    background: rgba(0, 0, 0, 0.6);
     margin-left: 2rem;
   }
 }
@@ -6266,9 +6269,10 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
 .messageSender {
   font-weight: bold;
-  color: $lightning-silver;
+  color: #ffffff;
   font-family: 'Courier New', monospace;
   font-size: 0.9rem;
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
 }
 
 .hecateMessageSender {
@@ -6278,15 +6282,16 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 }
 
 .messageTime {
-  color: rgba($text-color, 0.6);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 0.8rem;
   font-family: 'Courier New', monospace;
 }
 
 .messageContent {
-  color: $text-color;
-  line-height: 1.4;
+  color: #ffffff;
+  line-height: 1.6;
   text-align: left;
+  font-size: 0.95rem;
 
   // Ensure markdown content fits within chat messages
   .markdownContainer {
@@ -6294,6 +6299,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     overflow-wrap: break-word;
     word-wrap: break-word;
     text-align: left;
+    color: #ffffff;
 
     // Adjust code block wrapper for chat
     .codeBlockWrapper {
@@ -6396,8 +6402,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .chatInput {
   display: flex;
   padding: 1rem;
-  background: rgba($background-dark, 0.5);
-  border-top: 1px solid rgba($echo-blue, 0.2);
+  background: rgba(0, 0, 0, 0.8);
+  border-top: 1px solid rgba($echo-blue, 0.4);
   gap: 0.5rem;
   flex-shrink: 0; // Prevent input from shrinking
   min-height: 60px; // Ensure minimum height
