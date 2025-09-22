@@ -8,7 +8,10 @@
 |_| \_|\__,_|_|_|____/|_|\___/ \___|_|\_\
 ```
 
-**🎯 Mission**: In a rapidly expanding onchain automated world, we are building the picks and axes for this digital gold rush. NullBlock empowers builders with the essential tools to create, deploy, and profit from intelligent agent workflows that shape the future of autonomous commerce.
+**🎯 Mission**:
+In a rapidly expanding onchain automated world, we are building the picks and axes for this digital gold rush.
+NullBlock empowers builders with the essential tools to create, deploy, and profit from intelligent agent workflows.
+Together, we shape the future of autonomous commerce.
 
 ## 🌐 Connect & Follow
 
