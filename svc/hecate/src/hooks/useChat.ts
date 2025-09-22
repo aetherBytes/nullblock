@@ -184,25 +184,36 @@ export const useChat = (publicKey: string | null) => {
 
     const isNearBottom = scrollHeight - scrollTop - clientHeight <= 50;
 
-    if (!isNearBottom && !isUserScrolling) {
-      setIsUserScrolling(true);
-      setChatAutoScroll(false);
+    // Immediately disable auto-scroll when user scrolls (regardless of position)
+    // This prevents forced scrolling while user is reading
+    setIsUserScrolling(true);
+    setChatAutoScroll(false);
 
-      if (userScrollTimeoutRef.current) {
-        clearTimeout(userScrollTimeoutRef.current);
-      }
+    // Clear any existing timeout
+    if (userScrollTimeoutRef.current) {
+      clearTimeout(userScrollTimeoutRef.current);
+    }
 
+    // If user is near bottom, re-enable auto-scroll after a short delay
+    if (isNearBottom) {
       userScrollTimeoutRef.current = setTimeout(() => {
         setIsUserScrolling(false);
         setChatAutoScroll(true);
-      }, 3000);
-    } else if (isNearBottom && isUserScrolling) {
+      }, 1000);
+    } else {
+      // If user is not near bottom, set a longer timeout
+      userScrollTimeoutRef.current = setTimeout(() => {
+        setIsUserScrolling(false);
+        setChatAutoScroll(true);
+      }, 5000);
+    }
+  };
+
+  const scrollToBottom = () => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
       setIsUserScrolling(false);
       setChatAutoScroll(true);
-
-      if (userScrollTimeoutRef.current) {
-        clearTimeout(userScrollTimeoutRef.current);
-      }
     }
   };
 
@@ -223,6 +234,7 @@ export const useChat = (publicKey: string | null) => {
     userScrollTimeoutRef,
     handleChatSubmit,
     handleChatInputChange,
-    handleChatScroll
+    handleChatScroll,
+    scrollToBottom
   };
 };
