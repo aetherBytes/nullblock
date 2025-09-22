@@ -85,6 +85,17 @@ export const useTaskManagement = (
   initialFilter: TaskFilter = {},
   autoSubscribe: boolean = true
 ): UseTaskManagementReturn => {
+  // Helper function to ensure we always have a valid array
+  const ensureArray = (value: any): Task[] => {
+    if (Array.isArray(value)) return value;
+    return [];
+  };
+
+  const ensureNotificationArray = (value: any): TaskNotification[] => {
+    if (Array.isArray(value)) return value;
+    return [];
+  };
+
   // Core state
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -185,13 +196,14 @@ export const useTaskManagement = (
         const unsubscribe = await taskService.subscribeToUpdates(
           (updatedTask: Task) => {
             setTasks(prev => {
-              const index = prev.findIndex(t => t.id === updatedTask.id);
+              const currentTasks = ensureArray(prev);
+              const index = currentTasks.findIndex(t => t.id === updatedTask.id);
               if (index >= 0) {
-                const newTasks = [...prev];
+                const newTasks = [...currentTasks];
                 newTasks[index] = updatedTask;
                 return newTasks;
               } else {
-                return [updatedTask, ...prev];
+                return [updatedTask, ...currentTasks];
               }
             });
 
@@ -277,7 +289,7 @@ export const useTaskManagement = (
       setIsLoading(true);
       const response = await taskService.createTask(request);
       if (response.success && response.data) {
-        setTasks(prev => [response.data!, ...prev]);
+        setTasks(prev => [response.data!, ...ensureArray(prev)]);
         console.log('✅ Task created via backend:', response.data);
         return true;
       } else {
@@ -304,7 +316,7 @@ export const useTaskManagement = (
     try {
       const response = await taskService.updateTask(request);
       if (response.success && response.data) {
-        setTasks(prev => prev.map(t => t.id === request.id ? response.data! : t));
+        setTasks(prev => ensureArray(prev).map(t => t.id === request.id ? response.data! : t));
         if (activeTask?.id === request.id) {
           setActiveTask(response.data);
         }
@@ -332,7 +344,7 @@ export const useTaskManagement = (
     try {
       const response = await taskService.deleteTask(id);
       if (response.success) {
-        setTasks(prev => prev.filter(t => t.id !== id));
+        setTasks(prev => ensureArray(prev).filter(t => t.id !== id));
         if (activeTask?.id === id) {
           setActiveTask(null);
         }
@@ -418,7 +430,7 @@ export const useTaskManagement = (
     try {
       const response = await taskService.createFromTemplate(templateId, parameters);
       if (response.success && response.data) {
-        setTasks(prev => [response.data!, ...prev]);
+        setTasks(prev => [response.data!, ...ensureArray(prev)]);
         return true;
       } else {
         setError(response.error || 'Failed to create task from template');
@@ -433,7 +445,7 @@ export const useTaskManagement = (
   const markNotificationRead = useCallback(async (id: string): Promise<boolean> => {
     const response = await taskService.markNotificationRead(id);
     if (response.success) {
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      setNotifications(prev => ensureNotificationArray(prev).map(n => n.id === id ? { ...n, read: true } : n));
       return true;
     }
     return false;

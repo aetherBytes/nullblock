@@ -30,7 +30,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const taskTypes: { value: TaskType; label: string }[] = [
-    { value: 'system', label: 'System Task' }
+    { value: 'system', label: 'User Generated' }
   ];
 
   const priorities: { value: TaskPriority; label: string; color: string }[] = [
@@ -41,10 +41,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
   ];
 
   const categories: { value: TaskCategory; label: string }[] = [
-    { value: 'user-assigned', label: 'User Assigned' },
-    { value: 'system-generated', label: 'System Generated' },
-    { value: 'autonomous', label: 'Autonomous' },
-    { value: 'event-triggered', label: 'Event Triggered' }
+    { value: 'user-assigned', label: 'User Generated' }
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,25 +154,6 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
             {priorities.map(priority => (
               <option key={priority.value} value={priority.value}>
                 {priority.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="taskCategory" className={styles.formLabel}>
-            Category
-          </label>
-          <select
-            id="taskCategory"
-            value={formData.category}
-            onChange={(e) => handleInputChange('category', e.target.value as TaskCategory)}
-            className={styles.formSelect}
-            disabled={isLoading}
-          >
-            {categories.map(category => (
-              <option key={category.value} value={category.value}>
-                {category.label}
               </option>
             ))}
           </select>

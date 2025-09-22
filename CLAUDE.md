@@ -70,6 +70,7 @@ Frontend → Erebus → {
 ### Key API Endpoints
 - **Wallets**: `/api/wallets/*` - Authentication, session management
 - **Agents**: `/api/agents/*` - Chat, status, orchestration
+- **Tasks**: `/api/agents/tasks/*` - Task management, lifecycle operations
 - **MCP**: `/mcp/*` - Protocol operations
 - **Marketplace**: `/api/marketplace/*` - Listing management, search, featured items
 - **Discovery**: `/api/discovery/*` - Service discovery, health monitoring
@@ -97,8 +98,9 @@ svc/erebus/src/resources/crossroads/
 ### Hecate Agent (Primary Interface)
 - **Purpose**: Main conversational interface and orchestration engine
 - **Default Model**: DeepSeek Chat v3.1 Free (cost: $0.00) for all conversations
-- **Features**: Multi-model LLM support, intent analysis, agent delegation
+- **Features**: Multi-model LLM support, intent analysis, agent delegation, task management
 - **Integration**: Full frontend chat with real-time model display
+- **Task Management**: Session-based task creation, lifecycle management, User Generated tasks
 - **Chat Logging**: Real-time conversation logs with timestamps, model info, and cost tracking
 - **Logging**: Standardized cyberpunk-themed logs in `logs/` directory
 
@@ -113,6 +115,57 @@ svc/erebus/src/resources/crossroads/
 - **Information Gathering**: Market data, DeFi protocols, social sentiment
 - **Social Trading**: Twitter monitoring, sentiment analysis, risk assessment
 - **Arbitrage**: Price monitoring, strategy execution with MEV protection
+
+## 📋 Task Management System
+
+### Current Implementation ✅
+- **Session-based Storage**: Tasks stored in-memory during agent service session
+- **User Generated Tasks**: Frontend form allows creating basic tasks with name, description, priority
+- **Task Categories**: Currently supports "User Generated" category (user_assigned backend type)
+- **Task Lifecycle**: Full CRUD operations - create, read, update, delete, start, pause, resume, cancel, retry
+- **Frontend Integration**: TaskCreationForm.tsx integrated with Scopes.tsx in Hecate interface
+- **Data Flow**: Frontend → Erebus → Hecate Agent (port 9003) → In-memory storage
+
+### API Endpoints (via Erebus port 3000)
+- **`/api/agents/tasks`**: GET (list), POST (create)
+- **`/api/agents/tasks/:id`**: GET (single), PUT (update), DELETE (remove)
+- **`/api/agents/tasks/:id/start`**: POST - Start task execution
+- **`/api/agents/tasks/:id/pause`**: POST - Pause running task
+- **`/api/agents/tasks/:id/resume`**: POST - Resume paused task
+- **`/api/agents/tasks/:id/cancel`**: POST - Cancel task
+- **`/api/agents/tasks/:id/retry`**: POST - Retry failed task
+
+### Task Data Structure
+```json
+{
+  "id": "task_1",
+  "name": "User Task Name",
+  "description": "Task description",
+  "task_type": "system",
+  "category": "user_assigned",
+  "status": "created|running|paused|completed|failed|cancelled",
+  "priority": "low|medium|high|urgent|critical",
+  "created_at": "2025-09-22T03:17:08Z",
+  "updated_at": "2025-09-22T03:17:08Z",
+  "progress": 0,
+  "parameters": {},
+  "user_approval_required": false,
+  "auto_retry": true,
+  "max_retries": 3
+}
+```
+
+### Frontend Components
+- **TaskCreationForm.tsx**: Simple form for creating User Generated tasks
+- **useTaskManagement.ts**: React hook handling task operations and state
+- **task-service.tsx**: Service layer handling API communication with data transformation
+- **Scopes.tsx**: Contains tasks scope displaying task list and management UI
+
+### Development Notes
+- **Data Transformation**: Frontend uses kebab-case, backend expects snake_case (handled in task-service.tsx)
+- **Session Persistence**: Tasks persist until Hecate agent service restart
+- **Ready for Database**: Current structure designed to easily integrate with persistent storage
+- **Hecate Agent Service**: Must be running on port 9003 for task functionality
 
 ## 🛣️ Crossroads Marketplace System
 
@@ -212,12 +265,12 @@ ssr-boost dev
 
 ### Agent Development
 ```bash
-# Start Hecate agent server
-cd svc/nullblock-agents && python -m agents.hecate.server
+# Start Hecate agent server (Rust service)
+cd svc/nullblock-agents && cargo run
 
-# Run demos
-python demo_integration.py
-python -m agents.information_gathering.demo
+# Test task management endpoints
+curl http://localhost:9003/tasks
+curl -X POST http://localhost:9003/tasks -H "Content-Type: application/json" -d '{"name":"Test","description":"Test task","task_type":"system"}'
 
 # Monitor logs
 tail -f logs/hecate-server.log
@@ -227,6 +280,23 @@ tail -f svc/nullblock-agents/logs/chats/hecate-chat.log
 
 # View chat session data (JSON format)
 cat svc/nullblock-agents/logs/chats/session_*.jsonl
+```
+
+### Task Management Development
+```bash
+# Test task creation via Erebus (end-to-end)
+curl -X POST http://localhost:3000/api/agents/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test Task","description":"Testing","task_type":"system","category":"user_assigned","priority":"medium"}'
+
+# List all tasks
+curl http://localhost:3000/api/agents/tasks
+
+# Test task lifecycle operations
+curl -X POST http://localhost:3000/api/agents/tasks/task_1/start
+curl -X POST http://localhost:3000/api/agents/tasks/task_1/pause
+curl -X POST http://localhost:3000/api/agents/tasks/task_1/resume
+curl -X DELETE http://localhost:3000/api/agents/tasks/task_1
 ```
 
 ### Crossroads Marketplace Development
