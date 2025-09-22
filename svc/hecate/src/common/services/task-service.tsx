@@ -80,7 +80,7 @@ class TaskService {
       name: request.name,
       description: request.description,
       task_type: request.type,  // Frontend uses 'type', backend expects 'task_type'
-      category: request.category,
+      category: request.category.replace(/-/g, '_'),  // Convert kebab-case to snake_case
       priority: request.priority,
       parameters: request.parameters,
       dependencies: request.dependencies,
