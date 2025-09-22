@@ -1295,16 +1295,16 @@ const HecateHud: React.FC<HecateHudProps> = ({
                     ☀️ Light
                   </button>
                   <button
-                    className={`${styles.themeControlBtn} ${theme === 'dark' ? styles.active : ''}`}
-                    onClick={() => onThemeChange && onThemeChange('dark')}
+                    className={`${styles.themeControlBtn} ${theme === 'null' ? styles.active : ''}`}
+                    onClick={() => onThemeChange && onThemeChange('null')}
                   >
                     🌙 Dark
                   </button>
                   <button
-                    className={`${styles.themeControlBtn} ${theme === 'null' ? styles.active : ''}`}
-                    onClick={() => onThemeChange && onThemeChange('cyber')}
+                    className={`${styles.themeControlBtn} ${theme === 'dark' ? styles.active : ''}`}
+                    onClick={() => onThemeChange && onThemeChange('dark')}
                   >
-                    ⚡ Cyber
+                    🌌 Null
                   </button>
                 </div>
               </div>
@@ -1839,7 +1839,7 @@ const HecateHud: React.FC<HecateHudProps> = ({
 
   return (
     <div
-      className={`${styles.contextDashboard} ${theme === 'dark' ? styles.dark : theme === 'light' ? styles.light : ''} ${styles[`theme-${theme}`] || ''}`}
+      className={`${styles.contextDashboard} ${theme === 'null' ? styles.dark : theme === 'light' ? styles.light : theme === 'dark' ? styles.dark : ''} ${styles[`theme-${theme}`] || ''}`}
     >
       <div className={styles.dashboardHeader}>
         <div className={styles.headerLeft}>

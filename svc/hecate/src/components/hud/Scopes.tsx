@@ -432,10 +432,16 @@ const Scopes: React.FC<ScopesProps> = ({
               <h6>🎨 Theme</h6>
               <div className={styles.themeSelector}>
                 <button
+                  className={`${styles.themeButton} ${theme === 'null' ? styles.active : ''}`}
+                  onClick={() => onThemeChange('null')}
+                >
+                  🌙 Dark
+                </button>
+                <button
                   className={`${styles.themeButton} ${theme === 'dark' ? styles.active : ''}`}
                   onClick={() => onThemeChange('dark')}
                 >
-                  🌙 Dark
+                  🌌 Null
                 </button>
                 <button
                   className={`${styles.themeButton} ${theme === 'light' ? styles.active : ''}`}
