@@ -6572,13 +6572,10 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 }
 
 .chatInput {
-  display: flex;
   padding: 1rem;
   background: rgba(0, 0, 0, 0.8);
   border-top: 1px solid rgba($echo-blue, 0.4);
-  gap: 0.5rem;
   flex-shrink: 0; // Prevent input from shrinking
-  min-height: 60px; // Ensure minimum height
 
   // When in expanded mode, ensure proper positioning
   .chatSection.expanded & {
@@ -6589,6 +6586,13 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+.chatInputContainer {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+  min-height: 60px;
+}
+
 .chatInputField {
   flex: 1;
   background: rgba($background-dark, 0.7);
@@ -6597,6 +6601,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   padding: 0.75rem;
   border-radius: 4px;
   font-family: 'Courier New', monospace;
+  resize: none;
+  min-height: 44px;
+  max-height: 200px;
+  overflow-y: auto;
+  line-height: 1.4;
+  transition: height 0.1s ease;
 
   &:focus {
     outline: none;
@@ -6606,6 +6616,25 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
   &::placeholder {
     color: rgba($text-color, 0.5);
+  }
+
+  // Custom scrollbar for overflow content
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba($background-dark, 0.3);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.4);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba($echo-blue, 0.6);
+    }
   }
 }
 

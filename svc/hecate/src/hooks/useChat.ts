@@ -19,7 +19,7 @@ export const useChat = (publicKey: string | null) => {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
-  const chatInputRef = useRef<HTMLInputElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleChatSubmit = (
@@ -171,7 +171,7 @@ export const useChat = (publicKey: string | null) => {
     }
   };
 
-  const handleChatInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChatInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { value } = e.target;
     setChatInput(value);
   };
