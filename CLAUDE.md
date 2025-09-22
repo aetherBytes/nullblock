@@ -12,7 +12,10 @@
 
 ## 🌐 Connect & Follow
 
-**🧑‍💻 Developer**: [@pervySoftware](https://x.com/pervySoftware) | **🏢 Official**: [@Nullblock_io](https://x.com/Nullblock_io) | **📦 SDK**: [nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk) | **🌍 Site**: NullBlock.io *(Coming Soon)*
+**🧑‍💻 Developer**: [@pervySoftware](https://x.com/pervySoftware) - https://x.com/pervySoftware
+**🏢 Official**: [@Nullblock_io](https://x.com/Nullblock_io) - https://x.com/Nullblock_io
+**📦 SDK**: [nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk) - https://github.com/aetherBytes/nullblock-sdk
+**🌍 Site**: NullBlock.io *(Coming Soon)*
 
 ### What is NullBlock?
 
