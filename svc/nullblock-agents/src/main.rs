@@ -7,12 +7,14 @@ use axum::{
 };
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::{info, warn};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber;
 
 mod agents;
 mod config;
+mod database;
 mod error;
 mod handlers;
+mod kafka;
 mod llm;
 mod logging;
 mod models;

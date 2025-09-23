@@ -18,7 +18,7 @@ Together, we shape the future of autonomous commerce.
 **🧑‍💻 Developer**: [@pervySoftware](https://x.com/pervySoftware) - https://x.com/pervySoftware
 **🏢 Official**: [@Nullblock_io](https://x.com/Nullblock_io) - https://x.com/Nullblock_io
 **📦 SDK**: [nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk) - https://github.com/aetherBytes/nullblock-sdk
-**🌍 Site**: NullBlock.io *(Coming Soon)*
+**🌍 Site**: NullBlock.io _(Coming Soon)_
 
 ### What is NullBlock?
 
@@ -30,7 +30,7 @@ Together, we shape the future of autonomous commerce.
 
 1. **Task & Scheduling Infrastructure** - Building robust task management service with persistent storage, scheduling capabilities, and lifecycle management
 2. **Agent Service Integration** - Establishing seamless communication protocols between task service and agent orchestration system
-3. **Automated Workflow Execution** - Implementing intelligent task distribution, dependency resolution, and execution monitoring across agent network
+3. **X \ Marketing Agent** - Need a marketing agent ASAPPP I suck at tweeting.
 
 ## 🎨 Visual Overview
 
@@ -41,6 +41,7 @@ Together, we shape the future of autonomous commerce.
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 
 ### Architecture Overview
+
 ```
 ┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
 │   Frontend  │    │    Erebus    │    │   Backend       │
@@ -56,6 +57,7 @@ Together, we shape the future of autonomous commerce.
 ```
 
 ### 🚀 Key Features
+
 - **🤖 Agent Orchestration**: Multi-model LLM coordination via Hecate
 - **🛣️ Unified Router**: Single entry point through Erebus (Port 3000)
 - **💰 Marketplace**: Crossroads AI service discovery and monetization
@@ -185,12 +187,57 @@ svc/erebus/src/resources/crossroads/
 
 ### Current Implementation ✅
 
-- **Session-based Storage**: Tasks stored in-memory during agent service session
+- **PostgreSQL Storage**: Tasks persisted in PostgreSQL database with full CRUD operations
+- **Kafka Event Streaming**: Task lifecycle events published to Kafka for inter-service communication
 - **User Generated Tasks**: Frontend form allows creating basic tasks with name, description, priority
 - **Task Categories**: Currently supports "User Generated" category (user_assigned backend type)
 - **Task Lifecycle**: Full CRUD operations - create, read, update, delete, start, pause, resume, cancel, retry
 - **Frontend Integration**: TaskCreationForm.tsx integrated with Scopes.tsx in Hecate interface
-- **Data Flow**: Frontend → Erebus → Hecate Agent (port 9003) → In-memory storage
+- **Data Flow**: Frontend → Erebus → Hecate Agent (port 9003) → PostgreSQL + Kafka Events
+
+### Database Architecture
+
+#### Database Ownership & Key Relationships
+
+**Erebus Database (Port 3000)** - **OWNS CRUD**
+
+- **`users` table** - Master source of truth for user data
+  - Primary Key: `id` (UUID)
+  - Fields: `wallet_address`, `chain`, `user_type`, `email`, `metadata`
+  - **Full CRUD ownership** - All user operations
+
+**Agents Database (Port 9003)** - **OWNS CRUD**
+
+- **`tasks` table** - Task management and lifecycle
+
+  - Primary Key: `id` (UUID)
+  - Foreign Key: `user_id` (UUID) → references `user_references.id`
+  - Foreign Key: `assigned_agent_id` (UUID) → references `agents.id`
+  - **Full CRUD ownership** for task operations
+
+- **`agents` table** - Agent registry and capabilities
+
+  - Primary Key: `id` (UUID)
+  - **Full CRUD ownership** for agent management
+
+- **`user_references` table** - **READ-ONLY sync cache**
+  - Primary Key: `id` (UUID) → mirrors Erebus `users.id`
+  - **Populated via Kafka events** from Erebus user changes
+  - Used for task foreign key validation only
+
+#### Sync Strategy
+
+- **Erebus** publishes `user.created/updated/deleted` Kafka events
+- **Agents** consumes events to maintain `user_references` cache
+- **Tasks** reference `user_references.id` for user attribution
+- **No direct DB connections** between services - event-driven sync only
+
+#### Key Benefits
+
+- **Service Isolation**: Each service owns its domain data
+- **Event-Driven Architecture**: Loose coupling via Kafka
+- **Data Consistency**: Foreign key validation with synced references
+- **Scalability**: Independent scaling of services and databases
 
 ### API Endpoints (via Erebus port 3000)
 
@@ -233,8 +280,12 @@ svc/erebus/src/resources/crossroads/
 ### Development Notes
 
 - **Data Transformation**: Frontend uses kebab-case, backend expects snake_case (handled in task-service.tsx)
-- **Session Persistence**: Tasks persist until Hecate agent service restart
-- **Ready for Database**: Current structure designed to easily integrate with persistent storage
+- **Database Persistence**: Tasks stored in PostgreSQL with automatic migrations on startup
+- **Event Streaming**: Task lifecycle events published to Kafka for system-wide coordination
+- **Environment Variables**:
+  - `DATABASE_URL`: PostgreSQL connection (required for persistence)
+  - `KAFKA_BOOTSTRAP_SERVERS`: Kafka cluster (optional, defaults to localhost:9092)
+- **Migration System**: SQLx migrations run automatically on service startup
 - **Hecate Agent Service**: Must be running on port 9003 for task functionality
 
 ## 🛣️ Crossroads Marketplace System
@@ -345,13 +396,35 @@ npm run develop
 ssr-boost dev
 ```
 
+### Database & Event Streaming Development
+
+```bash
+# Start PostgreSQL and Kafka services
+docker-compose up postgres kafka zookeeper -d
+
+# Start Hecate agent server with database (Rust service)
+export DATABASE_URL="postgresql://postgres:postgres_secure_pass@localhost:5432/postgres"
+export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
+cd svc/nullblock-agents && cargo run
+
+# Test database migrations
+cd svc/nullblock-agents && sqlx migrate run --database-url $DATABASE_URL
+
+# Monitor Kafka topics
+docker exec -it nullblock-kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic task.lifecycle --from-beginning
+docker exec -it nullblock-kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic user.created --from-beginning
+
+# Database direct access
+psql postgresql://postgres:postgres_secure_pass@localhost:5432/postgres
+```
+
 ### Agent Development
 
 ```bash
 # Start Hecate agent server (Rust service)
 cd svc/nullblock-agents && cargo run
 
-# Test task management endpoints
+# Test task management endpoints (database-backed)
 curl http://localhost:9003/tasks
 curl -X POST http://localhost:9003/tasks -H "Content-Type: application/json" -d '{"name":"Test","description":"Test task","task_type":"system"}'
 
