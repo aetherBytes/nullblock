@@ -10,8 +10,8 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{error, info, warn};
-use uuid::Uuid;
+use tracing::{info, warn};
+// use uuid::Uuid;  // For future features
 
 pub struct HecateAgent {
     pub personality: String,

@@ -195,4 +195,10 @@ impl From<tokio::time::error::Elapsed> for AppError {
     }
 }
 
+impl From<anyhow::Error> for AppError {
+    fn from(err: anyhow::Error) -> Self {
+        AppError::InternalError(err.to_string())
+    }
+}
+
 pub type AppResult<T> = Result<T, AppError>;
