@@ -50,10 +50,10 @@ impl TaskRepository {
         .bind(task_id)
         .bind(&request.name)
         .bind(&request.description)
-        .bind(format!("{:?}", request.task_type).to_lowercase())
-        .bind(format!("{:?}", request.category.as_ref().unwrap_or(&crate::models::TaskCategory::UserAssigned)).to_lowercase())
+        .bind(serde_json::to_string(&request.task_type).unwrap().trim_matches('"').to_string())
+        .bind(serde_json::to_string(&request.category.as_ref().unwrap_or(&crate::models::TaskCategory::UserAssigned)).unwrap().trim_matches('"').to_string())
         .bind(status_str)
-        .bind(format!("{:?}", request.priority.as_ref().unwrap_or(&crate::models::TaskPriority::Medium)).to_lowercase())
+        .bind(serde_json::to_string(&request.priority.as_ref().unwrap_or(&crate::models::TaskPriority::Medium)).unwrap().trim_matches('"').to_string())
         .bind(user_id)
         .bind(now)
         .bind(now)
@@ -145,8 +145,8 @@ impl TaskRepository {
         .bind(uuid)
         .bind(request.name.as_ref())
         .bind(request.description.as_ref())
-        .bind(request.status.as_ref().map(|s| format!("{:?}", s).to_lowercase()))
-        .bind(request.priority.as_ref().map(|p| format!("{:?}", p).to_lowercase()))
+        .bind(request.status.as_ref().map(|s| serde_json::to_string(s).unwrap().trim_matches('"').to_string()))
+        .bind(request.priority.as_ref().map(|p| serde_json::to_string(p).unwrap().trim_matches('"').to_string()))
         .bind(request.progress.map(|p| p as i16))
         .bind(request.parameters.as_ref().and_then(|p| serde_json::to_value(p).ok()))
         .bind(request.started_at)
@@ -175,7 +175,7 @@ impl TaskRepository {
     pub async fn update_status(&self, task_id: &str, status: TaskStatus) -> Result<Option<TaskEntity>> {
         let uuid = Uuid::parse_str(task_id)?;
         let now = Utc::now();
-        let status_str = format!("{:?}", status).to_lowercase();
+        let status_str = serde_json::to_string(&status).unwrap().trim_matches('"').to_string();
 
         let started_at = if status == TaskStatus::Running {
             Some(now)
