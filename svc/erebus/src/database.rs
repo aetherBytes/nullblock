@@ -1,6 +1,6 @@
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::time::Duration;
-use tracing::{info, error};
+use tracing::info;
 
 pub struct Database {
     pool: PgPool,
@@ -42,3 +42,18 @@ impl Clone for Database {
         }
     }
 }
+
+// Global database instance
+static mut DATABASE: Option<Database> = None;
+
+pub async fn get_erebus_connection() -> Result<&'static PgPool, sqlx::Error> {
+    unsafe {
+        if DATABASE.is_none() {
+            let database_url = std::env::var("DATABASE_URL")
+                .unwrap_or_else(|_| "postgres://postgres:postgres_secure_pass@localhost:5440/erebus".to_string());
+            DATABASE = Some(Database::new(&database_url).await?);
+        }
+        Ok(&DATABASE.as_ref().unwrap().pool)
+    }
+}
+

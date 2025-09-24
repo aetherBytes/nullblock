@@ -29,7 +29,9 @@ use resources::agents::routes::{
     get_task_queues, get_task_templates, create_task_from_template,
     get_task_stats, get_task_notifications, mark_notification_read, handle_notification_action,
     get_task_events, publish_task_event, get_motivation_state, update_motivation_state,
-    get_task_suggestions, learn_from_task
+    get_task_suggestions, learn_from_task, process_task,
+    // User management routes
+    register_user
 };
 use resources::wallets::routes::create_wallet_routes;
 use resources::{WalletManager, create_crossroads_routes, ExternalService};
@@ -278,6 +280,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/agents/tasks/motivation", put(update_motivation_state))
         .route("/api/agents/tasks/suggestions", post(get_task_suggestions))
         .route("/api/agents/tasks/:task_id/learn", post(learn_from_task))
+        .route("/api/agents/tasks/:task_id/process", post(process_task))
+        // User management endpoints
+        .route("/api/agents/users/register", post(register_user))
         // Merge wallet routes
         .merge(create_wallet_routes())
         // Merge crossroads routes
