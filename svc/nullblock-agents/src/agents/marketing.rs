@@ -616,3 +616,4 @@ pub struct ProjectAnalysis {
     pub technical_highlights: Vec<String>,
     pub target_audiences: Vec<String>,
 }
+

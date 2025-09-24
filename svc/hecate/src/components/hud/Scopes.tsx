@@ -489,13 +489,22 @@ const Scopes: React.FC<ScopesProps> = ({
                     </div>
                     <div className={styles.taskActions}>
                       {task.status === 'created' && (
-                        <button
-                          onClick={() => taskManagement.startTask(task.id)}
-                          className={styles.taskActionButton}
-                          title="Start Task"
-                        >
-                          ▶️ Start
-                        </button>
+                        <>
+                          <button
+                            onClick={() => taskManagement.startTask(task.id)}
+                            className={styles.taskActionButton}
+                            title="Start Task"
+                          >
+                            ▶️ Start
+                          </button>
+                          <button
+                            onClick={() => taskManagement.processTask(task.id)}
+                            className={styles.taskActionButton}
+                            title="Process Task with Hecate"
+                          >
+                            ⚡ Process
+                          </button>
+                        </>
                       )}
                       {task.status === 'running' && (
                         <>

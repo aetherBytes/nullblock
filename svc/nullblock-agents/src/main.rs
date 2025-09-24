@@ -112,6 +112,7 @@ fn create_router(state: server::AppState) -> Router {
         .route("/user-references", post(user_references::create_user_reference))
         .route("/user-references", get(user_references::list_user_references))
         .route("/user-references/:wallet_address/:chain", get(user_references::get_user_reference))
+        .route("/user-references/sync", post(user_references::sync_user_reference))
         // Add state
         .with_state(state)
         // Add middleware
