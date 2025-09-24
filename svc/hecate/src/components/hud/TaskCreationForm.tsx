@@ -21,7 +21,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
     task_type: 'system',
     priority: 'medium',
     category: 'user_assigned',
-    auto_start: false,
+    auto_start: true, // Default to auto-start for better UX
     user_approval_required: false,
     parameters: {},
     dependencies: []
@@ -68,7 +68,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
           task_type: 'system',
           priority: 'medium',
           category: 'user_assigned',
-          auto_start: false,
+          auto_start: true, // Default to auto-start for better UX
           user_approval_required: false,
           parameters: {},
           dependencies: []
