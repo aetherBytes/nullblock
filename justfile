@@ -64,8 +64,8 @@ health-check:
     @echo "🔍 General Agents (Port 9001):"
     @curl -s --max-time 5 http://localhost:9001/health | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ General Agents not responding" | tee -a logs/just-commands.log)
     @echo ""
-    @echo "🔍 Hecate Agent (Port 9002):"
-    @curl -s --max-time 5 http://localhost:9002/health | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Hecate Agent not responding" | tee -a logs/just-commands.log)
+    @echo "🔍 Hecate Agent (Port 9003):"
+    @curl -s --max-time 5 http://localhost:9003/health | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Hecate Agent not responding" | tee -a logs/just-commands.log)
     @echo ""
     @echo "🔍 Frontend (Port 5173):"
     @curl -s --max-time 5 http://localhost:5173 >/dev/null && (echo "✅ Frontend responding" | tee -a logs/just-commands.log) || (echo "❌ Frontend not responding" | tee -a logs/just-commands.log)
@@ -92,7 +92,7 @@ test-api:
     @curl -s --max-time 5 http://localhost:3000/api/wallets | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Erebus wallets not available" | tee -a logs/just-commands.log)
     @echo ""
     @echo "🔹 Testing Hecate Agent endpoints:"
-    @curl -s --max-time 5 http://localhost:9002/model-status | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Hecate model status not available" | tee -a logs/just-commands.log)
+    @curl -s --max-time 5 http://localhost:9003/hecate/model-status | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Hecate model status not available" | tee -a logs/just-commands.log)
     @echo ""
     @echo "🔹 Testing LLM Service endpoints:"
     @curl -s --max-time 5 http://localhost:1234/v1/models | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ LM Studio models not available" | tee -a logs/just-commands.log)
@@ -109,7 +109,7 @@ ping-services:
     @echo -n "Orchestration (8002): "; curl -s --max-time 2 http://localhost:8002/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
     @echo -n "Erebus (3000): "; curl -s --max-time 2 http://localhost:3000/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
     @echo -n "General Agents (9001): "; curl -s --max-time 2 http://localhost:9001/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
-    @echo -n "Hecate Agent (9002): "; curl -s --max-time 2 http://localhost:9002/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
+    @echo -n "Hecate Agent (9003): "; curl -s --max-time 2 http://localhost:9003/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
     @echo -n "Frontend (5173): "; curl -s --max-time 2 http://localhost:5173 >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
     @echo -n "LM Studio (1234): "; curl -s --max-time 2 http://localhost:1234/v1/models >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
     @echo "$(date '+%Y-%m-%d %H:%M:%S') [PING-TEST] ✅ Ping test completed" | tee -a logs/just-commands.log
@@ -124,7 +124,7 @@ test-chat:
     @echo "$(date '+%Y-%m-%d %H:%M:%S') [CHAT-TEST] 📤 REQUEST:" | tee -a logs/just-commands.log
     @echo '{"message":"Hello, this is a test message from the health check system."}' | jq '.' | tee -a logs/just-commands.log
     @echo "$(date '+%Y-%m-%d %H:%M:%S') [CHAT-TEST] 📥 RESPONSE:" | tee -a logs/just-commands.log
-    @curl -s --max-time 10 -X POST http://localhost:9002/chat \
+    @curl -s --max-time 10 -X POST http://localhost:9003/chat \
         -H "Content-Type: application/json" \
         -d '{"message":"Hello, this is a test message from the health check system."}' | \
         jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Chat endpoint not responding" | tee -a logs/just-commands.log)
@@ -218,15 +218,27 @@ dev-tmux-setup:
     @echo "⚙️ Setting up tmuxinator configuration..."
     ./scripts/dev-tmux setup
 
-# Initialize databases
+# Initialize databases (Docker)
 init-db:
-    @echo "🗄️ Initializing PostgreSQL databases..."
-    ./scripts/init-databases.sh
+    @echo "🗄️ Initializing Docker PostgreSQL databases..."
+    docker-compose up postgres-agents postgres-erebus postgres-mcp postgres-orchestration postgres-analytics -d
+    @echo "⏳ Waiting for databases to be ready..."
+    @sleep 10
+    @echo "🔍 Checking database health..."
+    docker-compose ps | grep postgres
 
 # Show Docker database connections
 docker-db-info:
     @echo "🗄️ Docker Database Connection Info..."
-    cat scripts/docker-database-connections.txt
+    @echo "PostgreSQL Agents:     postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
+    @echo "PostgreSQL Erebus:     postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus"
+    @echo "PostgreSQL MCP:        postgresql://postgres:REDACTED_DB_PASS@localhost:5442/mcp"
+    @echo "PostgreSQL Orchestration: postgresql://postgres:REDACTED_DB_PASS@localhost:5443/orchestration"
+    @echo "PostgreSQL Analytics:  postgresql://postgres:REDACTED_DB_PASS@localhost:5444/analytics"
+    @echo "Redis:                 redis://localhost:6379"
+    @echo "Kafka:                 localhost:9092"
+    @echo "IPFS API:              http://localhost:5001"
+    @echo "IPFS Gateway:          http://localhost:8080"
 
 # Show help
 help:

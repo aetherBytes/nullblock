@@ -54,8 +54,23 @@ kill_services() {
 
     echo "💀 Killing all development services..."
 
-    # Stop PostgreSQL (user mode)
-    echo "Stopping PostgreSQL..."
+    # Stop Docker containers first
+    echo "Stopping Docker containers..."
+    docker-compose down 2>/dev/null || true
+
+    # Stop individual containers if they're still running
+    echo "Killing individual Docker containers..."
+    docker stop nullblock-postgres-agents nullblock-postgres-erebus nullblock-postgres-mcp nullblock-postgres-orchestration nullblock-postgres-analytics 2>/dev/null || true
+    docker stop nullblock-redis nullblock-kafka nullblock-zookeeper nullblock-ipfs 2>/dev/null || true
+    docker stop nullblock-mcp nullblock-orchestration nullblock-agents nullblock-hecate nullblock-erebus nullblock-nginx 2>/dev/null || true
+
+    # Remove containers
+    docker rm -f nullblock-postgres-agents nullblock-postgres-erebus nullblock-postgres-mcp nullblock-postgres-orchestration nullblock-postgres-analytics 2>/dev/null || true
+    docker rm -f nullblock-redis nullblock-kafka nullblock-zookeeper nullblock-ipfs 2>/dev/null || true
+    docker rm -f nullblock-mcp nullblock-orchestration nullblock-agents nullblock-hecate nullblock-erebus nullblock-nginx 2>/dev/null || true
+
+    # Stop PostgreSQL (user mode - fallback)
+    echo "Stopping local PostgreSQL (if any)..."
     case $OS in
         "macos")
             brew services stop postgresql@17 2>/dev/null || true
@@ -65,8 +80,8 @@ kill_services() {
             ;;
     esac
 
-    # Stop Redis (user mode)
-    echo "Stopping Redis..."
+    # Stop Redis (user mode - fallback)
+    echo "Stopping local Redis (if any)..."
     case $OS in
         "macos")
             brew services stop redis 2>/dev/null || true
@@ -105,7 +120,15 @@ kill_services() {
     echo "Cleaning up PID files..."
     rm -f logs/*.pid 2>/dev/null || true
 
-    echo "✅ All development services killed"
+    # Optional: Clean up Docker volumes (commented out by default)
+    # echo "Cleaning up Docker volumes..."
+    # docker volume prune -f 2>/dev/null || true
+
+    # Clean up Docker networks
+    echo "Cleaning up Docker networks..."
+    docker network rm nullblock-network 2>/dev/null || true
+
+    echo "✅ All development services killed and cleaned up"
 }
 
 # Main execution

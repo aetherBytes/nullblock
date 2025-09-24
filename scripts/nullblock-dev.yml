@@ -30,15 +30,21 @@ windows:
             done
             echo ""
 
-            # Database Connections
+            # Database Connections (Docker)
             echo "🗄️  Database Connections:"
-            if pg_isready -h localhost -p 5432 > /dev/null 2>&1; then
-              echo "  ✅ PostgreSQL - Connected"
+            if docker ps | grep -q nullblock-postgres-agents && docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; then
+              echo "  ✅ PostgreSQL (Agents) - Connected"
             else
-              echo "  ❌ PostgreSQL - Connection failed"
+              echo "  ❌ PostgreSQL (Agents) - Connection failed"
             fi
 
-            if redis-cli ping > /dev/null 2>&1; then
+            if docker ps | grep -q nullblock-postgres-erebus && docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>&1; then
+              echo "  ✅ PostgreSQL (Erebus) - Connected"
+            else
+              echo "  ❌ PostgreSQL (Erebus) - Connection failed"
+            fi
+
+            if docker ps | grep -q nullblock-redis && docker exec nullblock-redis redis-cli ping > /dev/null 2>&1; then
               echo "  ✅ Redis - Connected"
             else
               echo "  ❌ Redis - Connection failed"
@@ -103,51 +109,42 @@ windows:
           mkdir -p logs
           export EREBUS_HOST=127.0.0.1
           export EREBUS_PORT=3000
-          export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
+          export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus"
           export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
           echo "📝 Logs will be written to logs/erebus.log"
+          echo ""
+          echo "🗄️  Waiting for Erebus database to be ready..."
+          while ! docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>&1; do
+            echo "⏳ Waiting for Erebus PostgreSQL container to be ready..."
+            sleep 2
+          done
+          echo "✅ Erebus database connection ready"
+          echo ""
+          echo "🚀 Starting Erebus Rust server..."
           cargo run 2>&1 | tee logs/erebus.log
         - |
-          echo "🗄️  Starting PostgreSQL for Erebus (Users DB)..."
-          if [[ "$OSTYPE" == "darwin"* ]]; then
-            brew services start postgresql@17
-          elif command -v systemctl &> /dev/null; then
-            systemctl --user start postgresql || echo "PostgreSQL service not available in user mode"
-          else
-            echo "Please start PostgreSQL manually"
-          fi
-          echo "✅ PostgreSQL started for users database"
+          echo "🗄️  Monitoring PostgreSQL for Erebus (Users DB)..."
+          echo "Using Docker PostgreSQL container on port 5440..."
           echo ""
           echo "📊 Database connection monitoring..."
           while true; do
-            if pg_isready -h localhost -p 5432 > /dev/null 2>&1; then
-              echo "$(date '+%H:%M:%S') ✅ PostgreSQL connection healthy"
+            if docker ps | grep -q nullblock-postgres-erebus && docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>&1; then
+              echo "$(date '+%H:%M:%S') ✅ Erebus PostgreSQL (Docker) connection healthy"
             else
-              echo "$(date '+%H:%M:%S') ❌ PostgreSQL connection failed"
+              echo "$(date '+%H:%M:%S') ❌ Erebus PostgreSQL (Docker) connection failed"
             fi
             sleep 30
           done
         - |
-          echo "🔄 Starting Redis for Erebus (Sessions)..."
-          if [[ "$OSTYPE" == "darwin"* ]]; then
-            brew services start redis
-          elif command -v systemctl &> /dev/null; then
-            if command -v pacman &> /dev/null; then
-              systemctl --user start redis || echo "Redis service not available in user mode"
-            else
-              systemctl --user start redis-server || echo "Redis service not available in user mode"
-            fi
-          else
-            echo "Please start Redis manually"
-          fi
-          echo "✅ Redis started for session management"
+          echo "🔄 Monitoring Redis for Erebus (Sessions)..."
+          echo "Using Docker Redis container on port 6379..."
           echo ""
           echo "📊 Redis connection monitoring..."
           while true; do
-            if redis-cli ping > /dev/null 2>&1; then
-              echo "$(date '+%H:%M:%S') ✅ Redis connection healthy"
+            if docker ps | grep -q nullblock-redis && docker exec nullblock-redis redis-cli ping > /dev/null 2>&1; then
+              echo "$(date '+%H:%M:%S') ✅ Redis (Docker) connection healthy"
             else
-              echo "$(date '+%H:%M:%S') ❌ Redis connection failed"
+              echo "$(date '+%H:%M:%S') ❌ Redis (Docker) connection failed"
             fi
             sleep 30
           done
@@ -182,13 +179,28 @@ windows:
           echo "📨 Using Kafka for event streaming"
           echo ""
           echo "🗄️  Setting up database schema..."
+          echo "📋 Waiting for database to be ready..."
+          while ! docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; do
+            echo "⏳ Waiting for PostgreSQL container to be ready..."
+            sleep 2
+          done
+          echo "✅ Database connection ready"
+          echo ""
           echo "📋 Running database migrations..."
-          psql "$DATABASE_URL" -f migrations/001_create_tasks_table.sql 2>/dev/null || echo "Tasks table already exists"
-          psql "$DATABASE_URL" -f migrations/002_create_agents_table.sql 2>/dev/null || echo "Agents table already exists"
-          psql "$DATABASE_URL" -f migrations/003_create_user_references_table.sql 2>/dev/null || echo "User references table already exists"
-          psql "$DATABASE_URL" -f migrations/004_add_foreign_key_constraints.sql 2>/dev/null || echo "Foreign key constraints already exist"
+          psql "$DATABASE_URL" -f svc/nullblock-agents/migrations/001_create_tasks_table.sql 2>/dev/null || echo "Tasks table already exists"
+          psql "$DATABASE_URL" -f svc/nullblock-agents/migrations/002_create_agents_table.sql 2>/dev/null || echo "Agents table already exists"
+          psql "$DATABASE_URL" -f svc/nullblock-agents/migrations/003_create_user_references_table.sql 2>/dev/null || echo "User references table already exists"
+          psql "$DATABASE_URL" -f svc/nullblock-agents/migrations/004_add_foreign_key_constraints.sql 2>/dev/null || echo "Foreign key constraints already exists"
           echo "✅ Database schema ready"
           echo ""
+          echo "📨 Waiting for Kafka to be ready..."
+          while ! docker exec nullblock-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1; do
+            echo "⏳ Waiting for Kafka container to be ready..."
+            sleep 3
+          done
+          echo "✅ Kafka connection ready"
+          echo ""
+          echo "🚀 Starting Rust agents service..."
           cargo run --release 2>&1 | tee logs/hecate-rust.log
         - |
           echo "🗄️  Agents Database Monitoring"
@@ -197,27 +209,27 @@ windows:
           mkdir -p logs
           while true; do
             echo "$(date '+%Y-%m-%d %H:%M:%S') [DB] Agents database status..." | tee -a logs/agents-db.log
-            if psql "postgresql://postgres:REDACTED_DB_PASS@localhost:5432/postgres" -c "SELECT COUNT(*) as task_count FROM tasks;" 2>/dev/null | grep -q "task_count"; then
+            if docker exec nullblock-postgres-agents psql -U postgres -d agents -c "SELECT COUNT(*) as task_count FROM tasks;" 2>/dev/null | grep -q "task_count"; then
               # Basic counts
-              task_count=$(psql "postgresql://postgres:REDACTED_DB_PASS@localhost:5432/postgres" -t -c "SELECT COUNT(*) FROM tasks;" 2>/dev/null | xargs)
-              user_ref_count=$(psql "postgresql://postgres:REDACTED_DB_PASS@localhost:5432/postgres" -t -c "SELECT COUNT(*) FROM user_references;" 2>/dev/null | xargs)
-              agent_count=$(psql "postgresql://postgres:REDACTED_DB_PASS@localhost:5432/postgres" -t -c "SELECT COUNT(*) FROM agents;" 2>/dev/null | xargs)
+              task_count=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks;" 2>/dev/null | xargs)
+              user_ref_count=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM user_references;" 2>/dev/null | xargs)
+              agent_count=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM agents;" 2>/dev/null | xargs)
 
               # Task status breakdown
               echo "📊 Total: Tasks=$task_count | Users=$user_ref_count | Agents=$agent_count" | tee -a logs/agents-db.log
 
               # Task status distribution
-              created_tasks=$(psql "postgresql://postgres:REDACTED_DB_PASS@localhost:5432/postgres" -t -c "SELECT COUNT(*) FROM tasks WHERE status='created';" 2>/dev/null | xargs)
-              running_tasks=$(psql "postgresql://postgres:REDACTED_DB_PASS@localhost:5432/postgres" -t -c "SELECT COUNT(*) FROM tasks WHERE status='running';" 2>/dev/null | xargs)
-              completed_tasks=$(psql "postgresql://postgres:REDACTED_DB_PASS@localhost:5432/postgres" -t -c "SELECT COUNT(*) FROM tasks WHERE status='completed';" 2>/dev/null | xargs)
-              failed_tasks=$(psql "postgresql://postgres:REDACTED_DB_PASS@localhost:5432/postgres" -t -c "SELECT COUNT(*) FROM tasks WHERE status='failed';" 2>/dev/null | xargs)
-              paused_tasks=$(psql "postgresql://postgres:REDACTED_DB_PASS@localhost:5432/postgres" -t -c "SELECT COUNT(*) FROM tasks WHERE status='paused';" 2>/dev/null | xargs)
-              cancelled_tasks=$(psql "postgresql://postgres:REDACTED_DB_PASS@localhost:5432/postgres" -t -c "SELECT COUNT(*) FROM tasks WHERE status='cancelled';" 2>/dev/null | xargs)
+              created_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE status='created';" 2>/dev/null | xargs)
+              running_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE status='running';" 2>/dev/null | xargs)
+              completed_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE status='completed';" 2>/dev/null | xargs)
+              failed_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE status='failed';" 2>/dev/null | xargs)
+              paused_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE status='paused';" 2>/dev/null | xargs)
+              cancelled_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE status='cancelled';" 2>/dev/null | xargs)
 
               echo "📋 Status: Created=$created_tasks | Running=$running_tasks | Completed=$completed_tasks | Failed=$failed_tasks | Paused=$paused_tasks | Cancelled=$cancelled_tasks" | tee -a logs/agents-db.log
 
               # Recent activity
-              recent_tasks=$(psql "postgresql://postgres:REDACTED_DB_PASS@localhost:5432/postgres" -t -c "SELECT COUNT(*) FROM tasks WHERE created_at >= NOW() - INTERVAL '1 hour';" 2>/dev/null | xargs)
+              recent_tasks=$(docker exec nullblock-postgres-agents psql -U postgres -d agents -t -c "SELECT COUNT(*) FROM tasks WHERE created_at >= NOW() - INTERVAL '1 hour';" 2>/dev/null | xargs)
               echo "⏰ Recent activity: $recent_tasks tasks created in last hour" | tee -a logs/agents-db.log
             else
               echo "❌ Database not accessible or tables not created" | tee -a logs/agents-db.log
@@ -225,18 +237,16 @@ windows:
             sleep 45
           done
         - |
-          echo "📨 Starting Kafka for Agents (Event Streaming)..."
-          echo "Starting Kafka and Zookeeper via Docker..."
-          docker-compose up kafka zookeeper -d
-          echo "✅ Kafka cluster starting..."
+          echo "📨 Monitoring Kafka for Agents (Event Streaming)..."
+          echo "Kafka and Zookeeper should be running via Docker..."
           echo ""
           echo "📊 Kafka monitoring and topic management..."
           sleep 10
-          echo "📋 Creating topics..."
-          docker exec -it nullblock-kafka kafka-topics --create --topic task.lifecycle --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
-          docker exec -it nullblock-kafka kafka-topics --create --topic user.created --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
-          docker exec -it nullblock-kafka kafka-topics --create --topic user.updated --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
-          docker exec -it nullblock-kafka kafka-topics --create --topic user.deleted --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
+          echo "📋 Creating topics (if not exists)..."
+          docker exec nullblock-kafka kafka-topics --create --topic task.lifecycle --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
+          docker exec nullblock-kafka kafka-topics --create --topic user.created --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
+          docker exec nullblock-kafka kafka-topics --create --topic user.updated --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
+          docker exec nullblock-kafka kafka-topics --create --topic user.deleted --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
           echo "✅ Topics created"
           echo ""
           echo "📨 Live Kafka Event Monitoring..."
@@ -246,7 +256,7 @@ windows:
           # Start background consumers for different topics with formatting
           (
             echo "📋 Task Lifecycle Events:"
-            docker exec -i nullblock-kafka kafka-console-consumer \
+            docker exec nullblock-kafka kafka-console-consumer \
               --bootstrap-server localhost:9092 \
               --topic task.lifecycle \
               --from-beginning 2>/dev/null | \
@@ -258,7 +268,7 @@ windows:
           (
             echo "👤 User Events:"
             for topic in user.created user.updated user.deleted; do
-              docker exec -i nullblock-kafka kafka-console-consumer \
+              docker exec nullblock-kafka kafka-console-consumer \
                 --bootstrap-server localhost:9092 \
                 --topic "$topic" \
                 --from-beginning 2>/dev/null | \
@@ -472,6 +482,14 @@ on_project_start: |
   mkdir -p svc/erebus/logs
   mkdir -p svc/hecate/logs
   echo "✅ Log directories created"
+  echo ""
+  echo "🗄️ Starting infrastructure services..."
+  echo "Starting PostgreSQL, Redis, Kafka, and Zookeeper containers..."
+  docker-compose up postgres-agents postgres-erebus postgres-mcp postgres-orchestration redis kafka zookeeper -d
+  echo "⏳ Waiting for services to become healthy..."
+  sleep 15
+  echo "🔍 Checking service health..."
+  docker-compose ps | grep -E "(postgres|redis|kafka|zookeeper)" | grep -E "(healthy|Up)"
   echo ""
   echo "🚀 Nullblock Development Environment Ready!"
   echo "================================================"

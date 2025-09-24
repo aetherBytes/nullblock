@@ -65,8 +65,8 @@ pub async fn create_task(
                             task.id.clone(),
                             user_id,
                             task.name.clone(),
-                            format!("{:?}", task.status).to_lowercase(),
-                            format!("{:?}", task.priority).to_lowercase(),
+                            serde_json::to_string(&task.status).unwrap().trim_matches('"').to_string(),
+                            serde_json::to_string(&task.priority).unwrap().trim_matches('"').to_string(),
                         );
 
                         if let Err(e) = kafka_producer.publish_task_event(event).await {
@@ -418,7 +418,7 @@ pub async fn start_task(
                             task.name.clone(),
                             "created".to_string(), // assume previous status
                             "running".to_string(),
-                            format!("{:?}", task.priority).to_lowercase(),
+                            serde_json::to_string(&task.priority).unwrap().trim_matches('"').to_string(),
                             task.progress,
                         );
 
