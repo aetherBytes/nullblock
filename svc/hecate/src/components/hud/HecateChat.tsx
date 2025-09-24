@@ -10,6 +10,10 @@ interface ChatMessage {
   type?: string;
   model_used?: string;
   metadata?: any;
+  taskId?: string;
+  taskName?: string;
+  isTaskResult?: boolean;
+  processingTime?: number;
 }
 
 interface HecateChatProps {
@@ -151,6 +155,20 @@ const HecateChat: React.FC<HecateChatProps> = ({
         </span>
       </div>
       <div className={styles.messageContent}>
+        {message.isTaskResult && (
+          <div className={styles.taskResultHeader}>
+            <div className={styles.taskResultBadge}>
+              <span className={styles.taskIcon}>✅</span>
+              <span className={styles.taskLabel}>Task Result</span>
+              {message.taskName && <span className={styles.taskName}>"{message.taskName}"</span>}
+            </div>
+            {message.processingTime && (
+              <div className={styles.taskMetrics}>
+                <span className={styles.processingTime}>⏱️ {message.processingTime}ms</span>
+              </div>
+            )}
+          </div>
+        )}
         <MarkdownRenderer content={message.message} />
       </div>
     </div>

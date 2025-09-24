@@ -2,11 +2,12 @@
 use axum::{
     extract::{Path, Json, Query},
     response::Json as ResponseJson,
-    http::StatusCode,
+    http::{StatusCode, HeaderMap},
 };
 use std::collections::HashMap;
 use serde_json::Value;
 use tracing::{info, error, warn};
+use uuid::Uuid;
 
 use super::proxy::{AgentProxy, AgentRequest, AgentResponse, AgentStatus, AgentErrorResponse};
 
@@ -15,6 +16,64 @@ fn get_hecate_proxy() -> AgentProxy {
     let hecate_url = std::env::var("HECATE_AGENT_URL")
         .unwrap_or_else(|_| "http://localhost:9003".to_string());
     AgentProxy::new(hecate_url)
+}
+
+/// Extract wallet address from request headers and create user reference if needed
+async fn extract_wallet_and_create_user(headers: &HeaderMap) -> Option<Uuid> {
+    let wallet_address = headers.get("x-wallet-address")
+        .and_then(|h| h.to_str().ok())?;
+    let wallet_chain = headers.get("x-wallet-chain")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("unknown");
+    
+    info!("🔍 Extracted wallet: {} on chain: {}", wallet_address, wallet_chain);
+    
+    // Create user reference entry in the agents database
+    match create_user_reference(wallet_address, wallet_chain).await {
+        Ok(user_id) => {
+            info!("✅ User reference created/updated: {}", user_id);
+            Some(user_id)
+        }
+        Err(e) => {
+            error!("❌ Failed to create user reference: {}", e);
+            None
+        }
+    }
+}
+
+/// Create or update user reference in the agents database
+async fn create_user_reference(wallet_address: &str, chain: &str) -> Result<Uuid, String> {
+    let agents_url = std::env::var("HECATE_AGENT_URL")
+        .unwrap_or_else(|_| "http://localhost:9003".to_string());
+    
+    let client = reqwest::Client::new();
+    let user_data = serde_json::json!({
+        "wallet_address": wallet_address,
+        "chain": chain,
+        "wallet_type": "external"
+    });
+    
+    // Try to create user reference via agents service
+    match client
+        .post(&format!("{}/user-references", agents_url))
+        .json(&user_data)
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if response.status().is_success() {
+                let response_data: Value = response.json().await.map_err(|e| e.to_string())?;
+                if let Some(user_id_str) = response_data["data"]["id"].as_str() {
+                    Uuid::parse_str(user_id_str).map_err(|e| e.to_string())
+                } else {
+                    Err("No user ID in response".to_string())
+                }
+            } else {
+                Err(format!("HTTP error: {}", response.status()))
+            }
+        }
+        Err(e) => Err(e.to_string())
+    }
 }
 
 /// Health check for agent routing subsystem
@@ -363,9 +422,20 @@ pub async fn hecate_search_models(Query(params): Query<HashMap<String, String>>)
 // ================================
 
 /// Create a new task (user-initiated or API/MCP-triggered)
-pub async fn create_task(Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn create_task(
+    headers: HeaderMap,
+    Json(request): Json<Value>
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📋 Task creation request received");
     info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+
+    // Extract wallet information and create user reference if needed
+    let user_id = extract_wallet_and_create_user(&headers).await;
+    if let Some(user_id) = user_id {
+        info!("👤 Task will be associated with user: {}", user_id);
+    } else {
+        info!("👤 No wallet information provided, task will be created without user association");
+    }
 
     let proxy = get_hecate_proxy();
 

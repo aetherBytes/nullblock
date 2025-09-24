@@ -129,4 +129,72 @@ impl UserReferenceRepository {
 
         Ok(user_refs)
     }
+
+    pub async fn create(&self, user_ref: &crate::models::UserReference) -> Result<UserReferenceEntity> {
+        let now = Utc::now();
+
+        let user_entity = sqlx::query_as::<_, UserReferenceEntity>(
+            r#"
+            INSERT INTO user_references (
+                id, wallet_address, chain, user_type, email, metadata,
+                preferences, synced_at, is_active, erebus_created_at, erebus_updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING *
+            "#
+        )
+        .bind(user_ref.id)
+        .bind(&user_ref.wallet_address)
+        .bind(&user_ref.chain)
+        .bind(&user_ref.wallet_type)
+        .bind(None::<String>) // email
+        .bind(serde_json::json!({})) // metadata
+        .bind(serde_json::json!({})) // preferences
+        .bind(now)
+        .bind(true) // is_active
+        .bind(Some(user_ref.created_at))
+        .bind(Some(user_ref.updated_at))
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(user_entity)
+    }
+
+    pub async fn list(
+        &self,
+        wallet_address: Option<&str>,
+        chain: Option<&str>,
+        limit: Option<usize>,
+    ) -> Result<Vec<UserReferenceEntity>> {
+        let limit_val = limit.unwrap_or(100) as i64;
+
+        let query = if let (Some(wallet), Some(chain)) = (wallet_address, chain) {
+            sqlx::query_as::<_, UserReferenceEntity>(
+                "SELECT * FROM user_references WHERE wallet_address = $1 AND chain = $2 AND is_active = true ORDER BY synced_at DESC LIMIT $3"
+            )
+            .bind(wallet)
+            .bind(chain)
+            .bind(limit_val)
+        } else if let Some(wallet) = wallet_address {
+            sqlx::query_as::<_, UserReferenceEntity>(
+                "SELECT * FROM user_references WHERE wallet_address = $1 AND is_active = true ORDER BY synced_at DESC LIMIT $2"
+            )
+            .bind(wallet)
+            .bind(limit_val)
+        } else if let Some(chain) = chain {
+            sqlx::query_as::<_, UserReferenceEntity>(
+                "SELECT * FROM user_references WHERE chain = $1 AND is_active = true ORDER BY synced_at DESC LIMIT $2"
+            )
+            .bind(chain)
+            .bind(limit_val)
+        } else {
+            sqlx::query_as::<_, UserReferenceEntity>(
+                "SELECT * FROM user_references WHERE is_active = true ORDER BY synced_at DESC LIMIT $1"
+            )
+            .bind(limit_val)
+        };
+
+        let user_refs = query.fetch_all(&self.pool).await?;
+        Ok(user_refs)
+    }
 }

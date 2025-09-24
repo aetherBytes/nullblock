@@ -107,17 +107,17 @@ pub async fn available_models(
         get_fallback_models()
     };
 
-    let default_model = "deepseek/deepseek-chat-v3.1:free";
+    let default_model = "x-ai/grok-4-fast:free";
     
     Ok(Json(json!({
         "models": available_models,
         "current_model": agent.current_model,
         "default_model": default_model,
         "recommended_models": {
-            "free": "deepseek/deepseek-chat-v3.1:free",
-            "reasoning": "deepseek/deepseek-r1",
+            "free": "x-ai/grok-4-fast:free",
+            "reasoning": "x-ai/grok-4-fast:free",
             "premium": "anthropic/claude-3.5-sonnet",
-            "fast": "openai/gpt-3.5-turbo"
+            "fast": "x-ai/grok-4-fast:free"
         },
         "total_models": available_models.len()
     })))
@@ -408,8 +408,8 @@ fn get_fallback_models() -> Vec<serde_json::Value> {
     
     vec![
         json!({
-            "id": "deepseek/deepseek-chat-v3.1:free",
-            "name": "deepseek/deepseek-chat-v3.1:free",
+            "id": "x-ai/grok-4-fast:free",
+            "name": "x-ai/grok-4-fast:free",
             "display_name": "DeepSeek Chat v3.1 Free",
             "icon": "🤖",
             "provider": "openrouter",
@@ -428,7 +428,7 @@ fn get_fallback_models() -> Vec<serde_json::Value> {
             "created": created_timestamp,
             "created_at": created_at,
             "updated_at": created_at,
-            "canonical_slug": "deepseek/deepseek-chat-v3.1:free",
+            "canonical_slug": "x-ai/grok-4-fast:free",
             "hugging_face_id": "",
             "supported_parameters": vec!["temperature", "top_p", "max_tokens"],
             "per_request_limits": json!({}),
@@ -658,7 +658,7 @@ pub async fn get_model_info(
     let api_keys = state.config.get_api_keys();
     
     let model_name = params.model_name.unwrap_or_else(|| {
-        agent.current_model.clone().unwrap_or_else(|| "deepseek/deepseek-chat-v3.1:free".to_string())
+        agent.current_model.clone().unwrap_or_else(|| "x-ai/grok-4-fast:free".to_string())
     });
     
     if !agent.is_model_available(&model_name, &api_keys) {

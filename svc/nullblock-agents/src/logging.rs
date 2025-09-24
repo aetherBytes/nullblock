@@ -1,5 +1,4 @@
 use std::fs;
-use std::io;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 pub fn setup_logging() -> anyhow::Result<()> {
@@ -106,9 +105,3 @@ macro_rules! log_request_complete {
         );
     };
 }
-
-pub use log_agent_startup;
-pub use log_agent_shutdown;
-pub use log_model_info;
-pub use log_request_start;
-pub use log_request_complete;
