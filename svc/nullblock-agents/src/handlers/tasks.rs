@@ -10,7 +10,7 @@ use crate::{
     database::repositories::TaskRepository,
     kafka::TaskLifecycleEvent,
     models::{
-        Task, TaskStatus,
+        TaskStatus,
         CreateTaskRequest, UpdateTaskRequest, TaskResponse, TaskListResponse
     },
     server::AppState,

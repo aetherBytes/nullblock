@@ -3,9 +3,7 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::consumer::{StreamConsumer, Consumer};
 use rdkafka::Message;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
+use serde::Serialize;
 use std::time::Duration;
 
 pub mod events;
@@ -98,7 +96,6 @@ impl KafkaConsumer {
     where
         F: FnMut(UserEvent) -> Result<()> + Send,
     {
-        use rdkafka::consumer::StreamConsumer;
         use futures::StreamExt;
 
         let mut stream = self.consumer.stream();
