@@ -750,6 +750,20 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
             }
         }
 
+        // Update task status to completed
+        match task_repo.update_status(task_id, crate::models::TaskStatus::Completed).await {
+            Ok(Some(_)) => {
+                info!("✅ Task {} status updated to completed", task_id);
+            }
+            Ok(None) => {
+                warn!("⚠️ Task {} not found when updating status to completed", task_id);
+            }
+            Err(e) => {
+                error!("❌ Failed to update task status to completed: {}", e);
+                // Don't return error here as the task was processed successfully
+            }
+        }
+
         info!("🎉 Task {} completed in {}ms", task_id, processing_duration);
         Ok(chat_response.content)
     }

@@ -32,16 +32,44 @@ async fn get_user_id_from_wallet(
     chain: Option<&str>,
 ) -> Option<Uuid> {
     if let (Some(wallet), Some(chain)) = (wallet_address, chain) {
+        // Generate deterministic UUID from wallet address
+        let user_id = wallet_to_uuid(wallet, chain);
         let user_repo = UserReferenceRepository::new(database.pool().clone());
-        match user_repo.get_by_wallet(wallet, chain).await {
-            Ok(Some(user_ref)) => Some(user_ref.id),
+
+        // Check if user already exists
+        match user_repo.get_by_id(&user_id).await {
+            Ok(Some(_)) => {
+                // User exists, return the UUID
+                info!("✅ Found existing user for wallet: {} -> {}", wallet, user_id);
+                Some(user_id)
+            }
             Ok(None) => {
-                warn!("⚠️ User not found for wallet: {} on chain: {}", wallet, chain);
-                None
+                // User doesn't exist, create it
+                info!("🆕 Creating new user for wallet: {} -> {}", wallet, user_id);
+                let user_ref = crate::models::UserReference {
+                    id: user_id,
+                    wallet_address: wallet.to_string(),
+                    chain: chain.to_string(),
+                    wallet_type: "web3".to_string(),
+                    created_at: chrono::Utc::now(),
+                    updated_at: chrono::Utc::now(),
+                };
+                match user_repo.create(&user_ref).await {
+                    Ok(_) => {
+                        info!("✅ Successfully created user for wallet: {}", wallet);
+                        Some(user_id)
+                    }
+                    Err(e) => {
+                        error!("❌ Failed to create user for wallet {}: {}", wallet, e);
+                        // Still return the UUID since we know what it should be
+                        Some(user_id)
+                    }
+                }
             }
             Err(e) => {
-                error!("❌ Failed to lookup user by wallet: {}", e);
-                None
+                error!("❌ Failed to lookup user by ID: {}", e);
+                // Return the deterministic UUID anyway - it should work for filtering
+                Some(user_id)
             }
         }
     } else {
@@ -137,6 +165,24 @@ pub async fn create_task(
                         if let Err(e) = kafka_producer.publish_task_event(event).await {
                             warn!("⚠️ Failed to publish task created event: {}", e);
                         }
+                    }
+
+                    // If auto_start is true, automatically process the task
+                    if request.auto_start.unwrap_or(false) {
+                        info!("🚀 Auto-starting task: {}", task.id);
+
+                        // Create a background task to process this task
+                        let state_clone = state.clone();
+                        let task_id = task.id.clone();
+                        tokio::spawn(async move {
+                            // Small delay to ensure task is fully committed to database
+                            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+                            match process_task_internal(state_clone, task_id).await {
+                                Ok(_) => info!("✅ Auto-started task processed successfully"),
+                                Err(e) => error!("❌ Failed to auto-process task: {}", e),
+                            }
+                        });
                     }
 
                     Ok(Json(TaskResponse {
@@ -820,23 +866,19 @@ pub async fn retry_task(
     }
 }
 
-pub async fn process_task(
-    State(state): State<AppState>,
-    Path(task_id): Path<String>,
-) -> Result<Json<TaskResponse>, StatusCode> {
-    info!("🎯 Processing task: {}", task_id);
+// Internal function for processing tasks (used by both public endpoint and auto-start)
+async fn process_task_internal(
+    state: AppState,
+    task_id: String,
+) -> Result<TaskResponse, String> {
+    info!("🎯 Processing task internally: {}", task_id);
 
     // Check if we have database connection
     let database = match &state.database {
         Some(db) => db,
         None => {
             error!("❌ Database connection not available");
-            return Ok(Json(TaskResponse {
-                success: false,
-                data: None,
-                error: Some("Database connection not available".to_string()),
-                timestamp: Utc::now(),
-            }));
+            return Err("Database connection not available".to_string());
         }
     };
 
@@ -848,38 +890,22 @@ pub async fn process_task(
         Ok(Some(task)) => task,
         Ok(None) => {
             warn!("⚠️ Task not found: {}", task_id);
-            return Ok(Json(TaskResponse {
-                success: false,
-                data: None,
-                error: Some(format!("Task not found: {}", task_id)),
-                timestamp: Utc::now(),
-            }));
+            return Err(format!("Task not found: {}", task_id));
         }
         Err(e) => {
             error!("❌ Failed to fetch task: {}", e);
-            return Ok(Json(TaskResponse {
-                success: false,
-                data: None,
-                error: Some("Failed to fetch task".to_string()),
-                timestamp: Utc::now(),
-            }));
+            return Err("Failed to fetch task".to_string());
         }
     };
 
     // Check if task is in a processable state
     if task_entity.status != "running" {
         warn!("⚠️ Task {} is not in running state: {}", task_id, task_entity.status);
-        return Ok(Json(TaskResponse {
-            success: false,
-            data: None,
-            error: Some(format!("Task must be in 'running' state to process. Current state: {}", task_entity.status)),
-            timestamp: Utc::now(),
-        }));
+        return Err(format!("Task must be in 'running' state to process. Current state: {}", task_entity.status));
     }
 
     // Execute the task using Hecate
     let mut hecate_agent = state.hecate_agent.write().await;
-
     let task_description = task_entity.description.as_deref().unwrap_or(&task_entity.name);
 
     match hecate_agent.execute_task(&task_id, task_description, &task_repo, &agent_repo).await {
@@ -909,63 +935,135 @@ pub async fn process_task(
                                 }
                             }
 
-                            Ok(Json(TaskResponse {
+                            Ok(TaskResponse {
                                 success: true,
                                 data: Some(task_model),
                                 error: None,
                                 timestamp: Utc::now(),
-                            }))
+                            })
                         }
                         Err(e) => {
                             error!("❌ Failed to convert processed task entity: {}", e);
-                            Ok(Json(TaskResponse {
-                                success: false,
-                                data: None,
-                                error: Some("Failed to retrieve processed task".to_string()),
-                                timestamp: Utc::now(),
-                            }))
+                            Err("Failed to retrieve processed task".to_string())
                         }
                     }
                 }
                 Ok(None) => {
                     error!("❌ Task disappeared after processing: {}", task_id);
-                    Ok(Json(TaskResponse {
-                        success: false,
-                        data: None,
-                        error: Some("Task not found after processing".to_string()),
-                        timestamp: Utc::now(),
-                    }))
+                    Err("Failed to retrieve processed task".to_string())
                 }
                 Err(e) => {
                     error!("❌ Failed to fetch processed task: {}", e);
-                    Ok(Json(TaskResponse {
-                        success: false,
-                        data: None,
-                        error: Some("Failed to retrieve processed task".to_string()),
-                        timestamp: Utc::now(),
-                    }))
+                    Err("Failed to retrieve processed task".to_string())
                 }
             }
         }
         Err(e) => {
             error!("❌ Failed to process task {}: {}", task_id, e);
+            Err(format!("Failed to process task: {}", e))
+        }
+    }
+}
 
-            // Check if it was already actioned
-            if e.to_string().contains("already actioned") {
-                return Ok(Json(TaskResponse {
-                    success: false,
-                    data: None,
-                    error: Some("Task has already been processed".to_string()),
-                    timestamp: Utc::now(),
-                }));
+pub async fn process_task(
+    State(state): State<AppState>,
+    Path(task_id): Path<String>,
+) -> Result<Json<TaskResponse>, StatusCode> {
+    match process_task_internal(state, task_id).await {
+        Ok(response) => Ok(Json(response)),
+        Err(error) => Ok(Json(TaskResponse {
+            success: false,
+            data: None,
+            error: Some(error),
+            timestamp: Utc::now(),
+        }))
+    }
+}
+
+// Utility function to convert wallet address to deterministic UUID
+fn wallet_to_uuid(wallet_address: &str, chain: &str) -> Uuid {
+    use sha2::{Sha256, Digest};
+
+    // Create input string combining wallet and chain for uniqueness
+    let input = format!("{}:{}", wallet_address.to_lowercase(), chain.to_lowercase());
+
+    // Generate SHA-256 hash
+    let mut hasher = Sha256::new();
+    hasher.update(input.as_bytes());
+    let hash = hasher.finalize();
+
+    // Convert first 16 bytes of hash to UUID
+    // This ensures deterministic UUIDs for the same wallet+chain combination
+    let mut uuid_bytes = [0u8; 16];
+    uuid_bytes.copy_from_slice(&hash[0..16]);
+
+    // Set version (4) and variant bits to create a valid UUID v4
+    uuid_bytes[6] = (uuid_bytes[6] & 0x0F) | 0x40; // Version 4
+    uuid_bytes[8] = (uuid_bytes[8] & 0x3F) | 0x80; // Variant 10
+
+    Uuid::from_bytes(uuid_bytes)
+}
+
+// Migration function to update existing users to wallet-derived UUIDs
+async fn migrate_existing_users_to_wallet_uuids(
+    database: &crate::database::Database,
+) -> Result<(), String> {
+    info!("🔄 Starting migration of existing users to wallet-derived UUIDs");
+
+    let user_repo = UserReferenceRepository::new(database.pool().clone());
+
+    // Get all existing users
+    match user_repo.list_active(None).await {
+        Ok(existing_users) => {
+            let mut migrated_count = 0;
+            let mut failed_count = 0;
+
+            for user_entity in existing_users {
+                if let (Some(wallet_address), Some(chain)) = (&user_entity.wallet_address, &user_entity.chain) {
+                    // Calculate what the UUID should be
+                    let correct_uuid = wallet_to_uuid(wallet_address, chain);
+
+                    if user_entity.id != correct_uuid {
+                        info!("🔄 Migrating user {} -> {}", user_entity.id, correct_uuid);
+
+                        // Create new user with correct UUID
+                        let new_user_ref = crate::models::UserReference {
+                            id: correct_uuid,
+                            wallet_address: wallet_address.clone(),
+                            chain: chain.clone(),
+                            wallet_type: "web3".to_string(),
+                            created_at: chrono::Utc::now(),
+                            updated_at: chrono::Utc::now(),
+                        };
+
+                        match user_repo.create(&new_user_ref).await {
+                            Ok(_) => {
+                                info!("✅ Created new user with correct UUID: {}", correct_uuid);
+                                migrated_count += 1;
+
+                                // TODO: Update any existing tasks to reference the new user_id
+                                // This would require a task repository update as well
+                            }
+                            Err(e) => {
+                                error!("❌ Failed to create new user {}: {}", correct_uuid, e);
+                                failed_count += 1;
+                            }
+                        }
+                    } else {
+                        info!("✅ User {} already has correct UUID", user_entity.id);
+                    }
+                } else {
+                    warn!("⚠️ User {} missing wallet_address or chain", user_entity.id);
+                    failed_count += 1;
+                }
             }
 
-            Ok(Json(TaskResponse {
-                success: false,
-                data: None,
-                error: Some(format!("Task processing failed: {}", e)),
-                timestamp: Utc::now(),
-            }))
+            info!("🎉 Migration completed: {} migrated, {} failed", migrated_count, failed_count);
+            Ok(())
+        }
+        Err(e) => {
+            error!("❌ Failed to list existing users: {}", e);
+            Err(format!("Failed to list users: {}", e))
         }
     }
 }

@@ -94,6 +94,39 @@ export const useTaskManagement = (
     return true;
   }) : [];
 
+  // Data loading functions - defined early to avoid hoisting issues
+  const loadTasks = useCallback(async () => {
+    const response = await taskService.getTasks(filter);
+    if (response.success && response.data) {
+      setTasks(response.data);
+    } else {
+      setError(response.error || 'Failed to load tasks');
+    }
+  }, [filter]);
+
+  // Auto-refresh for running tasks
+  useEffect(() => {
+    const runningTasks = Array.isArray(tasks) ? tasks.filter(task => task.status === 'running') : [];
+
+    if (runningTasks.length > 0 && isConnectedRef.current) {
+      console.log(`🔄 Setting up polling for ${runningTasks.length} running tasks`);
+
+      const pollInterval = setInterval(async () => {
+        try {
+          console.log('🔄 Polling for task updates...');
+          await loadTasks();
+        } catch (e) {
+          console.warn('⚠️ Failed to poll for task updates:', e);
+        }
+      }, 5000); // Poll every 5 seconds when there are running tasks
+
+      return () => {
+        console.log('⏹️ Stopping task polling');
+        clearInterval(pollInterval);
+      };
+    }
+  }, [tasks, loadTasks]);
+
   // Initialize connection
   useEffect(() => {
     const initializeConnection = async () => {
@@ -132,17 +165,6 @@ export const useTaskManagement = (
     }
   }, [walletPublicKey]);
 
-  // Data loading functions
-  const loadTasks = useCallback(async () => {
-    const response = await taskService.getTasks(filter);
-    if (response.success && response.data) {
-      setTasks(response.data);
-    } else {
-      setError(response.error || 'Failed to load tasks');
-    }
-  }, [filter]);
-
-
   // Task operations
   const createTask = useCallback(async (request: TaskCreationRequest): Promise<boolean> => {
     console.log('📋 Creating task:', request);
@@ -159,6 +181,20 @@ export const useTaskManagement = (
       if (response.success && response.data) {
         setTasks(prev => [response.data!, ...ensureArray(prev)]);
         console.log('✅ Task created via backend:', response.data);
+
+        // If auto_start is true, refresh tasks after a brief delay to show processing results
+        if (request.auto_start) {
+          console.log('🔄 Auto-start task created, scheduling refresh for processing updates...');
+          setTimeout(async () => {
+            try {
+              console.log('🔄 Refreshing tasks to show auto-start processing results...');
+              await loadTasks();
+            } catch (e) {
+              console.warn('⚠️ Failed to refresh tasks after auto-start:', e);
+            }
+          }, 2000); // 2 second delay to allow processing
+        }
+
         return true;
       } else {
         setError(response.error || 'Failed to create task');
