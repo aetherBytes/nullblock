@@ -2,7 +2,7 @@ use crate::database::Database;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use tracing::{info, warn, error};
+use tracing::{info, error};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserReference {

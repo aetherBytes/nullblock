@@ -14,7 +14,7 @@ use crate::resources::crossroads::models::CreateListingRequest;
 use crate::resources::crossroads::services::NullblockServiceIntegrator;
 use crate::resources::ExternalService;
 
-pub fn create_crossroads_routes(external_service: &Arc<ExternalService>) -> Router<crate::AppState> {
+pub fn create_crossroads_routes(_external_service: &Arc<ExternalService>) -> Router<crate::AppState> {
     Router::new()
         // Core Marketplace API - ONLY marketplace functionality
         .route("/api/marketplace/listings", get(get_listings))
