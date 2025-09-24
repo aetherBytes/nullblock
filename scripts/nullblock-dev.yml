@@ -34,20 +34,26 @@ windows:
             echo "🗄️  Database Connections:"
             if docker ps | grep -q nullblock-postgres-agents && docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; then
               echo "  ✅ PostgreSQL (Agents) - Connected"
+              echo "     🔑 Test Credentials: postgres:postgres_secure_pass@localhost:5441/agents"
             else
               echo "  ❌ PostgreSQL (Agents) - Connection failed"
+              echo "     🔑 Test Credentials: postgres:postgres_secure_pass@localhost:5441/agents"
             fi
 
             if docker ps | grep -q nullblock-postgres-erebus && docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>&1; then
               echo "  ✅ PostgreSQL (Erebus) - Connected"
+              echo "     🔑 Test Credentials: postgres:postgres_secure_pass@localhost:5440/erebus"
             else
               echo "  ❌ PostgreSQL (Erebus) - Connection failed"
+              echo "     🔑 Test Credentials: postgres:postgres_secure_pass@localhost:5440/erebus"
             fi
 
             if docker ps | grep -q nullblock-redis && docker exec nullblock-redis redis-cli ping > /dev/null 2>&1; then
               echo "  ✅ Redis - Connected"
+              echo "     🔑 Test Credentials: localhost:6379 (no auth required)"
             else
               echo "  ❌ Redis - Connection failed"
+              echo "     🔑 Test Credentials: localhost:6379 (no auth required)"
             fi
             echo ""
 
@@ -267,42 +273,77 @@ windows:
           docker exec nullblock-kafka kafka-topics --create --topic user.deleted --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 2>/dev/null || echo "Topic already exists"
           echo "✅ Topics created"
           echo ""
-          echo "📨 Live Kafka Event Monitoring..."
+          echo "📨 Live Kafka Event Monitoring with Pretty JSON..."
           echo "🔄 Task Lifecycle Events | 👤 User Events | 📊 Event Counters"
           echo "=================================================="
 
-          # Start background consumers for different topics with formatting
+          # Function to pretty print JSON with fallback
+          pretty_json() {
+            local line="$1"
+            local topic="$2"
+            local timestamp=$(date '+%H:%M:%S')
+            
+            # Try to parse as JSON and pretty print
+            if echo "$line" | jq . >/dev/null 2>&1; then
+              echo "$timestamp [$topic] 📄 Pretty JSON:"
+              echo "$line" | jq . | sed 's/^/    /'
+              echo ""
+            else
+              # Fallback to raw output if not valid JSON
+              echo "$timestamp [$topic] 📄 Raw: $line"
+            fi
+          }
+
+          # Start background consumers for different topics with JSON formatting
           (
-            echo "📋 Task Lifecycle Events:"
+            echo "📋 Task Lifecycle Events (Pretty JSON):"
             docker exec nullblock-kafka kafka-console-consumer \
               --bootstrap-server localhost:9092 \
               --topic task.lifecycle \
               --from-beginning 2>/dev/null | \
             while IFS= read -r line; do
-              echo "$(date '+%H:%M:%S') [TASK] $line"
+              pretty_json "$line" "TASK"
             done
           ) &
 
           (
-            echo "👤 User Events:"
+            echo "👤 User Events (Pretty JSON):"
             for topic in user.created user.updated user.deleted; do
               docker exec nullblock-kafka kafka-console-consumer \
                 --bootstrap-server localhost:9092 \
                 --topic "$topic" \
                 --from-beginning 2>/dev/null | \
               while IFS= read -r line; do
-                echo "$(date '+%H:%M:%S') [USER] $topic: $line"
+                pretty_json "$line" "USER-$topic"
               done &
             done
             wait
           ) &
 
-          # Event counter
+          # Event counter with enhanced metrics
           while true; do
+            echo "$(date '+%H:%M:%S') 📊 Kafka Event Metrics:"
+            
+            # Task events count
             task_events=$(docker exec nullblock-kafka kafka-run-class kafka.tools.ConsumerOffsetChecker \
               --zookeeper localhost:2181 \
               --topic task.lifecycle 2>/dev/null | awk '{sum+=$4} END {print sum+0}' 2>/dev/null || echo "0")
-            echo "$(date '+%H:%M:%S') 📊 Total task events: $task_events"
+            echo "  📋 Task lifecycle events: $task_events"
+            
+            # User events count
+            user_created=$(docker exec nullblock-kafka kafka-run-class kafka.tools.ConsumerOffsetChecker \
+              --zookeeper localhost:2181 \
+              --topic user.created 2>/dev/null | awk '{sum+=$4} END {print sum+0}' 2>/dev/null || echo "0")
+            user_updated=$(docker exec nullblock-kafka kafka-run-class kafka.tools.ConsumerOffsetChecker \
+              --zookeeper localhost:2181 \
+              --topic user.updated 2>/dev/null | awk '{sum+=$4} END {print sum+0}' 2>/dev/null || echo "0")
+            user_deleted=$(docker exec nullblock-kafka kafka-run-class kafka.tools.ConsumerOffsetChecker \
+              --zookeeper localhost:2181 \
+              --topic user.deleted 2>/dev/null | awk '{sum+=$4} END {print sum+0}' 2>/dev/null || echo "0")
+            
+            echo "  👤 User events: created=$user_created, updated=$user_updated, deleted=$user_deleted"
+            echo "  📊 Total events: $((task_events + user_created + user_updated + user_deleted))"
+            echo ""
             sleep 60
           done
         - |

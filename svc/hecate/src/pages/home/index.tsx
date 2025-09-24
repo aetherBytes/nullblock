@@ -352,6 +352,30 @@ const Home: React.FC = () => {
         updateAuthTime();
 
         console.log('Phantom wallet authenticated successfully via backend!');
+        console.log('🎯 REACHED USER REGISTRATION SECTION');
+        
+        // Register user with Erebus after successful wallet connection
+        try {
+          console.log('👤 Registering user with Erebus...');
+          console.log('📝 Wallet address:', walletAddress);
+          console.log('📝 Wallet chain: solana');
+          console.log('📝 About to import task service...');
+          const { taskService } = await import('../../common/services/task-service');
+          console.log('📝 Task service imported successfully');
+          taskService.setWalletContext(walletAddress, 'solana');
+          console.log('🔗 Task service wallet context set');
+          console.log('📝 About to call registerUser...');
+          const registrationResult = await taskService.registerUser(walletAddress, 'solana');
+          console.log('📤 Registration result:', registrationResult);
+          if (registrationResult.success) {
+            console.log('✅ User registered successfully:', registrationResult.data);
+          } else {
+            console.warn('⚠️ User registration failed:', registrationResult.error);
+          }
+        } catch (err) {
+          console.warn('⚠️ User registration error:', err);
+          console.error('❌ Full error details:', err);
+        }
       } else {
         throw new Error(`Authentication failed: ${verifyResponse.message}`);
       }
@@ -548,6 +572,30 @@ const Home: React.FC = () => {
         updateAuthTime();
 
         console.log('MetaMask wallet authenticated successfully via backend!');
+        console.log('🎯 REACHED USER REGISTRATION SECTION (MetaMask)');
+        
+        // Register user with Erebus after successful wallet connection
+        try {
+          console.log('👤 Registering user with Erebus...');
+          console.log('📝 Wallet address:', walletAddress);
+          console.log('📝 Wallet chain: ethereum');
+          console.log('📝 About to import task service...');
+          const { taskService } = await import('../../common/services/task-service');
+          console.log('📝 Task service imported successfully');
+          taskService.setWalletContext(walletAddress, 'ethereum');
+          console.log('🔗 Task service wallet context set');
+          console.log('📝 About to call registerUser...');
+          const registrationResult = await taskService.registerUser(walletAddress, 'ethereum');
+          console.log('📤 Registration result:', registrationResult);
+          if (registrationResult.success) {
+            console.log('✅ User registered successfully:', registrationResult.data);
+          } else {
+            console.warn('⚠️ User registration failed:', registrationResult.error);
+          }
+        } catch (err) {
+          console.warn('⚠️ User registration error:', err);
+          console.error('❌ Full error details:', err);
+        }
       } else {
         throw new Error(`Authentication failed: ${verifyResponse.message}`);
       }

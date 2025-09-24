@@ -182,17 +182,17 @@ export const useTaskManagement = (
         setTasks(prev => [response.data!, ...ensureArray(prev)]);
         console.log('✅ Task created via backend:', response.data);
 
-        // If auto_start is true, refresh tasks after a brief delay to show processing results
+        // If auto_start is true, automatically process the task
         if (request.auto_start) {
-          console.log('🔄 Auto-start task created, scheduling refresh for processing updates...');
+          console.log('🔄 Auto-start task created, automatically processing...');
           setTimeout(async () => {
             try {
-              console.log('🔄 Refreshing tasks to show auto-start processing results...');
-              await loadTasks();
+              console.log('⚡ Auto-processing task:', response.data!.id);
+              await processTask(response.data!.id);
             } catch (e) {
-              console.warn('⚠️ Failed to refresh tasks after auto-start:', e);
+              console.warn('⚠️ Failed to auto-process task:', e);
             }
-          }, 2000); // 2 second delay to allow processing
+          }, 1000); // 1 second delay to allow task creation to complete
         }
 
         return true;
@@ -376,6 +376,30 @@ export const useTaskManagement = (
     }
   }, [activeTask?.id]);
 
+  const processTask = useCallback(async (id: string): Promise<boolean> => {
+    console.log('⚡ Processing task:', id);
+    try {
+      const response = await taskService.processTask(id);
+      if (response.success && response.data) {
+        setTasks(prev => ensureArray(prev).map(t => t.id === id ? response.data! : t));
+        if (activeTask?.id === id) {
+          setActiveTask(response.data);
+        }
+        console.log('✅ Task processed successfully');
+        // Refresh tasks to get updated results
+        setTimeout(() => loadTasks(), 1000);
+        return true;
+      } else {
+        setError(response.error || 'Failed to process task');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Task processing error:', error);
+      setError((error as Error).message);
+      return false;
+    }
+  }, [activeTask?.id, loadTasks]);
+
 
   // Analytics & queries
   const getTasksByStatus = useCallback((status: TaskStatus): Task[] => {
@@ -439,6 +463,7 @@ export const useTaskManagement = (
     resumeTask,
     cancelTask,
     retryTask,
+    processTask,
 
     // Task Selection
     selectTask,

@@ -536,6 +536,7 @@ curl http://localhost:3000/api/discovery/agents
 
 - **GOLDEN RULE**: ALL frontend requests MUST route through Erebus (port 3000) - NO EXCEPTIONS
 - **GOLDEN RULE**: Keep the top portion of CLAUDE.md static in structure and up to date with code changes
+- **GOLDEN RULE**: NEVER use test database credentials in production - test credentials are for development only
 - **main.rs**: Only subsystem entry points and core routes
 - **Subsystem Organization**: Each feature gets own directory (wallets/, mcp/, agents/)
 - **Wallet Subsystem**: All wallets implement `WalletProvider` trait

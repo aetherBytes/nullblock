@@ -61,12 +61,21 @@ class TaskService {
         headers['x-wallet-chain'] = this.walletChain;
       }
 
-      const response = await fetch(`${this.erebusUrl}/api/agents/tasks${endpoint}`, {
+      const url = `${this.erebusUrl}/api/agents/tasks${endpoint}`;
+      console.log('🌐 Making request to:', url);
+      console.log('📋 Headers:', headers);
+      console.log('📋 Options:', options);
+
+      const response = await fetch(url, {
         headers,
         ...options,
       });
 
+      console.log('📤 Response status:', response.status);
+      console.log('📤 Response headers:', Object.fromEntries(response.headers.entries()));
+
       const data = await response.json();
+      console.log('📤 Response data:', data);
 
       return {
         success: response.ok,
@@ -143,6 +152,53 @@ class TaskService {
     return this.makeRequest<Task>(`/${id}/retry`, {
       method: 'POST',
     });
+  }
+
+  async processTask(id: string): Promise<TaskServiceResponse<Task>> {
+    return this.makeRequest<Task>(`/${id}/process`, {
+      method: 'POST',
+    });
+  }
+
+  // User management
+  async registerUser(walletAddress: string, chain: string = 'solana'): Promise<TaskServiceResponse<any>> {
+    console.log('🔗 TaskService.registerUser called with:', { walletAddress, chain });
+    console.log('🔗 Current wallet context:', { walletAddress: this.walletAddress, chain: this.walletChain });
+    console.log('🔗 Erebus URL:', this.erebusUrl);
+    
+    const requestBody = {
+      wallet_address: walletAddress,
+      chain: chain
+    };
+    
+    console.log('📤 Sending registration request to:', `${this.erebusUrl}/api/agents/users/register`);
+    console.log('📤 Request body:', requestBody);
+    
+    // Use direct Erebus endpoint for user registration (not through tasks)
+    const url = `${this.erebusUrl}/api/agents/users/register`;
+    console.log('🌐 Making direct request to:', url);
+    console.log('📋 Request body:', requestBody);
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-wallet-address': walletAddress,
+        'x-wallet-chain': chain,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    console.log('📤 Response status:', response.status);
+    const data = await response.json();
+    console.log('📤 Response data:', data);
+
+    return {
+      success: response.ok,
+      data: response.ok ? data : undefined,
+      error: response.ok ? undefined : data.message || 'Request failed',
+      timestamp: new Date(),
+    };
   }
 
 

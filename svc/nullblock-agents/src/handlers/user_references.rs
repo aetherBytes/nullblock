@@ -21,6 +21,16 @@ pub struct CreateUserReferenceRequest {
 }
 
 #[derive(Debug, serde::Deserialize)]
+pub struct SyncUserReferenceRequest {
+    pub id: String,
+    pub wallet_address: String,
+    pub chain: String,
+    pub user_type: String,
+    pub erebus_created_at: String,
+    pub erebus_updated_at: String,
+}
+
+#[derive(Debug, serde::Deserialize)]
 pub struct UserReferenceQuery {
     wallet_address: Option<String>,
     chain: Option<String>,
@@ -235,6 +245,101 @@ pub async fn list_user_references(
                 success: false,
                 data: None,
                 total: 0,
+                error: Some(format!("Database error: {}", e)),
+                timestamp: Utc::now(),
+            }))
+        }
+    }
+}
+
+/// Sync user reference from Erebus
+pub async fn sync_user_reference(
+    State(state): State<AppState>,
+    Json(request): Json<SyncUserReferenceRequest>,
+) -> Result<Json<UserReferenceResponse>, StatusCode> {
+    info!("🔄 Syncing user reference from Erebus: {} on chain: {}", request.wallet_address, request.chain);
+
+    // Check if we have database connection
+    let database = match &state.database {
+        Some(db) => db,
+        None => {
+            error!("❌ Database connection not available");
+            return Ok(Json(UserReferenceResponse {
+                success: false,
+                data: None,
+                error: Some("Database connection not available".to_string()),
+                timestamp: Utc::now(),
+            }));
+        }
+    };
+
+    // Parse user ID
+    let user_id = match Uuid::parse_str(&request.id) {
+        Ok(id) => id,
+        Err(e) => {
+            error!("❌ Invalid user ID format: {}", e);
+            return Ok(Json(UserReferenceResponse {
+                success: false,
+                data: None,
+                error: Some(format!("Invalid user ID format: {}", e)),
+                timestamp: Utc::now(),
+            }));
+        }
+    };
+
+    // Parse timestamps
+    let erebus_created_at = match chrono::DateTime::parse_from_rfc3339(&request.erebus_created_at) {
+        Ok(dt) => Some(dt.with_timezone(&Utc)),
+        Err(e) => {
+            warn!("⚠️ Failed to parse erebus_created_at: {}", e);
+            None
+        }
+    };
+
+    let erebus_updated_at = match chrono::DateTime::parse_from_rfc3339(&request.erebus_updated_at) {
+        Ok(dt) => Some(dt.with_timezone(&Utc)),
+        Err(e) => {
+            warn!("⚠️ Failed to parse erebus_updated_at: {}", e);
+            None
+        }
+    };
+
+    // Create user reference repository
+    let user_repo = UserReferenceRepository::new(database.pool().clone());
+
+    // Sync user from Erebus
+    match user_repo.upsert_from_kafka_event(
+        user_id,
+        Some(&request.wallet_address),
+        Some(&request.chain),
+        &request.user_type,
+        None, // email
+        &serde_json::json!({}), // metadata
+        erebus_created_at,
+        erebus_updated_at,
+    ).await {
+        Ok(user_ref) => {
+            info!("✅ User reference synced successfully: {}", user_ref.id);
+            let user = UserReference {
+                id: user_ref.id,
+                wallet_address: user_ref.wallet_address.unwrap_or_default(),
+                chain: user_ref.chain.unwrap_or_default(),
+                wallet_type: user_ref.user_type,
+                created_at: user_ref.erebus_created_at.unwrap_or(user_ref.synced_at),
+                updated_at: user_ref.erebus_updated_at.unwrap_or(user_ref.synced_at),
+            };
+            Ok(Json(UserReferenceResponse {
+                success: true,
+                data: Some(user),
+                error: None,
+                timestamp: Utc::now(),
+            }))
+        }
+        Err(e) => {
+            error!("❌ Failed to sync user reference: {}", e);
+            Ok(Json(UserReferenceResponse {
+                success: false,
+                data: None,
                 error: Some(format!("Database error: {}", e)),
                 timestamp: Utc::now(),
             }))
