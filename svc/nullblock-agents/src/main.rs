@@ -7,7 +7,6 @@ use axum::{
 };
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::{info, warn};
-use tracing_subscriber;
 
 mod agents;
 mod config;
