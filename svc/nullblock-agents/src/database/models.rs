@@ -40,6 +40,12 @@ pub struct TaskEntity {
     pub current_retries: i32,
     pub user_approval_required: bool,
     pub user_notifications: bool,
+
+    // Action tracking fields
+    pub actioned_at: Option<DateTime<Utc>>,
+    pub action_result: Option<String>,
+    pub action_metadata: serde_json::Value,
+    pub action_duration: Option<i64>,
 }
 
 impl TaskEntity {
@@ -77,6 +83,12 @@ impl TaskEntity {
             required_capabilities: serde_json::from_value(self.required_capabilities)?,
             user_approval_required: self.user_approval_required,
             user_notifications: self.user_notifications,
+
+            // Action tracking fields
+            actioned_at: self.actioned_at,
+            action_result: self.action_result,
+            action_metadata: serde_json::from_value(self.action_metadata)?,
+            action_duration: self.action_duration.map(|d| d as u64),
         })
     }
 
@@ -115,6 +127,12 @@ impl TaskEntity {
             current_retries: task.current_retries as i32,
             user_approval_required: task.user_approval_required,
             user_notifications: task.user_notifications,
+
+            // Action tracking fields
+            actioned_at: task.actioned_at,
+            action_result: task.action_result.clone(),
+            action_metadata: serde_json::to_value(&task.action_metadata)?,
+            action_duration: task.action_duration.map(|d| d as i64),
         })
     }
 }
@@ -134,6 +152,13 @@ pub struct AgentEntity {
     pub health_status: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+
+    // Activity tracking fields
+    pub last_task_processed: Option<Uuid>,
+    pub tasks_processed_count: i32,
+    pub last_action_at: Option<DateTime<Utc>>,
+    pub average_processing_time: i64,
+    pub total_processing_time: i64,
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]

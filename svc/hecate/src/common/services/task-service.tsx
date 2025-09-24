@@ -2,13 +2,7 @@ import {
   Task,
   TaskCreationRequest,
   TaskUpdateRequest,
-  TaskFilter,
-  TaskStats,
-  TaskQueue,
-  TaskTemplate,
-  TaskNotification,
-  TaskEvent,
-  MotivationState
+  TaskFilter
 } from '../../types/tasks';
 
 export interface TaskServiceResponse<T = any> {
@@ -21,9 +15,16 @@ export interface TaskServiceResponse<T = any> {
 class TaskService {
   private erebusUrl: string;
   private isConnected: boolean = false;
+  private walletAddress: string | null = null;
+  private walletChain: string | null = null;
 
   constructor(erebusUrl: string = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000') {
     this.erebusUrl = erebusUrl;
+  }
+
+  setWalletContext(walletAddress: string | null, chain: string = 'solana') {
+    this.walletAddress = walletAddress;
+    this.walletChain = chain;
   }
 
   async connect(): Promise<boolean> {
@@ -47,11 +48,21 @@ class TaskService {
         await this.connect();
       }
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      };
+
+      // Add wallet context headers if available
+      if (this.walletAddress) {
+        headers['x-wallet-address'] = this.walletAddress;
+      }
+      if (this.walletChain) {
+        headers['x-wallet-chain'] = this.walletChain;
+      }
+
       const response = await fetch(`${this.erebusUrl}/api/agents/tasks${endpoint}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
+        headers,
         ...options,
       });
 
@@ -75,22 +86,9 @@ class TaskService {
 
   // Task CRUD Operations
   async createTask(request: TaskCreationRequest): Promise<TaskServiceResponse<Task>> {
-    // Transform frontend request to match backend expectations
-    const backendRequest = {
-      name: request.name,
-      description: request.description,
-      task_type: request.type,  // Frontend uses 'type', backend expects 'task_type'
-      category: request.category.replace(/-/g, '_'),  // Convert kebab-case to snake_case
-      priority: request.priority,
-      parameters: request.parameters,
-      dependencies: request.dependencies,
-      auto_start: request.autoStart,  // Frontend uses camelCase, backend expects snake_case
-      user_approval_required: request.userApprovalRequired
-    };
-
     return this.makeRequest<Task>('', {
       method: 'POST',
-      body: JSON.stringify(backendRequest),
+      body: JSON.stringify(request),
     });
   }
 
@@ -147,131 +145,7 @@ class TaskService {
     });
   }
 
-  // Task Queue Operations
-  async getQueues(): Promise<TaskServiceResponse<TaskQueue[]>> {
-    return this.makeRequest<TaskQueue[]>('/queues');
-  }
 
-  async getQueueTasks(queueId: string): Promise<TaskServiceResponse<Task[]>> {
-    return this.makeRequest<Task[]>(`/queues/${queueId}/tasks`);
-  }
-
-  async moveTaskToQueue(taskId: string, queueId: string): Promise<TaskServiceResponse<Task>> {
-    return this.makeRequest<Task>(`/${taskId}/move`, {
-      method: 'POST',
-      body: JSON.stringify({ queueId }),
-    });
-  }
-
-  // Task Templates
-  async getTemplates(): Promise<TaskServiceResponse<TaskTemplate[]>> {
-    return this.makeRequest<TaskTemplate[]>('/templates');
-  }
-
-  async createFromTemplate(
-    templateId: string,
-    parameters: Record<string, any>
-  ): Promise<TaskServiceResponse<Task>> {
-    return this.makeRequest<Task>('/from-template', {
-      method: 'POST',
-      body: JSON.stringify({ templateId, parameters }),
-    });
-  }
-
-  // Analytics & Stats
-  async getStats(filter?: TaskFilter): Promise<TaskServiceResponse<TaskStats>> {
-    const queryParams = filter ? `?${new URLSearchParams(this.filterToParams(filter))}` : '';
-    return this.makeRequest<TaskStats>(`/stats${queryParams}`);
-  }
-
-  // Notifications
-  async getNotifications(): Promise<TaskServiceResponse<TaskNotification[]>> {
-    return this.makeRequest<TaskNotification[]>('/notifications');
-  }
-
-  async markNotificationRead(id: string): Promise<TaskServiceResponse<void>> {
-    return this.makeRequest<void>(`/notifications/${id}/read`, {
-      method: 'POST',
-    });
-  }
-
-  async handleNotificationAction(
-    id: string,
-    action: string
-  ): Promise<TaskServiceResponse<void>> {
-    return this.makeRequest<void>(`/notifications/${id}/action`, {
-      method: 'POST',
-      body: JSON.stringify({ action }),
-    });
-  }
-
-  // Events & Automation
-  async getEvents(taskId?: string): Promise<TaskServiceResponse<TaskEvent[]>> {
-    const endpoint = taskId ? `/events?taskId=${taskId}` : '/events';
-    return this.makeRequest<TaskEvent[]>(endpoint);
-  }
-
-  async publishEvent(event: Omit<TaskEvent, 'id'>): Promise<TaskServiceResponse<TaskEvent>> {
-    return this.makeRequest<TaskEvent>('/events', {
-      method: 'POST',
-      body: JSON.stringify(event),
-    });
-  }
-
-  // Hecate Motivation System
-  async getMotivationState(): Promise<TaskServiceResponse<MotivationState>> {
-    return this.makeRequest<MotivationState>('/motivation');
-  }
-
-  async updateMotivationState(
-    updates: Partial<MotivationState>
-  ): Promise<TaskServiceResponse<MotivationState>> {
-    return this.makeRequest<MotivationState>('/motivation', {
-      method: 'PUT',
-      body: JSON.stringify(updates),
-    });
-  }
-
-  async suggestTasks(context: Record<string, any>): Promise<TaskServiceResponse<TaskCreationRequest[]>> {
-    return this.makeRequest<TaskCreationRequest[]>('/suggestions', {
-      method: 'POST',
-      body: JSON.stringify({ context }),
-    });
-  }
-
-  async learnFromOutcome(taskId: string, feedback: Record<string, any>): Promise<TaskServiceResponse<void>> {
-    return this.makeRequest<void>(`/${taskId}/learn`, {
-      method: 'POST',
-      body: JSON.stringify(feedback),
-    });
-  }
-
-  // Real-time Updates
-  async subscribeToUpdates(
-    callback: (task: Task) => void,
-    filter?: TaskFilter
-  ): Promise<() => void> {
-    const eventSource = new EventSource(
-      `${this.erebusUrl}/api/agents/tasks/stream${filter ? `?${new URLSearchParams(this.filterToParams(filter))}` : ''}`
-    );
-
-    eventSource.onmessage = (event) => {
-      try {
-        const task: Task = JSON.parse(event.data);
-        callback(task);
-      } catch (error) {
-        console.error('Failed to parse task update:', error);
-      }
-    };
-
-    eventSource.onerror = (error) => {
-      console.error('Task stream error:', error);
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }
 
   // Utility methods
   private filterToParams(filter: TaskFilter): Record<string, string> {
@@ -281,7 +155,7 @@ class TaskService {
       params.status = filter.status.join(',');
     }
     if (filter.type) {
-      params.type = filter.type.join(',');
+      params.task_type = filter.type.join(',');
     }
     if (filter.category) {
       params.category = filter.category.join(',');
@@ -289,15 +163,15 @@ class TaskService {
     if (filter.priority) {
       params.priority = filter.priority.join(',');
     }
-    if (filter.assignedAgent) {
-      params.assignedAgent = filter.assignedAgent;
+    if (filter.assigned_agent) {
+      params.assigned_agent = filter.assigned_agent;
     }
-    if (filter.searchTerm) {
-      params.search = filter.searchTerm;
+    if (filter.search_term) {
+      params.search = filter.search_term;
     }
-    if (filter.dateRange) {
-      params.startDate = filter.dateRange.start.toISOString();
-      params.endDate = filter.dateRange.end.toISOString();
+    if (filter.date_range) {
+      params.start_date = filter.date_range.start.toISOString();
+      params.end_date = filter.date_range.end.toISOString();
     }
 
     return params;
@@ -305,7 +179,7 @@ class TaskService {
 
   isTaskStale(task: Task): boolean {
     const now = new Date();
-    const lastUpdate = new Date(task.updatedAt);
+    const lastUpdate = new Date(task.updated_at);
     const staleThreshold = 5 * 60 * 1000; // 5 minutes
     return now.getTime() - lastUpdate.getTime() > staleThreshold;
   }
@@ -324,9 +198,9 @@ class TaskService {
   estimateTaskComplexity(task: Task): 'simple' | 'moderate' | 'complex' {
     const factors = [
       task.dependencies.length,
-      task.subTasks.length,
+      task.sub_tasks.length,
       Object.keys(task.parameters).length,
-      task.requiredCapabilities.length,
+      task.required_capabilities.length,
     ];
 
     const totalComplexity = factors.reduce((sum, factor) => sum + factor, 0);

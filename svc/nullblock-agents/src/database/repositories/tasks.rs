@@ -15,7 +15,7 @@ impl TaskRepository {
         Self { pool }
     }
 
-    pub async fn create(&self, request: &CreateTaskRequest, user_id: Option<Uuid>) -> Result<TaskEntity> {
+    pub async fn create(&self, request: &CreateTaskRequest, user_id: Option<Uuid>, assigned_agent_id: Option<Uuid>) -> Result<TaskEntity> {
         let task_id = Uuid::new_v4();
         let now = Utc::now();
 
@@ -35,14 +35,14 @@ impl TaskRepository {
             r#"
             INSERT INTO tasks (
                 id, name, description, task_type, category, status, priority,
-                user_id, created_at, updated_at, started_at, progress,
+                user_id, assigned_agent_id, created_at, updated_at, started_at, progress,
                 sub_tasks, dependencies, context, parameters, logs, triggers,
                 required_capabilities, auto_retry, max_retries, current_retries,
                 user_approval_required, user_notifications
             )
             VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-                $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
             )
             RETURNING *
             "#
@@ -55,6 +55,7 @@ impl TaskRepository {
         .bind(status_str)
         .bind(serde_json::to_string(&request.priority.as_ref().unwrap_or(&crate::models::TaskPriority::Medium)).unwrap().trim_matches('"').to_string())
         .bind(user_id)
+        .bind(assigned_agent_id)
         .bind(now)
         .bind(now)
         .bind(started_at)
@@ -209,5 +210,96 @@ impl TaskRepository {
         .await?;
 
         Ok(task)
+    }
+
+    // Action tracking methods
+    pub async fn mark_task_actioned(&self, task_id: &str, action_metadata: Option<serde_json::Value>) -> Result<Option<TaskEntity>> {
+        let uuid = Uuid::parse_str(task_id)?;
+        let now = Utc::now();
+
+        let task = sqlx::query_as::<_, TaskEntity>(
+            r#"
+            UPDATE tasks SET
+                actioned_at = $2,
+                action_metadata = $3,
+                updated_at = $4
+            WHERE id = $1 AND actioned_at IS NULL
+            RETURNING *
+            "#
+        )
+        .bind(uuid)
+        .bind(now)
+        .bind(action_metadata.unwrap_or_else(|| serde_json::json!({})))
+        .bind(now)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(task)
+    }
+
+    pub async fn update_action_result(&self, task_id: &str, action_result: &str, action_duration: Option<u64>) -> Result<Option<TaskEntity>> {
+        let uuid = Uuid::parse_str(task_id)?;
+        let now = Utc::now();
+
+        let task = sqlx::query_as::<_, TaskEntity>(
+            r#"
+            UPDATE tasks SET
+                action_result = $2,
+                action_duration = $3,
+                updated_at = $4
+            WHERE id = $1
+            RETURNING *
+            "#
+        )
+        .bind(uuid)
+        .bind(action_result)
+        .bind(action_duration.map(|d| d as i64))
+        .bind(now)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(task)
+    }
+
+    pub async fn get_unactioned_tasks(&self, agent_id: Option<Uuid>, limit: Option<i64>) -> Result<Vec<TaskEntity>> {
+        let mut query_builder = sqlx::QueryBuilder::new(
+            "SELECT * FROM tasks WHERE status = 'running' AND actioned_at IS NULL"
+        );
+
+        if let Some(agent) = agent_id {
+            query_builder.push(" AND assigned_agent_id = ");
+            query_builder.push_bind(agent);
+        }
+
+        query_builder.push(" ORDER BY priority DESC, created_at ASC");
+
+        if let Some(limit_val) = limit {
+            query_builder.push(" LIMIT ");
+            query_builder.push_bind(limit_val);
+        }
+
+        let query = query_builder.build_query_as::<TaskEntity>();
+        let tasks = query.fetch_all(&self.pool).await?;
+
+        Ok(tasks)
+    }
+
+    pub async fn get_tasks_for_agent(&self, agent_id: Uuid, status_filter: Option<&str>) -> Result<Vec<TaskEntity>> {
+        let mut query_builder = sqlx::QueryBuilder::new(
+            "SELECT * FROM tasks WHERE assigned_agent_id = "
+        );
+        query_builder.push_bind(agent_id);
+
+        if let Some(status) = status_filter {
+            query_builder.push(" AND status = ");
+            query_builder.push_bind(status);
+        }
+
+        query_builder.push(" ORDER BY actioned_at DESC NULLS FIRST, created_at DESC");
+
+        let query = query_builder.build_query_as::<TaskEntity>();
+        let tasks = query.fetch_all(&self.pool).await?;
+
+        Ok(tasks)
     }
 }

@@ -192,6 +192,10 @@ svc/erebus/src/resources/crossroads/
 - **User Generated Tasks**: Frontend form allows creating basic tasks with name, description, priority
 - **Task Categories**: Currently supports "User Generated" category (user_assigned backend type)
 - **Task Lifecycle**: Full CRUD operations - create, read, update, delete, start, pause, resume, cancel, retry
+- **Task Processing**: Execute tasks via `/process` endpoint with Hecate agent integration
+- **Action Tracking**: Database fields track when tasks are actioned, processed, and completed
+- **Agent Integration**: Hecate agent automatically registered and assigned to new tasks
+- **Chat Integration**: Task results displayed in Hecate chat interface with processing metrics
 - **Frontend Integration**: TaskCreationForm.tsx integrated with Scopes.tsx in Hecate interface
 - **Data Flow**: Frontend → Erebus → Hecate Agent (port 9003) → PostgreSQL + Kafka Events
 
@@ -248,6 +252,7 @@ svc/erebus/src/resources/crossroads/
 - **`/api/agents/tasks/:id/resume`**: POST - Resume paused task
 - **`/api/agents/tasks/:id/cancel`**: POST - Cancel task
 - **`/api/agents/tasks/:id/retry`**: POST - Retry failed task
+- **`/api/agents/tasks/:id/process`**: POST - **NEW** Execute task with Hecate agent
 
 ### Task Data Structure
 
@@ -266,7 +271,17 @@ svc/erebus/src/resources/crossroads/
   "parameters": {},
   "user_approval_required": false,
   "auto_retry": true,
-  "max_retries": 3
+  "max_retries": 3,
+
+  // NEW: Action tracking fields
+  "actioned_at": "2025-09-22T03:18:15Z",
+  "action_result": "Task completed successfully. Here's what I accomplished...",
+  "action_metadata": {
+    "started_by": "hecate",
+    "agent_id": "hecate-agent-uuid",
+    "execution_start": "2025-09-22T03:18:15Z"
+  },
+  "action_duration": 2340
 }
 ```
 
@@ -276,6 +291,27 @@ svc/erebus/src/resources/crossroads/
 - **useTaskManagement.ts**: React hook handling task operations and state
 - **task-service.tsx**: Service layer handling API communication with data transformation
 - **Scopes.tsx**: Contains tasks scope displaying task list and management UI
+
+### Task Action Tracking System ✅
+
+**Completed Implementation:**
+- **Action State Separation**: Clear distinction between task lifecycle and agent execution
+  - Task lifecycle: `created` → `running` → `completed` (administrative states)
+  - Agent action: `actioned_at` → `action_result` → agent stats updated (execution tracking)
+- **Database Schema**:
+  - Tasks table: `actioned_at`, `action_result`, `action_metadata`, `action_duration`
+  - Agents table: `last_task_processed`, `tasks_processed_count`, `last_action_at`, `average_processing_time`
+- **Agent Registration**: Hecate automatically registered in agents table on startup
+- **Auto-Assignment**: New tasks automatically assigned to Hecate agent
+- **Execution Flow**:
+  1. Create task (assigned to Hecate)
+  2. Start task (status: `running`, `actioned_at: NULL`)
+  3. Process task (calls `/process` endpoint)
+  4. Hecate executes task (sets `actioned_at`, processes via chat)
+  5. Store result (sets `action_result`, `action_duration`)
+  6. Update agent stats (increments counters, updates averages)
+- **Chat Integration**: Task results displayed in Hecate chat with special formatting
+- **Duplicate Prevention**: Tasks can only be actioned once (`actioned_at IS NULL` check)
 
 ### Development Notes
 

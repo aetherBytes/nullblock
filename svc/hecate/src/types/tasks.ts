@@ -1,163 +1,86 @@
 export type TaskStatus =
   | 'created'
-  | 'assigned'
   | 'running'
+  | 'paused'
   | 'completed'
   | 'failed'
-  | 'paused'
   | 'cancelled';
 
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent' | 'critical';
 
 export type TaskCategory =
   | 'autonomous'
-  | 'user-assigned'
-  | 'system-generated'
-  | 'event-triggered';
+  | 'user_assigned'
+  | 'system_generated'
+  | 'event_triggered';
 
 export type TaskType =
-  | 'trading'
   | 'arbitrage'
-  | 'portfolio'
   | 'social'
-  | 'research'
-  | 'monitoring'
-  | 'analysis'
-  | 'automation'
-  | 'communication'
+  | 'portfolio'
   | 'mcp'
-  | 'agent'
-  | 'system';
+  | 'system'
+  | 'user_assigned';
 
-export type EventType =
-  | 'price_change'
-  | 'market_opportunity'
-  | 'user_interaction'
-  | 'agent_completion'
-  | 'system_alert'
-  | 'time_trigger'
-  | 'threshold_breach'
-  | 'new_data';
-
-export interface TaskEvent {
-  id: string;
-  type: EventType;
-  timestamp: Date;
-  data: any;
-  source: string;
-  processed: boolean;
-}
-
-export interface TaskDependency {
-  taskId: string;
-  type: 'blocks' | 'triggers' | 'notifies';
-  condition?: string;
-}
 
 export interface TaskOutcome {
   success: boolean;
   result?: any;
   error?: string;
-  metrics?: Record<string, number>;
-  nextActions?: string[];
-}
-
-export interface TaskMetrics {
-  executionTime?: number;
-  resourceUsage?: number;
-  successRate?: number;
-  userSatisfaction?: number;
-  profitability?: number;
-  efficiency?: number;
+  metrics?: Record<string, any>;
 }
 
 export interface Task {
   id: string;
   name: string;
   description: string;
-  type: TaskType;
+  task_type: TaskType;
   category: TaskCategory;
   status: TaskStatus;
   priority: TaskPriority;
 
   // Lifecycle
-  createdAt: Date;
-  assignedAt?: Date;
-  startedAt?: Date;
-  completedAt?: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
+  started_at?: Date;
+  completed_at?: Date;
 
   // Execution
   progress: number;
-  estimatedDuration?: number;
-  actualDuration?: number;
+  estimated_duration?: number;
+  actual_duration?: number;
 
   // Relationships
-  parentTaskId?: string;
-  subTasks: string[];
-  dependencies: TaskDependency[];
+  sub_tasks: string[];
+  dependencies: string[];
 
   // Context
   context: Record<string, any>;
   parameters: Record<string, any>;
-  constraints?: Record<string, any>;
 
   // Results
   outcome?: TaskOutcome;
-  metrics?: TaskMetrics;
-  logs: TaskLog[];
+  logs: string[];
 
   // Automation
-  triggers: TaskEvent[];
-  autoRetry: boolean;
-  maxRetries: number;
-  currentRetries: number;
+  triggers: string[];
+  auto_retry: boolean;
+  max_retries: number;
+  current_retries: number;
 
   // Agent assignment
-  assignedAgent?: string;
-  requiredCapabilities: string[];
+  assigned_agent?: string;
+  required_capabilities: string[];
 
   // User interaction
-  userApprovalRequired: boolean;
-  userNotifications: boolean;
+  user_approval_required: boolean;
+  user_notifications: boolean;
 
-  // Learning
-  feedbackScore?: number;
-  improvements?: string[];
-}
-
-export interface TaskLog {
-  id: string;
-  timestamp: Date;
-  level: 'debug' | 'info' | 'warning' | 'error' | 'success';
-  message: string;
-  data?: any;
-  source: string;
-}
-
-export interface TaskQueue {
-  id: string;
-  name: string;
-  priority: TaskPriority;
-  tasks: Task[];
-  maxConcurrency: number;
-  currentlyRunning: number;
-  paused: boolean;
-}
-
-export interface TaskTemplate {
-  id: string;
-  name: string;
-  description: string;
-  type: TaskType;
-  category: TaskCategory;
-  defaultPriority: TaskPriority;
-  requiredParameters: string[];
-  optionalParameters: string[];
-  defaultContext: Record<string, any>;
-  estimatedDuration: number;
-  requiredCapabilities: string[];
-  successCriteria: string[];
+  // Action tracking fields
+  actioned_at?: Date;
+  action_result?: string;
+  action_metadata: Record<string, any>;
+  action_duration?: number;
 }
 
 export interface TaskFilter {
@@ -165,61 +88,24 @@ export interface TaskFilter {
   type?: TaskType[];
   category?: TaskCategory[];
   priority?: TaskPriority[];
-  assignedAgent?: string;
-  dateRange?: {
+  assigned_agent?: string;
+  date_range?: {
     start: Date;
     end: Date;
   };
-  searchTerm?: string;
-}
-
-export interface TaskStats {
-  total: number;
-  byStatus: Record<TaskStatus, number>;
-  byType: Record<TaskType, number>;
-  byPriority: Record<TaskPriority, number>;
-  avgExecutionTime: number;
-  successRate: number;
-  totalProfit?: number;
-}
-
-export interface TaskNotification {
-  id: string;
-  taskId: string;
-  type: 'created' | 'completed' | 'failed' | 'requires_approval' | 'progress_update';
-  title: string;
-  message: string;
-  timestamp: Date;
-  read: boolean;
-  actionRequired: boolean;
-  actions?: {
-    label: string;
-    action: string;
-    variant: 'primary' | 'secondary' | 'danger';
-  }[];
-}
-
-export interface MotivationState {
-  currentGoals: Task[];
-  priorities: TaskPriority[];
-  focus: TaskType[];
-  autonomyLevel: number;
-  learningMode: boolean;
-  conversationContext: Record<string, any>;
-  userPreferences: Record<string, any>;
-  marketConditions: Record<string, any>;
+  search_term?: string;
 }
 
 export interface TaskCreationRequest {
   name: string;
   description: string;
-  type: TaskType;
+  task_type: TaskType;
   category?: TaskCategory;
   priority?: TaskPriority;
   parameters?: Record<string, any>;
-  dependencies?: TaskDependency[];
-  userApprovalRequired?: boolean;
-  autoStart?: boolean;
+  dependencies?: string[];
+  user_approval_required?: boolean;
+  auto_start?: boolean;
 }
 
 export interface TaskUpdateRequest {
@@ -229,5 +115,4 @@ export interface TaskUpdateRequest {
   parameters?: Record<string, any>;
   priority?: TaskPriority;
   outcome?: TaskOutcome;
-  addLogs?: TaskLog[];
 }

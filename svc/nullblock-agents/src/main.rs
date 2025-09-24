@@ -21,7 +21,7 @@ mod server;
 mod utils;
 
 use crate::config::Config;
-use crate::handlers::{arbitrage, health, hecate, tasks};
+use crate::handlers::{arbitrage, health, hecate, marketing, tasks, user_references};
 use crate::logging::setup_logging;
 
 #[tokio::main]
@@ -57,6 +57,7 @@ async fn main() -> anyhow::Result<()> {
     info!("🏥 Health check: http://localhost:{}/health", port);
     info!("🤖 Hecate agent: http://localhost:{}/hecate", port);
     info!("📊 Arbitrage: http://localhost:{}/arbitrage", port);
+    info!("📱 Marketing agent: http://localhost:{}/marketing", port);
     info!("📚 API docs: http://localhost:{}/docs (future)", port);
 
     // Start the server
@@ -90,8 +91,8 @@ fn create_router(state: server::AppState) -> Router {
         .route("/arbitrage/summary", get(arbitrage::get_summary))
         .route("/arbitrage/execute", post(arbitrage::execute))
         // Task management endpoints
-        .route("/tasks", post(tasks::create_task))
-        .route("/tasks", get(tasks::get_tasks))
+        .route("/tasks", post(tasks::create_task_handler))
+        .route("/tasks", get(tasks::get_tasks_handler))
         .route("/tasks/:task_id", get(tasks::get_task))
         .route("/tasks/:task_id", put(tasks::update_task))
         .route("/tasks/:task_id", delete(tasks::delete_task))
@@ -100,6 +101,17 @@ fn create_router(state: server::AppState) -> Router {
         .route("/tasks/:task_id/resume", post(tasks::resume_task))
         .route("/tasks/:task_id/cancel", post(tasks::cancel_task))
         .route("/tasks/:task_id/retry", post(tasks::retry_task))
+        .route("/tasks/:task_id/process", post(tasks::process_task))
+        // Marketing agent endpoints
+        .route("/marketing/generate-content", post(marketing::generate_content))
+        .route("/marketing/create-post", post(marketing::create_twitter_post))
+        .route("/marketing/analyze-project", get(marketing::analyze_project_progress))
+        .route("/marketing/health", get(marketing::get_marketing_health))
+        .route("/marketing/themes", get(marketing::get_content_themes))
+        // User reference endpoints
+        .route("/user-references", post(user_references::create_user_reference))
+        .route("/user-references", get(user_references::list_user_references))
+        .route("/user-references/:wallet_address/:chain", get(user_references::get_user_reference))
         // Add state
         .with_state(state)
         // Add middleware

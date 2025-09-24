@@ -17,6 +17,8 @@ use tracing_appender::{rolling, non_blocking};
 
 
 // Import our modules
+mod database;
+mod user_references;
 mod resources;
 use resources::agents::routes::{
     agent_health, hecate_chat, hecate_status, agent_chat, agent_status,

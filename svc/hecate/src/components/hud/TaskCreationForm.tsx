@@ -18,11 +18,11 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
   const [formData, setFormData] = useState<TaskCreationRequest>({
     name: '',
     description: '',
-    type: 'system',
+    task_type: 'system',
     priority: 'medium',
-    category: 'user-assigned',
-    autoStart: false,
-    userApprovalRequired: false,
+    category: 'user_assigned',
+    auto_start: false,
+    user_approval_required: false,
     parameters: {},
     dependencies: []
   });
@@ -41,7 +41,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
   ];
 
   const categories: { value: TaskCategory; label: string }[] = [
-    { value: 'user-assigned', label: 'User Generated' }
+    { value: 'user_assigned', label: 'User Generated' }
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,11 +65,11 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
         setFormData({
           name: '',
           description: '',
-          type: 'system',
+          task_type: 'system',
           priority: 'medium',
-          category: 'user-assigned',
-          autoStart: false,
-          userApprovalRequired: false,
+          category: 'user_assigned',
+          auto_start: false,
+          user_approval_required: false,
           parameters: {},
           dependencies: []
         });
@@ -163,8 +163,8 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
           <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
-              checked={formData.autoStart}
-              onChange={(e) => handleInputChange('autoStart', e.target.checked)}
+              checked={formData.auto_start}
+              onChange={(e) => handleInputChange('auto_start', e.target.checked)}
               disabled={isLoading}
             />
             <span className={styles.checkboxText}>Auto-start task immediately</span>
@@ -173,8 +173,8 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
           <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
-              checked={formData.userApprovalRequired}
-              onChange={(e) => handleInputChange('userApprovalRequired', e.target.checked)}
+              checked={formData.user_approval_required}
+              onChange={(e) => handleInputChange('user_approval_required', e.target.checked)}
               disabled={isLoading}
             />
             <span className={styles.checkboxText}>Require user approval before execution</span>

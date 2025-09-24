@@ -10983,3 +10983,70 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     }
   }
 }
+
+// Task Result Styles
+.taskResultHeader {
+  background: rgba($echo-green, 0.1);
+  border: 1px solid rgba($echo-green, 0.3);
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.taskResultBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+.taskIcon {
+  color: $echo-green;
+  font-size: 1.1rem;
+}
+
+.taskLabel {
+  color: $echo-green;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+}
+
+.taskName {
+  color: rgba(255, 255, 255, 0.9);
+  font-style: italic;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskMetrics {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+}
+
+.processingTime {
+  color: rgba($lightning-gold, 0.9);
+  background: rgba($lightning-gold, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba($lightning-gold, 0.3);
+}
+
+// Enhanced message styling for task results
+.chatMessage {
+  &:has(.taskResultHeader) {
+    border-color: rgba($echo-green, 0.4);
+    background: rgba($echo-green, 0.05);
+  }
+}
