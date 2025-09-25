@@ -269,10 +269,12 @@ const Scopes: React.FC<ScopesProps> = ({
                   <div className={styles.progressBar}>
                     <div
                       className={styles.progressFill}
-                      style={{ width: `${selectedTask.progress}%` }}
+                      style={{ width: `${selectedTask.status === 'completed' ? 100 : selectedTask.progress}%` }}
                     ></div>
                   </div>
-                  <span>{Math.round(selectedTask.progress)}%</span>
+                  <span>
+                    {selectedTask.status === 'completed' ? '100' : Math.round(selectedTask.progress)}%
+                  </span>
                 </div>
               </div>
               {selectedTask.assigned_agent && (
@@ -487,10 +489,13 @@ const Scopes: React.FC<ScopesProps> = ({
                         <div className={styles.progressBar}>
                           <div
                             className={styles.progressFill}
-                            style={{ width: `${task.progress}%` }}
+                            style={{ width: `${task.status === 'completed' ? 100 : task.progress}%` }}
                           ></div>
                         </div>
-                        <span className={styles.progressText}>{Math.round(task.progress)}%</span>
+                        <span className={styles.progressText}>
+                          {task.status === 'completed' ? '100' : Math.round(task.progress)}%
+                        </span>
+
                       </div>
                     )}
                     <div className={styles.taskMetadata}>
@@ -1005,7 +1010,6 @@ const Scopes: React.FC<ScopesProps> = ({
     <>
       {isScopesExpanded && expandedScopesContent}
       {regularScopesContent}
-      {renderTaskDetails()}
     </>
   );
 };
