@@ -10514,6 +10514,229 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+// Task Details Inline Styles
+.taskDetailsContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.taskDetailsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba($echo-blue, 0.1);
+  border-bottom: 1px solid rgba($echo-blue, 0.2);
+  flex-shrink: 0;
+
+  h4 {
+    margin: 0;
+    color: $text-primary;
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .backButton {
+    background: rgba($echo-blue, 0.2);
+    border: 1px solid rgba($echo-blue, 0.4);
+    color: $echo-blue;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba($echo-blue, 0.3);
+      border-color: rgba($echo-blue, 0.6);
+      transform: translateY(-1px);
+    }
+  }
+}
+
+.taskDetailsBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.3);
+    border-radius: 3px;
+  }
+}
+
+.taskDetailsSection {
+  h5 {
+    margin: 0 0 1rem 0;
+    color: $echo-blue;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba($echo-blue, 0.2);
+    padding-bottom: 0.5rem;
+  }
+}
+
+.taskDetailsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.taskDetailsField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  label {
+    font-size: 0.8rem;
+    color: $text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+  }
+
+  span, p {
+    color: $text-primary;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  p {
+    margin: 0;
+    padding: 0.75rem;
+    background: rgba($background-dark, 0.5);
+    border: 1px solid rgba($echo-blue, 0.1);
+    border-radius: 4px;
+    white-space: pre-wrap;
+  }
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &.statusRunning {
+    background: rgba($echo-green, 0.2);
+    color: $echo-green;
+    border: 1px solid rgba($echo-green, 0.3);
+  }
+
+  &.statusCompleted {
+    background: rgba($echo-blue, 0.2);
+    color: $echo-blue;
+    border: 1px solid rgba($echo-blue, 0.3);
+  }
+
+  &.statusFailed {
+    background: rgba($echo-red, 0.2);
+    color: $echo-red;
+    border: 1px solid rgba($echo-red, 0.3);
+  }
+
+  &.statusPending {
+    background: rgba($echo-orange, 0.2);
+    color: $echo-orange;
+    border: 1px solid rgba($echo-orange, 0.3);
+  }
+}
+
+.priorityBadge {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba($echo-blue, 0.2);
+  color: $echo-blue;
+  border: 1px solid rgba($echo-blue, 0.3);
+}
+
+.taskResultBox {
+  background: rgba($background-dark, 0.6);
+  border: 1px solid rgba($echo-blue, 0.2);
+  border-radius: 4px;
+  padding: 1rem;
+  margin-top: 0.5rem;
+
+  pre {
+    margin: 0;
+    color: $text-primary;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+}
+
+.taskDetailsActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba($echo-blue, 0.2);
+
+  .taskActionButton {
+    background: rgba($echo-blue, 0.2);
+    border: 1px solid rgba($echo-blue, 0.4);
+    color: $echo-blue;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba($echo-blue, 0.3);
+      border-color: rgba($echo-blue, 0.6);
+      transform: translateY(-1px);
+    }
+
+    &.dangerButton {
+      background: rgba($echo-red, 0.2);
+      border-color: rgba($echo-red, 0.4);
+      color: $echo-red;
+
+      &:hover {
+        background: rgba($echo-red, 0.3);
+        border-color: rgba($echo-red, 0.6);
+      }
+    }
+  }
+}
+
 // Task Creation Form Styles
 .taskCreationForm {
   background: rgba($background-dark, 0.95);
@@ -11156,6 +11379,33 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     flex-direction: column;
     gap: 1rem;
     align-items: stretch;
+  }
+
+  // Task details modal responsive
+  .taskDetailsOverlay {
+    padding: 1rem;
+  }
+
+  .taskDetailsModal {
+    max-height: 95vh;
+  }
+
+  .taskDetailsGrid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .taskDetailsHeader {
+    padding: 1rem;
+
+    h4 {
+      font-size: 1.1rem;
+    }
+  }
+
+  .taskDetailsBody {
+    padding: 1rem;
+    gap: 1.5rem;
   }
 }
 
