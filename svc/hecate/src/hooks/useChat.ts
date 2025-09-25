@@ -8,6 +8,10 @@ interface ChatMessage {
   type?: string;
   model_used?: string;
   metadata?: any;
+  taskId?: string;
+  taskName?: string;
+  isTaskResult?: boolean;
+  processingTime?: number;
 }
 
 export const useChat = (publicKey: string | null) => {
@@ -21,6 +25,30 @@ export const useChat = (publicKey: string | null) => {
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Function to add task notifications to chat
+  const addTaskNotification = (taskId: string, taskName: string, message: string, processingTime?: number) => {
+    const taskNotification: ChatMessage = {
+      id: `task-notification-${taskId}-${Date.now()}`,
+      timestamp: new Date(),
+      sender: 'hecate',
+      message: message,
+      type: 'task-notification',
+      taskId,
+      taskName,
+      isTaskResult: true,
+      processingTime
+    };
+
+    setChatMessages(prev => [...prev, taskNotification]);
+
+    // Auto-scroll to show the notification
+    setTimeout(() => {
+      if (chatEndRef.current) {
+        chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
 
   const handleChatSubmit = (
     e: React.FormEvent,
@@ -235,6 +263,7 @@ export const useChat = (publicKey: string | null) => {
     handleChatSubmit,
     handleChatInputChange,
     handleChatScroll,
-    scrollToBottom
+    scrollToBottom,
+    addTaskNotification
   };
 };

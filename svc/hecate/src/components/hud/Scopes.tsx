@@ -105,17 +105,46 @@ const Scopes: React.FC<ScopesProps> = ({
       case 'running':
       case 'active':
         return styles.statusRunning;
+      case 'paused':
+        return styles.statusPaused;
       case 'completed':
       case 'success':
         return styles.statusCompleted;
       case 'failed':
       case 'error':
         return styles.statusFailed;
+      case 'cancelled':
+        return styles.statusCancelled;
+      case 'created':
       case 'pending':
       case 'idle':
         return styles.statusPending;
       default:
         return styles.statusPending;
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'running':
+      case 'active':
+        return '⚡';
+      case 'paused':
+        return '⏸️';
+      case 'completed':
+      case 'success':
+        return '✅';
+      case 'failed':
+      case 'error':
+        return '❌';
+      case 'cancelled':
+        return '🚫';
+      case 'created':
+      case 'pending':
+      case 'idle':
+        return '⏳';
+      default:
+        return '❓';
     }
   };
 
@@ -196,7 +225,7 @@ const Scopes: React.FC<ScopesProps> = ({
                 <div className={styles.taskDetailsField}>
                   <label>Status:</label>
                   <span className={`${styles.statusBadge} ${getStatusColor(selectedTask.status)}`}>
-                    {selectedTask.status}
+                    {getStatusIcon(selectedTask.status)} {selectedTask.status}
                   </span>
                 </div>
                 <div className={styles.taskDetailsField}>
@@ -436,12 +465,7 @@ const Scopes: React.FC<ScopesProps> = ({
                     <div className={styles.emptyState}>
                       <p>No {activeTaskCategory} tasks found</p>
                       {activeTaskCategory === 'todo' && (
-                        <button
-                          onClick={() => setShowTaskForm(true)}
-                          className={styles.taskActionButton}
-                        >
-                          Create your first task
-                        </button>
+                        <p className={styles.emptyHint}>Use the "➕ Create Task" button above to get started</p>
                       )}
                     </div>
                   ) : (
@@ -453,7 +477,7 @@ const Scopes: React.FC<ScopesProps> = ({
                         <span className={styles.taskType}>{task.task_type}</span>
                       </div>
                       <div className={styles.taskStatus}>
-                        <span className={styles.statusDot}></span>
+                        <span className={styles.statusIcon}>{getStatusIcon(task.status)}</span>
                         {task.status}
                       </div>
                     </div>
@@ -551,7 +575,7 @@ const Scopes: React.FC<ScopesProps> = ({
                       </button>
                     </div>
                   </div>
-                    ))
+                  ))
                   )}
                 </div>
               </>

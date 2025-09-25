@@ -898,10 +898,42 @@ async fn process_task_internal(
         }
     };
 
-    // Check if task is in a processable state
-    if task_entity.status != "running" {
-        warn!("⚠️ Task {} is not in running state: {}", task_id, task_entity.status);
-        return Err(format!("Task must be in 'running' state to process. Current state: {}", task_entity.status));
+    // Check if task is in a processable state - if it's created, start it automatically
+    if task_entity.status == "created" {
+        info!("🚀 Auto-starting task {} before processing", task_id);
+        match task_repo.update_status(&task_id, crate::models::TaskStatus::Running).await {
+            Ok(Some(updated_task)) => {
+                info!("✅ Task {} automatically started", task_id);
+
+                // Publish Kafka event for auto-start
+                if let Some(kafka_producer) = &state.kafka_producer {
+                    if let Ok(task_model) = updated_task.to_domain_model() {
+                        let event = TaskLifecycleEvent::task_status_changed(
+                            task_id.clone(),
+                            None, // No user_id available in Task domain model
+                            None, // No agent_id yet
+                            task_model.name.clone(),
+                            "created".to_string(),
+                            "running".to_string(),
+                            format!("{:?}", task_model.priority), // Use Debug format
+                            0, // progress: u8 (0% when starting)
+                        );
+                        let _ = kafka_producer.publish_task_event(event).await;
+                    }
+                }
+            }
+            Ok(None) => {
+                warn!("⚠️ Task {} not found when auto-starting", task_id);
+                return Err(format!("Task not found when starting: {}", task_id));
+            }
+            Err(e) => {
+                error!("❌ Failed to auto-start task {}: {}", task_id, e);
+                return Err(format!("Failed to start task: {}", e));
+            }
+        }
+    } else if task_entity.status != "running" {
+        warn!("⚠️ Task {} is not in a processable state: {}", task_id, task_entity.status);
+        return Err(format!("Task must be in 'created' or 'running' state to process. Current state: {}", task_entity.status));
     }
 
     // Execute the task using Hecate

@@ -74,13 +74,16 @@ class TaskService {
       console.log('📤 Response status:', response.status);
       console.log('📤 Response headers:', Object.fromEntries(response.headers.entries()));
 
-      const data = await response.json();
-      console.log('📤 Response data:', data);
+      const responseJson = await response.json();
+      console.log('📤 Response data:', responseJson);
+
+      // Handle backend API response format which wraps data in { data: [...], success: true }
+      const actualData = response.ok && responseJson.data !== undefined ? responseJson.data : responseJson;
 
       return {
         success: response.ok,
-        data: response.ok ? data : undefined,
-        error: response.ok ? undefined : data.message || 'Request failed',
+        data: response.ok ? actualData : undefined,
+        error: response.ok ? undefined : responseJson.message || responseJson.error || 'Request failed',
         timestamp: new Date(),
       };
     } catch (error) {
@@ -119,8 +122,19 @@ class TaskService {
   }
 
   async getTasks(filter?: TaskFilter): Promise<TaskServiceResponse<Task[]>> {
+    console.log('📋 Getting tasks with filter:', filter);
+    console.log('🔗 Wallet context:', { address: this.walletAddress, chain: this.walletChain });
+
     const queryParams = filter ? `?${new URLSearchParams(this.filterToParams(filter))}` : '';
-    return this.makeRequest<Task[]>(`${queryParams}`);
+    const response = await this.makeRequest<Task[]>(`${queryParams}`);
+
+    if (response.success && response.data) {
+      console.log(`📋 Loaded ${response.data.length} tasks for user`);
+    } else {
+      console.warn('⚠️ Failed to load tasks:', response.error);
+    }
+
+    return response;
   }
 
   // Task Lifecycle Operations
@@ -165,40 +179,53 @@ class TaskService {
     console.log('🔗 TaskService.registerUser called with:', { walletAddress, chain });
     console.log('🔗 Current wallet context:', { walletAddress: this.walletAddress, chain: this.walletChain });
     console.log('🔗 Erebus URL:', this.erebusUrl);
-    
-    const requestBody = {
-      wallet_address: walletAddress,
-      chain: chain
-    };
-    
-    console.log('📤 Sending registration request to:', `${this.erebusUrl}/api/agents/users/register`);
-    console.log('📤 Request body:', requestBody);
-    
-    // Use direct Erebus endpoint for user registration (not through tasks)
-    const url = `${this.erebusUrl}/api/agents/users/register`;
-    console.log('🌐 Making direct request to:', url);
-    console.log('📋 Request body:', requestBody);
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-wallet-address': walletAddress,
-        'x-wallet-chain': chain,
-      },
-      body: JSON.stringify(requestBody),
-    });
 
-    console.log('📤 Response status:', response.status);
-    const data = await response.json();
-    console.log('📤 Response data:', data);
+    try {
+      const requestBody = {
+        wallet_address: walletAddress,
+        chain: chain
+      };
 
-    return {
-      success: response.ok,
-      data: response.ok ? data : undefined,
-      error: response.ok ? undefined : data.message || 'Request failed',
-      timestamp: new Date(),
-    };
+      console.log('📤 Sending registration request to:', `${this.erebusUrl}/api/agents/users/register`);
+      console.log('📤 Request body:', requestBody);
+
+      // Use direct Erebus endpoint for user registration (not through tasks)
+      const url = `${this.erebusUrl}/api/agents/users/register`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+          'x-wallet-chain': chain,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('📤 Response status:', response.status);
+      const data = await response.json();
+      console.log('📤 Response data:', data);
+
+      if (response.ok) {
+        // Update wallet context after successful registration
+        this.setWalletContext(walletAddress, chain);
+        console.log('✅ User registration successful, wallet context updated');
+      }
+
+      return {
+        success: response.ok,
+        data: response.ok ? data : undefined,
+        error: response.ok ? undefined : data.message || 'Request failed',
+        timestamp: new Date(),
+      };
+    } catch (error) {
+      console.error('❌ User registration error:', error);
+      return {
+        success: false,
+        error: (error as Error).message,
+        timestamp: new Date(),
+      };
+    }
   }
 
 
