@@ -32,6 +32,7 @@ interface UseTaskManagementReturn {
   resumeTask: (id: string) => Promise<boolean>;
   cancelTask: (id: string) => Promise<boolean>;
   retryTask: (id: string) => Promise<boolean>;
+  processTask: (id: string) => Promise<boolean>;
 
   // Task Selection
   selectTask: (id: string | null) => void;
@@ -49,7 +50,8 @@ interface UseTaskManagementReturn {
 export const useTaskManagement = (
   walletPublicKey?: string | null,
   initialFilter: TaskFilter = {},
-  autoSubscribe: boolean = true
+  autoSubscribe: boolean = true,
+  addChatNotification?: (taskId: string, taskName: string, message: string, processingTime?: number) => void
 ): UseTaskManagementReturn => {
   // Helper function to ensure we always have a valid array
   const ensureArray = (value: any): Task[] => {
@@ -135,17 +137,20 @@ export const useTaskManagement = (
         console.log('🔗 Attempting to connect to task service...');
 
         // Set wallet context for task service
-        taskService.setWalletContext(walletPublicKey, 'solana');
+        const walletType = localStorage.getItem('walletType');
+        const chain = walletType === 'phantom' ? 'solana' : walletType === 'metamask' ? 'ethereum' : 'solana';
+        taskService.setWalletContext(walletPublicKey, chain);
 
         const connected = await taskService.connect();
         isConnectedRef.current = connected;
         console.log('🔗 Task service connection:', connected ? 'SUCCESS' : 'FAILED');
 
         if (connected) {
-          console.log('📋 Loading task data for wallet:', walletPublicKey);
+          console.log('📋 Loading task data for wallet:', walletPublicKey, 'on chain:', chain);
           await loadTasks();
         } else {
           console.log('⚠️ Task service unavailable - no tasks will be loaded');
+          setError('Task service is unavailable. Please check your connection.');
         }
       } catch (err) {
         console.error('❌ Task management initialization error:', err);
@@ -162,6 +167,8 @@ export const useTaskManagement = (
       taskService.setWalletContext(null);
       setTasks([]);
       setActiveTask(null);
+      setError(null);
+      isConnectedRef.current = false;
     }
   }, [walletPublicKey]);
 
@@ -378,27 +385,83 @@ export const useTaskManagement = (
 
   const processTask = useCallback(async (id: string): Promise<boolean> => {
     console.log('⚡ Processing task:', id);
+
+    // First try to get task from current tasks array
+    let task = ensureArray(tasks).find(t => t.id === id);
+    let taskName = task?.name;
+
+    // If task not found in current array, try to fetch it first
+    if (!task) {
+      console.log('🔍 Task not found in current array, fetching task details...');
+      try {
+        const taskResponse = await taskService.getTask(id);
+        if (taskResponse.success && taskResponse.data) {
+          task = taskResponse.data;
+          taskName = task.name;
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch task details:', error);
+      }
+    }
+
     try {
       const response = await taskService.processTask(id);
       if (response.success && response.data) {
+        // Use the task name from the response data if available, otherwise fall back to what we found
+        const finalTaskName = response.data.name || taskName || 'Unknown Task';
+
+        console.log('✅ Task processed successfully:', finalTaskName);
+
         setTasks(prev => ensureArray(prev).map(t => t.id === id ? response.data! : t));
         if (activeTask?.id === id) {
           setActiveTask(response.data);
         }
-        console.log('✅ Task processed successfully');
+
+        // Add chat notification for task completion
+        if (addChatNotification) {
+          const processingTime = response.data.action_duration || undefined;
+          let notificationMessage = `Task "${finalTaskName}" has been completed successfully!`;
+
+          if (response.data.action_result) {
+            // Clean up the result message - remove any extra whitespace/newlines
+            const cleanResult = response.data.action_result.trim();
+            notificationMessage += `\n\n**Result:**\n${cleanResult}`;
+          }
+
+          if (processingTime) {
+            notificationMessage += `\n\n*Processing time: ${(processingTime / 1000).toFixed(2)}s*`;
+          }
+
+          addChatNotification(id, finalTaskName, notificationMessage, processingTime);
+        }
+
         // Refresh tasks to get updated results
         setTimeout(() => loadTasks(), 1000);
         return true;
       } else {
+        const finalTaskName = taskName || 'Unknown Task';
         setError(response.error || 'Failed to process task');
+
+        // Add chat notification for task failure
+        if (addChatNotification) {
+          addChatNotification(id, finalTaskName, `Task "${finalTaskName}" failed to process: ${response.error || 'Unknown error'}`);
+        }
+
         return false;
       }
     } catch (error) {
       console.error('❌ Task processing error:', error);
+      const finalTaskName = taskName || 'Unknown Task';
       setError((error as Error).message);
+
+      // Add chat notification for task error
+      if (addChatNotification) {
+        addChatNotification(id, finalTaskName, `Task "${finalTaskName}" encountered an error: ${(error as Error).message}`);
+      }
+
       return false;
     }
-  }, [activeTask?.id, loadTasks]);
+  }, [activeTask?.id, loadTasks, tasks, addChatNotification]);
 
 
   // Analytics & queries

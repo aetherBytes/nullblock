@@ -68,6 +68,7 @@ const HUD: React.FC<HUDProps> = ({
   const [mainHudActiveTab, setMainHudActiveTab] = useState<
     'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate'
   >(publicKey ? 'hecate' : 'crossroads');
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Tab functionality state
   const [logs, setLogs] = useState<any[]>([]);
@@ -98,7 +99,7 @@ const HUD: React.FC<HUDProps> = ({
   // Use custom hooks
   const modelManagement = useModelManagement(publicKey);
   const chat = useChat(publicKey);
-  const taskManagement = useTaskManagement(publicKey);
+  const taskManagement = useTaskManagement(publicKey, {}, true, chat.addTaskNotification);
   const eventSystem = useEventSystem(true, 3000);
 
   // Debug: Log task management state
@@ -990,11 +991,27 @@ const HUD: React.FC<HUDProps> = ({
         </div>
       </div>
 
+      {/* Mobile Menu Button */}
+      <button 
+        className={styles.mobileMenuButton}
+        onClick={() => setShowMobileMenu(!showMobileMenu)}
+        title="Toggle Navigation Menu"
+      >
+        <span className={styles.hamburgerIcon}>
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+      </button>
+
       {/* Center - Navigation Tabs */}
-      <div className={styles.navbarCenter}>
+      <div className={`${styles.navbarCenter} ${showMobileMenu ? styles.mobileMenuOpen : ''}`}>
         <button
           className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
-          onClick={() => setMainHudActiveTab('crossroads')}
+          onClick={() => {
+            setMainHudActiveTab('crossroads');
+            setShowMobileMenu(false);
+          }}
         >
           CROSSROADS
         </button>
@@ -1002,7 +1019,10 @@ const HUD: React.FC<HUDProps> = ({
         {publicKey && (
           <button
             className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
-            onClick={() => setMainHudActiveTab('hecate')}
+            onClick={() => {
+              setMainHudActiveTab('hecate');
+              setShowMobileMenu(false);
+            }}
           >
             HECATE
           </button>

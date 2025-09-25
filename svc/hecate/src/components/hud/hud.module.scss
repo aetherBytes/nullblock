@@ -7319,13 +7319,13 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   color: $text-color;
   overflow-y: auto;
   min-height: 0;
-  max-height: calc(100vh - 120px); // Account for header
+  display: flex;
+  flex-direction: column;
 
   // When in expanded mode, ensure proper spacing
   .scopesSection.expanded & {
     flex: 1;
     min-height: 0;
-    max-height: calc(100vh - 120px);
     width: 100% !important;
     max-width: calc(100vw - 2rem) !important; // Account for padding and prevent overflow
     padding: 2rem;
@@ -10418,7 +10418,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-height: 500px;
+  flex: 1;
   overflow: hidden;
 
   // When showing task form, allow full height
@@ -10439,10 +10439,9 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .taskScrollContainer {
   position: relative !important;
   width: 100% !important;
-  height: 250px !important;
-  max-height: 250px !important;
-  min-height: 250px !important;
-  overflow-y: scroll !important;
+  height: 100% !important;
+  flex: 1 !important;
+  overflow-y: auto !important;
   overflow-x: hidden !important;
   background: transparent !important;
   border: none !important;
@@ -11048,5 +11047,131 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   &:has(.taskResultHeader) {
     border-color: rgba($echo-green, 0.4);
     background: rgba($echo-green, 0.05);
+  }
+}
+
+
+// Mobile Menu Button
+.mobileMenuButton {
+  display: none;
+  background: none;
+  border: none;
+  color: $lightning-silver;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba($echo-blue, 0.1);
+    color: $echo-blue;
+  }
+
+  .hamburgerIcon {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 20px;
+    height: 16px;
+
+    span {
+      display: block;
+      height: 2px;
+      background: currentColor;
+      transition: all 0.3s ease;
+      border-radius: 1px;
+    }
+  }
+}
+
+// Simple Mobile Responsive Design
+@media (max-width: 768px) {
+  .unifiedNavbar {
+    flex-wrap: wrap;
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+
+    .navbarCenter {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: rgba($background-dark, 0.98);
+      border: 1px solid $border-color;
+      border-top: none;
+      flex-direction: column;
+      padding: 1rem;
+      z-index: 1000;
+
+      &.mobileMenuOpen {
+        display: flex;
+      }
+
+      .menuButton {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid rgba($border-color, 0.3);
+        font-size: 1rem;
+
+        &:last-child {
+          border-bottom: none;
+        }
+      }
+    }
+
+    .mobileMenuButton {
+      display: block;
+    }
+  }
+
+  .walletMenuButton, .docsMenuButton {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .innerHudMenuBar {
+    padding: 0.5rem;
+
+    .menuButton {
+      font-size: 0.8rem;
+      padding: 0.4rem 0.8rem;
+    }
+  }
+
+  // Task tabs responsive
+  .taskTabs {
+    flex-direction: column;
+    gap: 0.5rem;
+    
+    .taskTab {
+      width: 100%;
+      text-align: left;
+      padding: 0.75rem 1rem;
+    }
+  }
+
+  .tasksHeader {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .unifiedNavbar {
+    .navbarLeft {
+      .nullblockTitle {
+        font-size: 0.9rem;
+      }
+    }
+
+    .navbarRight {
+      .walletMenuButton, .docsMenuButton {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+      }
+    }
   }
 }
