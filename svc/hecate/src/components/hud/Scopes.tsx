@@ -194,173 +194,171 @@ const Scopes: React.FC<ScopesProps> = ({
 
   const selectedTask = selectedTaskId ? tasks.find(t => t.id === selectedTaskId) : null;
 
-  const renderTaskDetailsModal = () => {
+  const renderTaskDetails = () => {
     if (!selectedTask) return null;
 
     return (
-      <div className={styles.taskDetailsOverlay} onClick={() => setSelectedTaskId(null)}>
-        <div className={styles.taskDetailsModal} onClick={(e) => e.stopPropagation()}>
-          <div className={styles.taskDetailsHeader}>
-            <h4>📋 Task Details</h4>
-            <button
-              onClick={() => setSelectedTaskId(null)}
-              className={styles.closeButton}
-            >
-              ✕
-            </button>
-          </div>
+      <div className={styles.taskDetailsContainer}>
+        <div className={styles.taskDetailsHeader}>
+          <button
+            onClick={() => setSelectedTaskId(null)}
+            className={styles.backButton}
+          >
+            ← Back to Tasks
+          </button>
+          <h4>📋 Task Details</h4>
+        </div>
 
-          <div className={styles.taskDetailsBody}>
-            <div className={styles.taskDetailsSection}>
-              <h5>Basic Information</h5>
-              <div className={styles.taskDetailsGrid}>
-                <div className={styles.taskDetailsField}>
-                  <label>Name:</label>
-                  <span>{selectedTask.name}</span>
-                </div>
-                <div className={styles.taskDetailsField}>
-                  <label>Type:</label>
-                  <span>{selectedTask.task_type}</span>
-                </div>
-                <div className={styles.taskDetailsField}>
-                  <label>Status:</label>
-                  <span className={`${styles.statusBadge} ${getStatusColor(selectedTask.status)}`}>
-                    {getStatusIcon(selectedTask.status)} {selectedTask.status}
-                  </span>
-                </div>
-                <div className={styles.taskDetailsField}>
-                  <label>Priority:</label>
-                  <span className={styles.priorityBadge}>{selectedTask.priority}</span>
-                </div>
+        <div className={styles.taskDetailsBody}>
+          <div className={styles.taskDetailsSection}>
+            <h5>Basic Information</h5>
+            <div className={styles.taskDetailsGrid}>
+              <div className={styles.taskDetailsField}>
+                <label>Name:</label>
+                <span>{selectedTask.name}</span>
               </div>
               <div className={styles.taskDetailsField}>
-                <label>Description:</label>
-                <p>{selectedTask.description}</p>
+                <label>Type:</label>
+                <span>{selectedTask.task_type}</span>
+              </div>
+              <div className={styles.taskDetailsField}>
+                <label>Status:</label>
+                <span className={`${styles.statusBadge} ${getStatusColor(selectedTask.status)}`}>
+                  {getStatusIcon(selectedTask.status)} {selectedTask.status}
+                </span>
+              </div>
+              <div className={styles.taskDetailsField}>
+                <label>Priority:</label>
+                <span className={styles.priorityBadge}>{selectedTask.priority}</span>
               </div>
             </div>
+            <div className={styles.taskDetailsField}>
+              <label>Description:</label>
+              <p>{selectedTask.description}</p>
+            </div>
+          </div>
 
-            <div className={styles.taskDetailsSection}>
-              <h5>Timeline</h5>
-              <div className={styles.taskDetailsGrid}>
+          <div className={styles.taskDetailsSection}>
+            <h5>Timeline</h5>
+            <div className={styles.taskDetailsGrid}>
+              <div className={styles.taskDetailsField}>
+                <label>Created:</label>
+                <span>{new Date(selectedTask.created_at).toLocaleString()}</span>
+              </div>
+              {selectedTask.started_at && (
                 <div className={styles.taskDetailsField}>
-                  <label>Created:</label>
-                  <span>{new Date(selectedTask.created_at).toLocaleString()}</span>
+                  <label>Started:</label>
+                  <span>{new Date(selectedTask.started_at).toLocaleString()}</span>
                 </div>
-                {selectedTask.started_at && (
-                  <div className={styles.taskDetailsField}>
-                    <label>Started:</label>
-                    <span>{new Date(selectedTask.started_at).toLocaleString()}</span>
-                  </div>
-                )}
-                {selectedTask.completed_at && (
-                  <div className={styles.taskDetailsField}>
-                    <label>Completed:</label>
-                    <span>{new Date(selectedTask.completed_at).toLocaleString()}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className={styles.taskDetailsSection}>
-              <h5>Execution</h5>
-              <div className={styles.taskDetailsGrid}>
+              )}
+              {selectedTask.completed_at && (
                 <div className={styles.taskDetailsField}>
-                  <label>Progress:</label>
-                  <div className={styles.progressContainer}>
-                    <div className={styles.progressBar}>
-                      <div
-                        className={styles.progressFill}
-                        style={{ width: `${selectedTask.progress}%` }}
-                      ></div>
-                    </div>
-                    <span>{Math.round(selectedTask.progress)}%</span>
-                  </div>
+                  <label>Completed:</label>
+                  <span>{new Date(selectedTask.completed_at).toLocaleString()}</span>
                 </div>
-                {selectedTask.assigned_agent && (
-                  <div className={styles.taskDetailsField}>
-                    <label>Assigned Agent:</label>
-                    <span>{selectedTask.assigned_agent}</span>
+              )}
+            </div>
+          </div>
+
+          <div className={styles.taskDetailsSection}>
+            <h5>Execution</h5>
+            <div className={styles.taskDetailsGrid}>
+              <div className={styles.taskDetailsField}>
+                <label>Progress:</label>
+                <div className={styles.progressContainer}>
+                  <div className={styles.progressBar}>
+                    <div
+                      className={styles.progressFill}
+                      style={{ width: `${selectedTask.progress}%` }}
+                    ></div>
                   </div>
-                )}
-                {selectedTask.actioned_at && (
-                  <div className={styles.taskDetailsField}>
-                    <label>Action Time:</label>
-                    <span>{new Date(selectedTask.actioned_at).toLocaleString()}</span>
-                  </div>
-                )}
-                {selectedTask.action_duration && (
-                  <div className={styles.taskDetailsField}>
-                    <label>Duration:</label>
-                    <span>{(selectedTask.action_duration / 1000).toFixed(2)}s</span>
-                  </div>
-                )}
+                  <span>{Math.round(selectedTask.progress)}%</span>
+                </div>
+              </div>
+              {selectedTask.assigned_agent && (
+                <div className={styles.taskDetailsField}>
+                  <label>Assigned Agent:</label>
+                  <span>{selectedTask.assigned_agent}</span>
+                </div>
+              )}
+              {selectedTask.actioned_at && (
+                <div className={styles.taskDetailsField}>
+                  <label>Action Time:</label>
+                  <span>{new Date(selectedTask.actioned_at).toLocaleString()}</span>
+                </div>
+              )}
+              {selectedTask.action_duration && (
+                <div className={styles.taskDetailsField}>
+                  <label>Duration:</label>
+                  <span>{(selectedTask.action_duration / 1000).toFixed(2)}s</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {selectedTask.action_result && (
+            <div className={styles.taskDetailsSection}>
+              <h5>Result</h5>
+              <div className={styles.taskResultBox}>
+                <pre>{selectedTask.action_result}</pre>
               </div>
             </div>
+          )}
 
-            {selectedTask.action_result && (
-              <div className={styles.taskDetailsSection}>
-                <h5>Result</h5>
-                <div className={styles.taskResultBox}>
-                  <pre>{selectedTask.action_result}</pre>
-                </div>
-              </div>
-            )}
-
-            <div className={styles.taskDetailsActions}>
-              {selectedTask.status === 'created' && (
-                <button
-                  onClick={() => {
-                    taskManagement.startTask(selectedTask.id);
-                    setSelectedTaskId(null);
-                  }}
-                  className={styles.taskActionButton}
-                >
-                  ▶️ Start Task
-                </button>
-              )}
-              {selectedTask.status === 'running' && (
-                <>
-                  <button
-                    onClick={() => {
-                      taskManagement.pauseTask(selectedTask.id);
-                      setSelectedTaskId(null);
-                    }}
-                    className={styles.taskActionButton}
-                  >
-                    ⏸️ Pause
-                  </button>
-                  <button
-                    onClick={() => {
-                      taskManagement.cancelTask(selectedTask.id);
-                      setSelectedTaskId(null);
-                    }}
-                    className={styles.taskActionButton}
-                  >
-                    🚫 Cancel
-                  </button>
-                </>
-              )}
-              {selectedTask.status === 'failed' && (
-                <button
-                  onClick={() => {
-                    taskManagement.retryTask(selectedTask.id);
-                    setSelectedTaskId(null);
-                  }}
-                  className={styles.taskActionButton}
-                >
-                  🔄 Retry
-                </button>
-              )}
+          <div className={styles.taskDetailsActions}>
+            {selectedTask.status === 'created' && (
               <button
                 onClick={() => {
-                  taskManagement.deleteTask(selectedTask.id);
+                  taskManagement.startTask(selectedTask.id);
                   setSelectedTaskId(null);
                 }}
-                className={`${styles.taskActionButton} ${styles.dangerButton}`}
+                className={styles.taskActionButton}
               >
-                🗑️ Delete
+                ▶️ Start Task
               </button>
-            </div>
+            )}
+            {selectedTask.status === 'running' && (
+              <>
+                <button
+                  onClick={() => {
+                    taskManagement.pauseTask(selectedTask.id);
+                    setSelectedTaskId(null);
+                  }}
+                  className={styles.taskActionButton}
+                >
+                  ⏸️ Pause
+                </button>
+                <button
+                  onClick={() => {
+                    taskManagement.cancelTask(selectedTask.id);
+                    setSelectedTaskId(null);
+                  }}
+                  className={styles.taskActionButton}
+                >
+                  🚫 Cancel
+                </button>
+              </>
+            )}
+            {selectedTask.status === 'failed' && (
+              <button
+                onClick={() => {
+                  taskManagement.retryTask(selectedTask.id);
+                  setSelectedTaskId(null);
+                }}
+                className={styles.taskActionButton}
+              >
+                🔄 Retry
+              </button>
+            )}
+            <button
+              onClick={() => {
+                taskManagement.deleteTask(selectedTask.id);
+                setSelectedTaskId(null);
+              }}
+              className={`${styles.taskActionButton} ${styles.dangerButton}`}
+            >
+              🗑️ Delete
+            </button>
           </div>
         </div>
       </div>
@@ -410,7 +408,9 @@ const Scopes: React.FC<ScopesProps> = ({
       case 'tasks':
         return (
           <div className={`${styles.tasksScope} ${showTaskForm ? styles.showingTaskForm : ''}`}>
-            {showTaskForm ? (
+            {selectedTaskId ? (
+              renderTaskDetails()
+            ) : showTaskForm ? (
               <div className={styles.taskFormContainer}>
                 <div className={styles.taskFormHeader}>
                   <h3>📋 Create New Task</h3>
@@ -1005,7 +1005,7 @@ const Scopes: React.FC<ScopesProps> = ({
     <>
       {isScopesExpanded && expandedScopesContent}
       {regularScopesContent}
-      {renderTaskDetailsModal()}
+      {renderTaskDetails()}
     </>
   );
 };
