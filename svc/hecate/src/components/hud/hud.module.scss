@@ -5616,6 +5616,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     transition: width 0.3s ease;
   }
 
+  // Special styling for completed tasks
+  &.statusCompleted .progressFill {
+    background: linear-gradient(90deg, $echo-green, $echo-blue);
+    box-shadow: 0 0 8px rgba($echo-green, 0.3);
+  }
+
   .progressText {
     position: absolute;
     right: 0.5rem;
@@ -5770,6 +5776,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       background: linear-gradient(90deg, $echo-blue, $lightning-blue);
       border-radius: 3px;
       transition: width 0.3s ease;
+    }
+
+    // Special styling for completed tasks in details view
+    &.statusCompleted .progressFill {
+      background: linear-gradient(90deg, $echo-green, $echo-blue);
+      box-shadow: 0 0 8px rgba($echo-green, 0.3);
     }
   }
 
