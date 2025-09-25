@@ -239,28 +239,6 @@ const Scopes: React.FC<ScopesProps> = ({
           </div>
 
           <div className={styles.taskDetailsSection}>
-            <h5>Timeline</h5>
-            <div className={styles.taskDetailsGrid}>
-              <div className={styles.taskDetailsField}>
-                <label>Created:</label>
-                <span>{new Date(selectedTask.created_at).toLocaleString()}</span>
-              </div>
-              {selectedTask.started_at && (
-                <div className={styles.taskDetailsField}>
-                  <label>Started:</label>
-                  <span>{new Date(selectedTask.started_at).toLocaleString()}</span>
-                </div>
-              )}
-              {selectedTask.completed_at && (
-                <div className={styles.taskDetailsField}>
-                  <label>Completed:</label>
-                  <span>{new Date(selectedTask.completed_at).toLocaleString()}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className={styles.taskDetailsSection}>
             <h5>Execution</h5>
             <div className={styles.taskDetailsGrid}>
               <div className={styles.taskDetailsField}>
@@ -283,16 +261,61 @@ const Scopes: React.FC<ScopesProps> = ({
                   <span>{selectedTask.assigned_agent}</span>
                 </div>
               )}
-              {selectedTask.actioned_at && (
-                <div className={styles.taskDetailsField}>
-                  <label>Action Time:</label>
-                  <span>{new Date(selectedTask.actioned_at).toLocaleString()}</span>
-                </div>
-              )}
               {selectedTask.action_duration && (
                 <div className={styles.taskDetailsField}>
                   <label>Duration:</label>
                   <span>{(selectedTask.action_duration / 1000).toFixed(2)}s</span>
+                </div>
+              )}
+              <div className={styles.taskDetailsField}>
+                <label>Created:</label>
+                <span>{new Date(selectedTask.created_at).toLocaleString()}</span>
+              </div>
+              {selectedTask.completed_at && (
+                <div className={styles.taskDetailsField}>
+                  <label>Completed:</label>
+                  <span>{new Date(selectedTask.completed_at).toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={styles.taskDetailsSection}>
+            <h5>Invocation Trail</h5>
+            <div className={styles.executionTrail}>
+              <div className={styles.trailItem}>
+                <div className={styles.trailContent}>
+                  <div className={styles.trailLabel}>Source</div>
+                  <div className={styles.trailValue}>
+                    {selectedTask.wallet_address || selectedTask.created_by_wallet || selectedTask.source_wallet || 'Unknown'}
+                  </div>
+                </div>
+              </div>
+              {selectedTask.agent_uuid && (
+                <div className={styles.trailItem}>
+                  <div className={styles.trailIcon}>🤖</div>
+                  <div className={styles.trailContent}>
+                    <div className={styles.trailLabel}>Agent</div>
+                    <div className={styles.trailValue}>{selectedTask.agent_uuid}</div>
+                  </div>
+                </div>
+              )}
+              {selectedTask.api_call_id && (
+                <div className={styles.trailItem}>
+                  <div className={styles.trailIcon}>🔗</div>
+                  <div className={styles.trailContent}>
+                    <div className={styles.trailLabel}>API Call</div>
+                    <div className={styles.trailValue}>{selectedTask.api_call_id}</div>
+                  </div>
+                </div>
+              )}
+              {selectedTask.invocation_chain && (
+                <div className={styles.trailItem}>
+                  <div className={styles.trailIcon}>⛓️</div>
+                  <div className={styles.trailContent}>
+                    <div className={styles.trailLabel}>Chain</div>
+                    <div className={styles.trailValue}>{selectedTask.invocation_chain}</div>
+                  </div>
                 </div>
               )}
             </div>
@@ -472,7 +495,12 @@ const Scopes: React.FC<ScopesProps> = ({
                     </div>
                   ) : (
                     currentCategoryTasks.map((task) => (
-                  <div key={task.id} className={`${styles.taskItem} ${getStatusColor(task.status)}`}>
+                  <div 
+                    key={task.id} 
+                    className={`${styles.taskItem} ${getStatusColor(task.status)} ${styles.clickableTask}`}
+                    onClick={() => setSelectedTaskId(task.id)}
+                    title="Click to view details"
+                  >
                     <div className={styles.taskHeader}>
                       <div className={styles.taskInfo}>
                         <span className={styles.taskName}>{task.name}</span>
@@ -483,51 +511,46 @@ const Scopes: React.FC<ScopesProps> = ({
                         {task.status}
                       </div>
                     </div>
-                    <div className={styles.taskDescription}>{task.description}</div>
-                    {task.progress !== undefined && (
-                      <div className={styles.taskProgress}>
-                        <div className={styles.progressBar}>
-                          <div
-                            className={styles.progressFill}
-                            style={{ width: `${task.status === 'completed' ? 100 : task.progress}%` }}
-                          ></div>
-                        </div>
-                        <span className={styles.progressText}>
-                          {task.status === 'completed' ? '100' : Math.round(task.progress)}%
-                        </span>
-
-                      </div>
-                    )}
                     <div className={styles.taskMetadata}>
                       <span className={styles.taskTime}>
                         Created: {new Date(task.created_at).toLocaleTimeString()}
                       </span>
-                      {task.started_at && (
-                        <span className={styles.taskTime}>
-                          Started: {new Date(task.started_at).toLocaleTimeString()}
-                        </span>
-                      )}
                       {task.completed_at && (
                         <span className={styles.taskTime}>
                           Completed: {new Date(task.completed_at).toLocaleTimeString()}
                         </span>
                       )}
-                      <span className={styles.taskPriority}>
-                        Priority: {task.priority}
+                      <span className={styles.taskInitiator}>
+                        Initiator: {task.category === 'user' && '👤 User'}
+                        {task.category === 'agent' && '🤖 Agent'}
+                        {task.category === 'api' && '🔗 API'}
+                        {task.category === 'system' && '⚙️ System'}
+                        {task.category === 'scheduled' && '⏰ Scheduled'}
+                        {task.category === 'automated' && '🤖 Automated'}
+                        {task.category === 'manual' && '👤 Manual'}
+                        {task.category === 'webhook' && '🔗 Webhook'}
+                        {task.category === 'cron' && '⏰ Cron'}
+                        {task.category && !['user', 'agent', 'api', 'system', 'scheduled', 'automated', 'manual', 'webhook', 'cron'].includes(task.category) && `📋 ${task.category}`}
                       </span>
                     </div>
                     <div className={styles.taskActions}>
                       {task.status === 'created' && (
                         <>
                           <button
-                            onClick={() => taskManagement.startTask(task.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              taskManagement.startTask(task.id);
+                            }}
                             className={styles.taskActionButton}
                             title="Start Task"
                           >
                             ▶️ Start
                           </button>
                           <button
-                            onClick={() => taskManagement.processTask(task.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              taskManagement.processTask(task.id);
+                            }}
                             className={styles.taskActionButton}
                             title="Process Task with Hecate"
                           >
@@ -538,14 +561,20 @@ const Scopes: React.FC<ScopesProps> = ({
                       {task.status === 'running' && (
                         <>
                           <button
-                            onClick={() => taskManagement.pauseTask(task.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              taskManagement.pauseTask(task.id);
+                            }}
                             className={styles.taskActionButton}
                             title="Pause Task"
                           >
                             ⏸️ Pause
                           </button>
                           <button
-                            onClick={() => taskManagement.cancelTask(task.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              taskManagement.cancelTask(task.id);
+                            }}
                             className={styles.taskActionButton}
                             title="Cancel Task"
                           >
@@ -555,7 +584,10 @@ const Scopes: React.FC<ScopesProps> = ({
                       )}
                       {task.status === 'paused' && (
                         <button
-                          onClick={() => taskManagement.resumeTask(task.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            taskManagement.resumeTask(task.id);
+                          }}
                           className={styles.taskActionButton}
                           title="Resume Task"
                         >
@@ -564,20 +596,16 @@ const Scopes: React.FC<ScopesProps> = ({
                       )}
                       {task.status === 'failed' && (
                         <button
-                          onClick={() => taskManagement.retryTask(task.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            taskManagement.retryTask(task.id);
+                          }}
                           className={styles.taskActionButton}
                           title="Retry Task"
                         >
                           🔄 Retry
                         </button>
                       )}
-                      <button
-                        onClick={() => setSelectedTaskId(task.id)}
-                        className={styles.taskActionButton}
-                        title="View Details"
-                      >
-                        👁️ Details
-                      </button>
                     </div>
                   </div>
                   ))
