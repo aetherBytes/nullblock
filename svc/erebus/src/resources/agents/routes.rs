@@ -4,7 +4,6 @@ use axum::{
     response::Json as ResponseJson,
     http::{StatusCode, HeaderMap},
 };
-use sqlx::Row;
 use std::collections::HashMap;
 use serde_json::Value;
 use tracing::{info, error, warn};
@@ -26,87 +25,75 @@ async fn extract_wallet_and_create_user(headers: &HeaderMap) -> Option<Uuid> {
     let wallet_chain = headers.get("x-wallet-chain")
         .and_then(|h| h.to_str().ok())
         .unwrap_or("unknown");
-    
+
     info!("🔍 Extracted wallet: {} on chain: {}", wallet_address, wallet_chain);
-    
-    // Create user reference entry in the Erebus database
-    match create_user_in_erebus_database(wallet_address, wallet_chain).await {
+
+    // Call Erebus user registration API instead of direct database access
+    let default_source_type = serde_json::json!({
+        "type": "web3_wallet",
+        "provider": "unknown",
+        "metadata": {}
+    });
+    match call_erebus_user_registration_api(wallet_address, wallet_chain, Some(default_source_type)).await {
         Ok(user_id) => {
-            info!("✅ User reference created/updated: {}", user_id);
+            info!("✅ User reference created/updated via Erebus API: {}", user_id);
             Some(user_id)
         }
         Err(e) => {
-            error!("❌ Failed to create user reference: {}", e);
+            error!("❌ Failed to create user reference via Erebus API: {}", e);
             None
         }
     }
 }
 
-/// Create user in Erebus database
-async fn create_user_in_erebus_database(wallet_address: &str, chain: &str) -> Result<Uuid, String> {
-    use crate::database::get_erebus_connection;
-    
-    let conn = get_erebus_connection().await.map_err(|e| e.to_string())?;
-    
-    let user_id = Uuid::new_v4();
-    
-    let result = sqlx::query(
-        r#"
-        INSERT INTO user_references (id, wallet_address, chain, user_type, created_at, updated_at, is_active)
-        VALUES ($1, $2, $3, $4, NOW(), NOW(), $5)
-        ON CONFLICT (wallet_address, chain) 
-        DO UPDATE SET 
-            updated_at = NOW(),
-            is_active = $5
-        RETURNING id
-        "#
-    )
-    .bind(user_id)
-    .bind(wallet_address)
-    .bind(chain)
-    .bind("external")
-    .bind(true)
-    .fetch_one(conn)
-    .await
-    .map_err(|e| e.to_string())?;
-    
-    let id: Uuid = result.get("id");
-    Ok(id)
-}
-
-/// Sync user from Erebus to Agents database
-async fn sync_user_to_agents_database(user_id: Uuid, wallet_address: &str, chain: &str) -> Result<(), String> {
-    let agents_url = std::env::var("HECATE_AGENT_URL")
-        .unwrap_or_else(|_| "http://localhost:9003".to_string());
-    
+/// Call Erebus user registration API (replaces direct database access)
+async fn call_erebus_user_registration_api(wallet_address: &str, chain: &str, source_type: Option<serde_json::Value>) -> Result<Uuid, String> {
+    let erebus_url = "http://localhost:3000";
     let client = reqwest::Client::new();
-    let user_data = serde_json::json!({
-        "id": user_id.to_string(),
-        "wallet_address": wallet_address,
+
+    let request_body = serde_json::json!({
+        "source_identifier": wallet_address,
         "chain": chain,
-        "user_type": "external",
-        "erebus_created_at": chrono::Utc::now().to_rfc3339(),
-        "erebus_updated_at": chrono::Utc::now().to_rfc3339()
+        "source_type": source_type.unwrap_or_else(|| serde_json::json!({
+            "type": "web3_wallet",
+            "provider": "unknown",
+            "metadata": {}
+        })),
+        "wallet_type": "unknown"
     });
-    
-    // Sync user to agents service
+
+    info!("🌐 Calling Erebus user registration API: {}/api/users/register", erebus_url);
+
     match client
-        .post(&format!("{}/user-references/sync", agents_url))
-        .json(&user_data)
+        .post(&format!("{}/api/users/register", erebus_url))
+        .json(&request_body)
         .send()
         .await
     {
         Ok(response) => {
             if response.status().is_success() {
-                Ok(())
+                match response.json::<serde_json::Value>().await {
+                    Ok(json_response) => {
+                        if let Some(user_id_str) = json_response["user_id"].as_str() {
+                            match Uuid::parse_str(user_id_str) {
+                                Ok(user_id) => Ok(user_id),
+                                Err(e) => Err(format!("Invalid UUID in response: {}", e))
+                            }
+                        } else {
+                            Err("No user_id in response".to_string())
+                        }
+                    }
+                    Err(e) => Err(format!("Failed to parse response JSON: {}", e))
+                }
             } else {
                 let error_text = response.text().await.unwrap_or_default();
-                Err(format!("Agents sync error: {}", error_text))
+                Err(format!("Erebus API error: {}", error_text))
             }
         }
-        Err(e) => Err(e.to_string())
+        Err(e) => Err(format!("Failed to call Erebus API: {}", e))
     }
 }
+
 
 /// Register user endpoint - called when wallet connects
 pub async fn register_user(
@@ -119,7 +106,7 @@ pub async fn register_user(
     // Extract wallet information from headers or request body
     let wallet_address = headers.get("x-wallet-address")
         .and_then(|h| h.to_str().ok())
-        .or_else(|| request["wallet_address"].as_str());
+        .or_else(|| request["source_identifier"].as_str());
     
     let wallet_chain = headers.get("x-wallet-chain")
         .and_then(|h| h.to_str().ok())
@@ -129,20 +116,16 @@ pub async fn register_user(
     if let Some(wallet_address) = wallet_address {
         info!("🔍 Registering user with wallet: {} on chain: {}", wallet_address, wallet_chain);
         
-        match create_user_in_erebus_database(wallet_address, wallet_chain).await {
+        // Extract source_type from request
+        let source_type = request["source_type"].as_object().map(|obj| serde_json::Value::Object(obj.clone()));
+        
+        match call_erebus_user_registration_api(wallet_address, wallet_chain, source_type).await {
             Ok(user_id) => {
-                info!("✅ User registered successfully in Erebus database: {}", user_id);
-                
-                // Sync user to Agents database
-                match sync_user_to_agents_database(user_id, wallet_address, wallet_chain).await {
-                    Ok(_) => {
-                        info!("✅ User synced to Agents database successfully");
-                    }
-                    Err(e) => {
-                        warn!("⚠️ User created in Erebus but failed to sync to Agents: {}", e);
-                    }
-                }
-                
+                info!("✅ User registered successfully via Erebus API: {}", user_id);
+
+                // Note: User sync to Agents database is now handled automatically by Erebus
+                // via Kafka events and database triggers - no manual sync needed
+
                 let response = serde_json::json!({
                     "success": true,
                     "data": {
@@ -150,7 +133,7 @@ pub async fn register_user(
                         "wallet_address": wallet_address,
                         "chain": wallet_chain
                     },
-                    "message": "User registered successfully in Erebus database"
+                    "message": "User registered successfully via Erebus API"
                 });
                 Ok(ResponseJson(response))
             }
@@ -159,7 +142,7 @@ pub async fn register_user(
                 let error_response = AgentErrorResponse {
                     error: "user_registration_failed".to_string(),
                     code: "USER_REGISTRATION_ERROR".to_string(),
-                    message: format!("Failed to register user: {}", e),
+                    message: format!("Failed to register user via Erebus API: {}", e),
                     agent_available: true,
                 };
                 Err((StatusCode::INTERNAL_SERVER_ERROR, ResponseJson(error_response)))

@@ -48,9 +48,14 @@ async fn get_user_id_from_wallet(
                 info!("🆕 Creating new user for wallet: {} -> {}", wallet, user_id);
                 let user_ref = crate::models::UserReference {
                     id: user_id,
-                    wallet_address: wallet.to_string(),
+                    source_identifier: wallet.to_string(),
                     chain: chain.to_string(),
-                    wallet_type: "web3".to_string(),
+                    source_type: serde_json::json!({
+                        "type": "web3_wallet",
+                        "provider": "web3",
+                        "metadata": {}
+                    }),
+                    wallet_type: Some("web3".to_string()),
                     created_at: chrono::Utc::now(),
                     updated_at: chrono::Utc::now(),
                 };
@@ -1051,9 +1056,9 @@ async fn migrate_existing_users_to_wallet_uuids(
             let mut failed_count = 0;
 
             for user_entity in existing_users {
-                if let (Some(wallet_address), Some(chain)) = (&user_entity.wallet_address, &user_entity.chain) {
+                if let (Some(source_identifier), Some(chain)) = (&user_entity.source_identifier, &user_entity.chain) {
                     // Calculate what the UUID should be
-                    let correct_uuid = wallet_to_uuid(wallet_address, chain);
+                    let correct_uuid = wallet_to_uuid(source_identifier, chain);
 
                     if user_entity.id != correct_uuid {
                         info!("🔄 Migrating user {} -> {}", user_entity.id, correct_uuid);
@@ -1061,9 +1066,14 @@ async fn migrate_existing_users_to_wallet_uuids(
                         // Create new user with correct UUID
                         let new_user_ref = crate::models::UserReference {
                             id: correct_uuid,
-                            wallet_address: wallet_address.clone(),
-                            chain: chain.clone(),
-                            wallet_type: "web3".to_string(),
+                            source_identifier: source_identifier.to_string(),
+                            chain: chain.to_string(),
+                            source_type: serde_json::json!({
+                                "type": "web3_wallet",
+                                "provider": "web3",
+                                "metadata": {}
+                            }),
+                            wallet_type: Some("web3".to_string()),
                             created_at: chrono::Utc::now(),
                             updated_at: chrono::Utc::now(),
                         };

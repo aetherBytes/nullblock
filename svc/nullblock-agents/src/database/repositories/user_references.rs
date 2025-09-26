@@ -17,9 +17,10 @@ impl UserReferenceRepository {
     pub async fn upsert_from_kafka_event(
         &self,
         user_id: Uuid,
-        wallet_address: Option<&str>,
+        source_identifier: Option<&str>,
         chain: Option<&str>,
-        user_type: &str,
+        source_type: &serde_json::Value,
+        wallet_type: Option<&str>,
         email: Option<&str>,
         metadata: &serde_json::Value,
         erebus_created_at: Option<DateTime<Utc>>,
@@ -30,33 +31,30 @@ impl UserReferenceRepository {
         let user_ref = sqlx::query_as::<_, UserReferenceEntity>(
             r#"
             INSERT INTO user_references (
-                id, wallet_address, chain, user_type, email, metadata,
-                preferences, synced_at, is_active, erebus_created_at, erebus_updated_at
+                id, source_identifier, chain, user_type, source_type, wallet_type, email, metadata,
+                preferences, is_active
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            ON CONFLICT (id) DO UPDATE SET
-                wallet_address = EXCLUDED.wallet_address,
-                chain = EXCLUDED.chain,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (source_identifier, chain) DO UPDATE SET
                 user_type = EXCLUDED.user_type,
+                source_type = EXCLUDED.source_type,
+                wallet_type = EXCLUDED.wallet_type,
                 email = EXCLUDED.email,
                 metadata = EXCLUDED.metadata,
-                synced_at = EXCLUDED.synced_at,
-                is_active = EXCLUDED.is_active,
-                erebus_updated_at = EXCLUDED.erebus_updated_at
+                is_active = EXCLUDED.is_active
             RETURNING *
             "#
         )
         .bind(user_id)
-        .bind(wallet_address)
+        .bind(source_identifier)
         .bind(chain)
-        .bind(user_type)
+        .bind("external") // user_type - default value
+        .bind(source_type)
+        .bind(wallet_type)
         .bind(email)
         .bind(metadata)
         .bind(serde_json::json!({})) // preferences
-        .bind(now)
         .bind(true) // is_active
-        .bind(erebus_created_at)
-        .bind(erebus_updated_at)
         .fetch_one(&self.pool)
         .await?;
 
@@ -74,11 +72,11 @@ impl UserReferenceRepository {
         Ok(user_ref)
     }
 
-    pub async fn get_by_wallet(&self, wallet_address: &str, chain: &str) -> Result<Option<UserReferenceEntity>> {
+    pub async fn get_by_source(&self, source_identifier: &str, chain: &str) -> Result<Option<UserReferenceEntity>> {
         let user_ref = sqlx::query_as::<_, UserReferenceEntity>(
-            "SELECT * FROM user_references WHERE wallet_address = $1 AND chain = $2 AND is_active = true"
+            "SELECT * FROM user_references WHERE source_identifier = $1 AND chain = $2 AND is_active = true"
         )
-        .bind(wallet_address)
+        .bind(source_identifier)
         .bind(chain)
         .fetch_optional(&self.pool)
         .await?;
@@ -136,24 +134,23 @@ impl UserReferenceRepository {
         let user_entity = sqlx::query_as::<_, UserReferenceEntity>(
             r#"
             INSERT INTO user_references (
-                id, wallet_address, chain, user_type, email, metadata,
-                preferences, synced_at, is_active, erebus_created_at, erebus_updated_at
+                id, source_identifier, chain, user_type, source_type, wallet_type, email, metadata,
+                preferences, is_active
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
             "#
         )
         .bind(user_ref.id)
-        .bind(&user_ref.wallet_address)
+        .bind(&user_ref.source_identifier)
         .bind(&user_ref.chain)
+        .bind("external") // user_type - default value
+        .bind(&user_ref.source_type)
         .bind(&user_ref.wallet_type)
         .bind(None::<String>) // email
         .bind(serde_json::json!({})) // metadata
         .bind(serde_json::json!({})) // preferences
-        .bind(now)
         .bind(true) // is_active
-        .bind(Some(user_ref.created_at))
-        .bind(Some(user_ref.updated_at))
         .fetch_one(&self.pool)
         .await?;
 

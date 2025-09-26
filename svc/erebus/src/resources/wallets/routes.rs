@@ -16,7 +16,36 @@ use crate::resources::types::{
     WalletDetectionRequest, WalletDetectionResponse, WalletConnectionRequest,
     WalletConnectionResponse, WalletStatusResponse
 };
+use crate::user_references::UserReferenceService;
 use super::wallet_service::WalletService;
+use super::{PhantomWallet, MetaMaskWallet};
+use uuid::Uuid;
+
+/// Register user directly in Erebus database after successful wallet verification
+async fn register_user_in_database(wallet_address: &str, chain: &str, database: &crate::database::Database) -> Result<Uuid, String> {
+    let user_service = UserReferenceService::new(database.clone());
+
+    let source_type = serde_json::json!({
+        "type": "web3_wallet",
+        "provider": if chain == "solana" { "phantom" } else if chain == "ethereum" { "metamask" } else { "unknown" },
+        "metadata": {}
+    });
+
+    let wallet_type = if chain == "solana" { "phantom" } else if chain == "ethereum" { "metamask" } else { "unknown" };
+
+    println!("🗄️ Registering user directly in Erebus database from wallet verification");
+
+    match user_service.create_or_get_user(wallet_address, chain, source_type, Some(wallet_type)).await {
+        Ok(user_ref) => {
+            println!("✅ User registered successfully in database: {}", user_ref.id);
+            Ok(user_ref.id)
+        }
+        Err(e) => {
+            println!("❌ Failed to register user in database: {}", e);
+            Err(e)
+        }
+    }
+}
 
 /// Create wallet routes for the main router
 pub fn create_wallet_routes() -> Router<crate::AppState> {
@@ -83,7 +112,34 @@ async fn verify_wallet_signature(
     State(app_state): State<crate::AppState>,
     Json(request): Json<WalletVerifyRequest>,
 ) -> Json<WalletVerifyResponse> {
-    Json(app_state.wallet_manager.verify_wallet_signature(request))
+    let wallet_address = request.wallet_address.clone();
+    let verification_response = app_state.wallet_manager.verify_wallet_signature(request);
+
+    // If verification successful, register user via Erebus API
+    if verification_response.success {
+        println!("🎯 Wallet verification successful, registering user: {}", wallet_address);
+
+        // Determine chain based on wallet type
+        let chain = if PhantomWallet::validate_solana_address(&wallet_address) {
+            "solana"
+        } else if MetaMaskWallet::validate_ethereum_address(&wallet_address) {
+            "ethereum"
+        } else {
+            "unknown"
+        };
+
+        // Register user directly in database
+        match register_user_in_database(&wallet_address, chain, &app_state.database).await {
+            Ok(user_id) => {
+                println!("✅ User registered successfully after wallet verification: {}", user_id);
+            }
+            Err(e) => {
+                println!("⚠️ Wallet verification successful but user registration failed: {}", e);
+            }
+        }
+    }
+
+    Json(verification_response)
 }
 
 /// Get supported networks for a specific wallet type

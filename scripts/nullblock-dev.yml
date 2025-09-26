@@ -544,6 +544,10 @@ on_project_start: |
   echo "🔍 Checking service health..."
   docker-compose ps | grep -E "(postgres|redis|kafka|zookeeper)" | grep -E "(healthy|Up)"
   echo ""
+  echo "🔄 Running database migrations and syncs..."
+  echo "Applying all database schema updates and syncing data..."
+  just migrate
+  echo ""
   echo "🚀 Nullblock Development Environment Ready!"
   echo "================================================"
   echo "🏗️  Architecture: Client ↔ Erebus ↔ Services"

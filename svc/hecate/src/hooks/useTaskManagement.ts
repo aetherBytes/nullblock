@@ -32,7 +32,7 @@ interface UseTaskManagementReturn {
   resumeTask: (id: string) => Promise<boolean>;
   cancelTask: (id: string) => Promise<boolean>;
   retryTask: (id: string) => Promise<boolean>;
-  processTask: (id: string) => Promise<boolean>;
+  processTask: (id: string, isAutoProcessing?: boolean) => Promise<boolean>;
 
   // Task Selection
   selectTask: (id: string | null) => void;
@@ -189,17 +189,19 @@ export const useTaskManagement = (
         setTasks(prev => [response.data!, ...ensureArray(prev)]);
         console.log('✅ Task created via backend:', response.data);
 
-        // If auto_start is true, automatically process the task
+        // If auto_start is true, the backend handles processing automatically
         if (request.auto_start) {
-          console.log('🔄 Auto-start task created, automatically processing...');
+          console.log('🔄 Auto-start task created, backend will handle processing automatically');
+          // Backend already processes auto_start tasks, no need for frontend processing
+          // Set up polling to monitor completion
           setTimeout(async () => {
             try {
-              console.log('⚡ Auto-processing task:', response.data!.id);
-              await processTask(response.data!.id);
+              console.log('🔄 Refreshing tasks to check auto-processing completion');
+              await loadTasks();
             } catch (e) {
-              console.warn('⚠️ Failed to auto-process task:', e);
+              console.warn('⚠️ Failed to refresh tasks after auto-start:', e);
             }
-          }, 1000); // 1 second delay to allow task creation to complete
+          }, 3000); // 3 second delay to allow backend processing
         }
 
         return true;
@@ -383,7 +385,7 @@ export const useTaskManagement = (
     }
   }, [activeTask?.id]);
 
-  const processTask = useCallback(async (id: string): Promise<boolean> => {
+  const processTask = useCallback(async (id: string, isAutoProcessing: boolean = false): Promise<boolean> => {
     console.log('⚡ Processing task:', id);
 
     // First try to get task from current tasks array
@@ -405,7 +407,9 @@ export const useTaskManagement = (
     }
 
     try {
+      console.log(`🔧 Making processTask API call for task: ${id}`);
       const response = await taskService.processTask(id);
+      console.log(`📤 ProcessTask API response:`, response);
       if (response.success && response.data) {
         // Use the task name from the response data if available, otherwise fall back to what we found
         const finalTaskName = response.data.name || taskName || 'Unknown Task';
@@ -440,7 +444,14 @@ export const useTaskManagement = (
         return true;
       } else {
         const finalTaskName = taskName || 'Unknown Task';
-        setError(response.error || 'Failed to process task');
+
+        console.log(`❌ ProcessTask failed for task ${id}:`, response);
+        // Only set global error state if this is not auto-processing
+        if (!isAutoProcessing) {
+          setError(response.error || 'Failed to process task');
+        } else {
+          console.warn('⚠️ Auto-processing failed:', response.error || 'Failed to process task');
+        }
 
         // Add chat notification for task failure
         if (addChatNotification) {
@@ -452,7 +463,13 @@ export const useTaskManagement = (
     } catch (error) {
       console.error('❌ Task processing error:', error);
       const finalTaskName = taskName || 'Unknown Task';
-      setError((error as Error).message);
+
+      // Only set global error state if this is not auto-processing
+      if (!isAutoProcessing) {
+        setError((error as Error).message);
+      } else {
+        console.warn('⚠️ Auto-processing error:', (error as Error).message);
+      }
 
       // Add chat notification for task error
       if (addChatNotification) {

@@ -287,7 +287,15 @@ const Scopes: React.FC<ScopesProps> = ({
                 <div className={styles.trailContent}>
                   <div className={styles.trailLabel}>Source</div>
                   <div className={styles.trailValue}>
-                    {selectedTask.wallet_address || selectedTask.created_by_wallet || selectedTask.source_wallet || 'Unknown'}
+                    {(() => {
+                      const sourceType = selectedTask.source_metadata?.type || 'unknown';
+                      const sourceValue = selectedTask.source_metadata?.wallet_address || 
+                                        selectedTask.source_metadata?.identifier || 
+                                        selectedTask.source_identifier || 
+                                        'Unknown';
+                      
+                      return `${sourceType}: ${sourceValue}`;
+                    })()}
                   </div>
                 </div>
               </div>

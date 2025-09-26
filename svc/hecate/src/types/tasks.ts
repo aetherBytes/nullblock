@@ -81,6 +81,10 @@ export interface Task {
   action_result?: string;
   action_metadata: Record<string, any>;
   action_duration?: number;
+
+  // Source tracking fields
+  source_identifier?: string;
+  source_metadata: Record<string, any>;
 }
 
 export interface TaskFilter {

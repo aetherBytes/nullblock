@@ -52,9 +52,10 @@ pub struct ChatResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserReference {
     pub id: Uuid,
-    pub wallet_address: String,
+    pub source_identifier: String,
     pub chain: String,
-    pub wallet_type: String,
+    pub source_type: serde_json::Value,
+    pub wallet_type: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -432,6 +433,10 @@ pub struct Task {
     pub action_result: Option<String>,
     pub action_metadata: HashMap<String, serde_json::Value>,
     pub action_duration: Option<u64>,
+
+    // Source tracking fields
+    pub source_identifier: Option<String>,
+    pub source_metadata: HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
