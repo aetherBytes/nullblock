@@ -240,6 +240,34 @@ docker-db-info:
     @echo "IPFS API:              http://localhost:5001"
     @echo "IPFS Gateway:          http://localhost:8080"
 
+# Run all database migrations and syncs
+migrate:
+    @echo "🔄 Running all database migrations and syncs..."
+    @echo "=============================================="
+    @echo ""
+    @echo "📋 Step 1: Running Erebus database migrations..."
+    @echo "Applying Erebus schema updates..."
+    @./scripts/run-erebus-migrations.sh
+    @echo "✅ Erebus migrations completed"
+    @echo ""
+    @echo "📋 Step 2: Running Agents database migrations..."
+    @echo "Applying Agents schema updates..."
+    @./scripts/run-agents-migrations.sh
+    @echo "✅ Agents migrations completed"
+    @echo ""
+    @echo "📋 Step 3: Syncing databases..."
+    @echo "Syncing user data from Erebus to Agents..."
+    @cd svc/erebus && ./scripts/manual_sync.sh
+    @echo "✅ Database sync completed"
+    @echo ""
+    @echo "📊 Final status check..."
+    @echo "Erebus users:"
+    @docker exec nullblock-postgres-erebus psql -U postgres -d erebus -c "SELECT COUNT(*) as users FROM user_references WHERE is_active = true;" 2>/dev/null || echo "❌ Erebus database not accessible"
+    @echo "Agents users:"
+    @docker exec nullblock-postgres-agents psql -U postgres -d agents -c "SELECT COUNT(*) as users FROM user_references WHERE is_active = true;" 2>/dev/null || echo "❌ Agents database not accessible"
+    @echo ""
+    @echo "🎉 All migrations and syncs completed successfully!"
+
 # Show help
 help:
     @echo "Nullblock MVP Commands:"
@@ -266,6 +294,7 @@ help:
     @echo "  just start-erebus - Start Erebus Rust server"
     @echo "  just build-erebus - Build Erebus Rust server"
     @echo "  just init-db      - Initialize PostgreSQL databases (local)"
+    @echo "  just migrate      - Run all database migrations and syncs"
     @echo "  just docker-db-info - Show Docker database connections"
     @echo ""
     @echo "Testing Commands:"

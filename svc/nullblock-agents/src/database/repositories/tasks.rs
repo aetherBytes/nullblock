@@ -33,7 +33,7 @@ impl TaskRepository {
 
         let task = sqlx::query_as::<_, TaskEntity>(
             r#"
-            INSERT INTO tasks (
+            INSERT INTO task_executions (
                 id, name, description, task_type, category, status, priority,
                 user_id, assigned_agent_id, created_at, updated_at, started_at, progress,
                 sub_tasks, dependencies, context, parameters, logs, triggers,
@@ -82,7 +82,7 @@ impl TaskRepository {
         let uuid = Uuid::parse_str(task_id)?;
 
         let task = sqlx::query_as::<_, TaskEntity>(
-            "SELECT * FROM tasks WHERE id = $1"
+            "SELECT * FROM task_executions WHERE id = $1"
         )
         .bind(uuid)
         .fetch_optional(&self.pool)
@@ -92,7 +92,7 @@ impl TaskRepository {
     }
 
     pub async fn list(&self, user_id: Option<Uuid>, status_filter: Option<&str>, task_type_filter: Option<&str>, limit: Option<i64>) -> Result<Vec<TaskEntity>> {
-        let mut query_builder = sqlx::QueryBuilder::new("SELECT * FROM tasks WHERE 1=1");
+        let mut query_builder = sqlx::QueryBuilder::new("SELECT * FROM task_executions WHERE 1=1");
 
         if let Some(uid) = user_id {
             query_builder.push(" AND user_id = ");
@@ -128,7 +128,7 @@ impl TaskRepository {
 
         let task = sqlx::query_as::<_, TaskEntity>(
             r#"
-            UPDATE tasks SET
+            UPDATE task_executions SET
                 name = COALESCE($2, name),
                 description = COALESCE($3, description),
                 status = COALESCE($4, status),
@@ -164,7 +164,7 @@ impl TaskRepository {
         let uuid = Uuid::parse_str(task_id)?;
 
         let task = sqlx::query_as::<_, TaskEntity>(
-            "DELETE FROM tasks WHERE id = $1 RETURNING *"
+            "DELETE FROM task_executions WHERE id = $1 RETURNING *"
         )
         .bind(uuid)
         .fetch_optional(&self.pool)
@@ -192,7 +192,7 @@ impl TaskRepository {
 
         let task = sqlx::query_as::<_, TaskEntity>(
             r#"
-            UPDATE tasks SET
+            UPDATE task_executions SET
                 status = $2,
                 started_at = COALESCE($3, started_at),
                 completed_at = COALESCE($4, completed_at),
@@ -219,7 +219,7 @@ impl TaskRepository {
 
         let task = sqlx::query_as::<_, TaskEntity>(
             r#"
-            UPDATE tasks SET
+            UPDATE task_executions SET
                 actioned_at = $2,
                 action_metadata = $3,
                 updated_at = $4
@@ -243,7 +243,7 @@ impl TaskRepository {
 
         let task = sqlx::query_as::<_, TaskEntity>(
             r#"
-            UPDATE tasks SET
+            UPDATE task_executions SET
                 action_result = $2,
                 action_duration = $3,
                 updated_at = $4
@@ -263,7 +263,7 @@ impl TaskRepository {
 
     pub async fn get_unactioned_tasks(&self, agent_id: Option<Uuid>, limit: Option<i64>) -> Result<Vec<TaskEntity>> {
         let mut query_builder = sqlx::QueryBuilder::new(
-            "SELECT * FROM tasks WHERE status = 'running' AND actioned_at IS NULL"
+            "SELECT * FROM task_executions WHERE status = 'running' AND actioned_at IS NULL"
         );
 
         if let Some(agent) = agent_id {
@@ -286,7 +286,7 @@ impl TaskRepository {
 
     pub async fn get_tasks_for_agent(&self, agent_id: Uuid, status_filter: Option<&str>) -> Result<Vec<TaskEntity>> {
         let mut query_builder = sqlx::QueryBuilder::new(
-            "SELECT * FROM tasks WHERE assigned_agent_id = "
+            "SELECT * FROM task_executions WHERE assigned_agent_id = "
         );
         query_builder.push_bind(agent_id);
 

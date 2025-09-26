@@ -46,6 +46,10 @@ pub struct TaskEntity {
     pub action_result: Option<String>,
     pub action_metadata: serde_json::Value,
     pub action_duration: Option<i64>,
+
+    // Source tracking fields
+    pub source_identifier: Option<String>,
+    pub source_metadata: serde_json::Value,
 }
 
 impl TaskEntity {
@@ -89,6 +93,10 @@ impl TaskEntity {
             action_result: self.action_result,
             action_metadata: serde_json::from_value(self.action_metadata)?,
             action_duration: self.action_duration.map(|d| d as u64),
+
+            // Source tracking fields
+            source_identifier: self.source_identifier,
+            source_metadata: serde_json::from_value(self.source_metadata)?,
         })
     }
 
@@ -133,6 +141,10 @@ impl TaskEntity {
             action_result: task.action_result.clone(),
             action_metadata: serde_json::to_value(&task.action_metadata)?,
             action_duration: task.action_duration.map(|d| d as i64),
+
+            // Source tracking fields
+            source_identifier: task.source_identifier.clone(),
+            source_metadata: serde_json::to_value(&task.source_metadata)?,
         })
     }
 }
@@ -164,12 +176,15 @@ pub struct AgentEntity {
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct UserReferenceEntity {
     pub id: Uuid,
-    pub wallet_address: Option<String>,
+    pub source_identifier: Option<String>,
     pub chain: Option<String>,
     pub user_type: String,
+    pub source_type: serde_json::Value,
+    pub wallet_type: Option<String>,
     pub email: Option<String>,
     pub metadata: serde_json::Value,
     pub preferences: serde_json::Value,
+    pub additional_metadata: serde_json::Value,
     pub synced_at: DateTime<Utc>,
     pub is_active: bool,
     pub erebus_created_at: Option<DateTime<Utc>>,

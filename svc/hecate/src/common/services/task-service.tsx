@@ -182,8 +182,14 @@ class TaskService {
 
     try {
       const requestBody = {
-        wallet_address: walletAddress,
-        chain: chain
+        source_identifier: walletAddress,
+        chain: chain,
+        source_type: {
+          type: "web3_wallet",
+          provider: "unknown",
+          metadata: {}
+        },
+        wallet_type: null
       };
 
       console.log('📤 Sending registration request to:', `${this.erebusUrl}/api/agents/users/register`);

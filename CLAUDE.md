@@ -131,14 +131,54 @@ Frontend → Erebus → {
 
 ### Key API Endpoints
 
-- **Wallets**: `/api/wallets/*` - Authentication, session management
-- **Agents**: `/api/agents/*` - Chat, status, orchestration
-- **Tasks**: `/api/agents/tasks/*` - Task management, lifecycle operations
-- **MCP**: `/mcp/*` - Protocol operations
-- **Marketplace**: `/api/marketplace/*` - Listing management, search, featured items
-- **Discovery**: `/api/discovery/*` - Service discovery, health monitoring
-- **Admin**: `/api/admin/*` - Marketplace moderation, system management
-- **Health**: `/health` - Service status
+- **🔐 Users**: `/api/users/*` - **EREBUS OWNED** User registration, lookup, management
+- **👛 Wallets**: `/api/wallets/*` - Authentication, session management
+- **🤖 Agents**: `/api/agents/*` - Chat, status, orchestration
+- **📋 Tasks**: `/api/agents/tasks/*` - Task management, lifecycle operations
+- **🔗 MCP**: `/mcp/*` - Protocol operations
+- **🛣️ Marketplace**: `/api/marketplace/*` - Listing management, search, featured items
+- **🔍 Discovery**: `/api/discovery/*` - Service discovery, health monitoring
+- **⚙️ Admin**: `/api/admin/*` - Marketplace moderation, system management
+- **🏥 Health**: `/health` - Service status
+
+### 🔐 User Authentication & Registration Flow
+
+**CRITICAL**: All user operations go through Erebus APIs only. No direct database access allowed.
+
+#### Complete Web3 Wallet Authentication Flow
+
+```
+1. Frontend: Wallet Connect (MetaMask/Phantom)
+   ↓
+2. POST /api/wallets/challenge (create auth challenge)
+   ↓
+3. User signs challenge with wallet
+   ↓
+4. POST /api/wallets/verify (verify signature)
+   ↓
+5. ✅ Successful verification automatically calls:
+   POST /api/users/register (Erebus User API)
+   ↓
+6. User registered in Erebus database
+   ↓
+7. Kafka events sync user to Agents database
+   ↓
+8. Session token returned to frontend
+```
+
+#### User Management Endpoints (Erebus Port 3000)
+
+- **POST `/api/users/register`** - Create/update user after wallet verification
+- **POST `/api/users/lookup`** - Find user by wallet address + chain
+- **GET `/api/users/:user_id`** - Get user by UUID
+- **❌ DEPRECATED**: `/api/agents/users/register` - Use Erebus endpoints instead
+
+#### Architecture Enforcement
+
+- **✅ CORRECT**: Frontend → Erebus `/api/users/*` → Erebus Database
+- **❌ WRONG**: Any service → Direct database access
+- **❌ WRONG**: Agents service creating users directly
+- **✅ CORRECT**: Wallet verification → Automatic user registration
 
 ### Directory Structure
 
@@ -535,6 +575,12 @@ curl http://localhost:3000/api/discovery/agents
 ### Erebus Architecture Rules
 
 - **GOLDEN RULE**: ALL frontend requests MUST route through Erebus (port 3000) - NO EXCEPTIONS
+- **🚨 CRITICAL GOLDEN RULE**: EREBUS OWNS ALL USER CRUD OPERATIONS (Port 5440) - NO EXCEPTIONS
+  - **ALL user registration, authentication, and CRUD operations MUST go through Erebus APIs**
+  - **NO other service may directly access user databases or create users**
+  - **Use `/api/users/register`, `/api/users/lookup`, `/api/users/:id` endpoints ONLY**
+  - **Direct database access for users is STRICTLY PROHIBITED**
+  - **This prevents data corruption and maintains service boundaries**
 - **GOLDEN RULE**: Keep the top portion of CLAUDE.md static in structure and up to date with code changes
 - **GOLDEN RULE**: NEVER use test database credentials in production - test credentials are for development only
 - **main.rs**: Only subsystem entry points and core routes

@@ -4,6 +4,7 @@ pub mod types;
 pub mod wallets;
 pub mod mcp;
 pub mod agents;
+pub mod users;
 pub mod crossroads;
 pub mod external_service;
 
