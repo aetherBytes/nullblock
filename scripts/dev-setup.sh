@@ -126,13 +126,14 @@ BITTENSOR_NETWORK=test
 BITTENSOR_WALLET_PATH=your-bittensor-wallet-path
 
 # Database Configuration (local)
-DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@localhost:5432/nullblock
-MCP_DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@localhost:5432/nullblock_mcp
-ORCHESTRATION_DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@localhost:5432/nullblock_orchestration
-AGENTS_DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@localhost:5432/nullblock_agents
-EREBUS_DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@localhost:5432/nullblock_erebus
-HECATE_DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@localhost:5432/nullblock_hecate
-PLATFORM_DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@localhost:5432/nullblock_platform
+# Docker Database URLs (using mapped ports)
+DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
+MCP_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5442/mcp
+ORCHESTRATION_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5443/orchestration
+AGENTS_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
+EREBUS_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus
+HECATE_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
+PLATFORM_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5444/analytics
 REDIS_URL=redis://localhost:6379
 
 # IPFS Configuration (local)

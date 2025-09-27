@@ -10,13 +10,17 @@ interface ChatMessage {
   type?: string;
   model_used?: string;
   metadata?: any;
+  taskId?: string;
+  taskName?: string;
+  isTaskResult?: boolean;
+  processingTime?: number;
 }
 
 interface HecateChatProps {
   chatMessages: ChatMessage[];
   chatInput: string;
   setChatInput: (value: string) => void;
-  chatInputRef: React.RefObject<HTMLInputElement>;
+  chatInputRef: React.RefObject<HTMLTextAreaElement>;
   chatMessagesRef: React.RefObject<HTMLDivElement>;
   chatEndRef: React.RefObject<HTMLDivElement>;
   nullviewState: string;
@@ -24,6 +28,7 @@ interface HecateChatProps {
   isProcessingChat: boolean;
   defaultModelReady: boolean;
   currentSelectedModel: string | null;
+  agentHealthStatus?: 'healthy' | 'unhealthy' | 'unknown';
   isChatExpanded: boolean;
   setIsChatExpanded: (expanded: boolean) => void;
   isScopesExpanded: boolean;
@@ -31,8 +36,11 @@ interface HecateChatProps {
   activeScope: string | null;
   setActiveLens: (scope: string | null) => void;
   onChatSubmit: (e: React.FormEvent) => void;
-  onChatInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChatInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onChatScroll: (e: React.UIEvent<HTMLDivElement>) => void;
+  scrollToBottom: () => void;
+  isUserScrolling: boolean;
+  chatAutoScroll: boolean;
 }
 
 const HecateChat: React.FC<HecateChatProps> = ({
@@ -47,6 +55,7 @@ const HecateChat: React.FC<HecateChatProps> = ({
   isProcessingChat,
   defaultModelReady,
   currentSelectedModel,
+  agentHealthStatus = 'unknown',
   isChatExpanded,
   setIsChatExpanded,
   isScopesExpanded,
@@ -55,8 +64,42 @@ const HecateChat: React.FC<HecateChatProps> = ({
   setActiveLens,
   onChatSubmit,
   onChatInputChange,
-  onChatScroll
+  onChatScroll,
+  scrollToBottom,
+  isUserScrolling,
+  chatAutoScroll
 }) => {
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      onChatSubmit(e);
+    }
+  };
+
+  const handleTextareaResize = () => {
+    if (chatInputRef.current) {
+      chatInputRef.current.style.height = 'auto';
+      const scrollHeight = chatInputRef.current.scrollHeight;
+      const maxHeight = 200; // Maximum height in pixels
+      chatInputRef.current.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+    }
+  };
+
+  useEffect(() => {
+    handleTextareaResize();
+  }, [chatInput]);
+
+  useEffect(() => {
+    if (chatInputRef.current) {
+      chatInputRef.current.addEventListener('input', handleTextareaResize);
+      return () => {
+        if (chatInputRef.current) {
+          chatInputRef.current.removeEventListener('input', handleTextareaResize);
+        }
+      };
+    }
+  }, []);
   const renderThinkingIndicator = () => (
     <div className={`${styles.chatMessage} ${styles['message-hecate']} ${styles['type-thinking']}`}>
       <div className={styles.messageHeader}>
@@ -112,6 +155,20 @@ const HecateChat: React.FC<HecateChatProps> = ({
         </span>
       </div>
       <div className={styles.messageContent}>
+        {message.isTaskResult && (
+          <div className={styles.taskResultHeader}>
+            <div className={styles.taskResultBadge}>
+              <span className={styles.taskIcon}>✅</span>
+              <span className={styles.taskLabel}>Task Result</span>
+              {message.taskName && <span className={styles.taskName}>"{message.taskName}"</span>}
+            </div>
+            {message.processingTime && (
+              <div className={styles.taskMetrics}>
+                <span className={styles.processingTime}>⏱️ {message.processingTime}ms</span>
+              </div>
+            )}
+          </div>
+        )}
         <MarkdownRenderer content={message.message} />
       </div>
     </div>
@@ -125,7 +182,8 @@ const HecateChat: React.FC<HecateChatProps> = ({
             <div className={styles.chatTitle}>
               <h4>💬 Hecate Chat</h4>
               <span className={styles.modelStatus}>
-                {defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}
+                {agentHealthStatus === 'unhealthy' ? '⚠️ API Keys Required' :
+                 defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}
               </span>
             </div>
             <div className={styles.chatHeaderControls}>
@@ -149,28 +207,33 @@ const HecateChat: React.FC<HecateChatProps> = ({
           </div>
 
           <form className={styles.chatInput} onSubmit={onChatSubmit}>
-            <input
-              ref={chatInputRef}
-              type="text"
-              value={chatInput}
-              onChange={onChatInputChange}
-              placeholder={
-                isModelChanging
-                  ? "Switching models..."
-                  : isProcessingChat || nullviewState === 'thinking'
-                    ? "Hecate is thinking..."
-                    : "Ask Hecate anything..."
-              }
-              className={styles.chatInputField}
-              disabled={isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
-            />
-            <button
-              type="submit"
-              className={styles.chatSendButton}
-              disabled={isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
-            >
-              <span>➤</span>
-            </button>
+            <div className={styles.chatInputContainer}>
+              <textarea
+                ref={chatInputRef}
+                value={chatInput}
+                onChange={onChatInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  agentHealthStatus === 'unhealthy'
+                    ? "⚠️ Configure API keys in settings first..."
+                    : isModelChanging
+                      ? "Switching models..."
+                      : isProcessingChat || nullviewState === 'thinking'
+                        ? "Hecate is thinking..."
+                        : "Ask Hecate anything... (Enter to send, Shift+Enter for new line)"
+                }
+                className={styles.chatInputField}
+                disabled={agentHealthStatus === 'unhealthy' || isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
+                rows={1}
+              />
+              <button
+                type="submit"
+                className={styles.chatSendButton}
+                disabled={agentHealthStatus === 'unhealthy' || isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
+              >
+                <span>➤</span>
+              </button>
+            </div>
           </form>
         </div>
       </div>
@@ -184,7 +247,8 @@ const HecateChat: React.FC<HecateChatProps> = ({
           <div className={styles.chatTitle}>
             <h4>{currentSelectedModel ? `HECATE:${currentSelectedModel.split('/').pop()?.split(':')[0]?.toUpperCase() || 'MODEL'}` : 'HECATE:LOADING'}</h4>
             <span className={styles.chatStatus}>
-              {defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}
+              {agentHealthStatus === 'unhealthy' ? '⚠️ API Keys Required' :
+               defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}
             </span>
           </div>
           <div className={styles.chatHeaderControls}>
@@ -207,31 +271,47 @@ const HecateChat: React.FC<HecateChatProps> = ({
           {chatMessages.map(renderChatMessage)}
           {nullviewState === 'thinking' && renderThinkingIndicator()}
           <div ref={chatEndRef} />
+          
+          {/* Scroll to bottom button - show when user has scrolled up or when there are messages */}
+          {(isUserScrolling || chatMessages.length > 0) && (
+            <button
+              className={styles.scrollToBottomButton}
+              onClick={scrollToBottom}
+              title="Scroll to bottom"
+            >
+              ↓
+            </button>
+          )}
         </div>
 
         <form className={styles.chatInput} onSubmit={onChatSubmit}>
-          <input
-            ref={chatInputRef}
-            type="text"
-            value={chatInput}
-            onChange={onChatInputChange}
-            placeholder={
-              isModelChanging
-                ? "Switching models..."
-                : isProcessingChat || nullviewState === 'thinking'
-                  ? "Hecate is thinking..."
-                  : "Ask Hecate anything..."
-            }
-            className={styles.chatInputField}
-            disabled={isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
-          />
-          <button
-            type="submit"
-            className={styles.chatSendButton}
-            disabled={isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
-          >
-            <span>➤</span>
-          </button>
+          <div className={styles.chatInputContainer}>
+            <textarea
+              ref={chatInputRef}
+              value={chatInput}
+              onChange={onChatInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                agentHealthStatus === 'unhealthy'
+                  ? "⚠️ Configure API keys in settings first..."
+                  : isModelChanging
+                    ? "Switching models..."
+                    : isProcessingChat || nullviewState === 'thinking'
+                      ? "Hecate is thinking..."
+                      : "Ask Hecate anything... (Enter to send, Shift+Enter for new line)"
+              }
+              className={styles.chatInputField}
+              disabled={agentHealthStatus === 'unhealthy' || isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
+              rows={1}
+            />
+            <button
+              type="submit"
+              className={styles.chatSendButton}
+              disabled={agentHealthStatus === 'unhealthy' || isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}
+            >
+              <span>➤</span>
+            </button>
+          </div>
         </form>
       </div>
     </div>

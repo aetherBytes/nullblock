@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import ModelInfo from './ModelInfo';
 import TaskCreationForm from './TaskCreationForm';
+import MarkdownRenderer from '../common/MarkdownRenderer';
 import styles from './hud.module.scss';
 import { Task } from '../../types/tasks';
 
@@ -26,7 +27,7 @@ interface ScopesProps {
   setAutoScroll: (scroll: boolean) => void;
   logsEndRef: React.RefObject<HTMLDivElement>;
   theme: string;
-  onThemeChange: (theme: 'null' | 'cyber' | 'light' | 'dark') => void;
+  onThemeChange: (theme: 'null' | 'light' | 'dark') => void;
   // Model info props
   isLoadingModelInfo: boolean;
   modelInfo: any;
@@ -58,6 +59,8 @@ interface ScopesProps {
   getLatestModels: (models: any[], limit?: number) => any[];
 }
 
+type TaskCategory = 'todo' | 'running' | 'completed';
+
 const Scopes: React.FC<ScopesProps> = ({
   activeScope,
   setActiveLens,
@@ -84,6 +87,8 @@ const Scopes: React.FC<ScopesProps> = ({
   ...modelInfoProps
 }) => {
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [activeTaskCategory, setActiveTaskCategory] = useState<TaskCategory>('todo');
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const scopesOptions = [
     { id: 'modelinfo', icon: '🤖', title: 'Model Info', description: 'Current model details', color: '#ff6b6b' },
     { id: 'tasks', icon: '📋', title: 'Tasks', description: 'Active agent tasks', color: '#4ecdc4' },
@@ -101,17 +106,46 @@ const Scopes: React.FC<ScopesProps> = ({
       case 'running':
       case 'active':
         return styles.statusRunning;
+      case 'paused':
+        return styles.statusPaused;
       case 'completed':
       case 'success':
         return styles.statusCompleted;
       case 'failed':
       case 'error':
         return styles.statusFailed;
+      case 'cancelled':
+        return styles.statusCancelled;
+      case 'created':
       case 'pending':
       case 'idle':
         return styles.statusPending;
       default:
         return styles.statusPending;
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'running':
+      case 'active':
+        return '⚡';
+      case 'paused':
+        return '⏸️';
+      case 'completed':
+      case 'success':
+        return '✅';
+      case 'failed':
+      case 'error':
+        return '❌';
+      case 'cancelled':
+        return '🚫';
+      case 'created':
+      case 'pending':
+      case 'idle':
+        return '⏳';
+      default:
+        return '❓';
     }
   };
 
@@ -141,6 +175,228 @@ const Scopes: React.FC<ScopesProps> = ({
   const handleScopesClick = (scopeId: string) => {
     const newScope = activeScope === scopeId ? null : scopeId;
     setActiveLens(newScope);
+  };
+
+  // Categorize tasks
+  const todoTasks = tasks.filter(task => task.status === 'created');
+  const runningTasks = tasks.filter(task => task.status === 'running' || task.status === 'paused');
+  const completedTasks = tasks.filter(task => task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled');
+
+  const getTasksForCategory = (category: TaskCategory) => {
+    switch (category) {
+      case 'todo': return todoTasks;
+      case 'running': return runningTasks;
+      case 'completed': return completedTasks;
+      default: return [];
+    }
+  };
+
+  const currentCategoryTasks = getTasksForCategory(activeTaskCategory);
+
+  const selectedTask = selectedTaskId ? tasks.find(t => t.id === selectedTaskId) : null;
+
+  const renderTaskDetails = () => {
+    if (!selectedTask) return null;
+
+    return (
+      <div className={styles.taskDetailsContainer}>
+        <div className={styles.taskDetailsHeader}>
+          <button
+            onClick={() => setSelectedTaskId(null)}
+            className={styles.backButton}
+          >
+            ← Back to Tasks
+          </button>
+          <h4>📋 Task Details</h4>
+        </div>
+
+        <div className={styles.taskDetailsBody}>
+          <div className={styles.taskDetailsSection}>
+            <h5>Basic Information</h5>
+            <div className={styles.taskDetailsGrid}>
+              <div className={styles.taskDetailsField}>
+                <label>Name:</label>
+                <span>{selectedTask.name}</span>
+              </div>
+              <div className={styles.taskDetailsField}>
+                <label>Type:</label>
+                <span>{selectedTask.task_type}</span>
+              </div>
+              <div className={styles.taskDetailsField}>
+                <label>Status:</label>
+                <span className={`${styles.statusBadge} ${getStatusColor(selectedTask.status)}`}>
+                  {getStatusIcon(selectedTask.status)} {selectedTask.status}
+                </span>
+              </div>
+              <div className={styles.taskDetailsField}>
+                <label>Priority:</label>
+                <span className={styles.priorityBadge}>{selectedTask.priority}</span>
+              </div>
+            </div>
+            <div className={styles.taskDetailsField}>
+              <label>Description:</label>
+              <p>{selectedTask.description}</p>
+            </div>
+          </div>
+
+          <div className={styles.taskDetailsSection}>
+            <h5>Execution</h5>
+            <div className={styles.taskDetailsGrid}>
+              <div className={styles.taskDetailsField}>
+                <label>Progress:</label>
+                <div className={styles.progressContainer}>
+                  <div className={styles.progressBar}>
+                    <div
+                      className={styles.progressFill}
+                      style={{ width: `${selectedTask.status === 'completed' ? 100 : selectedTask.progress}%` }}
+                    ></div>
+                  </div>
+                  <span>
+                    {selectedTask.status === 'completed' ? '100' : Math.round(selectedTask.progress)}%
+                  </span>
+                </div>
+              </div>
+              {selectedTask.assigned_agent && (
+                <div className={styles.taskDetailsField}>
+                  <label>Assigned Agent:</label>
+                  <span>{selectedTask.assigned_agent}</span>
+                </div>
+              )}
+              {selectedTask.action_duration && (
+                <div className={styles.taskDetailsField}>
+                  <label>Duration:</label>
+                  <span>{(selectedTask.action_duration / 1000).toFixed(2)}s</span>
+                </div>
+              )}
+              <div className={styles.taskDetailsField}>
+                <label>Created:</label>
+                <span>{new Date(selectedTask.created_at).toLocaleString()}</span>
+              </div>
+              {selectedTask.completed_at && (
+                <div className={styles.taskDetailsField}>
+                  <label>Completed:</label>
+                  <span>{new Date(selectedTask.completed_at).toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={styles.taskDetailsSection}>
+            <h5>Invocation Trail</h5>
+            <div className={styles.executionTrail}>
+              <div className={styles.trailItem}>
+                <div className={styles.trailContent}>
+                  <div className={styles.trailLabel}>Source</div>
+                  <div className={styles.trailValue}>
+                    {(() => {
+                      const sourceType = selectedTask.source_metadata?.type || 'unknown';
+                      const sourceValue = selectedTask.source_metadata?.wallet_address || 
+                                        selectedTask.source_metadata?.identifier || 
+                                        selectedTask.source_identifier || 
+                                        'Unknown';
+                      
+                      return `${sourceType}: ${sourceValue}`;
+                    })()}
+                  </div>
+                </div>
+              </div>
+              {selectedTask.agent_uuid && (
+                <div className={styles.trailItem}>
+                  <div className={styles.trailIcon}>🤖</div>
+                  <div className={styles.trailContent}>
+                    <div className={styles.trailLabel}>Agent</div>
+                    <div className={styles.trailValue}>{selectedTask.agent_uuid}</div>
+                  </div>
+                </div>
+              )}
+              {selectedTask.api_call_id && (
+                <div className={styles.trailItem}>
+                  <div className={styles.trailIcon}>🔗</div>
+                  <div className={styles.trailContent}>
+                    <div className={styles.trailLabel}>API Call</div>
+                    <div className={styles.trailValue}>{selectedTask.api_call_id}</div>
+                  </div>
+                </div>
+              )}
+              {selectedTask.invocation_chain && (
+                <div className={styles.trailItem}>
+                  <div className={styles.trailIcon}>⛓️</div>
+                  <div className={styles.trailContent}>
+                    <div className={styles.trailLabel}>Chain</div>
+                    <div className={styles.trailValue}>{selectedTask.invocation_chain}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {selectedTask.action_result && (
+            <div className={styles.taskDetailsSection}>
+              <h5>Result</h5>
+              <div className={styles.taskResultBox}>
+                <MarkdownRenderer content={selectedTask.action_result} />
+              </div>
+            </div>
+          )}
+
+          <div className={styles.taskDetailsActions}>
+            {selectedTask.status === 'created' && (
+              <button
+                onClick={() => {
+                  taskManagement.startTask(selectedTask.id);
+                  setSelectedTaskId(null);
+                }}
+                className={styles.taskActionButton}
+              >
+                ▶️ Start Task
+              </button>
+            )}
+            {selectedTask.status === 'running' && (
+              <>
+                <button
+                  onClick={() => {
+                    taskManagement.pauseTask(selectedTask.id);
+                    setSelectedTaskId(null);
+                  }}
+                  className={styles.taskActionButton}
+                >
+                  ⏸️ Pause
+                </button>
+                <button
+                  onClick={() => {
+                    taskManagement.cancelTask(selectedTask.id);
+                    setSelectedTaskId(null);
+                  }}
+                  className={styles.taskActionButton}
+                >
+                  🚫 Cancel
+                </button>
+              </>
+            )}
+            {selectedTask.status === 'failed' && (
+              <button
+                onClick={() => {
+                  taskManagement.retryTask(selectedTask.id);
+                  setSelectedTaskId(null);
+                }}
+                className={styles.taskActionButton}
+              >
+                🔄 Retry
+              </button>
+            )}
+            <button
+              onClick={() => {
+                taskManagement.deleteTask(selectedTask.id);
+                setSelectedTaskId(null);
+              }}
+              className={`${styles.taskActionButton} ${styles.dangerButton}`}
+            >
+              🗑️ Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderScopeDropdown = () => (
@@ -185,140 +441,186 @@ const Scopes: React.FC<ScopesProps> = ({
 
       case 'tasks':
         return (
-          <div className={styles.tasksScope}>
-            <div className={styles.tasksHeader}>
-              <div className={styles.taskStats}>
-                <span className={styles.stat}>
-                  Total: {tasks.length}
-                </span>
-                <span className={styles.stat}>
-                  Running: {tasks.filter((t) => t.status === 'running').length}
-                </span>
-                <span className={styles.stat}>
-                  Completed: {tasks.filter((t) => t.status === 'completed').length}
-                </span>
-                <span className={styles.stat}>
-                  Failed: {tasks.filter((t) => t.status === 'failed').length}
-                </span>
+          <div className={`${styles.tasksScope} ${showTaskForm ? styles.showingTaskForm : ''}`}>
+            {selectedTaskId ? (
+              renderTaskDetails()
+            ) : showTaskForm ? (
+              <div className={styles.taskFormContainer}>
+                <div className={styles.taskFormHeader}>
+                  <h3>📋 Create New Task</h3>
+                  <button
+                    onClick={() => setShowTaskForm(false)}
+                    className={styles.backButton}
+                    title="Back to Task List"
+                  >
+                    ← Back to Tasks
+                  </button>
+                </div>
+                <TaskCreationForm
+                  onCreateTask={taskManagement.createTask}
+                  isLoading={taskManagement.isLoading}
+                  onCancel={() => setShowTaskForm(false)}
+                  variant="fullscreen"
+                />
               </div>
-              <button
-                onClick={() => setShowTaskForm(true)}
-                className={styles.taskActionButton}
-                title="Create Custom Task"
-                disabled={showTaskForm}
-              >
-                ➕ Create Task
-              </button>
-            </div>
-            {showTaskForm && (
-              <TaskCreationForm
-                onCreateTask={taskManagement.createTask}
-                isLoading={taskManagement.isLoading}
-                onCancel={() => setShowTaskForm(false)}
-                variant="embedded"
-              />
-            )}
-            {!showTaskForm && (
-              <div className={styles.taskScrollContainer}>
-                {tasks.map((task) => (
-                <div key={task.id} className={`${styles.taskItem} ${getStatusColor(task.status)}`}>
-                  <div className={styles.taskHeader}>
-                    <div className={styles.taskInfo}>
-                      <span className={styles.taskName}>{task.name}</span>
-                      <span className={styles.taskType}>{task.type}</span>
-                    </div>
-                    <div className={styles.taskStatus}>
-                      <span className={styles.statusDot}></span>
-                      {task.status}
-                    </div>
-                  </div>
-                  <div className={styles.taskDescription}>{task.description}</div>
-                  {task.progress !== undefined && (
-                    <div className={styles.taskProgress}>
-                      <div className={styles.progressBar}>
-                        <div
-                          className={styles.progressFill}
-                          style={{ width: `${task.progress}%` }}
-                        ></div>
-                      </div>
-                      <span className={styles.progressText}>{Math.round(task.progress)}%</span>
-                    </div>
-                  )}
-                  <div className={styles.taskMetadata}>
-                    <span className={styles.taskTime}>
-                      Created: {new Date(task.createdAt).toLocaleTimeString()}
-                    </span>
-                    {task.startedAt && (
-                      <span className={styles.taskTime}>
-                        Started: {new Date(task.startedAt).toLocaleTimeString()}
-                      </span>
-                    )}
-                    {task.completedAt && (
-                      <span className={styles.taskTime}>
-                        Completed: {new Date(task.completedAt).toLocaleTimeString()}
-                      </span>
-                    )}
-                    <span className={styles.taskPriority}>
-                      Priority: {task.priority}
-                    </span>
-                  </div>
-                  <div className={styles.taskActions}>
-                    {task.status === 'created' && (
-                      <button
-                        onClick={() => taskManagement.startTask(task.id)}
-                        className={styles.taskActionButton}
-                        title="Start Task"
-                      >
-                        ▶️ Start
-                      </button>
-                    )}
-                    {task.status === 'running' && (
-                      <>
-                        <button
-                          onClick={() => taskManagement.pauseTask(task.id)}
-                          className={styles.taskActionButton}
-                          title="Pause Task"
-                        >
-                          ⏸️ Pause
-                        </button>
-                        <button
-                          onClick={() => taskManagement.cancelTask(task.id)}
-                          className={styles.taskActionButton}
-                          title="Cancel Task"
-                        >
-                          ❌ Cancel
-                        </button>
-                      </>
-                    )}
-                    {task.status === 'paused' && (
-                      <button
-                        onClick={() => taskManagement.resumeTask(task.id)}
-                        className={styles.taskActionButton}
-                        title="Resume Task"
-                      >
-                        ▶️ Resume
-                      </button>
-                    )}
-                    {task.status === 'failed' && (
-                      <button
-                        onClick={() => taskManagement.retryTask(task.id)}
-                        className={styles.taskActionButton}
-                        title="Retry Task"
-                      >
-                        🔄 Retry
-                      </button>
-                    )}
+            ) : (
+              <>
+                <div className={styles.tasksHeader}>
+                  <div className={styles.taskTabs}>
                     <button
-                      onClick={() => taskManagement.selectTask(task.id)}
-                      className={styles.taskActionButton}
-                      title="View Details"
+                      className={`${styles.taskTab} ${activeTaskCategory === 'todo' ? styles.activeTab : ''}`}
+                      onClick={() => setActiveTaskCategory('todo')}
                     >
-                      👁️ Details
+                      📋 Todo ({todoTasks.length})
+                    </button>
+                    <button
+                      className={`${styles.taskTab} ${activeTaskCategory === 'running' ? styles.activeTab : ''}`}
+                      onClick={() => setActiveTaskCategory('running')}
+                    >
+                      ⚡ Running ({runningTasks.length})
+                    </button>
+                    <button
+                      className={`${styles.taskTab} ${activeTaskCategory === 'completed' ? styles.activeTab : ''}`}
+                      onClick={() => setActiveTaskCategory('completed')}
+                    >
+                      ✅ Completed ({completedTasks.length})
                     </button>
                   </div>
+                  <button
+                    onClick={() => setShowTaskForm(true)}
+                    className={styles.taskActionButton}
+                    title="Create Custom Task"
+                  >
+                    ➕ Create Task
+                  </button>
                 </div>
-              ))}
-              </div>
+                <div className={styles.taskScrollContainer}>
+                  {currentCategoryTasks.length === 0 ? (
+                    <div className={styles.emptyState}>
+                      <p>No {activeTaskCategory} tasks found</p>
+                      {activeTaskCategory === 'todo' && (
+                        <p className={styles.emptyHint}>Use the "➕ Create Task" button above to get started</p>
+                      )}
+                    </div>
+                  ) : (
+                    currentCategoryTasks.map((task) => (
+                  <div 
+                    key={task.id} 
+                    className={`${styles.taskItem} ${getStatusColor(task.status)} ${styles.clickableTask}`}
+                    onClick={() => setSelectedTaskId(task.id)}
+                    title="Click to view details"
+                  >
+                    <div className={styles.taskHeader}>
+                      <div className={styles.taskInfo}>
+                        <span className={styles.taskName}>{task.name}</span>
+                        <span className={styles.taskType}>{task.task_type}</span>
+                      </div>
+                      <div className={styles.taskStatus}>
+                        <span className={styles.statusIcon}>{getStatusIcon(task.status)}</span>
+                        {task.status}
+                      </div>
+                    </div>
+                    <div className={styles.taskMetadata}>
+                      <span className={styles.taskTime}>
+                        Created: {new Date(task.created_at).toLocaleTimeString()}
+                      </span>
+                      {task.completed_at && (
+                        <span className={styles.taskTime}>
+                          Completed: {new Date(task.completed_at).toLocaleTimeString()}
+                        </span>
+                      )}
+                      <span className={styles.taskInitiator}>
+                        Initiator: {task.category === 'user' && '👤 User'}
+                        {task.category === 'agent' && '🤖 Agent'}
+                        {task.category === 'api' && '🔗 API'}
+                        {task.category === 'system' && '⚙️ System'}
+                        {task.category === 'scheduled' && '⏰ Scheduled'}
+                        {task.category === 'automated' && '🤖 Automated'}
+                        {task.category === 'manual' && '👤 Manual'}
+                        {task.category === 'webhook' && '🔗 Webhook'}
+                        {task.category === 'cron' && '⏰ Cron'}
+                        {task.category && !['user', 'agent', 'api', 'system', 'scheduled', 'automated', 'manual', 'webhook', 'cron'].includes(task.category) && `📋 ${task.category}`}
+                      </span>
+                    </div>
+                    <div className={styles.taskActions}>
+                      {task.status === 'created' && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              taskManagement.startTask(task.id);
+                            }}
+                            className={styles.taskActionButton}
+                            title="Start Task"
+                          >
+                            ▶️ Start
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              taskManagement.processTask(task.id);
+                            }}
+                            className={styles.taskActionButton}
+                            title="Process Task with Hecate"
+                          >
+                            ⚡ Process
+                          </button>
+                        </>
+                      )}
+                      {task.status === 'running' && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              taskManagement.pauseTask(task.id);
+                            }}
+                            className={styles.taskActionButton}
+                            title="Pause Task"
+                          >
+                            ⏸️ Pause
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              taskManagement.cancelTask(task.id);
+                            }}
+                            className={styles.taskActionButton}
+                            title="Cancel Task"
+                          >
+                            ❌ Cancel
+                          </button>
+                        </>
+                      )}
+                      {task.status === 'paused' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            taskManagement.resumeTask(task.id);
+                          }}
+                          className={styles.taskActionButton}
+                          title="Resume Task"
+                        >
+                          ▶️ Resume
+                        </button>
+                      )}
+                      {task.status === 'failed' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            taskManagement.retryTask(task.id);
+                          }}
+                          className={styles.taskActionButton}
+                          title="Retry Task"
+                        >
+                          🔄 Retry
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  ))
+                  )}
+                </div>
+              </>
             )}
           </div>
         );
@@ -432,22 +734,24 @@ const Scopes: React.FC<ScopesProps> = ({
               <h6>🎨 Theme</h6>
               <div className={styles.themeSelector}>
                 <button
+                  className={`${styles.themeButton} ${theme === 'null' ? styles.active : ''}`}
+                  onClick={() => onThemeChange('null')}
+                >
+                  🌙 Dark
+                  <span className={styles.wipBadge}>WIP</span>
+                </button>
+                <button
                   className={`${styles.themeButton} ${theme === 'dark' ? styles.active : ''}`}
                   onClick={() => onThemeChange('dark')}
                 >
-                  🌙 Dark
+                  🌌 Null
                 </button>
                 <button
                   className={`${styles.themeButton} ${theme === 'light' ? styles.active : ''}`}
                   onClick={() => onThemeChange('light')}
                 >
                   ☀️ Light
-                </button>
-                <button
-                  className={`${styles.themeButton} ${theme === 'null' ? styles.active : ''}`}
-                  onClick={() => onThemeChange('null')}
-                >
-                  ⚡ Cyber
+                  <span className={styles.wipBadge}>WIP</span>
                 </button>
               </div>
             </div>

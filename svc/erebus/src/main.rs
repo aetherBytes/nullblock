@@ -1,5 +1,5 @@
 use axum::{
-    extract::Request,
+    extract::{Request, State},
     response::Json,
     routing::{get, post, put, delete},
     Router,
@@ -17,6 +17,8 @@ use tracing_appender::{rolling, non_blocking};
 
 
 // Import our modules
+mod database;
+mod user_references;
 mod resources;
 use resources::agents::routes::{
     agent_health, hecate_chat, hecate_status, agent_chat, agent_status,
@@ -27,8 +29,11 @@ use resources::agents::routes::{
     get_task_queues, get_task_templates, create_task_from_template,
     get_task_stats, get_task_notifications, mark_notification_read, handle_notification_action,
     get_task_events, publish_task_event, get_motivation_state, update_motivation_state,
-    get_task_suggestions, learn_from_task
+    get_task_suggestions, learn_from_task, process_task,
+    // User management routes
+    register_user
 };
+use resources::users::routes::{create_user_endpoint, lookup_user_endpoint, get_user_endpoint};
 use resources::wallets::routes::create_wallet_routes;
 use resources::{WalletManager, create_crossroads_routes, ExternalService};
 
@@ -44,14 +49,24 @@ struct StatusResponse {
 struct AppState {
     wallet_manager: WalletManager,
     external_service: Arc<ExternalService>,
+    database: Arc<database::Database>,
 }
 
-async fn health_check() -> Json<StatusResponse> {
+async fn health_check(State(app_state): State<AppState>) -> Json<StatusResponse> {
+    // Check database connection
+    let database_status = match app_state.database.health_check().await {
+        Ok(_) => "healthy",
+        Err(_) => "unhealthy"
+    };
+
+    let overall_status = if database_status == "healthy" { "healthy" } else { "unhealthy" };
+    let message = format!("🎯 Ready for agentic workflows and MCP integration (DB: {})", database_status);
+
     Json(StatusResponse {
-        status: "healthy".to_string(),
+        status: overall_status.to_string(),
         service: "erebus".to_string(),
         version: "0.1.0".to_string(),
-        message: "🎯 Ready for agentic workflows and MCP integration".to_string(),
+        message,
     })
 }
 
@@ -223,9 +238,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🕐 Timestamp: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"));
     info!("============================================================");
     
+    // Initialize database connection
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus".to_string());
+
+    info!("🗄️ Initializing database connection...");
+    let database = match database::Database::new(&database_url).await {
+        Ok(db) => {
+            info!("✅ Database connection established successfully");
+            Arc::new(db)
+        }
+        Err(e) => {
+            error!("❌ Failed to connect to database: {}", e);
+            return Err(Box::new(e) as Box<dyn std::error::Error>);
+        }
+    };
+
+    // Test database connection
+    if let Err(e) = database.health_check().await {
+        error!("❌ Database health check failed: {}", e);
+        return Err(Box::new(e) as Box<dyn std::error::Error>);
+    }
+    info!("✅ Database health check passed");
+
     // Create wallet manager
     let wallet_manager = WalletManager::new();
-    
+
     // Create external service
     let external_service = Arc::new(ExternalService::new());
 
@@ -233,6 +271,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app_state = AppState {
         wallet_manager,
         external_service,
+        database,
     };
     
     // Create router with CORS, agent routes, wallet routes, and crossroads routes
@@ -276,6 +315,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/agents/tasks/motivation", put(update_motivation_state))
         .route("/api/agents/tasks/suggestions", post(get_task_suggestions))
         .route("/api/agents/tasks/:task_id/learn", post(learn_from_task))
+        .route("/api/agents/tasks/:task_id/process", post(process_task))
+        // User management endpoints
+        .route("/api/users/register", post(create_user_endpoint))
+        .route("/api/users/lookup", post(lookup_user_endpoint))
+        .route("/api/users/:user_id", get(get_user_endpoint))
+        // Legacy agent user registration (deprecated - use /api/users/register)
+        .route("/api/agents/users/register", post(register_user))
         // Merge wallet routes
         .merge(create_wallet_routes())
         // Merge crossroads routes
@@ -318,11 +364,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("💡 Ready for agentic workflows, marketplace operations, and service discovery");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    let listener = tokio::net::TcpListener::bind(addr).await?;
-    
+    let listener = tokio::net::TcpListener::bind(addr).await
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+
     info!("✅ Server listening on {}", addr);
-    
-    axum::serve(listener, app).await?;
+
+    axum::serve(listener, app).await
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
     Ok(())
 }

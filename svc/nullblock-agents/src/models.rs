@@ -47,6 +47,36 @@ pub struct ChatResponse {
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
+// ==================== User Reference Types ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserReference {
+    pub id: Uuid,
+    pub source_identifier: String,
+    pub chain: String,
+    pub source_type: serde_json::Value,
+    pub wallet_type: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserReferenceResponse {
+    pub success: bool,
+    pub data: Option<UserReference>,
+    pub error: Option<String>,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserReferenceListResponse {
+    pub success: bool,
+    pub data: Option<Vec<UserReference>>,
+    pub total: usize,
+    pub error: Option<String>,
+    pub timestamp: DateTime<Utc>,
+}
+
 // ==================== API Request/Response Types ====================
 
 #[derive(Debug, Deserialize)]
@@ -397,6 +427,16 @@ pub struct Task {
     pub required_capabilities: Vec<String>,
     pub user_approval_required: bool,
     pub user_notifications: bool,
+
+    // Action tracking fields
+    pub actioned_at: Option<DateTime<Utc>>,
+    pub action_result: Option<String>,
+    pub action_metadata: HashMap<String, serde_json::Value>,
+    pub action_duration: Option<u64>,
+
+    // Source tracking fields
+    pub source_identifier: Option<String>,
+    pub source_metadata: HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

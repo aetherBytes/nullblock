@@ -2,11 +2,12 @@
 use axum::{
     extract::{Path, Json, Query},
     response::Json as ResponseJson,
-    http::StatusCode,
+    http::{StatusCode, HeaderMap},
 };
 use std::collections::HashMap;
 use serde_json::Value;
 use tracing::{info, error, warn};
+use uuid::Uuid;
 
 use super::proxy::{AgentProxy, AgentRequest, AgentResponse, AgentStatus, AgentErrorResponse};
 
@@ -15,6 +16,148 @@ fn get_hecate_proxy() -> AgentProxy {
     let hecate_url = std::env::var("HECATE_AGENT_URL")
         .unwrap_or_else(|_| "http://localhost:9003".to_string());
     AgentProxy::new(hecate_url)
+}
+
+/// Extract wallet address from request headers and create user reference if needed
+async fn extract_wallet_and_create_user(headers: &HeaderMap) -> Option<Uuid> {
+    let wallet_address = headers.get("x-wallet-address")
+        .and_then(|h| h.to_str().ok())?;
+    let wallet_chain = headers.get("x-wallet-chain")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("unknown");
+
+    info!("🔍 Extracted wallet: {} on chain: {}", wallet_address, wallet_chain);
+
+    // Call Erebus user registration API instead of direct database access
+    let default_source_type = serde_json::json!({
+        "type": "web3_wallet",
+        "provider": "unknown",
+        "metadata": {}
+    });
+    match call_erebus_user_registration_api(wallet_address, wallet_chain, Some(default_source_type)).await {
+        Ok(user_id) => {
+            info!("✅ User reference created/updated via Erebus API: {}", user_id);
+            Some(user_id)
+        }
+        Err(e) => {
+            error!("❌ Failed to create user reference via Erebus API: {}", e);
+            None
+        }
+    }
+}
+
+/// Call Erebus user registration API (replaces direct database access)
+async fn call_erebus_user_registration_api(wallet_address: &str, chain: &str, source_type: Option<serde_json::Value>) -> Result<Uuid, String> {
+    let erebus_url = "http://localhost:3000";
+    let client = reqwest::Client::new();
+
+    let request_body = serde_json::json!({
+        "source_identifier": wallet_address,
+        "chain": chain,
+        "source_type": source_type.unwrap_or_else(|| serde_json::json!({
+            "type": "web3_wallet",
+            "provider": "unknown",
+            "metadata": {}
+        })),
+        "wallet_type": "unknown"
+    });
+
+    info!("🌐 Calling Erebus user registration API: {}/api/users/register", erebus_url);
+
+    match client
+        .post(&format!("{}/api/users/register", erebus_url))
+        .json(&request_body)
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if response.status().is_success() {
+                match response.json::<serde_json::Value>().await {
+                    Ok(json_response) => {
+                        if let Some(user_id_str) = json_response["user_id"].as_str() {
+                            match Uuid::parse_str(user_id_str) {
+                                Ok(user_id) => Ok(user_id),
+                                Err(e) => Err(format!("Invalid UUID in response: {}", e))
+                            }
+                        } else {
+                            Err("No user_id in response".to_string())
+                        }
+                    }
+                    Err(e) => Err(format!("Failed to parse response JSON: {}", e))
+                }
+            } else {
+                let error_text = response.text().await.unwrap_or_default();
+                Err(format!("Erebus API error: {}", error_text))
+            }
+        }
+        Err(e) => Err(format!("Failed to call Erebus API: {}", e))
+    }
+}
+
+
+/// Register user endpoint - called when wallet connects
+pub async fn register_user(
+    headers: HeaderMap,
+    Json(request): Json<Value>
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("👤 User registration request received");
+    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+
+    // Extract wallet information from headers or request body
+    let wallet_address = headers.get("x-wallet-address")
+        .and_then(|h| h.to_str().ok())
+        .or_else(|| request["source_identifier"].as_str());
+    
+    let wallet_chain = headers.get("x-wallet-chain")
+        .and_then(|h| h.to_str().ok())
+        .or_else(|| request["chain"].as_str())
+        .unwrap_or("unknown");
+
+    if let Some(wallet_address) = wallet_address {
+        info!("🔍 Registering user with wallet: {} on chain: {}", wallet_address, wallet_chain);
+        
+        // Extract source_type from request
+        let source_type = request["source_type"].as_object().map(|obj| serde_json::Value::Object(obj.clone()));
+        
+        match call_erebus_user_registration_api(wallet_address, wallet_chain, source_type).await {
+            Ok(user_id) => {
+                info!("✅ User registered successfully via Erebus API: {}", user_id);
+
+                // Note: User sync to Agents database is now handled automatically by Erebus
+                // via Kafka events and database triggers - no manual sync needed
+
+                let response = serde_json::json!({
+                    "success": true,
+                    "data": {
+                        "user_id": user_id,
+                        "wallet_address": wallet_address,
+                        "chain": wallet_chain
+                    },
+                    "message": "User registered successfully via Erebus API"
+                });
+                Ok(ResponseJson(response))
+            }
+            Err(e) => {
+                error!("❌ User registration failed: {}", e);
+                let error_response = AgentErrorResponse {
+                    error: "user_registration_failed".to_string(),
+                    code: "USER_REGISTRATION_ERROR".to_string(),
+                    message: format!("Failed to register user via Erebus API: {}", e),
+                    agent_available: true,
+                };
+                Err((StatusCode::INTERNAL_SERVER_ERROR, ResponseJson(error_response)))
+            }
+        }
+    } else {
+        error!("❌ No wallet address provided for user registration");
+        let error_response = AgentErrorResponse {
+            error: "missing_wallet_address".to_string(),
+            code: "MISSING_WALLET_ADDRESS".to_string(),
+            message: "Wallet address is required for user registration".to_string(),
+            agent_available: true,
+        };
+        Err((StatusCode::BAD_REQUEST, ResponseJson(error_response)))
+    }
 }
 
 /// Health check for agent routing subsystem
@@ -363,9 +506,20 @@ pub async fn hecate_search_models(Query(params): Query<HashMap<String, String>>)
 // ================================
 
 /// Create a new task (user-initiated or API/MCP-triggered)
-pub async fn create_task(Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn create_task(
+    headers: HeaderMap,
+    Json(request): Json<Value>
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📋 Task creation request received");
     info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+
+    // Extract wallet information and create user reference if needed
+    let user_id = extract_wallet_and_create_user(&headers).await;
+    if let Some(user_id) = user_id {
+        info!("👤 Task will be associated with user: {}", user_id);
+    } else {
+        info!("👤 No wallet information provided, task will be created without user association");
+    }
 
     let proxy = get_hecate_proxy();
 
@@ -1026,6 +1180,35 @@ pub async fn learn_from_task(Path(task_id): Path<String>, Json(request): Json<Va
         }
         Err(error) => {
             error!("❌ Learn from task failed");
+            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+
+            let status_code = match error.code.as_str() {
+                "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
+                "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
+                "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+
+            Err((status_code, ResponseJson(error)))
+        }
+    }
+}
+
+/// Process task with Hecate agent
+pub async fn process_task(Path(task_id): Path<String>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("⚡ Process task request received for ID: {}", task_id);
+
+    let proxy = get_hecate_proxy();
+    let endpoint = format!("tasks/{}/process", task_id);
+
+    match proxy.proxy_request(&endpoint, "POST", None).await {
+        Ok(response) => {
+            info!("✅ Task processed successfully");
+            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            Ok(ResponseJson(response))
+        }
+        Err(error) => {
+            error!("❌ Task processing failed");
             error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
 
             let status_code = match error.code.as_str() {

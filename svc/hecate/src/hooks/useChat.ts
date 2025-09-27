@@ -8,6 +8,10 @@ interface ChatMessage {
   type?: string;
   model_used?: string;
   metadata?: any;
+  taskId?: string;
+  taskName?: string;
+  isTaskResult?: boolean;
+  processingTime?: number;
 }
 
 export const useChat = (publicKey: string | null) => {
@@ -19,8 +23,32 @@ export const useChat = (publicKey: string | null) => {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
-  const chatInputRef = useRef<HTMLInputElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Function to add task notifications to chat
+  const addTaskNotification = (taskId: string, taskName: string, message: string, processingTime?: number) => {
+    const taskNotification: ChatMessage = {
+      id: `task-notification-${taskId}-${Date.now()}`,
+      timestamp: new Date(),
+      sender: 'hecate',
+      message: message,
+      type: 'task-notification',
+      taskId,
+      taskName,
+      isTaskResult: true,
+      processingTime
+    };
+
+    setChatMessages(prev => [...prev, taskNotification]);
+
+    // Auto-scroll to show the notification
+    setTimeout(() => {
+      if (chatEndRef.current) {
+        chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
 
   const handleChatSubmit = (
     e: React.FormEvent,
@@ -129,7 +157,12 @@ export const useChat = (publicKey: string | null) => {
       if (error instanceof Error) {
         const errorMsg = error.message.toLowerCase();
 
-        if (errorMsg.includes('lm studio') || errorMsg.includes('localhost:1234')) {
+        // Check for API key configuration errors first
+        if (errorMsg.includes('api key') || errorMsg.includes('openrouter') ||
+            errorMsg.includes('config_required') || errorMsg.includes('no working models') ||
+            errorMsg.includes('provider not available') || errorMsg.includes('no llm api keys detected')) {
+          userFriendlyMessage = "🔑 I need API keys to work properly. Please configure your OpenRouter API key in settings. Visit https://openrouter.ai/ to get a free API key.";
+        } else if (errorMsg.includes('lm studio') || errorMsg.includes('localhost:1234')) {
           userFriendlyMessage = "I'm currently offline. Please check that the local AI service is running and try again.";
         } else if (errorMsg.includes('connection') || errorMsg.includes('network')) {
           userFriendlyMessage = "I'm having connection issues. Please check your network and try again.";
@@ -166,7 +199,7 @@ export const useChat = (publicKey: string | null) => {
     }
   };
 
-  const handleChatInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChatInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { value } = e.target;
     setChatInput(value);
   };
@@ -179,25 +212,36 @@ export const useChat = (publicKey: string | null) => {
 
     const isNearBottom = scrollHeight - scrollTop - clientHeight <= 50;
 
-    if (!isNearBottom && !isUserScrolling) {
-      setIsUserScrolling(true);
-      setChatAutoScroll(false);
+    // Immediately disable auto-scroll when user scrolls (regardless of position)
+    // This prevents forced scrolling while user is reading
+    setIsUserScrolling(true);
+    setChatAutoScroll(false);
 
-      if (userScrollTimeoutRef.current) {
-        clearTimeout(userScrollTimeoutRef.current);
-      }
+    // Clear any existing timeout
+    if (userScrollTimeoutRef.current) {
+      clearTimeout(userScrollTimeoutRef.current);
+    }
 
+    // If user is near bottom, re-enable auto-scroll after a short delay
+    if (isNearBottom) {
       userScrollTimeoutRef.current = setTimeout(() => {
         setIsUserScrolling(false);
         setChatAutoScroll(true);
-      }, 3000);
-    } else if (isNearBottom && isUserScrolling) {
+      }, 1000);
+    } else {
+      // If user is not near bottom, set a longer timeout
+      userScrollTimeoutRef.current = setTimeout(() => {
+        setIsUserScrolling(false);
+        setChatAutoScroll(true);
+      }, 5000);
+    }
+  };
+
+  const scrollToBottom = () => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
       setIsUserScrolling(false);
       setChatAutoScroll(true);
-
-      if (userScrollTimeoutRef.current) {
-        clearTimeout(userScrollTimeoutRef.current);
-      }
     }
   };
 
@@ -218,6 +262,8 @@ export const useChat = (publicKey: string | null) => {
     userScrollTimeoutRef,
     handleChatSubmit,
     handleChatInputChange,
-    handleChatScroll
+    handleChatScroll,
+    scrollToBottom,
+    addTaskNotification
   };
 };

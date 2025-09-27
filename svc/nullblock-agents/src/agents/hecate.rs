@@ -1,5 +1,6 @@
 use crate::{
     config::ApiKeys,
+    database::repositories::AgentRepository,
     error::{AppError, AppResult},
     llm::{LLMServiceFactory, OptimizationGoal, Priority, TaskRequirements},
     log_agent_shutdown, log_agent_startup, log_request_complete, log_request_start,
@@ -10,7 +11,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{error, info, warn};
+use tracing::{info, warn, error};
 use uuid::Uuid;
 
 pub struct HecateAgent {
@@ -22,6 +23,7 @@ pub struct HecateAgent {
     pub llm_factory: Option<Arc<RwLock<LLMServiceFactory>>>,
     pub context_limit: usize,
     pub current_session_id: Option<String>,
+    pub agent_id: Option<uuid::Uuid>,
     personalities: HashMap<String, PersonalityConfig>,
 }
 
@@ -95,12 +97,13 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         Self {
             personality,
             running: false,
-            preferred_model: "deepseek/deepseek-chat-v3.1:free".to_string(),
+            preferred_model: "x-ai/grok-4-fast:free".to_string(),
             current_model: None,
             conversation_history: Arc::new(RwLock::new(Vec::new())),
             llm_factory: None,
             context_limit: 8000,
             current_session_id: None,
+            agent_id: None,
             personalities,
         }
     }
@@ -328,17 +331,29 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
             let health = factory.health_check().await?;
             let stats = factory.get_stats().await;
 
+            // Check if models are actually available
+            let models_available = health["models_available"].as_u64().unwrap_or(0);
+            let llm_status = health["overall_status"].as_str().unwrap_or("unknown");
+
+            let agent_status = if models_available == 0 || llm_status == "unhealthy" {
+                "unhealthy"
+            } else {
+                "ready"
+            };
+
             Ok(json!({
-                "status": "running",
+                "status": agent_status,
                 "current_model": self.current_model,
                 "health": health,
                 "stats": stats,
-                "conversation_length": self.conversation_history.read().await.len()
+                "conversation_length": self.conversation_history.read().await.len(),
+                "models_available": models_available
             }))
         } else {
             Ok(json!({
                 "status": "not_started",
-                "current_model": null
+                "current_model": null,
+                "models_available": 0
             }))
         }
     }
@@ -387,9 +402,9 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
     }
 
     pub fn is_model_available(&self, model_name: &str, api_keys: &ApiKeys) -> bool {
-        if let Some(llm_factory) = &self.llm_factory {
+        if let Some(_llm_factory) = &self.llm_factory {
             // Use a simple check for now - in reality we'd check the factory's model registry
-            model_name == "deepseek/deepseek-chat-v3.1:free" && api_keys.openrouter.is_some()
+            model_name == "x-ai/grok-4-fast:free" && api_keys.openrouter.is_some()
                 || (model_name.contains("/") || model_name.contains(":")) && api_keys.openrouter.is_some()
         } else {
             false
@@ -397,7 +412,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
     }
 
     pub fn get_model_availability_reason(&self, model_name: &str, api_keys: &ApiKeys) -> String {
-        if let Some(llm_factory) = &self.llm_factory {
+        if let Some(_llm_factory) = &self.llm_factory {
             // In a real implementation, we'd delegate to the factory
             if !self.is_model_available(model_name, api_keys) {
                 format!("Model '{}' is not available. Check API keys and try again.", model_name)
@@ -604,6 +619,153 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         }
 
         confidence.max(0.0).min(1.0)
+    }
+
+    // Agent registration for task execution
+    pub async fn register_agent(&mut self, agent_repo: &AgentRepository) -> AppResult<()> {
+        let capabilities = vec![
+            "conversation".to_string(),
+            "task_execution".to_string(),
+            "orchestration".to_string(),
+            "reasoning".to_string(),
+            "creative".to_string(),
+        ];
+
+        match agent_repo.get_by_name_and_type("hecate", "conversational").await {
+            Ok(Some(existing_agent)) => {
+                info!("✅ Hecate agent already registered with ID: {}", existing_agent.id);
+                self.agent_id = Some(existing_agent.id);
+
+                // Update health status
+                if let Err(e) = agent_repo.update_health_status(&existing_agent.id, "healthy").await {
+                    warn!("⚠️ Failed to update Hecate health status: {}", e);
+                }
+            }
+            Ok(None) => {
+                info!("📝 Registering Hecate agent in database...");
+                match agent_repo.create(
+                    "hecate",
+                    "conversational",
+                    Some("Primary conversational interface and task orchestrator for NullBlock platform"),
+                    &capabilities,
+                ).await {
+                    Ok(agent_entity) => {
+                        info!("✅ Hecate agent registered with ID: {}", agent_entity.id);
+                        self.agent_id = Some(agent_entity.id);
+                    }
+                    Err(e) => {
+                        error!("❌ Failed to register Hecate agent: {}", e);
+                        return Err(AppError::DatabaseError(format!("Agent registration failed: {}", e)));
+                    }
+                }
+            }
+            Err(e) => {
+                error!("❌ Failed to check existing Hecate agent: {}", e);
+                return Err(AppError::DatabaseError(format!("Agent lookup failed: {}", e)));
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn get_agent_id(&self) -> Option<Uuid> {
+        self.agent_id
+    }
+
+    // Task execution handler
+    pub async fn execute_task(&mut self, task_id: &str, task_description: &str, task_repo: &crate::database::repositories::TaskRepository, agent_repo: &AgentRepository) -> AppResult<String> {
+        let start_time = std::time::Instant::now();
+
+        // Mark task as actioned to prevent duplicate processing
+        let action_metadata = serde_json::json!({
+            "started_by": "hecate",
+            "agent_id": self.agent_id,
+            "execution_start": Utc::now().to_rfc3339()
+        });
+
+        // Mark task as being processed
+        match task_repo.mark_task_actioned(task_id, Some(action_metadata)).await {
+            Ok(Some(_)) => {
+                info!("🎯 Task {} marked as actioned by Hecate", task_id);
+            }
+            Ok(None) => {
+                warn!("⚠️ Task {} was already actioned or not found", task_id);
+                return Err(AppError::TaskAlreadyActioned(task_id.to_string()));
+            }
+            Err(e) => {
+                error!("❌ Failed to mark task as actioned: {}", e);
+                return Err(AppError::DatabaseError(format!("Task action marking failed: {}", e)));
+            }
+        }
+
+        info!("🚀 Hecate processing task: {}", task_id);
+
+        // Create a conversational prompt from the task description
+        let task_prompt = format!(
+            "I need you to help me with the following task:\n\n**Task Description:**\n{}\n\nPlease provide a helpful response and let me know what I can do to complete this task effectively.",
+            task_description
+        );
+
+        // Execute the task as a conversation
+        let task_context = Some(std::collections::HashMap::from([
+            ("task_id".to_string(), serde_json::json!(task_id)),
+            ("task_mode".to_string(), serde_json::json!(true)),
+            ("execution_type".to_string(), serde_json::json!("task_processing"))
+        ]));
+
+        let chat_response = match self.chat(task_prompt, task_context).await {
+            Ok(response) => response,
+            Err(e) => {
+                error!("❌ Failed to process task {}: {}", task_id, e);
+
+                // Update task with error result
+                let error_result = format!("Task processing failed: {}", e);
+                let _ = task_repo.update_action_result(task_id, &error_result, None).await;
+
+                return Err(e);
+            }
+        };
+
+        let processing_duration = start_time.elapsed().as_millis() as u64;
+
+        // Store the result in the database
+        match task_repo.update_action_result(task_id, &chat_response.content, Some(processing_duration)).await {
+            Ok(Some(_)) => {
+                info!("✅ Task {} result stored successfully", task_id);
+            }
+            Ok(None) => {
+                warn!("⚠️ Task {} not found when storing result", task_id);
+            }
+            Err(e) => {
+                error!("❌ Failed to store task result: {}", e);
+                return Err(AppError::DatabaseError(format!("Task result storage failed: {}", e)));
+            }
+        }
+
+        // Update agent statistics
+        if let Some(agent_id) = self.agent_id {
+            let task_uuid = Uuid::parse_str(task_id).unwrap_or_else(|_| Uuid::new_v4());
+            if let Err(e) = agent_repo.update_task_processing_stats(&agent_id, &task_uuid, processing_duration).await {
+                warn!("⚠️ Failed to update agent processing stats: {}", e);
+            }
+        }
+
+        // Update task status to completed
+        match task_repo.update_status(task_id, crate::models::TaskStatus::Completed).await {
+            Ok(Some(_)) => {
+                info!("✅ Task {} status updated to completed", task_id);
+            }
+            Ok(None) => {
+                warn!("⚠️ Task {} not found when updating status to completed", task_id);
+            }
+            Err(e) => {
+                error!("❌ Failed to update task status to completed: {}", e);
+                // Don't return error here as the task was processed successfully
+            }
+        }
+
+        info!("🎉 Task {} completed in {}ms", task_id, processing_duration);
+        Ok(chat_response.content)
     }
 }
 

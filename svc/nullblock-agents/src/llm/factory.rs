@@ -14,7 +14,7 @@ use super::{
         AnthropicProvider, GroqProvider, OllamaProvider, OpenAIProvider, OpenRouterProvider,
         Provider,
     },
-    router::{ModelRouter, OptimizationGoal, Priority, RoutingDecision, TaskRequirements},
+    router::{ModelRouter, OptimizationGoal, TaskRequirements},
 };
 
 pub struct LLMServiceFactory {
@@ -186,7 +186,7 @@ impl LLMServiceFactory {
             "api_providers": {},
             "local_providers": {},
             "models_available": 0,
-            "default_model": "deepseek/deepseek-chat-v3.1:free",
+            "default_model": "x-ai/grok-4-fast:free",
             "issues": []
         });
 
@@ -308,7 +308,7 @@ impl LLMServiceFactory {
 
     pub fn is_model_available(&self, model_name: &str, api_keys: &ApiKeys) -> bool {
         // Check if model is a known static model or a dynamic OpenRouter model
-        if model_name == "deepseek/deepseek-chat-v3.1:free" {
+        if model_name == "x-ai/grok-4-fast:free" {
             // This is our default free model - available if we have OpenRouter key or if it's truly free
             api_keys.openrouter.is_some()
         } else if model_name.contains("/") || model_name.contains(":") {
