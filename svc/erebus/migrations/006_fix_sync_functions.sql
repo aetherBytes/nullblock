@@ -65,3 +65,5 @@ $$ LANGUAGE plpgsql;
 COMMENT ON FUNCTION sync_user_to_agents IS 'Logs user changes for application-level sync processing';
 COMMENT ON FUNCTION get_source_display_info IS 'Generates human-readable source information from JSONB source_type';
 
+
+

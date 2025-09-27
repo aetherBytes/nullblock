@@ -187,6 +187,91 @@ impl MarketingAgent {
         Ok(())
     }
 
+    pub async fn chat(
+        &mut self,
+        message: String,
+        user_context: Option<HashMap<String, serde_json::Value>>,
+    ) -> AppResult<crate::models::ChatMessageResponse> {
+        if !self.running {
+            return Err(AppError::AgentNotRunning);
+        }
+
+        let llm_factory = self.llm_factory.as_ref()
+            .ok_or(AppError::AgentNotInitialized)?;
+
+        let start_time = std::time::Instant::now();
+
+        info!("🎭 Marketing agent received chat message: {}", message);
+
+        // Build marketing-focused prompt
+        let system_prompt = "You are a marketing expert AI assistant for NullBlock, an innovative agentic platform. You specialize in:
+- Content creation and social media strategy
+- Community engagement and brand management
+- Marketing automation and campaign development
+- Twitter/X content optimization
+- Project promotion and storytelling
+
+Always provide helpful, creative, and brand-aligned marketing advice. Keep responses professional but engaging.";
+
+        let full_prompt = if let Some(context) = &user_context {
+            format!("{}\n\nUser Context: {}\n\nUser: {}",
+                system_prompt,
+                serde_json::to_string_pretty(context).unwrap_or_default(),
+                message)
+        } else {
+            format!("{}\n\nUser: {}", system_prompt, message)
+        };
+
+        let request = crate::models::LLMRequest {
+            prompt: full_prompt,
+            system_prompt: None,
+            messages: None,
+            max_tokens: Some(1000),
+            temperature: Some(0.7),
+            top_p: None,
+            stop_sequences: None,
+            tools: None,
+            model_override: None,
+            concise: false,
+            max_chars: None,
+            reasoning: None,
+        };
+
+        let llm_response = {
+            let factory = llm_factory.read().await;
+            factory.generate(&request, None).await?
+        };
+
+        let latency = start_time.elapsed().as_millis() as f64;
+        info!("✅ Marketing chat response generated in {}ms", latency);
+
+        Ok(crate::models::ChatMessageResponse {
+            id: uuid::Uuid::new_v4().to_string(),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            role: "assistant".to_string(),
+            content: llm_response.content,
+            model_used: Some(llm_response.model_used),
+            metadata: {
+                let mut meta = std::collections::HashMap::new();
+                meta.insert("agent_type".to_string(), serde_json::json!("marketing"));
+                meta.insert("specialization".to_string(), serde_json::json!("marketing_strategy"));
+                meta.insert("capabilities".to_string(), serde_json::json!([
+                    "content_generation",
+                    "social_media_management",
+                    "marketing_automation",
+                    "community_engagement",
+                    "brand_management"
+                ]));
+                meta.insert("latency_ms".to_string(), serde_json::json!(latency));
+                meta.insert("confidence_score".to_string(), serde_json::json!(0.85));
+                if let Some(ctx) = user_context {
+                    meta.insert("user_context".to_string(), serde_json::json!(ctx));
+                }
+                Some(meta)
+            },
+        })
+    }
+
     pub async fn generate_content(
         &mut self,
         content_type: String,
@@ -616,5 +701,7 @@ pub struct ProjectAnalysis {
     pub technical_highlights: Vec<String>,
     pub target_audiences: Vec<String>,
 }
+
+
 
 

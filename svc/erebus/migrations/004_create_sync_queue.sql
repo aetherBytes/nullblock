@@ -73,3 +73,5 @@ COMMENT ON TABLE user_sync_queue IS 'Queue for syncing user data from Erebus to 
 COMMENT ON FUNCTION queue_user_sync IS 'Adds user changes to sync queue for processing';
 COMMENT ON FUNCTION trigger_queue_user_sync IS 'Automatically queues user changes for sync';
 
+
+

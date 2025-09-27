@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use tracing::{error, info};
 
 use crate::{
-    models::ErrorResponse,
+    models::{ErrorResponse, ChatRequest},
     server::AppState,
 };
 
@@ -199,5 +199,53 @@ pub async fn get_content_themes(
 
     Ok(Json(response))
 }
+
+pub async fn chat(
+    State(state): State<AppState>,
+    Json(request): Json<ChatRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    info!("🎭 Marketing agent chat request received");
+
+    let mut marketing_agent = state.marketing_agent.write().await;
+
+    match marketing_agent.chat(request.message, request.user_context).await {
+        Ok(response) => {
+            info!("✅ Marketing chat response generated: {} chars", response.content.len());
+            
+            // Extract latency_ms and confidence_score from metadata
+            let latency_ms = response.metadata
+                .as_ref()
+                .and_then(|meta| meta.get("latency_ms"))
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            
+            let confidence_score = response.metadata
+                .as_ref()
+                .and_then(|meta| meta.get("confidence_score"))
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.85);
+            
+            Ok(Json(serde_json::json!({
+                "content": response.content,
+                "model_used": response.model_used,
+                "latency_ms": latency_ms,
+                "confidence_score": confidence_score,
+                "metadata": response.metadata
+            })))
+        }
+        Err(e) => {
+            error!("❌ Marketing chat failed: {}", e);
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse::new(
+                    "marketing_chat_failed".to_string(),
+                    format!("Marketing chat failed: {}", e),
+                )),
+            ))
+        }
+    }
+}
+
+
 
 

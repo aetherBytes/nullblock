@@ -119,3 +119,5 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trigger_update_updated_at
     BEFORE UPDATE ON user_references
     FOR EACH ROW EXECUTE FUNCTION trigger_update_updated_at();
+
+

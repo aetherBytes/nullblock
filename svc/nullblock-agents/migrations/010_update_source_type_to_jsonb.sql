@@ -29,3 +29,5 @@ CREATE INDEX idx_user_references_source_type_type ON user_references USING BTREE
 -- Update comments
 COMMENT ON COLUMN user_references.source_type IS 'JSONB field containing source type information: {"type": "web3_wallet", "provider": "phantom", "metadata": {...}}';
 
+
+

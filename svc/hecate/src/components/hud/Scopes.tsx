@@ -48,6 +48,9 @@ interface ScopesProps {
   isSearchingModels: boolean;
   searchResults: any[];
   activeQuickAction: string | null;
+  // Chat props for agent switching
+  activeAgent?: 'hecate' | 'marketing';
+  setActiveAgent?: (agent: 'hecate' | 'marketing') => void;
   categoryModels: any[];
   isLoadingCategory: boolean;
   setCategoryModels: (models: any[]) => void;
@@ -86,6 +89,8 @@ const Scopes: React.FC<ScopesProps> = ({
   logsEndRef,
   theme,
   onThemeChange,
+  activeAgent,
+  setActiveAgent,
   ...modelInfoProps
 }) => {
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -775,9 +780,22 @@ const Scopes: React.FC<ScopesProps> = ({
                         <div className={styles.agentDetailsActions}>
                           <button
                             onClick={() => {
-                              // Navigate to chat with this agent
                               console.log(`💬 Starting chat with ${selectedAgent.name}`);
-                              // You could implement chat routing here
+                              console.log(`🔍 setActiveAgent function:`, setActiveAgent);
+                              console.log(`🔍 activeAgent current:`, activeAgent);
+
+                              // Switch to the selected agent
+                              if (setActiveAgent && (selectedAgent.name === 'hecate' || selectedAgent.name === 'marketing')) {
+                                setActiveAgent(selectedAgent.name);
+                                console.log(`🔄 Switched active agent to: ${selectedAgent.name}`);
+
+                                // Just switch the agent - don't expand anything, use main chat
+                                console.log(`✅ Activated chat with ${selectedAgent.name} agent`);
+                              } else {
+                                console.warn(`⚠️ Agent ${selectedAgent.name} not supported for chat yet or setActiveAgent not available`);
+                                console.warn(`⚠️ setActiveAgent available:`, !!setActiveAgent);
+                                console.warn(`⚠️ Agent name:`, selectedAgent.name);
+                              }
                             }}
                             className={styles.agentActionButton}
                             disabled={!agentService.isAgentOnline(selectedAgent)}

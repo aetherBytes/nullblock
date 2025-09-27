@@ -70,3 +70,5 @@ COMMENT ON COLUMN user_references.is_active IS 'Soft delete flag - false means u
 COMMENT ON COLUMN user_references.synced_at IS 'Timestamp when this record was synced from Erebus';
 COMMENT ON COLUMN user_references.erebus_created_at IS 'Original creation timestamp from Erebus';
 COMMENT ON COLUMN user_references.erebus_updated_at IS 'Original update timestamp from Erebus';
+
+
