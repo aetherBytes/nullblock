@@ -62,11 +62,17 @@ tera = "1.19"
 # Regular expressions
 regex = "1.10"
 
+# Cryptography for deterministic UUIDs
+sha2 = "0.10"
+
 # Database (optional for conversation history)
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"], optional = true }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "migrate"], optional = true }
 
 # Redis (optional for caching)
 redis = { version = "0.25", features = ["tokio-comp"], optional = true }
+
+# Kafka for event streaming
+rdkafka = { version = "0.36", features = ["cmake-build", "tokio"] }
 
 [features]
 default = ["postgres", "redis", "prometheus"]

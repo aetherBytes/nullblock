@@ -8,7 +8,7 @@ use crate::{
 use axum::{extract::{Query, State}, Json};
 use serde::Deserialize;
 use serde_json::json;
-use std::collections::HashMap;
+// use std::collections::HashMap;  // For future feature development
 use tracing::{info, warn, error};
 
 #[derive(Deserialize)]
@@ -41,13 +41,33 @@ pub async fn chat(
 
 pub async fn health(State(state): State<AppState>) -> Result<Json<serde_json::Value>, AppError> {
     let agent = state.hecate_agent.read().await;
-    
+
     if !agent.running {
         return Err(AppError::AgentNotRunning);
     }
 
+    // Check if LLM models are available
+    if let Some(llm_factory) = &agent.llm_factory {
+        let factory = llm_factory.read().await;
+        match factory.health_check().await {
+            Ok(health_info) => {
+                let models_available = health_info["models_available"].as_u64().unwrap_or(0);
+                let llm_status = health_info["overall_status"].as_str().unwrap_or("unknown");
+
+                if models_available == 0 || llm_status == "unhealthy" {
+                    return Err(AppError::LLMRequestFailed("No working LLM models available. Please check your OpenRouter API key configuration in .env.dev and restart the service. Visit https://openrouter.ai/ to get a free API key.".to_string()));
+                }
+            }
+            Err(e) => {
+                return Err(AppError::LLMRequestFailed(format!("LLM service health check failed: {}. Please check your API key configuration.", e)));
+            }
+        }
+    } else {
+        return Err(AppError::AgentNotInitialized);
+    }
+
     let status = agent.get_model_status().await?;
-    
+
     Ok(Json(json!({
         "status": "healthy",
         "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -87,17 +107,17 @@ pub async fn available_models(
         get_fallback_models()
     };
 
-    let default_model = "deepseek/deepseek-chat-v3.1:free";
+    let default_model = "x-ai/grok-4-fast:free";
     
     Ok(Json(json!({
         "models": available_models,
         "current_model": agent.current_model,
         "default_model": default_model,
         "recommended_models": {
-            "free": "deepseek/deepseek-chat-v3.1:free",
-            "reasoning": "deepseek/deepseek-r1",
+            "free": "x-ai/grok-4-fast:free",
+            "reasoning": "x-ai/grok-4-fast:free",
             "premium": "anthropic/claude-3.5-sonnet",
-            "fast": "openai/gpt-3.5-turbo"
+            "fast": "x-ai/grok-4-fast:free"
         },
         "total_models": available_models.len()
     })))
@@ -388,8 +408,8 @@ fn get_fallback_models() -> Vec<serde_json::Value> {
     
     vec![
         json!({
-            "id": "deepseek/deepseek-chat-v3.1:free",
-            "name": "deepseek/deepseek-chat-v3.1:free",
+            "id": "x-ai/grok-4-fast:free",
+            "name": "x-ai/grok-4-fast:free",
             "display_name": "DeepSeek Chat v3.1 Free",
             "icon": "🤖",
             "provider": "openrouter",
@@ -408,7 +428,7 @@ fn get_fallback_models() -> Vec<serde_json::Value> {
             "created": created_timestamp,
             "created_at": created_at,
             "updated_at": created_at,
-            "canonical_slug": "deepseek/deepseek-chat-v3.1:free",
+            "canonical_slug": "x-ai/grok-4-fast:free",
             "hugging_face_id": "",
             "supported_parameters": vec!["temperature", "top_p", "max_tokens"],
             "per_request_limits": json!({}),
@@ -478,7 +498,7 @@ pub async fn search_models(
     State(state): State<AppState>,
     Query(params): Query<SearchModelsQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let agent = state.hecate_agent.read().await;
+    let _agent = state.hecate_agent.read().await;
     let api_keys = state.config.get_api_keys();
     
     // Get available models (same source as available_models endpoint)
@@ -638,7 +658,7 @@ pub async fn get_model_info(
     let api_keys = state.config.get_api_keys();
     
     let model_name = params.model_name.unwrap_or_else(|| {
-        agent.current_model.clone().unwrap_or_else(|| "deepseek/deepseek-chat-v3.1:free".to_string())
+        agent.current_model.clone().unwrap_or_else(|| "x-ai/grok-4-fast:free".to_string())
     });
     
     if !agent.is_model_available(&model_name, &api_keys) {

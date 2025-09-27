@@ -95,7 +95,21 @@ class HecateAgentService {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to get the actual error message from the response body
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.details) {
+            errorMessage = errorData.details;
+          }
+        } catch {
+          // If we can't parse the error response, use the default message
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

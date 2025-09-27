@@ -22,7 +22,7 @@ const Home: React.FC = () => {
   const [walletConnected, setWalletConnected] = useState<boolean>(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [showHUD, setShowHUD] = useState<boolean>(true);
-  const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>('dark');
+  const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>('null');
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
@@ -51,8 +51,12 @@ const Home: React.FC = () => {
   // Initialize theme immediately to prevent flash
   useEffect(() => {
     const savedTheme = localStorage.getItem('currentTheme');
-    if (savedTheme) {
+    if (savedTheme && (savedTheme === 'null' || savedTheme === 'light' || savedTheme === 'dark')) {
       setCurrentTheme(savedTheme as 'null' | 'light' | 'dark');
+    } else {
+      // Set default null theme if no valid saved theme
+      setCurrentTheme('null');
+      localStorage.setItem('currentTheme', 'null');
     }
   }, []);
 
@@ -348,6 +352,30 @@ const Home: React.FC = () => {
         updateAuthTime();
 
         console.log('Phantom wallet authenticated successfully via backend!');
+        console.log('🎯 REACHED USER REGISTRATION SECTION');
+        
+        // Register user with Erebus after successful wallet connection
+        try {
+          console.log('👤 Registering user with Erebus...');
+          console.log('📝 Wallet address:', walletAddress);
+          console.log('📝 Wallet chain: solana');
+          console.log('📝 About to import task service...');
+          const { taskService } = await import('../../common/services/task-service');
+          console.log('📝 Task service imported successfully');
+          taskService.setWalletContext(walletAddress, 'solana');
+          console.log('🔗 Task service wallet context set');
+          console.log('📝 About to call registerUser...');
+          const registrationResult = await taskService.registerUser(walletAddress, 'solana');
+          console.log('📤 Registration result:', registrationResult);
+          if (registrationResult.success) {
+            console.log('✅ User registered successfully:', registrationResult.data);
+          } else {
+            console.warn('⚠️ User registration failed:', registrationResult.error);
+          }
+        } catch (err) {
+          console.warn('⚠️ User registration error:', err);
+          console.error('❌ Full error details:', err);
+        }
       } else {
         throw new Error(`Authentication failed: ${verifyResponse.message}`);
       }
@@ -544,6 +572,30 @@ const Home: React.FC = () => {
         updateAuthTime();
 
         console.log('MetaMask wallet authenticated successfully via backend!');
+        console.log('🎯 REACHED USER REGISTRATION SECTION (MetaMask)');
+        
+        // Register user with Erebus after successful wallet connection
+        try {
+          console.log('👤 Registering user with Erebus...');
+          console.log('📝 Wallet address:', walletAddress);
+          console.log('📝 Wallet chain: ethereum');
+          console.log('📝 About to import task service...');
+          const { taskService } = await import('../../common/services/task-service');
+          console.log('📝 Task service imported successfully');
+          taskService.setWalletContext(walletAddress, 'ethereum');
+          console.log('🔗 Task service wallet context set');
+          console.log('📝 About to call registerUser...');
+          const registrationResult = await taskService.registerUser(walletAddress, 'ethereum');
+          console.log('📤 Registration result:', registrationResult);
+          if (registrationResult.success) {
+            console.log('✅ User registered successfully:', registrationResult.data);
+          } else {
+            console.warn('⚠️ User registration failed:', registrationResult.error);
+          }
+        } catch (err) {
+          console.warn('⚠️ User registration error:', err);
+          console.error('❌ Full error details:', err);
+        }
       } else {
         throw new Error(`Authentication failed: ${verifyResponse.message}`);
       }
@@ -612,7 +664,7 @@ const Home: React.FC = () => {
       className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]} ${isInitialized ? styles.initialized : ''}`}
     >
       <div className={styles.backgroundImage} />
-      <StarsCanvas theme={currentTheme === 'dark' ? 'null' : currentTheme} />
+      <StarsCanvas theme={currentTheme === 'light' ? 'light' : (currentTheme === 'null' ? 'null' : 'null')} />
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`}>
         {/* System status panel moved to HUD component */}
       </div>
@@ -627,11 +679,8 @@ const Home: React.FC = () => {
             setShowHUD(false);
           }}
           onThemeChange={(theme) => {
-            if (theme === 'cyber') {
-              setCurrentTheme('null');
-              localStorage.setItem('currentTheme', 'null');
-            } else {
-              setCurrentTheme(theme as 'null' | 'light' | 'dark');
+            if (theme === 'null' || theme === 'light' || theme === 'dark') {
+              setCurrentTheme(theme);
               localStorage.setItem('currentTheme', theme);
             }
           }}

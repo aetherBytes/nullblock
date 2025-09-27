@@ -53,6 +53,12 @@ pub enum AppError {
     
     #[error("Bad request: {0}")]
     BadRequest(String),
+
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+
+    #[error("Task already actioned: {0}")]
+    TaskAlreadyActioned(String),
 }
 
 impl AppError {
@@ -61,9 +67,11 @@ impl AppError {
             AppError::AgentNotInitialized 
             | AppError::AgentNotRunning => StatusCode::SERVICE_UNAVAILABLE,
             
-            AppError::ModelNotAvailable(_) 
-            | AppError::InvalidModelConfig(_) 
+            AppError::ModelNotAvailable(_)
+            | AppError::InvalidModelConfig(_)
             | AppError::BadRequest(_) => StatusCode::BAD_REQUEST,
+
+            AppError::TaskAlreadyActioned(_) => StatusCode::CONFLICT,
             
             AppError::AuthError(_) => StatusCode::UNAUTHORIZED,
             
@@ -71,12 +79,13 @@ impl AppError {
             
             AppError::TimeoutError(_) => StatusCode::REQUEST_TIMEOUT,
             
-            AppError::LLMRequestFailed(_) 
-            | AppError::ConversationError(_) 
-            | AppError::ArbitrageError(_) 
-            | AppError::ConfigError(_) 
-            | AppError::NetworkError(_) 
-            | AppError::SerializationError(_) 
+            AppError::LLMRequestFailed(_)
+            | AppError::ConversationError(_)
+            | AppError::ArbitrageError(_)
+            | AppError::ConfigError(_)
+            | AppError::NetworkError(_)
+            | AppError::SerializationError(_)
+            | AppError::DatabaseError(_)
             | AppError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -98,6 +107,8 @@ impl AppError {
             AppError::RateLimitError(_) => "rate_limit_error",
             AppError::InternalError(_) => "internal_error",
             AppError::BadRequest(_) => "bad_request",
+            AppError::DatabaseError(_) => "database_error",
+            AppError::TaskAlreadyActioned(_) => "task_already_actioned",
         }
     }
 
@@ -110,8 +121,10 @@ impl AppError {
                 format!("🧠 The model '{}' is not currently available. Please select a different model or check your API keys.", model)
             }
             AppError::LLMRequestFailed(details) => {
-                if details.to_lowercase().contains("api key") {
-                    "🔑 Authentication issue with the AI service. Please check your API keys.".to_string()
+                if details.to_lowercase().contains("no auth credentials") ||
+                   details.to_lowercase().contains("401 unauthorized") ||
+                   details.to_lowercase().contains("api key") {
+                    "🔑 No LLM API keys detected. Please check your OpenRouter API key configuration in .env.dev and restart the service. Visit https://openrouter.ai/ to get a free API key.".to_string()
                 } else if details.to_lowercase().contains("timeout") {
                     "⏰ The AI service is taking too long to respond. Please try again in a moment.".to_string()
                 } else if details.to_lowercase().contains("rate limit") {
@@ -190,6 +203,12 @@ impl From<crate::config::ConfigError> for AppError {
 impl From<tokio::time::error::Elapsed> for AppError {
     fn from(err: tokio::time::error::Elapsed) -> Self {
         AppError::TimeoutError(err.to_string())
+    }
+}
+
+impl From<anyhow::Error> for AppError {
+    fn from(err: anyhow::Error) -> Self {
+        AppError::InternalError(err.to_string())
     }
 }
 

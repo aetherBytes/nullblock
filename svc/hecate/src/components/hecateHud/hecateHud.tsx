@@ -18,7 +18,7 @@ interface ChatMessage {
   timestamp: Date;
   sender: 'user' | 'hecate';
   message: string;
-  type: 'text' | 'system' | 'error';
+  type: 'text' | 'system' | 'error' | 'suggestion' | 'update';
   model_used?: string;
   metadata?: any;
 }
@@ -78,7 +78,6 @@ const HecateHud: React.FC<HecateHudProps> = ({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [mcpOperations, setMcpOperations] = useState<MCPOperation[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [agents, setAgents] = useState<any[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,9 +91,7 @@ const HecateHud: React.FC<HecateHudProps> = ({
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const [chatAutoScroll, setChatAutoScroll] = useState(true);
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
   const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const previousMessageCountRef = useRef<number>(0);
   const [nullviewState, setNulleyeState] = useState<
     | 'base'
     | 'response'
@@ -1293,18 +1290,20 @@ const HecateHud: React.FC<HecateHudProps> = ({
                     onClick={() => onThemeChange && onThemeChange('light')}
                   >
                     ☀️ Light
+                    <span className={styles.wipBadge}>WIP</span>
+                  </button>
+                  <button
+                    className={`${styles.themeControlBtn} ${theme === 'null' ? styles.active : ''}`}
+                    onClick={() => onThemeChange && onThemeChange('null')}
+                  >
+                    🌙 Dark
+                    <span className={styles.wipBadge}>WIP</span>
                   </button>
                   <button
                     className={`${styles.themeControlBtn} ${theme === 'dark' ? styles.active : ''}`}
                     onClick={() => onThemeChange && onThemeChange('dark')}
                   >
-                    🌙 Dark
-                  </button>
-                  <button
-                    className={`${styles.themeControlBtn} ${theme === 'null' ? styles.active : ''}`}
-                    onClick={() => onThemeChange && onThemeChange('cyber')}
-                  >
-                    ⚡ Cyber
+                    🌌 Null
                   </button>
                 </div>
               </div>
@@ -1680,7 +1679,6 @@ const HecateHud: React.FC<HecateHudProps> = ({
                       className={styles.scrollToBottomBtn}
                       onClick={() => {
                         setChatAutoScroll(true);
-                        setIsUserScrolling(false);
                         
                         if (chatMessagesRef.current) {
                           chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
@@ -1839,7 +1837,7 @@ const HecateHud: React.FC<HecateHudProps> = ({
 
   return (
     <div
-      className={`${styles.contextDashboard} ${theme === 'dark' ? styles.dark : theme === 'light' ? styles.light : ''} ${styles[`theme-${theme}`] || ''}`}
+      className={`${styles.contextDashboard} ${theme === 'null' ? styles.dark : theme === 'light' ? styles.light : theme === 'dark' ? styles.dark : ''} ${styles[`theme-${theme}`] || ''}`}
     >
       <div className={styles.dashboardHeader}>
         <div className={styles.headerLeft}>

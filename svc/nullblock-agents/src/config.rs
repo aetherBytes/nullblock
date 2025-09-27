@@ -86,7 +86,7 @@ impl Config {
 
             llm: LLMConfig {
                 default_model: env::var("DEFAULT_LLM_MODEL")
-                    .unwrap_or_else(|_| "deepseek/deepseek-chat-v3.1:free".to_string()),
+                    .unwrap_or_else(|_| "x-ai/grok-4-fast:free".to_string()),
                 request_timeout_ms: env::var("LLM_REQUEST_TIMEOUT_MS")
                     .unwrap_or_else(|_| "300000".to_string()) // 5 minutes for thinking models
                     .parse()
@@ -151,11 +151,42 @@ impl Config {
 
     pub fn get_api_keys(&self) -> ApiKeys {
         ApiKeys {
-            openai: env::var("OPENAI_API_KEY").ok(),
-            anthropic: env::var("ANTHROPIC_API_KEY").ok(),
-            groq: env::var("GROQ_API_KEY").ok(),
-            huggingface: env::var("HUGGINGFACE_API_KEY").ok(),
-            openrouter: env::var("OPENROUTER_API_KEY").ok(),
+            openai: Self::get_valid_api_key("OPENAI_API_KEY"),
+            anthropic: Self::get_valid_api_key("ANTHROPIC_API_KEY"),
+            groq: Self::get_valid_api_key("GROQ_API_KEY"),
+            huggingface: Self::get_valid_api_key("HUGGINGFACE_API_KEY"),
+            openrouter: Self::get_valid_api_key("OPENROUTER_API_KEY"),
+        }
+    }
+
+    fn get_valid_api_key(env_var: &str) -> Option<String> {
+        if let Ok(key) = env::var(env_var) {
+            // Check for placeholder values that indicate the key isn't configured
+            let placeholder_patterns = [
+                "your-",
+                "replace-",
+                "enter-",
+                "add-",
+                "insert-",
+                "api-key-here",
+                "key-here",
+                "token-here",
+                "secret-here",
+            ];
+
+            let key_lower = key.to_lowercase();
+
+            // Check if key is obviously a placeholder
+            if placeholder_patterns.iter().any(|pattern| key_lower.contains(pattern)) {
+                None
+            } else if key.len() < 10 {
+                // API keys are typically longer than 10 characters
+                None
+            } else {
+                Some(key)
+            }
+        } else {
+            None
         }
     }
 }

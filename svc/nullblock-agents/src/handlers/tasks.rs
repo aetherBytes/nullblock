@@ -1,41 +1,22 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{StatusCode, HeaderMap},
     response::Json,
 };
 use chrono::Utc;
-use serde_json::json;
-use std::collections::HashMap;
 use tracing::{info, warn, error};
 use uuid::Uuid;
 
 use crate::{
+    database::repositories::{TaskRepository, AgentRepository},
+    database::repositories::user_references::UserReferenceRepository,
+    kafka::TaskLifecycleEvent,
     models::{
-        Task, TaskStatus, TaskPriority, TaskType, TaskCategory, TaskOutcome,
+        TaskStatus,
         CreateTaskRequest, UpdateTaskRequest, TaskResponse, TaskListResponse
     },
     server::AppState,
 };
-
-// In-memory task storage for session-based persistence
-static mut TASKS: Option<Vec<Task>> = None;
-static mut TASK_COUNTER: u64 = 0;
-
-fn get_tasks_storage() -> &'static mut Vec<Task> {
-    unsafe {
-        if TASKS.is_none() {
-            TASKS = Some(Vec::new());
-        }
-        TASKS.as_mut().unwrap()
-    }
-}
-
-fn generate_task_id() -> String {
-    unsafe {
-        TASK_COUNTER += 1;
-        format!("task_{}", TASK_COUNTER)
-    }
-}
 
 #[derive(Debug, serde::Deserialize)]
 pub struct TaskQuery {
@@ -44,379 +25,1087 @@ pub struct TaskQuery {
     limit: Option<usize>,
 }
 
-pub async fn create_task(
-    State(_state): State<AppState>,
+// Helper function to extract user_id from wallet address
+async fn get_user_id_from_wallet(
+    database: &crate::database::Database,
+    wallet_address: Option<&str>,
+    chain: Option<&str>,
+) -> Option<Uuid> {
+    if let (Some(wallet), Some(chain)) = (wallet_address, chain) {
+        // Generate deterministic UUID from wallet address
+        let user_id = wallet_to_uuid(wallet, chain);
+        let user_repo = UserReferenceRepository::new(database.pool().clone());
+
+        // Check if user already exists
+        match user_repo.get_by_id(&user_id).await {
+            Ok(Some(_)) => {
+                // User exists, return the UUID
+                info!("✅ Found existing user for wallet: {} -> {}", wallet, user_id);
+                Some(user_id)
+            }
+            Ok(None) => {
+                // User doesn't exist, create it
+                info!("🆕 Creating new user for wallet: {} -> {}", wallet, user_id);
+                let user_ref = crate::models::UserReference {
+                    id: user_id,
+                    source_identifier: wallet.to_string(),
+                    chain: chain.to_string(),
+                    source_type: serde_json::json!({
+                        "type": "web3_wallet",
+                        "provider": "web3",
+                        "metadata": {}
+                    }),
+                    wallet_type: Some("web3".to_string()),
+                    created_at: chrono::Utc::now(),
+                    updated_at: chrono::Utc::now(),
+                };
+                match user_repo.create(&user_ref).await {
+                    Ok(_) => {
+                        info!("✅ Successfully created user for wallet: {}", wallet);
+                        Some(user_id)
+                    }
+                    Err(e) => {
+                        error!("❌ Failed to create user for wallet {}: {}", wallet, e);
+                        // Still return the UUID since we know what it should be
+                        Some(user_id)
+                    }
+                }
+            }
+            Err(e) => {
+                error!("❌ Failed to lookup user by ID: {}", e);
+                // Return the deterministic UUID anyway - it should work for filtering
+                Some(user_id)
+            }
+        }
+    } else {
+        None
+    }
+}
+
+
+// Wrapper function for create_task that extracts headers
+pub async fn create_task_handler(
+    State(state): State<AppState>,
+    headers: HeaderMap,
     Json(request): Json<CreateTaskRequest>,
+) -> Result<Json<TaskResponse>, StatusCode> {
+    create_task(State(state), Json(request), headers).await
+}
+
+pub async fn create_task(
+    State(state): State<AppState>,
+    Json(request): Json<CreateTaskRequest>,
+    headers: HeaderMap,
 ) -> Result<Json<TaskResponse>, StatusCode> {
     info!("📋 Creating new task: {}", request.name);
 
-    let now = Utc::now();
-    let task_id = generate_task_id();
+    // Check if we have database connection
+    let database = match &state.database {
+        Some(db) => db,
+        None => {
+            error!("❌ Database connection not available");
+            return Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database connection not available".to_string()),
+                timestamp: Utc::now(),
+            }));
+        }
+    };
 
-    let status = if request.auto_start.unwrap_or(false) {
-        TaskStatus::Running
+    // Create task repository
+    let task_repo = TaskRepository::new(database.pool().clone());
+    let agent_repo = AgentRepository::new(database.pool().clone());
+
+    // Extract wallet address and chain from headers
+    let wallet_address = headers.get("x-wallet-address")
+        .and_then(|h| h.to_str().ok());
+    let chain = headers.get("x-wallet-chain")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("solana"); // Default to Solana chain
+
+    // Get user_id from wallet address
+    let user_id = get_user_id_from_wallet(database, wallet_address, Some(chain)).await;
+    
+    if let Some(wallet) = wallet_address {
+        info!("🔍 Creating task for wallet: {} on chain: {}", wallet, chain);
+        if user_id.is_none() {
+            warn!("⚠️ No user found for wallet: {}, creating task without user association", wallet);
+        }
     } else {
-        TaskStatus::Created
+        info!("📋 No wallet address provided, creating task without user association");
+    }
+
+    // Get Hecate agent ID for task assignment
+    let hecate_agent_id = match agent_repo.get_by_name_and_type("hecate", "conversational").await {
+        Ok(Some(agent)) => Some(agent.id),
+        Ok(None) => {
+            warn!("⚠️ Hecate agent not found in database, creating task without assignment");
+            None
+        }
+        Err(e) => {
+            warn!("⚠️ Failed to lookup Hecate agent: {}, creating task without assignment", e);
+            None
+        }
     };
 
-    let task = Task {
-        id: task_id.clone(),
-        name: request.name,
-        description: request.description,
-        task_type: request.task_type,
-        category: request.category.unwrap_or(TaskCategory::UserAssigned),
-        status: status.clone(),
-        priority: request.priority.unwrap_or(TaskPriority::Medium),
-        created_at: now,
-        updated_at: now,
-        started_at: if status == TaskStatus::Running { Some(now) } else { None },
-        completed_at: None,
-        progress: 0,
-        estimated_duration: None,
-        actual_duration: None,
-        sub_tasks: Vec::new(),
-        dependencies: request.dependencies.unwrap_or_default(),
-        context: HashMap::new(),
-        parameters: request.parameters.unwrap_or_default(),
-        outcome: None,
-        logs: Vec::new(),
-        triggers: Vec::new(),
-        assigned_agent: None,
-        auto_retry: true,
-        max_retries: 3,
-        current_retries: 0,
-        required_capabilities: Vec::new(),
-        user_approval_required: request.user_approval_required.unwrap_or(false),
-        user_notifications: true,
-    };
+    // Create task in database
+    match task_repo.create(&request, user_id, hecate_agent_id).await {
+        Ok(task_entity) => {
+            // Convert to domain model
+            match task_entity.to_domain_model() {
+                Ok(task) => {
+                    info!("✅ Task created successfully: {} ({})", task.name, task.id);
 
-    // Store task in session storage
-    let tasks = get_tasks_storage();
-    tasks.push(task.clone());
+                    // Publish Kafka event if producer is available
+                    if let Some(kafka_producer) = &state.kafka_producer {
+                        let event = TaskLifecycleEvent::task_created(
+                            task.id.clone(),
+                            user_id,
+                            task.name.clone(),
+                            serde_json::to_string(&task.status).unwrap().trim_matches('"').to_string(),
+                            serde_json::to_string(&task.priority).unwrap().trim_matches('"').to_string(),
+                        );
 
-    info!("✅ Task created successfully: {} ({})", task.name, task.id);
+                        if let Err(e) = kafka_producer.publish_task_event(event).await {
+                            warn!("⚠️ Failed to publish task created event: {}", e);
+                        }
+                    }
 
-    Ok(Json(TaskResponse {
-        success: true,
-        data: Some(task),
-        error: None,
-        timestamp: Utc::now(),
-    }))
+                    // If auto_start is true, automatically process the task
+                    if request.auto_start.unwrap_or(false) {
+                        info!("🚀 Auto-starting task: {}", task.id);
+
+                        // Create a background task to process this task
+                        let state_clone = state.clone();
+                        let task_id = task.id.clone();
+                        tokio::spawn(async move {
+                            // Small delay to ensure task is fully committed to database
+                            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+                            match process_task_internal(state_clone, task_id).await {
+                                Ok(_) => info!("✅ Auto-started task processed successfully"),
+                                Err(e) => error!("❌ Failed to auto-process task: {}", e),
+                            }
+                        });
+                    }
+
+                    Ok(Json(TaskResponse {
+                        success: true,
+                        data: Some(task),
+                        error: None,
+                        timestamp: Utc::now(),
+                    }))
+                }
+                Err(e) => {
+                    error!("❌ Failed to convert task entity to domain model: {}", e);
+                    Ok(Json(TaskResponse {
+                        success: false,
+                        data: None,
+                        error: Some("Failed to create task".to_string()),
+                        timestamp: Utc::now(),
+                    }))
+                }
+            }
+        }
+        Err(e) => {
+            error!("❌ Failed to create task in database: {}", e);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Failed to create task".to_string()),
+                timestamp: Utc::now(),
+            }))
+        }
+    }
+}
+
+// Wrapper function for get_tasks that extracts headers
+pub async fn get_tasks_handler(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<TaskQuery>,
+) -> Result<Json<TaskListResponse>, StatusCode> {
+    get_tasks(State(state), Query(query), headers).await
 }
 
 pub async fn get_tasks(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Query(query): Query<TaskQuery>,
+    headers: HeaderMap,
 ) -> Result<Json<TaskListResponse>, StatusCode> {
     info!("📋 Fetching tasks with filters: {:?}", query);
 
-    let tasks = get_tasks_storage();
-    let mut filtered_tasks = tasks.clone();
+    // Check if we have database connection
+    let database = match &state.database {
+        Some(db) => db,
+        None => {
+            error!("❌ Database connection not available");
+            return Ok(Json(TaskListResponse {
+                success: false,
+                data: None,
+                total: 0,
+                error: Some("Database connection not available".to_string()),
+                timestamp: Utc::now(),
+            }));
+        }
+    };
 
-    // Apply filters
-    if let Some(status_filter) = query.status {
-        filtered_tasks.retain(|task| {
-            format!("{:?}", task.status).to_lowercase() == status_filter.to_lowercase()
-        });
+    // Create task repository
+    let task_repo = TaskRepository::new(database.pool().clone());
+
+    // Extract wallet address and chain from headers
+    let wallet_address = headers.get("x-wallet-address")
+        .and_then(|h| h.to_str().ok());
+    let chain = headers.get("x-wallet-chain")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("solana"); // Default to Solana chain
+
+    // Get user_id from wallet address
+    let user_id = get_user_id_from_wallet(database, wallet_address, Some(chain)).await;
+    
+    if let Some(wallet) = wallet_address {
+        info!("🔍 Looking up tasks for wallet: {} on chain: {}", wallet, chain);
+        if user_id.is_none() {
+            warn!("⚠️ No user found for wallet: {}, returning empty task list", wallet);
+        }
+    } else {
+        info!("📋 No wallet address provided, returning all tasks (admin mode)");
     }
 
-    if let Some(type_filter) = query.task_type {
-        filtered_tasks.retain(|task| {
-            format!("{:?}", task.task_type).to_lowercase() == type_filter.to_lowercase()
-        });
+    // Fetch tasks from database
+    match task_repo.list(
+        user_id,
+        query.status.as_deref(),
+        query.task_type.as_deref(),
+        query.limit.map(|l| l as i64),
+    ).await {
+        Ok(task_entities) => {
+            // Convert to domain models
+            let mut tasks = Vec::new();
+            for entity in task_entities {
+                match entity.to_domain_model() {
+                    Ok(task) => tasks.push(task),
+                    Err(e) => {
+                        warn!("⚠️ Failed to convert task entity to domain model: {}", e);
+                    }
+                }
+            }
+
+            let total = tasks.len();
+            info!("✅ Returning {} tasks", total);
+
+            Ok(Json(TaskListResponse {
+                success: true,
+                data: Some(tasks),
+                total,
+                error: None,
+                timestamp: Utc::now(),
+            }))
+        }
+        Err(e) => {
+            error!("❌ Failed to fetch tasks from database: {}", e);
+            Ok(Json(TaskListResponse {
+                success: false,
+                data: None,
+                total: 0,
+                error: Some("Failed to fetch tasks".to_string()),
+                timestamp: Utc::now(),
+            }))
+        }
     }
-
-    // Apply limit
-    if let Some(limit) = query.limit {
-        filtered_tasks.truncate(limit);
-    }
-
-    let total = filtered_tasks.len();
-
-    info!("✅ Returning {} tasks (total: {})", filtered_tasks.len(), tasks.len());
-
-    Ok(Json(TaskListResponse {
-        success: true,
-        data: Some(filtered_tasks),
-        total,
-        error: None,
-        timestamp: Utc::now(),
-    }))
 }
 
 pub async fn get_task(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<TaskResponse>, StatusCode> {
     info!("📋 Fetching task: {}", task_id);
 
-    let tasks = get_tasks_storage();
+    // Check if we have database connection
+    let database = match &state.database {
+        Some(db) => db,
+        None => {
+            error!("❌ Database connection not available");
+            return Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database connection not available".to_string()),
+                timestamp: Utc::now(),
+            }));
+        }
+    };
 
-    if let Some(task) = tasks.iter().find(|t| t.id == task_id) {
-        info!("✅ Found task: {}", task.name);
-        Ok(Json(TaskResponse {
-            success: true,
-            data: Some(task.clone()),
-            error: None,
-            timestamp: Utc::now(),
-        }))
-    } else {
-        warn!("⚠️ Task not found: {}", task_id);
-        Ok(Json(TaskResponse {
-            success: false,
-            data: None,
-            error: Some(format!("Task not found: {}", task_id)),
-            timestamp: Utc::now(),
-        }))
+    // Create task repository
+    let task_repo = TaskRepository::new(database.pool().clone());
+
+    // Fetch task from database
+    match task_repo.get_by_id(&task_id).await {
+        Ok(Some(task_entity)) => {
+            match task_entity.to_domain_model() {
+                Ok(task) => {
+                    info!("✅ Found task: {}", task.name);
+                    Ok(Json(TaskResponse {
+                        success: true,
+                        data: Some(task),
+                        error: None,
+                        timestamp: Utc::now(),
+                    }))
+                }
+                Err(e) => {
+                    error!("❌ Failed to convert task entity to domain model: {}", e);
+                    Ok(Json(TaskResponse {
+                        success: false,
+                        data: None,
+                        error: Some("Failed to fetch task".to_string()),
+                        timestamp: Utc::now(),
+                    }))
+                }
+            }
+        }
+        Ok(None) => {
+            warn!("⚠️ Task not found: {}", task_id);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some(format!("Task not found: {}", task_id)),
+                timestamp: Utc::now(),
+            }))
+        }
+        Err(e) => {
+            error!("❌ Failed to fetch task from database: {}", e);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Failed to fetch task".to_string()),
+                timestamp: Utc::now(),
+            }))
+        }
     }
 }
 
 pub async fn update_task(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(task_id): Path<String>,
     Json(update_request): Json<UpdateTaskRequest>,
 ) -> Result<Json<TaskResponse>, StatusCode> {
     info!("📝 Updating task: {}", task_id);
 
-    let tasks = get_tasks_storage();
+    // Check if we have database connection
+    let database = match &state.database {
+        Some(db) => db,
+        None => {
+            error!("❌ Database connection not available");
+            return Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database connection not available".to_string()),
+                timestamp: Utc::now(),
+            }));
+        }
+    };
 
-    if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
-        // Apply updates
-        if let Some(name) = update_request.name {
-            task.name = name;
-        }
-        if let Some(description) = update_request.description {
-            task.description = description;
-        }
-        if let Some(status) = update_request.status {
-            task.status = status;
-        }
-        if let Some(priority) = update_request.priority {
-            task.priority = priority;
-        }
-        if let Some(progress) = update_request.progress {
-            task.progress = progress;
-        }
-        if let Some(parameters) = update_request.parameters {
-            task.parameters = parameters;
-        }
-        if let Some(started_at) = update_request.started_at {
-            task.started_at = Some(started_at);
-        }
-        if let Some(completed_at) = update_request.completed_at {
-            task.completed_at = Some(completed_at);
-        }
-        if let Some(outcome) = update_request.outcome {
-            task.outcome = Some(outcome);
-        }
+    let task_repo = TaskRepository::new(database.pool().clone());
 
-        task.updated_at = Utc::now();
+    // Update the task using the repository
+    match task_repo.update(&task_id, &update_request).await {
+        Ok(Some(task_entity)) => {
+            // Convert entity to domain model
+            match task_entity.to_domain_model() {
+                Ok(task) => {
+                    info!("✅ Task updated successfully: {}", task.name);
 
-        info!("✅ Task updated successfully: {}", task.name);
-
-        Ok(Json(TaskResponse {
-            success: true,
-            data: Some(task.clone()),
-            error: None,
-            timestamp: Utc::now(),
-        }))
-    } else {
-        warn!("⚠️ Task not found for update: {}", task_id);
-        Ok(Json(TaskResponse {
-            success: false,
-            data: None,
-            error: Some(format!("Task not found: {}", task_id)),
-            timestamp: Utc::now(),
-        }))
+                    Ok(Json(TaskResponse {
+                        success: true,
+                        data: Some(task),
+                        error: None,
+                        timestamp: Utc::now(),
+                    }))
+                }
+                Err(e) => {
+                    error!("❌ Failed to convert task entity: {}", e);
+                    Ok(Json(TaskResponse {
+                        success: false,
+                        data: None,
+                        error: Some("Failed to convert task data".to_string()),
+                        timestamp: Utc::now(),
+                    }))
+                }
+            }
+        }
+        Ok(None) => {
+            warn!("⚠️ Task not found for update: {}", task_id);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some(format!("Task not found: {}", task_id)),
+                timestamp: Utc::now(),
+            }))
+        }
+        Err(e) => {
+            error!("❌ Failed to update task: {}", e);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database operation failed".to_string()),
+                timestamp: Utc::now(),
+            }))
+        }
     }
 }
 
 pub async fn delete_task(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<TaskResponse>, StatusCode> {
     info!("🗑️ Deleting task: {}", task_id);
 
-    let tasks = get_tasks_storage();
+    // Check if we have database connection
+    let database = match &state.database {
+        Some(db) => db,
+        None => {
+            error!("❌ Database connection not available");
+            return Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database connection not available".to_string()),
+                timestamp: Utc::now(),
+            }));
+        }
+    };
 
-    if let Some(pos) = tasks.iter().position(|t| t.id == task_id) {
-        let removed_task = tasks.remove(pos);
-        info!("✅ Task deleted successfully: {}", removed_task.name);
+    let task_repo = TaskRepository::new(database.pool().clone());
 
-        Ok(Json(TaskResponse {
-            success: true,
-            data: Some(removed_task),
-            error: None,
-            timestamp: Utc::now(),
-        }))
-    } else {
-        warn!("⚠️ Task not found for deletion: {}", task_id);
-        Ok(Json(TaskResponse {
-            success: false,
-            data: None,
-            error: Some(format!("Task not found: {}", task_id)),
-            timestamp: Utc::now(),
-        }))
+    // Delete the task using the repository
+    match task_repo.delete(&task_id).await {
+        Ok(Some(task_entity)) => {
+            // Convert entity to domain model
+            match task_entity.to_domain_model() {
+                Ok(task) => {
+                    info!("✅ Task deleted successfully: {}", task.name);
+
+                    Ok(Json(TaskResponse {
+                        success: true,
+                        data: Some(task),
+                        error: None,
+                        timestamp: Utc::now(),
+                    }))
+                }
+                Err(e) => {
+                    error!("❌ Failed to convert task entity: {}", e);
+                    Ok(Json(TaskResponse {
+                        success: false,
+                        data: None,
+                        error: Some("Failed to convert task data".to_string()),
+                        timestamp: Utc::now(),
+                    }))
+                }
+            }
+        }
+        Ok(None) => {
+            warn!("⚠️ Task not found for deletion: {}", task_id);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some(format!("Task not found: {}", task_id)),
+                timestamp: Utc::now(),
+            }))
+        }
+        Err(e) => {
+            error!("❌ Failed to delete task: {}", e);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database operation failed".to_string()),
+                timestamp: Utc::now(),
+            }))
+        }
     }
 }
 
 pub async fn start_task(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<TaskResponse>, StatusCode> {
     info!("▶️ Starting task: {}", task_id);
 
-    let tasks = get_tasks_storage();
+    let database = match &state.database {
+        Some(db) => db,
+        None => {
+            error!("❌ Database connection not available");
+            return Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database connection not available".to_string()),
+                timestamp: Utc::now(),
+            }));
+        }
+    };
 
-    if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
-        task.status = TaskStatus::Running;
-        task.started_at = Some(Utc::now());
-        task.updated_at = Utc::now();
-        task.progress = 0;
+    let task_repo = TaskRepository::new(database.pool().clone());
 
-        info!("✅ Task started successfully: {}", task.name);
+    match task_repo.update_status(&task_id, TaskStatus::Running).await {
+        Ok(Some(task_entity)) => {
+            match task_entity.to_domain_model() {
+                Ok(task) => {
+                    info!("✅ Task started successfully: {}", task.name);
 
-        Ok(Json(TaskResponse {
-            success: true,
-            data: Some(task.clone()),
-            error: None,
-            timestamp: Utc::now(),
-        }))
-    } else {
-        warn!("⚠️ Task not found for start: {}", task_id);
-        Ok(Json(TaskResponse {
-            success: false,
-            data: None,
-            error: Some(format!("Task not found: {}", task_id)),
-            timestamp: Utc::now(),
-        }))
+                    // Publish Kafka event
+                    if let Some(kafka_producer) = &state.kafka_producer {
+                        let event = TaskLifecycleEvent::task_status_changed(
+                            task.id.clone(),
+                            None, // user_id
+                            None, // agent_id
+                            task.name.clone(),
+                            "created".to_string(), // assume previous status
+                            "running".to_string(),
+                            serde_json::to_string(&task.priority).unwrap().trim_matches('"').to_string(),
+                            task.progress,
+                        );
+
+                        if let Err(e) = kafka_producer.publish_task_event(event).await {
+                            warn!("⚠️ Failed to publish task started event: {}", e);
+                        }
+                    }
+
+                    Ok(Json(TaskResponse {
+                        success: true,
+                        data: Some(task),
+                        error: None,
+                        timestamp: Utc::now(),
+                    }))
+                }
+                Err(e) => {
+                    error!("❌ Failed to convert task entity: {}", e);
+                    Ok(Json(TaskResponse {
+                        success: false,
+                        data: None,
+                        error: Some("Failed to start task".to_string()),
+                        timestamp: Utc::now(),
+                    }))
+                }
+            }
+        }
+        Ok(None) => {
+            warn!("⚠️ Task not found for start: {}", task_id);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some(format!("Task not found: {}", task_id)),
+                timestamp: Utc::now(),
+            }))
+        }
+        Err(e) => {
+            error!("❌ Failed to start task: {}", e);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Failed to start task".to_string()),
+                timestamp: Utc::now(),
+            }))
+        }
     }
 }
 
 pub async fn pause_task(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<TaskResponse>, StatusCode> {
     info!("⏸️ Pausing task: {}", task_id);
 
-    let tasks = get_tasks_storage();
+    // Check if we have database connection
+    let database = match &state.database {
+        Some(db) => db,
+        None => {
+            error!("❌ Database connection not available");
+            return Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database connection not available".to_string()),
+                timestamp: Utc::now(),
+            }));
+        }
+    };
 
-    if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
-        task.status = TaskStatus::Paused;
-        task.updated_at = Utc::now();
+    let task_repo = TaskRepository::new(database.pool().clone());
 
-        info!("✅ Task paused successfully: {}", task.name);
+    match task_repo.update_status(&task_id, TaskStatus::Paused).await {
+        Ok(Some(task_entity)) => {
+            match task_entity.to_domain_model() {
+                Ok(task) => {
+                    info!("✅ Task paused successfully: {}", task.name);
 
-        Ok(Json(TaskResponse {
-            success: true,
-            data: Some(task.clone()),
-            error: None,
-            timestamp: Utc::now(),
-        }))
-    } else {
-        warn!("⚠️ Task not found for pause: {}", task_id);
-        Ok(Json(TaskResponse {
-            success: false,
-            data: None,
-            error: Some(format!("Task not found: {}", task_id)),
-            timestamp: Utc::now(),
-        }))
+                    Ok(Json(TaskResponse {
+                        success: true,
+                        data: Some(task),
+                        error: None,
+                        timestamp: Utc::now(),
+                    }))
+                }
+                Err(e) => {
+                    error!("❌ Failed to convert task entity: {}", e);
+                    Ok(Json(TaskResponse {
+                        success: false,
+                        data: None,
+                        error: Some("Failed to convert task data".to_string()),
+                        timestamp: Utc::now(),
+                    }))
+                }
+            }
+        }
+        Ok(None) => {
+            warn!("⚠️ Task not found for pause: {}", task_id);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some(format!("Task not found: {}", task_id)),
+                timestamp: Utc::now(),
+            }))
+        }
+        Err(e) => {
+            error!("❌ Failed to pause task: {}", e);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database operation failed".to_string()),
+                timestamp: Utc::now(),
+            }))
+        }
     }
 }
 
 pub async fn resume_task(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<TaskResponse>, StatusCode> {
     info!("▶️ Resuming task: {}", task_id);
 
-    let tasks = get_tasks_storage();
+    // Check if we have database connection
+    let database = match &state.database {
+        Some(db) => db,
+        None => {
+            error!("❌ Database connection not available");
+            return Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database connection not available".to_string()),
+                timestamp: Utc::now(),
+            }));
+        }
+    };
 
-    if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
-        task.status = TaskStatus::Running;
-        task.updated_at = Utc::now();
+    let task_repo = TaskRepository::new(database.pool().clone());
 
-        info!("✅ Task resumed successfully: {}", task.name);
+    match task_repo.update_status(&task_id, TaskStatus::Running).await {
+        Ok(Some(task_entity)) => {
+            match task_entity.to_domain_model() {
+                Ok(task) => {
+                    info!("✅ Task resumed successfully: {}", task.name);
 
-        Ok(Json(TaskResponse {
-            success: true,
-            data: Some(task.clone()),
-            error: None,
-            timestamp: Utc::now(),
-        }))
-    } else {
-        warn!("⚠️ Task not found for resume: {}", task_id);
-        Ok(Json(TaskResponse {
-            success: false,
-            data: None,
-            error: Some(format!("Task not found: {}", task_id)),
-            timestamp: Utc::now(),
-        }))
+                    Ok(Json(TaskResponse {
+                        success: true,
+                        data: Some(task),
+                        error: None,
+                        timestamp: Utc::now(),
+                    }))
+                }
+                Err(e) => {
+                    error!("❌ Failed to convert task entity: {}", e);
+                    Ok(Json(TaskResponse {
+                        success: false,
+                        data: None,
+                        error: Some("Failed to convert task data".to_string()),
+                        timestamp: Utc::now(),
+                    }))
+                }
+            }
+        }
+        Ok(None) => {
+            warn!("⚠️ Task not found for resume: {}", task_id);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some(format!("Task not found: {}", task_id)),
+                timestamp: Utc::now(),
+            }))
+        }
+        Err(e) => {
+            error!("❌ Failed to resume task: {}", e);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database operation failed".to_string()),
+                timestamp: Utc::now(),
+            }))
+        }
     }
 }
 
 pub async fn cancel_task(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<TaskResponse>, StatusCode> {
     info!("🚫 Cancelling task: {}", task_id);
 
-    let tasks = get_tasks_storage();
+    let database = match &state.database {
+        Some(db) => db,
+        None => {
+            error!("❌ Database connection not available");
+            return Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database connection not available".to_string()),
+                timestamp: Utc::now(),
+            }));
+        }
+    };
 
-    if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
-        task.status = TaskStatus::Cancelled;
-        task.updated_at = Utc::now();
+    let task_repo = TaskRepository::new(database.pool().clone());
 
-        info!("✅ Task cancelled successfully: {}", task.name);
+    match task_repo.update_status(&task_id, TaskStatus::Cancelled).await {
+        Ok(Some(task_entity)) => {
+            match task_entity.to_domain_model() {
+                Ok(task) => {
+                    info!("✅ Task cancelled successfully: {}", task.name);
+                    Ok(Json(TaskResponse {
+                        success: true,
+                        data: Some(task),
+                        error: None,
+                        timestamp: Utc::now(),
+                    }))
+                }
+                Err(e) => {
+                    error!("❌ Failed to convert task entity: {}", e);
+                    Ok(Json(TaskResponse {
+                        success: false,
+                        data: None,
+                        error: Some("Failed to convert task data".to_string()),
+                        timestamp: Utc::now(),
+                    }))
+                }
+            }
+        }
+        Ok(None) => {
+            warn!("⚠️ Task not found for cancellation: {}", task_id);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some(format!("Task not found: {}", task_id)),
+                timestamp: Utc::now(),
+            }))
+        }
+        Err(e) => {
+            error!("❌ Failed to cancel task: {}", e);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database operation failed".to_string()),
+                timestamp: Utc::now(),
+            }))
+        }
+    }
+}
 
-        Ok(Json(TaskResponse {
-            success: true,
-            data: Some(task.clone()),
-            error: None,
-            timestamp: Utc::now(),
-        }))
-    } else {
-        warn!("⚠️ Task not found for cancel: {}", task_id);
-        Ok(Json(TaskResponse {
+pub async fn retry_task(
+    State(state): State<AppState>,
+    Path(task_id): Path<String>,
+) -> Result<Json<TaskResponse>, StatusCode> {
+    info!("🔄 Retrying task: {}", task_id);
+
+    let database = match &state.database {
+        Some(db) => db,
+        None => {
+            error!("❌ Database connection not available");
+            return Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database connection not available".to_string()),
+                timestamp: Utc::now(),
+            }));
+        }
+    };
+
+    let task_repo = TaskRepository::new(database.pool().clone());
+
+    match task_repo.update_status(&task_id, TaskStatus::Running).await {
+        Ok(Some(task_entity)) => {
+            match task_entity.to_domain_model() {
+                Ok(task) => {
+                    info!("✅ Task retried successfully: {}", task.name);
+                    Ok(Json(TaskResponse {
+                        success: true,
+                        data: Some(task),
+                        error: None,
+                        timestamp: Utc::now(),
+                    }))
+                }
+                Err(e) => {
+                    error!("❌ Failed to convert task entity: {}", e);
+                    Ok(Json(TaskResponse {
+                        success: false,
+                        data: None,
+                        error: Some("Failed to convert task data".to_string()),
+                        timestamp: Utc::now(),
+                    }))
+                }
+            }
+        }
+        Ok(None) => {
+            warn!("⚠️ Task not found for retry: {}", task_id);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some(format!("Task not found: {}", task_id)),
+                timestamp: Utc::now(),
+            }))
+        }
+        Err(e) => {
+            error!("❌ Failed to retry task: {}", e);
+            Ok(Json(TaskResponse {
+                success: false,
+                data: None,
+                error: Some("Database operation failed".to_string()),
+                timestamp: Utc::now(),
+            }))
+        }
+    }
+}
+
+// Internal function for processing tasks (used by both public endpoint and auto-start)
+async fn process_task_internal(
+    state: AppState,
+    task_id: String,
+) -> Result<TaskResponse, String> {
+    info!("🎯 Processing task internally: {}", task_id);
+
+    // Check if we have database connection
+    let database = match &state.database {
+        Some(db) => db,
+        None => {
+            error!("❌ Database connection not available");
+            return Err("Database connection not available".to_string());
+        }
+    };
+
+    let task_repo = TaskRepository::new(database.pool().clone());
+    let agent_repo = AgentRepository::new(database.pool().clone());
+
+    // Get the task to process
+    let task_entity = match task_repo.get_by_id(&task_id).await {
+        Ok(Some(task)) => task,
+        Ok(None) => {
+            warn!("⚠️ Task not found: {}", task_id);
+            return Err(format!("Task not found: {}", task_id));
+        }
+        Err(e) => {
+            error!("❌ Failed to fetch task: {}", e);
+            return Err("Failed to fetch task".to_string());
+        }
+    };
+
+    // Check if task is in a processable state - if it's created, start it automatically
+    if task_entity.status == "created" {
+        info!("🚀 Auto-starting task {} before processing", task_id);
+        match task_repo.update_status(&task_id, crate::models::TaskStatus::Running).await {
+            Ok(Some(updated_task)) => {
+                info!("✅ Task {} automatically started", task_id);
+
+                // Publish Kafka event for auto-start
+                if let Some(kafka_producer) = &state.kafka_producer {
+                    if let Ok(task_model) = updated_task.to_domain_model() {
+                        let event = TaskLifecycleEvent::task_status_changed(
+                            task_id.clone(),
+                            None, // No user_id available in Task domain model
+                            None, // No agent_id yet
+                            task_model.name.clone(),
+                            "created".to_string(),
+                            "running".to_string(),
+                            format!("{:?}", task_model.priority), // Use Debug format
+                            0, // progress: u8 (0% when starting)
+                        );
+                        let _ = kafka_producer.publish_task_event(event).await;
+                    }
+                }
+            }
+            Ok(None) => {
+                warn!("⚠️ Task {} not found when auto-starting", task_id);
+                return Err(format!("Task not found when starting: {}", task_id));
+            }
+            Err(e) => {
+                error!("❌ Failed to auto-start task {}: {}", task_id, e);
+                return Err(format!("Failed to start task: {}", e));
+            }
+        }
+    } else if task_entity.status != "running" {
+        warn!("⚠️ Task {} is not in a processable state: {}", task_id, task_entity.status);
+        return Err(format!("Task must be in 'created' or 'running' state to process. Current state: {}", task_entity.status));
+    }
+
+    // Execute the task using Hecate
+    let mut hecate_agent = state.hecate_agent.write().await;
+    let task_description = task_entity.description.as_deref().unwrap_or(&task_entity.name);
+
+    match hecate_agent.execute_task(&task_id, task_description, &task_repo, &agent_repo).await {
+        Ok(_result) => {
+            info!("✅ Task {} processed successfully", task_id);
+
+            // Get updated task from database
+            match task_repo.get_by_id(&task_id).await {
+                Ok(Some(updated_task)) => {
+                    match updated_task.to_domain_model() {
+                        Ok(task_model) => {
+                            // Publish Kafka event
+                            if let Some(kafka_producer) = &state.kafka_producer {
+                                let event = TaskLifecycleEvent::task_status_changed(
+                                    task_id.clone(),
+                                    None, // user_id
+                                    hecate_agent.get_agent_id(),
+                                    task_model.name.clone(),
+                                    "running".to_string(),
+                                    "processed".to_string(), // Custom status for processed tasks
+                                    serde_json::to_string(&task_model.priority).unwrap().trim_matches('"').to_string(),
+                                    task_model.progress,
+                                );
+
+                                if let Err(e) = kafka_producer.publish_task_event(event).await {
+                                    warn!("⚠️ Failed to publish task processed event: {}", e);
+                                }
+                            }
+
+                            Ok(TaskResponse {
+                                success: true,
+                                data: Some(task_model),
+                                error: None,
+                                timestamp: Utc::now(),
+                            })
+                        }
+                        Err(e) => {
+                            error!("❌ Failed to convert processed task entity: {}", e);
+                            Err("Failed to retrieve processed task".to_string())
+                        }
+                    }
+                }
+                Ok(None) => {
+                    error!("❌ Task disappeared after processing: {}", task_id);
+                    Err("Failed to retrieve processed task".to_string())
+                }
+                Err(e) => {
+                    error!("❌ Failed to fetch processed task: {}", e);
+                    Err("Failed to retrieve processed task".to_string())
+                }
+            }
+        }
+        Err(e) => {
+            error!("❌ Failed to process task {}: {}", task_id, e);
+            Err(format!("Failed to process task: {}", e))
+        }
+    }
+}
+
+pub async fn process_task(
+    State(state): State<AppState>,
+    Path(task_id): Path<String>,
+) -> Result<Json<TaskResponse>, StatusCode> {
+    match process_task_internal(state, task_id).await {
+        Ok(response) => Ok(Json(response)),
+        Err(error) => Ok(Json(TaskResponse {
             success: false,
             data: None,
-            error: Some(format!("Task not found: {}", task_id)),
+            error: Some(error),
             timestamp: Utc::now(),
         }))
     }
 }
 
-pub async fn retry_task(
-    State(_state): State<AppState>,
-    Path(task_id): Path<String>,
-) -> Result<Json<TaskResponse>, StatusCode> {
-    info!("🔄 Retrying task: {}", task_id);
+// Utility function to convert wallet address to deterministic UUID
+fn wallet_to_uuid(wallet_address: &str, chain: &str) -> Uuid {
+    use sha2::{Sha256, Digest};
 
-    let tasks = get_tasks_storage();
+    // Create input string combining wallet and chain for uniqueness
+    let input = format!("{}:{}", wallet_address.to_lowercase(), chain.to_lowercase());
 
-    if let Some(task) = tasks.iter_mut().find(|t| t.id == task_id) {
-        task.status = TaskStatus::Running;
-        task.current_retries = 0;
-        task.progress = 0;
-        task.started_at = Some(Utc::now());
-        task.updated_at = Utc::now();
-        task.outcome = None;
+    // Generate SHA-256 hash
+    let mut hasher = Sha256::new();
+    hasher.update(input.as_bytes());
+    let hash = hasher.finalize();
 
-        info!("✅ Task retry initiated successfully: {}", task.name);
+    // Convert first 16 bytes of hash to UUID
+    // This ensures deterministic UUIDs for the same wallet+chain combination
+    let mut uuid_bytes = [0u8; 16];
+    uuid_bytes.copy_from_slice(&hash[0..16]);
 
-        Ok(Json(TaskResponse {
-            success: true,
-            data: Some(task.clone()),
-            error: None,
-            timestamp: Utc::now(),
-        }))
-    } else {
-        warn!("⚠️ Task not found for retry: {}", task_id);
-        Ok(Json(TaskResponse {
-            success: false,
-            data: None,
-            error: Some(format!("Task not found: {}", task_id)),
-            timestamp: Utc::now(),
-        }))
+    // Set version (4) and variant bits to create a valid UUID v4
+    uuid_bytes[6] = (uuid_bytes[6] & 0x0F) | 0x40; // Version 4
+    uuid_bytes[8] = (uuid_bytes[8] & 0x3F) | 0x80; // Variant 10
+
+    Uuid::from_bytes(uuid_bytes)
+}
+
+// Migration function to update existing users to wallet-derived UUIDs
+async fn migrate_existing_users_to_wallet_uuids(
+    database: &crate::database::Database,
+) -> Result<(), String> {
+    info!("🔄 Starting migration of existing users to wallet-derived UUIDs");
+
+    let user_repo = UserReferenceRepository::new(database.pool().clone());
+
+    // Get all existing users
+    match user_repo.list_active(None).await {
+        Ok(existing_users) => {
+            let mut migrated_count = 0;
+            let mut failed_count = 0;
+
+            for user_entity in existing_users {
+                if let (Some(source_identifier), Some(chain)) = (&user_entity.source_identifier, &user_entity.chain) {
+                    // Calculate what the UUID should be
+                    let correct_uuid = wallet_to_uuid(source_identifier, chain);
+
+                    if user_entity.id != correct_uuid {
+                        info!("🔄 Migrating user {} -> {}", user_entity.id, correct_uuid);
+
+                        // Create new user with correct UUID
+                        let new_user_ref = crate::models::UserReference {
+                            id: correct_uuid,
+                            source_identifier: source_identifier.to_string(),
+                            chain: chain.to_string(),
+                            source_type: serde_json::json!({
+                                "type": "web3_wallet",
+                                "provider": "web3",
+                                "metadata": {}
+                            }),
+                            wallet_type: Some("web3".to_string()),
+                            created_at: chrono::Utc::now(),
+                            updated_at: chrono::Utc::now(),
+                        };
+
+                        match user_repo.create(&new_user_ref).await {
+                            Ok(_) => {
+                                info!("✅ Created new user with correct UUID: {}", correct_uuid);
+                                migrated_count += 1;
+
+                                // TODO: Update any existing tasks to reference the new user_id
+                                // This would require a task repository update as well
+                            }
+                            Err(e) => {
+                                error!("❌ Failed to create new user {}: {}", correct_uuid, e);
+                                failed_count += 1;
+                            }
+                        }
+                    } else {
+                        info!("✅ User {} already has correct UUID", user_entity.id);
+                    }
+                } else {
+                    warn!("⚠️ User {} missing wallet_address or chain", user_entity.id);
+                    failed_count += 1;
+                }
+            }
+
+            info!("🎉 Migration completed: {} migrated, {} failed", migrated_count, failed_count);
+            Ok(())
+        }
+        Err(e) => {
+            error!("❌ Failed to list existing users: {}", e);
+            Err(format!("Failed to list users: {}", e))
+        }
     }
 }

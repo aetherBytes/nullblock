@@ -4,12 +4,6 @@ import {
   TaskCreationRequest,
   TaskUpdateRequest,
   TaskFilter,
-  TaskStats,
-  TaskQueue,
-  TaskTemplate,
-  TaskNotification,
-  TaskEvent,
-  MotivationState,
   TaskStatus,
   TaskPriority
 } from '../types/tasks';
@@ -20,11 +14,6 @@ interface UseTaskManagementReturn {
   tasks: Task[];
   filteredTasks: Task[];
   activeTask: Task | null;
-  queues: TaskQueue[];
-  templates: TaskTemplate[];
-  notifications: TaskNotification[];
-  stats: TaskStats | null;
-  motivationState: MotivationState | null;
   isLoading: boolean;
   error: string | null;
 
@@ -43,37 +32,15 @@ interface UseTaskManagementReturn {
   resumeTask: (id: string) => Promise<boolean>;
   cancelTask: (id: string) => Promise<boolean>;
   retryTask: (id: string) => Promise<boolean>;
+  processTask: (id: string, isAutoProcessing?: boolean) => Promise<boolean>;
 
   // Task Selection
   selectTask: (id: string | null) => void;
   getTask: (id: string) => Task | undefined;
 
-  // Batch Operations
-  startMultipleTasks: (ids: string[]) => Promise<boolean>;
-  deleteMultipleTasks: (ids: string[]) => Promise<boolean>;
-  updateTaskPriority: (id: string, priority: TaskPriority) => Promise<boolean>;
-
-  // Templates
-  createFromTemplate: (templateId: string, parameters: Record<string, any>) => Promise<boolean>;
-
-  // Notifications
-  markNotificationRead: (id: string) => Promise<boolean>;
-  handleNotificationAction: (id: string, action: string) => Promise<boolean>;
-  unreadNotificationCount: number;
-
   // Analytics
-  refreshStats: () => Promise<void>;
   getTasksByStatus: (status: TaskStatus) => Task[];
   getTasksByPriority: (priority: TaskPriority) => Task[];
-
-  // Motivation System
-  suggestTasks: (context?: Record<string, any>) => Promise<TaskCreationRequest[]>;
-  updateMotivation: (updates: Partial<MotivationState>) => Promise<boolean>;
-  learnFromTask: (taskId: string, feedback: Record<string, any>) => Promise<boolean>;
-
-  // Real-time
-  subscribeToUpdates: boolean;
-  setSubscribeToUpdates: (subscribe: boolean) => void;
 
   // Utility
   refresh: () => Promise<void>;
@@ -83,45 +50,45 @@ interface UseTaskManagementReturn {
 export const useTaskManagement = (
   walletPublicKey?: string | null,
   initialFilter: TaskFilter = {},
-  autoSubscribe: boolean = true
+  autoSubscribe: boolean = true,
+  addChatNotification?: (taskId: string, taskName: string, message: string, processingTime?: number) => void
 ): UseTaskManagementReturn => {
+  // Helper function to ensure we always have a valid array
+  const ensureArray = (value: any): Task[] => {
+    if (Array.isArray(value)) return value;
+    return [];
+  };
+
   // Core state
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const [queues, setQueues] = useState<TaskQueue[]>([]);
-  const [templates, setTemplates] = useState<TaskTemplate[]>([]);
-  const [notifications, setNotifications] = useState<TaskNotification[]>([]);
-  const [stats, setStats] = useState<TaskStats | null>(null);
-  const [motivationState, setMotivationState] = useState<MotivationState | null>(null);
 
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<TaskFilter>(initialFilter);
   const [searchTerm, setSearchTerm] = useState('');
-  const [subscribeToUpdates, setSubscribeToUpdates] = useState(autoSubscribe);
 
   // Refs for cleanup
-  const unsubscribeRef = useRef<(() => void) | null>(null);
   const isConnectedRef = useRef(false);
 
   // Computed state
   const filteredTasks = Array.isArray(tasks) ? tasks.filter(task => {
     if (filter.status && !filter.status.includes(task.status)) return false;
-    if (filter.type && !filter.type.includes(task.type)) return false;
+    if (filter.type && !filter.type.includes(task.task_type)) return false;
     if (filter.category && !filter.category.includes(task.category)) return false;
     if (filter.priority && !filter.priority.includes(task.priority)) return false;
-    if (filter.assignedAgent && task.assignedAgent !== filter.assignedAgent) return false;
-    if (filter.dateRange) {
-      const taskDate = new Date(task.createdAt);
-      if (taskDate < filter.dateRange.start || taskDate > filter.dateRange.end) return false;
+    if (filter.assigned_agent && task.assigned_agent !== filter.assigned_agent) return false;
+    if (filter.date_range) {
+      const taskDate = new Date(task.created_at);
+      if (taskDate < filter.date_range.start || taskDate > filter.date_range.end) return false;
     }
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       if (
         !task.name.toLowerCase().includes(searchLower) &&
         !task.description.toLowerCase().includes(searchLower) &&
-        !task.type.toLowerCase().includes(searchLower)
+        !task.task_type.toLowerCase().includes(searchLower)
       ) {
         return false;
       }
@@ -129,7 +96,38 @@ export const useTaskManagement = (
     return true;
   }) : [];
 
-  const unreadNotificationCount = Array.isArray(notifications) ? notifications.filter(n => !n.read).length : 0;
+  // Data loading functions - defined early to avoid hoisting issues
+  const loadTasks = useCallback(async () => {
+    const response = await taskService.getTasks(filter);
+    if (response.success && response.data) {
+      setTasks(response.data);
+    } else {
+      setError(response.error || 'Failed to load tasks');
+    }
+  }, [filter]);
+
+  // Auto-refresh for running tasks
+  useEffect(() => {
+    const runningTasks = Array.isArray(tasks) ? tasks.filter(task => task.status === 'running') : [];
+
+    if (runningTasks.length > 0 && isConnectedRef.current) {
+      console.log(`🔄 Setting up polling for ${runningTasks.length} running tasks`);
+
+      const pollInterval = setInterval(async () => {
+        try {
+          console.log('🔄 Polling for task updates...');
+          await loadTasks();
+        } catch (e) {
+          console.warn('⚠️ Failed to poll for task updates:', e);
+        }
+      }, 5000); // Poll every 5 seconds when there are running tasks
+
+      return () => {
+        console.log('⏹️ Stopping task polling');
+        clearInterval(pollInterval);
+      };
+    }
+  }, [tasks, loadTasks]);
 
   // Initialize connection
   useEffect(() => {
@@ -137,22 +135,22 @@ export const useTaskManagement = (
       setIsLoading(true);
       try {
         console.log('🔗 Attempting to connect to task service...');
+
+        // Set wallet context for task service
+        const walletType = localStorage.getItem('walletType');
+        const chain = walletType === 'phantom' ? 'solana' : walletType === 'metamask' ? 'ethereum' : 'solana';
+        taskService.setWalletContext(walletPublicKey, chain);
+
         const connected = await taskService.connect();
         isConnectedRef.current = connected;
         console.log('🔗 Task service connection:', connected ? 'SUCCESS' : 'FAILED');
 
         if (connected) {
-          console.log('📋 Loading task data...');
-          await Promise.all([
-            loadTasks(),
-            loadQueues(),
-            loadTemplates(),
-            loadNotifications(),
-            loadStats(),
-            loadMotivationState()
-          ]);
+          console.log('📋 Loading task data for wallet:', walletPublicKey, 'on chain:', chain);
+          await loadTasks();
         } else {
           console.log('⚠️ Task service unavailable - no tasks will be loaded');
+          setError('Task service is unavailable. Please check your connection.');
         }
       } catch (err) {
         console.error('❌ Task management initialization error:', err);
@@ -164,104 +162,15 @@ export const useTaskManagement = (
 
     if (walletPublicKey) {
       initializeConnection();
-    }
-
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-      }
-    };
-  }, [walletPublicKey]);
-
-
-  // Real-time updates subscription
-  useEffect(() => {
-    if (!walletPublicKey || !subscribeToUpdates || !isConnectedRef.current) {
-      return;
-    }
-
-    const setupSubscription = async () => {
-      try {
-        const unsubscribe = await taskService.subscribeToUpdates(
-          (updatedTask: Task) => {
-            setTasks(prev => {
-              const index = prev.findIndex(t => t.id === updatedTask.id);
-              if (index >= 0) {
-                const newTasks = [...prev];
-                newTasks[index] = updatedTask;
-                return newTasks;
-              } else {
-                return [updatedTask, ...prev];
-              }
-            });
-
-            if (activeTask?.id === updatedTask.id) {
-              setActiveTask(updatedTask);
-            }
-          },
-          filter
-        );
-
-        unsubscribeRef.current = unsubscribe;
-      } catch (err) {
-        console.error('Failed to setup task updates subscription:', err);
-      }
-    };
-
-    setupSubscription();
-
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
-    };
-  }, [walletPublicKey, subscribeToUpdates, filter, activeTask?.id]);
-
-  // Data loading functions
-  const loadTasks = useCallback(async () => {
-    const response = await taskService.getTasks(filter);
-    if (response.success && response.data) {
-      setTasks(response.data);
     } else {
-      setError(response.error || 'Failed to load tasks');
+      // Clear wallet context when no wallet connected
+      taskService.setWalletContext(null);
+      setTasks([]);
+      setActiveTask(null);
+      setError(null);
+      isConnectedRef.current = false;
     }
-  }, [filter]);
-
-  const loadQueues = useCallback(async () => {
-    const response = await taskService.getQueues();
-    if (response.success && response.data) {
-      setQueues(response.data);
-    }
-  }, []);
-
-  const loadTemplates = useCallback(async () => {
-    const response = await taskService.getTemplates();
-    if (response.success && response.data) {
-      setTemplates(response.data);
-    }
-  }, []);
-
-  const loadNotifications = useCallback(async () => {
-    const response = await taskService.getNotifications();
-    if (response.success && response.data) {
-      setNotifications(response.data);
-    }
-  }, []);
-
-  const loadStats = useCallback(async () => {
-    const response = await taskService.getStats(filter);
-    if (response.success && response.data) {
-      setStats(response.data);
-    }
-  }, [filter]);
-
-  const loadMotivationState = useCallback(async () => {
-    const response = await taskService.getMotivationState();
-    if (response.success && response.data) {
-      setMotivationState(response.data);
-    }
-  }, []);
+  }, [walletPublicKey]);
 
   // Task operations
   const createTask = useCallback(async (request: TaskCreationRequest): Promise<boolean> => {
@@ -277,8 +186,24 @@ export const useTaskManagement = (
       setIsLoading(true);
       const response = await taskService.createTask(request);
       if (response.success && response.data) {
-        setTasks(prev => [response.data!, ...prev]);
+        setTasks(prev => [response.data!, ...ensureArray(prev)]);
         console.log('✅ Task created via backend:', response.data);
+
+        // If auto_start is true, the backend handles processing automatically
+        if (request.auto_start) {
+          console.log('🔄 Auto-start task created, backend will handle processing automatically');
+          // Backend already processes auto_start tasks, no need for frontend processing
+          // Set up polling to monitor completion
+          setTimeout(async () => {
+            try {
+              console.log('🔄 Refreshing tasks to check auto-processing completion');
+              await loadTasks();
+            } catch (e) {
+              console.warn('⚠️ Failed to refresh tasks after auto-start:', e);
+            }
+          }, 3000); // 3 second delay to allow backend processing
+        }
+
         return true;
       } else {
         setError(response.error || 'Failed to create task');
@@ -304,7 +229,7 @@ export const useTaskManagement = (
     try {
       const response = await taskService.updateTask(request);
       if (response.success && response.data) {
-        setTasks(prev => prev.map(t => t.id === request.id ? response.data! : t));
+        setTasks(prev => ensureArray(prev).map(t => t.id === request.id ? response.data! : t));
         if (activeTask?.id === request.id) {
           setActiveTask(response.data);
         }
@@ -332,7 +257,7 @@ export const useTaskManagement = (
     try {
       const response = await taskService.deleteTask(id);
       if (response.success) {
-        setTasks(prev => prev.filter(t => t.id !== id));
+        setTasks(prev => ensureArray(prev).filter(t => t.id !== id));
         if (activeTask?.id === id) {
           setActiveTask(null);
         }
@@ -351,102 +276,210 @@ export const useTaskManagement = (
 
   const startTask = useCallback(async (id: string): Promise<boolean> => {
     console.log('▶️ Starting task:', id);
-    return updateTask({
-      id,
-      status: 'running',
-      startedAt: new Date(),
-      progress: 0
-    });
-  }, [updateTask]);
+
+    if (!isConnectedRef.current) {
+      setError('Task service is not available');
+      return false;
+    }
+
+    try {
+      const response = await taskService.startTask(id);
+      if (response.success && response.data) {
+        setTasks(prev => ensureArray(prev).map(t => t.id === id ? response.data! : t));
+        if (activeTask?.id === id) {
+          setActiveTask(response.data);
+        }
+        return true;
+      } else {
+        setError(response.error || 'Failed to start task');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Task start error:', error);
+      setError((error as Error).message);
+      return false;
+    }
+  }, [activeTask?.id]);
 
   const pauseTask = useCallback(async (id: string): Promise<boolean> => {
     console.log('⏸️ Pausing task:', id);
-    return updateTask({
-      id,
-      status: 'paused'
-    });
-  }, [updateTask]);
+    try {
+      const response = await taskService.pauseTask(id);
+      if (response.success && response.data) {
+        setTasks(prev => ensureArray(prev).map(t => t.id === id ? response.data! : t));
+        if (activeTask?.id === id) {
+          setActiveTask(response.data);
+        }
+        return true;
+      } else {
+        setError(response.error || 'Failed to pause task');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Task pause error:', error);
+      setError((error as Error).message);
+      return false;
+    }
+  }, [activeTask?.id]);
 
   const resumeTask = useCallback(async (id: string): Promise<boolean> => {
     console.log('▶️ Resuming task:', id);
-    return updateTask({
-      id,
-      status: 'running'
-    });
-  }, [updateTask]);
+    try {
+      const response = await taskService.resumeTask(id);
+      if (response.success && response.data) {
+        setTasks(prev => ensureArray(prev).map(t => t.id === id ? response.data! : t));
+        if (activeTask?.id === id) {
+          setActiveTask(response.data);
+        }
+        return true;
+      } else {
+        setError(response.error || 'Failed to resume task');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Task resume error:', error);
+      setError((error as Error).message);
+      return false;
+    }
+  }, [activeTask?.id]);
 
   const cancelTask = useCallback(async (id: string): Promise<boolean> => {
     console.log('🚫 Cancelling task:', id);
-    return updateTask({
-      id,
-      status: 'cancelled'
-    });
-  }, [updateTask]);
+    try {
+      const response = await taskService.cancelTask(id);
+      if (response.success && response.data) {
+        setTasks(prev => ensureArray(prev).map(t => t.id === id ? response.data! : t));
+        if (activeTask?.id === id) {
+          setActiveTask(response.data);
+        }
+        return true;
+      } else {
+        setError(response.error || 'Failed to cancel task');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Task cancel error:', error);
+      setError((error as Error).message);
+      return false;
+    }
+  }, [activeTask?.id]);
 
   const retryTask = useCallback(async (id: string): Promise<boolean> => {
     console.log('🔄 Retrying task:', id);
-    return updateTask({
-      id,
-      status: 'running',
-      currentRetries: 0,
-      progress: 0,
-      startedAt: new Date()
-    });
-  }, [updateTask]);
-
-  // Batch operations
-  const startMultipleTasks = useCallback(async (ids: string[]): Promise<boolean> => {
-    const results = await Promise.all(ids.map(id => startTask(id)));
-    return results.every(success => success);
-  }, [startTask]);
-
-  const deleteMultipleTasks = useCallback(async (ids: string[]): Promise<boolean> => {
-    const results = await Promise.all(ids.map(id => deleteTask(id)));
-    return results.every(success => success);
-  }, [deleteTask]);
-
-  const updateTaskPriority = useCallback(async (id: string, priority: TaskPriority): Promise<boolean> => {
-    return updateTask({ id, priority });
-  }, [updateTask]);
-
-  // Template operations
-  const createFromTemplate = useCallback(async (
-    templateId: string,
-    parameters: Record<string, any>
-  ): Promise<boolean> => {
-    setIsLoading(true);
     try {
-      const response = await taskService.createFromTemplate(templateId, parameters);
+      const response = await taskService.retryTask(id);
       if (response.success && response.data) {
-        setTasks(prev => [response.data!, ...prev]);
+        setTasks(prev => ensureArray(prev).map(t => t.id === id ? response.data! : t));
+        if (activeTask?.id === id) {
+          setActiveTask(response.data);
+        }
         return true;
       } else {
-        setError(response.error || 'Failed to create task from template');
+        setError(response.error || 'Failed to retry task');
         return false;
       }
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error('❌ Task retry error:', error);
+      setError((error as Error).message);
+      return false;
     }
-  }, []);
+  }, [activeTask?.id]);
 
-  // Notification operations
-  const markNotificationRead = useCallback(async (id: string): Promise<boolean> => {
-    const response = await taskService.markNotificationRead(id);
-    if (response.success) {
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-      return true;
-    }
-    return false;
-  }, []);
+  const processTask = useCallback(async (id: string, isAutoProcessing: boolean = false): Promise<boolean> => {
+    console.log('⚡ Processing task:', id);
 
-  const handleNotificationAction = useCallback(async (id: string, action: string): Promise<boolean> => {
-    const response = await taskService.handleNotificationAction(id, action);
-    if (response.success) {
-      await loadNotifications();
-      return true;
+    // First try to get task from current tasks array
+    let task = ensureArray(tasks).find(t => t.id === id);
+    let taskName = task?.name;
+
+    // If task not found in current array, try to fetch it first
+    if (!task) {
+      console.log('🔍 Task not found in current array, fetching task details...');
+      try {
+        const taskResponse = await taskService.getTask(id);
+        if (taskResponse.success && taskResponse.data) {
+          task = taskResponse.data;
+          taskName = task.name;
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch task details:', error);
+      }
     }
-    return false;
-  }, [loadNotifications]);
+
+    try {
+      console.log(`🔧 Making processTask API call for task: ${id}`);
+      const response = await taskService.processTask(id);
+      console.log(`📤 ProcessTask API response:`, response);
+      if (response.success && response.data) {
+        // Use the task name from the response data if available, otherwise fall back to what we found
+        const finalTaskName = response.data.name || taskName || 'Unknown Task';
+
+        console.log('✅ Task processed successfully:', finalTaskName);
+
+        setTasks(prev => ensureArray(prev).map(t => t.id === id ? response.data! : t));
+        if (activeTask?.id === id) {
+          setActiveTask(response.data);
+        }
+
+        // Add chat notification for task completion
+        if (addChatNotification) {
+          const processingTime = response.data.action_duration || undefined;
+          let notificationMessage = `Task "${finalTaskName}" has been completed successfully!`;
+
+          if (response.data.action_result) {
+            // Clean up the result message - remove any extra whitespace/newlines
+            const cleanResult = response.data.action_result.trim();
+            notificationMessage += `\n\n**Result:**\n${cleanResult}`;
+          }
+
+          if (processingTime) {
+            notificationMessage += `\n\n*Processing time: ${(processingTime / 1000).toFixed(2)}s*`;
+          }
+
+          addChatNotification(id, finalTaskName, notificationMessage, processingTime);
+        }
+
+        // Refresh tasks to get updated results
+        setTimeout(() => loadTasks(), 1000);
+        return true;
+      } else {
+        const finalTaskName = taskName || 'Unknown Task';
+
+        console.log(`❌ ProcessTask failed for task ${id}:`, response);
+        // Only set global error state if this is not auto-processing
+        if (!isAutoProcessing) {
+          setError(response.error || 'Failed to process task');
+        } else {
+          console.warn('⚠️ Auto-processing failed:', response.error || 'Failed to process task');
+        }
+
+        // Add chat notification for task failure
+        if (addChatNotification) {
+          addChatNotification(id, finalTaskName, `Task "${finalTaskName}" failed to process: ${response.error || 'Unknown error'}`);
+        }
+
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Task processing error:', error);
+      const finalTaskName = taskName || 'Unknown Task';
+
+      // Only set global error state if this is not auto-processing
+      if (!isAutoProcessing) {
+        setError((error as Error).message);
+      } else {
+        console.warn('⚠️ Auto-processing error:', (error as Error).message);
+      }
+
+      // Add chat notification for task error
+      if (addChatNotification) {
+        addChatNotification(id, finalTaskName, `Task "${finalTaskName}" encountered an error: ${(error as Error).message}`);
+      }
+
+      return false;
+    }
+  }, [activeTask?.id, loadTasks, tasks, addChatNotification]);
+
 
   // Analytics & queries
   const getTasksByStatus = useCallback((status: TaskStatus): Task[] => {
@@ -470,48 +503,18 @@ export const useTaskManagement = (
     }
   }, [getTask]);
 
-  // Motivation system
-  const suggestTasks = useCallback(async (context?: Record<string, any>): Promise<TaskCreationRequest[]> => {
-    const response = await taskService.suggestTasks(context || {});
-    return response.success && response.data ? response.data : [];
-  }, []);
-
-  const updateMotivation = useCallback(async (updates: Partial<MotivationState>): Promise<boolean> => {
-    const response = await taskService.updateMotivationState(updates);
-    if (response.success && response.data) {
-      setMotivationState(response.data);
-      return true;
-    }
-    return false;
-  }, []);
-
-  const learnFromTask = useCallback(async (taskId: string, feedback: Record<string, any>): Promise<boolean> => {
-    const response = await taskService.learnFromOutcome(taskId, feedback);
-    return response.success;
-  }, []);
 
   // Utility functions
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
-      await Promise.all([
-        loadTasks(),
-        loadQueues(),
-        loadTemplates(),
-        loadNotifications(),
-        loadStats(),
-        loadMotivationState()
-      ]);
+      await loadTasks();
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setIsLoading(false);
     }
-  }, [loadTasks, loadQueues, loadTemplates, loadNotifications, loadStats, loadMotivationState]);
-
-  const refreshStats = useCallback(async () => {
-    await loadStats();
-  }, [loadStats]);
+  }, [loadTasks]);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -522,11 +525,6 @@ export const useTaskManagement = (
     tasks,
     filteredTasks,
     activeTask,
-    queues,
-    templates,
-    notifications,
-    stats,
-    motivationState,
     isLoading,
     error,
 
@@ -545,37 +543,15 @@ export const useTaskManagement = (
     resumeTask,
     cancelTask,
     retryTask,
+    processTask,
 
     // Task Selection
     selectTask,
     getTask,
 
-    // Batch Operations
-    startMultipleTasks,
-    deleteMultipleTasks,
-    updateTaskPriority,
-
-    // Templates
-    createFromTemplate,
-
-    // Notifications
-    markNotificationRead,
-    handleNotificationAction,
-    unreadNotificationCount,
-
     // Analytics
-    refreshStats,
     getTasksByStatus,
     getTasksByPriority,
-
-    // Motivation System
-    suggestTasks,
-    updateMotivation,
-    learnFromTask,
-
-    // Real-time
-    subscribeToUpdates,
-    setSubscribeToUpdates,
 
     // Utility
     refresh,

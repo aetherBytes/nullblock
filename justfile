@@ -11,30 +11,9 @@ stop:
     @echo "🛑 Stopping Nullblock services..."
     ./scripts/start-nullblock.sh stop
 
-# Kill all development services by port
+# Kill all development services by port (cross-platform)
 kill-services:
-    @echo "💀 Killing all development services..."
-    @echo "Stopping PostgreSQL..."
-    -brew services stop postgresql@17 2>/dev/null || true
-    @echo "Stopping Redis..."
-    -brew services stop redis 2>/dev/null || true
-    @echo "Killing IPFS daemon..."
-    -pkill -f "ipfs daemon" 2>/dev/null || true
-    @echo "Killing services on development ports..."
-    -lsof -ti:8001 | xargs kill -9 2>/dev/null || true  # MCP Server
-    -lsof -ti:8002 | xargs kill -9 2>/dev/null || true  # Orchestration
-    -lsof -ti:9001 | xargs kill -9 2>/dev/null || true  # General Agents
-    -lsof -ti:9002 | xargs kill -9 2>/dev/null || true  # Hecate Agent
-    -lsof -ti:3000 | xargs kill -9 2>/dev/null || true  # Erebus
-    -lsof -ti:5173 | xargs kill -9 2>/dev/null || true  # Frontend
-    -lsof -ti:1234 | xargs kill -9 2>/dev/null || true  # LM Studio
-    @echo "Stopping LM Studio server..."
-    -lms server stop 2>/dev/null || true
-    @echo "Killing tmuxinator sessions..."
-    -tmux kill-session -t nullblock-dev 2>/dev/null || true
-    @echo "Cleaning up PID files..."
-    -rm -f logs/*.pid 2>/dev/null || true
-    @echo "✅ All development services killed"
+    ./scripts/kill-services.sh
 
 # Restart all services
 restart:
@@ -85,8 +64,8 @@ health-check:
     @echo "🔍 General Agents (Port 9001):"
     @curl -s --max-time 5 http://localhost:9001/health | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ General Agents not responding" | tee -a logs/just-commands.log)
     @echo ""
-    @echo "🔍 Hecate Agent (Port 9002):"
-    @curl -s --max-time 5 http://localhost:9002/health | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Hecate Agent not responding" | tee -a logs/just-commands.log)
+    @echo "🔍 Hecate Agent (Port 9003):"
+    @curl -s --max-time 5 http://localhost:9003/health | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Hecate Agent not responding" | tee -a logs/just-commands.log)
     @echo ""
     @echo "🔍 Frontend (Port 5173):"
     @curl -s --max-time 5 http://localhost:5173 >/dev/null && (echo "✅ Frontend responding" | tee -a logs/just-commands.log) || (echo "❌ Frontend not responding" | tee -a logs/just-commands.log)
@@ -113,7 +92,7 @@ test-api:
     @curl -s --max-time 5 http://localhost:3000/api/wallets | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Erebus wallets not available" | tee -a logs/just-commands.log)
     @echo ""
     @echo "🔹 Testing Hecate Agent endpoints:"
-    @curl -s --max-time 5 http://localhost:9002/model-status | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Hecate model status not available" | tee -a logs/just-commands.log)
+    @curl -s --max-time 5 http://localhost:9003/hecate/model-status | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Hecate model status not available" | tee -a logs/just-commands.log)
     @echo ""
     @echo "🔹 Testing LLM Service endpoints:"
     @curl -s --max-time 5 http://localhost:1234/v1/models | jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ LM Studio models not available" | tee -a logs/just-commands.log)
@@ -130,7 +109,7 @@ ping-services:
     @echo -n "Orchestration (8002): "; curl -s --max-time 2 http://localhost:8002/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
     @echo -n "Erebus (3000): "; curl -s --max-time 2 http://localhost:3000/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
     @echo -n "General Agents (9001): "; curl -s --max-time 2 http://localhost:9001/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
-    @echo -n "Hecate Agent (9002): "; curl -s --max-time 2 http://localhost:9002/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
+    @echo -n "Hecate Agent (9003): "; curl -s --max-time 2 http://localhost:9003/health >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
     @echo -n "Frontend (5173): "; curl -s --max-time 2 http://localhost:5173 >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
     @echo -n "LM Studio (1234): "; curl -s --max-time 2 http://localhost:1234/v1/models >/dev/null && (echo "✅ UP" | tee -a logs/just-commands.log) || (echo "❌ DOWN" | tee -a logs/just-commands.log)
     @echo "$(date '+%Y-%m-%d %H:%M:%S') [PING-TEST] ✅ Ping test completed" | tee -a logs/just-commands.log
@@ -145,7 +124,7 @@ test-chat:
     @echo "$(date '+%Y-%m-%d %H:%M:%S') [CHAT-TEST] 📤 REQUEST:" | tee -a logs/just-commands.log
     @echo '{"message":"Hello, this is a test message from the health check system."}' | jq '.' | tee -a logs/just-commands.log
     @echo "$(date '+%Y-%m-%d %H:%M:%S') [CHAT-TEST] 📥 RESPONSE:" | tee -a logs/just-commands.log
-    @curl -s --max-time 10 -X POST http://localhost:9002/chat \
+    @curl -s --max-time 10 -X POST http://localhost:9003/chat \
         -H "Content-Type: application/json" \
         -d '{"message":"Hello, this is a test message from the health check system."}' | \
         jq '.' 2>/dev/null | tee -a logs/just-commands.log || (echo "❌ Chat endpoint not responding" | tee -a logs/just-commands.log)
@@ -239,15 +218,55 @@ dev-tmux-setup:
     @echo "⚙️ Setting up tmuxinator configuration..."
     ./scripts/dev-tmux setup
 
-# Initialize databases
+# Initialize databases (Docker)
 init-db:
-    @echo "🗄️ Initializing PostgreSQL databases..."
-    ./scripts/init-databases.sh
+    @echo "🗄️ Initializing Docker PostgreSQL databases..."
+    docker-compose up postgres-agents postgres-erebus postgres-mcp postgres-orchestration postgres-analytics -d
+    @echo "⏳ Waiting for databases to be ready..."
+    @sleep 10
+    @echo "🔍 Checking database health..."
+    docker-compose ps | grep postgres
 
 # Show Docker database connections
 docker-db-info:
     @echo "🗄️ Docker Database Connection Info..."
-    cat scripts/docker-database-connections.txt
+    @echo "PostgreSQL Agents:     postgresql://postgres:postgres_secure_pass@localhost:5441/agents"
+    @echo "PostgreSQL Erebus:     postgresql://postgres:postgres_secure_pass@localhost:5440/erebus"
+    @echo "PostgreSQL MCP:        postgresql://postgres:postgres_secure_pass@localhost:5442/mcp"
+    @echo "PostgreSQL Orchestration: postgresql://postgres:postgres_secure_pass@localhost:5443/orchestration"
+    @echo "PostgreSQL Analytics:  postgresql://postgres:postgres_secure_pass@localhost:5444/analytics"
+    @echo "Redis:                 redis://localhost:6379"
+    @echo "Kafka:                 localhost:9092"
+    @echo "IPFS API:              http://localhost:5001"
+    @echo "IPFS Gateway:          http://localhost:8080"
+
+# Run all database migrations and syncs
+migrate:
+    @echo "🔄 Running all database migrations and syncs..."
+    @echo "=============================================="
+    @echo ""
+    @echo "📋 Step 1: Running Erebus database migrations..."
+    @echo "Applying Erebus schema updates..."
+    @./scripts/run-erebus-migrations.sh
+    @echo "✅ Erebus migrations completed"
+    @echo ""
+    @echo "📋 Step 2: Running Agents database migrations..."
+    @echo "Applying Agents schema updates..."
+    @./scripts/run-agents-migrations.sh
+    @echo "✅ Agents migrations completed"
+    @echo ""
+    @echo "📋 Step 3: Syncing databases..."
+    @echo "Syncing user data from Erebus to Agents..."
+    @cd svc/erebus && ./scripts/manual_sync.sh
+    @echo "✅ Database sync completed"
+    @echo ""
+    @echo "📊 Final status check..."
+    @echo "Erebus users:"
+    @docker exec nullblock-postgres-erebus psql -U postgres -d erebus -c "SELECT COUNT(*) as users FROM user_references WHERE is_active = true;" 2>/dev/null || echo "❌ Erebus database not accessible"
+    @echo "Agents users:"
+    @docker exec nullblock-postgres-agents psql -U postgres -d agents -c "SELECT COUNT(*) as users FROM user_references WHERE is_active = true;" 2>/dev/null || echo "❌ Agents database not accessible"
+    @echo ""
+    @echo "🎉 All migrations and syncs completed successfully!"
 
 # Show help
 help:
@@ -275,6 +294,7 @@ help:
     @echo "  just start-erebus - Start Erebus Rust server"
     @echo "  just build-erebus - Build Erebus Rust server"
     @echo "  just init-db      - Initialize PostgreSQL databases (local)"
+    @echo "  just migrate      - Run all database migrations and syncs"
     @echo "  just docker-db-info - Show Docker database connections"
     @echo ""
     @echo "Testing Commands:"

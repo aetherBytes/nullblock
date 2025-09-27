@@ -248,7 +248,7 @@ impl ModelRouter {
     fn get_fallback_models(&self) -> Option<Vec<String>> {
         // Return some reliable fallback models
         Some(vec![
-            "deepseek/deepseek-chat-v3.1:free".to_string(),
+            "x-ai/grok-4-fast:free".to_string(),
             "gpt-3.5-turbo".to_string(),
         ])
     }
@@ -257,7 +257,7 @@ impl ModelRouter {
         // This would normally come from a configuration file or database
         // For now, return the default Hecate model
         vec![ModelConfig {
-            name: "deepseek/deepseek-chat-v3.1:free".to_string(),
+            name: "x-ai/grok-4-fast:free".to_string(),
             display_name: "DeepSeek Chat v3.1 Free".to_string(),
             icon: "🤖".to_string(),
             provider: ModelProvider::OpenRouter,

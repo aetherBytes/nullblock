@@ -3,7 +3,7 @@
 # Nullblock Health Monitor
 # Compact service status monitoring for the logs tab
 
-set -e
+# Note: Removed 'set -e' to prevent script exit on service check failures
 
 # Colors for output
 RED='\033[0;31m'
@@ -17,13 +17,32 @@ BRIGHT_GREEN='\033[1;32m'
 BRIGHT_BLUE='\033[1;34m'
 NC='\033[0m' # No Color
 
+# Detect operating system
+detect_os() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        OS="macos"
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        if command -v pacman &> /dev/null; then
+            OS="arch"
+        elif command -v apt &> /dev/null; then
+            OS="ubuntu"
+        elif command -v dnf &> /dev/null; then
+            OS="fedora"
+        else
+            OS="linux"
+        fi
+    else
+        OS="unknown"
+    fi
+}
+
 # Function to check if a service is running
 check_service() {
     local name="$1"
     local port="$2"
     local url="$3"
     local check_type="$4"
-    
+
     if [ "$check_type" = "port" ]; then
         if lsof -i :$port > /dev/null 2>&1; then
             echo "✅"
@@ -39,10 +58,10 @@ check_service() {
     elif [ "$check_type" = "openrouter" ]; then
         # Check OpenRouter API with authentication (no tokens spent)
         local api_key="${OPENROUTER_API_KEY:-}"
-        if [ -z "$api_key" ] && [ -f "/Users/sage/nullblock/.env.dev" ]; then
-            api_key=$(grep "OPENROUTER_API_KEY" /Users/sage/nullblock/.env.dev 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d ' ')
+        if [ -z "$api_key" ] && [ -f "$HOME/nullblock/.env.dev" ]; then
+            api_key=$(grep "OPENROUTER_API_KEY" "$HOME/nullblock/.env.dev" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d ' ')
         fi
-        
+
         if [ -n "$api_key" ]; then
             local response=$(curl -s --max-time 5 -H "Authorization: Bearer $api_key" "https://openrouter.ai/api/v1/models" 2>/dev/null)
             if echo "$response" | grep -q '"data"' && ! echo "$response" | grep -q '"error"'; then
@@ -53,12 +72,24 @@ check_service() {
         else
             echo "❓"
         fi
-    elif [ "$check_type" = "brew" ]; then
-        if brew services list | grep -q "$name.*started"; then
-            echo "✅"
-        else
-            echo "❌"
-        fi
+    elif [ "$check_type" = "systemctl" ]; then
+        # Check systemctl services (Linux)
+        case $OS in
+            "macos")
+                if brew services list | grep -q "$name.*started"; then
+                    echo "✅"
+                else
+                    echo "❌"
+                fi
+                ;;
+            *)
+                if systemctl --user is-active "$name" > /dev/null 2>&1; then
+                    echo "✅"
+                else
+                    echo "❌"
+                fi
+                ;;
+        esac
     elif [ "$check_type" = "process" ]; then
         if pgrep -f "$name" > /dev/null; then
             echo "✅"
@@ -72,13 +103,16 @@ check_service() {
 
 # Function to print compact status table
 print_status() {
+    # Detect OS first
+    detect_os
+
     local timestamp=$(date '+%H:%M:%S')
     echo -e "${BRIGHT_BLUE}┌─ NULLBLOCK SERVICE STATUS ─ $timestamp ──────────────────────────┐${NC}"
-    
+
     # Infrastructure
-    local postgres15_status=$(check_service "postgresql@15" "" "" "brew")
-    local postgres17_status=$(check_service "postgresql@17" "" "" "brew")
-    local redis_status=$(check_service "redis" "" "" "brew") 
+    local postgres15_status=$(check_service "postgresql@15" "" "" "systemctl")
+    local postgres17_status=$(check_service "postgresql" "" "" "systemctl")
+    local redis_status=$(check_service "redis" "" "" "systemctl")
     local ipfs_status=$(check_service "ipfs daemon" "" "" "process")
     
     # Backend Services
@@ -86,8 +120,7 @@ print_status() {
     local orch_status=$(check_service "Orchestration" "8002" "http://localhost:8002/health" "http")
     local erebus_status=$(check_service "Erebus" "3000" "http://localhost:3000/health" "http")
     
-    # Agent Services  
-    local agents_status=$(check_service "General Agents" "9001" "http://localhost:9001/health" "http")
+    # Agent Services
     local hecate_status=$(check_service "Hecate Agent" "9003" "http://localhost:9003/hecate/health" "http")
     
     # Frontend & LLM
@@ -96,11 +129,11 @@ print_status() {
     
     echo -e "${WHITE}│ Infrastructure: ${postgres15_status} PG@15 ${postgres17_status} PG@17 ${redis_status} Redis ${ipfs_status} IPFS                        │${NC}"
     echo -e "${WHITE}│ Backend:        ${mcp_status} MCP:8001 ${orch_status} Orchestration:8002 ${erebus_status} Erebus:3000            │${NC}"
-    echo -e "${WHITE}│ Agents:         ${agents_status} General:9001 ${hecate_status} Hecate:9003                              │${NC}"
+    echo -e "${WHITE}│ Agents:         ${hecate_status} Hecate:9003                                          │${NC}"
     echo -e "${WHITE}│ Frontend:       ${frontend_status} Vite:5173 ${openrouter_status} OpenRouter API                        │${NC}"
     
     # Count services
-    local all_statuses=("$postgres15_status" "$postgres17_status" "$redis_status" "$ipfs_status" "$mcp_status" "$orch_status" "$erebus_status" "$agents_status" "$hecate_status" "$frontend_status" "$openrouter_status")
+    local all_statuses=("$postgres15_status" "$postgres17_status" "$redis_status" "$ipfs_status" "$mcp_status" "$orch_status" "$erebus_status" "$hecate_status" "$frontend_status" "$openrouter_status")
     local online_count=0
     for status in "${all_statuses[@]}"; do
         if [[ "$status" == "✅" ]]; then
@@ -122,30 +155,33 @@ print_status() {
 # Function to show detailed log file status
 show_log_summary() {
     echo -e "${CYAN}📋 Log File Status:${NC}"
-    
+
     # Updated log file paths to match actual file locations
     local log_files=(
         # Main logs directory
-        "/Users/sage/nullblock/logs/just-commands.log"
-        "/Users/sage/nullblock/logs/frontend.log"
-        "/Users/sage/nullblock/logs/ipfs.log"
-        "/Users/sage/nullblock/logs/erebus.log"
-        "/Users/sage/nullblock/logs/mcp.log"
-        "/Users/sage/nullblock/logs/orchestration.log"
-        
+        "$HOME/nullblock/logs/just-commands.log"
+        "$HOME/nullblock/logs/frontend.log"
+        "$HOME/nullblock/logs/ipfs.log"
+        "$HOME/nullblock/logs/erebus.log"
+        "$HOME/nullblock/logs/mcp.log"
+        "$HOME/nullblock/logs/orchestration.log"
+
         # Agent logs (actual paths)
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate.log"
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-server.log"
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/hecate-startup.log"
-        "/Users/sage/nullblock/svc/nullblock-agents/agents.log"
-        
+        "$HOME/nullblock/svc/nullblock-agents/logs/hecate.log"
+        "$HOME/nullblock/svc/nullblock-agents/logs/hecate-server.log"
+        "$HOME/nullblock/svc/nullblock-agents/logs/hecate-startup.log"
+        "$HOME/nullblock/svc/nullblock-agents/agents.log"
+
         # Service-specific logs
-        "/Users/sage/nullblock/svc/nullblock-mcp/logs/mcp-server.log"
-        "/Users/sage/nullblock/svc/nullblock-orchestration/logs/orchestration.log"
-        
+        "$HOME/nullblock/svc/nullblock-mcp/logs/mcp-server.log"
+        "$HOME/nullblock/svc/nullblock-orchestration/logs/orchestration.log"
+
+        # Erebus logs
+        "$HOME/nullblock/svc/erebus/logs/erebus.log"
+
         # LLM Service logs (OpenRouter)
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/llm-health.log"
-        "/Users/sage/nullblock/svc/nullblock-agents/logs/model-performance.log"
+        "$HOME/nullblock/svc/nullblock-agents/logs/llm-health.log"
+        "$HOME/nullblock/svc/nullblock-agents/logs/model-performance.log"
     )
     
     local active_logs=0
@@ -153,7 +189,13 @@ show_log_summary() {
     
     for log_file in "${log_files[@]}"; do
         if [ -f "$log_file" ]; then
-            local size_bytes=$(stat -f%z "$log_file" 2>/dev/null || echo "0")
+            # Cross-platform stat command
+            local size_bytes
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                size_bytes=$(stat -f%z "$log_file" 2>/dev/null || echo "0")
+            else
+                size_bytes=$(stat -c%s "$log_file" 2>/dev/null || echo "0")
+            fi
             local size_human=$(du -h "$log_file" 2>/dev/null | cut -f1)
             local lines=$(wc -l < "$log_file" 2>/dev/null | tr -d ' ')
             
