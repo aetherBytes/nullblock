@@ -19,3 +19,5 @@ done
 
 echo "✅ Erebus migrations completed"
 
+
+

@@ -41,6 +41,7 @@ interface HecateChatProps {
   scrollToBottom: () => void;
   isUserScrolling: boolean;
   chatAutoScroll: boolean;
+  activeAgent?: 'hecate' | 'marketing';
 }
 
 const HecateChat: React.FC<HecateChatProps> = ({
@@ -67,7 +68,8 @@ const HecateChat: React.FC<HecateChatProps> = ({
   onChatScroll,
   scrollToBottom,
   isUserScrolling,
-  chatAutoScroll
+  chatAutoScroll,
+  activeAgent = 'hecate'
 }) => {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

@@ -103,6 +103,7 @@ fn create_router(state: server::AppState) -> Router {
         .route("/tasks/:task_id/retry", post(tasks::retry_task))
         .route("/tasks/:task_id/process", post(tasks::process_task))
         // Marketing agent endpoints
+        .route("/marketing/chat", post(marketing::chat))
         .route("/marketing/generate-content", post(marketing::generate_content))
         .route("/marketing/create-post", post(marketing::create_twitter_post))
         .route("/marketing/analyze-project", get(marketing::analyze_project_progress))
