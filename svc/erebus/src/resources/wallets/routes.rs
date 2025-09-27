@@ -16,7 +16,7 @@ use crate::resources::types::{
     WalletDetectionRequest, WalletDetectionResponse, WalletConnectionRequest,
     WalletConnectionResponse, WalletStatusResponse
 };
-use crate::user_references::UserReferenceService;
+use crate::user_references::{UserReferenceService, SourceType};
 use super::wallet_service::WalletService;
 use super::{PhantomWallet, MetaMaskWallet};
 use uuid::Uuid;
@@ -25,17 +25,17 @@ use uuid::Uuid;
 async fn register_user_in_database(wallet_address: &str, chain: &str, database: &crate::database::Database) -> Result<Uuid, String> {
     let user_service = UserReferenceService::new(database.clone());
 
-    let source_type = serde_json::json!({
-        "type": "web3_wallet",
-        "provider": if chain == "solana" { "phantom" } else if chain == "ethereum" { "metamask" } else { "unknown" },
-        "metadata": {}
-    });
+    let provider = if chain == "solana" { "phantom" } else if chain == "ethereum" { "metamask" } else { "unknown" };
 
-    let wallet_type = if chain == "solana" { "phantom" } else if chain == "ethereum" { "metamask" } else { "unknown" };
+    let source_type = SourceType::Web3Wallet {
+        provider: provider.to_string(),
+        network: chain.to_string(),
+        metadata: serde_json::json!({}),
+    };
 
     println!("🗄️ Registering user directly in Erebus database from wallet verification");
 
-    match user_service.create_or_get_user(wallet_address, chain, source_type, Some(wallet_type)).await {
+    match user_service.create_or_get_user(wallet_address, chain, source_type, None).await {
         Ok(user_ref) => {
             println!("✅ User registered successfully in database: {}", user_ref.id);
             Ok(user_ref.id)

@@ -18,3 +18,4 @@ for migration in svc/nullblock-agents/migrations/*.sql; do
 done
 
 echo "✅ Agents migrations completed"
+

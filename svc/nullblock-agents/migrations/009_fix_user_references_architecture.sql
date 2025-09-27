@@ -20,3 +20,4 @@ COMMENT ON TABLE user_references IS 'READ-ONLY sync cache from Erebus user_refer
 -- The user_references table in agents should be populated via sync from Erebus
 -- The task_executions table will use source_identifier and source_metadata
 -- instead of foreign keys to user_references
+

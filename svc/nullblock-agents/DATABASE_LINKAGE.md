@@ -189,3 +189,4 @@ WHERE source_metadata @> '{"chain": "solana"}';
 - Update TypeScript interfaces
 - Handle missing source metadata gracefully
 - Provide fallback display values
+

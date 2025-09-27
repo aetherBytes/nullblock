@@ -62,3 +62,4 @@ SELECT 'Final Status:' as status;
 SELECT 'Erebus users:' as database, COUNT(*) as count FROM dblink('host=localhost port=5440 dbname=erebus user=postgres password=REDACTED_DB_PASS', 'SELECT COUNT(*) FROM user_references WHERE is_active = true') AS erebus_count(count bigint)
 UNION ALL
 SELECT 'Agents users:' as database, COUNT(*) as count FROM user_references WHERE is_active = true;
+

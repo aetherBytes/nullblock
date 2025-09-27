@@ -139,3 +139,4 @@ async def sync_user_delete(agents_conn, user_id):
 
 if __name__ == "__main__":
     asyncio.run(process_sync_queue())
+

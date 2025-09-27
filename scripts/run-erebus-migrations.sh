@@ -18,3 +18,4 @@ for migration in svc/erebus/migrations/*.sql; do
 done
 
 echo "✅ Erebus migrations completed"
+

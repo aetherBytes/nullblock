@@ -83,3 +83,4 @@ CREATE TRIGGER trigger_sync_user_to_agents
 -- Add comments for documentation
 COMMENT ON FUNCTION sync_user_to_agents IS 'Syncs user data from Erebus (owner) to Agents database (read-only cache)';
 COMMENT ON FUNCTION trigger_sync_user_to_agents IS 'Automatically syncs user changes to agents database';
+
