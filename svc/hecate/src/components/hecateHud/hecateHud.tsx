@@ -1536,38 +1536,9 @@ const HecateHud: React.FC<HecateHudProps> = ({
         <h3>Active Agents</h3>
       </div>
       <div className={styles.agentsList}>
-        <div className={styles.agentItem}>
-          <div className={styles.agentInfo}>
-            <span className={styles.agentName}>Arbitrage Agent</span>
-            <span className={styles.agentStatus}>Active</span>
-          </div>
-          <div className={styles.agentMetrics}>
-            <span>Opportunities Found: 12</span>
-            <span>Executed Trades: 8</span>
-            <span>Success Rate: 92%</span>
-          </div>
-        </div>
-        <div className={styles.agentItem}>
-          <div className={styles.agentInfo}>
-            <span className={styles.agentName}>Social Trading Agent</span>
-            <span className={styles.agentStatus}>Active</span>
-          </div>
-          <div className={styles.agentMetrics}>
-            <span>Signals Generated: 45</span>
-            <span>Accuracy: 78%</span>
-            <span>Last Update: 2m ago</span>
-          </div>
-        </div>
-        <div className={styles.agentItem}>
-          <div className={styles.agentInfo}>
-            <span className={styles.agentName}>Portfolio Manager</span>
-            <span className={styles.agentStatus}>Idle</span>
-          </div>
-          <div className={styles.agentMetrics}>
-            <span>Rebalancing Events: 3</span>
-            <span>Risk Score: 0.23</span>
-            <span>Last Action: 15m ago</span>
-          </div>
+        <div className={styles.emptyState}>
+          <p>No agents available</p>
+          <p className={styles.emptyHint}>Agents will appear here when they are discovered and registered</p>
         </div>
       </div>
     </div>

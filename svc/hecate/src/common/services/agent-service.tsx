@@ -87,8 +87,8 @@ class AgentService {
     console.log(`⚙️ Fetching capabilities for agent: ${agentName}`);
 
     // For specialized endpoints, route to specific agent capabilities
-    if (agentName === 'marketing') {
-      return this.makeRequest<any>(`/api/agents/marketing/themes`);
+    if (agentName === 'siren') {
+      return this.makeRequest<any>(`/api/agents/siren/themes`);
     } else if (agentName === 'hecate') {
       return this.makeRequest<any>(`/api/agents/hecate/model-info`);
     }
@@ -156,7 +156,7 @@ class AgentService {
         return '📝';
       case 'social_media_management':
         return '📱';
-      case 'marketing_automation':
+      case 'siren_automation':
         return '🎯';
       case 'community_engagement':
         return '🤝';
@@ -179,20 +179,42 @@ class AgentService {
     const metrics: string[] = [];
 
     if (agent.metrics) {
+      // Common base stats for all agents
       if (agent.metrics.tasks_processed !== undefined) {
         metrics.push(`Tasks: ${agent.metrics.tasks_processed}`);
       }
-      if (agent.metrics.content_themes !== undefined) {
-        metrics.push(`Themes: ${agent.metrics.content_themes}`);
-      }
-      if (agent.metrics.twitter_integration) {
-        metrics.push(`Twitter: ${agent.metrics.twitter_integration}`);
-      }
-      if (agent.metrics.llm_factory) {
-        metrics.push(`LLM: ${agent.metrics.llm_factory}`);
-      }
       if (agent.metrics.last_activity) {
         metrics.push(`Last: ${agent.metrics.last_activity}`);
+      }
+
+      // Custom stats based on agent type/name
+      if (agent.name === 'hecate') {
+        // Hecate-specific stats
+        if (agent.metrics.llm_factory) {
+          metrics.push(`LLM: ${agent.metrics.llm_factory}`);
+        }
+        if (agent.metrics.orchestration_enabled) {
+          metrics.push(`Orchestration: Active`);
+        }
+      } else if (agent.name === 'siren') {
+        // Siren-specific marketing stats
+        if (agent.metrics.content_themes !== undefined) {
+          metrics.push(`Themes: ${agent.metrics.content_themes}`);
+        }
+        if (agent.metrics.twitter_integration) {
+          metrics.push(`Twitter: ${agent.metrics.twitter_integration}`);
+        }
+        if (agent.metrics.campaigns_active !== undefined) {
+          metrics.push(`Campaigns: ${agent.metrics.campaigns_active}`);
+        }
+      } else {
+        // Generic stats for other agents
+        if (agent.metrics.success_rate !== undefined) {
+          metrics.push(`Success: ${agent.metrics.success_rate}%`);
+        }
+        if (agent.metrics.uptime) {
+          metrics.push(`Uptime: ${agent.metrics.uptime}`);
+        }
       }
     }
 

@@ -18,11 +18,11 @@ fn get_hecate_proxy() -> AgentProxy {
     AgentProxy::new(hecate_url)
 }
 
-/// Marketing agent proxy instance - also uses the Rust service
-fn get_marketing_proxy() -> AgentProxy {
-    let marketing_url = std::env::var("MARKETING_AGENT_URL")
+/// Siren agent proxy instance - also uses the Rust service
+fn get_siren_proxy() -> AgentProxy {
+    let siren_url = std::env::var("SIREN_AGENT_URL")
         .unwrap_or_else(|_| "http://localhost:9003".to_string());
-    AgentProxy::new(marketing_url)
+    AgentProxy::new(siren_url)
 }
 
 /// Extract wallet address from request headers and create user reference if needed
@@ -220,21 +220,21 @@ pub async fn hecate_chat(Json(request): Json<AgentRequest>) -> Result<ResponseJs
     }
 }
 
-/// Proxy chat request to Marketing agent
-pub async fn marketing_chat(Json(request): Json<AgentRequest>) -> Result<ResponseJson<AgentResponse>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
-    info!("🎭 Marketing chat request received");
+/// Proxy chat request to Siren agent
+pub async fn siren_chat(Json(request): Json<AgentRequest>) -> Result<ResponseJson<AgentResponse>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("🎭 Siren chat request received");
     info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
 
-    let proxy = get_marketing_proxy();
+    let proxy = get_siren_proxy();
 
-    match proxy.proxy_marketing_chat(request).await {
+    match proxy.proxy_siren_chat(request).await {
         Ok(response) => {
-            info!("✅ Marketing chat response successful");
+            info!("✅ Siren chat response successful");
             info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
             Ok(ResponseJson(response))
         }
         Err(error) => {
-            error!("❌ Marketing chat request failed");
+            error!("❌ Siren chat request failed");
             error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
 
             let status_code = match error.code.as_str() {
@@ -287,7 +287,7 @@ pub async fn agent_chat(
     
     match agent_name.as_str() {
         "hecate" => hecate_chat(Json(request)).await,
-        "marketing" => marketing_chat(Json(request)).await,
+        "siren" => siren_chat(Json(request)).await,
         _ => {
             let error = AgentErrorResponse {
                 error: "agent_not_found".to_string(),

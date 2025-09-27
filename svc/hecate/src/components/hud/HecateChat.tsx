@@ -5,7 +5,7 @@ import styles from './hud.module.scss';
 interface ChatMessage {
   id: string;
   timestamp: Date;
-  sender: 'user' | 'hecate';
+  sender: 'user' | 'hecate' | 'siren';
   message: string;
   type?: string;
   model_used?: string;
@@ -41,7 +41,7 @@ interface HecateChatProps {
   scrollToBottom: () => void;
   isUserScrolling: boolean;
   chatAutoScroll: boolean;
-  activeAgent?: 'hecate' | 'marketing';
+  activeAgent?: 'hecate' | 'siren';
 }
 
 const HecateChat: React.FC<HecateChatProps> = ({
@@ -113,7 +113,7 @@ const HecateChat: React.FC<HecateChatProps> = ({
               <div className={styles.streamLineChat}></div>
               <div className={styles.lightningSparkChat}></div>
             </div>
-            Hecate
+            {activeAgent || 'Hecate'}
           </span>
         </span>
         <span className={styles.messageTime}>
@@ -125,7 +125,7 @@ const HecateChat: React.FC<HecateChatProps> = ({
           <span className={styles.thinkingDots}>●</span>
           <span className={styles.thinkingDots}>●</span>
           <span className={styles.thinkingDots}>●</span>
-          <span className={styles.thinkingText}>Thinking...</span>
+          <span className={styles.thinkingText}>{activeAgent || 'Hecate'} is thinking...</span>
         </div>
       </div>
     </div>
@@ -138,15 +138,15 @@ const HecateChat: React.FC<HecateChatProps> = ({
     >
       <div className={styles.messageHeader}>
         <span className={styles.messageSender}>
-          {message.sender === 'hecate' ? (
-            <span className={styles.hecateMessageSender}>
+          {message.sender === 'hecate' || message.sender === 'siren' ? (
+            <span className={message.sender === 'siren' ? styles.sirenMessageSender : styles.hecateMessageSender}>
               <div className={`${styles.nullviewChat} ${styles[`chat-${nullviewState === 'thinking' ? 'thinking' : (message.type || 'base')}`]} ${styles.clickableNulleyeChat}`}>
                 <div className={styles.staticFieldChat}></div>
                 <div className={styles.coreNodeChat}></div>
                 <div className={styles.streamLineChat}></div>
                 <div className={styles.lightningSparkChat}></div>
               </div>
-              Hecate
+{message.sender === 'hecate' ? 'Hecate' : message.sender === 'siren' ? 'Siren' : 'Agent'}
             </span>
           ) : (
             '👤 You'
@@ -182,7 +182,7 @@ const HecateChat: React.FC<HecateChatProps> = ({
         <div className={styles.hecateChat}>
           <div className={styles.chatHeader}>
             <div className={styles.chatTitle}>
-              <h4>💬 Hecate Chat</h4>
+              <h4>💬 {activeAgent || 'Hecate'} Chat</h4>
               <span className={styles.modelStatus}>
                 {agentHealthStatus === 'unhealthy' ? '⚠️ API Keys Required' :
                  defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}
@@ -247,7 +247,7 @@ const HecateChat: React.FC<HecateChatProps> = ({
       <div className={styles.hecateChat}>
         <div className={styles.chatHeader}>
           <div className={styles.chatTitle}>
-            <h4>{currentSelectedModel ? `HECATE:${currentSelectedModel.split('/').pop()?.split(':')[0]?.toUpperCase() || 'MODEL'}` : 'HECATE:LOADING'}</h4>
+            <h4>{currentSelectedModel ? `${(activeAgent || 'HECATE').toUpperCase()}:${currentSelectedModel.split('/').pop()?.split(':')[0]?.toUpperCase() || 'MODEL'}` : `${(activeAgent || 'HECATE').toUpperCase()}:LOADING`}</h4>
             <span className={styles.chatStatus}>
               {agentHealthStatus === 'unhealthy' ? '⚠️ API Keys Required' :
                defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}
@@ -299,8 +299,8 @@ const HecateChat: React.FC<HecateChatProps> = ({
                   : isModelChanging
                     ? "Switching models..."
                     : isProcessingChat || nullviewState === 'thinking'
-                      ? "Hecate is thinking..."
-                      : "Ask Hecate anything... (Enter to send, Shift+Enter for new line)"
+                      ? `${activeAgent || 'Hecate'} is thinking...`
+                      : `Ask ${activeAgent || 'Hecate'} anything... (Enter to send, Shift+Enter for new line)`
               }
               className={styles.chatInputField}
               disabled={agentHealthStatus === 'unhealthy' || isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)}

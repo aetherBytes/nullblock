@@ -1,4 +1,4 @@
-use crate::{agents::{HecateAgent, MarketingAgent}, config::Config, database::{Database, repositories::AgentRepository}, kafka::{KafkaConfig, KafkaProducer}, error::AppResult};
+use crate::{agents::{HecateAgent, siren_marketing::MarketingAgent}, config::Config, database::{Database, repositories::AgentRepository}, kafka::{KafkaConfig, KafkaProducer}, error::AppResult};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

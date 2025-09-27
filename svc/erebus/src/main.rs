@@ -21,7 +21,7 @@ mod database;
 mod user_references;
 mod resources;
 use resources::agents::routes::{
-    agent_health, hecate_chat, marketing_chat, hecate_status, agent_chat, agent_status,
+    agent_health, hecate_chat, siren_chat, hecate_status, agent_chat, agent_status,
     hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model, hecate_model_info, hecate_search_models,
     // Task management routes
     create_task, get_tasks, get_task, update_task, delete_task,
@@ -281,7 +281,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Agent routing endpoints
         .route("/api/agents/health", get(agent_health))
         .route("/api/agents/hecate/chat", post(hecate_chat))
-        .route("/api/agents/marketing/chat", post(marketing_chat))
+        .route("/api/agents/siren/chat", post(siren_chat))
         .route("/api/agents/hecate/status", get(hecate_status))
         .route("/api/agents/hecate/personality", post(hecate_personality))
         .route("/api/agents/hecate/clear", post(hecate_clear))
@@ -342,7 +342,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🏥 Health check: http://localhost:3000/health");
     info!("🤖 Agent routing: http://localhost:3000/api/agents/health");
     info!("💬 Hecate chat: http://localhost:3000/api/agents/hecate/chat");
-    info!("🎭 Marketing chat: http://localhost:3000/api/agents/marketing/chat");
+    info!("🎭 Siren chat: http://localhost:3000/api/agents/siren/chat");
     info!("📊 Hecate status: http://localhost:3000/api/agents/hecate/status");
     info!("⚙️ Hecate personality: http://localhost:3000/api/agents/hecate/personality");
     info!("🧹 Hecate clear: http://localhost:3000/api/agents/hecate/clear");
