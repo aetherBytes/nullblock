@@ -19,40 +19,153 @@ impl NullblockServiceIntegrator {
     /// Discover agents via shared ExternalService
     pub async fn discover_agents_from_service(&self) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
         info!("🤖 Discovering agents via shared ExternalService");
-        
-        // Use the shared ExternalService to call Hecate directly
-        match self.external_service.call_hecate("status").await {
-            Ok(hecate_status) => {
-                info!("✅ Successfully discovered agents via ExternalService");
-                // Extract agent info from Hecate status response
-                let agents = vec![
-                    serde_json::json!({
-                        "name": "hecate",
-                        "type": "conversational",
-                        "status": "healthy",
-                        "endpoint": "/api/agents/hecate",
-                        "capabilities": ["chat", "reasoning", "model_switching"],
-                        "hecate_status": hecate_status
-                    })
-                ];
-                Ok(agents)
+
+        let mut agents = Vec::new();
+
+        // Discover Hecate Agent
+        let agents_base_url = std::env::var("HECATE_AGENT_URL")
+            .unwrap_or_else(|_| "http://localhost:9003".to_string());
+        let hecate_health_url = format!("{}/hecate/health", agents_base_url);
+
+        match reqwest::get(&hecate_health_url).await {
+            Ok(response) if response.status().is_success() => {
+                match response.json::<serde_json::Value>().await {
+                    Ok(hecate_status) => {
+                        info!("✅ Successfully discovered Hecate agent");
+
+                        // Determine health status - handle both "healthy" and "ready" as healthy states
+                        let raw_status = hecate_status.get("status")
+                            .and_then(|s| s.as_str())
+                            .unwrap_or("unknown");
+                        let health_status = match raw_status {
+                            "healthy" | "ready" => "healthy",
+                            _ => "unhealthy"
+                        };
+
+                        agents.push(serde_json::json!({
+                            "name": "hecate",
+                            "type": "conversational",
+                            "status": health_status,
+                            "endpoint": "/api/agents/hecate",
+                            "capabilities": ["chat", "reasoning", "model_switching", "task_execution"],
+                            "description": "Primary conversational interface and orchestration engine",
+                            "hecate_status": hecate_status,
+                            "metrics": {
+                                "tasks_processed": hecate_status.get("tasks_processed").unwrap_or(&serde_json::json!(0)),
+                                "last_activity": hecate_status.get("last_activity").unwrap_or(&serde_json::json!("unknown")),
+                                "raw_status": raw_status,
+                                "current_model": hecate_status.get("current_model").unwrap_or(&serde_json::json!("unknown"))
+                            }
+                        }));
+                    }
+                    Err(e) => {
+                        warn!("⚠️ Failed to parse Hecate agent response: {}", e);
+                        agents.push(serde_json::json!({
+                            "name": "hecate",
+                            "type": "conversational",
+                            "status": "unhealthy",
+                            "endpoint": "/api/agents/hecate",
+                            "capabilities": ["chat", "reasoning", "model_switching", "task_execution"],
+                            "description": "Primary conversational interface and orchestration engine",
+                            "note": "Agent found but response parsing failed"
+                        }));
+                    }
+                }
+            }
+            Ok(response) => {
+                warn!("⚠️ Hecate agent responded with status: {}", response.status());
+                agents.push(serde_json::json!({
+                    "name": "hecate",
+                    "type": "conversational",
+                    "status": "unhealthy",
+                    "endpoint": "/api/agents/hecate",
+                    "capabilities": ["chat", "reasoning", "model_switching", "task_execution"],
+                    "description": "Primary conversational interface and orchestration engine",
+                    "note": format!("Service responded with HTTP {}", response.status())
+                }));
             }
             Err(e) => {
-                warn!("⚠️ Failed to discover agents via ExternalService: {}", e);
-                // Return mock data as fallback
-                let agents = vec![
-                    serde_json::json!({
-                        "name": "hecate",
-                        "type": "conversational",
-                        "status": "unhealthy",
-                        "endpoint": "/api/agents/hecate",
-                        "capabilities": ["chat", "reasoning", "model_switching"],
-                        "note": "Using fallback data due to service unavailability"
-                    })
-                ];
-                Ok(agents)
+                warn!("⚠️ Failed to discover Hecate agent: {}", e);
+                agents.push(serde_json::json!({
+                    "name": "hecate",
+                    "type": "conversational",
+                    "status": "unhealthy",
+                    "endpoint": "/api/agents/hecate",
+                    "capabilities": ["chat", "reasoning", "model_switching", "task_execution"],
+                    "description": "Primary conversational interface and orchestration engine",
+                    "note": "Using fallback data due to service unavailability"
+                }));
             }
         }
+
+        // Discover Marketing Agent
+        let agents_base_url = std::env::var("HECATE_AGENT_URL")
+            .unwrap_or_else(|_| "http://localhost:9003".to_string());
+        let marketing_url = format!("{}/marketing/health", agents_base_url);
+        info!("🎭 Checking Marketing agent at: {}", marketing_url);
+
+        match reqwest::get(&marketing_url).await {
+            Ok(response) if response.status().is_success() => {
+                match response.json::<serde_json::Value>().await {
+                    Ok(marketing_status) => {
+                        info!("✅ Successfully discovered Marketing agent");
+                        agents.push(serde_json::json!({
+                            "name": "marketing",
+                            "type": "specialized",
+                            "status": "healthy",
+                            "endpoint": "/api/agents/marketing",
+                            "capabilities": ["content_generation", "social_media_management", "marketing_automation", "community_engagement", "brand_management"],
+                            "description": "Marketing and social media management agent for NullBlock platform",
+                            "marketing_status": marketing_status,
+                            "metrics": {
+                                "content_themes": marketing_status.get("components").and_then(|c| c.get("content_themes")).unwrap_or(&serde_json::json!(0)),
+                                "twitter_integration": marketing_status.get("components").and_then(|c| c.get("twitter_integration")).unwrap_or(&serde_json::json!("not_configured")),
+                                "llm_factory": marketing_status.get("components").and_then(|c| c.get("llm_factory")).unwrap_or(&serde_json::json!("not_initialized"))
+                            }
+                        }));
+                    }
+                    Err(e) => {
+                        warn!("⚠️ Failed to parse Marketing agent response: {}", e);
+                        agents.push(serde_json::json!({
+                            "name": "marketing",
+                            "type": "specialized",
+                            "status": "unhealthy",
+                            "endpoint": "/api/agents/marketing",
+                            "capabilities": ["content_generation", "social_media_management", "marketing_automation", "community_engagement", "brand_management"],
+                            "description": "Marketing and social media management agent for NullBlock platform",
+                            "note": "Agent found but response parsing failed"
+                        }));
+                    }
+                }
+            }
+            Ok(response) => {
+                warn!("⚠️ Marketing agent responded with status: {}", response.status());
+                agents.push(serde_json::json!({
+                    "name": "marketing",
+                    "type": "specialized",
+                    "status": "unhealthy",
+                    "endpoint": "/api/agents/marketing",
+                    "capabilities": ["content_generation", "social_media_management", "marketing_automation", "community_engagement", "brand_management"],
+                    "description": "Marketing and social media management agent for NullBlock platform",
+                    "note": format!("Service responded with HTTP {}", response.status())
+                }));
+            }
+            Err(e) => {
+                warn!("⚠️ Failed to discover Marketing agent: {}", e);
+                agents.push(serde_json::json!({
+                    "name": "marketing",
+                    "type": "specialized",
+                    "status": "unhealthy",
+                    "endpoint": "/api/agents/marketing",
+                    "capabilities": ["content_generation", "social_media_management", "marketing_automation", "community_engagement", "brand_management"],
+                    "description": "Marketing and social media management agent for NullBlock platform",
+                    "note": "Using fallback data due to service unavailability"
+                }));
+            }
+        }
+
+        info!("🤖 Agent discovery completed: {} agents found", agents.len());
+        Ok(agents)
     }
 
     /// Discover MCP servers via shared ExternalService

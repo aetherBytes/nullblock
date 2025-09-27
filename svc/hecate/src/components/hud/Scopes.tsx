@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ModelInfo from './ModelInfo';
 import TaskCreationForm from './TaskCreationForm';
 import MarkdownRenderer from '../common/MarkdownRenderer';
 import styles from './hud.module.scss';
 import { Task } from '../../types/tasks';
+import { Agent } from '../../types/agents';
+import { agentService } from '../../common/services/agent-service';
 
 interface ScopesProps {
   activeScope: string | null;
@@ -89,6 +91,40 @@ const Scopes: React.FC<ScopesProps> = ({
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [activeTaskCategory, setActiveTaskCategory] = useState<TaskCategory>('todo');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+  // Agent state management
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [isLoadingAgents, setIsLoadingAgents] = useState(false);
+  const [agentsError, setAgentsError] = useState<string | null>(null);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+
+  // Fetch agents on component mount
+  useEffect(() => {
+    const fetchAgents = async () => {
+      setIsLoadingAgents(true);
+      setAgentsError(null);
+
+      try {
+        const response = await agentService.getAgents();
+        if (response.success && response.data) {
+          setAgents(response.data.agents);
+          console.log(`✅ Loaded ${response.data.agents.length} agents`);
+        } else {
+          setAgentsError(response.error || 'Failed to load agents');
+          console.warn('⚠️ Failed to load agents:', response.error);
+        }
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        setAgentsError(errorMessage);
+        console.error('❌ Error loading agents:', error);
+      } finally {
+        setIsLoadingAgents(false);
+      }
+    };
+
+    fetchAgents();
+  }, []);
+
   const scopesOptions = [
     { id: 'modelinfo', icon: '🤖', title: 'Model Info', description: 'Current model details', color: '#ff6b6b' },
     { id: 'tasks', icon: '📋', title: 'Tasks', description: 'Active agent tasks', color: '#4ecdc4' },
@@ -629,43 +665,222 @@ const Scopes: React.FC<ScopesProps> = ({
         return (
           <div className={styles.agentsScope}>
             <div className={styles.agentsHeader}>
-              <h6>🤖 Active Agents</h6>
+              <h6>🤖 Active Agents ({agents.length})</h6>
+              <button
+                onClick={() => {
+                  setIsLoadingAgents(true);
+                  setAgentsError(null);
+                  agentService.getAgents().then(response => {
+                    if (response.success && response.data) {
+                      setAgents(response.data.agents);
+                    } else {
+                      setAgentsError(response.error || 'Failed to refresh agents');
+                    }
+                    setIsLoadingAgents(false);
+                  });
+                }}
+                className={styles.refreshButton}
+                disabled={isLoadingAgents}
+                title="Refresh agents"
+              >
+                {isLoadingAgents ? '🔄' : '🔄'}
+              </button>
             </div>
-            <div className={styles.agentsList}>
-              <div className={styles.agentItem}>
-                <div className={styles.agentInfo}>
-                  <span className={styles.agentName}>Arbitrage Agent</span>
-                  <span className={styles.agentStatus}>Active</span>
-                </div>
-                <div className={styles.agentMetrics}>
-                  <span>Opportunities Found: 12</span>
-                  <span>Executed Trades: 8</span>
-                  <span>Success Rate: 92%</span>
-                </div>
+
+            {agentsError && (
+              <div className={styles.errorMessage}>
+                <span>❌ {agentsError}</span>
               </div>
-              <div className={styles.agentItem}>
-                <div className={styles.agentInfo}>
-                  <span className={styles.agentName}>Social Trading Agent</span>
-                  <span className={styles.agentStatus}>Active</span>
-                </div>
-                <div className={styles.agentMetrics}>
-                  <span>Signals Generated: 45</span>
-                  <span>Accuracy: 78%</span>
-                  <span>Last Update: 2m ago</span>
-                </div>
+            )}
+
+            {isLoadingAgents ? (
+              <div className={styles.loadingState}>
+                <span>🔄 Loading agents...</span>
               </div>
-              <div className={styles.agentItem}>
-                <div className={styles.agentInfo}>
-                  <span className={styles.agentName}>Portfolio Manager</span>
-                  <span className={styles.agentStatus}>Monitoring</span>
-                </div>
-                <div className={styles.agentMetrics}>
-                  <span>Assets Under Management: $12,450</span>
-                  <span>24h Performance: +2.3%</span>
-                  <span>Risk Level: Medium</span>
-                </div>
+            ) : selectedAgentId ? (
+              <div className={styles.agentDetails}>
+                {(() => {
+                  const selectedAgent = agents.find(a => a.name === selectedAgentId);
+                  if (!selectedAgent) return null;
+
+                  return (
+                    <div className={styles.agentDetailsContainer}>
+                      <div className={styles.agentDetailsHeader}>
+                        <button
+                          onClick={() => setSelectedAgentId(null)}
+                          className={styles.backButton}
+                        >
+                          ← Back to Agents
+                        </button>
+                        <h4>{agentService.getAgentTypeIcon(selectedAgent.type)} {selectedAgent.name.charAt(0).toUpperCase() + selectedAgent.name.slice(1)} Agent</h4>
+                      </div>
+
+                      <div className={styles.agentDetailsBody}>
+                        <div className={styles.agentDetailsSection}>
+                          <h5>Basic Information</h5>
+                          <div className={styles.agentDetailsGrid}>
+                            <div className={styles.agentDetailsField}>
+                              <label>Type:</label>
+                              <span>{selectedAgent.type}</span>
+                            </div>
+                            <div className={styles.agentDetailsField}>
+                              <label>Status:</label>
+                              <span
+                                className={styles.statusBadge}
+                                style={{ backgroundColor: agentService.getAgentStatusColor(selectedAgent.status) }}
+                              >
+                                {selectedAgent.status === 'healthy' ? '✅' : '❌'} {selectedAgent.status}
+                              </span>
+                            </div>
+                            <div className={styles.agentDetailsField}>
+                              <label>Endpoint:</label>
+                              <span>{selectedAgent.endpoint}</span>
+                            </div>
+                          </div>
+                          <div className={styles.agentDetailsField}>
+                            <label>Description:</label>
+                            <p>{selectedAgent.description}</p>
+                          </div>
+                        </div>
+
+                        <div className={styles.agentDetailsSection}>
+                          <h5>Capabilities</h5>
+                          <div className={styles.capabilitiesList}>
+                            {selectedAgent.capabilities.map((capability, index) => (
+                              <div key={index} className={styles.capabilityItem}>
+                                <span className={styles.capabilityIcon}>
+                                  {agentService.getCapabilityIcon(capability)}
+                                </span>
+                                <span className={styles.capabilityName}>
+                                  {capability.replace(/_/g, ' ')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {selectedAgent.metrics && (
+                          <div className={styles.agentDetailsSection}>
+                            <h5>Metrics</h5>
+                            <div className={styles.metricsList}>
+                              {agentService.getAgentMetrics(selectedAgent).map((metric, index) => (
+                                <div key={index} className={styles.metricItem}>
+                                  <span>{metric}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className={styles.agentDetailsActions}>
+                          <button
+                            onClick={() => {
+                              // Navigate to chat with this agent
+                              console.log(`💬 Starting chat with ${selectedAgent.name}`);
+                              // You could implement chat routing here
+                            }}
+                            className={styles.agentActionButton}
+                            disabled={!agentService.isAgentOnline(selectedAgent)}
+                          >
+                            💬 Chat with Agent
+                          </button>
+                          <button
+                            onClick={() => {
+                              agentService.getAgentHealth(selectedAgent.name).then(response => {
+                                console.log(`🏥 Health check for ${selectedAgent.name}:`, response);
+                              });
+                            }}
+                            className={styles.agentActionButton}
+                          >
+                            🏥 Check Health
+                          </button>
+                          <button
+                            onClick={() => {
+                              agentService.getAgentCapabilities(selectedAgent.name).then(response => {
+                                console.log(`⚙️ Capabilities for ${selectedAgent.name}:`, response);
+                              });
+                            }}
+                            className={styles.agentActionButton}
+                          >
+                            ⚙️ View Details
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
-            </div>
+            ) : (
+              <div className={styles.agentsList}>
+                {agents.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <p>No agents found</p>
+                    <p className={styles.emptyHint}>Check that the agents service is running</p>
+                  </div>
+                ) : (
+                  agents.map((agent) => (
+                    <div
+                      key={agent.name}
+                      className={`${styles.agentItem} ${styles.clickableAgent}`}
+                      onClick={() => setSelectedAgentId(agent.name)}
+                      title="Click to view details"
+                    >
+                      <div className={styles.agentHeader}>
+                        <div className={styles.agentInfo}>
+                          <span className={styles.agentName}>
+                            {agentService.getAgentTypeIcon(agent.type)} {agent.name.charAt(0).toUpperCase() + agent.name.slice(1)} Agent
+                          </span>
+                          <span className={styles.agentType}>{agent.type}</span>
+                        </div>
+                        <div className={styles.agentStatus}>
+                          <span
+                            className={styles.statusIcon}
+                            style={{ color: agentService.getAgentStatusColor(agent.status) }}
+                          >
+                            {agent.status === 'healthy' ? '✅' : '❌'}
+                          </span>
+                          {agent.status}
+                        </div>
+                      </div>
+
+                      <div className={styles.agentDescription}>
+                        <span>{agentService.getAgentDescription(agent)}</span>
+                      </div>
+
+                      <div className={styles.agentCapabilities}>
+                        <span className={styles.capabilitiesLabel}>Capabilities:</span>
+                        <div className={styles.capabilitiesPreview}>
+                          {agent.capabilities.slice(0, 3).map((capability, index) => (
+                            <span key={index} className={styles.capabilityTag}>
+                              {agentService.getCapabilityIcon(capability)} {capability.replace(/_/g, ' ')}
+                            </span>
+                          ))}
+                          {agent.capabilities.length > 3 && (
+                            <span className={styles.capabilityTag}>
+                              +{agent.capabilities.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {agent.metrics && (
+                        <div className={styles.agentMetrics}>
+                          {agentService.getAgentMetrics(agent).slice(0, 2).map((metric, index) => (
+                            <span key={index}>{metric}</span>
+                          ))}
+                        </div>
+                      )}
+
+                      {agent.note && (
+                        <div className={styles.agentNote}>
+                          <span>⚠️ {agent.note}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         );
 
