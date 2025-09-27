@@ -11,6 +11,10 @@ export interface Agent {
     twitter_integration?: string;
     llm_factory?: string;
     last_activity?: string;
+    success_rate?: number;
+    uptime?: string;
+    orchestration_enabled?: boolean;
+    campaigns_active?: number;
   };
   hecate_status?: any;
   marketing_status?: any;
@@ -42,4 +46,6 @@ export interface AgentMetrics {
   last_activity?: string;
   success_rate?: number;
   uptime?: string;
+  orchestration_enabled?: boolean;
+  campaigns_active?: number;
 }

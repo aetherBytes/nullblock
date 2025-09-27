@@ -126,12 +126,12 @@ impl AgentProxy {
         }
     }
 
-    /// Proxy chat request to Marketing agent backend
-    pub async fn proxy_marketing_chat(&self, request: AgentRequest) -> Result<AgentResponse, AgentErrorResponse> {
+    /// Proxy chat request to Siren agent backend
+    pub async fn proxy_siren_chat(&self, request: AgentRequest) -> Result<AgentResponse, AgentErrorResponse> {
         let client = reqwest::Client::new();
-        let url = format!("{}/marketing/chat", self.agent_base_url);
+        let url = format!("{}/siren/chat", self.agent_base_url);
 
-        info!("🎭 Proxying chat request to marketing agent: {}", url);
+        info!("🎭 Proxying chat request to Siren agent: {}", url);
 
         match client
             .post(&url)

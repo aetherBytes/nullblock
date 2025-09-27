@@ -846,15 +846,19 @@ All services implement `/health` endpoints with standardized JSON responses:
 - **Source-Agnostic User System**: Complete redesign of user_references table and supporting infrastructure
 - **Database Migration Applied**: Schema changes successfully applied with data preservation
 - **Type-Safe API**: Enhanced endpoints with SourceType enum and backward compatibility
+- **Agent Renaming & Rebranding**: Marketing Agent → Siren with updated profile, capabilities, and documentation
+- **Frontend Agent Integration**: Real-time agent discovery, standardized metrics, and improved UI
+- **Agent Metrics Standardization**: Common base stats (tasks, last) + agent-specific custom stats
+- **Database Schema Updates**: Added missing agent activity columns and migration system
 
 ### In Progress 🔄
-- **Compilation Fixes**: Minor Rust compilation errors being resolved (move semantics, type mismatches)
-- **Testing**: Verifying backward compatibility with existing wallet flows
+- **Agent Identity System**: Dynamic agent name display in chat titles and message attribution
+- **UI/UX Refinements**: Agent card styling, text alignment, and mock data cleanup
 
 ### Next Up 📋
 1. **Agent Service Integration**: Establish communication protocols between task service and orchestration
-2. **X Marketing Agent**: Automated social media engagement and content generation
-3. **Performance Optimization**: Database query optimization and caching strategies
+2. **Performance Optimization**: Database query optimization and caching strategies
+3. **Advanced Agent Features**: Enhanced capabilities and specialized agent workflows
 
 ---
 

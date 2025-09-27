@@ -53,8 +53,9 @@ impl NullblockServiceIntegrator {
                             "metrics": {
                                 "tasks_processed": hecate_status.get("tasks_processed").unwrap_or(&serde_json::json!(0)),
                                 "last_activity": hecate_status.get("last_activity").unwrap_or(&serde_json::json!("unknown")),
-                                "raw_status": raw_status,
-                                "current_model": hecate_status.get("current_model").unwrap_or(&serde_json::json!("unknown"))
+                                "llm_factory": hecate_status.get("current_model").unwrap_or(&serde_json::json!("unknown")),
+                                "orchestration_enabled": true,
+                                "raw_status": raw_status
                             }
                         }));
                     }
@@ -98,67 +99,69 @@ impl NullblockServiceIntegrator {
             }
         }
 
-        // Discover Marketing Agent
+        // Discover Siren Agent
         let agents_base_url = std::env::var("HECATE_AGENT_URL")
             .unwrap_or_else(|_| "http://localhost:9003".to_string());
-        let marketing_url = format!("{}/marketing/health", agents_base_url);
-        info!("🎭 Checking Marketing agent at: {}", marketing_url);
+        let siren_url = format!("{}/siren/health", agents_base_url);
+        info!("🎭 Checking Siren agent at: {}", siren_url);
 
-        match reqwest::get(&marketing_url).await {
+        match reqwest::get(&siren_url).await {
             Ok(response) if response.status().is_success() => {
                 match response.json::<serde_json::Value>().await {
-                    Ok(marketing_status) => {
-                        info!("✅ Successfully discovered Marketing agent");
+                    Ok(siren_status) => {
+                        info!("✅ Successfully discovered Siren agent");
                         agents.push(serde_json::json!({
-                            "name": "marketing",
+                            "name": "siren",
                             "type": "specialized",
                             "status": "healthy",
-                            "endpoint": "/api/agents/marketing",
+                            "endpoint": "/api/agents/siren",
                             "capabilities": ["content_generation", "social_media_management", "marketing_automation", "community_engagement", "brand_management"],
-                            "description": "Marketing and social media management agent for NullBlock platform",
-                            "marketing_status": marketing_status,
+                            "description": "Siren - Marketing and Community Orchestrator for NullBlock platform",
+                            "siren_status": siren_status,
                             "metrics": {
-                                "content_themes": marketing_status.get("components").and_then(|c| c.get("content_themes")).unwrap_or(&serde_json::json!(0)),
-                                "twitter_integration": marketing_status.get("components").and_then(|c| c.get("twitter_integration")).unwrap_or(&serde_json::json!("not_configured")),
-                                "llm_factory": marketing_status.get("components").and_then(|c| c.get("llm_factory")).unwrap_or(&serde_json::json!("not_initialized"))
+                                "tasks_processed": 0, // Base stat for all agents
+                                "last_activity": "unknown", // Base stat for all agents
+                                "content_themes": siren_status.get("components").and_then(|c| c.get("content_themes")).unwrap_or(&serde_json::json!(0)),
+                                "twitter_integration": siren_status.get("components").and_then(|c| c.get("twitter_integration")).unwrap_or(&serde_json::json!("not_configured")),
+                                "campaigns_active": 0 // Siren-specific stat
                             }
                         }));
                     }
                     Err(e) => {
-                        warn!("⚠️ Failed to parse Marketing agent response: {}", e);
+                        warn!("⚠️ Failed to parse Siren agent response: {}", e);
                         agents.push(serde_json::json!({
-                            "name": "marketing",
+                            "name": "siren",
                             "type": "specialized",
                             "status": "unhealthy",
-                            "endpoint": "/api/agents/marketing",
+                            "endpoint": "/api/agents/siren",
                             "capabilities": ["content_generation", "social_media_management", "marketing_automation", "community_engagement", "brand_management"],
-                            "description": "Marketing and social media management agent for NullBlock platform",
+                            "description": "Siren - Marketing and Community Orchestrator for NullBlock platform",
                             "note": "Agent found but response parsing failed"
                         }));
                     }
                 }
             }
             Ok(response) => {
-                warn!("⚠️ Marketing agent responded with status: {}", response.status());
+                warn!("⚠️ Siren agent responded with status: {}", response.status());
                 agents.push(serde_json::json!({
-                    "name": "marketing",
+                    "name": "siren",
                     "type": "specialized",
                     "status": "unhealthy",
-                    "endpoint": "/api/agents/marketing",
+                    "endpoint": "/api/agents/siren",
                     "capabilities": ["content_generation", "social_media_management", "marketing_automation", "community_engagement", "brand_management"],
-                    "description": "Marketing and social media management agent for NullBlock platform",
+                    "description": "Siren - Marketing and Community Orchestrator for NullBlock platform",
                     "note": format!("Service responded with HTTP {}", response.status())
                 }));
             }
             Err(e) => {
-                warn!("⚠️ Failed to discover Marketing agent: {}", e);
+                warn!("⚠️ Failed to discover Siren agent: {}", e);
                 agents.push(serde_json::json!({
-                    "name": "marketing",
+                    "name": "siren",
                     "type": "specialized",
                     "status": "unhealthy",
-                    "endpoint": "/api/agents/marketing",
+                    "endpoint": "/api/agents/siren",
                     "capabilities": ["content_generation", "social_media_management", "marketing_automation", "community_engagement", "brand_management"],
-                    "description": "Marketing and social media management agent for NullBlock platform",
+                    "description": "Siren - Marketing and Community Orchestrator for NullBlock platform",
                     "note": "Using fallback data due to service unavailability"
                 }));
             }

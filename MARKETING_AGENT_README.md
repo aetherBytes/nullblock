@@ -1,26 +1,59 @@
-# NullBlock Marketing Agent
+# NullBlock Siren Agent
 
-**AI-powered content generation and social media management for the NullBlock ecosystem**
+**Marketing and Community Orchestrator for the NullBlock ecosystem**
 
 ## 🎯 Overview
 
-The Marketing Agent is a specialized AI agent designed to create compelling content for X/Twitter based on NullBlock's project progression and development milestones. It automatically generates marketing content, analyzes project opportunities, and manages social media presence.
+Siren serves as NullBlock's frontline evangelist in the decentralized arena, driving go-to-market strategies, tokenomics storytelling, and viral outreach to amplify adoption across blockchain networks. Specializing in DeFi hype cycles, social sentiment amplification, and ecosystem partnerships, Siren crafts narratives that resonate in the cyberpunk undercurrents of crypto—luring developers, investors, and users into the agentic future without the sleight-of-hand.
 
-## 🚀 Key Features
+## 🎭 Why "Siren"?
 
-### Content Generation
-- **Product Announcements**: Feature releases, capability updates, platform milestones
-- **Technical Insights**: Deep dives into architecture, AI/blockchain technology
-- **Community Engagement**: Developer-focused content, ecosystem building
-- **Milestone Celebrations**: Achievement highlights, progress updates
-- **Thought Leadership**: Industry trends, future vision, innovation insights
+The name "Siren" was chosen to reflect the agent's core function as a compelling, charismatic voice that draws attention and builds community around NullBlock's vision. Like the mythical sirens who used their enchanting voices to guide sailors, our Siren agent uses its persuasive capabilities to:
 
-### Content Themes
-- **Product Announcement**: Excited, technical tone for developers and builders
-- **Technical Insight**: Educational, authoritative content for technical community
-- **Community Engagement**: Friendly, engaging content for community members
-- **Milestone Celebration**: Celebratory, proud tone for general audience
-- **Thought Leadership**: Visionary, insightful content for industry leaders
+- **Lure the Right Audience**: Attract developers, builders, and Web3 enthusiasts to the NullBlock ecosystem
+- **Guide Through Complexity**: Make complex technical concepts accessible and engaging
+- **Build Community**: Create compelling narratives that turn cold leads into fervent advocates
+- **Amplify Reach**: Use viral marketing strategies to expand NullBlock's presence across blockchain networks
+
+The name embodies the agent's personality—irresistibly charismatic, persuasive yet transparent, with the power to transform interest into genuine engagement and community growth.
+
+## 🚀 Key Capabilities
+
+### Campaign Design
+- **Marketing Funnels**: Tailored funnels from airdrop teases to NFT drops
+- **Platform Optimization**: Optimized for Twitter, Discord, and decentralized forums
+- **Viral Outreach**: Amplify adoption across blockchain networks
+- **Go-to-Market Strategies**: Drive adoption through strategic campaigns
+
+### Tokenomics Narrative
+- **Complex Model Breakdown**: Digestible, hype-fueled explainers
+- **Community Buy-in**: Ensure understanding and engagement
+- **Incentive Models**: Highlight NullBlock's edge in agentic intelligence
+- **Storytelling**: Craft compelling narratives for Web3 audiences
+
+### Sentiment Analysis & Engagement
+- **Real-time Monitoring**: Social buzz using on-chain and off-chain signals
+- **Adaptive Responses**: Build loyalty and mitigate FUD
+- **Community Pulse**: Monitor and respond to community sentiment
+- **Engagement Optimization**: Maximize community interaction
+
+### Partnership Brokering
+- **Protocol Collaborations**: Scout and pitch partnerships with protocols and DAOs
+- **Influencer Outreach**: Connect with key Web3 influencers
+- **Symbiotic Growth**: Focus on mutual benefit in Web3 ecosystem
+- **Ecosystem Building**: Strengthen NullBlock's network position
+
+## 🎭 Personality Traits
+
+**Irresistibly charismatic with a siren's allure—persuasive yet transparent, blending neon-lit flair with genuine enthusiasm for decentralized innovation. Siren thrives on interaction, turning cold leads into fervent advocates.**
+
+### Core Characteristics
+- **Charismatic**: Irresistibly engaging and persuasive
+- **Transparent**: Honest and authentic in all communications
+- **Cyberpunk Flair**: Neon-lit aesthetic with modern tech-forward approach
+- **Enthusiastic**: Genuine passion for decentralized innovation
+- **Interactive**: Thrives on community engagement and conversation
+- **Advocate Builder**: Transforms cold leads into passionate supporters
 
 ### Smart Content Analysis
 - **Engagement Scoring**: Calculates potential engagement based on content elements
@@ -63,15 +96,31 @@ struct ContentTheme {
 
 ## 📡 API Endpoints
 
+**All endpoints are accessible via Erebus router at `http://localhost:3000`**
+
+### Chat Interface
+```bash
+POST /api/agents/siren/chat
+Content-Type: application/json
+
+{
+  "message": "Create a marketing campaign for our new feature",
+  "context": {
+    "user_id": "user_uuid",
+    "session_id": "session_uuid"
+  }
+}
+```
+
 ### Content Generation
 ```bash
-POST /marketing/generate-content
+POST /api/agents/siren/generate-content
 Content-Type: application/json
 
 {
   "content_type": "product_announcement",
   "context": {
-    "topic": "New Marketing Agent",
+    "topic": "New Siren Agent",
     "audience": "developers",
     "feature": "AI-powered content generation"
   }
@@ -80,28 +129,28 @@ Content-Type: application/json
 
 ### Twitter Post Creation
 ```bash
-POST /marketing/create-post
+POST /api/agents/siren/create-post
 Content-Type: application/json
 
 {
-  "content": "🚀 Just shipped our new Marketing Agent! #NullBlock #AgenticAI",
+  "content": "🚀 Just shipped our new Siren Agent! #NullBlock #AgenticAI",
   "media_urls": ["https://example.com/image.jpg"]
 }
 ```
 
 ### Project Analysis
 ```bash
-GET /marketing/analyze-project
+GET /api/agents/siren/analyze-project
 ```
 
 ### Health Check
 ```bash
-GET /marketing/health
+GET /api/agents/siren/health
 ```
 
 ### Content Themes
 ```bash
-GET /marketing/themes
+GET /api/agents/siren/themes
 ```
 
 ## 🎨 Content Types
@@ -214,14 +263,32 @@ Based on NullBlock's current state, the agent identifies:
 
 ## 🚀 Usage Examples
 
+### Chat with Siren
+```python
+import requests
+
+response = requests.post("http://localhost:3000/api/agents/siren/chat", json={
+    "message": "Create a marketing campaign for our new feature",
+    "context": {
+        "user_id": "user_uuid",
+        "session_id": "session_uuid"
+    }
+})
+
+result = response.json()
+print(f"Siren: {result['response']}")
+print(f"Agent: {result['agent_type']}")
+print(f"Confidence: {result['confidence_score']}")
+```
+
 ### Generate Product Announcement
 ```python
 import requests
 
-response = requests.post("http://localhost:9003/marketing/generate-content", json={
+response = requests.post("http://localhost:3000/api/agents/siren/generate-content", json={
     "content_type": "product_announcement",
     "context": {
-        "topic": "New Marketing Agent",
+        "topic": "New Siren Agent",
         "audience": "developers",
         "feature": "AI-powered content generation"
     }
@@ -234,7 +301,7 @@ print(f"Hashtags: {content['hashtags']}")
 
 ### Analyze Project Progress
 ```python
-response = requests.get("http://localhost:9003/marketing/analyze-project")
+response = requests.get("http://localhost:3000/api/agents/siren/analyze-project")
 analysis = response.json()["data"]
 
 print("Key Opportunities:")
@@ -244,8 +311,8 @@ for opp in analysis["key_opportunities"]:
 
 ### Create Twitter Post
 ```python
-response = requests.post("http://localhost:9003/marketing/create-post", json={
-    "content": "🚀 Just shipped our new Marketing Agent! #NullBlock #AgenticAI",
+response = requests.post("http://localhost:3000/api/agents/siren/create-post", json={
+    "content": "🚀 Just shipped our new Siren Agent! #NullBlock #AgenticAI",
     "media_urls": None
 })
 
@@ -316,15 +383,18 @@ The test script covers:
 
 ## 🔗 Integration
 
-The Marketing Agent integrates seamlessly with:
-- **Hecate Agent**: For conversational content generation
+Siren integrates seamlessly with:
+- **Hecate Agent**: For conversational content generation and orchestration
 - **Task Management**: Automated content creation based on project milestones
 - **Crossroads Marketplace**: Content about available services
-- **Erebus Router**: Unified API access for all marketing operations
+- **Erebus Router**: Unified API access for all marketing operations (Port 3000)
+- **Agent Discovery**: Real-time agent status and capabilities via `/api/discovery/agents`
+- **Frontend Integration**: Direct chat interface in Hecate frontend
+- **Database Sync**: PostgreSQL logical replication for user data consistency
 
 ---
 
-**The Marketing Agent is your AI-powered content creation partner, helping NullBlock build a strong social media presence and engage with the developer community effectively.**
+**Siren is your charismatic marketing and community orchestrator, helping NullBlock build a strong social media presence, drive viral outreach, and engage with the Web3 community through compelling narratives and strategic partnerships.**
 
 
 

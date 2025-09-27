@@ -27,7 +27,7 @@ pub struct CreateTwitterPostRequest {
 #[derive(Debug, Serialize)]
 pub struct MarketingContentResponse {
     pub success: bool,
-    pub data: Option<crate::agents::marketing::MarketingContent>,
+    pub data: Option<crate::agents::siren_marketing::MarketingContent>,
     pub error: Option<String>,
     pub timestamp: String,
 }
@@ -35,7 +35,7 @@ pub struct MarketingContentResponse {
 #[derive(Debug, Serialize)]
 pub struct TwitterPostResponse {
     pub success: bool,
-    pub data: Option<crate::agents::marketing::TwitterPostResult>,
+    pub data: Option<crate::agents::siren_marketing::TwitterPostResult>,
     pub error: Option<String>,
     pub timestamp: String,
 }
@@ -43,7 +43,7 @@ pub struct TwitterPostResponse {
 #[derive(Debug, Serialize)]
 pub struct ProjectAnalysisResponse {
     pub success: bool,
-    pub data: Option<crate::agents::marketing::ProjectAnalysis>,
+    pub data: Option<crate::agents::siren_marketing::ProjectAnalysis>,
     pub error: Option<String>,
     pub timestamp: String,
 }
@@ -140,10 +140,10 @@ pub async fn analyze_project_progress(
     }
 }
 
-pub async fn get_marketing_health(
+pub async fn get_siren_health(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
-    info!("🏥 Checking marketing agent health");
+    info!("🏥 Checking Siren agent health");
 
     let marketing_agent = state.marketing_agent.read().await;
     
@@ -155,7 +155,7 @@ pub async fn get_marketing_health(
 
     let health_data = serde_json::json!({
         "status": health_status,
-        "service": "marketing_agent",
+        "service": "siren_agent",
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "components": {
             "llm_factory": if marketing_agent.llm_factory.is_some() { "ready" } else { "not_initialized" },

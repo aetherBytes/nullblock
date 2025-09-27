@@ -49,8 +49,8 @@ interface ScopesProps {
   searchResults: any[];
   activeQuickAction: string | null;
   // Chat props for agent switching
-  activeAgent?: 'hecate' | 'marketing';
-  setActiveAgent?: (agent: 'hecate' | 'marketing') => void;
+  activeAgent?: 'hecate' | 'siren';
+  setActiveAgent?: (agent: 'hecate' | 'siren') => void;
   categoryModels: any[];
   isLoadingCategory: boolean;
   setCategoryModels: (models: any[]) => void;
@@ -717,7 +717,7 @@ const Scopes: React.FC<ScopesProps> = ({
                         >
                           ← Back to Agents
                         </button>
-                        <h4>{agentService.getAgentTypeIcon(selectedAgent.type)} {selectedAgent.name.charAt(0).toUpperCase() + selectedAgent.name.slice(1)} Agent</h4>
+                        <h4>{selectedAgent.name.charAt(0).toUpperCase() + selectedAgent.name.slice(1)}</h4>
                       </div>
 
                       <div className={styles.agentDetailsBody}>
@@ -785,7 +785,7 @@ const Scopes: React.FC<ScopesProps> = ({
                               console.log(`🔍 activeAgent current:`, activeAgent);
 
                               // Switch to the selected agent
-                              if (setActiveAgent && (selectedAgent.name === 'hecate' || selectedAgent.name === 'marketing')) {
+                              if (setActiveAgent && (selectedAgent.name === 'hecate' || selectedAgent.name === 'siren')) {
                                 setActiveAgent(selectedAgent.name);
                                 console.log(`🔄 Switched active agent to: ${selectedAgent.name}`);
 
@@ -846,7 +846,7 @@ const Scopes: React.FC<ScopesProps> = ({
                       <div className={styles.agentHeader}>
                         <div className={styles.agentInfo}>
                           <span className={styles.agentName}>
-                            {agentService.getAgentTypeIcon(agent.type)} {agent.name.charAt(0).toUpperCase() + agent.name.slice(1)} Agent
+                            {agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}
                           </span>
                           <span className={styles.agentType}>{agent.type}</span>
                         </div>

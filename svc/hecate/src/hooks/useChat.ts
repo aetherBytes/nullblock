@@ -3,7 +3,7 @@ import { useState, useRef } from 'react';
 interface ChatMessage {
   id: string;
   timestamp: Date;
-  sender: 'user' | 'hecate' | 'marketing';
+  sender: 'user' | 'hecate' | 'siren';
   message: string;
   type?: string;
   model_used?: string;
@@ -12,7 +12,7 @@ interface ChatMessage {
   taskName?: string;
   isTaskResult?: boolean;
   processingTime?: number;
-  agentType?: 'hecate' | 'marketing';
+  agentType?: 'hecate' | 'siren';
 }
 
 export const useChat = (publicKey: string | null) => {
@@ -21,7 +21,7 @@ export const useChat = (publicKey: string | null) => {
   const [isProcessingChat, setIsProcessingChat] = useState(false);
   const [chatAutoScroll, setChatAutoScroll] = useState(true);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
-  const [activeAgent, setActiveAgent] = useState<'hecate' | 'marketing'>('hecate');
+  const [activeAgent, setActiveAgent] = useState<'hecate' | 'siren'>('hecate');
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);

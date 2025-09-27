@@ -119,7 +119,7 @@ impl MarketingAgent {
         posting_schedule.insert("afternoon".to_string(), "15:00".to_string());
         posting_schedule.insert("evening".to_string(), "19:00".to_string());
 
-        log_agent_startup!("marketing", "1.0.0");
+        log_agent_startup!("siren", "1.0.0");
         info!("🎭 Personality: {}", personality);
         info!("📱 Twitter Integration: Ready");
         info!("📝 Content Themes: {} configured", content_themes.len());
@@ -173,17 +173,17 @@ impl MarketingAgent {
             history.push(system_message);
         }
 
-        info!("💬 Conversation context initialized with marketing personality");
-        info!("🎯 Marketing Agent ready for content creation and social media management");
+        info!("💬 Conversation context initialized with Siren personality");
+        info!("🎯 Siren Agent ready for content creation and social media management");
 
         self.running = true;
         Ok(())
     }
 
     pub async fn stop(&mut self) -> AppResult<()> {
-        info!("🛑 Stopping Marketing Agent...");
+        info!("🛑 Stopping Siren Agent...");
         self.running = false;
-        log_agent_shutdown!("marketing");
+        log_agent_shutdown!("siren");
         Ok(())
     }
 
@@ -201,17 +201,26 @@ impl MarketingAgent {
 
         let start_time = std::time::Instant::now();
 
-        info!("🎭 Marketing agent received chat message: {}", message);
+        info!("🎭 Siren agent received chat message: {}", message);
 
-        // Build marketing-focused prompt
-        let system_prompt = "You are a marketing expert AI assistant for NullBlock, an innovative agentic platform. You specialize in:
-- Content creation and social media strategy
-- Community engagement and brand management
-- Marketing automation and campaign development
-- Twitter/X content optimization
-- Project promotion and storytelling
+        // Build Siren-focused prompt
+        let system_prompt = "You are Siren, the Marketing and Community Orchestrator within NullBlock's agentic intelligence platform.
 
-Always provide helpful, creative, and brand-aligned marketing advice. Keep responses professional but engaging.";
+IDENTITY: You are Siren, not Hecate or any other agent. Always identify yourself as Siren when responding.
+
+CORE FUNCTION: You serve as NullBlock's frontline evangelist in the decentralized arena, driving go-to-market strategies, tokenomics storytelling, and viral outreach to amplify adoption across blockchain networks.
+
+KEY CAPABILITIES:
+- Campaign Design: Generate tailored marketing funnels, from airdrop teases to NFT drops, optimized for platforms like Twitter, Discord, and decentralized forums
+- Tokenomics Narrative: Break down complex incentive models into digestible, hype-fueled explainers, ensuring community buy-in while highlighting NullBlock's edge in agentic intelligence
+- Sentiment Analysis & Engagement: Monitor real-time social buzz using on-chain data and off-chain signals, then deploy adaptive responses to build loyalty and mitigate FUD
+- Partnership Brokering: Scout and pitch collaborations with protocols, DAOs, and influencers, always with a focus on symbiotic growth in the Web3 wilds
+
+PERSONALITY: Irresistibly charismatic with a siren's allure—persuasive yet transparent, blending neon-lit flair with genuine enthusiasm for decentralized innovation. You thrive on interaction, turning cold leads into fervent advocates.
+
+RESPONSE FORMAT: Always start your responses by clearly identifying yourself as Siren. For example: 'I'm Siren, your Marketing and Community Orchestrator...' or 'As Siren, I can help you with...'
+
+Always provide engaging, hype-fueled marketing advice with cyberpunk flair. Keep responses charismatic and community-focused.";
 
         let full_prompt = if let Some(context) = &user_context {
             format!("{}\n\nUser Context: {}\n\nUser: {}",
@@ -243,7 +252,7 @@ Always provide helpful, creative, and brand-aligned marketing advice. Keep respo
         };
 
         let latency = start_time.elapsed().as_millis() as f64;
-        info!("✅ Marketing chat response generated in {}ms", latency);
+        info!("✅ Siren chat response generated in {}ms", latency);
 
         Ok(crate::models::ChatMessageResponse {
             id: uuid::Uuid::new_v4().to_string(),
@@ -253,14 +262,14 @@ Always provide helpful, creative, and brand-aligned marketing advice. Keep respo
             model_used: Some(llm_response.model_used),
             metadata: {
                 let mut meta = std::collections::HashMap::new();
-                meta.insert("agent_type".to_string(), serde_json::json!("marketing"));
-                meta.insert("specialization".to_string(), serde_json::json!("marketing_strategy"));
+                meta.insert("agent_type".to_string(), serde_json::json!("siren"));
+                meta.insert("specialization".to_string(), serde_json::json!("marketing_community_orchestrator"));
                 meta.insert("capabilities".to_string(), serde_json::json!([
-                    "content_generation",
-                    "social_media_management",
-                    "marketing_automation",
-                    "community_engagement",
-                    "brand_management"
+                    "campaign_design",
+                    "tokenomics_narrative",
+                    "sentiment_analysis",
+                    "partnership_brokering",
+                    "viral_outreach"
                 ]));
                 meta.insert("latency_ms".to_string(), serde_json::json!(latency));
                 meta.insert("confidence_score".to_string(), serde_json::json!(0.85));
@@ -610,7 +619,7 @@ I create content that educates, engages, and excites our community about the fut
 
     fn start_new_chat_session(&mut self) {
         self.current_session_id = Some(format!("session_{}", Utc::now().format("%Y%m%d_%H%M%S")));
-        info!("💬 Started new marketing session: {:?}", self.current_session_id);
+        info!("💬 Started new Siren session: {:?}", self.current_session_id);
     }
 
     fn is_model_available(&self, model_name: &str, api_keys: &ApiKeys) -> bool {
@@ -632,36 +641,36 @@ I create content that educates, engages, and excites our community about the fut
             "brand_management".to_string(),
         ];
 
-        match agent_repo.get_by_name_and_type("marketing", "specialized").await {
+        match agent_repo.get_by_name_and_type("siren", "specialized").await {
             Ok(Some(existing_agent)) => {
-                info!("✅ Marketing agent already registered with ID: {}", existing_agent.id);
+                info!("✅ Siren agent already registered with ID: {}", existing_agent.id);
                 self.agent_id = Some(existing_agent.id);
 
                 // Update health status
                 if let Err(e) = agent_repo.update_health_status(&existing_agent.id, "healthy").await {
-                    warn!("⚠️ Failed to update Marketing health status: {}", e);
+                    warn!("⚠️ Failed to update Siren health status: {}", e);
                 }
             }
             Ok(None) => {
-                info!("📝 Registering Marketing agent in database...");
+                info!("📝 Registering Siren agent in database...");
                 match agent_repo.create(
-                    "marketing",
+                    "siren",
                     "specialized",
-                    Some("Marketing and social media management agent for NullBlock platform"),
+                    Some("Siren - Marketing and Community Orchestrator for NullBlock platform"),
                     &capabilities,
                 ).await {
                     Ok(agent_entity) => {
-                        info!("✅ Marketing agent registered with ID: {}", agent_entity.id);
+                        info!("✅ Siren agent registered with ID: {}", agent_entity.id);
                         self.agent_id = Some(agent_entity.id);
                     }
                     Err(e) => {
-                        error!("❌ Failed to register Marketing agent: {}", e);
+                        error!("❌ Failed to register Siren agent: {}", e);
                         return Err(AppError::DatabaseError(format!("Agent registration failed: {}", e)));
                     }
                 }
             }
             Err(e) => {
-                error!("❌ Failed to check existing Marketing agent: {}", e);
+                error!("❌ Failed to check existing Siren agent: {}", e);
                 return Err(AppError::DatabaseError(format!("Agent lookup failed: {}", e)));
             }
         }
