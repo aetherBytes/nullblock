@@ -30,3 +30,4 @@ COMMENT ON COLUMN user_references.source_identifier IS 'Generic identifier for t
 COMMENT ON COLUMN user_references.source_type IS 'Type of source: web3_wallet, email, api, system';
 COMMENT ON COLUMN user_references.wallet_type IS 'Specific wallet type for web3 sources: phantom, metamask, coinbase, etc.';
 COMMENT ON COLUMN user_references.additional_metadata IS 'Additional source-specific metadata like session info, IP addresses, etc.';
+

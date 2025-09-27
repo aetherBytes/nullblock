@@ -8,14 +8,23 @@ use tracing::{info, error};
 use uuid::Uuid;
 
 use crate::database::Database;
-use crate::user_references::{UserReferenceService, UserReference};
+use crate::user_references::{UserReferenceService, UserReference, SourceType};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateUserRequest {
     pub source_identifier: String,
-    pub chain: String,
-    pub source_type: Option<serde_json::Value>,
-    pub wallet_type: Option<String>,
+    pub network: String,                        // Renamed from 'chain' for source agnostic terminology
+    pub source_type: SourceType,                // Use proper SourceType enum instead of raw JSON
+    pub user_type: Option<String>,              // Optional user type (defaults to "external")
+    pub email: Option<String>,                  // Email address if available
+    pub metadata: Option<serde_json::Value>,    // General user metadata
+    pub preferences: Option<serde_json::Value>, // User preferences
+
+    // Legacy fields for backward compatibility (will be removed in future version)
+    #[serde(default)]
+    pub chain: Option<String>,                  // Legacy field name - maps to network
+    #[serde(default)]
+    pub wallet_type: Option<String>,            // Legacy wallet type - handled by source_type conversion
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,7 +38,11 @@ pub struct CreateUserResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LookupUserRequest {
     pub source_identifier: String,
-    pub chain: String,
+    pub network: String,                        // Renamed from 'chain' for source agnostic terminology
+
+    // Legacy field for backward compatibility
+    #[serde(default)]
+    pub chain: Option<String>,                  // Legacy field name - maps to network
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -71,18 +84,41 @@ pub async fn create_user_endpoint(
 
     let user_service = UserReferenceService::new(database);
 
-    let source_type = request.source_type.unwrap_or_else(|| serde_json::json!({
-        "type": "web3_wallet",
-        "provider": request.wallet_type.as_deref().unwrap_or("unknown"),
-        "metadata": {}
-    }));
+    // Handle backward compatibility for legacy 'chain' field
+    let network = if !request.network.is_empty() {
+        request.network.clone()
+    } else if let Some(legacy_chain) = request.chain.as_ref() {
+        info!("🔄 Using legacy 'chain' field value: {}", legacy_chain);
+        legacy_chain.clone()
+    } else {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            ResponseJson(ErrorResponse {
+                success: false,
+                error: "Either 'network' or legacy 'chain' field must be provided".to_string(),
+                code: "MISSING_NETWORK_FIELD".to_string(),
+            }),
+        ));
+    };
+
+    // Handle legacy wallet_type conversion to proper SourceType if needed
+    let source_type = if let Some(wallet_type) = request.wallet_type.as_ref() {
+        info!("🔄 Converting legacy wallet_type '{}' to SourceType::Web3Wallet", wallet_type);
+        SourceType::Web3Wallet {
+            provider: wallet_type.clone(),
+            network: network.clone(),
+            metadata: request.metadata.clone().unwrap_or_default(),
+        }
+    } else {
+        request.source_type
+    };
 
     match user_service
         .create_or_get_user(
             &request.source_identifier,
-            &request.chain,
+            &network,
             source_type,
-            request.wallet_type.as_deref(),
+            request.user_type.as_deref(),
         )
         .await
     {
@@ -135,8 +171,25 @@ pub async fn lookup_user_endpoint(
 
     let user_service = UserReferenceService::new(database);
 
+    // Handle backward compatibility for legacy 'chain' field
+    let network = if !request.network.is_empty() {
+        request.network.clone()
+    } else if let Some(legacy_chain) = request.chain.as_ref() {
+        info!("🔄 Using legacy 'chain' field value: {}", legacy_chain);
+        legacy_chain.clone()
+    } else {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            ResponseJson(ErrorResponse {
+                success: false,
+                error: "Either 'network' or legacy 'chain' field must be provided".to_string(),
+                code: "MISSING_NETWORK_FIELD".to_string(),
+            }),
+        ));
+    };
+
     match user_service
-        .get_user_by_source(&request.source_identifier, &request.chain)
+        .get_user_by_source(&request.source_identifier, &network)
         .await
     {
         Ok(user_opt) => {

@@ -42,3 +42,4 @@ COMMENT ON COLUMN user_references.additional_metadata IS 'Additional source-spec
 --   "last_login": "2024-01-01T00:00:00Z",
 --   "login_count": 42
 -- }
+

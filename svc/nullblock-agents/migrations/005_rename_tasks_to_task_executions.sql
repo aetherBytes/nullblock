@@ -32,3 +32,4 @@ COMMENT ON COLUMN task_executions.source_metadata IS 'JSON metadata about the so
 --   "ip_address": "192.168.1.1",
 --   "user_agent": "Mozilla/5.0..."
 -- }
+
