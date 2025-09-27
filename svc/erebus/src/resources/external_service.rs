@@ -27,7 +27,7 @@ impl ExternalService {
         Self {
             client: Client::new(),
             hecate_base_url: std::env::var("HECATE_BASE_URL")
-                .unwrap_or_else(|_| "http://localhost:9002".to_string()),
+                .unwrap_or_else(|_| "http://localhost:9003".to_string()),
             mcp_base_url: std::env::var("MCP_BASE_URL")
                 .unwrap_or_else(|_| "http://localhost:8001".to_string()),
             orchestration_base_url: std::env::var("ORCHESTRATION_BASE_URL")
