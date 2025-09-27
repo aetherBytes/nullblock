@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ModelInfo from './ModelInfo';
 import TaskCreationForm from './TaskCreationForm';
+import MarkdownRenderer from '../common/MarkdownRenderer';
 import styles from './hud.module.scss';
 import { Task } from '../../types/tasks';
 
@@ -333,7 +334,7 @@ const Scopes: React.FC<ScopesProps> = ({
             <div className={styles.taskDetailsSection}>
               <h5>Result</h5>
               <div className={styles.taskResultBox}>
-                <pre>{selectedTask.action_result}</pre>
+                <MarkdownRenderer content={selectedTask.action_result} />
               </div>
             </div>
           )}
