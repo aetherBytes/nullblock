@@ -252,8 +252,8 @@ class TaskService {
     if (filter.priority) {
       params.priority = filter.priority.join(',');
     }
-    if (filter.assigned_agent) {
-      params.assigned_agent = filter.assigned_agent;
+    if (filter.assigned_agent_id) {
+      params.assigned_agent_id = filter.assigned_agent_id;
     }
     if (filter.search_term) {
       params.search = filter.search_term;

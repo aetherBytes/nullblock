@@ -69,7 +69,7 @@ export interface Task {
   current_retries: number;
 
   // Agent assignment
-  assigned_agent?: string;
+  assigned_agent_id?: string;
   required_capabilities: string[];
 
   // User interaction
@@ -92,7 +92,7 @@ export interface TaskFilter {
   type?: TaskType[];
   category?: TaskCategory[];
   priority?: TaskPriority[];
-  assigned_agent?: string;
+  assigned_agent_id?: string;
   date_range?: {
     start: Date;
     end: Date;

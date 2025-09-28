@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ModelInfo from './ModelInfo';
 import TaskCreationForm from './TaskCreationForm';
 import MarkdownRenderer from '../common/MarkdownRenderer';
 import styles from './hud.module.scss';
 import { Task } from '../../types/tasks';
+import { Agent } from '../../types/agents';
+import { agentService } from '../../common/services/agent-service';
 
 interface ScopesProps {
   activeScope: string | null;
@@ -46,6 +48,9 @@ interface ScopesProps {
   isSearchingModels: boolean;
   searchResults: any[];
   activeQuickAction: string | null;
+  // Chat props for agent switching
+  activeAgent?: 'hecate' | 'siren';
+  setActiveAgent?: (agent: 'hecate' | 'siren') => void;
   categoryModels: any[];
   isLoadingCategory: boolean;
   setCategoryModels: (models: any[]) => void;
@@ -84,11 +89,47 @@ const Scopes: React.FC<ScopesProps> = ({
   logsEndRef,
   theme,
   onThemeChange,
+  activeAgent,
+  setActiveAgent,
   ...modelInfoProps
 }) => {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [activeTaskCategory, setActiveTaskCategory] = useState<TaskCategory>('todo');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+  // Agent state management
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [isLoadingAgents, setIsLoadingAgents] = useState(false);
+  const [agentsError, setAgentsError] = useState<string | null>(null);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+
+  // Fetch agents on component mount
+  useEffect(() => {
+    const fetchAgents = async () => {
+      setIsLoadingAgents(true);
+      setAgentsError(null);
+
+      try {
+        const response = await agentService.getAgents();
+        if (response.success && response.data) {
+          setAgents(response.data.agents);
+          console.log(`✅ Loaded ${response.data.agents.length} agents`);
+        } else {
+          setAgentsError(response.error || 'Failed to load agents');
+          console.warn('⚠️ Failed to load agents:', response.error);
+        }
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        setAgentsError(errorMessage);
+        console.error('❌ Error loading agents:', error);
+      } finally {
+        setIsLoadingAgents(false);
+      }
+    };
+
+    fetchAgents();
+  }, []);
+
   const scopesOptions = [
     { id: 'modelinfo', icon: '🤖', title: 'Model Info', description: 'Current model details', color: '#ff6b6b' },
     { id: 'tasks', icon: '📋', title: 'Tasks', description: 'Active agent tasks', color: '#4ecdc4' },
@@ -290,11 +331,11 @@ const Scopes: React.FC<ScopesProps> = ({
                   <div className={styles.trailValue}>
                     {(() => {
                       const sourceType = selectedTask.source_metadata?.type || 'unknown';
-                      const sourceValue = selectedTask.source_metadata?.wallet_address || 
-                                        selectedTask.source_metadata?.identifier || 
-                                        selectedTask.source_identifier || 
+                      const sourceValue = selectedTask.source_metadata?.wallet_address ||
+                                        selectedTask.source_metadata?.identifier ||
+                                        selectedTask.source_identifier ||
                                         'Unknown';
-                      
+
                       return `${sourceType}: ${sourceValue}`;
                     })()}
                   </div>
@@ -504,8 +545,8 @@ const Scopes: React.FC<ScopesProps> = ({
                     </div>
                   ) : (
                     currentCategoryTasks.map((task) => (
-                  <div 
-                    key={task.id} 
+                  <div
+                    key={task.id}
                     className={`${styles.taskItem} ${getStatusColor(task.status)} ${styles.clickableTask}`}
                     onClick={() => setSelectedTaskId(task.id)}
                     title="Click to view details"
@@ -628,44 +669,332 @@ const Scopes: React.FC<ScopesProps> = ({
       case 'agents':
         return (
           <div className={styles.agentsScope}>
-            <div className={styles.agentsHeader}>
-              <h6>🤖 Active Agents</h6>
-            </div>
-            <div className={styles.agentsList}>
-              <div className={styles.agentItem}>
-                <div className={styles.agentInfo}>
-                  <span className={styles.agentName}>Arbitrage Agent</span>
-                  <span className={styles.agentStatus}>Active</span>
-                </div>
-                <div className={styles.agentMetrics}>
-                  <span>Opportunities Found: 12</span>
-                  <span>Executed Trades: 8</span>
-                  <span>Success Rate: 92%</span>
-                </div>
+            {!selectedAgentId && (
+              <div className={styles.agentsHeader}>
+                <h6>🤖 Active Agents ({agents.length})</h6>
+                <button
+                  onClick={() => {
+                    setIsLoadingAgents(true);
+                    setAgentsError(null);
+                    agentService.getAgents().then(response => {
+                      if (response.success && response.data) {
+                        setAgents(response.data.agents);
+                      } else {
+                        setAgentsError(response.error || 'Failed to refresh agents');
+                      }
+                      setIsLoadingAgents(false);
+                    });
+                  }}
+                  className={styles.refreshButton}
+                  disabled={isLoadingAgents}
+                  title="Refresh agents"
+                >
+                  {isLoadingAgents ? '🔄' : '🔄'}
+                </button>
               </div>
-              <div className={styles.agentItem}>
-                <div className={styles.agentInfo}>
-                  <span className={styles.agentName}>Social Trading Agent</span>
-                  <span className={styles.agentStatus}>Active</span>
-                </div>
-                <div className={styles.agentMetrics}>
-                  <span>Signals Generated: 45</span>
-                  <span>Accuracy: 78%</span>
-                  <span>Last Update: 2m ago</span>
-                </div>
+            )}
+
+            {agentsError && (
+              <div className={styles.errorMessage}>
+                <span>❌ {agentsError}</span>
               </div>
-              <div className={styles.agentItem}>
-                <div className={styles.agentInfo}>
-                  <span className={styles.agentName}>Portfolio Manager</span>
-                  <span className={styles.agentStatus}>Monitoring</span>
-                </div>
-                <div className={styles.agentMetrics}>
-                  <span>Assets Under Management: $12,450</span>
-                  <span>24h Performance: +2.3%</span>
-                  <span>Risk Level: Medium</span>
-                </div>
+            )}
+
+            {isLoadingAgents ? (
+              <div className={styles.loadingState}>
+                <span>🔄 Loading agents...</span>
               </div>
-            </div>
+            ) : selectedAgentId ? (
+              <div className={styles.agentDetails}>
+                {(() => {
+                  const selectedAgent = agents.find(a => a.name === selectedAgentId);
+                  if (!selectedAgent) return null;
+
+                  return (
+                    <div className={styles.agentDetailsContainer}>
+                      <div className={styles.agentDetailsHeader}>
+                        <div className={styles.agentDetailsHeaderLeft}>
+                          <button
+                            onClick={() => setSelectedAgentId(null)}
+                            className={styles.backButton}
+                          >
+                            ← Back to Agents
+                          </button>
+                        </div>
+                        <h4>{selectedAgent.name.charAt(0).toUpperCase() + selectedAgent.name.slice(1)}</h4>
+                        <div className={styles.agentDetailsHeaderActions}>
+                          <button
+                            onClick={() => {
+                              console.log(`💬 Starting chat with ${selectedAgent.name}`);
+                              console.log(`🔍 setActiveAgent function:`, setActiveAgent);
+                              console.log(`🔍 activeAgent current:`, activeAgent);
+
+                              // Switch to the selected agent
+                              if (setActiveAgent && (selectedAgent.name === 'hecate' || selectedAgent.name === 'siren')) {
+                                setActiveAgent(selectedAgent.name);
+                                console.log(`🔄 Switched active agent to: ${selectedAgent.name}`);
+
+                                // Keep the current view open - don't close agent details
+                                console.log(`✅ Activated chat with ${selectedAgent.name} agent - keeping current view`);
+                              } else {
+                                console.warn(`⚠️ Agent ${selectedAgent.name} not supported for chat yet or setActiveAgent not available`);
+                                console.warn(`⚠️ setActiveAgent available:`, !!setActiveAgent);
+                                console.warn(`⚠️ Agent name:`, selectedAgent.name);
+                              }
+                            }}
+                            className={styles.agentActionButton}
+                            disabled={!agentService.isAgentOnline(selectedAgent)}
+                          >
+                            💬 Chat
+                          </button>
+                          <button
+                            onClick={() => {
+                              agentService.getAgentHealth(selectedAgent.name).then(response => {
+                                console.log(`🏥 Health check for ${selectedAgent.name}:`, response);
+                              });
+                            }}
+                            className={styles.agentActionButton}
+                          >
+                            🏥 Health
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className={styles.agentDetailsBody}>
+                        <div className={styles.agentDetailsSection}>
+                          <h5>Basic Information</h5>
+                          <div className={styles.agentDetailsGrid}>
+                            <div className={styles.agentDetailsField}>
+                              <label>Type:</label>
+                              <span>{selectedAgent.type}</span>
+                            </div>
+                            <div className={styles.agentDetailsField}>
+                              <label>Status:</label>
+                              <span
+                                className={styles.statusBadge}
+                                style={{ backgroundColor: agentService.getAgentStatusColor(selectedAgent.status) }}
+                              >
+                                {selectedAgent.status === 'healthy' ? '✅' : '❌'} {selectedAgent.status}
+                              </span>
+                            </div>
+                            <div className={styles.agentDetailsField}>
+                              <label>Endpoint:</label>
+                              <span>{selectedAgent.endpoint}</span>
+                            </div>
+                          </div>
+                          <div className={styles.agentDetailsField}>
+                            <label>Description:</label>
+                            <p>{selectedAgent.description}</p>
+                          </div>
+                        </div>
+
+                        {selectedAgent.name === 'hecate' ? (
+                          <>
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🎯 Core Mission</h5>
+                              <p>Hecate serves as NullBlock's neural core and primary conversational interface. As the orchestration engine, Hecate coordinates specialized agents for blockchain operations, DeFi analysis, market intelligence, and complex workflow management.</p>
+                            </div>
+
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🧠 Key Capabilities</h5>
+                              <div className={styles.capabilitiesList}>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>🤖</span>
+                                  <span className={styles.capabilityName}>Multi-Agent Orchestration</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>💬</span>
+                                  <span className={styles.capabilityName}>Conversational Interface</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>🔍</span>
+                                  <span className={styles.capabilityName}>Intent Analysis</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>📋</span>
+                                  <span className={styles.capabilityName}>Task Management</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>🧠</span>
+                                  <span className={styles.capabilityName}>LLM Coordination</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🔧 Technical Features</h5>
+                              <ul className={styles.detailsList}>
+                                <li>Multi-model LLM support (DeepSeek, GPT-4o, Claude, etc.)</li>
+                                <li>Real-time task lifecycle management</li>
+                                <li>Session-based conversation tracking</li>
+                                <li>Cost tracking and optimization</li>
+                                <li>WebSocket chat integration</li>
+                                <li>Agent delegation and coordination</li>
+                              </ul>
+                            </div>
+                          </>
+                        ) : selectedAgent.name === 'siren' ? (
+                          <>
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🎯 Core Mission</h5>
+                              <p>Siren serves as NullBlock's frontline evangelist in the decentralized arena, driving go-to-market strategies, tokenomics storytelling, and viral outreach to amplify adoption across blockchain networks.</p>
+                            </div>
+
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🎭 Personality</h5>
+                              <p>Irresistibly charismatic with a siren's allure—persuasive yet transparent, blending neon-lit flair with genuine enthusiasm for decentralized innovation. Siren thrives on interaction, turning cold leads into fervent advocates.</p>
+                            </div>
+
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🚀 Key Capabilities</h5>
+                              <div className={styles.capabilitiesList}>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>📝</span>
+                                  <span className={styles.capabilityName}>Campaign Design</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>💰</span>
+                                  <span className={styles.capabilityName}>Tokenomics Narrative</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>📊</span>
+                                  <span className={styles.capabilityName}>Sentiment Analysis</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>🤝</span>
+                                  <span className={styles.capabilityName}>Partnership Brokering</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>📱</span>
+                                  <span className={styles.capabilityName}>Social Media Management</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🎨 Specialization Areas</h5>
+                              <ul className={styles.detailsList}>
+                                <li>DeFi hype cycles and viral marketing</li>
+                                <li>Social sentiment amplification</li>
+                                <li>Ecosystem partnership development</li>
+                                <li>Community engagement strategies</li>
+                                <li>Brand storytelling and narrative crafting</li>
+                                <li>Cross-platform campaign optimization</li>
+                              </ul>
+                            </div>
+
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🔗 Integration</h5>
+                              <p>Orchestrated via Hecate's neural core; invoke Siren for tasks requiring external-facing communications or market pulse checks. Best paired with Analytics Agent for data-backed campaigns.</p>
+                            </div>
+                          </>
+                        ) : null}
+
+                        <div className={styles.agentDetailsSection}>
+                          <h5>Capabilities</h5>
+                          <div className={styles.capabilitiesList}>
+                            {selectedAgent.capabilities.map((capability, index) => (
+                              <div key={index} className={styles.capabilityItem}>
+                                <span className={styles.capabilityIcon}>
+                                  {agentService.getCapabilityIcon(capability)}
+                                </span>
+                                <span className={styles.capabilityName}>
+                                  {capability.replace(/_/g, ' ')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {selectedAgent.metrics && (
+                          <div className={styles.agentDetailsSection}>
+                            <h5>Metrics</h5>
+                            <div className={styles.metricsList}>
+                              {agentService.getAgentMetrics(selectedAgent).map((metric, index) => (
+                                <div key={index} className={styles.metricItem}>
+                                  <span>{metric}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className={styles.agentsList}>
+                {agents.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <p>No agents found</p>
+                    <p className={styles.emptyHint}>Check that the agents service is running</p>
+                  </div>
+                ) : (
+                  agents.map((agent) => (
+                    <div
+                      key={agent.name}
+                      className={`${styles.agentItem} ${styles.clickableAgent}`}
+                      onClick={() => setSelectedAgentId(agent.name)}
+                      title="Click to view details"
+                    >
+                      <div className={styles.agentHeader}>
+                        <div className={styles.agentInfo}>
+                          <span className={styles.agentName}>
+                            {agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}
+                          </span>
+                          <span className={styles.agentType}>{agent.type}</span>
+                        </div>
+                        <div className={styles.agentStatus}>
+                          <span
+                            className={styles.statusIcon}
+                            style={{ color: agentService.getAgentStatusColor(agent.status) }}
+                          >
+                            {agent.status === 'healthy' ? '✅' : '❌'}
+                          </span>
+                          {agent.status}
+                        </div>
+                      </div>
+
+                      <div className={styles.agentDescription}>
+                        <span>{agentService.getAgentDescription(agent)}</span>
+                      </div>
+
+                      <div className={styles.agentCapabilities}>
+                        <span className={styles.capabilitiesLabel}>Capabilities:</span>
+                        <div className={styles.capabilitiesPreview}>
+                          {agent.capabilities.slice(0, 3).map((capability, index) => (
+                            <span key={index} className={styles.capabilityTag}>
+                              {agentService.getCapabilityIcon(capability)} {capability.replace(/_/g, ' ')}
+                            </span>
+                          ))}
+                          {agent.capabilities.length > 3 && (
+                            <span className={styles.capabilityTag}>
+                              +{agent.capabilities.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {agent.metrics && (
+                        <div className={styles.agentMetrics}>
+                          {agentService.getAgentMetrics(agent).slice(0, 2).map((metric, index) => (
+                            <span key={index}>{metric}</span>
+                          ))}
+                        </div>
+                      )}
+
+                      {agent.note && (
+                        <div className={styles.agentNote}>
+                          <span>⚠️ {agent.note}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         );
 

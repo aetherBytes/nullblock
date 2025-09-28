@@ -405,7 +405,10 @@ impl OllamaProvider {
 
         Self {
             client,
-            base_url: base_url.unwrap_or_else(|| "http://localhost:11434".to_string()),
+            base_url: base_url.unwrap_or_else(|| {
+                std::env::var("OLLAMA_BASE_URL")
+                    .unwrap_or_else(|_| "http://localhost:11434".to_string())
+            }),
         }
     }
 }

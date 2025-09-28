@@ -13,9 +13,16 @@ use super::proxy::{AgentProxy, AgentRequest, AgentResponse, AgentStatus, AgentEr
 
 /// Hecate agent proxy instance - now points to Rust service
 fn get_hecate_proxy() -> AgentProxy {
-    let hecate_url = std::env::var("HECATE_AGENT_URL")
+    let hecate_url = std::env::var("AGENTS_SERVICE_URL")
         .unwrap_or_else(|_| "http://localhost:9003".to_string());
     AgentProxy::new(hecate_url)
+}
+
+/// Siren agent proxy instance - also uses the Rust service
+fn get_siren_proxy() -> AgentProxy {
+    let siren_url = std::env::var("AGENTS_SERVICE_URL")
+        .unwrap_or_else(|_| "http://localhost:9003".to_string());
+    AgentProxy::new(siren_url)
 }
 
 /// Extract wallet address from request headers and create user reference if needed
@@ -48,7 +55,8 @@ async fn extract_wallet_and_create_user(headers: &HeaderMap) -> Option<Uuid> {
 
 /// Call Erebus user registration API (replaces direct database access)
 async fn call_erebus_user_registration_api(wallet_address: &str, chain: &str, source_type: Option<serde_json::Value>) -> Result<Uuid, String> {
-    let erebus_url = "http://localhost:3000";
+    let erebus_url = std::env::var("EREBUS_BASE_URL")
+        .unwrap_or_else(|_| "http://localhost:3000".to_string());
     let client = reqwest::Client::new();
 
     let request_body = serde_json::json!({
@@ -213,6 +221,35 @@ pub async fn hecate_chat(Json(request): Json<AgentRequest>) -> Result<ResponseJs
     }
 }
 
+/// Proxy chat request to Siren agent
+pub async fn siren_chat(Json(request): Json<AgentRequest>) -> Result<ResponseJson<AgentResponse>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("🎭 Siren chat request received");
+    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+
+    let proxy = get_siren_proxy();
+
+    match proxy.proxy_siren_chat(request).await {
+        Ok(response) => {
+            info!("✅ Siren chat response successful");
+            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            Ok(ResponseJson(response))
+        }
+        Err(error) => {
+            error!("❌ Siren chat request failed");
+            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+
+            let status_code = match error.code.as_str() {
+                "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
+                "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
+                "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+
+            Err((status_code, ResponseJson(error)))
+        }
+    }
+}
+
 /// Get Hecate agent status
 pub async fn hecate_status() -> Result<ResponseJson<AgentStatus>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📊 Hecate status request received");
@@ -251,6 +288,7 @@ pub async fn agent_chat(
     
     match agent_name.as_str() {
         "hecate" => hecate_chat(Json(request)).await,
+        "siren" => siren_chat(Json(request)).await,
         _ => {
             let error = AgentErrorResponse {
                 error: "agent_not_found".to_string(),

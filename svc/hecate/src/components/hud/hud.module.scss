@@ -5526,6 +5526,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   flex: 1;
   overflow-y: auto;
   padding-right: 0.5rem;
+  height: 100%;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -5550,6 +5551,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  text-align: left;
 
   &:hover {
     border-color: rgba($echo-blue, 0.4);
@@ -5576,6 +5578,431 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+// Agent-specific styles
+.clickableAgent {
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    border-color: rgba($echo-blue, 0.5);
+    background: rgba($background-dark, 0.5);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba($echo-blue, 0.15);
+  }
+
+  &:active {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba($echo-blue, 0.2);
+  }
+}
+
+.agentDetails {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.3);
+    border-radius: 2px;
+  }
+}
+
+.agentDetailsContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.agentDetailsHeader {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba($echo-blue, 0.2);
+
+  h4 {
+    margin: 0;
+    color: $echo-blue;
+    font-size: 1.1rem;
+    text-align: center;
+  }
+}
+
+.agentDetailsHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.agentDetailsHeaderActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.agentDetailsBody {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  text-align: left;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba($echo-blue, 0.3);
+    border-radius: 2px;
+  }
+}
+
+.agentDetailsSection {
+  margin-bottom: 1.5rem;
+  text-align: left;
+
+  h5 {
+    color: $echo-blue;
+    margin: 0 0 0.75rem 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: left;
+  }
+}
+
+.agentDetailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.agentDetailsField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  label {
+    font-size: 0.8rem;
+    color: rgba($text-color, 0.7);
+    font-weight: 500;
+  }
+
+  span, p {
+    color: $text-color;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.capabilitiesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.capabilityItem {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba($echo-blue, 0.1);
+  border: 1px solid rgba($echo-blue, 0.2);
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.capabilityIcon {
+  font-size: 0.9rem;
+}
+
+.capabilityName {
+  color: $text-color;
+  text-transform: capitalize;
+}
+
+.metricsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.metricItem {
+  padding: 0.5rem;
+  background: rgba($background-dark, 0.4);
+  border: 1px solid rgba($echo-blue, 0.1);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: $text-color;
+}
+
+.detailsList {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: $text-color;
+  line-height: 1.6;
+  text-align: left;
+
+  li {
+    margin-bottom: 0.5rem;
+    text-align: left;
+
+    strong {
+      color: $echo-blue;
+      font-weight: 600;
+    }
+  }
+}
+
+
+.agentActionButton {
+  padding: 0.4rem 0.8rem;
+  background: rgba($echo-blue, 0.1);
+  border: 1px solid rgba($echo-blue, 0.3);
+  border-radius: 4px;
+  color: $echo-blue;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: rgba($echo-blue, 0.2);
+    border-color: rgba($echo-blue, 0.5);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.backButton {
+  background: rgba($echo-red, 0.1);
+  border: 1px solid rgba($echo-red, 0.3);
+  border-radius: 4px;
+  color: $echo-red;
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba($echo-red, 0.2);
+    border-color: rgba($echo-red, 0.5);
+  }
+}
+
+.agentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.agentName {
+  font-weight: 600;
+  color: $echo-blue;
+  font-size: 1rem;
+}
+
+.agentType {
+  font-size: 0.75rem;
+  color: rgba($text-color, 0.6);
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.agentStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.statusIcon {
+  font-size: 0.9rem;
+}
+
+.agentDescription {
+  margin-bottom: 0.75rem;
+
+  span {
+    color: rgba($text-color, 0.8);
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+}
+
+.agentCapabilities {
+  margin-bottom: 0.75rem;
+}
+
+.capabilitiesLabel {
+  font-size: 0.75rem;
+  color: rgba($text-color, 0.6);
+  margin-bottom: 0.5rem;
+  display: block;
+  font-weight: 500;
+}
+
+.capabilitiesPreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.capabilityTag {
+  padding: 0.2rem 0.4rem;
+  background: rgba($echo-blue, 0.1);
+  border: 1px solid rgba($echo-blue, 0.2);
+  border-radius: 3px;
+  font-size: 0.7rem;
+  color: $text-color;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.agentMetrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+
+  span {
+    font-size: 0.75rem;
+    color: rgba($text-color, 0.7);
+  }
+}
+
+.agentNote {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba($echo-orange, 0.1);
+  border: 1px solid rgba($echo-orange, 0.2);
+  border-radius: 4px;
+
+  span {
+    font-size: 0.75rem;
+    color: $echo-orange;
+  }
+}
+
+.refreshButton {
+  background: rgba($echo-green, 0.1);
+  border: 1px solid rgba($echo-green, 0.3);
+  border-radius: 4px;
+  color: $echo-green;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba($echo-green, 0.2);
+    border-color: rgba($echo-green, 0.5);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.agentsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+
+  h6 {
+    margin: 0;
+    color: $echo-blue;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+.errorMessage {
+  padding: 0.75rem;
+  background: rgba($echo-red, 0.1);
+  border: 1px solid rgba($echo-red, 0.2);
+  border-radius: 4px;
+  margin-bottom: 1rem;
+
+  span {
+    color: $echo-red;
+    font-size: 0.85rem;
+  }
+}
+
+.loadingState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+
+  span {
+    color: $text-color;
+    font-size: 0.9rem;
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+
+  p {
+    margin: 0.25rem 0;
+    color: rgba($text-color, 0.7);
+    font-size: 0.9rem;
+  }
+}
+
+.emptyHint {
+  font-size: 0.8rem !important;
+  color: rgba($text-color, 0.5) !important;
+}
+
 .taskHeader, .mcpHeader {
   display: flex;
   justify-content: space-between;
@@ -5590,6 +6017,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   gap: 0.25rem;
   flex: 1;
   min-width: 0;
+  text-align: left;
 }
 
 .taskName, .mcpName, .agentName {
@@ -5598,6 +6026,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   font-family: 'Courier New', monospace;
   font-size: 1rem;
   line-height: 1.2;
+  text-align: left;
 }
 
 .taskType, .mcpStatus, .agentStatus {
@@ -5610,6 +6039,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   border-radius: 3px;
   display: inline-block;
   width: fit-content;
+  text-align: left;
 }
 
 .taskStatus {
@@ -6501,6 +6931,11 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     background: rgba(0, 0, 0, 0.8);
   }
 
+  &.message-siren {
+    border-color: rgba($echo-purple, 0.5);
+    background: rgba(0, 0, 0, 0.8);
+  }
+
   &.message-user {
     border-color: rgba($lightning-silver, 0.4);
     background: rgba(0, 0, 0, 0.6);
@@ -6523,10 +6958,36 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
 }
 
+.clickableAgentName {
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: rgba($echo-blue, 0.2);
+    color: $echo-blue;
+    text-shadow: 0 0 5px rgba($echo-blue, 0.5);
+    transform: scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
 .hecateMessageSender {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.sirenMessageSender {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: $echo-purple;
 }
 
 .messageTime {
@@ -10509,6 +10970,15 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     padding-bottom: 0.5rem;
     border-bottom: 1px solid rgba($echo-blue, 0.2);
   }
+}
+
+// Agents Scope Styles
+.agentsScope {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: 1;
+  overflow: hidden;
 }
 
 // Dedicated scroll container for tasks - completely unique to avoid conflicts
