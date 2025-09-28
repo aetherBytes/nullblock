@@ -116,7 +116,7 @@ print_status() {
     local ipfs_status=$(check_service "ipfs daemon" "" "" "process")
     
     # Backend Services
-    local mcp_status=$(check_service "MCP" "8001" "http://localhost:8001/health" "http")
+    local protocols_status=$(check_service "Protocols" "8001" "http://localhost:8001/health" "http")
     local orch_status=$(check_service "Orchestration" "8002" "http://localhost:8002/health" "http")
     local erebus_status=$(check_service "Erebus" "3000" "http://localhost:3000/health" "http")
     
@@ -128,12 +128,12 @@ print_status() {
     local openrouter_status=$(check_service "OpenRouter" "" "" "openrouter")
     
     echo -e "${WHITE}│ Infrastructure: ${postgres15_status} PG@15 ${postgres17_status} PG@17 ${redis_status} Redis ${ipfs_status} IPFS                        │${NC}"
-    echo -e "${WHITE}│ Backend:        ${mcp_status} MCP:8001 ${orch_status} Orchestration:8002 ${erebus_status} Erebus:3000            │${NC}"
+    echo -e "${WHITE}│ Backend:        ${protocols_status} Protocols:8001 ${orch_status} Orchestration:8002 ${erebus_status} Erebus:3000     │${NC}"
     echo -e "${WHITE}│ Agents:         ${hecate_status} Hecate:9003                                          │${NC}"
     echo -e "${WHITE}│ Frontend:       ${frontend_status} Vite:5173 ${openrouter_status} OpenRouter API                        │${NC}"
     
     # Count services
-    local all_statuses=("$postgres15_status" "$postgres17_status" "$redis_status" "$ipfs_status" "$mcp_status" "$orch_status" "$erebus_status" "$hecate_status" "$frontend_status" "$openrouter_status")
+    local all_statuses=("$postgres15_status" "$postgres17_status" "$redis_status" "$ipfs_status" "$protocols_status" "$orch_status" "$erebus_status" "$hecate_status" "$frontend_status" "$openrouter_status")
     local online_count=0
     for status in "${all_statuses[@]}"; do
         if [[ "$status" == "✅" ]]; then
@@ -163,7 +163,7 @@ show_log_summary() {
         "$HOME/nullblock/logs/frontend.log"
         "$HOME/nullblock/logs/ipfs.log"
         "$HOME/nullblock/logs/erebus.log"
-        "$HOME/nullblock/logs/mcp.log"
+        "$HOME/nullblock/logs/protocols.log"
         "$HOME/nullblock/logs/orchestration.log"
 
         # Agent logs (actual paths)
@@ -173,7 +173,7 @@ show_log_summary() {
         "$HOME/nullblock/svc/nullblock-agents/agents.log"
 
         # Service-specific logs
-        "$HOME/nullblock/svc/nullblock-mcp/logs/mcp-server.log"
+        "$HOME/nullblock/svc/nullblock-protocols/logs/protocols-server.log"
         "$HOME/nullblock/svc/nullblock-orchestration/logs/orchestration.log"
 
         # Erebus logs

@@ -11,15 +11,15 @@ END
 $$;
 
 -- Create databases for each service
-CREATE DATABASE nullblock_mcp OWNER nullblock;
+CREATE DATABASE nullblock_protocols OWNER nullblock;
 CREATE DATABASE nullblock_orchestration OWNER nullblock;
 CREATE DATABASE nullblock_agents OWNER nullblock;
 CREATE DATABASE nullblock_erebus OWNER nullblock;
 CREATE DATABASE nullblock_hecate OWNER nullblock;
 CREATE DATABASE nullblock_platform OWNER nullblock;
 
--- Connect to MCP database and create schema
-\c nullblock_mcp;
+-- Connect to Protocols database and create schema
+\c nullblock_protocols;
 
 CREATE TABLE IF NOT EXISTS wallet_sessions (
     id SERIAL PRIMARY KEY,

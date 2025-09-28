@@ -82,7 +82,7 @@ DEX_API_KEYS=your-dex-api-keys
 SOLANA_RPC_URL=https://api.devnet.solana.com
 
 # Frontend Configuration
-VITE_MCP_API_URL=http://localhost:8000
+VITE_PROTOCOLS_API_URL=http://localhost:8001
 VITE_ORCHESTRATION_API_URL=http://localhost:8001
 VITE_AGENTS_API_URL=http://localhost:8002
 EOF
@@ -96,9 +96,9 @@ EOF
 build_services() {
     print_status "Building all Nullblock services..."
     
-    # Build MCP service
-    print_status "Building Nullblock MCP..."
-    docker-compose build nullblock-mcp
+    # Build Protocols service
+    print_status "Building Nullblock Protocols..."
+    docker-compose build nullblock-protocols
     
     # Build orchestration service
     print_status "Building Nullblock Orchestration..."
@@ -137,7 +137,7 @@ start_services() {
     
     # Start core services
     print_status "Starting core services..."
-    docker-compose up -d nullblock-mcp nullblock-orchestration nullblock-agents
+    docker-compose up -d nullblock-protocols nullblock-orchestration nullblock-agents
     
     # Wait for core services
     print_status "Waiting for core services to be ready..."
@@ -158,7 +158,7 @@ verify_databases() {
     while [ $attempt -le $max_attempts ]; do
         print_status "Checking databases (attempt $attempt/$max_attempts)..."
         
-        if docker exec nullblock-postgres psql -U postgres -d postgres -c "SELECT 1 FROM pg_database WHERE datname='nullblock_mcp'" | grep -q 1; then
+        if docker exec nullblock-postgres psql -U postgres -d postgres -c "SELECT 1 FROM pg_database WHERE datname='nullblock_protocols'" | grep -q 1; then
             print_success "All databases are ready"
             return 0
         else
@@ -180,7 +180,7 @@ check_health() {
         "postgres:5432"
         "redis:6379"
         "ipfs:5001"
-        "nullblock-mcp:8000"
+        "nullblock-protocols:8001"
         "nullblock-orchestration:8001"
         "nullblock-agents:8002"
         "hecate:5173"
@@ -208,7 +208,7 @@ show_status() {
     echo ""
     print_status "Service URLs:"
     echo "  Frontend (Hecate): http://localhost:5173"
-    echo "  MCP API: http://localhost:8000"
+    echo "  Protocols API: http://localhost:8001"
     echo "  Orchestration API: http://localhost:8001"
     echo "  Agents API: http://localhost:8002"
     echo "  IPFS Gateway: http://localhost:8080"

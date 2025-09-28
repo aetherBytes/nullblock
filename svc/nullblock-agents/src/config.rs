@@ -70,7 +70,11 @@ impl Config {
                     .parse()
                     .map_err(|e| ConfigError::Parse(format!("AGENTS_PORT: {}", e)))?,
                 cors_origins: env::var("CORS_ORIGINS")
-                    .unwrap_or_else(|_| "http://localhost:5173,http://localhost:3000".to_string())
+                    .unwrap_or_else(|_| {
+                        let frontend_url = env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
+                        let erebus_url = env::var("EREBUS_BASE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+                        format!("{},{}", frontend_url, erebus_url)
+                    })
                     .split(',')
                     .map(|s| s.trim().to_string())
                     .collect(),

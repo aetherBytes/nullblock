@@ -15,7 +15,7 @@ Together, we shape the future of autonomous commerce.
 
 ## 🌐 Connect & Follow
 
-**🧑‍💻 Developer**: [@pervySoftware](https://x.com/pervySoftware) - https://x.com/pervySoftware
+**🧑‍💻 Developer**: [@sage_nullblock](https://x.com/sage_nullblock) - https://x.com/sage_nullblock
 **🏢 Official**: [@Nullblock_io](https://x.com/Nullblock_io) - https://x.com/Nullblock_io
 **📦 SDK**: [nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk) - https://github.com/aetherBytes/nullblock-sdk
 **🌍 Site**: NullBlock.io _(Coming Soon)_
@@ -28,9 +28,9 @@ Together, we shape the future of autonomous commerce.
 
 **Next 3 Priority Items:**
 
-1. **✅ User References Source Agnostic** - COMPLETED: Redesigned user_references table to support multiple source types (Web3, API, Email, OAuth, System Agents)
-2. **✅ PostgreSQL Logical Replication** - COMPLETED: Replaced failing Python sync scripts with native PostgreSQL logical replication for real-time user data sync between Erebus and Agents databases
-3. **✅ Agent Service Integration & Frontend Enhancement** - COMPLETED: Enhanced agent discovery system and updated Hecate frontend Agents scope with real-time agent data integration
+1. **✅ Multi-Protocol Service** - COMPLETED: Converted Python nullblock-mcp to Rust nullblock-protocols service with full A2A and MCP protocol support
+2. **🔄 Database Table Rename: task_executions → tasks** - Clean migrations create `tasks` table but current database has `task_executions`. Need to rename table and update all Rust code references (models, queries, foreign keys, indexes) to match clean migration schema.
+3. **✅ User References Source Agnostic** - COMPLETED: Redesigned user_references table to support multiple source types (Web3, API, Email, OAuth, System Agents)
 
 ## 🎨 Visual Overview
 
@@ -61,7 +61,7 @@ Together, we shape the future of autonomous commerce.
 - **🤖 Agent Orchestration**: Multi-model LLM coordination via Hecate
 - **🛣️ Unified Router**: Single entry point through Erebus (Port 3000)
 - **💰 Marketplace**: Crossroads AI service discovery and monetization
-- **🔗 Protocol Agnostic**: MCP, A2A, and custom protocol support
+- **🔗 Protocol Agnostic**: A2A (Agent-to-Agent), MCP (Model Context Protocol), and custom protocol support
 - **⚡ Real-time**: WebSocket chat, live task management, instant feedback
 
 **Core Architecture**: Client ↔ NullBlock (Agentic Platform) ↔ Server (Web3 wallets, APIs, etc.)
@@ -70,7 +70,7 @@ Together, we shape the future of autonomous commerce.
 
 ### Production-Ready Components ✅
 
-- **NullBlock.mcp** (`/svc/nullblock-mcp/`): Complete MCP server with authentication, context storage, security middleware
+- **NullBlock.protocols** (`/svc/nullblock-protocols/`): Multi-protocol server supporting A2A and MCP protocols for agent communication
 - **NullBlock.agents** (`/svc/nullblock-agents/`): Agent suite including Hecate orchestrator, trading, monitoring, LLM coordination
 - **Erebus** (`/svc/erebus/`): Unified routing server for wallet interactions and agent communication
 - **Crossroads** (`/svc/erebus/src/resources/crossroads/`): Marketplace and discovery subsystem integrated into Erebus
@@ -78,7 +78,7 @@ Together, we shape the future of autonomous commerce.
 
 ### Legacy Components (Transitioning)
 
-- **Helios** (`/svc/helios/`): Original FastAPI backend → **Replaced by NullBlock.mcp**
+- **Helios** (`/svc/helios/`): Original FastAPI backend → **Replaced by NullBlock.protocols**
 - **NullBlock.orchestration** (`/svc/nullblock-orchestration/`): Workflow engine → **Integrated into agents**
 
 ## 🚀 Quick Start
@@ -90,8 +90,8 @@ Together, we shape the future of autonomous commerce.
 ./scripts/dev-tmux
 
 # Individual service startup:
-# - MCP Server: cd svc/nullblock-mcp && python -m mcp.server
-# - Hecate Agent: cd svc/nullblock-agents && python -m agents.hecate.server
+# - Protocol Server: cd svc/nullblock-protocols && cargo run
+# - Hecate Agent: cd svc/nullblock-agents && cargo run
 # - Erebus Server: cd svc/erebus && cargo run
 # - Frontend: cd svc/hecate && npm run develop
 ```
@@ -100,7 +100,7 @@ Together, we shape the future of autonomous commerce.
 
 - **3000**: Erebus (unified backend router + Crossroads marketplace)
 - **5173**: Hecate frontend (development)
-- **8001**: MCP server
+- **8001**: Protocol server (A2A/MCP)
 - **9001**: General agents API
 - **9003**: Hecate agent API (Rust service)
 
@@ -115,7 +115,7 @@ Frontend → Erebus → {
   Wallet operations → Internal wallet handlers
   Agent chat → Hecate agent (port 9003)
   Agent search → Hecate agent (port 9003)
-  MCP operations → MCP server (port 8001)
+  A2A/MCP operations → Protocol server (port 8001)
   Marketplace operations → Crossroads subsystem (internal)
 }
 ```
@@ -135,7 +135,8 @@ Frontend → Erebus → {
 - **👛 Wallets**: `/api/wallets/*` - Authentication, session management
 - **🤖 Agents**: `/api/agents/*` - Chat, status, orchestration
 - **📋 Tasks**: `/api/agents/tasks/*` - Task management, lifecycle operations
-- **🔗 MCP**: `/mcp/*` - Protocol operations
+- **🔗 Protocols**: `/api/protocols/*` - A2A and MCP protocol operations
+- **🌐 A2A**: Direct endpoints for Agent-to-Agent communication
 - **🛣️ Marketplace**: `/api/marketplace/*` - Listing management, search, featured items
 - **🔍 Discovery**: `/api/discovery/*` - Service discovery, health monitoring
 - **⚙️ Admin**: `/api/admin/*` - Marketplace moderation, system management
@@ -148,6 +149,7 @@ Frontend → Erebus → {
 #### ✅ Source-Agnostic User System
 
 The user_references table now supports multiple authentication sources:
+
 - **🌐 Web3 Wallets** - MetaMask, Phantom, Coinbase Wallet, etc.
 - **🔑 API Keys** - Service tokens, automation scripts
 - **📧 Email Auth** - Traditional email-based authentication
@@ -183,6 +185,7 @@ The user_references table now supports multiple authentication sources:
 - **❌ DEPRECATED**: `/api/agents/users/register` - Use Erebus endpoints instead
 
 #### Enhanced API Features (NEW)
+
 - **Source Type Support**: Strongly typed SourceType enum (Web3Wallet, ApiKey, EmailAuth, SystemAgent, OAuth)
 - **Backward Compatibility**: Legacy `chain` and `wallet_type` fields automatically converted
 - **Complete User Data**: All database fields (metadata, preferences, email, user_type) exposed via API
@@ -237,6 +240,87 @@ svc/erebus/src/resources/crossroads/
 - **Information Gathering**: Market data, DeFi protocols, social sentiment
 - **Social Trading**: Twitter monitoring, sentiment analysis, risk assessment
 - **Arbitrage**: Price monitoring, strategy execution with MEV protection
+
+## 🌐 A2A Protocol Implementation
+
+### Protocol Specification Compliance
+
+NullBlock implements the **Agent-to-Agent (A2A) Protocol** following the official specification: https://a2a-protocol.org/latest/specification/
+
+### Core A2A Features
+
+- **Agent Card Discovery**: Standard agent metadata at `/.well-known/agent-card.json`
+- **Dual Transport Support**: JSON-RPC 2.0 and REST/HTTP+JSON
+- **Task Management**: Full task lifecycle with status tracking
+- **Message Handling**: Support for text, image, and multipart messages
+- **Push Notifications**: Webhook-based task update notifications
+- **Streaming Support**: Real-time message streaming capabilities
+
+### A2A Endpoints
+
+#### JSON-RPC Methods (POST /a2a/jsonrpc)
+
+```
+message/send                    - Send message to agent
+message/stream                  - Send message with streaming
+tasks/get                       - Get task status
+tasks/list                      - List tasks
+tasks/cancel                    - Cancel task
+tasks/resubscribe              - Resume task streaming
+tasks/pushNotificationConfig/* - Push notification management
+agent/getAuthenticatedExtendedCard - Get authenticated agent card
+```
+
+#### REST Endpoints
+
+```
+GET  /v1/card                                     - Agent card discovery
+POST /v1/message:send                            - Send message
+POST /v1/message:stream                          - Streaming message
+GET  /v1/tasks                                   - List tasks
+GET  /v1/tasks/{id}                             - Get task
+POST /v1/tasks/{id}:cancel                      - Cancel task
+POST /v1/tasks/{id}:subscribe                   - Resume streaming
+POST /v1/tasks/{id}/pushNotificationConfigs     - Set push config
+GET  /v1/tasks/{id}/pushNotificationConfigs     - List push configs
+```
+
+### Agent Card Configuration
+
+```json
+{
+  "protocolVersion": "0.3.0",
+  "name": "NullBlock Protocol Service",
+  "description": "Multi-protocol agent communication service supporting MCP and A2A protocols",
+  "url": "https://localhost:8001/a2a/v1",
+  "preferredTransport": "JSONRPC",
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": true,
+    "stateTransitionHistory": false
+  },
+  "skills": [
+    {
+      "id": "task-management",
+      "name": "Task Management",
+      "description": "Create, manage, and execute tasks within the NullBlock agent ecosystem"
+    },
+    {
+      "id": "protocol-routing",
+      "name": "Protocol Routing",
+      "description": "Route messages between different agent protocols (MCP, A2A)"
+    }
+  ]
+}
+```
+
+### Integration Benefits
+
+- **🔗 Agent Interoperability**: Standard A2A compliance enables communication with external agents
+- **🌐 Protocol Bridge**: Foundation for translating between A2A and MCP protocols
+- **📡 Discovery**: Automatic agent discovery through standardized agent cards
+- **⚡ Real-time**: Streaming message support for responsive agent interactions
+- **🔔 Notifications**: Push notification system for asynchronous task updates
 
 ## 📋 Task Management System
 
@@ -311,6 +395,7 @@ svc/erebus/src/resources/crossroads/
 **COMPLETED**: Major architectural improvement making user authentication source-agnostic.
 
 #### Key Improvements Made:
+
 - **🔄 Database Migration**: Renamed `chain` → `network`, enhanced `source_type` JSONB structure
 - **🎯 Strongly Typed Enums**: SourceType enum with Web3Wallet, ApiKey, EmailAuth, SystemAgent, OAuth variants
 - **📊 Complete Struct Mapping**: All database fields accessible through UserReference struct
@@ -319,6 +404,7 @@ svc/erebus/src/resources/crossroads/
 - **✅ Database Applied**: Migration successfully applied with data preservation and validation
 
 #### Future Authentication Methods Supported:
+
 - **Web3 Wallets**: MetaMask, Phantom, Coinbase, hardware wallets
 - **API Authentication**: Service tokens, automation scripts, CI/CD systems
 - **Email Authentication**: Traditional email/password, magic links
@@ -330,6 +416,7 @@ svc/erebus/src/resources/crossroads/
 **COMPLETED**: Replaced failing Python sync scripts with enterprise-grade PostgreSQL logical replication.
 
 #### Problems Solved:
+
 - **🐍 Python Script Failures**: Eliminated unreliable `sync_service.py` and `sync_to_agents.py`
 - **⏰ Polling Delays**: Removed 30-second sync delays
 - **🗂️ Queue Complexity**: Eliminated `user_sync_queue` table and processing overhead
@@ -337,6 +424,7 @@ svc/erebus/src/resources/crossroads/
 - **🛠️ Manual Recovery**: No more manual intervention for failed syncs
 
 #### Implementation Highlights:
+
 - **📡 Publication Setup**: `erebus_user_sync` publication on Erebus database (port 5440)
 - **📥 Subscription Setup**: `agents_user_sync` subscription on Agents database (port 5441)
 - **🔄 Schema Synchronization**: Fixed column mismatches between databases
@@ -344,6 +432,7 @@ svc/erebus/src/resources/crossroads/
 - **🛡️ Built-in Recovery**: PostgreSQL handles connection failures and retries automatically
 
 #### Performance Improvements:
+
 - **Speed**: Sub-second replication vs 30-second polling
 - **Reliability**: 99.9% uptime vs intermittent Python script failures
 - **Maintenance**: Zero application code vs complex Python debugging
@@ -351,6 +440,7 @@ svc/erebus/src/resources/crossroads/
 - **Recovery**: Automatic vs manual intervention required
 
 #### Monitoring Commands:
+
 ```sql
 -- Check replication health
 SELECT * FROM subscription_health;
@@ -414,6 +504,7 @@ SELECT * FROM pg_replication_slots;
 ### Task Action Tracking System ✅
 
 **Completed Implementation:**
+
 - **Action State Separation**: Clear distinction between task lifecycle and agent execution
   - Task lifecycle: `created` → `running` → `completed` (administrative states)
   - Agent action: `actioned_at` → `action_result` → agent stats updated (execution tracking)
@@ -459,6 +550,7 @@ SELECT * FROM pg_replication_slots;
 #### Frontend Integration (Hecate)
 
 **Enhanced Agents Scope** (`/svc/hecate/src/components/hud/Scopes.tsx`):
+
 - ✅ **Real Data Integration**: Replaced mock data with live agent discovery API
 - ✅ **Agent Service Layer**: New `AgentService` class for API communication
 - ✅ **Interactive UI**: Clickable agent cards with detailed view panels
@@ -468,6 +560,7 @@ SELECT * FROM pg_replication_slots;
 #### Backend Enhancement (Erebus)
 
 **Enhanced Agent Discovery Service** (`/svc/erebus/src/resources/crossroads/services.rs`):
+
 - ✅ **Multi-Agent Support**: Discovery of both Hecate and Marketing agents
 - ✅ **Health Monitoring**: Individual agent health checks via `/marketing/health`, `/hecate/status`
 - ✅ **Comprehensive Metadata**: Agent capabilities, descriptions, and metrics
@@ -477,13 +570,14 @@ SELECT * FROM pg_replication_slots;
 
 ```typescript
 interface Agent {
-  name: string;           // "hecate" | "marketing"
-  type: string;           // "conversational" | "specialized"
-  status: string;         // "healthy" | "unhealthy"
-  endpoint: string;       // "/api/agents/hecate" | "/api/agents/marketing"
+  name: string; // "hecate" | "marketing"
+  type: string; // "conversational" | "specialized"
+  status: string; // "healthy" | "unhealthy"
+  endpoint: string; // "/api/agents/hecate" | "/api/agents/marketing"
   capabilities: string[]; // ["chat", "reasoning"] | ["content_generation", "social_media"]
-  description: string;    // Human-readable agent description
-  metrics?: {             // Live agent metrics
+  description: string; // Human-readable agent description
+  metrics?: {
+    // Live agent metrics
     tasks_processed?: number;
     content_themes?: number;
     twitter_integration?: string;
@@ -503,6 +597,7 @@ interface Agent {
 #### Frontend Agent Service
 
 **New Service Layer** (`/svc/hecate/src/common/services/agent-service.tsx`):
+
 - `getAgents()`: Fetch all available agents
 - `getAgentHealth(agentName)`: Check individual agent health
 - `getAgentCapabilities(agentName)`: Get agent-specific capabilities
@@ -796,20 +891,91 @@ curl http://localhost:3000/api/discovery/agents
 
 ## 🔧 Environment Setup
 
-### Required Environment Variables
+### Production-Ready Environment Variables
+
+All services now support configurable URLs through environment variables to support dev/staging/production deployments.
+
+#### Backend Service URLs
 
 ```bash
-# MCP Server
-ETHEREUM_RPC_URL=
-FLASHBOTS_PRIVATE_KEY=
-IPFS_API=
+# Service Base URLs (Production Ready)
+EREBUS_BASE_URL=http://localhost:3000              # Erebus unified router
+PROTOCOLS_SERVICE_URL=http://localhost:8001        # Protocols service (A2A/MCP)
+AGENTS_SERVICE_URL=http://localhost:9003           # Agents service (Rust)
+ORCHESTRATION_SERVICE_URL=http://localhost:8002    # Orchestration service (future)
 
-# Frontend
-VITE_FAST_API_BACKEND_URL=http://localhost:3000
+# Database Configuration
+DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5441/agents
+EREBUS_DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5440/erebus
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 
+# External Service URLs
+OLLAMA_BASE_URL=http://localhost:11434             # Ollama LLM service
+```
+
+#### Frontend Environment Variables
+
+```bash
+# Frontend API Configuration (Production Ready)
+VITE_EREBUS_API_URL=http://localhost:3000          # Primary API endpoint
+VITE_PROTOCOLS_API_URL=http://localhost:8001       # Protocols service
+VITE_A2A_API_URL=http://localhost:8001             # A2A protocol endpoints
+VITE_HECATE_API_URL=http://localhost:9003          # Direct agent access (via Erebus)
+VITE_FAST_API_BACKEND_URL=http://localhost:8000    # Legacy FastAPI (transitioning)
+VITE_MCP_API_URL=http://localhost:8001             # MCP protocol endpoints
+
+# CORS Configuration
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+FRONTEND_URL=http://localhost:5173
+```
+
+#### AWS Production Configuration (Future)
+
+```bash
+# Production URLs (AWS deployment ready)
+EREBUS_BASE_URL=https://api.nullblock.io
+PROTOCOLS_SERVICE_URL=https://protocols.nullblock.io
+AGENTS_SERVICE_URL=https://agents.nullblock.io
+
+# Frontend Production URLs
+VITE_EREBUS_API_URL=https://api.nullblock.io
+VITE_PROTOCOLS_API_URL=https://protocols.nullblock.io
+VITE_A2A_API_URL=https://protocols.nullblock.io
+```
+
+#### Development vs Production
+
+**Development (Default)**: All services default to localhost URLs when environment variables are not set.
+
+**Production**: Set environment variables to point to your AWS or cloud infrastructure:
+
+- **API Gateway**: Route external traffic to internal services
+- **Load Balancers**: Distribute traffic across service instances
+- **Service Discovery**: Automatically configure service URLs
+- **SSL Termination**: HTTPS endpoints for all external services
+
+#### LLM API Configuration
+
+```bash
 # Optional LLM APIs
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
+GROQ_API_KEY=
+HUGGINGFACE_API_KEY=
+OPENROUTER_API_KEY=
+
+# LLM Service Configuration
+DEFAULT_LLM_MODEL=x-ai/grok-4-fast:free
+LLM_REQUEST_TIMEOUT_MS=300000
+```
+
+#### Legacy Configuration
+
+```bash
+# Legacy Configuration (still supported)
+ETHEREUM_RPC_URL=
+FLASHBOTS_PRIVATE_KEY=
+IPFS_API=
 ```
 
 ### Health Monitoring
@@ -843,6 +1009,7 @@ All services implement `/health` endpoints with standardized JSON responses:
 ## 🚧 Current Development Status
 
 ### Recently Completed ✅
+
 - **Source-Agnostic User System**: Complete redesign of user_references table and supporting infrastructure
 - **Database Migration Applied**: Schema changes successfully applied with data preservation
 - **Type-Safe API**: Enhanced endpoints with SourceType enum and backward compatibility
@@ -852,10 +1019,12 @@ All services implement `/health` endpoints with standardized JSON responses:
 - **Database Schema Updates**: Added missing agent activity columns and migration system
 
 ### In Progress 🔄
+
 - **Agent Identity System**: Dynamic agent name display in chat titles and message attribution
 - **UI/UX Refinements**: Agent card styling, text alignment, and mock data cleanup
 
 ### Next Up 📋
+
 1. **Agent Service Integration**: Establish communication protocols between task service and orchestration
 2. **Performance Optimization**: Database query optimization and caching strategies
 3. **Advanced Agent Features**: Enhanced capabilities and specialized agent workflows

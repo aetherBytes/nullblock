@@ -42,6 +42,7 @@ interface HecateChatProps {
   isUserScrolling: boolean;
   chatAutoScroll: boolean;
   activeAgent?: 'hecate' | 'siren';
+  setActiveAgent?: (agent: 'hecate' | 'siren') => void;
 }
 
 const HecateChat: React.FC<HecateChatProps> = ({
@@ -69,13 +70,21 @@ const HecateChat: React.FC<HecateChatProps> = ({
   scrollToBottom,
   isUserScrolling,
   chatAutoScroll,
-  activeAgent = 'hecate'
+  activeAgent = 'hecate',
+  setActiveAgent
 }) => {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       onChatSubmit(e);
+    }
+  };
+
+  const handleAgentSwitch = (agentName: 'hecate' | 'siren') => {
+    if (setActiveAgent && agentName !== activeAgent) {
+      console.log(`🔄 Switching to ${agentName} agent from chat`);
+      setActiveAgent(agentName);
     }
   };
 
@@ -113,7 +122,13 @@ const HecateChat: React.FC<HecateChatProps> = ({
               <div className={styles.streamLineChat}></div>
               <div className={styles.lightningSparkChat}></div>
             </div>
-            {activeAgent || 'Hecate'}
+            <span
+              className={styles.clickableAgentName}
+              onClick={() => handleAgentSwitch(activeAgent === 'hecate' ? 'siren' : 'hecate')}
+              title={`Switch to ${activeAgent === 'hecate' ? 'Siren' : 'Hecate'} agent`}
+            >
+              {activeAgent || 'Hecate'}
+            </span>
           </span>
         </span>
         <span className={styles.messageTime}>
@@ -146,7 +161,13 @@ const HecateChat: React.FC<HecateChatProps> = ({
                 <div className={styles.streamLineChat}></div>
                 <div className={styles.lightningSparkChat}></div>
               </div>
-{message.sender === 'hecate' ? 'Hecate' : message.sender === 'siren' ? 'Siren' : 'Agent'}
+              <span
+                className={styles.clickableAgentName}
+                onClick={() => handleAgentSwitch(message.sender)}
+                title={`Switch to ${message.sender === 'hecate' ? 'Hecate' : 'Siren'} agent`}
+              >
+                {message.sender === 'hecate' ? 'Hecate' : message.sender === 'siren' ? 'Siren' : 'Agent'}
+              </span>
             </span>
           ) : (
             '👤 You'
@@ -182,7 +203,13 @@ const HecateChat: React.FC<HecateChatProps> = ({
         <div className={styles.hecateChat}>
           <div className={styles.chatHeader}>
             <div className={styles.chatTitle}>
-              <h4>💬 {activeAgent || 'Hecate'} Chat</h4>
+              <h4>💬 <span
+                className={styles.clickableAgentName}
+                onClick={() => handleAgentSwitch(activeAgent === 'hecate' ? 'siren' : 'hecate')}
+                title={`Switch to ${activeAgent === 'hecate' ? 'Siren' : 'Hecate'} agent`}
+              >
+                {activeAgent || 'Hecate'}
+              </span> Chat</h4>
               <span className={styles.modelStatus}>
                 {agentHealthStatus === 'unhealthy' ? '⚠️ API Keys Required' :
                  defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}
@@ -247,7 +274,16 @@ const HecateChat: React.FC<HecateChatProps> = ({
       <div className={styles.hecateChat}>
         <div className={styles.chatHeader}>
           <div className={styles.chatTitle}>
-            <h4>{currentSelectedModel ? `${(activeAgent || 'HECATE').toUpperCase()}:${currentSelectedModel.split('/').pop()?.split(':')[0]?.toUpperCase() || 'MODEL'}` : `${(activeAgent || 'HECATE').toUpperCase()}:LOADING`}</h4>
+            <h4>
+              <span
+                className={styles.clickableAgentName}
+                onClick={() => handleAgentSwitch(activeAgent === 'hecate' ? 'siren' : 'hecate')}
+                title={`Switch to ${activeAgent === 'hecate' ? 'Siren' : 'Hecate'} agent`}
+              >
+                {(activeAgent || 'HECATE').toUpperCase()}
+              </span>
+              :{currentSelectedModel ? currentSelectedModel.split('/').pop()?.split(':')[0]?.toUpperCase() || 'MODEL' : 'LOADING'}
+            </h4>
             <span className={styles.chatStatus}>
               {agentHealthStatus === 'unhealthy' ? '⚠️ API Keys Required' :
                defaultModelReady || currentSelectedModel ? 'Ready' : 'Loading...'}

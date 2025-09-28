@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './hecateHud.module.scss';
 import { hecateAgent } from '../../common/services/hecate-agent';
 
+// Configurable API base URL
+const EREBUS_API_BASE_URL = import.meta.env.VITE_EREBUS_API_URL || `${EREBUS_API_BASE_URL}';
+
 interface HecateHudProps {
   onClose: () => void;
   theme?: 'null' | 'light' | 'dark';
@@ -801,7 +804,7 @@ const HecateHud: React.FC<HecateHudProps> = ({
 
   const loadAvailableModels = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/agents/hecate/available-models');
+      const response = await fetch(`${EREBUS_API_BASE_URL}/api/agents/hecate/available-models');
       if (response.ok) {
         const data = await response.json();
         setAvailableModels(data.models || []);
@@ -842,7 +845,7 @@ const HecateHud: React.FC<HecateHudProps> = ({
           setChatMessages(prev => [...prev, unloadMessage]);
           
           // Use LM Studio CLI to unload the model
-          const unloadResponse = await fetch('http://localhost:3000/api/agents/hecate/unload-lm-studio-model', {
+          const unloadResponse = await fetch(`${EREBUS_API_BASE_URL}/api/agents/hecate/unload-lm-studio-model', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ current_model: currentSelectedModel })
@@ -859,7 +862,7 @@ const HecateHud: React.FC<HecateHudProps> = ({
         }
       }
       
-      const response = await fetch('http://localhost:3000/api/agents/hecate/set-model', {
+      const response = await fetch(`${EREBUS_API_BASE_URL}/api/agents/hecate/set-model', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model_name: modelName })

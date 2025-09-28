@@ -51,14 +51,16 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or(9001);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let agents_base_url = env::var("AGENTS_SERVICE_URL")
+        .unwrap_or_else(|_| format!("http://localhost:{}", port));
 
     info!("🚀 NullBlock Agents Rust Service starting...");
     info!("📡 Server will bind to: {}", addr);
-    info!("🏥 Health check: http://localhost:{}/health", port);
-    info!("🤖 Hecate agent: http://localhost:{}/hecate", port);
-    info!("📊 Arbitrage: http://localhost:{}/arbitrage", port);
-    info!("📱 Siren agent: http://localhost:{}/siren", port);
-    info!("📚 API docs: http://localhost:{}/docs (future)", port);
+    info!("🏥 Health check: {}/health", agents_base_url);
+    info!("🤖 Hecate agent: {}/hecate", agents_base_url);
+    info!("📊 Arbitrage: {}/arbitrage", agents_base_url);
+    info!("📱 Siren agent: {}/siren", agents_base_url);
+    info!("📚 API docs: {}/docs (future)", agents_base_url);
 
     // Start the server
     let listener = tokio::net::TcpListener::bind(&addr).await?;
