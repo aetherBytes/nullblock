@@ -26,11 +26,11 @@ impl ExternalService {
     pub fn new() -> Self {
         Self {
             client: Client::new(),
-            hecate_base_url: std::env::var("HECATE_BASE_URL")
-                .unwrap_or_else(|_| "http://localhost:9002".to_string()),
-            mcp_base_url: std::env::var("MCP_BASE_URL")
+            hecate_base_url: std::env::var("AGENTS_SERVICE_URL")
+                .unwrap_or_else(|_| "http://localhost:9003".to_string()),
+            mcp_base_url: std::env::var("PROTOCOLS_SERVICE_URL")
                 .unwrap_or_else(|_| "http://localhost:8001".to_string()),
-            orchestration_base_url: std::env::var("ORCHESTRATION_BASE_URL")
+            orchestration_base_url: std::env::var("ORCHESTRATION_SERVICE_URL")
                 .unwrap_or_else(|_| "http://localhost:8002".to_string()),
             response_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             max_retries: 3,

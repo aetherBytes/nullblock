@@ -21,7 +21,7 @@ mod database;
 mod user_references;
 mod resources;
 use resources::agents::routes::{
-    agent_health, hecate_chat, hecate_status, agent_chat, agent_status,
+    agent_health, hecate_chat, siren_chat, hecate_status, agent_chat, agent_status,
     hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model, hecate_model_info, hecate_search_models,
     // Task management routes
     create_task, get_tasks, get_task, update_task, delete_task,
@@ -281,6 +281,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Agent routing endpoints
         .route("/api/agents/health", get(agent_health))
         .route("/api/agents/hecate/chat", post(hecate_chat))
+        .route("/api/agents/siren/chat", post(siren_chat))
         .route("/api/agents/hecate/status", get(hecate_status))
         .route("/api/agents/hecate/personality", post(hecate_personality))
         .route("/api/agents/hecate/clear", post(hecate_clear))
@@ -337,30 +338,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .allow_headers(Any),
         );
 
+    // Get configurable base URL for this service
+    let erebus_base_url = std::env::var("EREBUS_BASE_URL")
+        .unwrap_or_else(|_| "http://localhost:3000".to_string());
+
     info!("🌐 Server starting on http://0.0.0.0:3000");
-    info!("🏥 Health check: http://localhost:3000/health");
-    info!("🤖 Agent routing: http://localhost:3000/api/agents/health");
-    info!("💬 Hecate chat: http://localhost:3000/api/agents/hecate/chat");
-    info!("📊 Hecate status: http://localhost:3000/api/agents/hecate/status");
-    info!("⚙️ Hecate personality: http://localhost:3000/api/agents/hecate/personality");
-    info!("🧹 Hecate clear: http://localhost:3000/api/agents/hecate/clear");
-    info!("📜 Hecate history: http://localhost:3000/api/agents/hecate/history");
-    info!("🧠 Hecate available models: http://localhost:3000/api/agents/hecate/available-models");
-    info!("🎯 Hecate set model: http://localhost:3000/api/agents/hecate/set-model");
-    info!("📋 Hecate model info: http://localhost:3000/api/agents/hecate/model-info");
-    info!("🔍 Hecate search models: http://localhost:3000/api/agents/hecate/search-models");
-    info!("📋 Task management: http://localhost:3000/api/agents/tasks");
-    info!("⚡ Task events: http://localhost:3000/api/agents/tasks/events");
-    info!("🧠 Task motivation: http://localhost:3000/api/agents/tasks/motivation");
-    info!("💡 Task suggestions: http://localhost:3000/api/agents/tasks/suggestions");
-    info!("👛 Wallet endpoints: http://localhost:3000/api/wallets");
-    info!("🔍 Wallet detection: http://localhost:3000/api/wallets/detect");
-    info!("🔐 Wallet challenge: http://localhost:3000/api/wallets/challenge");
-    info!("✅ Wallet verify: http://localhost:3000/api/wallets/verify");
-    info!("🛣️  Crossroads marketplace: http://localhost:3000/api/marketplace");
-    info!("🔍 Discovery service: http://localhost:3000/api/discovery");
-    info!("⚙️  Admin panel: http://localhost:3000/api/admin");
-    info!("🏥 Crossroads health: http://localhost:3000/api/crossroads/health");
+    info!("🏥 Health check: {}/health", erebus_base_url);
+    info!("🤖 Agent routing: {}/api/agents/health", erebus_base_url);
+    info!("💬 Hecate chat: {}/api/agents/hecate/chat", erebus_base_url);
+    info!("🎭 Siren chat: {}/api/agents/siren/chat", erebus_base_url);
+    info!("📊 Hecate status: {}/api/agents/hecate/status", erebus_base_url);
+    info!("⚙️ Hecate personality: {}/api/agents/hecate/personality", erebus_base_url);
+    info!("🧹 Hecate clear: {}/api/agents/hecate/clear", erebus_base_url);
+    info!("📜 Hecate history: {}/api/agents/hecate/history", erebus_base_url);
+    info!("🧠 Hecate available models: {}/api/agents/hecate/available-models", erebus_base_url);
+    info!("🎯 Hecate set model: {}/api/agents/hecate/set-model", erebus_base_url);
+    info!("📋 Hecate model info: {}/api/agents/hecate/model-info", erebus_base_url);
+    info!("🔍 Hecate search models: {}/api/agents/hecate/search-models", erebus_base_url);
+    info!("📋 Task management: {}/api/agents/tasks", erebus_base_url);
+    info!("⚡ Task events: {}/api/agents/tasks/events", erebus_base_url);
+    info!("🧠 Task motivation: {}/api/agents/tasks/motivation", erebus_base_url);
+    info!("💡 Task suggestions: {}/api/agents/tasks/suggestions", erebus_base_url);
+    info!("👛 Wallet endpoints: {}/api/wallets", erebus_base_url);
+    info!("🔍 Wallet detection: {}/api/wallets/detect", erebus_base_url);
+    info!("🔐 Wallet challenge: {}/api/wallets/challenge", erebus_base_url);
+    info!("✅ Wallet verify: {}/api/wallets/verify", erebus_base_url);
+    info!("🛣️  Crossroads marketplace: {}/api/marketplace", erebus_base_url);
+    info!("🔍 Discovery service: {}/api/discovery", erebus_base_url);
+    info!("⚙️  Admin panel: {}/api/admin", erebus_base_url);
+    info!("🏥 Crossroads health: {}/api/crossroads/health", erebus_base_url);
     info!("💡 Ready for agentic workflows, marketplace operations, and service discovery");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));

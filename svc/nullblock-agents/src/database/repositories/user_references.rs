@@ -23,10 +23,10 @@ impl UserReferenceRepository {
         wallet_type: Option<&str>,
         email: Option<&str>,
         metadata: &serde_json::Value,
-        erebus_created_at: Option<DateTime<Utc>>,
-        erebus_updated_at: Option<DateTime<Utc>>,
+        _erebus_created_at: Option<DateTime<Utc>>,
+        _erebus_updated_at: Option<DateTime<Utc>>,
     ) -> Result<UserReferenceEntity> {
-        let now = Utc::now();
+        let _now = Utc::now();
 
         let user_ref = sqlx::query_as::<_, UserReferenceEntity>(
             r#"
@@ -129,7 +129,7 @@ impl UserReferenceRepository {
     }
 
     pub async fn create(&self, user_ref: &crate::models::UserReference) -> Result<UserReferenceEntity> {
-        let now = Utc::now();
+        let _now = Utc::now();
 
         let user_entity = sqlx::query_as::<_, UserReferenceEntity>(
             r#"

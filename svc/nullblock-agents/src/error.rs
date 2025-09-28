@@ -59,6 +59,9 @@ pub enum AppError {
 
     #[error("Task already actioned: {0}")]
     TaskAlreadyActioned(String),
+
+    #[error("LLM error: {0}")]
+    LLMError(String),
 }
 
 impl AppError {
@@ -80,6 +83,7 @@ impl AppError {
             AppError::TimeoutError(_) => StatusCode::REQUEST_TIMEOUT,
             
             AppError::LLMRequestFailed(_)
+            | AppError::LLMError(_)
             | AppError::ConversationError(_)
             | AppError::ArbitrageError(_)
             | AppError::ConfigError(_)
@@ -96,6 +100,7 @@ impl AppError {
             AppError::AgentNotRunning => "agent_not_running",
             AppError::ModelNotAvailable(_) => "model_not_available",
             AppError::LLMRequestFailed(_) => "llm_request_failed",
+            AppError::LLMError(_) => "llm_error",
             AppError::InvalidModelConfig(_) => "invalid_model_config",
             AppError::ConversationError(_) => "conversation_error",
             AppError::ArbitrageError(_) => "arbitrage_error",

@@ -19,7 +19,7 @@ windows:
 
             # Service Health Checks
             echo "📡 Service Health Status:"
-            for service in "erebus:3000" "nullblock-agents:9003" "nullblock-mcp:8001" "frontend:5173"; do
+            for service in "erebus:3000" "nullblock-agents:9003" "nullblock-protocols:8001" "frontend:5173"; do
               name=$(echo $service | cut -d: -f1)
               port=$(echo $service | cut -d: -f2)
               if curl -s --max-time 3 "http://localhost:$port/health" > /dev/null 2>&1; then
@@ -421,7 +421,7 @@ windows:
             echo "$(date '+%H:%M:%S') 📊 [SUMMARY] Multi-service logs active: Hecate Agent, Erebus Router, Task System, Database"
           done
 
-  - nullblock-mcp:
+  - nullblock-protocols:
       layout: tiled
       pre_window: |
         if [ -f .env.dev ]; then
@@ -429,49 +429,58 @@ windows:
         fi
       panes:
         - |
-          echo "🌐 Starting MCP Server..."
-          cd svc/nullblock-mcp
-          echo "Installing/updating dependencies with hatch..."
-          hatch -e default run pip install -e .
-          export MCP_SERVER_HOST=0.0.0.0
-          export MCP_SERVER_PORT=8001
+          echo "🌐 Starting Protocol Server..."
+          cd svc/nullblock-protocols
+          echo "🦀 Starting Rust protocol service with A2A and MCP support..."
+          export PORT=8001
           export DATABASE_URL="postgresql://postgres:postgres_secure_pass@localhost:5441/agents"
-          echo "📝 Starting MCP server with database connection..."
-          hatch run python3 -m mcp 2>&1 | tee logs/mcp-server.log
+          echo "📝 Starting protocol server with database connection..."
+          echo "🔗 A2A JSON-RPC endpoint: http://localhost:8001/a2a/jsonrpc"
+          echo "🌐 A2A REST endpoints: http://localhost:8001/v1/*"
+          echo "📄 Agent Card: http://localhost:8001/v1/card"
+          echo "📨 Messages: POST /v1/messages, /v1/messages/stream"
+          echo "📋 Tasks: GET /v1/tasks, /v1/tasks/:id, POST /v1/tasks/:id/cancel"
+          cargo run 2>&1 | tee logs/protocols-server.log
         - |
-          echo "🗄️  MCP Database Monitoring"
-          echo "PostgreSQL monitoring for MCP data..."
+          echo "🗄️  Protocol Service Database Integration Monitoring"
+          echo "Monitoring Agents database connection for protocol service integration..."
           echo ""
           mkdir -p logs
           while true; do
-            echo "$(date '+%Y-%m-%d %H:%M:%S') [MCP-DB] Database status..." | tee -a logs/mcp-db.log
-            if pg_isready -h localhost -p 5432 > /dev/null 2>&1; then
-              echo "✅ PostgreSQL connection healthy" | tee -a logs/mcp-db.log
+            echo "$(date '+%Y-%m-%d %H:%M:%S') [AGENTS-DB] Database status..." | tee -a logs/agents-db.log
+            if docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; then
+              echo "✅ PostgreSQL connection healthy" | tee -a logs/agents-db.log
             else
-              echo "❌ PostgreSQL connection failed" | tee -a logs/mcp-db.log
+              echo "❌ PostgreSQL connection failed" | tee -a logs/agents-db.log
             fi
             sleep 45
           done
         - |
-          echo "🔗 Starting IPFS for MCP (Context Storage)..."
-          ipfs daemon --enable-gc &
-          echo "✅ IPFS daemon started for context storage"
+          echo "🔗 Protocol Health Monitoring..."
+          echo "A2A and MCP protocol health monitoring..."
           echo ""
-          echo "📊 IPFS monitoring..."
+          echo "📊 Protocol endpoint monitoring..."
           while true; do
-            if ipfs id > /dev/null 2>&1; then
-              echo "$(date '+%H:%M:%S') ✅ IPFS daemon healthy"
+            # Test A2A endpoints
+            if curl -s --max-time 3 "http://localhost:8001/v1/card" > /dev/null 2>&1; then
+              echo "$(date '+%H:%M:%S') ✅ A2A Agent Card endpoint healthy"
             else
-              echo "$(date '+%H:%M:%S') ❌ IPFS daemon not responding"
+              echo "$(date '+%H:%M:%S') ❌ A2A Agent Card endpoint not responding"
+            fi
+
+            if curl -s --max-time 3 "http://localhost:8001/health" > /dev/null 2>&1; then
+              echo "$(date '+%H:%M:%S') ✅ Protocol health endpoint healthy"
+            else
+              echo "$(date '+%H:%M:%S') ❌ Protocol health endpoint not responding"
             fi
             sleep 60
           done
         - |
-          echo "🌐 MCP Server Logs & Health"
-          echo "Monitoring MCP server logs and protocol operations..."
+          echo "🌐 Protocol Server Logs & Health"
+          echo "Monitoring protocol server logs and A2A/MCP operations..."
           echo ""
           mkdir -p logs
-          tail -f logs/mcp-server.log 2>/dev/null || echo "⚠️ Waiting for MCP logs..."
+          tail -f logs/protocols-server.log 2>/dev/null || echo "⚠️ Waiting for protocol server logs..."
 
   - task-management:
       layout: tiled
@@ -513,7 +522,8 @@ windows:
           cd svc/hecate
           echo "Installing/updating npm dependencies..."
           npm install
-          export VITE_MCP_API_URL=http://localhost:8001
+          export VITE_PROTOCOLS_API_URL=http://localhost:8001
+          export VITE_A2A_API_URL=http://localhost:8001
           export VITE_EREBUS_API_URL=http://localhost:3000
           export VITE_HECATE_API_URL=http://localhost:9003
           echo "🚀 Starting React development server..."
@@ -530,7 +540,7 @@ on_project_start: |
   echo "📁 Creating log directory structure..."
   mkdir -p logs
   mkdir -p svc/nullblock-agents/logs
-  mkdir -p svc/nullblock-mcp/logs
+  mkdir -p svc/nullblock-protocols/logs
   mkdir -p svc/nullblock-orchestration/logs
   mkdir -p svc/erebus/logs
   mkdir -p svc/hecate/logs
@@ -555,13 +565,20 @@ on_project_start: |
   echo ""
   echo "📡 Service Ports:"
   echo "   🌐 Erebus (unified router): http://localhost:3000"
-  echo "   🧠 MCP Server: http://localhost:8001"
+  echo "   🌐 Protocol Server (A2A/MCP): http://localhost:8001"
   echo "   🎯 Hecate Agent (Rust): http://localhost:9003"
   echo "   🎨 Frontend: http://localhost:5173"
   echo ""
   echo "🦀 Rust Services:"
   echo "   ✅ Hecate Agent - High-performance conversational AI"
   echo "   ✅ Erebus Router - Unified request routing & logging"
+  echo "   ✅ Protocol Server - A2A and MCP protocol communication"
+  echo ""
+  echo "🌐 A2A Protocol Integration:"
+  echo "   📋 Specification: https://a2a-protocol.org/latest/specification/"
+  echo "   🔗 JSON-RPC endpoint: http://localhost:8001/a2a/jsonrpc"
+  echo "   🌍 REST endpoints: http://localhost:8001/v1/*"
+  echo "   📄 Agent Card: http://localhost:8001/v1/card"
   echo ""
   echo "🧠 LLM Integration:"
   echo "   ⚡ Provider: OpenRouter (cloud-based)"
@@ -578,7 +595,7 @@ on_project_start: |
   echo "   📝 monitoring - Real-time service health & task metrics"
   echo "   🔗 erebus - Unified router with wallet & session management"
   echo "   🎯 nullblock-agents - Hecate Agent (Rust) with task system"
-  echo "   🧠 nullblock-mcp - MCP server with protocol operations"
+  echo "   🌐 nullblock-protocols - Multi-protocol server (A2A/MCP) with agent communication"
   echo "   📋 task-management - Integrated task system monitoring"
   echo "   🎨 frontend - React development server with wallet integration"
 

@@ -3,7 +3,7 @@ import { useState, useRef } from 'react';
 interface ChatMessage {
   id: string;
   timestamp: Date;
-  sender: 'user' | 'hecate';
+  sender: 'user' | 'hecate' | 'siren';
   message: string;
   type?: string;
   model_used?: string;
@@ -12,6 +12,7 @@ interface ChatMessage {
   taskName?: string;
   isTaskResult?: boolean;
   processingTime?: number;
+  agentType?: 'hecate' | 'siren';
 }
 
 export const useChat = (publicKey: string | null) => {
@@ -20,6 +21,7 @@ export const useChat = (publicKey: string | null) => {
   const [isProcessingChat, setIsProcessingChat] = useState(false);
   const [chatAutoScroll, setChatAutoScroll] = useState(true);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [activeAgent, setActiveAgent] = useState<'hecate' | 'siren'>('hecate');
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
@@ -31,13 +33,14 @@ export const useChat = (publicKey: string | null) => {
     const taskNotification: ChatMessage = {
       id: `task-notification-${taskId}-${Date.now()}`,
       timestamp: new Date(),
-      sender: 'hecate',
+      sender: activeAgent,
       message: message,
       type: 'task-notification',
       taskId,
       taskName,
       isTaskResult: true,
-      processingTime
+      processingTime,
+      agentType: activeAgent
     };
 
     setChatMessages(prev => [...prev, taskNotification]);
@@ -103,37 +106,39 @@ export const useChat = (publicKey: string | null) => {
 
   const handleRealChatResponse = async (message: string, setNulleyeState: (state: string) => void) => {
     try {
-      const { hecateAgent } = await import('../common/services/hecate-agent');
+      const { agentService } = await import('../common/services/agent-service');
 
-      const connected = await hecateAgent.connect();
+      const connected = await agentService.connect();
       if (!connected) {
-        throw new Error('Failed to connect to Hecate agent');
+        throw new Error(`Failed to connect to ${activeAgent} agent`);
       }
 
-      console.log('🔄 Sending message to Hecate agent, thinking state should be active...');
-      const response = await hecateAgent.sendMessage(message, {
-        wallet_address: publicKey || undefined,
-        wallet_type: localStorage.getItem('walletType') || undefined,
-        session_time: new Date().toISOString()
-      });
-      console.log('✅ Received response from Hecate, changing from thinking state...');
+      console.log(`🔄 Sending message to ${activeAgent} agent, thinking state should be active...`);
+      const response = await agentService.chatWithAgent(activeAgent, message);
 
-      const hecateMessage: ChatMessage = {
+      if (!response.success || !response.data) {
+        throw new Error(response.error || `Failed to get response from ${activeAgent} agent`);
+      }
+
+      console.log(`✅ Received response from ${activeAgent}, changing from thinking state...`);
+
+      const agentMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         timestamp: new Date(),
-        sender: 'hecate',
-        message: response.content,
+        sender: activeAgent,
+        message: response.data.content,
         type: 'text',
-        model_used: response.model_used,
-        metadata: response.metadata
+        model_used: response.data.model_used,
+        metadata: response.data.metadata,
+        agentType: activeAgent
       };
 
-      setChatMessages((prev) => [...prev, hecateMessage]);
+      setChatMessages((prev) => [...prev, agentMessage]);
 
       setIsProcessingChat(false);
-      if (response.confidence_score > 0.8) {
+      if (response.data.confidence_score > 0.8) {
         setNulleyeState('success');
-      } else if (response.metadata?.finish_reason === 'question') {
+      } else if (response.data.metadata?.finish_reason === 'question') {
         setNulleyeState('question');
       } else {
         setNulleyeState('response');
@@ -180,9 +185,10 @@ export const useChat = (publicKey: string | null) => {
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         timestamp: new Date(),
-        sender: 'hecate',
+        sender: activeAgent,
         message: userFriendlyMessage,
         type: 'error',
+        agentType: activeAgent
       };
 
       setChatMessages((prev) => [...prev, errorMessage]);
@@ -256,6 +262,8 @@ export const useChat = (publicKey: string | null) => {
     setChatAutoScroll,
     isUserScrolling,
     setIsUserScrolling,
+    activeAgent,
+    setActiveAgent,
     chatEndRef,
     chatMessagesRef,
     chatInputRef,

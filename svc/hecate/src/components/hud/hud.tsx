@@ -876,6 +876,8 @@ const HUD: React.FC<HUDProps> = ({
                         scrollToBottom={chat.scrollToBottom}
                         isUserScrolling={chat.isUserScrolling}
                         chatAutoScroll={chat.chatAutoScroll}
+                        activeAgent={chat.activeAgent}
+                        setActiveAgent={chat.setActiveAgent}
                       />
 
                       <Scopes
@@ -929,6 +931,8 @@ const HUD: React.FC<HUDProps> = ({
                           getThinkerModels={getThinkerModels}
                           getInstructModels={getInstructModels}
                           getLatestModels={getLatestModels}
+                          activeAgent={chat.activeAgent}
+                          setActiveAgent={chat.setActiveAgent}
                         />
                     </>
                   </div>

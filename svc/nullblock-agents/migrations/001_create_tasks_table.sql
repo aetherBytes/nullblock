@@ -42,7 +42,13 @@ CREATE TABLE tasks (
     max_retries INTEGER DEFAULT 3,
     current_retries INTEGER DEFAULT 0,
     user_approval_required BOOLEAN DEFAULT false,
-    user_notifications BOOLEAN DEFAULT true
+    user_notifications BOOLEAN DEFAULT true,
+
+    -- Action tracking fields (when tasks are processed by agents)
+    actioned_at TIMESTAMPTZ,
+    action_result TEXT,
+    action_metadata JSONB DEFAULT '{}'::jsonb,
+    action_duration BIGINT -- milliseconds
 );
 
 -- Indexes for performance
@@ -55,9 +61,25 @@ CREATE INDEX idx_tasks_priority ON tasks(priority);
 CREATE INDEX idx_tasks_created_at ON tasks(created_at);
 CREATE INDEX idx_tasks_updated_at ON tasks(updated_at);
 
+-- Action tracking indexes
+CREATE INDEX idx_tasks_actioned_at ON tasks(actioned_at);
+CREATE INDEX idx_tasks_action_result ON tasks(action_result) WHERE action_result IS NOT NULL;
+CREATE INDEX idx_tasks_action_duration ON tasks(action_duration);
+CREATE INDEX idx_tasks_unprocessed ON tasks(status, actioned_at) WHERE actioned_at IS NULL;
+CREATE INDEX idx_tasks_agent_actioned ON tasks(assigned_agent_id, actioned_at);
+
 -- Foreign key constraints (will be added after other tables are created)
--- ALTER TABLE tasks ADD CONSTRAINT fk_tasks_user_id FOREIGN KEY (user_id) REFERENCES user_references(id);
--- ALTER TABLE tasks ADD CONSTRAINT fk_tasks_assigned_agent_id FOREIGN KEY (assigned_agent_id) REFERENCES agents(id);
+-- Tasks -> User References relationship
+ALTER TABLE tasks
+ADD CONSTRAINT fk_tasks_user_id
+FOREIGN KEY (user_id) REFERENCES user_references(id)
+ON DELETE SET NULL; -- If user is deleted, set task user_id to NULL but keep task
+
+-- Tasks -> Agents relationship
+ALTER TABLE tasks
+ADD CONSTRAINT fk_tasks_assigned_agent_id
+FOREIGN KEY (assigned_agent_id) REFERENCES agents(id)
+ON DELETE SET NULL; -- If agent is deleted, unassign from task but keep task
 
 -- Update trigger for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()

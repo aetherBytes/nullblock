@@ -126,6 +126,79 @@ impl AgentProxy {
         }
     }
 
+    /// Proxy chat request to Siren agent backend
+    pub async fn proxy_siren_chat(&self, request: AgentRequest) -> Result<AgentResponse, AgentErrorResponse> {
+        let client = reqwest::Client::new();
+        let url = format!("{}/siren/chat", self.agent_base_url);
+
+        info!("🎭 Proxying chat request to Siren agent: {}", url);
+
+        match client
+            .post(&url)
+            .json(&request)
+            .timeout(std::time::Duration::from_secs(self.timeout_seconds))
+            .send()
+            .await
+        {
+            Ok(response) => {
+                if response.status().is_success() {
+                    match response.json::<AgentResponse>().await {
+                        Ok(agent_response) => {
+                            info!("✅ Marketing agent response received: {} chars", agent_response.content.len());
+                            Ok(agent_response)
+                        }
+                        Err(e) => {
+                            error!("❌ Failed to parse marketing agent response: {}", e);
+                            Err(AgentErrorResponse {
+                                error: "parse_error".to_string(),
+                                code: "AGENT_PARSE_ERROR".to_string(),
+                                message: format!("Failed to parse marketing agent response: {}", e),
+                                agent_available: true,
+                            })
+                        }
+                    }
+                } else {
+                    warn!("⚠️ Marketing agent returned error status: {}", response.status());
+                    Err(AgentErrorResponse {
+                        error: "agent_error".to_string(),
+                        code: "AGENT_HTTP_ERROR".to_string(),
+                        message: format!("Marketing agent returned status: {}", response.status()),
+                        agent_available: true,
+                    })
+                }
+            }
+            Err(e) => {
+                error!("❌ Failed to connect to marketing agent: {}", e);
+
+                // Check if this is likely an API key issue vs agent unavailable
+                let error_str = e.to_string().to_lowercase();
+                let (message, code) = if error_str.contains("connection refused") {
+                    (
+                        "🔑 Marketing agent is not running. This is usually caused by missing or invalid LLM API keys. Please check your OpenRouter API key configuration in .env.dev and restart the service.".to_string(),
+                        "AGENT_CONFIG_REQUIRED".to_string()
+                    )
+                } else if error_str.contains("timeout") {
+                    (
+                        "⏰ The marketing agent service is taking too long to respond. This may indicate an API key or network issue. Please check your configuration and try again.".to_string(),
+                        "AGENT_TIMEOUT".to_string()
+                    )
+                } else {
+                    (
+                        format!("🌐 Unable to connect to the marketing agent service: {}. Please check that your API keys are configured in .env.dev and the service is running.", e),
+                        "AGENT_UNAVAILABLE".to_string()
+                    )
+                };
+
+                Err(AgentErrorResponse {
+                    error: "connection_error".to_string(),
+                    code,
+                    message,
+                    agent_available: false,
+                })
+            }
+        }
+    }
+
     /// Get agent status and health
     pub async fn get_agent_status(&self) -> Result<AgentStatus, AgentErrorResponse> {
         let client = reqwest::Client::new();

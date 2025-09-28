@@ -60,14 +60,14 @@ kill_services() {
 
     # Stop individual containers if they're still running
     echo "Killing individual Docker containers..."
-    docker stop nullblock-postgres-agents nullblock-postgres-erebus nullblock-postgres-mcp nullblock-postgres-orchestration nullblock-postgres-analytics 2>/dev/null || true
+    docker stop nullblock-postgres-agents nullblock-postgres-erebus nullblock-postgres-protocols nullblock-postgres-orchestration nullblock-postgres-analytics 2>/dev/null || true
     docker stop nullblock-redis nullblock-kafka nullblock-zookeeper nullblock-ipfs 2>/dev/null || true
-    docker stop nullblock-mcp nullblock-orchestration nullblock-agents nullblock-hecate nullblock-erebus nullblock-nginx 2>/dev/null || true
+    docker stop nullblock-protocols nullblock-orchestration nullblock-agents nullblock-hecate nullblock-erebus nullblock-nginx 2>/dev/null || true
 
     # Remove containers
-    docker rm -f nullblock-postgres-agents nullblock-postgres-erebus nullblock-postgres-mcp nullblock-postgres-orchestration nullblock-postgres-analytics 2>/dev/null || true
+    docker rm -f nullblock-postgres-agents nullblock-postgres-erebus nullblock-postgres-protocols nullblock-postgres-orchestration nullblock-postgres-analytics 2>/dev/null || true
     docker rm -f nullblock-redis nullblock-kafka nullblock-zookeeper nullblock-ipfs 2>/dev/null || true
-    docker rm -f nullblock-mcp nullblock-orchestration nullblock-agents nullblock-hecate nullblock-erebus nullblock-nginx 2>/dev/null || true
+    docker rm -f nullblock-protocols nullblock-orchestration nullblock-agents nullblock-hecate nullblock-erebus nullblock-nginx 2>/dev/null || true
 
     # Stop PostgreSQL (user mode - fallback)
     echo "Stopping local PostgreSQL (if any)..."
@@ -100,7 +100,7 @@ kill_services() {
 
     # Kill services on development ports
     echo "Killing services on development ports..."
-    lsof -ti:8001 | xargs kill -9 2>/dev/null || true  # MCP Server
+    lsof -ti:8001 | xargs kill -9 2>/dev/null || true  # Protocol Server
     lsof -ti:8002 | xargs kill -9 2>/dev/null || true  # Orchestration
     lsof -ti:9001 | xargs kill -9 2>/dev/null || true  # General Agents
     lsof -ti:9003 | xargs kill -9 2>/dev/null || true  # Hecate Agent (Rust)

@@ -21,7 +21,7 @@ mod server;
 mod utils;
 
 use crate::config::Config;
-use crate::handlers::{arbitrage, health, hecate, marketing, tasks, user_references};
+use crate::handlers::{arbitrage, health, hecate, siren_marketing, tasks, user_references};
 use crate::logging::setup_logging;
 
 #[tokio::main]
@@ -51,14 +51,16 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or(9001);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let agents_base_url = env::var("AGENTS_SERVICE_URL")
+        .unwrap_or_else(|_| format!("http://localhost:{}", port));
 
     info!("🚀 NullBlock Agents Rust Service starting...");
     info!("📡 Server will bind to: {}", addr);
-    info!("🏥 Health check: http://localhost:{}/health", port);
-    info!("🤖 Hecate agent: http://localhost:{}/hecate", port);
-    info!("📊 Arbitrage: http://localhost:{}/arbitrage", port);
-    info!("📱 Marketing agent: http://localhost:{}/marketing", port);
-    info!("📚 API docs: http://localhost:{}/docs (future)", port);
+    info!("🏥 Health check: {}/health", agents_base_url);
+    info!("🤖 Hecate agent: {}/hecate", agents_base_url);
+    info!("📊 Arbitrage: {}/arbitrage", agents_base_url);
+    info!("📱 Siren agent: {}/siren", agents_base_url);
+    info!("📚 API docs: {}/docs (future)", agents_base_url);
 
     // Start the server
     let listener = tokio::net::TcpListener::bind(&addr).await?;
@@ -102,12 +104,13 @@ fn create_router(state: server::AppState) -> Router {
         .route("/tasks/:task_id/cancel", post(tasks::cancel_task))
         .route("/tasks/:task_id/retry", post(tasks::retry_task))
         .route("/tasks/:task_id/process", post(tasks::process_task))
-        // Marketing agent endpoints
-        .route("/marketing/generate-content", post(marketing::generate_content))
-        .route("/marketing/create-post", post(marketing::create_twitter_post))
-        .route("/marketing/analyze-project", get(marketing::analyze_project_progress))
-        .route("/marketing/health", get(marketing::get_marketing_health))
-        .route("/marketing/themes", get(marketing::get_content_themes))
+        // Siren Marketing agent endpoints
+        .route("/siren/chat", post(siren_marketing::chat))
+        .route("/siren/generate-content", post(siren_marketing::generate_content))
+        .route("/siren/create-post", post(siren_marketing::create_twitter_post))
+        .route("/siren/analyze-project", get(siren_marketing::analyze_project_progress))
+        .route("/siren/health", get(siren_marketing::get_siren_health))
+        .route("/siren/themes", get(siren_marketing::get_content_themes))
         // User reference endpoints
         .route("/user-references", post(user_references::create_user_reference))
         .route("/user-references", get(user_references::list_user_references))
