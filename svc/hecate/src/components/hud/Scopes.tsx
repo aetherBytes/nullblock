@@ -331,11 +331,11 @@ const Scopes: React.FC<ScopesProps> = ({
                   <div className={styles.trailValue}>
                     {(() => {
                       const sourceType = selectedTask.source_metadata?.type || 'unknown';
-                      const sourceValue = selectedTask.source_metadata?.wallet_address || 
-                                        selectedTask.source_metadata?.identifier || 
-                                        selectedTask.source_identifier || 
+                      const sourceValue = selectedTask.source_metadata?.wallet_address ||
+                                        selectedTask.source_metadata?.identifier ||
+                                        selectedTask.source_identifier ||
                                         'Unknown';
-                      
+
                       return `${sourceType}: ${sourceValue}`;
                     })()}
                   </div>
@@ -545,8 +545,8 @@ const Scopes: React.FC<ScopesProps> = ({
                     </div>
                   ) : (
                     currentCategoryTasks.map((task) => (
-                  <div 
-                    key={task.id} 
+                  <div
+                    key={task.id}
                     className={`${styles.taskItem} ${getStatusColor(task.status)} ${styles.clickableTask}`}
                     onClick={() => setSelectedTaskId(task.id)}
                     title="Click to view details"
@@ -669,28 +669,30 @@ const Scopes: React.FC<ScopesProps> = ({
       case 'agents':
         return (
           <div className={styles.agentsScope}>
-            <div className={styles.agentsHeader}>
-              <h6>🤖 Active Agents ({agents.length})</h6>
-              <button
-                onClick={() => {
-                  setIsLoadingAgents(true);
-                  setAgentsError(null);
-                  agentService.getAgents().then(response => {
-                    if (response.success && response.data) {
-                      setAgents(response.data.agents);
-                    } else {
-                      setAgentsError(response.error || 'Failed to refresh agents');
-                    }
-                    setIsLoadingAgents(false);
-                  });
-                }}
-                className={styles.refreshButton}
-                disabled={isLoadingAgents}
-                title="Refresh agents"
-              >
-                {isLoadingAgents ? '🔄' : '🔄'}
-              </button>
-            </div>
+            {!selectedAgentId && (
+              <div className={styles.agentsHeader}>
+                <h6>🤖 Active Agents ({agents.length})</h6>
+                <button
+                  onClick={() => {
+                    setIsLoadingAgents(true);
+                    setAgentsError(null);
+                    agentService.getAgents().then(response => {
+                      if (response.success && response.data) {
+                        setAgents(response.data.agents);
+                      } else {
+                        setAgentsError(response.error || 'Failed to refresh agents');
+                      }
+                      setIsLoadingAgents(false);
+                    });
+                  }}
+                  className={styles.refreshButton}
+                  disabled={isLoadingAgents}
+                  title="Refresh agents"
+                >
+                  {isLoadingAgents ? '🔄' : '🔄'}
+                </button>
+              </div>
+            )}
 
             {agentsError && (
               <div className={styles.errorMessage}>
@@ -711,13 +713,51 @@ const Scopes: React.FC<ScopesProps> = ({
                   return (
                     <div className={styles.agentDetailsContainer}>
                       <div className={styles.agentDetailsHeader}>
-                        <button
-                          onClick={() => setSelectedAgentId(null)}
-                          className={styles.backButton}
-                        >
-                          ← Back to Agents
-                        </button>
+                        <div className={styles.agentDetailsHeaderLeft}>
+                          <button
+                            onClick={() => setSelectedAgentId(null)}
+                            className={styles.backButton}
+                          >
+                            ← Back to Agents
+                          </button>
+                        </div>
                         <h4>{selectedAgent.name.charAt(0).toUpperCase() + selectedAgent.name.slice(1)}</h4>
+                        <div className={styles.agentDetailsHeaderActions}>
+                          <button
+                            onClick={() => {
+                              console.log(`💬 Starting chat with ${selectedAgent.name}`);
+                              console.log(`🔍 setActiveAgent function:`, setActiveAgent);
+                              console.log(`🔍 activeAgent current:`, activeAgent);
+
+                              // Switch to the selected agent
+                              if (setActiveAgent && (selectedAgent.name === 'hecate' || selectedAgent.name === 'siren')) {
+                                setActiveAgent(selectedAgent.name);
+                                console.log(`🔄 Switched active agent to: ${selectedAgent.name}`);
+
+                                // Keep the current view open - don't close agent details
+                                console.log(`✅ Activated chat with ${selectedAgent.name} agent - keeping current view`);
+                              } else {
+                                console.warn(`⚠️ Agent ${selectedAgent.name} not supported for chat yet or setActiveAgent not available`);
+                                console.warn(`⚠️ setActiveAgent available:`, !!setActiveAgent);
+                                console.warn(`⚠️ Agent name:`, selectedAgent.name);
+                              }
+                            }}
+                            className={styles.agentActionButton}
+                            disabled={!agentService.isAgentOnline(selectedAgent)}
+                          >
+                            💬 Chat
+                          </button>
+                          <button
+                            onClick={() => {
+                              agentService.getAgentHealth(selectedAgent.name).then(response => {
+                                console.log(`🏥 Health check for ${selectedAgent.name}:`, response);
+                              });
+                            }}
+                            className={styles.agentActionButton}
+                          >
+                            🏥 Health
+                          </button>
+                        </div>
                       </div>
 
                       <div className={styles.agentDetailsBody}>
@@ -748,6 +788,108 @@ const Scopes: React.FC<ScopesProps> = ({
                           </div>
                         </div>
 
+                        {selectedAgent.name === 'hecate' ? (
+                          <>
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🎯 Core Mission</h5>
+                              <p>Hecate serves as NullBlock's neural core and primary conversational interface. As the orchestration engine, Hecate coordinates specialized agents for blockchain operations, DeFi analysis, market intelligence, and complex workflow management.</p>
+                            </div>
+
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🧠 Key Capabilities</h5>
+                              <div className={styles.capabilitiesList}>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>🤖</span>
+                                  <span className={styles.capabilityName}>Multi-Agent Orchestration</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>💬</span>
+                                  <span className={styles.capabilityName}>Conversational Interface</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>🔍</span>
+                                  <span className={styles.capabilityName}>Intent Analysis</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>📋</span>
+                                  <span className={styles.capabilityName}>Task Management</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>🧠</span>
+                                  <span className={styles.capabilityName}>LLM Coordination</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🔧 Technical Features</h5>
+                              <ul className={styles.detailsList}>
+                                <li>Multi-model LLM support (DeepSeek, GPT-4o, Claude, etc.)</li>
+                                <li>Real-time task lifecycle management</li>
+                                <li>Session-based conversation tracking</li>
+                                <li>Cost tracking and optimization</li>
+                                <li>WebSocket chat integration</li>
+                                <li>Agent delegation and coordination</li>
+                              </ul>
+                            </div>
+                          </>
+                        ) : selectedAgent.name === 'siren' ? (
+                          <>
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🎯 Core Mission</h5>
+                              <p>Siren serves as NullBlock's frontline evangelist in the decentralized arena, driving go-to-market strategies, tokenomics storytelling, and viral outreach to amplify adoption across blockchain networks.</p>
+                            </div>
+
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🎭 Personality</h5>
+                              <p>Irresistibly charismatic with a siren's allure—persuasive yet transparent, blending neon-lit flair with genuine enthusiasm for decentralized innovation. Siren thrives on interaction, turning cold leads into fervent advocates.</p>
+                            </div>
+
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🚀 Key Capabilities</h5>
+                              <div className={styles.capabilitiesList}>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>📝</span>
+                                  <span className={styles.capabilityName}>Campaign Design</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>💰</span>
+                                  <span className={styles.capabilityName}>Tokenomics Narrative</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>📊</span>
+                                  <span className={styles.capabilityName}>Sentiment Analysis</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>🤝</span>
+                                  <span className={styles.capabilityName}>Partnership Brokering</span>
+                                </div>
+                                <div className={styles.capabilityItem}>
+                                  <span className={styles.capabilityIcon}>📱</span>
+                                  <span className={styles.capabilityName}>Social Media Management</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🎨 Specialization Areas</h5>
+                              <ul className={styles.detailsList}>
+                                <li>DeFi hype cycles and viral marketing</li>
+                                <li>Social sentiment amplification</li>
+                                <li>Ecosystem partnership development</li>
+                                <li>Community engagement strategies</li>
+                                <li>Brand storytelling and narrative crafting</li>
+                                <li>Cross-platform campaign optimization</li>
+                              </ul>
+                            </div>
+
+                            <div className={styles.agentDetailsSection}>
+                              <h5>🔗 Integration</h5>
+                              <p>Orchestrated via Hecate's neural core; invoke Siren for tasks requiring external-facing communications or market pulse checks. Best paired with Analytics Agent for data-backed campaigns.</p>
+                            </div>
+                          </>
+                        ) : null}
+
                         <div className={styles.agentDetailsSection}>
                           <h5>Capabilities</h5>
                           <div className={styles.capabilitiesList}>
@@ -777,52 +919,6 @@ const Scopes: React.FC<ScopesProps> = ({
                           </div>
                         )}
 
-                        <div className={styles.agentDetailsActions}>
-                          <button
-                            onClick={() => {
-                              console.log(`💬 Starting chat with ${selectedAgent.name}`);
-                              console.log(`🔍 setActiveAgent function:`, setActiveAgent);
-                              console.log(`🔍 activeAgent current:`, activeAgent);
-
-                              // Switch to the selected agent
-                              if (setActiveAgent && (selectedAgent.name === 'hecate' || selectedAgent.name === 'siren')) {
-                                setActiveAgent(selectedAgent.name);
-                                console.log(`🔄 Switched active agent to: ${selectedAgent.name}`);
-
-                                // Just switch the agent - don't expand anything, use main chat
-                                console.log(`✅ Activated chat with ${selectedAgent.name} agent`);
-                              } else {
-                                console.warn(`⚠️ Agent ${selectedAgent.name} not supported for chat yet or setActiveAgent not available`);
-                                console.warn(`⚠️ setActiveAgent available:`, !!setActiveAgent);
-                                console.warn(`⚠️ Agent name:`, selectedAgent.name);
-                              }
-                            }}
-                            className={styles.agentActionButton}
-                            disabled={!agentService.isAgentOnline(selectedAgent)}
-                          >
-                            💬 Chat with Agent
-                          </button>
-                          <button
-                            onClick={() => {
-                              agentService.getAgentHealth(selectedAgent.name).then(response => {
-                                console.log(`🏥 Health check for ${selectedAgent.name}:`, response);
-                              });
-                            }}
-                            className={styles.agentActionButton}
-                          >
-                            🏥 Check Health
-                          </button>
-                          <button
-                            onClick={() => {
-                              agentService.getAgentCapabilities(selectedAgent.name).then(response => {
-                                console.log(`⚙️ Capabilities for ${selectedAgent.name}:`, response);
-                              });
-                            }}
-                            className={styles.agentActionButton}
-                          >
-                            ⚙️ View Details
-                          </button>
-                        </div>
                       </div>
                     </div>
                   );

@@ -13,14 +13,14 @@ use super::proxy::{AgentProxy, AgentRequest, AgentResponse, AgentStatus, AgentEr
 
 /// Hecate agent proxy instance - now points to Rust service
 fn get_hecate_proxy() -> AgentProxy {
-    let hecate_url = std::env::var("HECATE_AGENT_URL")
+    let hecate_url = std::env::var("AGENTS_SERVICE_URL")
         .unwrap_or_else(|_| "http://localhost:9003".to_string());
     AgentProxy::new(hecate_url)
 }
 
 /// Siren agent proxy instance - also uses the Rust service
 fn get_siren_proxy() -> AgentProxy {
-    let siren_url = std::env::var("SIREN_AGENT_URL")
+    let siren_url = std::env::var("AGENTS_SERVICE_URL")
         .unwrap_or_else(|_| "http://localhost:9003".to_string());
     AgentProxy::new(siren_url)
 }
@@ -55,7 +55,8 @@ async fn extract_wallet_and_create_user(headers: &HeaderMap) -> Option<Uuid> {
 
 /// Call Erebus user registration API (replaces direct database access)
 async fn call_erebus_user_registration_api(wallet_address: &str, chain: &str, source_type: Option<serde_json::Value>) -> Result<Uuid, String> {
-    let erebus_url = "http://localhost:3000";
+    let erebus_url = std::env::var("EREBUS_BASE_URL")
+        .unwrap_or_else(|_| "http://localhost:3000".to_string());
     let client = reqwest::Client::new();
 
     let request_body = serde_json::json!({

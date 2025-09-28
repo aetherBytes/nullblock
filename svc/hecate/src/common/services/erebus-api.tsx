@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Erebus API base URL
-const EREBUS_API_BASE_URL = 'http://localhost:3000';
+const EREBUS_API_BASE_URL = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000';
 
 // New interfaces for backend-driven wallet interaction
 interface WalletDetectionRequest {

@@ -21,7 +21,8 @@ async fn call_erebus_user_api(
     wallet_type: Option<&str>,
 ) -> Result<UserReference, String> {
     let client = reqwest::Client::new();
-    let erebus_url = "http://localhost:3000";
+    let erebus_url = std::env::var("EREBUS_BASE_URL")
+        .unwrap_or_else(|_| "http://localhost:3000".to_string());
 
     let request_body = serde_json::json!({
         "source_identifier": source_identifier,
@@ -89,7 +90,8 @@ async fn call_erebus_user_lookup_api(
     chain: &str,
 ) -> Result<Option<UserReference>, String> {
     let client = reqwest::Client::new();
-    let erebus_url = "http://localhost:3000";
+    let erebus_url = std::env::var("EREBUS_BASE_URL")
+        .unwrap_or_else(|_| "http://localhost:3000".to_string());
 
     let request_body = serde_json::json!({
         "source_identifier": source_identifier,

@@ -62,12 +62,9 @@ check_rust() {
 # Install Python dependencies
 install_python_deps() {
     print_status "Installing Python dependencies..."
-    
-    # Install MCP dependencies
-    cd svc/nullblock-mcp
-    python3 -m pip install --upgrade pip
-    python3 -m pip install -e .
-    cd ../..
+
+    # Note: nullblock-mcp has been replaced by nullblock-protocols (Rust)
+    # Keeping orchestration and agents for now
     
     # Install orchestration dependencies
     cd svc/nullblock-orchestration
@@ -128,7 +125,7 @@ BITTENSOR_WALLET_PATH=your-bittensor-wallet-path
 # Database Configuration (local)
 # Docker Database URLs (using mapped ports)
 DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
-MCP_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5442/mcp
+# Note: Protocols service uses Agents database for integration (no separate database needed)
 ORCHESTRATION_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5443/orchestration
 AGENTS_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
 EREBUS_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus
@@ -146,9 +143,9 @@ DEX_API_KEYS=your-dex-api-keys
 SOLANA_RPC_URL=https://api.devnet.solana.com
 
 # Frontend Configuration
-VITE_MCP_API_URL=http://localhost:8000
-VITE_ORCHESTRATION_API_URL=http://localhost:8001
-VITE_AGENTS_API_URL=http://localhost:8002
+VITE_PROTOCOLS_API_URL=http://localhost:8001
+VITE_ORCHESTRATION_API_URL=http://localhost:8002
+VITE_AGENTS_API_URL=http://localhost:9001
 EOF
         print_warning "Please edit .env.dev file with your actual API keys and configuration"
     else
@@ -186,12 +183,14 @@ start_dev_services() {
 create_dev_scripts() {
     print_status "Creating development scripts..."
     
-    # Create script to start MCP server
-    cat > start-mcp.sh << 'EOF'
+    # Create script to start Protocols server
+    cat > start-protocols.sh << 'EOF'
 #!/bin/bash
-cd svc/nullblock-mcp
+cd svc/nullblock-protocols
 export $(cat ../../.env.dev | xargs)
-python3 -m mcp.server
+# Protocols service uses Agents database for integration
+export DATABASE_URL="$AGENTS_DATABASE_URL"
+cargo run
 EOF
     
     # Create script to start orchestration
@@ -235,7 +234,7 @@ echo "Erebus build complete"
 EOF
     
     # Make scripts executable
-    chmod +x start-mcp.sh start-orchestration.sh start-agents.sh start-frontend.sh start-erebus.sh build-erebus.sh
+    chmod +x start-protocols.sh start-orchestration.sh start-agents.sh start-frontend.sh start-erebus.sh build-erebus.sh
     
     print_success "Development scripts created"
 }
@@ -253,7 +252,7 @@ show_instructions() {
     echo "     - IPFS: ipfs daemon --enable-gc"
     echo ""
     echo "  3. Start services in separate terminals:"
-    echo "     - MCP: ./start-mcp.sh"
+    echo "     - Protocols: ./start-protocols.sh"
     echo "     - Orchestration: ./start-orchestration.sh"
     echo "     - Agents: ./start-agents.sh"
     echo "     - Erebus: ./start-erebus.sh"
@@ -261,10 +260,11 @@ show_instructions() {
     echo ""
     echo "Service URLs:"
     echo "  Frontend: http://localhost:5173"
-    echo "  MCP API: http://localhost:8000"
-    echo "  Orchestration API: http://localhost:8001"
-    echo "  Agents API: http://localhost:8002"
-    echo "  Erebus API: http://localhost:8003"
+    echo "  Protocols API: http://localhost:8001"
+    echo "  Orchestration API: http://localhost:8002"
+    echo "  Agents API: http://localhost:9001"
+    echo "  Hecate Agent API: http://localhost:9003"
+    echo "  Erebus API: http://localhost:3000"
     echo ""
 }
 

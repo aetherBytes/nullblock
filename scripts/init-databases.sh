@@ -38,7 +38,7 @@ DB_SUPERUSER="postgres"
 
 # Database names for each service
 DATABASES=(
-    "nullblock_mcp"
+    "nullblock_protocols"
     "nullblock_orchestration" 
     "nullblock_agents"
     "nullblock_erebus"
@@ -99,7 +99,7 @@ create_schema() {
     
     # Create basic tables based on service
     case $service_name in
-        "nullblock_mcp")
+        "nullblock_protocols")
             psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $db_name -c "
                 CREATE TABLE IF NOT EXISTS wallet_sessions (
                     id SERIAL PRIMARY KEY,

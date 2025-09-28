@@ -137,7 +137,7 @@ pub async fn create_task(
     }
 
     // Get Hecate agent ID for task assignment
-    let hecate_agent_id = match agent_repo.get_by_name_and_type("hecate", "conversational").await {
+    let hecate_agent_id = match agent_repo.get_by_name_and_type("hecate", "hive_mind").await {
         Ok(Some(agent)) => Some(agent.id),
         Ok(None) => {
             warn!("⚠️ Hecate agent not found in database, creating task without assignment");

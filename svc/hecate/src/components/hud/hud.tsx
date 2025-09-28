@@ -877,6 +877,7 @@ const HUD: React.FC<HUDProps> = ({
                         isUserScrolling={chat.isUserScrolling}
                         chatAutoScroll={chat.chatAutoScroll}
                         activeAgent={chat.activeAgent}
+                        setActiveAgent={chat.setActiveAgent}
                       />
 
                       <Scopes
