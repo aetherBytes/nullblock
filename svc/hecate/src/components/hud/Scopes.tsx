@@ -47,6 +47,11 @@ interface ScopesProps {
   setModelSearchQuery: (query: string) => void;
   isSearchingModels: boolean;
   searchResults: any[];
+  searchSubmitted: boolean;
+  setSearchSubmitted: (submitted: boolean) => void;
+  showSearchDropdown: boolean;
+  setShowSearchDropdown: (show: boolean) => void;
+  searchDropdownRef: React.RefObject<HTMLDivElement>;
   activeQuickAction: string | null;
   // Chat props for agent switching
   activeAgent?: 'hecate' | 'siren';

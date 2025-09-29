@@ -15,14 +15,12 @@ Together, we shape the future of autonomous commerce.
 
 ## 🌐 Connect & Follow
 
-**🧑‍💻 Developer**: [@sage_nullblock](https://x.com/sage_nullblock) - https://x.com/sage_nullblock
-**🏢 Official**: [@Nullblock_io](https://x.com/Nullblock_io) - https://x.com/Nullblock_io
-**📦 SDK**: [nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk) - https://github.com/aetherBytes/nullblock-sdk
+**🧑‍💻 Developer**: [@sage_nullblock](https://x.com/sage_nullblock)
+**🏢 Official**: [@Nullblock_io](https://x.com/Nullblock_io)
+**📦 SDK**: [nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk)
 **🌍 Site**: NullBlock.io _(Coming Soon)_
 
-### What is NullBlock?
-
-**NullBlock** is a revolutionary agentic platform that democratizes AI automation. Built on Rust for performance and reliability, it enables users to create, deploy, and monetize intelligent agent workflows without complex infrastructure. Whether you're automating DeFi trading, content creation, or data analysis, NullBlock's protocol-agnostic design seamlessly integrates with any system - from MCP servers to custom APIs.
+**NullBlock** is a revolutionary agentic platform that democratizes AI automation. Built on Rust for performance and reliability, it enables users to create, deploy, and monetize intelligent agent workflows without complex infrastructure. Protocol-agnostic design seamlessly integrates with any system - from MCP servers to custom APIs.
 
 ### 🚧 Current Development Focus
 
@@ -32,15 +30,7 @@ Together, we shape the future of autonomous commerce.
 2. **🔄 Database Table Rename: task_executions → tasks** - Clean migrations create `tasks` table but current database has `task_executions`. Need to rename table and update all Rust code references (models, queries, foreign keys, indexes) to match clean migration schema.
 3. **✅ User References Source Agnostic** - COMPLETED: Redesigned user_references table to support multiple source types (Web3, API, Email, OAuth, System Agents)
 
-## 🎨 Visual Overview
-
-![NullBlock Logo](https://img.shields.io/badge/NullBlock-Agentic%20Platform-00d4aa?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBzdHJva2U9IiNlNmMyMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0iIzAwZDRhYSIvPgo8L3N2Zz4K)
-![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)
-![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
-![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
-
-### Architecture Overview
+## Architecture Overview
 
 ```
 ┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
@@ -61,973 +51,278 @@ Together, we shape the future of autonomous commerce.
 - **🤖 Agent Orchestration**: Multi-model LLM coordination via Hecate
 - **🛣️ Unified Router**: Single entry point through Erebus (Port 3000)
 - **💰 Marketplace**: Crossroads AI service discovery and monetization
-- **🔗 Protocol Agnostic**: A2A (Agent-to-Agent), MCP (Model Context Protocol), and custom protocol support
+- **🔗 Protocol Agnostic**: A2A (Agent-to-Agent), MCP (Model Context Protocol), custom protocols
 - **⚡ Real-time**: WebSocket chat, live task management, instant feedback
 
-**Core Architecture**: Client ↔ NullBlock (Agentic Platform) ↔ Server (Web3 wallets, APIs, etc.)
+## 🎯 Core Services
 
-## 🎯 Current System Status
+### Production-Ready ✅
 
-### Production-Ready Components ✅
+- **NullBlock.protocols** (`/svc/nullblock-protocols/`): Multi-protocol server (A2A, MCP)
+- **NullBlock.agents** (`/svc/nullblock-agents/`): Agent suite (Hecate orchestrator, trading, monitoring, LLM)
+- **Erebus** (`/svc/erebus/`): Unified routing server
+- **Crossroads** (`/svc/erebus/src/resources/crossroads/`): Marketplace subsystem
+- **Hecate Frontend** (`/svc/hecate/`): React interface with real-time agent discovery
 
-- **NullBlock.protocols** (`/svc/nullblock-protocols/`): Multi-protocol server supporting A2A and MCP protocols for agent communication
-- **NullBlock.agents** (`/svc/nullblock-agents/`): Agent suite including Hecate orchestrator, trading, monitoring, LLM coordination
-- **Erebus** (`/svc/erebus/`): Unified routing server for wallet interactions and agent communication
-- **Crossroads** (`/svc/erebus/src/resources/crossroads/`): Marketplace and discovery subsystem integrated into Erebus
-- **Hecate Frontend** (`/svc/hecate/`): React interface with agent integration and real-time agent discovery
+### Legacy (Transitioning)
 
-### Legacy Components (Transitioning)
-
-- **Helios** (`/svc/helios/`): Original FastAPI backend → **Replaced by NullBlock.protocols**
-- **NullBlock.orchestration** (`/svc/nullblock-orchestration/`): Workflow engine → **Integrated into agents**
+- **Helios** → Replaced by NullBlock.protocols
+- **NullBlock.orchestration** → Integrated into agents
 
 ## 🚀 Quick Start
 
-### Complete Development Environment
-
 ```bash
-# Start all services with tmux
 ./scripts/dev-tmux
 
-# Individual service startup:
-# - Protocol Server: cd svc/nullblock-protocols && cargo run
-# - Hecate Agent: cd svc/nullblock-agents && cargo run
-# - Erebus Server: cd svc/erebus && cargo run
-# - Frontend: cd svc/hecate && npm run develop
+# Individual services:
+# cd svc/nullblock-protocols && cargo run  # Port 8001
+# cd svc/nullblock-agents && cargo run     # Port 9003
+# cd svc/erebus && cargo run               # Port 3000
+# cd svc/hecate && npm run develop         # Port 5173
 ```
 
 ### Key Ports
 
-- **3000**: Erebus (unified backend router + Crossroads marketplace)
-- **5173**: Hecate frontend (development)
+- **3000**: Erebus (unified router + Crossroads)
+- **5173**: Hecate frontend
 - **8001**: Protocol server (A2A/MCP)
-- **9001**: General agents API
-- **9003**: Hecate agent API (Rust service)
+- **9003**: Hecate agent API
 
-## 🏗️ Architecture
+## 🏗️ Architecture Rules
 
-### Erebus Unified Router (Port 3000) - GOLDEN RULE
+### Erebus Unified Router (Port 3000) - GOLDEN RULES
 
-🚨 **CRITICAL ARCHITECTURE RULE**: ALL frontend communication MUST route through Erebus. NO direct service connections allowed.
+🚨 **CRITICAL**: ALL frontend communication MUST route through Erebus. NO direct service connections.
 
 ```
 Frontend → Erebus → {
-  Wallet operations → Internal wallet handlers
-  Agent chat → Hecate agent (port 9003)
-  Agent search → Hecate agent (port 9003)
-  A2A/MCP operations → Protocol server (port 8001)
-  Marketplace operations → Crossroads subsystem (internal)
+  Wallet operations → Internal handlers
+  Agent chat → Hecate (9003)
+  A2A/MCP → Protocols (8001)
+  Marketplace → Crossroads (internal)
 }
 ```
 
-**NEVER allow frontend to bypass Erebus by connecting directly to:**
+🚨 **CRITICAL**: EREBUS OWNS ALL USER CRUD (Port 5440) - Use `/api/users/*` endpoints ONLY. NO direct database access.
 
-- Hecate agent (port 9003)
-- MCP server (port 8001)
-- Any other backend services
-- Crossroads marketplace is now INTERNAL to Erebus (no separate port)
+### API Endpoints
 
-**This prevents CORS issues and maintains proper request routing/logging.**
-
-### Key API Endpoints
-
-- **🔐 Users**: `/api/users/*` - **EREBUS OWNED** User registration, lookup, management
-- **👛 Wallets**: `/api/wallets/*` - Authentication, session management
+- **🔐 Users**: `/api/users/*` - Registration, lookup, management (EREBUS OWNED)
+- **👛 Wallets**: `/api/wallets/*` - Authentication, sessions
 - **🤖 Agents**: `/api/agents/*` - Chat, status, orchestration
-- **📋 Tasks**: `/api/agents/tasks/*` - Task management, lifecycle operations
-- **🔗 Protocols**: `/api/protocols/*` - A2A and MCP protocol operations
-- **🌐 A2A**: Direct endpoints for Agent-to-Agent communication
-- **🛣️ Marketplace**: `/api/marketplace/*` - Listing management, search, featured items
-- **🔍 Discovery**: `/api/discovery/*` - Service discovery, health monitoring
-- **⚙️ Admin**: `/api/admin/*` - Marketplace moderation, system management
-- **🏥 Health**: `/health` - Service status
+- **📋 Tasks**: `/api/agents/tasks/*` - Task management, lifecycle
+- **🔗 Protocols**: `/api/protocols/*` - A2A/MCP operations
+- **🛣️ Marketplace**: `/api/marketplace/*` - Listings, search
+- **🔍 Discovery**: `/api/discovery/*` - Service discovery, health
+- **⚙️ Admin**: `/api/admin/*` - Moderation, management
 
-### 🔐 User Authentication & Registration Flow
+## 🔐 User Authentication
 
-**CRITICAL**: All user operations go through Erebus APIs only. No direct database access allowed.
+### Source-Agnostic System ✅
 
-#### ✅ Source-Agnostic User System
+Supports: **Web3 Wallets**, **API Keys**, **Email Auth**, **OAuth**, **System Agents**
 
-The user_references table now supports multiple authentication sources:
-
-- **🌐 Web3 Wallets** - MetaMask, Phantom, Coinbase Wallet, etc.
-- **🔑 API Keys** - Service tokens, automation scripts
-- **📧 Email Auth** - Traditional email-based authentication
-- **🤖 System Agents** - Task runners, monitors, automated processes
-- **🔗 OAuth** - Google, GitHub, Discord, Twitter, etc.
-
-#### Complete Web3 Wallet Authentication Flow
+#### Web3 Wallet Flow
 
 ```
-1. Frontend: Wallet Connect (MetaMask/Phantom)
-   ↓
-2. POST /api/wallets/challenge (create auth challenge)
-   ↓
-3. User signs challenge with wallet
-   ↓
-4. POST /api/wallets/verify (verify signature)
-   ↓
-5. ✅ Successful verification automatically calls:
-   POST /api/users/register (Erebus User API)
-   ↓
-6. User registered in Erebus database
-   ↓
-7. Kafka events sync user to Agents database
-   ↓
-8. Session token returned to frontend
+1. Wallet Connect → 2. POST /api/wallets/challenge
+3. User signs → 4. POST /api/wallets/verify
+5. Auto POST /api/users/register → 6. Kafka sync → 7. Session token
 ```
 
-#### User Management Endpoints (Erebus Port 3000)
+### User Endpoints (Erebus Port 3000)
 
-- **POST `/api/users/register`** - Create/update user for any source type (Web3, API, Email, OAuth, System)
-- **POST `/api/users/lookup`** - Find user by source identifier + network (backward compatible with wallet + chain)
-- **GET `/api/users/:user_id`** - Get user by UUID
-- **❌ DEPRECATED**: `/api/agents/users/register` - Use Erebus endpoints instead
-
-#### Enhanced API Features (NEW)
-
-- **Source Type Support**: Strongly typed SourceType enum (Web3Wallet, ApiKey, EmailAuth, SystemAgent, OAuth)
-- **Backward Compatibility**: Legacy `chain` and `wallet_type` fields automatically converted
-- **Complete User Data**: All database fields (metadata, preferences, email, user_type) exposed via API
-- **Type-Safe Validation**: Database triggers validate source type structure and required fields
-
-#### Architecture Enforcement
-
-- **✅ CORRECT**: Frontend → Erebus `/api/users/*` → Erebus Database
-- **❌ WRONG**: Any service → Direct database access
-- **❌ WRONG**: Agents service creating users directly
-- **✅ CORRECT**: Wallet verification → Automatic user registration
-
-### Directory Structure
-
-```
-svc/erebus/src/resources/
-├── wallets/          # 👛 Wallet subsystem (MetaMask, Phantom)
-├── agents/           # 🤖 Agent routing & proxy
-├── mcp/              # 🔗 MCP protocol handlers
-├── templates/        # 🔒 RESERVED - MCP templates
-└── definitions/      # 🔒 RESERVED - MCP schemas
-
-svc/erebus/src/resources/crossroads/
-├── routes.rs         # 🛣️ API endpoints (marketplace, discovery, admin)
-├── services/         # 📦 Business logic (marketplace, discovery, health)
-├── models.rs         # 🗂️ Data structures and types
-└── mod.rs            # 📦 Module integration
-```
+- **POST `/api/users/register`** - Create/update user (all source types)
+- **POST `/api/users/lookup`** - Find by source identifier + network
+- **GET `/api/users/:user_id`** - Get by UUID
 
 ## 🤖 Agent System
 
-### Hecate Agent (Primary Interface)
+### Hecate Agent
 
-- **Purpose**: Main conversational interface and orchestration engine
-- **Default Model**: DeepSeek Chat v3.1 Free (cost: $0.00) for all conversations
-- **Features**: Multi-model LLM support, intent analysis, agent delegation, task management
-- **Integration**: Full frontend chat with real-time model display
-- **Task Management**: Session-based task creation, lifecycle management, User Generated tasks
-- **Chat Logging**: Real-time conversation logs with timestamps, model info, and cost tracking
-- **Logging**: Standardized cyberpunk-themed logs in `logs/` directory
+- **Purpose**: Main conversational interface, orchestration engine
+- **Default Model**: DeepSeek Chat v3.1 Free ($0.00)
+- **Features**: Multi-model LLM, intent analysis, delegation, task management
+- **Timeout**: 5-minute for thinking models
 
-### LLM Service Factory
+### LLM Factory
 
-- **Cloud Models**: OpenRouter (DeepSeek, GPT-4o, Claude), OpenAI, Anthropic, Groq, HuggingFace
-- **Default Model**: DeepSeek Chat v3.1 Free ($0.00/request) for cost-effective testing
-- **Routing**: Automatic model selection based on task requirements
-- **Optimization**: Quality, speed, cost, or balanced strategies
-- **Timeout Configuration**: 5-minute timeout for thinking models (DeepSeek-R1, etc.) to handle complex reasoning
+- **Providers**: OpenRouter, OpenAI, Anthropic, Groq, HuggingFace
+- **Strategies**: Quality, speed, cost, balanced
 
 ### Specialized Agents
 
-- **Information Gathering**: Market data, DeFi protocols, social sentiment
-- **Social Trading**: Twitter monitoring, sentiment analysis, risk assessment
-- **Arbitrage**: Price monitoring, strategy execution with MEV protection
+- **Information Gathering**: Market data, DeFi, social sentiment
+- **Social Trading**: Twitter monitoring, sentiment, risk
+- **Arbitrage**: Price monitoring, MEV protection
 
-## 🌐 A2A Protocol Implementation
+## 🌐 A2A Protocol
 
-### Protocol Specification Compliance
+NullBlock implements [A2A Protocol v0.3.0](https://a2a-protocol.org/latest/specification/)
 
-NullBlock implements the **Agent-to-Agent (A2A) Protocol** following the official specification: https://a2a-protocol.org/latest/specification/
+### Features
 
-### Core A2A Features
+- Agent card discovery (`/.well-known/agent-card.json`)
+- Dual transport (JSON-RPC 2.0, REST/HTTP+JSON)
+- Task lifecycle management
+- Message streaming
+- Push notifications
 
-- **Agent Card Discovery**: Standard agent metadata at `/.well-known/agent-card.json`
-- **Dual Transport Support**: JSON-RPC 2.0 and REST/HTTP+JSON
-- **Task Management**: Full task lifecycle with status tracking
-- **Message Handling**: Support for text, image, and multipart messages
-- **Push Notifications**: Webhook-based task update notifications
-- **Streaming Support**: Real-time message streaming capabilities
+### Endpoints
 
-### A2A Endpoints
+**JSON-RPC** (POST /a2a/jsonrpc): `message/send`, `message/stream`, `tasks/*`
+**REST**: `/v1/card`, `/v1/message:send`, `/v1/tasks/*`
 
-#### JSON-RPC Methods (POST /a2a/jsonrpc)
+## 📋 Task Management
 
-```
-message/send                    - Send message to agent
-message/stream                  - Send message with streaming
-tasks/get                       - Get task status
-tasks/list                      - List tasks
-tasks/cancel                    - Cancel task
-tasks/resubscribe              - Resume task streaming
-tasks/pushNotificationConfig/* - Push notification management
-agent/getAuthenticatedExtendedCard - Get authenticated agent card
-```
+### Implementation ✅
 
-#### REST Endpoints
-
-```
-GET  /v1/card                                     - Agent card discovery
-POST /v1/message:send                            - Send message
-POST /v1/message:stream                          - Streaming message
-GET  /v1/tasks                                   - List tasks
-GET  /v1/tasks/{id}                             - Get task
-POST /v1/tasks/{id}:cancel                      - Cancel task
-POST /v1/tasks/{id}:subscribe                   - Resume streaming
-POST /v1/tasks/{id}/pushNotificationConfigs     - Set push config
-GET  /v1/tasks/{id}/pushNotificationConfigs     - List push configs
-```
-
-### Agent Card Configuration
-
-```json
-{
-  "protocolVersion": "0.3.0",
-  "name": "NullBlock Protocol Service",
-  "description": "Multi-protocol agent communication service supporting MCP and A2A protocols",
-  "url": "https://localhost:8001/a2a/v1",
-  "preferredTransport": "JSONRPC",
-  "capabilities": {
-    "streaming": true,
-    "pushNotifications": true,
-    "stateTransitionHistory": false
-  },
-  "skills": [
-    {
-      "id": "task-management",
-      "name": "Task Management",
-      "description": "Create, manage, and execute tasks within the NullBlock agent ecosystem"
-    },
-    {
-      "id": "protocol-routing",
-      "name": "Protocol Routing",
-      "description": "Route messages between different agent protocols (MCP, A2A)"
-    }
-  ]
-}
-```
-
-### Integration Benefits
-
-- **🔗 Agent Interoperability**: Standard A2A compliance enables communication with external agents
-- **🌐 Protocol Bridge**: Foundation for translating between A2A and MCP protocols
-- **📡 Discovery**: Automatic agent discovery through standardized agent cards
-- **⚡ Real-time**: Streaming message support for responsive agent interactions
-- **🔔 Notifications**: Push notification system for asynchronous task updates
-
-## 📋 Task Management System
-
-### Current Implementation ✅
-
-- **PostgreSQL Storage**: Tasks persisted in PostgreSQL database with full CRUD operations
-- **Kafka Event Streaming**: Task lifecycle events published to Kafka for inter-service communication
-- **User Generated Tasks**: Frontend form allows creating basic tasks with name, description, priority
-- **Task Categories**: Currently supports "User Generated" category (user_assigned backend type)
-- **Task Lifecycle**: Full CRUD operations - create, read, update, delete, start, pause, resume, cancel, retry
-- **Task Processing**: Execute tasks via `/process` endpoint with Hecate agent integration
-- **Action Tracking**: Database fields track when tasks are actioned, processed, and completed
-- **Agent Integration**: Hecate agent automatically registered and assigned to new tasks
-- **Chat Integration**: Task results displayed in Hecate chat interface with processing metrics
-- **Frontend Integration**: TaskCreationForm.tsx integrated with Scopes.tsx in Hecate interface
-- **Data Flow**: Frontend → Erebus → Hecate Agent (port 9003) → PostgreSQL + Kafka Events
+- **Storage**: PostgreSQL with full CRUD
+- **Events**: Kafka streaming
+- **Lifecycle**: create → start → process → complete
+- **Processing**: `/api/agents/tasks/:id/process` endpoint
+- **Tracking**: `actioned_at`, `action_result`, `action_duration`
+- **Integration**: Hecate auto-assigned, chat display
 
 ### Database Architecture
 
-#### Database Ownership & Key Relationships
+**Erebus DB (5440)** - OWNS user_references
+**Agents DB (5441)** - OWNS tasks, agents, READ-ONLY user_references replica
 
-**Erebus Database (Port 5440)** - **OWNS CRUD**
+**Sync**: PostgreSQL logical replication (`erebus_user_sync` publication → `agents_user_sync` subscription)
 
-- **`user_references` table** - Master source of truth for user data ✅ REDESIGNED
-  - Primary Key: `id` (UUID)
-  - Fields: `source_identifier`, `network`, `source_type`, `user_type`, `email`, `metadata`, `preferences`
-  - **Source Agnostic**: Supports Web3, API, Email, OAuth, System Agent authentication
-  - **Enhanced Structure**: Strongly typed SourceType JSONB with validation triggers
-  - **Backward Compatible**: Legacy `chain`/`wallet_type` handling maintained
-  - **Full CRUD ownership** - All user operations
-  - **Logical Replication Publisher**: Real-time sync to Agents database
+**Benefits**: Service isolation, real-time sync (<1s), 99.9% reliability, zero maintenance
 
-**Agents Database (Port 5441)** - **OWNS CRUD**
+## 🛣️ Crossroads Marketplace
 
-- **`tasks` table** - Task management and lifecycle
+"Craigslist for AI Agents"
 
-  - Primary Key: `id` (UUID)
-  - Foreign Key: `user_id` (UUID) → references `user_references.id`
-  - Foreign Key: `assigned_agent_id` (UUID) → references `agents.id`
-  - **Full CRUD ownership** for task operations
+### Features
 
-- **`agents` table** - Agent registry and capabilities
+- **Listings**: Agents, workflows, tools, MCP servers
+- **Discovery**: Auto-discovery, health monitoring
+- **Search**: Advanced filtering, featured content
+- **Admin**: Moderation, quality control
 
-  - Primary Key: `id` (UUID)
-  - **Full CRUD ownership** for agent management
+### Endpoints
 
-- **`user_references` table** - **READ-ONLY replica via PostgreSQL logical replication**
-  - Primary Key: `id` (UUID) → mirrors Erebus `user_references.id`
-  - **Real-time sync via PostgreSQL logical replication**
-  - Used for task foreign key validation and user attribution
-
-#### Sync Strategy ✅ UPGRADED
-
-- **PostgreSQL Logical Replication**: Native, real-time, reliable sync
-- **Publication**: `erebus_user_sync` on Erebus database
-- **Subscription**: `agents_user_sync` on Agents database
-- **Real-time CRUD**: Insert, Update, Delete operations sync instantly
-- **No Python Scripts**: Eliminated failing sync scripts and queue system
-- **Built-in Recovery**: Automatic reconnection and failure handling
-
-#### Key Benefits
-
-- **Service Isolation**: Each service owns its domain data
-- **Real-time Sync**: Sub-second replication vs 30-second polling
-- **99.9% Reliability**: Native PostgreSQL replication vs custom Python scripts
-- **Zero Maintenance**: No application code to debug or monitor
-- **Data Consistency**: Foreign key validation with real-time synced references
-- **Scalability**: Independent scaling of services and databases
-
-### ✅ Source-Agnostic User System Achievement
-
-**COMPLETED**: Major architectural improvement making user authentication source-agnostic.
-
-#### Key Improvements Made:
-
-- **🔄 Database Migration**: Renamed `chain` → `network`, enhanced `source_type` JSONB structure
-- **🎯 Strongly Typed Enums**: SourceType enum with Web3Wallet, ApiKey, EmailAuth, SystemAgent, OAuth variants
-- **📊 Complete Struct Mapping**: All database fields accessible through UserReference struct
-- **🔧 Enhanced Service Methods**: Type-specific creators (`create_web3_user`, `create_api_user`, etc.)
-- **🌐 Updated API Endpoints**: Backward compatible with enhanced functionality
-- **✅ Database Applied**: Migration successfully applied with data preservation and validation
-
-#### Future Authentication Methods Supported:
-
-- **Web3 Wallets**: MetaMask, Phantom, Coinbase, hardware wallets
-- **API Authentication**: Service tokens, automation scripts, CI/CD systems
-- **Email Authentication**: Traditional email/password, magic links
-- **System Agents**: Task runners, monitoring systems, automated processes
-- **OAuth Integration**: Google, GitHub, Discord, Twitter, LinkedIn
-
-### ✅ PostgreSQL Logical Replication Upgrade
-
-**COMPLETED**: Replaced failing Python sync scripts with enterprise-grade PostgreSQL logical replication.
-
-#### Problems Solved:
-
-- **🐍 Python Script Failures**: Eliminated unreliable `sync_service.py` and `sync_to_agents.py`
-- **⏰ Polling Delays**: Removed 30-second sync delays
-- **🗂️ Queue Complexity**: Eliminated `user_sync_queue` table and processing overhead
-- **🔗 dblink Dependencies**: Removed error-prone database connection strings
-- **🛠️ Manual Recovery**: No more manual intervention for failed syncs
-
-#### Implementation Highlights:
-
-- **📡 Publication Setup**: `erebus_user_sync` publication on Erebus database (port 5440)
-- **📥 Subscription Setup**: `agents_user_sync` subscription on Agents database (port 5441)
-- **🔄 Schema Synchronization**: Fixed column mismatches between databases
-- **⚡ Real-time Sync**: Insert, Update, Delete operations replicate instantly
-- **🛡️ Built-in Recovery**: PostgreSQL handles connection failures and retries automatically
-
-#### Performance Improvements:
-
-- **Speed**: Sub-second replication vs 30-second polling
-- **Reliability**: 99.9% uptime vs intermittent Python script failures
-- **Maintenance**: Zero application code vs complex Python debugging
-- **Monitoring**: Built-in PostgreSQL views vs custom logging
-- **Recovery**: Automatic vs manual intervention required
-
-#### Monitoring Commands:
-
-```sql
--- Check replication health
-SELECT * FROM subscription_health;
-
--- Check replication lag
-SELECT * FROM replication_lag;
-
--- View replication slots
-SELECT * FROM pg_replication_slots;
-```
-
-### API Endpoints (via Erebus port 3000)
-
-- **`/api/agents/tasks`**: GET (list), POST (create)
-- **`/api/agents/tasks/:id`**: GET (single), PUT (update), DELETE (remove)
-- **`/api/agents/tasks/:id/start`**: POST - Start task execution
-- **`/api/agents/tasks/:id/pause`**: POST - Pause running task
-- **`/api/agents/tasks/:id/resume`**: POST - Resume paused task
-- **`/api/agents/tasks/:id/cancel`**: POST - Cancel task
-- **`/api/agents/tasks/:id/retry`**: POST - Retry failed task
-- **`/api/agents/tasks/:id/process`**: POST - **NEW** Execute task with Hecate agent
-
-### Task Data Structure
-
-```json
-{
-  "id": "task_1",
-  "name": "User Task Name",
-  "description": "Task description",
-  "task_type": "system",
-  "category": "user_assigned",
-  "status": "created|running|paused|completed|failed|cancelled",
-  "priority": "low|medium|high|urgent|critical",
-  "created_at": "2025-09-22T03:17:08Z",
-  "updated_at": "2025-09-22T03:17:08Z",
-  "progress": 0,
-  "parameters": {},
-  "user_approval_required": false,
-  "auto_retry": true,
-  "max_retries": 3,
-
-  // NEW: Action tracking fields
-  "actioned_at": "2025-09-22T03:18:15Z",
-  "action_result": "Task completed successfully. Here's what I accomplished...",
-  "action_metadata": {
-    "started_by": "hecate",
-    "agent_id": "hecate-agent-uuid",
-    "execution_start": "2025-09-22T03:18:15Z"
-  },
-  "action_duration": 2340
-}
-```
-
-### Frontend Components
-
-- **TaskCreationForm.tsx**: Simple form for creating User Generated tasks
-- **useTaskManagement.ts**: React hook handling task operations and state
-- **task-service.tsx**: Service layer handling API communication with data transformation
-- **Scopes.tsx**: Contains tasks scope displaying task list and management UI
-
-### Task Action Tracking System ✅
-
-**Completed Implementation:**
-
-- **Action State Separation**: Clear distinction between task lifecycle and agent execution
-  - Task lifecycle: `created` → `running` → `completed` (administrative states)
-  - Agent action: `actioned_at` → `action_result` → agent stats updated (execution tracking)
-- **Database Schema**:
-  - Tasks table: `actioned_at`, `action_result`, `action_metadata`, `action_duration`
-  - Agents table: `last_task_processed`, `tasks_processed_count`, `last_action_at`, `average_processing_time`
-- **Agent Registration**: Hecate automatically registered in agents table on startup
-- **Auto-Assignment**: New tasks automatically assigned to Hecate agent
-- **Execution Flow**:
-  1. Create task (assigned to Hecate)
-  2. Start task (status: `running`, `actioned_at: NULL`)
-  3. Process task (calls `/process` endpoint)
-  4. Hecate executes task (sets `actioned_at`, processes via chat)
-  5. Store result (sets `action_result`, `action_duration`)
-  6. Update agent stats (increments counters, updates averages)
-- **Chat Integration**: Task results displayed in Hecate chat with special formatting
-- **Duplicate Prevention**: Tasks can only be actioned once (`actioned_at IS NULL` check)
-
-### Development Notes
-
-- **Data Transformation**: Frontend uses kebab-case, backend expects snake_case (handled in task-service.tsx)
-- **Database Persistence**: Tasks stored in PostgreSQL with automatic migrations on startup
-- **Event Streaming**: Task lifecycle events published to Kafka for system-wide coordination
-- **Environment Variables**:
-  - `DATABASE_URL`: PostgreSQL connection (required for persistence)
-  - `KAFKA_BOOTSTRAP_SERVERS`: Kafka cluster (optional, defaults to localhost:9092)
-- **Migration System**: SQLx migrations run automatically on service startup
-- **Hecate Agent Service**: Must be running on port 9003 for task functionality
-
-## 🤖 Agent Discovery & Management System
-
-### ✅ Enhanced Agent Discovery Implementation
-
-**COMPLETED**: Comprehensive agent discovery and management system with real-time frontend integration.
-
-#### Core Features
-
-- **🔍 Real-time Agent Discovery**: Automatic discovery of available agents (Hecate, Marketing) via `/api/discovery/agents` endpoint
-- **📊 Live Agent Monitoring**: Real-time status, health, and metrics tracking for all agents
-- **🎯 Agent Selection Interface**: Interactive agent cards with detailed views and capabilities
-- **⚡ Direct Agent Interaction**: Quick actions for chat, health checks, and task assignment
-
-#### Frontend Integration (Hecate)
-
-**Enhanced Agents Scope** (`/svc/hecate/src/components/hud/Scopes.tsx`):
-
-- ✅ **Real Data Integration**: Replaced mock data with live agent discovery API
-- ✅ **Agent Service Layer**: New `AgentService` class for API communication
-- ✅ **Interactive UI**: Clickable agent cards with detailed view panels
-- ✅ **Live Status Indicators**: Visual health status and capability displays
-- ✅ **Refresh Functionality**: Manual agent discovery refresh with loading states
-
-#### Backend Enhancement (Erebus)
-
-**Enhanced Agent Discovery Service** (`/svc/erebus/src/resources/crossroads/services.rs`):
-
-- ✅ **Multi-Agent Support**: Discovery of both Hecate and Marketing agents
-- ✅ **Health Monitoring**: Individual agent health checks via `/marketing/health`, `/hecate/status`
-- ✅ **Comprehensive Metadata**: Agent capabilities, descriptions, and metrics
-- ✅ **Fallback Handling**: Graceful degradation when agents are unavailable
-
-#### Agent Data Structure
-
-```typescript
-interface Agent {
-  name: string; // "hecate" | "marketing"
-  type: string; // "conversational" | "specialized"
-  status: string; // "healthy" | "unhealthy"
-  endpoint: string; // "/api/agents/hecate" | "/api/agents/marketing"
-  capabilities: string[]; // ["chat", "reasoning"] | ["content_generation", "social_media"]
-  description: string; // Human-readable agent description
-  metrics?: {
-    // Live agent metrics
-    tasks_processed?: number;
-    content_themes?: number;
-    twitter_integration?: string;
-    llm_factory?: string;
-    last_activity?: string;
-  };
-}
-```
-
-#### API Endpoints
-
-- **`/api/discovery/agents`**: GET - Discover all available agents
-- **`/api/agents/{agent}/status`**: GET - Get individual agent health
-- **`/api/agents/marketing/themes`**: GET - Marketing agent content themes
-- **`/api/agents/hecate/model-info`**: GET - Hecate model information
-
-#### Frontend Agent Service
-
-**New Service Layer** (`/svc/hecate/src/common/services/agent-service.tsx`):
-
-- `getAgents()`: Fetch all available agents
-- `getAgentHealth(agentName)`: Check individual agent health
-- `getAgentCapabilities(agentName)`: Get agent-specific capabilities
-- `chatWithAgent(agentName, message)`: Direct agent communication
-- `assignTaskToAgent(agentName, taskId)`: Task-agent assignment
-
-#### User Experience Features
-
-- **🎨 Visual Status Indicators**: Color-coded health status (green=healthy, red=unhealthy)
-- **🏷️ Capability Tags**: Visual representation of agent capabilities with icons
-- **📊 Live Metrics Display**: Real-time agent performance data
-- **🔄 Refresh Controls**: Manual agent discovery refresh
-- **⚠️ Error Handling**: Graceful error states with helpful messages
-- **📱 Responsive Design**: Mobile-friendly agent cards and details
-
-#### Benefits
-
-- **✅ Real-time Visibility**: Live monitoring of all platform agents
-- **✅ Unified Management**: Single interface for all agent interactions
-- **✅ Task Integration**: Direct agent assignment for task workflows
-- **✅ Health Monitoring**: Proactive agent health tracking
-- **✅ Extensible Design**: Easy addition of new agents in the future
-
-## 🛣️ Crossroads Marketplace System
-
-### Core Purpose - **"Craigslist for AI Agents"**
-
-- **Focused Marketplace**: Simple listing and discovery of agents, workflows, tools, and MCP servers
-- **Service Discovery**: Automatic discovery and cataloging of available Nullblock services
-- **Integration Hub**: Connect with other Erebus subsystems for advanced functionality
-- **Unified Interface**: Single place to find and list AI services in the ecosystem
-
-### Core Features
-
-#### Marketplace Operations
-
-- **Listing Management**: Create, update, approve, delete marketplace listings
-- **Advanced Search**: Filter by type, tags, author, rating, price with full-text search
-- **Featured Listings**: Curated showcase of premium content
-- **Service Integration**: Connects to Nullblock Agent/MCP/Orchestration services for data
-
-#### Service Discovery Engine
-
-- **Agent Discovery**: Finds agents from Nullblock Agents service (port 9001)
-- **Workflow Discovery**: Finds workflows from Orchestration service (port 8002)
-- **MCP Server Discovery**: Finds MCP servers from MCP service (port 8001)
-- **Health Monitoring**: Continuous health checks and service availability tracking
-- **Real-time Scanning**: On-demand discovery scans with performance metrics
-
-#### Marketplace Administration
-
-- **Listing Moderation**: Approve, reject, and feature marketplace listings
-- **Quality Control**: Ensure marketplace integrity and content standards
-- **Admin Dashboard**: Administrative controls for marketplace management
-
-### API Endpoints (via Erebus port 3000)
-
-#### Core Marketplace
-
-- **`/api/marketplace/listings`**: CRUD operations for listings
-- **`/api/marketplace/search`**: Advanced search functionality
-- **`/api/marketplace/featured`**: Featured content management
-- **`/api/marketplace/stats`**: Marketplace statistics and metrics
-
-#### Service Discovery
-
-- **`/api/discovery/agents`**: Agent discovery with Nullblock service integration
-- **`/api/discovery/workflows`**: Workflow discovery from orchestration service
-- **`/api/discovery/mcp-servers`**: MCP server discovery and scanning
-- **`/api/discovery/scan`**: Trigger full discovery scans
-- **`/api/discovery/health/:endpoint`**: Check individual service health
-
-#### Administration
-
-- **`/api/admin/listings/approve/:id`**: Approve marketplace listings
-- **`/api/admin/listings/reject/:id`**: Reject marketplace listings
-- **`/api/admin/listings/feature/:id`**: Feature marketplace listings
-
-#### Health & Status
-
-- **`/api/crossroads/health`**: Crossroads subsystem health monitoring
-
-### Service Integration Architecture
-
-Crossroads integrates with other Nullblock services for extended functionality:
-
-- **For MCP Operations**: Use MCP service endpoints (`/svc/nullblock-mcp/`)
-- **For Blockchain/Tokenization**: Use dedicated blockchain service (to be implemented)
-- **For Wealth Distribution**: Use dedicated rewards service (to be implemented)
-- **For Agent Interoperability**: Use extended Agents service functionality
-
-### Integration Benefits
-
-- **Focused Scope**: Clean separation of marketplace vs. advanced functionality
-- **Service Composition**: Leverage other Erebus subsystems for complex operations
-- **Unified Routing**: All requests go through Erebus logging and middleware
-- **CORS Compliance**: No cross-origin issues since everything routes through port 3000
-- **Clear Responsibilities**: Marketplace discovery vs. service-specific functionality
+- `/api/marketplace/*` - Listings, search, stats
+- `/api/discovery/*` - Agents, workflows, MCP servers, health
+- `/api/admin/*` - Approve, reject, feature
 
 ## 📋 Common Commands
 
-### Service Management
-
 ```bash
-# Code quality (all Python services)
-ruff format . && ruff check . --fix && mypy .
-
-# Code quality (Rust)
-cargo fmt && cargo clippy
+# Quality
+cargo fmt && cargo clippy          # Rust
+ruff format . && ruff check . --fix # Python
 
 # Testing
-pytest -v                    # Python services
-cargo test                   # Rust services
-```
+cargo test                          # Rust
+pytest -v                           # Python
 
-### Development Servers
-
-```bash
-# Python services
-python -m [service_name]
-uvicorn [module]:app --reload
-
-# Rust services
-cargo run
-cargo watch -x run          # Auto-reload
-
-# Frontend
-npm run develop
-ssr-boost dev
-```
-
-### Database & Event Streaming Development
-
-```bash
-# Start PostgreSQL and Kafka services
+# Database
 docker-compose up postgres kafka zookeeper -d
-
-# Start Hecate agent server with database (Rust service)
-export DATABASE_URL="postgresql://postgres:postgres_secure_pass@localhost:5432/postgres"
+export DATABASE_URL="postgresql://postgres:postgres_secure_pass@localhost:5441/agents"
 export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
-cd svc/nullblock-agents && cargo run
 
-# Test database migrations
-cd svc/nullblock-agents && sqlx migrate run --database-url $DATABASE_URL
-
-# Monitor Kafka topics
-docker exec -it nullblock-kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic task.lifecycle --from-beginning
-docker exec -it nullblock-kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic user.created --from-beginning
-
-# Database direct access
-psql postgresql://postgres:postgres_secure_pass@localhost:5432/postgres
-```
-
-### Agent Development
-
-```bash
-# Start Hecate agent server (Rust service)
-cd svc/nullblock-agents && cargo run
-
-# Test task management endpoints (database-backed)
-curl http://localhost:9003/tasks
-curl -X POST http://localhost:9003/tasks -H "Content-Type: application/json" -d '{"name":"Test","description":"Test task","task_type":"system"}'
-
-# Monitor logs
-tail -f logs/hecate-server.log
-
-# Monitor chat conversations (real-time)
+# Monitoring
 tail -f svc/nullblock-agents/logs/chats/hecate-chat.log
-
-# View chat session data (JSON format)
-cat svc/nullblock-agents/logs/chats/session_*.jsonl
-```
-
-### Agent Discovery & Management Development
-
-```bash
-# Test agent discovery API (via Erebus)
-curl http://localhost:3000/api/discovery/agents
-
-# Test individual agent health endpoints
-curl http://localhost:9003/hecate/health
-curl http://localhost:9003/marketing/health
-
-# Test marketing agent capabilities
-curl http://localhost:9003/marketing/themes
-
-# Test Hecate model information
-curl http://localhost:9003/hecate/model-info
-
-# Monitor agent discovery service logs
-tail -f svc/erebus/logs/erebus.log | grep "agent"
-
-# Test frontend agent service integration
-# Open browser to http://localhost:5173
-# Navigate to Agents scope and verify real data loads
-# Click agent cards to test detailed views
-# Use refresh button to test live updates
-```
-
-### Task Management Development
-
-```bash
-# Test task creation via Erebus (end-to-end)
-curl -X POST http://localhost:3000/api/agents/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Test Task","description":"Testing","task_type":"system","category":"user_assigned","priority":"medium"}'
-
-# List all tasks
-curl http://localhost:3000/api/agents/tasks
-
-# Test task lifecycle operations
-curl -X POST http://localhost:3000/api/agents/tasks/task_1/start
-curl -X POST http://localhost:3000/api/agents/tasks/task_1/pause
-curl -X POST http://localhost:3000/api/agents/tasks/task_1/resume
-curl -X DELETE http://localhost:3000/api/agents/tasks/task_1
-```
-
-### Crossroads Marketplace Development
-
-```bash
-# Start Erebus server (includes Crossroads)
-cd svc/erebus && cargo run
-
-# Monitor Erebus logs (includes Crossroads operations)
 tail -f svc/erebus/logs/erebus.log
+docker exec -it nullblock-kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic task.lifecycle --from-beginning
 
-# Test Crossroads endpoints via Erebus
-curl http://localhost:3000/api/crossroads/health
-curl http://localhost:3000/api/marketplace/listings
+# API Testing
 curl http://localhost:3000/api/discovery/agents
+curl -X POST http://localhost:3000/api/agents/tasks -H "Content-Type: application/json" -d '{"name":"Test","description":"Test task","task_type":"system","category":"user_assigned","priority":"medium"}'
 ```
-
-### Chat Logging Structure
-
-- **Real-time Chat Log**: `svc/nullblock-agents/logs/chats/hecate-chat.log`
-  - Human-readable format with timestamps, emojis, and model info
-  - Continuous log of all conversations across sessions
-- **Session-specific Logs**: `svc/nullblock-agents/logs/chats/session_*.jsonl`
-  - Structured JSON data with full metadata
-  - Individual file per agent startup session
-  - Includes user context, model costs, latency metrics
 
 ## ⚠️ Organizational Rules
-
-### Reserved Directories (Do Not Modify)
-
-- `svc/erebus/src/resources/templates/` - MCP template definitions
-- `svc/erebus/src/resources/definitions/` - MCP type definitions and schemas
 
 ### Code Standards
 
 - **NEVER** add comments unless explicitly requested
-- **ALWAYS** prefer editing existing files over creating new ones
+- **ALWAYS** prefer editing existing files over creating new
 - **NEVER** proactively create documentation files
-- Follow existing code conventions and patterns
-- Use existing libraries already present in the codebase
+- Follow existing conventions and patterns
 
-### Erebus Architecture Rules
+### Architecture Enforcement
 
-- **GOLDEN RULE**: ALL frontend requests MUST route through Erebus (port 3000) - NO EXCEPTIONS
-- **🚨 CRITICAL GOLDEN RULE**: EREBUS OWNS ALL USER CRUD OPERATIONS (Port 5440) - NO EXCEPTIONS
-  - **ALL user registration, authentication, and CRUD operations MUST go through Erebus APIs**
-  - **NO other service may directly access user databases or create users**
-  - **Use `/api/users/register`, `/api/users/lookup`, `/api/users/:id` endpoints ONLY**
-  - **Direct database access for users is STRICTLY PROHIBITED**
-  - **This prevents data corruption and maintains service boundaries**
-- **GOLDEN RULE**: Keep the top portion of CLAUDE.md static in structure and up to date with code changes
-- **GOLDEN RULE**: NEVER use test database credentials in production - test credentials are for development only
-- **main.rs**: Only subsystem entry points and core routes
-- **Subsystem Organization**: Each feature gets own directory (wallets/, mcp/, agents/)
-- **Wallet Subsystem**: All wallets implement `WalletProvider` trait
-- **Shared Types**: Use `resources/types.rs` for cross-subsystem types
-- **Agent Timeout**: 5-minute proxy timeout for thinking models and complex agent operations
-- **Frontend Discipline**: If you see direct service calls (localhost:9003, localhost:8001) in frontend code, FIX IMMEDIATELY by routing through Erebus
+- **ALL** frontend requests → Erebus (3000) - NO EXCEPTIONS
+- **ALL** user CRUD → Erebus `/api/users/*` - NO direct DB access
+- Keep CLAUDE.md top section static and updated
+- NEVER use test credentials in production
+- Subsystems in own directories (wallets/, mcp/, agents/)
 
 ## 🎨 UI/UX Standards
 
-### Visual Design
+- **NullEye Animations**: 8 lightning arcs, silver-gold (#e8e8e8, #e6c200)
+- **State-Responsive**: Colors change based on agent state
+- **Responsive**: 4-column grids optimized for small screens
+- **Gentle Messaging**: Blue info (#4a90e2), red errors (#ff3333)
 
-- **NullEye Animations**: 8 randomized lightning arcs with silver-gold effects (#e8e8e8, #e6c200)
-- **State-Responsive**: Colors change based on agent state, red/dimmed when offline
-- **Responsive Design**: 4-column grids optimized for small screens
-- **Gentle Messaging**: Blue info (#4a90e2), red errors (#ff3333), no aggressive animations
+## 🔧 Environment Variables
 
-### User Interface
-
-- **Command Lens**: Compact grid with instant access styling
-- **Intelligent Tooltips**: Hover-based help system
-- **HecateHud**: Personalized user stats (wallet info, session time, connection status)
-- **Universal Navigation**: All NullEyes route to agent interfaces
-
-## 🔧 Environment Setup
-
-### Production-Ready Environment Variables
-
-All services now support configurable URLs through environment variables to support dev/staging/production deployments.
-
-#### Backend Service URLs
+### Backend
 
 ```bash
-# Service Base URLs (Production Ready)
-EREBUS_BASE_URL=http://localhost:3000              # Erebus unified router
-PROTOCOLS_SERVICE_URL=http://localhost:8001        # Protocols service (A2A/MCP)
-AGENTS_SERVICE_URL=http://localhost:9003           # Agents service (Rust)
-ORCHESTRATION_SERVICE_URL=http://localhost:8002    # Orchestration service (future)
-
-# Database Configuration
+EREBUS_BASE_URL=http://localhost:3000
+PROTOCOLS_SERVICE_URL=http://localhost:8001
+AGENTS_SERVICE_URL=http://localhost:9003
 DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5441/agents
 EREBUS_DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5440/erebus
 KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-
-# External Service URLs
-OLLAMA_BASE_URL=http://localhost:11434             # Ollama LLM service
+OLLAMA_BASE_URL=http://localhost:11434
 ```
 
-#### Frontend Environment Variables
+### Frontend
 
 ```bash
-# Frontend API Configuration (Production Ready)
-VITE_EREBUS_API_URL=http://localhost:3000          # Primary API endpoint
-VITE_PROTOCOLS_API_URL=http://localhost:8001       # Protocols service
-VITE_A2A_API_URL=http://localhost:8001             # A2A protocol endpoints
-VITE_HECATE_API_URL=http://localhost:9003          # Direct agent access (via Erebus)
-VITE_FAST_API_BACKEND_URL=http://localhost:8000    # Legacy FastAPI (transitioning)
-VITE_MCP_API_URL=http://localhost:8001             # MCP protocol endpoints
-
-# CORS Configuration
+VITE_EREBUS_API_URL=http://localhost:3000
+VITE_PROTOCOLS_API_URL=http://localhost:8001
+VITE_HECATE_API_URL=http://localhost:9003
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-FRONTEND_URL=http://localhost:5173
 ```
 
-#### AWS Production Configuration (Future)
+### LLM APIs
 
 ```bash
-# Production URLs (AWS deployment ready)
-EREBUS_BASE_URL=https://api.nullblock.io
-PROTOCOLS_SERVICE_URL=https://protocols.nullblock.io
-AGENTS_SERVICE_URL=https://agents.nullblock.io
-
-# Frontend Production URLs
-VITE_EREBUS_API_URL=https://api.nullblock.io
-VITE_PROTOCOLS_API_URL=https://protocols.nullblock.io
-VITE_A2A_API_URL=https://protocols.nullblock.io
-```
-
-#### Development vs Production
-
-**Development (Default)**: All services default to localhost URLs when environment variables are not set.
-
-**Production**: Set environment variables to point to your AWS or cloud infrastructure:
-
-- **API Gateway**: Route external traffic to internal services
-- **Load Balancers**: Distribute traffic across service instances
-- **Service Discovery**: Automatically configure service URLs
-- **SSL Termination**: HTTPS endpoints for all external services
-
-#### LLM API Configuration
-
-```bash
-# Optional LLM APIs
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
 GROQ_API_KEY=
-HUGGINGFACE_API_KEY=
 OPENROUTER_API_KEY=
-
-# LLM Service Configuration
 DEFAULT_LLM_MODEL=x-ai/grok-4-fast:free
 LLM_REQUEST_TIMEOUT_MS=300000
 ```
 
-#### Legacy Configuration
+## 💰 Monetization
 
-```bash
-# Legacy Configuration (still supported)
-ETHEREUM_RPC_URL=
-FLASHBOTS_PRIVATE_KEY=
-IPFS_API=
-```
+- **Financial Automation**: 0.5-1% fees
+- **Content & Communication**: $10-$100/month
+- **Data Intelligence**: $50-$500/month
+- **Marketplace Fee**: 5-10% revenue share
+- **Task Execution**: $0.01-$0.05 per task
+- **Premium Hosting**: $10-$100/month
 
-### Health Monitoring
-
-All services implement `/health` endpoints with standardized JSON responses:
-
-```json
-{
-  "status": "healthy|unhealthy",
-  "service": "service-name",
-  "timestamp": "2025-08-20T...",
-  "components": {...}
-}
-```
-
-## 💰 Monetization Strategy
-
-### Revenue Streams
-
-- **Financial Automation**: 0.5-1% fees on trading, portfolio management
-- **Content & Communication**: $10-$100/month subscriptions
-- **Data Intelligence**: $50-$500/month for analysis and insights
-- **Workflow Automation**: $25-$250/month for complex agent workflows
-
-### Platform Revenue
-
-- **Marketplace Fee**: 5-10% of user-created agent revenue
-- **Task Execution**: $0.01-$0.05 per automated task
-- **Premium Hosting**: $10-$100/month for advanced features
-
-## 🚧 Current Development Status
+## 🚧 Development Status
 
 ### Recently Completed ✅
 
-- **Source-Agnostic User System**: Complete redesign of user_references table and supporting infrastructure
-- **Database Migration Applied**: Schema changes successfully applied with data preservation
-- **Type-Safe API**: Enhanced endpoints with SourceType enum and backward compatibility
-- **Agent Renaming & Rebranding**: Marketing Agent → Siren with updated profile, capabilities, and documentation
-- **Frontend Agent Integration**: Real-time agent discovery, standardized metrics, and improved UI
-- **Agent Metrics Standardization**: Common base stats (tasks, last) + agent-specific custom stats
-- **Database Schema Updates**: Added missing agent activity columns and migration system
+- Source-agnostic user system with SourceType enum
+- Database migration applied with data preservation
+- Agent discovery with real-time metrics
+- PostgreSQL logical replication for user sync
+- Task action tracking with agent stats
 
 ### In Progress 🔄
 
-- **Agent Identity System**: Dynamic agent name display in chat titles and message attribution
-- **UI/UX Refinements**: Agent card styling, text alignment, and mock data cleanup
+- Agent identity system (dynamic name display)
+- UI/UX refinements (agent cards, text alignment)
 
 ### Next Up 📋
 
-1. **Agent Service Integration**: Establish communication protocols between task service and orchestration
-2. **Performance Optimization**: Database query optimization and caching strategies
-3. **Advanced Agent Features**: Enhanced capabilities and specialized agent workflows
+1. Database table rename: task_executions → tasks
+2. Agent service integration protocols
+3. Performance optimization (query caching)
 
 ---
 

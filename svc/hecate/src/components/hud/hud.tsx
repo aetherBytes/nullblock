@@ -85,7 +85,10 @@ const HUD: React.FC<HUDProps> = ({
   const [modelSearchQuery, setModelSearchQuery] = useState('');
   const [isSearchingModels, setIsSearchingModels] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchSubmitted, setSearchSubmitted] = useState(false);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
   const [modelInfo, setModelInfo] = useState<any>(null);
   const [isLoadingModelInfo, setIsLoadingModelInfo] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -256,18 +259,38 @@ const HUD: React.FC<HUDProps> = ({
     };
   }, [showScopeDropdown]);
 
-  // Debounced search effect
+  // Debounced search effect for autocomplete
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (modelSearchQuery.trim()) {
         searchModels(modelSearchQuery);
+        setShowSearchDropdown(true);
       } else {
         setSearchResults([]);
+        setShowSearchDropdown(false);
+        setSearchSubmitted(false);
       }
     }, 300);
 
     return () => clearTimeout(timeoutId);
   }, [modelSearchQuery]);
+
+  // Click outside handler for search dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target as Node)) {
+        setShowSearchDropdown(false);
+      }
+    };
+
+    if (showSearchDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSearchDropdown]);
 
   // Auto-load model info when current model changes
   useEffect(() => {
@@ -599,8 +622,39 @@ const HUD: React.FC<HUDProps> = ({
     }
   };
 
+  const fuzzyMatch = (text: string, query: string): { matches: boolean; score: number } => {
+    const textLower = text.toLowerCase();
+    const queryLower = query.toLowerCase();
+
+    if (textLower.includes(queryLower)) {
+      return { matches: true, score: 100 - textLower.indexOf(queryLower) };
+    }
+
+    let queryIndex = 0;
+    let lastMatchIndex = -1;
+    let score = 0;
+
+    for (let i = 0; i < textLower.length && queryIndex < queryLower.length; i++) {
+      if (textLower[i] === queryLower[queryIndex]) {
+        if (lastMatchIndex === -1 || i === lastMatchIndex + 1) {
+          score += 10;
+        } else {
+          score += 5;
+        }
+        lastMatchIndex = i;
+        queryIndex++;
+      }
+    }
+
+    const allMatched = queryIndex === queryLower.length;
+    return { matches: allMatched, score: allMatched ? score : 0 };
+  };
+
   const searchModels = async (query: string) => {
+    console.log('🔍 searchModels called with query:', query);
+
     if (!query.trim()) {
+      console.log('🔍 Empty query, clearing results');
       setSearchResults([]);
       return;
     }
@@ -609,27 +663,46 @@ const HUD: React.FC<HUDProps> = ({
       setIsSearchingModels(true);
 
       let searchableModels = modelManagement.availableModels;
+      console.log('🔍 Available models count:', searchableModels.length);
 
       if (searchableModels.length === 0) {
+        console.log('🔍 No cached models, loading from API...');
         await modelManagement.loadAvailableModels();
         searchableModels = modelManagement.availableModels;
+        console.log('🔍 Loaded models count:', searchableModels.length);
       }
 
-      const queryLower = query.toLowerCase();
-      const results = searchableModels.filter((model: any) => {
-        const name = (model.name || '').toLowerCase();
-        const displayName = (model.display_name || '').toLowerCase();
-        const description = (model.description || '').toLowerCase();
+      const results = searchableModels
+        .map((model: any) => {
+          const nameMatch = fuzzyMatch(model.name || '', query);
+          const displayNameMatch = fuzzyMatch(model.display_name || '', query);
+          const descriptionMatch = fuzzyMatch(model.description || '', query);
+          const providerMatch = fuzzyMatch(model.provider || '', query);
 
-        return name.includes(queryLower) ||
-               displayName.includes(queryLower) ||
-               description.includes(queryLower);
-      }).slice(0, 20);
+          const maxScore = Math.max(
+            nameMatch.score,
+            displayNameMatch.score,
+            descriptionMatch.score,
+            providerMatch.score
+          );
+
+          const matches = nameMatch.matches || displayNameMatch.matches ||
+                         descriptionMatch.matches || providerMatch.matches;
+
+          return { model, score: maxScore, matches };
+        })
+        .filter((result: any) => result.matches)
+        .sort((a: any, b: any) => b.score - a.score)
+        .map((result: any) => result.model)
+        .slice(0, 20);
 
       setSearchResults(results);
-      console.log(`Found ${results.length} models matching "${query}" in cached data`);
+      console.log(`✅ Found ${results.length} models matching "${query}"`);
+      if (results.length > 0) {
+        console.log('🔍 Top 3 results:', results.slice(0, 3).map((m: any) => m.display_name || m.name));
+      }
     } catch (error) {
-      console.error('Error searching cached models:', error);
+      console.error('❌ Error searching models:', error);
       setSearchResults([]);
     } finally {
       setIsSearchingModels(false);
@@ -919,6 +992,11 @@ const HUD: React.FC<HUDProps> = ({
                           setModelSearchQuery={setModelSearchQuery}
                           isSearchingModels={isSearchingModels}
                           searchResults={searchResults}
+                          searchSubmitted={searchSubmitted}
+                          setSearchSubmitted={setSearchSubmitted}
+                          showSearchDropdown={showSearchDropdown}
+                          setShowSearchDropdown={setShowSearchDropdown}
+                          searchDropdownRef={searchDropdownRef}
                           activeQuickAction={activeQuickAction}
                           categoryModels={categoryModels}
                           isLoadingCategory={isLoadingCategory}

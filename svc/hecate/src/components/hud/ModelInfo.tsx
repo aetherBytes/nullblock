@@ -18,6 +18,11 @@ interface ModelInfoProps {
   setModelSearchQuery: (query: string) => void;
   isSearchingModels: boolean;
   searchResults: any[];
+  searchSubmitted: boolean;
+  setSearchSubmitted: (submitted: boolean) => void;
+  showSearchDropdown: boolean;
+  setShowSearchDropdown: (show: boolean) => void;
+  searchDropdownRef: React.RefObject<HTMLDivElement>;
   activeQuickAction: string | null;
   categoryModels: any[];
   isLoadingCategory: boolean;
@@ -49,6 +54,11 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
   setModelSearchQuery,
   isSearchingModels,
   searchResults,
+  searchSubmitted,
+  setSearchSubmitted,
+  showSearchDropdown,
+  setShowSearchDropdown,
+  searchDropdownRef,
   activeQuickAction,
   categoryModels,
   isLoadingCategory,
@@ -65,7 +75,13 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
   const renderModelSelectButton = (model: any, keyPrefix: string, index: number) => (
     <button
       key={`${keyPrefix}-${model.name}-${index}`}
-      onClick={() => handleModelSelection(model.name)}
+      onClick={() => {
+        handleModelSelection(model.name);
+        setShowModelSelection(false);
+        setSearchSubmitted(false);
+        setModelSearchQuery('');
+        setShowSearchDropdown(false);
+      }}
       className={`${styles.modelSelectButton} ${model.name === currentSelectedModel ? styles.currentModel : ''}`}
     >
       <div className={styles.modelSelectInfo}>
@@ -92,8 +108,8 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
       onClick={() => {
         const newAction = activeQuickAction === action ? null : action;
         setActiveQuickAction(newAction);
-        setModelSearchQuery('');
         if (newAction === action) {
+          setModelSearchQuery('');
           setCategoryModels([]);
           loadCategoryModels(action);
         }
@@ -159,21 +175,62 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
       <div className={styles.modelInfoScope}>
         <div className={styles.modelSelectionContent}>
           <div className={styles.modelSelectionHeader}>
-            <input
-              type="text"
-              placeholder="Search LLM database..."
-              value={modelSearchQuery}
-              onChange={(e) => setModelSearchQuery(e.target.value)}
-              className={styles.modelSearchInput}
-            />
-            {isSearchingModels && (
-              <div className={styles.searchingIndicator}>⟳ Searching...</div>
-            )}
+            <div style={{ position: 'relative', flex: 1 }} ref={searchDropdownRef}>
+              <input
+                type="text"
+                placeholder="Search LLM database..."
+                value={modelSearchQuery}
+                onChange={(e) => setModelSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && modelSearchQuery.trim()) {
+                    setSearchSubmitted(true);
+                    setShowSearchDropdown(false);
+                    setActiveQuickAction(null);
+                  } else if (e.key === 'Escape') {
+                    setShowSearchDropdown(false);
+                  }
+                }}
+                className={styles.modelSearchInput}
+              />
+              {isSearchingModels && (
+                <div className={styles.searchingIndicator}>⟳ Searching...</div>
+              )}
+              {showSearchDropdown && !searchSubmitted && searchResults.length > 0 && (
+                <div className={styles.searchDropdown}>
+                  {searchResults.slice(0, 8).map((model, index) => (
+                    <button
+                      key={`dropdown-${model.name}-${index}`}
+                      onClick={() => {
+                        handleModelSelection(model.name);
+                        setShowModelSelection(false);
+                        setShowSearchDropdown(false);
+                        setSearchSubmitted(false);
+                        setModelSearchQuery('');
+                      }}
+                      className={styles.searchDropdownItem}
+                    >
+                      <span className={styles.modelIcon}>{model.icon || '🤖'}</span>
+                      <div className={styles.searchDropdownItemInfo}>
+                        <div className={styles.searchDropdownItemName}>{model.display_name || model.name}</div>
+                        <div className={styles.searchDropdownItemProvider}>{model.provider}</div>
+                      </div>
+                      <span className={styles.modelTierIcon}>
+                        {model.tier === 'economical' ? '🆓' :
+                         model.tier === 'fast' ? '⚡' :
+                         model.tier === 'premium' ? '💎' : '⭐'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               className={styles.backButton}
               onClick={() => {
                 setShowModelSelection(false);
                 setActiveQuickAction(null);
+                setSearchSubmitted(false);
+                setModelSearchQuery('');
               }}
               title="Back to model info"
             >
@@ -186,6 +243,8 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
               <button
                 onClick={() => {
                   setModelSearchQuery('');
+                  setSearchSubmitted(false);
+                  setShowSearchDropdown(false);
                   setActiveQuickAction('clear');
                   setTimeout(() => setActiveQuickAction(null), 500);
                 }}
@@ -202,7 +261,24 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
             </div>
           </div>
 
-          {activeQuickAction === 'latest' && (
+          {searchSubmitted && modelSearchQuery.trim() ? (
+            <div className={styles.modelSection}>
+              <h6>Search Results ({searchResults.length})</h6>
+              {isSearchingModels ? (
+                <div style={{textAlign: 'center', padding: '20px', opacity: 0.7}}>
+                  🔄 Searching models...
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div style={{textAlign: 'center', padding: '20px', opacity: 0.7}}>
+                  No models found matching "{modelSearchQuery}"
+                </div>
+              ) : (
+                <div className={styles.modelsList}>
+                  {searchResults.map((model, index) => renderModelSelectButton(model, 'search', index))}
+                </div>
+              )}
+            </div>
+          ) : activeQuickAction === 'latest' ? (
             <div className={styles.modelSection}>
               <h6>Latest Models ({isLoadingCategory ? '...' : categoryModels.length})</h6>
               {isLoadingCategory ? (
@@ -215,53 +291,53 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
                 </div>
               )}
             </div>
-          )}
-
-          {['free', 'fast', 'premium', 'thinkers', 'instruct'].map(action => {
-            if (activeQuickAction !== action) return null;
-            const getModelsFn = action === 'free' ? getFreeModels :
-                               action === 'fast' ? getFastModels :
-                               action === 'premium' ? getPremiumModels :
-                               action === 'thinkers' ? getThinkerModels : getInstructModels;
-            const models = getModelsFn(availableModels);
-            const icon = action === 'free' ? '🆓' :
-                        action === 'fast' ? '⚡' :
-                        action === 'premium' ? '💎' :
-                        action === 'thinkers' ? '🧠' : '💬';
-            return (
-              <div key={action} className={styles.modelSection}>
-                <h6>{action.charAt(0).toUpperCase() + action.slice(1)} Models ({models.length})</h6>
-                <div className={styles.modelsList}>
-                  {models.map((model, index) => renderModelSelectButton(model, action, index))}
+          ) : activeQuickAction && ['free', 'fast', 'premium', 'thinkers', 'instruct'].includes(activeQuickAction) ? (
+            (() => {
+              const getModelsFn = activeQuickAction === 'free' ? getFreeModels :
+                                 activeQuickAction === 'fast' ? getFastModels :
+                                 activeQuickAction === 'premium' ? getPremiumModels :
+                                 activeQuickAction === 'thinkers' ? getThinkerModels : getInstructModels;
+              const models = getModelsFn(availableModels);
+              return (
+                <div className={styles.modelSection}>
+                  <h6>{activeQuickAction.charAt(0).toUpperCase() + activeQuickAction.slice(1)} Models ({models.length})</h6>
+                  <div className={styles.modelsList}>
+                    {models.map((model, index) => renderModelSelectButton(model, activeQuickAction, index))}
+                  </div>
+                </div>
+              );
+            })()
+          ) : (
+            <>
+              <div className={styles.modelSection}>
+                <h6>Model Categories</h6>
+                <div className={styles.categoryOverview}>
+                  {renderCategoryButton('latest', '🆕', 'Latest', getLatestModels)}
+                  {renderCategoryButton('free', '🆓', 'Free', getFreeModels)}
+                  {renderCategoryButton('fast', '⚡', 'Fast', getFastModels)}
+                  {renderCategoryButton('premium', '💎', 'Premium', getPremiumModels)}
+                  {renderCategoryButton('thinkers', '🧠', 'Thinkers', getThinkerModels)}
+                  {renderCategoryButton('instruct', '💬', 'Instruct', getInstructModels)}
                 </div>
               </div>
-            );
-          })}
 
-          {searchResults.length > 0 && !activeQuickAction && (
-            <div className={styles.modelSection}>
-              <h6>Search Results ({searchResults.length})</h6>
-              <div className={styles.modelsList}>
-                {searchResults.slice(0, 5).map((model, index) => renderModelSelectButton(model, 'search', index))}
+              <div className={styles.modelSection}>
+                <h6>Database Statistics</h6>
+                <div className={styles.modelCounts}>
+                  <p>📊 Total Available: {availableModels.filter(m => m.available).length}</p>
+                  <p>🆓 Free Models: {getFreeModels(availableModels, 999).length}</p>
+                  <p>⚡ Fast Models: {getFastModels(availableModels, 999).length}</p>
+                  <p>💎 Premium Models: {getPremiumModels(availableModels, 999).length}</p>
+                  <p>🧠 Thinking Models: {getThinkerModels(availableModels, 999).length}</p>
+                  <p>💬 Instruct Models: {getInstructModels(availableModels, 999).length}</p>
+                  <p>🆕 Latest Added: {getLatestModels(availableModels, 999).length}</p>
+                </div>
               </div>
-            </div>
+            </>
           )}
 
-          {!activeQuickAction && searchResults.length === 0 && (
-            <div className={styles.modelSection}>
-              <h6>Model Categories</h6>
-              <div className={styles.categoryOverview}>
-                {renderCategoryButton('latest', '🆕', 'Latest', getLatestModels)}
-                {renderCategoryButton('free', '🆓', 'Free', getFreeModels)}
-                {renderCategoryButton('fast', '⚡', 'Fast', getFastModels)}
-                {renderCategoryButton('premium', '💎', 'Premium', getPremiumModels)}
-                {renderCategoryButton('thinkers', '🧠', 'Thinkers', getThinkerModels)}
-                {renderCategoryButton('instruct', '💬', 'Instruct', getInstructModels)}
-              </div>
-            </div>
-          )}
-
-          {!activeQuickAction && searchResults.length === 0 && (
+          {/* Old statistics block - now removed since it's incorporated above */}
+          {false && !activeQuickAction && searchResults.length === 0 && !modelSearchQuery.trim() && (
             <div className={styles.modelSection}>
               <h6>Database Statistics</h6>
               <div className={styles.modelCounts}>
