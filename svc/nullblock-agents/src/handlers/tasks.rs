@@ -12,7 +12,7 @@ use crate::{
     database::repositories::user_references::UserReferenceRepository,
     kafka::TaskLifecycleEvent,
     models::{
-        TaskStatus,
+        TaskState,
         CreateTaskRequest, UpdateTaskRequest, TaskResponse, TaskListResponse
     },
     server::AppState,
@@ -544,7 +544,7 @@ pub async fn start_task(
 
     let task_repo = TaskRepository::new(database.pool().clone());
 
-    match task_repo.update_status(&task_id, TaskStatus::Running).await {
+    match task_repo.update_status(&task_id, TaskState::Working).await {
         Ok(Some(task_entity)) => {
             match task_entity.to_domain_model() {
                 Ok(task) => {
@@ -629,7 +629,7 @@ pub async fn pause_task(
 
     let task_repo = TaskRepository::new(database.pool().clone());
 
-    match task_repo.update_status(&task_id, TaskStatus::Paused).await {
+    match task_repo.update_status(&task_id, TaskState::InputRequired).await {
         Ok(Some(task_entity)) => {
             match task_entity.to_domain_model() {
                 Ok(task) => {
@@ -696,7 +696,7 @@ pub async fn resume_task(
 
     let task_repo = TaskRepository::new(database.pool().clone());
 
-    match task_repo.update_status(&task_id, TaskStatus::Running).await {
+    match task_repo.update_status(&task_id, TaskState::Working).await {
         Ok(Some(task_entity)) => {
             match task_entity.to_domain_model() {
                 Ok(task) => {
@@ -762,7 +762,7 @@ pub async fn cancel_task(
 
     let task_repo = TaskRepository::new(database.pool().clone());
 
-    match task_repo.update_status(&task_id, TaskStatus::Cancelled).await {
+    match task_repo.update_status(&task_id, TaskState::Canceled).await {
         Ok(Some(task_entity)) => {
             match task_entity.to_domain_model() {
                 Ok(task) => {
@@ -827,7 +827,7 @@ pub async fn retry_task(
 
     let task_repo = TaskRepository::new(database.pool().clone());
 
-    match task_repo.update_status(&task_id, TaskStatus::Running).await {
+    match task_repo.update_status(&task_id, TaskState::Working).await {
         Ok(Some(task_entity)) => {
             match task_entity.to_domain_model() {
                 Ok(task) => {
@@ -906,7 +906,7 @@ async fn process_task_internal(
     // Check if task is in a processable state - if it's created, start it automatically
     if task_entity.status == "created" {
         info!("🚀 Auto-starting task {} before processing", task_id);
-        match task_repo.update_status(&task_id, crate::models::TaskStatus::Running).await {
+        match task_repo.update_status(&task_id, crate::models::TaskState::Working).await {
             Ok(Some(updated_task)) => {
                 info!("✅ Task {} automatically started", task_id);
 

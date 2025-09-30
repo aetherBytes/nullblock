@@ -751,7 +751,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         }
 
         // Update task status to completed
-        match task_repo.update_status(task_id, crate::models::TaskStatus::Completed).await {
+        match task_repo.update_status(task_id, crate::models::TaskState::Completed).await {
             Ok(Some(_)) => {
                 info!("✅ Task {} status updated to completed", task_id);
             }

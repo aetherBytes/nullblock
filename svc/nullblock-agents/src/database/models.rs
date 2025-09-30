@@ -12,7 +12,18 @@ pub struct TaskEntity {
     pub description: Option<String>,
     pub task_type: String,
     pub category: String,
+
+    // A2A Protocol required fields
+    pub context_id: Uuid,
+    pub kind: String,
     pub status: String,
+    pub status_message: Option<String>,
+    pub status_timestamp: Option<DateTime<Utc>>,
+
+    // A2A Protocol optional fields
+    pub history: serde_json::Value,
+    pub artifacts: serde_json::Value,
+
     pub priority: String,
     pub user_id: Option<Uuid>,
     pub assigned_agent_id: Option<Uuid>,
@@ -54,13 +65,34 @@ pub struct TaskEntity {
 
 impl TaskEntity {
     pub fn to_domain_model(self) -> Result<crate::models::Task, serde_json::Error> {
+        let task_state: crate::models::TaskState = serde_json::from_str(&format!("\"{}\"", self.status))?;
+
         Ok(crate::models::Task {
             id: self.id.to_string(),
             name: self.name,
             description: self.description.unwrap_or_default(),
             task_type: serde_json::from_str(&format!("\"{}\"", self.task_type))?,
             category: serde_json::from_str(&format!("\"{}\"", self.category))?,
-            status: serde_json::from_str(&format!("\"{}\"", self.status))?,
+
+            context_id: self.context_id.to_string(),
+            kind: self.kind,
+            status: crate::models::TaskStatus {
+                state: task_state,
+                message: self.status_message,
+                timestamp: self.status_timestamp.map(|ts| ts.to_rfc3339()),
+            },
+            history: if self.history == serde_json::json!([]) {
+                None
+            } else {
+                Some(serde_json::from_value(self.history)?)
+            },
+            artifacts: if self.artifacts == serde_json::json!([]) {
+                None
+            } else {
+                Some(serde_json::from_value(self.artifacts)?)
+            },
+            metadata: None,
+
             priority: serde_json::from_str(&format!("\"{}\"", self.priority))?,
             created_at: self.created_at,
             updated_at: self.updated_at,
@@ -80,7 +112,7 @@ impl TaskEntity {
             },
             logs: serde_json::from_value(self.logs)?,
             triggers: serde_json::from_value(self.triggers)?,
-            assigned_agent: None, // Will be populated from agent lookup
+            assigned_agent: None,
             auto_retry: self.auto_retry,
             max_retries: self.max_retries as u32,
             current_retries: self.current_retries as u32,
@@ -88,13 +120,11 @@ impl TaskEntity {
             user_approval_required: self.user_approval_required,
             user_notifications: self.user_notifications,
 
-            // Action tracking fields
             actioned_at: self.actioned_at,
             action_result: self.action_result,
             action_metadata: serde_json::from_value(self.action_metadata)?,
             action_duration: self.action_duration.map(|d| d as u64),
 
-            // Source tracking fields
             source_identifier: self.source_identifier,
             source_metadata: serde_json::from_value(self.source_metadata)?,
         })
@@ -107,7 +137,16 @@ impl TaskEntity {
             description: if task.description.is_empty() { None } else { Some(task.description.clone()) },
             task_type: serde_json::to_string(&task.task_type).unwrap().trim_matches('"').to_string(),
             category: serde_json::to_string(&task.category).unwrap().trim_matches('"').to_string(),
-            status: serde_json::to_string(&task.status).unwrap().trim_matches('"').to_string(),
+
+            context_id: Uuid::parse_str(&task.context_id).unwrap_or_else(|_| Uuid::new_v4()),
+            kind: task.kind.clone(),
+            status: serde_json::to_string(&task.status.state).unwrap().trim_matches('"').to_string(),
+            status_message: task.status.message.clone(),
+            status_timestamp: task.status.timestamp.as_ref().and_then(|ts| chrono::DateTime::parse_from_rfc3339(ts).ok().map(|dt| dt.with_timezone(&chrono::Utc))),
+
+            history: task.history.as_ref().map(|h| serde_json::to_value(h).unwrap()).unwrap_or_else(|| serde_json::json!([])),
+            artifacts: task.artifacts.as_ref().map(|a| serde_json::to_value(a).unwrap()).unwrap_or_else(|| serde_json::json!([])),
+
             priority: serde_json::to_string(&task.priority).unwrap().trim_matches('"').to_string(),
             user_id,
             assigned_agent_id,
@@ -136,13 +175,11 @@ impl TaskEntity {
             user_approval_required: task.user_approval_required,
             user_notifications: task.user_notifications,
 
-            // Action tracking fields
             actioned_at: task.actioned_at,
             action_result: task.action_result.clone(),
             action_metadata: serde_json::to_value(&task.action_metadata)?,
             action_duration: task.action_duration.map(|d| d as i64),
 
-            // Source tracking fields
             source_identifier: task.source_identifier.clone(),
             source_metadata: serde_json::to_value(&task.source_metadata)?,
         })
