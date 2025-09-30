@@ -4,7 +4,7 @@ use anyhow::Result;
 use chrono::Utc;
 
 use crate::database::models::TaskEntity;
-use crate::models::{CreateTaskRequest, UpdateTaskRequest, TaskStatus};
+use crate::models::{CreateTaskRequest, UpdateTaskRequest};
 
 pub struct TaskRepository {
     pool: PgPool,
@@ -17,15 +17,16 @@ impl TaskRepository {
 
     pub async fn create(&self, request: &CreateTaskRequest, user_id: Option<Uuid>, assigned_agent_id: Option<Uuid>) -> Result<TaskEntity> {
         let task_id = Uuid::new_v4();
+        let context_id = Uuid::new_v4();
         let now = Utc::now();
 
         let status_str = if request.auto_start.unwrap_or(false) {
-            "running"
+            "working"
         } else {
-            "created"
+            "submitted"
         };
 
-        let started_at = if status_str == "running" {
+        let started_at = if status_str == "working" {
             Some(now)
         } else {
             None
@@ -34,15 +35,18 @@ impl TaskRepository {
         let task = sqlx::query_as::<_, TaskEntity>(
             r#"
             INSERT INTO tasks (
-                id, name, description, task_type, category, status, priority,
-                user_id, assigned_agent_id, created_at, updated_at, started_at, progress,
+                id, name, description, task_type, category,
+                context_id, kind, status, status_timestamp,
+                priority, user_id, assigned_agent_id,
+                created_at, updated_at, started_at, progress,
                 sub_tasks, dependencies, context, parameters, logs, triggers,
                 required_capabilities, auto_retry, max_retries, current_retries,
                 user_approval_required, user_notifications
             )
             VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-                $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+                $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,
+                $23, $24, $25, $26, $27, $28
             )
             RETURNING *
             "#
@@ -52,26 +56,29 @@ impl TaskRepository {
         .bind(&request.description)
         .bind(serde_json::to_string(&request.task_type).unwrap().trim_matches('"').to_string())
         .bind(serde_json::to_string(&request.category.as_ref().unwrap_or(&crate::models::TaskCategory::UserAssigned)).unwrap().trim_matches('"').to_string())
+        .bind(context_id)
+        .bind("task")
         .bind(status_str)
+        .bind(now)
         .bind(serde_json::to_string(&request.priority.as_ref().unwrap_or(&crate::models::TaskPriority::Medium)).unwrap().trim_matches('"').to_string())
         .bind(user_id)
         .bind(assigned_agent_id)
         .bind(now)
         .bind(now)
         .bind(started_at)
-        .bind(0i16) // progress
-        .bind(serde_json::json!([])) // sub_tasks
+        .bind(0i16)
+        .bind(serde_json::json!([]))
         .bind(serde_json::to_value(&request.dependencies.as_ref().unwrap_or(&vec![])).unwrap())
-        .bind(serde_json::json!({})) // context
+        .bind(serde_json::json!({}))
         .bind(serde_json::to_value(&request.parameters.as_ref().unwrap_or(&std::collections::HashMap::new())).unwrap())
-        .bind(serde_json::json!([])) // logs
-        .bind(serde_json::json!([])) // triggers
-        .bind(serde_json::json!([])) // required_capabilities
-        .bind(true) // auto_retry
-        .bind(3i32) // max_retries
-        .bind(0i32) // current_retries
+        .bind(serde_json::json!([]))
+        .bind(serde_json::json!([]))
+        .bind(serde_json::json!([]))
+        .bind(true)
+        .bind(3i32)
+        .bind(0i32)
         .bind(request.user_approval_required.unwrap_or(false))
-        .bind(true) // user_notifications
+        .bind(true)
         .fetch_one(&self.pool)
         .await?;
 
@@ -173,18 +180,18 @@ impl TaskRepository {
         Ok(task)
     }
 
-    pub async fn update_status(&self, task_id: &str, status: TaskStatus) -> Result<Option<TaskEntity>> {
+    pub async fn update_status(&self, task_id: &str, status: crate::models::TaskState) -> Result<Option<TaskEntity>> {
         let uuid = Uuid::parse_str(task_id)?;
         let now = Utc::now();
         let status_str = serde_json::to_string(&status).unwrap().trim_matches('"').to_string();
 
-        let started_at = if status == TaskStatus::Running {
+        let started_at = if status == crate::models::TaskState::Working {
             Some(now)
         } else {
             None
         };
 
-        let completed_at = if matches!(status, TaskStatus::Completed | TaskStatus::Failed | TaskStatus::Cancelled) {
+        let completed_at = if matches!(status, crate::models::TaskState::Completed | crate::models::TaskState::Failed | crate::models::TaskState::Canceled) {
             Some(now)
         } else {
             None
@@ -194,15 +201,17 @@ impl TaskRepository {
             r#"
             UPDATE tasks SET
                 status = $2,
-                started_at = COALESCE($3, started_at),
-                completed_at = COALESCE($4, completed_at),
-                updated_at = $5
+                status_timestamp = $3,
+                started_at = COALESCE($4, started_at),
+                completed_at = COALESCE($5, completed_at),
+                updated_at = $6
             WHERE id = $1
             RETURNING *
             "#
         )
         .bind(uuid)
         .bind(status_str)
+        .bind(now)
         .bind(started_at)
         .bind(completed_at)
         .bind(now)
@@ -263,7 +272,7 @@ impl TaskRepository {
 
     pub async fn get_unactioned_tasks(&self, agent_id: Option<Uuid>, limit: Option<i64>) -> Result<Vec<TaskEntity>> {
         let mut query_builder = sqlx::QueryBuilder::new(
-            "SELECT * FROM tasks WHERE status = 'running' AND actioned_at IS NULL"
+            "SELECT * FROM tasks WHERE status = 'working' AND actioned_at IS NULL"
         );
 
         if let Some(agent) = agent_id {

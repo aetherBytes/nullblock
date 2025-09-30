@@ -15,7 +15,6 @@ Together, we shape the future of autonomous commerce.
 
 ## 🌐 Connect & Follow
 
-**🧑‍💻 Developer**: [@sage_nullblock](https://x.com/sage_nullblock)
 **🏢 Official**: [@Nullblock_io](https://x.com/Nullblock_io)
 **📦 SDK**: [nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk)
 **🌍 Site**: NullBlock.io _(Coming Soon)_
@@ -26,9 +25,9 @@ Together, we shape the future of autonomous commerce.
 
 **Next 3 Priority Items:**
 
-1. **✅ Multi-Protocol Service** - COMPLETED: Converted Python nullblock-mcp to Rust nullblock-protocols service with full A2A and MCP protocol support
-2. **🔄 Database Table Rename: task_executions → tasks** - Clean migrations create `tasks` table but current database has `task_executions`. Need to rename table and update all Rust code references (models, queries, foreign keys, indexes) to match clean migration schema.
-3. **✅ User References Source Agnostic** - COMPLETED: Redesigned user_references table to support multiple source types (Web3, API, Email, OAuth, System Agents)
+1. **✅ A2A Task Schema Alignment** - COMPLETED: Task database schema and models now fully comply with A2A Protocol v0.3.0 (context_id, kind, status object, history, artifacts, Message/Part types)
+2. **🔄 A2A Core Operations** - Connect protocol handlers to Agents service: message/send, tasks/get, tasks/list, tasks/cancel. Implement format converters between internal Task model and A2A protocol format.
+3. **🔄 A2A Streaming (SSE)** - Implement Server-Sent Events for message/stream and tasks/resubscribe. Bridge Kafka task.lifecycle events to SSE streams for real-time updates.
 
 ## Architecture Overview
 
@@ -160,25 +159,37 @@ Supports: **Web3 Wallets**, **API Keys**, **Email Auth**, **OAuth**, **System Ag
 
 NullBlock implements [A2A Protocol v0.3.0](https://a2a-protocol.org/latest/specification/)
 
-### Features
+### Implementation Status
 
-- Agent card discovery (`/.well-known/agent-card.json`)
-- Dual transport (JSON-RPC 2.0, REST/HTTP+JSON)
-- Task lifecycle management
-- Message streaming
-- Push notifications
+**✅ Completed:**
+- Task schema aligned with A2A spec (Task, TaskStatus, TaskState, Message, Artifact, Part types)
+- Agent Card with full schema compliance
+- JSON-RPC 2.0 and REST/HTTP+JSON endpoints defined
+- All 11 protocol methods scaffolded
+
+**🔄 In Progress:**
+- Handler implementations (currently stubs)
+- Server-Sent Events (SSE) streaming
+- Service integration (Protocols ↔ Agents ↔ Erebus)
+
+**❌ Not Implemented:**
+- Push notifications (webhook system)
+- Authentication middleware (security schemes)
+- Format converters (A2A ↔ internal models)
 
 ### Endpoints
 
-**JSON-RPC** (POST /a2a/jsonrpc): `message/send`, `message/stream`, `tasks/*`
-**REST**: `/v1/card`, `/v1/message:send`, `/v1/tasks/*`
+**JSON-RPC** (POST /a2a/jsonrpc): `message/send`, `message/stream`, `tasks/*`, `tasks/pushNotificationConfig/*`, `agent/getAuthenticatedExtendedCard`
+**REST**: `/a2a/v1/card`, `/a2a/v1/messages`, `/a2a/v1/tasks/*`
 
 ## 📋 Task Management
 
 ### Implementation ✅
 
 - **Storage**: PostgreSQL with full CRUD
-- **Events**: Kafka streaming
+- **Schema**: A2A Protocol v0.3.0 compliant (context_id, kind, status object, history, artifacts)
+- **States**: submitted, working, input-required, completed, canceled, failed, rejected, auth-required, unknown
+- **Events**: Kafka streaming (task.lifecycle topic)
 - **Lifecycle**: create → start → process → complete
 - **Processing**: `/api/agents/tasks/:id/process` endpoint
 - **Tracking**: `actioned_at`, `action_result`, `action_duration`
@@ -307,23 +318,48 @@ LLM_REQUEST_TIMEOUT_MS=300000
 
 ### Recently Completed ✅
 
+- A2A Protocol v0.3.0 task schema alignment (context_id, kind, status object, history, artifacts)
+- TaskState enum with all A2A states (submitted, working, input-required, etc.)
+- Message and Artifact types with Part union (Text, File, Data)
+- Database migration applied with A2A-compliant schema
 - Source-agnostic user system with SourceType enum
-- Database migration applied with data preservation
-- Agent discovery with real-time metrics
 - PostgreSQL logical replication for user sync
-- Task action tracking with agent stats
 
 ### In Progress 🔄
 
-- Agent identity system (dynamic name display)
-- UI/UX refinements (agent cards, text alignment)
+- A2A protocol handler implementations
+- Service integration (Protocols ↔ Agents ↔ Erebus)
+- Format converters (A2A ↔ internal models)
 
 ### Next Up 📋
 
-1. Database table rename: task_executions → tasks
-2. Agent service integration protocols
-3. Performance optimization (query caching)
+**Phase 1 - Core Operations (High Priority):**
+1. Connect message/send to Agents service (create tasks, route to agents)
+2. Implement tasks/get, tasks/list, tasks/cancel with database integration
+3. Build A2A ↔ Internal Task format converters
+
+**Phase 2 - Streaming (High Priority):**
+4. Implement Server-Sent Events (SSE) for message/stream
+5. Build Kafka → SSE bridge for real-time task updates
+6. Implement tasks/resubscribe for resuming streams
+
+**Phase 3 - Push Notifications (Medium Priority):**
+7. Create push_notification_configs database table
+8. Implement webhook delivery system with retry logic
+9. Add event filtering and webhook authentication
+
+**Phase 4 - Security (Medium Priority):**
+10. Implement authentication middleware
+11. Add security scheme support (API Key, OAuth2, Bearer tokens)
+12. Agent Card signatures (JWS) for integrity verification
+
+**Phase 5 - Polish (Lower Priority):**
+13. Standardize error handling (JSON-RPC error codes)
+14. State transition history tracking
+15. Extensions support
+16. Comprehensive A2A compliance testing
 
 ---
 
 _NullBlock implements a cyberpunk aesthetic with neon styling and maintains immersive error messages throughout the user experience while building toward a comprehensive MCP-powered agentic ecosystem._
+- add the above todos to memory and the claude md

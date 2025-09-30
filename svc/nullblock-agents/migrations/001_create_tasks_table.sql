@@ -1,4 +1,4 @@
--- Migration: Create tasks table
+-- Migration: Create tasks table aligned with A2A Protocol v0.3.0
 -- Agents service owns full CRUD for task management
 -- user_id references user_references.id (synced from Erebus)
 -- assigned_agent_id references agents.id
@@ -11,7 +11,18 @@ CREATE TABLE tasks (
     description TEXT,
     task_type VARCHAR NOT NULL, -- maps to TaskType enum: arbitrage, social, portfolio, mcp, system, user_assigned
     category VARCHAR NOT NULL,  -- maps to TaskCategory enum: autonomous, user_assigned, system_generated, event_triggered
-    status VARCHAR NOT NULL,    -- maps to TaskStatus enum: created, running, paused, completed, failed, cancelled
+
+    -- A2A Protocol required fields
+    context_id UUID NOT NULL DEFAULT uuid_generate_v4(), -- groups related tasks
+    kind VARCHAR NOT NULL DEFAULT 'task', -- always "task" per A2A spec
+    status VARCHAR NOT NULL CHECK (status IN ('submitted', 'working', 'input-required', 'completed', 'canceled', 'failed', 'rejected', 'auth-required', 'unknown')), -- A2A TaskState
+    status_message TEXT, -- optional human-readable status message
+    status_timestamp TIMESTAMPTZ, -- when status was last updated
+
+    -- A2A Protocol optional fields
+    history JSONB DEFAULT '[]'::jsonb, -- Message[] array per A2A spec
+    artifacts JSONB DEFAULT '[]'::jsonb, -- Artifact[] array per A2A spec
+
     priority VARCHAR NOT NULL,  -- maps to TaskPriority enum: low, medium, high, urgent, critical
     user_id UUID,              -- reference to user_references.id (synced from Erebus)
     assigned_agent_id UUID,     -- reference to agents.id
@@ -48,13 +59,19 @@ CREATE TABLE tasks (
     actioned_at TIMESTAMPTZ,
     action_result TEXT,
     action_metadata JSONB DEFAULT '{}'::jsonb,
-    action_duration BIGINT -- milliseconds
+    action_duration BIGINT, -- milliseconds
+
+    -- Source tracking fields
+    source_identifier VARCHAR,
+    source_metadata JSONB DEFAULT '{}'::jsonb
 );
 
 -- Indexes for performance
 CREATE INDEX idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX idx_tasks_assigned_agent_id ON tasks(assigned_agent_id);
 CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX idx_tasks_context_id ON tasks(context_id);
+CREATE INDEX idx_tasks_kind ON tasks(kind);
 CREATE INDEX idx_tasks_task_type ON tasks(task_type);
 CREATE INDEX idx_tasks_category ON tasks(category);
 CREATE INDEX idx_tasks_priority ON tasks(priority);

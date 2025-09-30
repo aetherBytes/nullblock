@@ -357,14 +357,26 @@ impl ErrorResponse {
 // ==================== Task Management Types ====================
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum TaskStatus {
-    Created,
-    Running,
-    Paused,
+#[serde(rename_all = "kebab-case")]
+pub enum TaskState {
+    Submitted,
+    Working,
+    InputRequired,
     Completed,
+    Canceled,
     Failed,
-    Cancelled,
+    Rejected,
+    AuthRequired,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskStatus {
+    pub state: TaskState,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamp: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -404,7 +416,21 @@ pub struct Task {
     pub description: String,
     pub task_type: TaskType,
     pub category: TaskCategory,
+
+    // A2A Protocol required fields
+    #[serde(rename = "contextId")]
+    pub context_id: String,
+    pub kind: String,
     pub status: TaskStatus,
+
+    // A2A Protocol optional fields
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub history: Option<Vec<serde_json::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artifacts: Option<Vec<serde_json::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<HashMap<String, serde_json::Value>>,
+
     pub priority: TaskPriority,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -464,7 +490,7 @@ pub struct CreateTaskRequest {
 pub struct UpdateTaskRequest {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub status: Option<TaskStatus>,
+    pub status: Option<TaskState>,
     pub priority: Option<TaskPriority>,
     pub progress: Option<u8>,
     pub parameters: Option<HashMap<String, serde_json::Value>>,

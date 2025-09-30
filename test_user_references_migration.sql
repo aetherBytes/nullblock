@@ -119,3 +119,4 @@ GROUP BY user_type
 ORDER BY user_count DESC;
 
 
+
