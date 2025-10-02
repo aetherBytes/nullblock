@@ -6,16 +6,35 @@ use tracing::info;
 use crate::health::health_check;
 use crate::protocols::a2a::routes::create_a2a_routes;
 
+#[derive(Clone)]
+pub struct AppState {
+    pub http_client: reqwest::Client,
+    pub agents_service_url: String,
+}
+
 pub struct Server {
     app: Router,
 }
 
 impl Server {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        let agents_service_url = std::env::var("AGENTS_SERVICE_URL")
+            .unwrap_or_else(|_| "http://localhost:9003".to_string());
+
+        info!("🔗 Agents Service URL: {}", agents_service_url);
+
+        let state = AppState {
+            http_client: reqwest::Client::new(),
+            agents_service_url,
+        };
+
+        let a2a_router = create_a2a_routes(state.clone());
+        let v1_router = create_a2a_routes(state.clone());
+
         let app = Router::new()
+            .nest("/a2a", a2a_router)
+            .nest("/v1", v1_router)
             .route("/health", get(health_check))
-            .nest("/a2a", create_a2a_routes())
-            .nest("/v1", create_a2a_routes()) // Also serve on /v1 for REST compatibility
             .layer(CorsLayer::permissive());
 
         Ok(Self { app })

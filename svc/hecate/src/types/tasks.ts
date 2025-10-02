@@ -1,10 +1,19 @@
-export type TaskStatus =
-  | 'created'
-  | 'running'
-  | 'paused'
+export type TaskState =
+  | 'submitted'
+  | 'working'
+  | 'input-required'
   | 'completed'
+  | 'canceled'
   | 'failed'
-  | 'cancelled';
+  | 'rejected'
+  | 'auth-required'
+  | 'unknown';
+
+export interface TaskStatus {
+  state: TaskState;
+  message?: string;
+  timestamp?: string;
+}
 
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent' | 'critical';
 
@@ -22,6 +31,38 @@ export type TaskType =
   | 'system'
   | 'user_assigned';
 
+export interface MessagePart {
+  type: 'text' | 'file' | 'data';
+  text?: string;
+  file?: {
+    type: 'bytes' | 'uri';
+    name: string;
+    bytes?: string;
+    uri?: string;
+    mimeType: string;
+  };
+  data?: any;
+  mimeType?: string;
+}
+
+export interface A2AMessage {
+  messageId: string;
+  role: 'user' | 'agent';
+  parts: MessagePart[];
+  timestamp?: string;
+  metadata?: Record<string, any>;
+  extensions?: string[];
+  referenceTaskIds?: string[];
+  taskId?: string;
+  contextId?: string;
+  kind: string;
+}
+
+export interface A2AArtifact {
+  id: string;
+  parts: MessagePart[];
+  metadata?: Record<string, any>;
+}
 
 export interface TaskOutcome {
   success: boolean;
@@ -36,7 +77,17 @@ export interface Task {
   description: string;
   task_type: TaskType;
   category: TaskCategory;
+
+  // A2A Protocol required fields
+  contextId: string;
+  kind: string;
   status: TaskStatus;
+
+  // A2A Protocol optional fields
+  history?: A2AMessage[];
+  artifacts?: A2AArtifact[];
+  metadata?: Record<string, any>;
+
   priority: TaskPriority;
 
   // Lifecycle
@@ -88,7 +139,7 @@ export interface Task {
 }
 
 export interface TaskFilter {
-  status?: TaskStatus[];
+  status?: TaskState[];
   type?: TaskType[];
   category?: TaskCategory[];
   priority?: TaskPriority[];
@@ -114,7 +165,7 @@ export interface TaskCreationRequest {
 
 export interface TaskUpdateRequest {
   id: string;
-  status?: TaskStatus;
+  status?: TaskState;
   progress?: number;
   parameters?: Record<string, any>;
   priority?: TaskPriority;

@@ -1,6 +1,7 @@
-use axum::Json;
+use axum::{extract::State, Json};
 use serde_json::Value;
 
+use crate::server::AppState;
 use crate::protocols::a2a::types::{
     JsonRpcRequest, JsonRpcResponse, JsonRpcError,
     MessageSendRequest, MessageStreamRequest, TaskListRequest,
@@ -13,7 +14,10 @@ use crate::protocols::a2a::handlers::{
     list_push_notification_configs, delete_push_notification_config,
 };
 
-pub async fn handle_jsonrpc(Json(request): Json<JsonRpcRequest>) -> Json<JsonRpcResponse> {
+pub async fn handle_jsonrpc(
+    State(state): State<AppState>,
+    Json(request): Json<JsonRpcRequest>
+) -> Json<JsonRpcResponse> {
     if request.jsonrpc != "2.0" {
         return Json(JsonRpcResponse {
             jsonrpc: "2.0".to_string(),
@@ -30,10 +34,10 @@ pub async fn handle_jsonrpc(Json(request): Json<JsonRpcRequest>) -> Json<JsonRpc
     let result = match request.method.as_str() {
         "message/send" => handle_message_send(request.params).await,
         "message/stream" => handle_message_stream(request.params).await,
-        "tasks/get" => handle_tasks_get(request.params).await,
-        "tasks/list" => handle_tasks_list(request.params).await,
-        "tasks/cancel" => handle_tasks_cancel(request.params).await,
-        "tasks/resubscribe" => handle_tasks_resubscribe(request.params).await,
+        "tasks/get" => handle_tasks_get(state.clone(), request.params).await,
+        "tasks/list" => handle_tasks_list(state.clone(), request.params).await,
+        "tasks/cancel" => handle_tasks_cancel(state.clone(), request.params).await,
+        "tasks/resubscribe" => handle_tasks_resubscribe(state.clone(), request.params).await,
         "tasks/pushNotificationConfig/set" => handle_push_config_set(request.params).await,
         "tasks/pushNotificationConfig/get" => handle_push_config_get(request.params).await,
         "tasks/pushNotificationConfig/list" => handle_push_config_list(request.params).await,
@@ -120,7 +124,7 @@ async fn handle_message_stream(params: Option<Value>) -> Result<Value, JsonRpcEr
     }
 }
 
-async fn handle_tasks_get(params: Option<Value>) -> Result<Value, JsonRpcError> {
+async fn handle_tasks_get(state: AppState, params: Option<Value>) -> Result<Value, JsonRpcError> {
     let params = params.ok_or_else(|| JsonRpcError {
         code: -32602,
         message: "Missing parameters".to_string(),
@@ -135,7 +139,7 @@ async fn handle_tasks_get(params: Option<Value>) -> Result<Value, JsonRpcError> 
             data: None,
         })?;
 
-    match get_task(axum::extract::Path(task_id.to_string())).await {
+    match get_task(State(state), axum::extract::Path(task_id.to_string())).await {
         Ok(Json(task)) => serde_json::to_value(task)
             .map_err(|e| JsonRpcError {
                 code: -32603,
@@ -150,7 +154,7 @@ async fn handle_tasks_get(params: Option<Value>) -> Result<Value, JsonRpcError> 
     }
 }
 
-async fn handle_tasks_list(params: Option<Value>) -> Result<Value, JsonRpcError> {
+async fn handle_tasks_list(state: AppState, params: Option<Value>) -> Result<Value, JsonRpcError> {
     let request = if let Some(params) = params {
         serde_json::from_value(params)
             .map_err(|e| JsonRpcError {
@@ -166,7 +170,7 @@ async fn handle_tasks_list(params: Option<Value>) -> Result<Value, JsonRpcError>
         }
     };
 
-    match list_tasks(Json(request)).await {
+    match list_tasks(State(state), Json(request)).await {
         Ok(Json(response)) => serde_json::to_value(response)
             .map_err(|e| JsonRpcError {
                 code: -32603,
@@ -181,7 +185,7 @@ async fn handle_tasks_list(params: Option<Value>) -> Result<Value, JsonRpcError>
     }
 }
 
-async fn handle_tasks_cancel(params: Option<Value>) -> Result<Value, JsonRpcError> {
+async fn handle_tasks_cancel(state: AppState, params: Option<Value>) -> Result<Value, JsonRpcError> {
     let params = params.ok_or_else(|| JsonRpcError {
         code: -32602,
         message: "Missing parameters".to_string(),
@@ -197,7 +201,7 @@ async fn handle_tasks_cancel(params: Option<Value>) -> Result<Value, JsonRpcErro
 
     let task_id = request.task_id.clone();
 
-    match cancel_task(axum::extract::Path(task_id), Json(request)).await {
+    match cancel_task(State(state), axum::extract::Path(task_id), Json(request)).await {
         Ok(Json(response)) => serde_json::to_value(response)
             .map_err(|e| JsonRpcError {
                 code: -32603,
@@ -212,7 +216,7 @@ async fn handle_tasks_cancel(params: Option<Value>) -> Result<Value, JsonRpcErro
     }
 }
 
-async fn handle_tasks_resubscribe(params: Option<Value>) -> Result<Value, JsonRpcError> {
+async fn handle_tasks_resubscribe(state: AppState, params: Option<Value>) -> Result<Value, JsonRpcError> {
     let params = params.ok_or_else(|| JsonRpcError {
         code: -32602,
         message: "Missing parameters".to_string(),
@@ -227,7 +231,7 @@ async fn handle_tasks_resubscribe(params: Option<Value>) -> Result<Value, JsonRp
             data: None,
         })?;
 
-    match resubscribe_task(axum::extract::Path(task_id.to_string())).await {
+    match resubscribe_task(State(state), axum::extract::Path(task_id.to_string())).await {
         Ok(Json(task)) => serde_json::to_value(task)
             .map_err(|e| JsonRpcError {
                 code: -32603,
