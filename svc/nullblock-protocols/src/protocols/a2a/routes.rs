@@ -4,6 +4,7 @@ use axum::{
     Router,
 };
 
+use crate::server::AppState;
 use super::auth::auth_middleware;
 use super::handlers::{
     get_agent_card, get_authenticated_extended_card,
@@ -14,7 +15,7 @@ use super::handlers::{
 };
 use super::jsonrpc::handle_jsonrpc;
 
-pub fn create_a2a_routes() -> Router {
+pub fn create_a2a_routes(state: AppState) -> Router {
     Router::new()
         // Agent Card endpoints
         .route("/card", get(get_agent_card))
@@ -42,6 +43,6 @@ pub fn create_a2a_routes() -> Router {
         // Authenticated extended card (same for now)
         .route("/authenticated/card", get(get_authenticated_extended_card))
 
-        // Apply auth middleware to all routes
+        .with_state(state)
         .layer(middleware::from_fn(auth_middleware))
 }

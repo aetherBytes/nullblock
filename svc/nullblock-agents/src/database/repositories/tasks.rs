@@ -311,4 +311,97 @@ impl TaskRepository {
 
         Ok(tasks)
     }
+
+    pub async fn add_message_to_history(
+        &self,
+        task_id: &str,
+        message: serde_json::Value
+    ) -> Result<Option<TaskEntity>> {
+        let uuid = Uuid::parse_str(task_id)?;
+        let task = sqlx::query_as::<_, TaskEntity>(
+            r#"
+            UPDATE tasks SET
+                history = history || $2::jsonb,
+                updated_at = $3
+            WHERE id = $1
+            RETURNING *
+            "#
+        )
+        .bind(uuid)
+        .bind(message)
+        .bind(Utc::now())
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(task)
+    }
+
+    pub async fn add_artifact(
+        &self,
+        task_id: &str,
+        artifact: serde_json::Value
+    ) -> Result<Option<TaskEntity>> {
+        let uuid = Uuid::parse_str(task_id)?;
+        let task = sqlx::query_as::<_, TaskEntity>(
+            r#"
+            UPDATE tasks SET
+                artifacts = artifacts || $2::jsonb,
+                updated_at = $3
+            WHERE id = $1
+            RETURNING *
+            "#
+        )
+        .bind(uuid)
+        .bind(artifact)
+        .bind(Utc::now())
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(task)
+    }
+
+    pub async fn update_status_with_message(
+        &self,
+        task_id: &str,
+        state: crate::models::TaskState,
+        message: Option<String>
+    ) -> Result<Option<TaskEntity>> {
+        let uuid = Uuid::parse_str(task_id)?;
+        let now = Utc::now();
+        let state_str = serde_json::to_string(&state).unwrap().trim_matches('"').to_string();
+
+        let started_at = if state == crate::models::TaskState::Working {
+            Some(now)
+        } else {
+            None
+        };
+
+        let completed_at = if matches!(state, crate::models::TaskState::Completed | crate::models::TaskState::Failed | crate::models::TaskState::Canceled) {
+            Some(now)
+        } else {
+            None
+        };
+
+        let task = sqlx::query_as::<_, TaskEntity>(
+            r#"
+            UPDATE tasks SET
+                status = $2,
+                status_message = $3,
+                status_timestamp = $4,
+                started_at = COALESCE($5, started_at),
+                completed_at = COALESCE($6, completed_at),
+                updated_at = $7
+            WHERE id = $1
+            RETURNING *
+            "#
+        )
+        .bind(uuid)
+        .bind(state_str)
+        .bind(message)
+        .bind(now)
+        .bind(started_at)
+        .bind(completed_at)
+        .bind(now)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(task)
+    }
 }

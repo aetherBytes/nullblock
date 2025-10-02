@@ -152,6 +152,24 @@ pub async fn create_task(
     // Create task in database
     match task_repo.create(&request, user_id, hecate_agent_id).await {
         Ok(task_entity) => {
+            // Add initial message to history with task description
+            let initial_message = serde_json::json!({
+                "messageId": format!("msg-{}", Uuid::new_v4()),
+                "role": "user",
+                "parts": [{
+                    "type": "text",
+                    "text": request.description.clone()
+                }],
+                "timestamp": Utc::now().to_rfc3339(),
+                "taskId": task_entity.id.to_string(),
+                "contextId": task_entity.context_id.to_string(),
+                "kind": "message"
+            });
+
+            if let Err(e) = task_repo.add_message_to_history(&task_entity.id.to_string(), initial_message).await {
+                warn!("⚠️ Failed to add initial message to task history: {}", e);
+            }
+
             // Convert to domain model
             match task_entity.to_domain_model() {
                 Ok(task) => {

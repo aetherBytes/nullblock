@@ -742,6 +742,48 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
             }
         }
 
+        // Add agent response message to history
+        let agent_message = serde_json::json!({
+            "messageId": format!("msg-{}", Uuid::new_v4()),
+            "role": "agent",
+            "parts": [{
+                "type": "text",
+                "text": chat_response.content.clone()
+            }],
+            "timestamp": Utc::now().to_rfc3339(),
+            "taskId": task_id,
+            "kind": "message",
+            "metadata": {
+                "agent": "hecate",
+                "agent_id": self.agent_id,
+                "model": &chat_response.model_used,
+                "processing_duration_ms": processing_duration
+            }
+        });
+
+        if let Err(e) = task_repo.add_message_to_history(task_id, agent_message).await {
+            warn!("⚠️ Failed to add agent message to task history: {}", e);
+        }
+
+        // Create artifact with completion result
+        let artifact = serde_json::json!({
+            "id": format!("artifact-{}", Uuid::new_v4()),
+            "parts": [{
+                "type": "text",
+                "text": chat_response.content.clone()
+            }],
+            "metadata": {
+                "artifact_type": "completion_result",
+                "created_at": Utc::now().to_rfc3339(),
+                "processing_duration_ms": processing_duration,
+                "model": &chat_response.model_used
+            }
+        });
+
+        if let Err(e) = task_repo.add_artifact(task_id, artifact).await {
+            warn!("⚠️ Failed to add completion artifact: {}", e);
+        }
+
         // Update agent statistics
         if let Some(agent_id) = self.agent_id {
             let task_uuid = Uuid::parse_str(task_id).unwrap_or_else(|_| Uuid::new_v4());
@@ -750,8 +792,9 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
             }
         }
 
-        // Update task status to completed
-        match task_repo.update_status(task_id, crate::models::TaskState::Completed).await {
+        // Update task status to completed with success message
+        let completion_message = format!("Task completed successfully in {}ms", processing_duration);
+        match task_repo.update_status_with_message(task_id, crate::models::TaskState::Completed, Some(completion_message)).await {
             Ok(Some(_)) => {
                 info!("✅ Task {} status updated to completed", task_id);
             }
@@ -760,7 +803,6 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
             }
             Err(e) => {
                 error!("❌ Failed to update task status to completed: {}", e);
-                // Don't return error here as the task was processed successfully
             }
         }
 
