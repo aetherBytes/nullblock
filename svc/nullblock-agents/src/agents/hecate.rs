@@ -7,12 +7,24 @@ use crate::{
     models::{ChatResponse, ConversationMessage, LLMRequest, ModelCapability},
 };
 use chrono::Utc;
+use regex::Regex;
 use serde_json::json;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 use tracing::{info, warn, error};
 use uuid::Uuid;
+
+// Compiled regex for stripping base64 image data (used to reduce token usage)
+// More robust pattern that catches base64 data with newlines and various formats
+static IMAGE_DATA_REGEX: OnceLock<Regex> = OnceLock::new();
+
+fn get_image_data_regex() -> &'static Regex {
+    IMAGE_DATA_REGEX.get_or_init(|| {
+        // Match base64 image data including those with newlines and spaces
+        Regex::new(r"data:image/[^;]+;base64,[A-Za-z0-9+/=\s]+").unwrap()
+    })
+}
 
 pub struct HecateAgent {
     pub personality: String,
@@ -179,8 +191,18 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
 
         log_request_start!("chat", &format!("from {}", &user_id[..8.min(user_id.len())]));
 
-        // Add user message to history
-        let user_message = ConversationMessage::new(message.clone(), "user".to_string())
+        // Check if message contains base64 image data and strip it before storing in history
+        let message_for_history = if message.contains("data:image") {
+            let stripped = get_image_data_regex().replace_all(&message, "[Image provided]").to_string();
+            let saved_tokens = message.len().saturating_sub(stripped.len());
+            info!("🖼️ Stripped base64 image data from user message (saved ~{} tokens)", saved_tokens / 4);
+            stripped
+        } else {
+            message.clone()
+        };
+
+        // Add user message to history (with images stripped if present)
+        let user_message = ConversationMessage::new(message_for_history, "user".to_string())
             .with_metadata(user_context.clone().unwrap_or_default());
 
         {
@@ -232,10 +254,22 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
 
         let context = self.build_conversation_context(&user_context).await;
 
+        // Check if this is an image generation request (before moving message)
+        let is_image_request = self.is_image_generation_request(&message);
+
+        // For image generation, use summarized context with NullBlock info and recent conversation
+        let (system_prompt, messages) = if is_image_request {
+            info!("🎨 Image generation detected - using summarized context with project info");
+            let (prompt, msgs) = self.build_image_generation_context(&user_context).await;
+            (Some(prompt), msgs)
+        } else {
+            (Some(context.system_prompt), Some(context.messages))
+        };
+
         let request = LLMRequest {
             prompt: message,
-            system_prompt: Some(context.system_prompt),
-            messages: Some(context.messages),
+            system_prompt,
+            messages,
             max_tokens: Some(1200),
             temperature: Some(0.8),
             top_p: None,
@@ -247,20 +281,25 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
             reasoning: None,
         };
 
-        let requirements = TaskRequirements {
-            required_capabilities: vec![
-                ModelCapability::Conversation,
-                ModelCapability::Reasoning,
-                ModelCapability::Creative,
-            ],
-            optimization_goal: personality_config.optimization_goal.clone(),
-            priority: Priority::High,
-            task_type: "conversation".to_string(),
-            allow_local_models: true,
-            preferred_providers: vec!["openrouter".to_string()],
-            min_quality_score: Some(0.7),
-            max_cost_per_1k_tokens: None,
-            min_context_window: None,
+        let requirements = if is_image_request {
+            info!("🎨 Using image generation requirements");
+            TaskRequirements::for_image_generation()
+        } else {
+            TaskRequirements {
+                required_capabilities: vec![
+                    ModelCapability::Conversation,
+                    ModelCapability::Reasoning,
+                    ModelCapability::Creative,
+                ],
+                optimization_goal: personality_config.optimization_goal.clone(),
+                priority: Priority::High,
+                task_type: "conversation".to_string(),
+                allow_local_models: true,
+                preferred_providers: vec!["openrouter".to_string()],
+                min_quality_score: Some(0.7),
+                max_cost_per_1k_tokens: None,
+                min_context_window: None,
+            }
         };
 
         info!("🧠 Generating response with {:?} optimization...", requirements.optimization_goal);
@@ -277,9 +316,19 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         // Store current model for display
         self.current_model = Some(llm_response.model_used.clone());
 
+        // For image generation responses, strip out base64 image data from history to save tokens
+        let content_for_history = if is_image_request && cleaned_content.contains("data:image") {
+            let stripped = get_image_data_regex().replace_all(&cleaned_content, "[Image generated]").to_string();
+            let saved_tokens = cleaned_content.len().saturating_sub(stripped.len());
+            info!("🖼️ Stripped base64 image from assistant response (saved ~{} tokens for future requests)", saved_tokens / 4);
+            stripped
+        } else {
+            cleaned_content.clone()
+        };
+
         // Add assistant response to history
         let assistant_message = ConversationMessage::new(
-            cleaned_content.clone(),
+            content_for_history,
             "assistant".to_string(),
         ).with_model(llm_response.model_used.clone())
         .with_metadata({
@@ -287,6 +336,9 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
             meta.insert("latency_ms".to_string(), json!(latency_ms));
             meta.insert("cost_estimate".to_string(), json!(llm_response.cost_estimate));
             meta.insert("finish_reason".to_string(), json!(llm_response.finish_reason));
+            if is_image_request {
+                meta.insert("image_generation".to_string(), json!(true));
+            }
             meta
         });
 
@@ -323,6 +375,17 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
                 meta
             },
         })
+    }
+
+    fn is_image_generation_request(&self, message: &str) -> bool {
+        let image_keywords = [
+            "logo", "image", "picture", "photo", "draw", "create", "generate", "design",
+            "visual", "graphic", "illustration", "artwork", "sketch", "render",
+            "show me", "make me", "give me", "create a", "design a", "draw a"
+        ];
+        
+        let lower_message = message.to_lowercase();
+        image_keywords.iter().any(|keyword| lower_message.contains(keyword))
     }
 
     pub async fn get_model_status(&self) -> AppResult<serde_json::Value> {
@@ -533,9 +596,60 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         messages
     }
 
+    async fn build_image_generation_context(&self, user_context: &Option<HashMap<String, serde_json::Value>>) -> (String, Option<Vec<HashMap<String, String>>>) {
+        let history = self.conversation_history.read().await;
+
+        // Minimal context for image generation to save tokens
+        let mut context_summary = String::new();
+
+        // Only include last 2-3 messages for minimal context, heavily truncated
+        let recent_messages: Vec<_> = history.iter()
+            .filter(|msg| msg.role != "system")
+            .rev()
+            .take(3)  // Reduced from 6 to 3
+            .collect();
+
+        if !recent_messages.is_empty() {
+            context_summary.push_str("Recent context:\n");
+            for msg in recent_messages.iter().rev() {
+                // Heavily truncate to just 80 chars to minimize tokens
+                let truncated = if msg.content.len() > 80 {
+                    format!("{}...", &msg.content[..80])
+                } else {
+                    msg.content.clone()
+                };
+                // Strip any remaining image data from context
+                let cleaned = get_image_data_regex().replace_all(&truncated, "[img]").to_string();
+                context_summary.push_str(&format!("{}: {}\n",
+                    if msg.role == "user" { "User" } else { "Hecate" },
+                    cleaned
+                ));
+            }
+        }
+
+        // Simplified system prompt with minimal context
+        let system_prompt = format!(
+            r#"You are Hecate's image generation module. Create high-quality images based on requests.
+
+{}
+
+IMPORTANT: Generate ONE image per request. Keep text responses minimal."#,
+            if !context_summary.is_empty() {
+                format!("CONTEXT:\n{}", context_summary)
+            } else {
+                String::new()
+            }
+        );
+
+        info!("🎨 Image generation context: {} chars (minimal for token efficiency)", system_prompt.len());
+
+        // Return NO messages array - only system prompt with minimal context
+        (system_prompt, None)
+    }
+
     async fn trim_conversation_history(&mut self) {
         let mut history = self.conversation_history.write().await;
-        
+
         // Estimate token count (rough approximation)
         let total_tokens: usize = history.iter()
             .map(|msg| (msg.content.len() / 4) + 10) // Rough token estimation
@@ -562,7 +676,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
                 .take(10)
                 .rev()
                 .collect();
-            
+
             let latest_system: Vec<ConversationMessage> = system_messages
                 .into_iter()
                 .rev()
@@ -571,9 +685,9 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
 
             let mut new_history = latest_system;
             new_history.extend(recent_conversation);
-            
+
             *history = new_history;
-            
+
             info!("✂️ Trimmed conversation history to {} messages", history.len());
         }
     }

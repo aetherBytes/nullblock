@@ -53,6 +53,22 @@ impl Default for TaskRequirements {
     }
 }
 
+impl TaskRequirements {
+    pub fn for_image_generation() -> Self {
+        Self {
+            required_capabilities: vec![ModelCapability::ImageGeneration, ModelCapability::Creative],
+            optimization_goal: OptimizationGoal::Quality,
+            priority: Priority::High,
+            task_type: "image_generation".to_string(),
+            allow_local_models: false,
+            preferred_providers: vec!["openrouter".to_string()],
+            min_quality_score: Some(0.8),
+            max_cost_per_1k_tokens: Some(5.0),  // Increased for better image models
+            min_context_window: Some(1000),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RoutingDecision {
     pub selected_model: String,
@@ -254,35 +270,64 @@ impl ModelRouter {
     }
 
     fn get_static_models(&self) -> Vec<ModelConfig> {
-        // This would normally come from a configuration file or database
-        // For now, return the default Hecate model
-        vec![ModelConfig {
-            name: "x-ai/grok-4-fast:free".to_string(),
-            display_name: "DeepSeek Chat v3.1 Free".to_string(),
-            icon: "🤖".to_string(),
-            provider: ModelProvider::OpenRouter,
-            tier: ModelTier::Free,
-            capabilities: vec![
-                ModelCapability::Conversation,
-                ModelCapability::Reasoning,
-                ModelCapability::Creative,
-            ],
-            metrics: crate::models::ModelMetrics {
-                avg_latency_ms: 1000.0,
-                tokens_per_second: 50.0,
-                cost_per_1k_tokens: 0.0,
-                context_window: 128000,
-                max_output_tokens: 8192,
-                quality_score: 0.85,
-                reliability_score: 0.90,
+        vec![
+            ModelConfig {
+                name: "x-ai/grok-4-fast:free".to_string(),
+                display_name: "DeepSeek Chat v3.1 Free".to_string(),
+                icon: "🤖".to_string(),
+                provider: ModelProvider::OpenRouter,
+                tier: ModelTier::Free,
+                capabilities: vec![
+                    ModelCapability::Conversation,
+                    ModelCapability::Reasoning,
+                    ModelCapability::Creative,
+                ],
+                metrics: crate::models::ModelMetrics {
+                    avg_latency_ms: 1000.0,
+                    tokens_per_second: 50.0,
+                    cost_per_1k_tokens: 0.0,
+                    context_window: 128000,
+                    max_output_tokens: 8192,
+                    quality_score: 0.85,
+                    reliability_score: 0.90,
+                },
+                api_endpoint: "https://openrouter.ai/api/v1/chat/completions".to_string(),
+                api_key_env: Some("OPENROUTER_API_KEY".to_string()),
+                description: "Free DeepSeek model optimized for conversation".to_string(),
+                enabled: true,
+                supports_reasoning: true,
+                is_popular: true,
+                created: None,
             },
-            api_endpoint: "https://openrouter.ai/api/v1/chat/completions".to_string(),
-            api_key_env: Some("OPENROUTER_API_KEY".to_string()),
-            description: "Free DeepSeek model optimized for conversation".to_string(),
-            enabled: true,
-            supports_reasoning: true,
-            is_popular: true,
-            created: None,
-        }]
+            ModelConfig {
+                name: "google/gemini-2.5-flash-image-preview".to_string(),
+                display_name: "Gemini 2.5 Flash Image".to_string(),
+                icon: "🎨".to_string(),
+                provider: ModelProvider::OpenRouter,
+                tier: ModelTier::Premium,
+                capabilities: vec![
+                    ModelCapability::ImageGeneration,
+                    ModelCapability::Creative,
+                    ModelCapability::Conversation,
+                    ModelCapability::Vision,
+                ],
+                metrics: crate::models::ModelMetrics {
+                    avg_latency_ms: 3000.0,
+                    tokens_per_second: 30.0,
+                    cost_per_1k_tokens: 1.5,  // More accurate cost estimate
+                    context_window: 1000000,
+                    max_output_tokens: 8192,
+                    quality_score: 0.95,
+                    reliability_score: 0.90,
+                },
+                api_endpoint: "https://openrouter.ai/api/v1/chat/completions".to_string(),
+                api_key_env: Some("OPENROUTER_API_KEY".to_string()),
+                description: "Gemini 2.5 Flash Image - Advanced image generation with contextual understanding".to_string(),
+                enabled: true,
+                supports_reasoning: false,
+                is_popular: true,
+                created: None,
+            },
+        ]
     }
 }

@@ -117,7 +117,8 @@ pub async fn available_models(
             "free": "x-ai/grok-4-fast:free",
             "reasoning": "x-ai/grok-4-fast:free",
             "premium": "anthropic/claude-3.5-sonnet",
-            "fast": "x-ai/grok-4-fast:free"
+            "fast": "x-ai/grok-4-fast:free",
+            "image_generation": "google/gemini-2.5-flash-image-preview"
         },
         "total_models": available_models.len()
     })))
@@ -443,6 +444,48 @@ fn get_fallback_models() -> Vec<serde_json::Value> {
                 "completion": "0",
                 "image": "0",
                 "request": "0",
+                "web_search": "0",
+                "internal_reasoning": "0",
+                "input_cache_read": "0",
+                "input_cache_write": "0"
+            }
+        }),
+        json!({
+            "id": "google/gemini-2.5-flash-image-preview",
+            "name": "google/gemini-2.5-flash-image-preview",
+            "display_name": "Gemini 2.5 Flash Image (Nano Banana)",
+            "icon": "🍌",
+            "provider": "openrouter",
+            "available": true,
+            "tier": "premium",
+            "context_length": 32768,
+            "max_completion_tokens": 8192,
+            "capabilities": vec!["image_generation", "creative", "conversation", "vision"],
+            "cost_per_1k_tokens": 0.30,
+            "supports_reasoning": true,
+            "supports_vision": true,
+            "supports_audio": false,
+            "is_moderated": true,
+            "description": "Google's Gemini 2.5 Flash Image - State-of-the-art image generation with contextual understanding and multi-turn conversations",
+            "is_popular": true,
+            "created": created_timestamp,
+            "created_at": created_at,
+            "updated_at": created_at,
+            "canonical_slug": "google/gemini-2.5-flash-image-preview",
+            "hugging_face_id": "",
+            "supported_parameters": vec!["temperature", "top_p", "max_tokens", "size", "quality"],
+            "per_request_limits": json!({}),
+            "architecture": {
+                "input_modalities": ["text", "image"],
+                "output_modalities": ["text", "image"],
+                "tokenizer": "Gemini",
+                "instruct_type": "chat_with_image_generation"
+            },
+            "pricing": {
+                "prompt": "0.30",
+                "completion": "2.50",
+                "image": "1.238",
+                "request": "0.03",
                 "web_search": "0",
                 "internal_reasoning": "0",
                 "input_cache_read": "0",

@@ -29,11 +29,11 @@ pub struct TaskQuery {
 async fn get_user_id_from_wallet(
     database: &crate::database::Database,
     wallet_address: Option<&str>,
-    chain: Option<&str>,
+    network: Option<&str>,
 ) -> Option<Uuid> {
-    if let (Some(wallet), Some(chain)) = (wallet_address, chain) {
+    if let (Some(wallet), Some(network)) = (wallet_address, network) {
         // Generate deterministic UUID from wallet address
-        let user_id = wallet_to_uuid(wallet, chain);
+        let user_id = wallet_to_uuid(wallet, network);
         let user_repo = UserReferenceRepository::new(database.pool().clone());
 
         // Check if user already exists
@@ -49,7 +49,7 @@ async fn get_user_id_from_wallet(
                 let user_ref = crate::models::UserReference {
                     id: user_id,
                     source_identifier: wallet.to_string(),
-                    chain: chain.to_string(),
+                    network: network.to_string(),
                     source_type: serde_json::json!({
                         "type": "web3_wallet",
                         "provider": "web3",
@@ -922,7 +922,7 @@ async fn process_task_internal(
     };
 
     // Check if task is in a processable state - if it's created, start it automatically
-    if task_entity.status == "created" {
+    if task_entity.status == "created" || task_entity.status == "submitted" {
         info!("🚀 Auto-starting task {} before processing", task_id);
         match task_repo.update_status(&task_id, crate::models::TaskState::Working).await {
             Ok(Some(updated_task)) => {
@@ -936,8 +936,8 @@ async fn process_task_internal(
                             None, // No user_id available in Task domain model
                             None, // No agent_id yet
                             task_model.name.clone(),
-                            "created".to_string(),
-                            "running".to_string(),
+                            task_entity.status.clone(),
+                            "working".to_string(),
                             format!("{:?}", task_model.priority), // Use Debug format
                             0, // progress: u8 (0% when starting)
                         );
@@ -954,9 +954,9 @@ async fn process_task_internal(
                 return Err(format!("Failed to start task: {}", e));
             }
         }
-    } else if task_entity.status != "running" {
+    } else if task_entity.status != "working" && task_entity.status != "running" {
         warn!("⚠️ Task {} is not in a processable state: {}", task_id, task_entity.status);
-        return Err(format!("Task must be in 'created' or 'running' state to process. Current state: {}", task_entity.status));
+        return Err(format!("Task must be in 'submitted', 'created', 'working', or 'running' state to process. Current state: {}", task_entity.status));
     }
 
     // Execute the task using Hecate
@@ -1074,9 +1074,9 @@ async fn migrate_existing_users_to_wallet_uuids(
             let mut failed_count = 0;
 
             for user_entity in existing_users {
-                if let (Some(source_identifier), Some(chain)) = (&user_entity.source_identifier, &user_entity.chain) {
+                if let (Some(source_identifier), Some(network)) = (&user_entity.source_identifier, &user_entity.network) {
                     // Calculate what the UUID should be
-                    let correct_uuid = wallet_to_uuid(source_identifier, chain);
+                    let correct_uuid = wallet_to_uuid(source_identifier, network);
 
                     if user_entity.id != correct_uuid {
                         info!("🔄 Migrating user {} -> {}", user_entity.id, correct_uuid);
@@ -1085,7 +1085,7 @@ async fn migrate_existing_users_to_wallet_uuids(
                         let new_user_ref = crate::models::UserReference {
                             id: correct_uuid,
                             source_identifier: source_identifier.to_string(),
-                            chain: chain.to_string(),
+                            network: network.to_string(),
                             source_type: serde_json::json!({
                                 "type": "web3_wallet",
                                 "provider": "web3",

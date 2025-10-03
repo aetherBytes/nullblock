@@ -151,6 +151,11 @@ import styles from './MarkdownRenderer.module.scss';
 interface MarkdownRendererProps {
   content: string;
   className?: string;
+  images?: Array<{
+    url: string;
+    alt?: string;
+    caption?: string;
+  }>;
 }
 
 // Copy button component
@@ -178,9 +183,69 @@ const CopyButton: React.FC<{ code: string }> = ({ code }) => {
   );
 };
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className }) => {
+// Image display component
+const ImageDisplay: React.FC<{ 
+  url: string; 
+  alt?: string; 
+  caption?: string; 
+}> = ({ url, alt, caption }) => {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+
+  return (
+    <div className={styles.imageContainer}>
+      {imageLoading && (
+        <div className={styles.imageLoading}>
+          <div className={styles.loadingSpinner}></div>
+          <span>Loading image...</span>
+        </div>
+      )}
+      {imageError ? (
+        <div className={styles.imageError}>
+          <span>❌ Failed to load image</span>
+          <a href={url} target="_blank" rel="noopener noreferrer" className={styles.imageLink}>
+            View original
+          </a>
+        </div>
+      ) : (
+        <img
+          src={url}
+          alt={alt || 'Generated image'}
+          className={styles.chatImage}
+          onLoad={() => setImageLoading(false)}
+          onError={() => {
+            setImageError(true);
+            setImageLoading(false);
+          }}
+          loading="lazy"
+        />
+      )}
+      {caption && (
+        <div className={styles.imageCaption}>
+          {caption}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className, images = [] }) => {
   return (
     <div className={`${styles.markdownContainer} ${className || ''}`}>
+      {/* Render images first if they exist */}
+      {images.length > 0 && (
+        <div className={styles.imagesContainer}>
+          {images.map((image, index) => (
+            <ImageDisplay
+              key={index}
+              url={image.url}
+              alt={image.alt}
+              caption={image.caption}
+            />
+          ))}
+        </div>
+      )}
+      
       <ReactMarkdown
         components={{
           // Custom styling for code blocks with syntax highlighting

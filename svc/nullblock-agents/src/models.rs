@@ -53,7 +53,7 @@ pub struct ChatResponse {
 pub struct UserReference {
     pub id: Uuid,
     pub source_identifier: String,
-    pub chain: String,
+    pub network: String,
     pub source_type: serde_json::Value,
     pub wallet_type: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -162,6 +162,7 @@ pub enum ModelCapability {
     Vision,
     FunctionCalling,
     ReasoningTokens,
+    ImageGeneration,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
