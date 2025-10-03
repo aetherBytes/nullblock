@@ -604,54 +604,61 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
     }
 
     async fn build_image_generation_context(&self, user_context: &Option<HashMap<String, serde_json::Value>>) -> (String, Option<Vec<HashMap<String, String>>>) {
-        let history = self.conversation_history.read().await;
+        // For image generation, use full personality but strip images from history
+        let personality_config = self.personalities.get(&self.personality)
+            .unwrap_or(&self.personalities["helpful_cyberpunk"]);
+        
+        let mut base_system_prompt = personality_config.system_prompt.clone();
 
-        // Minimal context for image generation to save tokens
-        let mut context_summary = String::new();
+        // Add user context if available
+        if let Some(context) = user_context {
+            let mut context_additions = Vec::new();
+            
+            if let Some(wallet_address) = context.get("wallet_address").and_then(|v| v.as_str()) {
+                let shortened = format!("{}...{}", &wallet_address[..8], &wallet_address[wallet_address.len()-4..]);
+                context_additions.push(format!("User wallet: {}", shortened));
+            }
+            
+            if let Some(wallet_type) = context.get("wallet_type").and_then(|v| v.as_str()) {
+                context_additions.push(format!("Wallet type: {}", wallet_type));
+            }
 
-        // Only include last 2-3 messages for minimal context, heavily truncated
-        let recent_messages: Vec<_> = history.iter()
-            .filter(|msg| msg.role != "system")
-            .rev()
-            .take(3)  // Reduced from 6 to 3
-            .collect();
-
-        if !recent_messages.is_empty() {
-            context_summary.push_str("Recent context:\n");
-            for msg in recent_messages.iter().rev() {
-                // Heavily truncate to just 80 chars to minimize tokens
-                let truncated = if msg.content.len() > 80 {
-                    format!("{}...", &msg.content[..80])
-                } else {
-                    msg.content.clone()
-                };
-                // Strip any remaining image data from context
-                let cleaned = get_image_data_regex().replace_all(&truncated, "[img]").to_string();
-                context_summary.push_str(&format!("{}: {}\n",
-                    if msg.role == "user" { "User" } else { "Hecate" },
-                    cleaned
-                ));
+            if !context_additions.is_empty() {
+                base_system_prompt.push_str(&format!("\n\nUser Context: {}", context_additions.join("; ")));
             }
         }
 
-        // Simplified system prompt with minimal context
-        let system_prompt = format!(
-            r#"You are Hecate's image generation module. Create high-quality images based on requests.
+        // Add image generation guidance
+        base_system_prompt.push_str("\n\nIMAGE GENERATION MODE: The user is requesting an image. Provide helpful commentary, suggestions, or context along with generating the image. Be conversational and engaging as Hecate.");
 
-{}
+        // Build messages with images stripped
+        let mut messages = Vec::new();
+        
+        // Add system message
+        let mut system_msg = HashMap::new();
+        system_msg.insert("role".to_string(), "system".to_string());
+        system_msg.insert("content".to_string(), base_system_prompt.clone());
+        messages.push(system_msg);
 
-IMPORTANT: Generate ONE image per request. Keep text responses minimal."#,
-            if !context_summary.is_empty() {
-                format!("CONTEXT:\n{}", context_summary)
-            } else {
-                String::new()
+        // Add conversation history with images stripped
+        let history = self.conversation_history.read().await;
+        for msg in history.iter() {
+            if msg.role != "system" {
+                // Strip any image data from the content
+                let content_without_images = get_image_data_regex()
+                    .replace_all(&msg.content, "[Image generated]")
+                    .to_string();
+                
+                let mut message = HashMap::new();
+                message.insert("role".to_string(), msg.role.clone());
+                message.insert("content".to_string(), content_without_images);
+                messages.push(message);
             }
-        );
+        }
 
-        info!("🎨 Image generation context: {} chars (minimal for token efficiency)", system_prompt.len());
+        info!("🎨 Image generation: Full personality with {} messages (images stripped for efficiency)", messages.len());
 
-        // Return NO messages array - only system prompt with minimal context
-        (system_prompt, None)
+        (base_system_prompt, Some(messages))
     }
 
     async fn trim_conversation_history(&mut self) {
