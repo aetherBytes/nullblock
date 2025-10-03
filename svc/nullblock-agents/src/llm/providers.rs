@@ -554,6 +554,12 @@ impl Provider for OpenRouterProvider {
         if config.name.contains("gemini-2.5-flash-image") {
             info!("🎨 Adding image+text modalities for Gemini image generation");
             payload["modalities"] = json!(["image", "text"]);
+            
+            // Log token usage for debugging
+            let approx_input_tokens = messages.iter()
+                .map(|msg| msg.get("content").and_then(|c| c.as_str()).unwrap_or("").len() / 4)
+                .sum::<usize>();
+            info!("📊 Approximate input tokens for image request: {}", approx_input_tokens);
         }
 
         // Add reasoning configuration if supported and requested
