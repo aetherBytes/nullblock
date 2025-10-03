@@ -266,11 +266,18 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
             (Some(context.system_prompt), Some(context.messages))
         };
 
+        // For image generation, use higher max_tokens to allow for base64 image data
+        let max_tokens = if is_image_request {
+            Some(4096)  // Increased for image generation responses
+        } else {
+            Some(1200)
+        };
+
         let request = LLMRequest {
             prompt: message,
             system_prompt,
             messages,
-            max_tokens: Some(1200),
+            max_tokens,
             temperature: Some(0.8),
             top_p: None,
             stop_sequences: None,
