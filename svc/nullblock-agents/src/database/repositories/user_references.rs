@@ -18,9 +18,9 @@ impl UserReferenceRepository {
         &self,
         user_id: Uuid,
         source_identifier: Option<&str>,
-        chain: Option<&str>,
+        network: Option<&str>,
         source_type: &serde_json::Value,
-        wallet_type: Option<&str>,
+        _wallet_type: Option<&str>,
         email: Option<&str>,
         metadata: &serde_json::Value,
         _erebus_created_at: Option<DateTime<Utc>>,
@@ -31,14 +31,13 @@ impl UserReferenceRepository {
         let user_ref = sqlx::query_as::<_, UserReferenceEntity>(
             r#"
             INSERT INTO user_references (
-                id, source_identifier, chain, user_type, source_type, wallet_type, email, metadata,
-                preferences, is_active
+                id, source_identifier, network, user_type, email, metadata,
+                preferences, source_type, is_active
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            ON CONFLICT (source_identifier, chain) DO UPDATE SET
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ON CONFLICT (source_identifier, network) DO UPDATE SET
                 user_type = EXCLUDED.user_type,
                 source_type = EXCLUDED.source_type,
-                wallet_type = EXCLUDED.wallet_type,
                 email = EXCLUDED.email,
                 metadata = EXCLUDED.metadata,
                 is_active = EXCLUDED.is_active
@@ -47,13 +46,12 @@ impl UserReferenceRepository {
         )
         .bind(user_id)
         .bind(source_identifier)
-        .bind(chain)
+        .bind(network)
         .bind("external") // user_type - default value
-        .bind(source_type)
-        .bind(wallet_type)
         .bind(email)
         .bind(metadata)
         .bind(serde_json::json!({})) // preferences
+        .bind(source_type)
         .bind(true) // is_active
         .fetch_one(&self.pool)
         .await?;
@@ -72,12 +70,12 @@ impl UserReferenceRepository {
         Ok(user_ref)
     }
 
-    pub async fn get_by_source(&self, source_identifier: &str, chain: &str) -> Result<Option<UserReferenceEntity>> {
+    pub async fn get_by_source(&self, source_identifier: &str, network: &str) -> Result<Option<UserReferenceEntity>> {
         let user_ref = sqlx::query_as::<_, UserReferenceEntity>(
-            "SELECT * FROM user_references WHERE source_identifier = $1 AND chain = $2 AND is_active = true"
+            "SELECT * FROM user_references WHERE source_identifier = $1 AND network = $2 AND is_active = true"
         )
         .bind(source_identifier)
-        .bind(chain)
+        .bind(network)
         .fetch_optional(&self.pool)
         .await?;
 
@@ -102,7 +100,7 @@ impl UserReferenceRepository {
             r#"
             UPDATE user_references SET
                 is_active = false,
-                synced_at = $2
+                updated_at = $2
             WHERE id = $1
             RETURNING *
             "#
@@ -119,7 +117,7 @@ impl UserReferenceRepository {
         let limit_val = limit.unwrap_or(100);
 
         let user_refs = sqlx::query_as::<_, UserReferenceEntity>(
-            "SELECT * FROM user_references WHERE is_active = true ORDER BY synced_at DESC LIMIT $1"
+            "SELECT * FROM user_references WHERE is_active = true ORDER BY updated_at DESC LIMIT $1"
         )
         .bind(limit_val)
         .fetch_all(&self.pool)
@@ -134,22 +132,21 @@ impl UserReferenceRepository {
         let user_entity = sqlx::query_as::<_, UserReferenceEntity>(
             r#"
             INSERT INTO user_references (
-                id, source_identifier, chain, user_type, source_type, wallet_type, email, metadata,
-                preferences, is_active
+                id, source_identifier, network, user_type, email, metadata,
+                preferences, source_type, is_active
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
             "#
         )
         .bind(user_ref.id)
         .bind(&user_ref.source_identifier)
-        .bind(&user_ref.chain)
+        .bind(&user_ref.network)
         .bind("external") // user_type - default value
-        .bind(&user_ref.source_type)
-        .bind(&user_ref.wallet_type)
         .bind(None::<String>) // email
         .bind(serde_json::json!({})) // metadata
         .bind(serde_json::json!({})) // preferences
+        .bind(&user_ref.source_type)
         .bind(true) // is_active
         .fetch_one(&self.pool)
         .await?;
@@ -159,34 +156,34 @@ impl UserReferenceRepository {
 
     pub async fn list(
         &self,
-        wallet_address: Option<&str>,
-        chain: Option<&str>,
+        source_identifier: Option<&str>,
+        network: Option<&str>,
         limit: Option<usize>,
     ) -> Result<Vec<UserReferenceEntity>> {
         let limit_val = limit.unwrap_or(100) as i64;
 
-        let query = if let (Some(wallet), Some(chain)) = (wallet_address, chain) {
+        let query = if let (Some(source), Some(network)) = (source_identifier, network) {
             sqlx::query_as::<_, UserReferenceEntity>(
-                "SELECT * FROM user_references WHERE wallet_address = $1 AND chain = $2 AND is_active = true ORDER BY synced_at DESC LIMIT $3"
+                "SELECT * FROM user_references WHERE source_identifier = $1 AND network = $2 AND is_active = true ORDER BY updated_at DESC LIMIT $3"
             )
-            .bind(wallet)
-            .bind(chain)
+            .bind(source)
+            .bind(network)
             .bind(limit_val)
-        } else if let Some(wallet) = wallet_address {
+        } else if let Some(source) = source_identifier {
             sqlx::query_as::<_, UserReferenceEntity>(
-                "SELECT * FROM user_references WHERE wallet_address = $1 AND is_active = true ORDER BY synced_at DESC LIMIT $2"
+                "SELECT * FROM user_references WHERE source_identifier = $1 AND is_active = true ORDER BY updated_at DESC LIMIT $2"
             )
-            .bind(wallet)
+            .bind(source)
             .bind(limit_val)
-        } else if let Some(chain) = chain {
+        } else if let Some(network) = network {
             sqlx::query_as::<_, UserReferenceEntity>(
-                "SELECT * FROM user_references WHERE chain = $1 AND is_active = true ORDER BY synced_at DESC LIMIT $2"
+                "SELECT * FROM user_references WHERE network = $1 AND is_active = true ORDER BY updated_at DESC LIMIT $2"
             )
-            .bind(chain)
+            .bind(network)
             .bind(limit_val)
         } else {
             sqlx::query_as::<_, UserReferenceEntity>(
-                "SELECT * FROM user_references WHERE is_active = true ORDER BY synced_at DESC LIMIT $1"
+                "SELECT * FROM user_references WHERE is_active = true ORDER BY updated_at DESC LIMIT $1"
             )
             .bind(limit_val)
         };

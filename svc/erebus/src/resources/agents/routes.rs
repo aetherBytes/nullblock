@@ -336,7 +336,7 @@ pub async fn hecate_personality(Json(request): Json<Value>) -> Result<ResponseJs
     
     let proxy = get_hecate_proxy();
     
-    match proxy.proxy_request("personality", "POST", Some(request)).await {
+    match proxy.proxy_request("personality", "POST", Some(request), None).await {
         Ok(response) => {
             info!("✅ Hecate personality set successfully");
             info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
@@ -364,7 +364,7 @@ pub async fn hecate_clear() -> Result<ResponseJson<Value>, (StatusCode, Response
     
     let proxy = get_hecate_proxy();
     
-    match proxy.proxy_request("clear", "POST", None).await {
+    match proxy.proxy_request("clear", "POST", None, None).await {
         Ok(response) => {
             info!("✅ Hecate conversation cleared successfully");
             info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
@@ -392,7 +392,7 @@ pub async fn hecate_history() -> Result<ResponseJson<Value>, (StatusCode, Respon
     
     let proxy = get_hecate_proxy();
     
-    match proxy.proxy_request("history", "GET", None).await {
+    match proxy.proxy_request("history", "GET", None, None).await {
         Ok(response) => {
             info!("✅ Hecate history retrieved successfully");
             info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
@@ -420,7 +420,7 @@ pub async fn hecate_available_models() -> Result<ResponseJson<Value>, (StatusCod
     
     let proxy = get_hecate_proxy();
     
-    match proxy.proxy_request("available-models", "GET", None).await {
+    match proxy.proxy_request("available-models", "GET", None, None).await {
         Ok(response) => {
             info!("✅ Hecate available models retrieved successfully");
             info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
@@ -449,7 +449,7 @@ pub async fn hecate_set_model(Json(request): Json<Value>) -> Result<ResponseJson
     
     let proxy = get_hecate_proxy();
     
-    match proxy.proxy_request("set-model", "POST", Some(request)).await {
+    match proxy.proxy_request("set-model", "POST", Some(request), None).await {
         Ok(response) => {
             info!("✅ Hecate model set successfully");
             info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
@@ -477,7 +477,7 @@ pub async fn hecate_model_info() -> Result<ResponseJson<Value>, (StatusCode, Res
     
     let proxy = get_hecate_proxy();
     
-    match proxy.proxy_request("model-info", "GET", None).await {
+    match proxy.proxy_request("model-info", "GET", None, None).await {
         Ok(response) => {
             info!("✅ Hecate model info retrieved successfully");
             info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
@@ -517,7 +517,7 @@ pub async fn hecate_search_models(Query(params): Query<HashMap<String, String>>)
         format!("search-models?{}", query_string)
     };
 
-    match proxy.proxy_request(&endpoint, "GET", None).await {
+    match proxy.proxy_request(&endpoint, "GET", None, None).await {
         Ok(response) => {
             info!("✅ Hecate search models retrieved successfully");
             info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
@@ -561,7 +561,7 @@ pub async fn create_task(
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks", "POST", Some(request)).await {
+    match proxy.proxy_request("tasks", "POST", Some(request), Some(&headers)).await {
         Ok(response) => {
             info!("✅ Task created successfully");
             info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
@@ -584,7 +584,10 @@ pub async fn create_task(
 }
 
 /// Get all tasks with optional filtering
-pub async fn get_tasks(Query(params): Query<HashMap<String, String>>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+pub async fn get_tasks(
+    headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📋 Get tasks request received");
     info!("📝 Query parameters: {:?}", params);
 
@@ -601,7 +604,7 @@ pub async fn get_tasks(Query(params): Query<HashMap<String, String>>) -> Result<
         format!("tasks?{}", query_string)
     };
 
-    match proxy.proxy_request(&endpoint, "GET", None).await {
+    match proxy.proxy_request(&endpoint, "GET", None, Some(&headers)).await {
         Ok(response) => {
             info!("✅ Tasks retrieved successfully");
             Ok(ResponseJson(response))
@@ -629,7 +632,7 @@ pub async fn get_task(Path(task_id): Path<String>) -> Result<ResponseJson<Value>
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/{}", task_id);
 
-    match proxy.proxy_request(&endpoint, "GET", None).await {
+    match proxy.proxy_request(&endpoint, "GET", None, None).await {
         Ok(response) => {
             info!("✅ Task retrieved successfully");
             Ok(ResponseJson(response))
@@ -658,7 +661,7 @@ pub async fn update_task(Path(task_id): Path<String>, Json(request): Json<Value>
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/{}", task_id);
 
-    match proxy.proxy_request(&endpoint, "PUT", Some(request)).await {
+    match proxy.proxy_request(&endpoint, "PUT", Some(request), None).await {
         Ok(response) => {
             info!("✅ Task updated successfully");
             info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
@@ -687,7 +690,7 @@ pub async fn delete_task(Path(task_id): Path<String>) -> Result<ResponseJson<Val
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/{}", task_id);
 
-    match proxy.proxy_request(&endpoint, "DELETE", None).await {
+    match proxy.proxy_request(&endpoint, "DELETE", None, None).await {
         Ok(response) => {
             info!("✅ Task deleted successfully");
             Ok(ResponseJson(response))
@@ -715,7 +718,7 @@ pub async fn start_task(Path(task_id): Path<String>) -> Result<ResponseJson<Valu
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/{}/start", task_id);
 
-    match proxy.proxy_request(&endpoint, "POST", None).await {
+    match proxy.proxy_request(&endpoint, "POST", None, None).await {
         Ok(response) => {
             info!("✅ Task started successfully");
             Ok(ResponseJson(response))
@@ -743,7 +746,7 @@ pub async fn pause_task(Path(task_id): Path<String>) -> Result<ResponseJson<Valu
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/{}/pause", task_id);
 
-    match proxy.proxy_request(&endpoint, "POST", None).await {
+    match proxy.proxy_request(&endpoint, "POST", None, None).await {
         Ok(response) => {
             info!("✅ Task paused successfully");
             Ok(ResponseJson(response))
@@ -771,7 +774,7 @@ pub async fn resume_task(Path(task_id): Path<String>) -> Result<ResponseJson<Val
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/{}/resume", task_id);
 
-    match proxy.proxy_request(&endpoint, "POST", None).await {
+    match proxy.proxy_request(&endpoint, "POST", None, None).await {
         Ok(response) => {
             info!("✅ Task resumed successfully");
             Ok(ResponseJson(response))
@@ -799,7 +802,7 @@ pub async fn cancel_task(Path(task_id): Path<String>) -> Result<ResponseJson<Val
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/{}/cancel", task_id);
 
-    match proxy.proxy_request(&endpoint, "POST", None).await {
+    match proxy.proxy_request(&endpoint, "POST", None, None).await {
         Ok(response) => {
             info!("✅ Task cancelled successfully");
             Ok(ResponseJson(response))
@@ -827,7 +830,7 @@ pub async fn retry_task(Path(task_id): Path<String>) -> Result<ResponseJson<Valu
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/{}/retry", task_id);
 
-    match proxy.proxy_request(&endpoint, "POST", None).await {
+    match proxy.proxy_request(&endpoint, "POST", None, None).await {
         Ok(response) => {
             info!("✅ Task retry initiated successfully");
             Ok(ResponseJson(response))
@@ -854,7 +857,7 @@ pub async fn get_task_queues() -> Result<ResponseJson<Value>, (StatusCode, Respo
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/queues", "GET", None).await {
+    match proxy.proxy_request("tasks/queues", "GET", None, None).await {
         Ok(response) => {
             info!("✅ Task queues retrieved successfully");
             Ok(ResponseJson(response))
@@ -881,7 +884,7 @@ pub async fn get_task_templates() -> Result<ResponseJson<Value>, (StatusCode, Re
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/templates", "GET", None).await {
+    match proxy.proxy_request("tasks/templates", "GET", None, None).await {
         Ok(response) => {
             info!("✅ Task templates retrieved successfully");
             Ok(ResponseJson(response))
@@ -909,7 +912,7 @@ pub async fn create_task_from_template(Json(request): Json<Value>) -> Result<Res
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/from-template", "POST", Some(request)).await {
+    match proxy.proxy_request("tasks/from-template", "POST", Some(request), None).await {
         Ok(response) => {
             info!("✅ Task created from template successfully");
             Ok(ResponseJson(response))
@@ -948,7 +951,7 @@ pub async fn get_task_stats(Query(params): Query<HashMap<String, String>>) -> Re
         format!("tasks/stats?{}", query_string)
     };
 
-    match proxy.proxy_request(&endpoint, "GET", None).await {
+    match proxy.proxy_request(&endpoint, "GET", None, None).await {
         Ok(response) => {
             info!("✅ Task stats retrieved successfully");
             Ok(ResponseJson(response))
@@ -975,7 +978,7 @@ pub async fn get_task_notifications() -> Result<ResponseJson<Value>, (StatusCode
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/notifications", "GET", None).await {
+    match proxy.proxy_request("tasks/notifications", "GET", None, None).await {
         Ok(response) => {
             info!("✅ Task notifications retrieved successfully");
             Ok(ResponseJson(response))
@@ -1003,7 +1006,7 @@ pub async fn mark_notification_read(Path(notification_id): Path<String>) -> Resu
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/notifications/{}/read", notification_id);
 
-    match proxy.proxy_request(&endpoint, "POST", None).await {
+    match proxy.proxy_request(&endpoint, "POST", None, None).await {
         Ok(response) => {
             info!("✅ Notification marked as read successfully");
             Ok(ResponseJson(response))
@@ -1032,7 +1035,7 @@ pub async fn handle_notification_action(Path(notification_id): Path<String>, Jso
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/notifications/{}/action", notification_id);
 
-    match proxy.proxy_request(&endpoint, "POST", Some(request)).await {
+    match proxy.proxy_request(&endpoint, "POST", Some(request), None).await {
         Ok(response) => {
             info!("✅ Notification action handled successfully");
             Ok(ResponseJson(response))
@@ -1071,7 +1074,7 @@ pub async fn get_task_events(Query(params): Query<HashMap<String, String>>) -> R
         format!("tasks/events?{}", query_string)
     };
 
-    match proxy.proxy_request(&endpoint, "GET", None).await {
+    match proxy.proxy_request(&endpoint, "GET", None, None).await {
         Ok(response) => {
             info!("✅ Task events retrieved successfully");
             Ok(ResponseJson(response))
@@ -1099,7 +1102,7 @@ pub async fn publish_task_event(Json(request): Json<Value>) -> Result<ResponseJs
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/events", "POST", Some(request)).await {
+    match proxy.proxy_request("tasks/events", "POST", Some(request), None).await {
         Ok(response) => {
             info!("✅ Task event published successfully");
             Ok(ResponseJson(response))
@@ -1126,7 +1129,7 @@ pub async fn get_motivation_state() -> Result<ResponseJson<Value>, (StatusCode, 
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/motivation", "GET", None).await {
+    match proxy.proxy_request("tasks/motivation", "GET", None, None).await {
         Ok(response) => {
             info!("✅ Motivation state retrieved successfully");
             Ok(ResponseJson(response))
@@ -1154,7 +1157,7 @@ pub async fn update_motivation_state(Json(request): Json<Value>) -> Result<Respo
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/motivation", "PUT", Some(request)).await {
+    match proxy.proxy_request("tasks/motivation", "PUT", Some(request), None).await {
         Ok(response) => {
             info!("✅ Motivation state updated successfully");
             Ok(ResponseJson(response))
@@ -1182,7 +1185,7 @@ pub async fn get_task_suggestions(Json(request): Json<Value>) -> Result<Response
 
     let proxy = get_hecate_proxy();
 
-    match proxy.proxy_request("tasks/suggestions", "POST", Some(request)).await {
+    match proxy.proxy_request("tasks/suggestions", "POST", Some(request), None).await {
         Ok(response) => {
             info!("✅ Task suggestions retrieved successfully");
             Ok(ResponseJson(response))
@@ -1211,7 +1214,7 @@ pub async fn learn_from_task(Path(task_id): Path<String>, Json(request): Json<Va
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/{}/learn", task_id);
 
-    match proxy.proxy_request(&endpoint, "POST", Some(request)).await {
+    match proxy.proxy_request(&endpoint, "POST", Some(request), None).await {
         Ok(response) => {
             info!("✅ Task learning completed successfully");
             Ok(ResponseJson(response))
@@ -1239,7 +1242,7 @@ pub async fn process_task(Path(task_id): Path<String>) -> Result<ResponseJson<Va
     let proxy = get_hecate_proxy();
     let endpoint = format!("tasks/{}/process", task_id);
 
-    match proxy.proxy_request(&endpoint, "POST", None).await {
+    match proxy.proxy_request(&endpoint, "POST", None, None).await {
         Ok(response) => {
             info!("✅ Task processed successfully");
             info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());

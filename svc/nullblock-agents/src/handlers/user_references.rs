@@ -16,7 +16,7 @@ use crate::{
 /// Call Erebus user registration API (enforces GOLDEN RULE)
 async fn call_erebus_user_api(
     source_identifier: &str,
-    chain: &str,
+    network: &str,
     source_type: &serde_json::Value,
     wallet_type: Option<&str>,
 ) -> Result<UserReference, String> {
@@ -26,7 +26,7 @@ async fn call_erebus_user_api(
 
     let request_body = serde_json::json!({
         "source_identifier": source_identifier,
-        "chain": chain,
+        "network": network,
         "source_type": source_type,
         "wallet_type": wallet_type.unwrap_or("unknown")
     });
@@ -54,9 +54,9 @@ async fn call_erebus_user_api(
                                         .and_then(|v| v.as_str())
                                         .unwrap_or(source_identifier)
                                         .to_string(),
-                                    chain: user_data.get("chain")
+                                    network: user_data.get("network")
                                         .and_then(|v| v.as_str())
-                                        .unwrap_or(chain)
+                                        .unwrap_or(network)
                                         .to_string(),
                                     source_type: user_data.get("source_type")
                                         .cloned()
@@ -87,7 +87,7 @@ async fn call_erebus_user_api(
 /// Call Erebus user lookup API (enforces GOLDEN RULE)
 async fn call_erebus_user_lookup_api(
     source_identifier: &str,
-    chain: &str,
+    network: &str,
 ) -> Result<Option<UserReference>, String> {
     let client = reqwest::Client::new();
     let erebus_url = std::env::var("EREBUS_BASE_URL")
@@ -95,7 +95,7 @@ async fn call_erebus_user_lookup_api(
 
     let request_body = serde_json::json!({
         "source_identifier": source_identifier,
-        "chain": chain
+        "network": network
     });
 
     info!("🔍 Calling Erebus user lookup API to enforce GOLDEN RULE: {}/api/users/lookup", erebus_url);
@@ -120,9 +120,9 @@ async fn call_erebus_user_lookup_api(
                                                 .and_then(|v| v.as_str())
                                                 .unwrap_or(source_identifier)
                                                 .to_string(),
-                                            chain: user_data.get("chain")
+                                            network: user_data.get("network")
                                                 .and_then(|v| v.as_str())
-                                                .unwrap_or(chain)
+                                                .unwrap_or(network)
                                                 .to_string(),
                                             source_type: user_data.get("source_type")
                                                 .cloned()
@@ -159,7 +159,7 @@ async fn call_erebus_user_lookup_api(
 #[derive(Debug, serde::Deserialize)]
 pub struct CreateUserReferenceRequest {
     pub source_identifier: String,
-    pub chain: String,
+    pub network: String,
     pub source_type: serde_json::Value,
     pub wallet_type: Option<String>,
 }
@@ -168,7 +168,7 @@ pub struct CreateUserReferenceRequest {
 pub struct SyncUserReferenceRequest {
     pub id: String,
     pub source_identifier: String,
-    pub chain: String,
+    pub network: String,
     pub source_type: serde_json::Value,
     pub wallet_type: Option<String>,
     pub created_at: String,
@@ -177,8 +177,8 @@ pub struct SyncUserReferenceRequest {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct UserReferenceQuery {
-    wallet_address: Option<String>,
-    chain: Option<String>,
+    source_identifier: Option<String>,
+    network: Option<String>,
     limit: Option<usize>,
 }
 
@@ -194,7 +194,7 @@ pub async fn create_user_reference(
     warn!("⚠️ Use Erebus /api/users/register endpoint instead - enforcing GOLDEN RULE");
 
     // Forward to Erebus user registration API
-    match call_erebus_user_api(&request.source_identifier, &request.chain, &request.source_type, request.wallet_type.as_deref()).await {
+    match call_erebus_user_api(&request.source_identifier, &request.network, &request.source_type, request.wallet_type.as_deref()).await {
         Ok(user_ref) => {
             info!("✅ User created via Erebus API forwarding: {}", user_ref.id);
             Ok(Json(UserReferenceResponse {
@@ -220,7 +220,7 @@ pub async fn create_user_reference(
 /// This endpoint now forwards lookups to Erebus to maintain GOLDEN RULE
 pub async fn get_user_reference(
     State(_state): State<AppState>,
-    Path((wallet_address, chain)): Path<(String, String)>,
+    Path((source_identifier, network)): Path<(String, String)>,
 ) -> Result<Json<UserReferenceResponse>, StatusCode> {
     info!("👤 [DEPRECATED] User lookup request received - forwarding to Erebus API");
 
@@ -228,7 +228,7 @@ pub async fn get_user_reference(
     warn!("⚠️ Use Erebus /api/users/lookup endpoint instead - enforcing GOLDEN RULE");
 
     // Forward to Erebus user lookup API
-    match call_erebus_user_lookup_api(&wallet_address, &chain).await {
+    match call_erebus_user_lookup_api(&source_identifier, &network).await {
         Ok(Some(user_ref)) => {
             info!("✅ User found via Erebus API forwarding: {}", user_ref.id);
             Ok(Json(UserReferenceResponse {
@@ -284,16 +284,16 @@ pub async fn list_user_references(
     // Create user reference repository
     let user_repo = UserReferenceRepository::new(database.pool().clone());
 
-    match user_repo.list(query.wallet_address.as_deref(), query.chain.as_deref(), query.limit).await {
+    match user_repo.list(query.source_identifier.as_deref(), query.network.as_deref(), query.limit).await {
         Ok(users) => {
             let user_refs: Vec<UserReference> = users.into_iter().map(|user| UserReference {
                 id: user.id,
                 source_identifier: user.source_identifier.unwrap_or_default(),
-                chain: user.chain.unwrap_or_default(),
+                network: user.network.unwrap_or_default(),
                 source_type: user.source_type,
-                wallet_type: user.wallet_type,
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
+                wallet_type: None,
+                created_at: user.created_at,
+                updated_at: user.updated_at,
             }).collect();
             info!("✅ Found {} user references", user_refs.len());
             Ok(Json(UserReferenceListResponse {
@@ -322,7 +322,7 @@ pub async fn sync_user_reference(
     State(state): State<AppState>,
     Json(request): Json<SyncUserReferenceRequest>,
 ) -> Result<Json<UserReferenceResponse>, StatusCode> {
-    info!("🔄 Syncing user reference from Erebus: {} on chain: {}", request.source_identifier, request.chain);
+    info!("🔄 Syncing user reference from Erebus: {} on network: {}", request.source_identifier, request.network);
 
     // Check if we have database connection
     let database = match &state.database {
@@ -376,7 +376,7 @@ pub async fn sync_user_reference(
     match user_repo.upsert_from_kafka_event(
         user_id,
         Some(&request.source_identifier),
-        Some(&request.chain),
+        Some(&request.network),
         &request.source_type,
         request.wallet_type.as_deref(),
         None, // email
@@ -389,11 +389,11 @@ pub async fn sync_user_reference(
             let user = UserReference {
                 id: user_ref.id,
                 source_identifier: user_ref.source_identifier.unwrap_or_default(),
-                chain: user_ref.chain.unwrap_or_default(),
+                network: user_ref.network.unwrap_or_default(),
                 source_type: user_ref.source_type,
-                wallet_type: user_ref.wallet_type,
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
+                wallet_type: None,
+                created_at: user_ref.created_at,
+                updated_at: user_ref.updated_at,
             };
             Ok(Json(UserReferenceResponse {
                 success: true,

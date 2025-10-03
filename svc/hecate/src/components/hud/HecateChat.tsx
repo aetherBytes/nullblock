@@ -14,6 +14,15 @@ interface ChatMessage {
   taskName?: string;
   isTaskResult?: boolean;
   processingTime?: number;
+  content?: {
+    type: 'text' | 'image' | 'mixed';
+    text?: string;
+    images?: Array<{
+      url: string;
+      alt?: string;
+      caption?: string;
+    }>;
+  };
 }
 
 interface HecateChatProps {
@@ -192,7 +201,10 @@ const HecateChat: React.FC<HecateChatProps> = ({
             )}
           </div>
         )}
-        <MarkdownRenderer content={message.message} />
+        <MarkdownRenderer 
+          content={message.message} 
+          images={message.content?.images || []}
+        />
       </div>
     </div>
   );

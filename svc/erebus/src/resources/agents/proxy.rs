@@ -279,7 +279,7 @@ impl AgentProxy {
     }
 
     /// Proxy generic request to agent
-    pub async fn proxy_request(&self, endpoint: &str, method: &str, body: Option<serde_json::Value>) -> Result<serde_json::Value, AgentErrorResponse> {
+    pub async fn proxy_request(&self, endpoint: &str, method: &str, body: Option<serde_json::Value>, headers: Option<&axum::http::HeaderMap>) -> Result<serde_json::Value, AgentErrorResponse> {
         let client = reqwest::Client::new();
         // Task endpoints are at root level, Hecate-specific endpoints are under /hecate
         let url = if endpoint.starts_with("tasks") {
@@ -287,9 +287,9 @@ impl AgentProxy {
         } else {
             format!("{}/hecate/{}", self.agent_base_url, endpoint)
         };
-        
+
         info!("🔗 Proxying {} request to agent: {}", method, url);
-        
+
         let mut request_builder = match method.to_uppercase().as_str() {
             "GET" => client.get(&url),
             "POST" => client.post(&url),
@@ -305,6 +305,22 @@ impl AgentProxy {
 
         if let Some(json_body) = body {
             request_builder = request_builder.json(&json_body);
+        }
+
+        // Forward wallet context headers if provided
+        if let Some(header_map) = headers {
+            if let Some(wallet_address) = header_map.get("x-wallet-address") {
+                if let Ok(addr_str) = wallet_address.to_str() {
+                    request_builder = request_builder.header("x-wallet-address", addr_str);
+                    info!("🔗 Forwarding x-wallet-address: {}", addr_str);
+                }
+            }
+            if let Some(wallet_chain) = header_map.get("x-wallet-chain") {
+                if let Ok(chain_str) = wallet_chain.to_str() {
+                    request_builder = request_builder.header("x-wallet-chain", chain_str);
+                    info!("🔗 Forwarding x-wallet-chain: {}", chain_str);
+                }
+            }
         }
 
         match request_builder

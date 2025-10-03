@@ -13,9 +13,93 @@ interface ChatMessage {
   isTaskResult?: boolean;
   processingTime?: number;
   agentType?: 'hecate' | 'siren';
+  content?: {
+    type: 'text' | 'image' | 'mixed';
+    text?: string;
+    images?: Array<{
+      url: string;
+      alt?: string;
+      caption?: string;
+    }>;
+  };
 }
 
-export const useChat = (publicKey: string | null) => {
+// Helper function to detect if a request is for image generation
+const isImageGenerationRequest = (message: string): boolean => {
+  const imageKeywords = [
+    'logo', 'image', 'picture', 'photo', 'draw', 'create', 'generate', 'design',
+    'visual', 'graphic', 'illustration', 'artwork', 'sketch', 'render',
+    'show me', 'make me', 'give me', 'create a', 'design a', 'draw a'
+  ];
+  
+  const lowerMessage = message.toLowerCase();
+  return imageKeywords.some(keyword => lowerMessage.includes(keyword));
+};
+
+// Helper function to parse content and extract images
+const parseContentForImages = (content: string): { content: string; images: Array<{ url: string; alt?: string; caption?: string }> } => {
+  const images: Array<{ url: string; alt?: string; caption?: string }> = [];
+  let processedContent = content;
+
+  // Regex patterns to detect various image formats
+  const imagePatterns = [
+    // Base64 images
+    /data:image\/([a-zA-Z]*);base64,([^"\s]+)/g,
+    // HTTP/HTTPS URLs
+    /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?/gi,
+    // Markdown image syntax
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    // OpenAI DALL-E style URLs
+    /https:\/\/oaidalleapiprodscus\.blob\.core\.windows\.net\/[^\s]+/g,
+    // Generic image URLs
+    /https:\/\/[^\s]*\.(jpg|jpeg|png|gif|webp|svg)/gi
+  ];
+
+  imagePatterns.forEach(pattern => {
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      let url = '';
+      let alt = '';
+      let caption = '';
+
+      if (match[0].startsWith('data:')) {
+        // Base64 image
+        url = match[0];
+        alt = 'Generated image';
+      } else if (match[0].startsWith('![')) {
+        // Markdown syntax: ![alt](url)
+        alt = match[1] || 'Generated image';
+        url = match[2];
+      } else {
+        // Direct URL
+        url = match[0];
+        alt = 'Generated image';
+      }
+
+      // Extract caption from surrounding text if available
+      const beforeMatch = content.substring(0, match.index);
+      const captionMatch = beforeMatch.match(/([^.!?]*[.!?])\s*$/);
+      if (captionMatch) {
+        caption = captionMatch[1].trim();
+      }
+
+      images.push({ url, alt, caption: caption || undefined });
+    }
+  });
+
+  // Remove image URLs from text content to avoid duplication
+  if (images.length > 0) {
+    imagePatterns.forEach(pattern => {
+      processedContent = processedContent.replace(pattern, '');
+    });
+    // Clean up extra whitespace
+    processedContent = processedContent.replace(/\s+/g, ' ').trim();
+  }
+
+  return { content: processedContent, images };
+};
+
+export const useChat = (_publicKey: string | null) => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isProcessingChat, setIsProcessingChat] = useState(false);
@@ -114,6 +198,14 @@ export const useChat = (publicKey: string | null) => {
       }
 
       console.log(`🔄 Sending message to ${activeAgent} agent, thinking state should be active...`);
+      
+      // Check if this is an image generation request
+      const isImageRequest = isImageGenerationRequest(message);
+      if (isImageRequest) {
+        console.log(`🎨 Detected image generation request, using DALL-E 3 model`);
+        // TODO: Implement image generation model selection
+      }
+      
       const response = await agentService.chatWithAgent(activeAgent, message);
 
       if (!response.success || !response.data) {
@@ -122,15 +214,23 @@ export const useChat = (publicKey: string | null) => {
 
       console.log(`✅ Received response from ${activeAgent}, changing from thinking state...`);
 
+      // Parse content to detect images
+      const { content, images } = parseContentForImages(response.data.content);
+
       const agentMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         timestamp: new Date(),
         sender: activeAgent,
-        message: response.data.content,
-        type: 'text',
+        message: content,
+        type: images.length > 0 ? 'mixed' : 'text',
         model_used: response.data.model_used,
         metadata: response.data.metadata,
-        agentType: activeAgent
+        agentType: activeAgent,
+        content: {
+          type: images.length > 0 ? (content ? 'mixed' : 'image') : 'text',
+          text: content,
+          images: images
+        }
       };
 
       setChatMessages((prev) => [...prev, agentMessage]);

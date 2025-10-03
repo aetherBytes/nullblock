@@ -7,6 +7,7 @@ use reqwest::Client;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::time::Instant;
+use tracing::{info, warn};
 
 #[async_trait]
 pub trait Provider: Send + Sync {
@@ -549,23 +550,29 @@ impl Provider for OpenRouterProvider {
             "temperature": request.temperature.unwrap_or(0.8)
         });
 
+        // Add modalities for Gemini image generation models
+        if config.name.contains("gemini-2.5-flash-image") {
+            info!("🎨 Adding image+text modalities for Gemini image generation");
+            payload["modalities"] = json!(["image", "text"]);
+        }
+
         // Add reasoning configuration if supported and requested
         if let Some(reasoning) = &request.reasoning {
             if config.supports_reasoning && reasoning.enabled {
                 let mut reasoning_payload = json!({
                     "enabled": true
                 });
-                
+
                 if let Some(effort) = &reasoning.effort {
                     reasoning_payload["effort"] = json!(effort);
                 } else if let Some(max_tokens) = reasoning.max_tokens {
                     reasoning_payload["max_tokens"] = json!(max_tokens);
                 }
-                
+
                 if reasoning.exclude {
                     reasoning_payload["exclude"] = json!(true);
                 }
-                
+
                 payload["reasoning"] = reasoning_payload;
             }
         }
@@ -607,8 +614,154 @@ impl Provider for OpenRouterProvider {
         let reasoning = choice["message"]["reasoning"].as_str().map(|s| s.to_string());
         let reasoning_details = choice["message"]["reasoning_details"].as_array().cloned();
 
+        // Handle image generation responses differently
+        let content = if config.name.contains("gemini-2.5-flash-image") || config.name.contains("dall-e") || config.name.contains("stable-diffusion") {
+            // For Gemini 2.5 Flash Image, check for inline_data with base64 images
+            if config.name.contains("gemini-2.5-flash-image") {
+                info!("🎨 Processing Gemini image generation response");
+
+                // First check for images in the message.images field (OpenRouter format)
+                if let Some(images) = choice["message"].get("images").and_then(|i| i.as_array()) {
+                    info!("✅ Found {} image(s) in message.images array", images.len());
+                    let mut result = String::new();
+
+                    // Add text content if present
+                    if let Some(text_content) = choice["message"]["content"].as_str() {
+                        if !text_content.is_empty() {
+                            info!("📝 Also found text content: {} chars", text_content.len());
+                            result.push_str(text_content);
+                            result.push_str("\n\n");
+                        }
+                    }
+
+                    // Extract images from the images array
+                    for (i, image) in images.iter().enumerate() {
+                        if let Some(image_url_obj) = image.get("image_url") {
+                            if let Some(url) = image_url_obj["url"].as_str() {
+                                info!("🖼️ Image {}: Found image URL ({}... bytes)", i, if url.len() > 100 { 100 } else { url.len() });
+                                result.push_str(&format!("![Generated Image]({})\n\n", url));
+                            }
+                        }
+                    }
+
+                    result.trim().to_string()
+                }
+                // Fallback to checking content field
+                else {
+                    let message_content = &choice["message"]["content"];
+
+                    info!("📊 Message content type: {}", if message_content.is_array() { "array" } else if message_content.is_string() { "string" } else if message_content.is_object() { "object" } else { "other" });
+
+                    // Path 1: Check if content is an array with parts (native Gemini format)
+                    if let Some(parts) = message_content.as_array() {
+                    info!("✅ Found parts array with {} elements", parts.len());
+                    let mut result = String::new();
+                    let mut found_images = 0;
+
+                    for (i, part) in parts.iter().enumerate() {
+                        info!("🔍 Part {}: keys = {:?}", i, part.as_object().map(|o| o.keys().collect::<Vec<_>>()));
+
+                        if let Some(text) = part["text"].as_str() {
+                            info!("📝 Found text part: {} chars", text.len());
+                            result.push_str(text);
+                            result.push_str("\n\n");
+                        }
+
+                        // Check for inline_data (base64 images)
+                        if let Some(inline_data) = part.get("inline_data") {
+                            if let Some(data) = inline_data["data"].as_str() {
+                                found_images += 1;
+                                let mime_type = inline_data["mime_type"].as_str().unwrap_or("image/png");
+                                let data_preview = if data.len() > 50 { &data[..50] } else { data };
+                                info!("🖼️ Found inline_data image: mime={}, size={} bytes, preview={}", mime_type, data.len(), data_preview);
+                                let image_url = format!("data:{};base64,{}", mime_type, data);
+                                result.push_str(&format!("![Generated Image]({})\n\n", image_url));
+                            }
+                        }
+                    }
+
+                    if found_images > 0 {
+                        info!("✅ Successfully extracted {} image(s) from response", found_images);
+                    } else {
+                        warn!("⚠️ No images found in parts array");
+                    }
+
+                    result.trim().to_string()
+                }
+                // Path 2: Check if content is a string (OpenRouter normalized format)
+                else if let Some(content_str) = message_content.as_str() {
+                    info!("📄 Content is string, length: {} chars", content_str.len());
+
+                    // Check if string contains base64 data URI
+                    if content_str.contains("data:image/") && content_str.contains("base64,") {
+                        info!("🖼️ Found base64 image data in string content");
+                        content_str.to_string()
+                    } else {
+                        warn!("⚠️ String content doesn't contain image data");
+                        content_str.to_string()
+                    }
+                }
+                // Path 3: Check alternate locations
+                else {
+                    warn!("⚠️ Unexpected content format, checking alternate locations");
+
+                    // Try checking message.parts directly
+                    if let Some(parts) = choice["message"].get("parts").and_then(|p| p.as_array()) {
+                        info!("🔍 Found message.parts array with {} elements", parts.len());
+                        let mut result = String::new();
+
+                        for part in parts {
+                            if let Some(text) = part["text"].as_str() {
+                                result.push_str(text);
+                                result.push_str("\n\n");
+                            }
+                            if let Some(inline_data) = part.get("inline_data") {
+                                if let Some(data) = inline_data["data"].as_str() {
+                                    let mime_type = inline_data["mime_type"].as_str().unwrap_or("image/png");
+                                    info!("🖼️ Found image in message.parts: {}", mime_type);
+                                    let image_url = format!("data:{};base64,{}", mime_type, data);
+                                    result.push_str(&format!("![Generated Image]({})\n\n", image_url));
+                                }
+                            }
+                        }
+
+                        result.trim().to_string()
+                    } else {
+                        // Log full response structure for debugging
+                        warn!("❌ Could not find images in any expected location");
+                        warn!("🔍 Full choice structure: {}", serde_json::to_string_pretty(&choice).unwrap_or_else(|_| "Could not serialize".to_string()));
+                        message_content.as_str().unwrap_or("").to_string()
+                    }
+                }
+                }
+            } else {
+                // For DALL-E and Stable Diffusion, look for image URLs
+                let message_content = choice["message"]["content"].as_str().unwrap_or("");
+
+                if message_content.contains("http") && (message_content.contains(".jpg") || message_content.contains(".png") || message_content.contains(".jpeg") || message_content.contains(".webp")) {
+                    let image_urls: Vec<&str> = message_content
+                        .split_whitespace()
+                        .filter(|word| word.starts_with("http") && (word.contains(".jpg") || word.contains(".png") || word.contains(".jpeg") || word.contains(".webp")))
+                        .collect();
+
+                    if !image_urls.is_empty() {
+                        image_urls.iter()
+                            .map(|url| format!("![Generated Image]({})", url))
+                            .collect::<Vec<String>>()
+                            .join("\n\n")
+                    } else {
+                        message_content.to_string()
+                    }
+                } else {
+                    message_content.to_string()
+                }
+            }
+        } else {
+            choice["message"]["content"].as_str().unwrap_or("").to_string()
+        };
+
         Ok(LLMResponse {
-            content: choice["message"]["content"].as_str().unwrap_or("").to_string(),
+            content,
             model_used: config.name.clone(),
             usage: usage_map,
             latency_ms,
