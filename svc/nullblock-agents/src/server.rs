@@ -30,11 +30,14 @@ impl AppState {
             None
         };
 
-        // Initialize Hecate agent
+        // Initialize Hecate agent with default model from config
+        let default_model = config.llm.default_model.clone();
         let mut hecate_agent = HecateAgent::new(None);
+        hecate_agent.preferred_model = default_model.clone();
 
-        // Initialize Marketing agent
+        // Initialize Marketing agent with default model from config
         let mut marketing_agent = MarketingAgent::new(None);
+        marketing_agent.preferred_model = default_model;
 
         // Get API keys from config
         let api_keys = config.get_api_keys();

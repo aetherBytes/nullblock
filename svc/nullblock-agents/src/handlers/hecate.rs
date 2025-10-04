@@ -107,17 +107,17 @@ pub async fn available_models(
         get_fallback_models()
     };
 
-    let default_model = "x-ai/grok-4-fast:free";
-    
+    let default_model = "cognitivecomputations/dolphin3.0-mistral-24b:free";
+
     Ok(Json(json!({
         "models": available_models,
         "current_model": agent.current_model,
         "default_model": default_model,
         "recommended_models": {
-            "free": "x-ai/grok-4-fast:free",
-            "reasoning": "x-ai/grok-4-fast:free",
+            "free": "cognitivecomputations/dolphin3.0-mistral-24b:free",
+            "reasoning": "cognitivecomputations/dolphin3.0-r1-mistral-24b:free",
             "premium": "anthropic/claude-3.5-sonnet",
-            "fast": "x-ai/grok-4-fast:free",
+            "fast": "deepseek/deepseek-chat-v3.1:free",
             "image_generation": "google/gemini-2.5-flash-image-preview"
         },
         "total_models": available_models.len()
@@ -619,7 +619,7 @@ pub async fn set_model(
             "previous_model": old_model
         })))
     } else {
-        let error_detail = agent.get_model_availability_reason(&request.model_name, &api_keys);
+        let error_detail = agent.get_model_availability_reason(&request.model_name, &api_keys).await;
         Err(AppError::ModelNotAvailable(error_detail))
     }
 }
@@ -701,20 +701,44 @@ pub async fn get_model_info(
     let api_keys = state.config.get_api_keys();
     
     let model_name = params.model_name.unwrap_or_else(|| {
-        agent.current_model.clone().unwrap_or_else(|| "x-ai/grok-4-fast:free".to_string())
+        agent.current_model.clone().unwrap_or_else(|| "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string())
     });
-    
-    if !agent.is_model_available(&model_name, &api_keys) {
+
+    if !agent.is_model_available(&model_name, &api_keys).await {
         return Err(AppError::ModelNotAvailable(format!("Model {} not found", model_name)));
     }
     
-    // Mock model info
+    // Determine display name and info based on model
+    let (display_name, icon, description) = match model_name.as_str() {
+        "cognitivecomputations/dolphin3.0-mistral-24b:free" => (
+            "Dolphin 3.0 Mistral 24B Free",
+            "🐬",
+            "Ultimate general purpose free model for coding, math, and function calling"
+        ),
+        "cognitivecomputations/dolphin3.0-r1-mistral-24b:free" => (
+            "Dolphin 3.0 R1 Mistral 24B Free",
+            "🐬",
+            "Reasoning-optimized Dolphin model with 800k reasoning traces"
+        ),
+        "deepseek/deepseek-chat-v3.1:free" => (
+            "DeepSeek Chat v3.1 Free",
+            "🤖",
+            "Free DeepSeek model optimized for conversation"
+        ),
+        "google/gemini-2.5-flash-image-preview" => (
+            "Gemini 2.5 Flash Image",
+            "🎨",
+            "Image generation model"
+        ),
+        _ => (model_name.as_str(), "🤖", "AI model")
+    };
+
     let model_info = json!({
         "name": model_name,
-        "display_name": "DeepSeek Chat v3.1 Free",
-        "icon": "🤖",
+        "display_name": display_name,
+        "icon": icon,
         "provider": "openrouter",
-        "description": "Free DeepSeek model optimized for conversation",
+        "description": description,
         "tier": "free",
         "available": true,
         "is_current": agent.current_model.as_ref() == Some(&model_name),

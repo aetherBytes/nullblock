@@ -127,7 +127,7 @@ impl MarketingAgent {
         Self {
             personality,
             running: false,
-            preferred_model: "x-ai/grok-4-fast:free".to_string(),
+            preferred_model: "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string(),
             current_model: None,
             conversation_history: Arc::new(RwLock::new(Vec::new())),
             llm_factory: None,
@@ -240,7 +240,7 @@ Always provide engaging, hype-fueled marketing advice with cyberpunk flair. Keep
             top_p: None,
             stop_sequences: None,
             tools: None,
-            model_override: None,
+            model_override: self.current_model.clone(),
             concise: false,
             max_chars: None,
             reasoning: None,

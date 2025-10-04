@@ -90,7 +90,7 @@ impl Config {
 
             llm: LLMConfig {
                 default_model: env::var("DEFAULT_LLM_MODEL")
-                    .unwrap_or_else(|_| "x-ai/grok-4-fast:free".to_string()),
+                    .unwrap_or_else(|_| "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string()),
                 request_timeout_ms: env::var("LLM_REQUEST_TIMEOUT_MS")
                     .unwrap_or_else(|_| "300000".to_string()) // 5 minutes for thinking models
                     .parse()
