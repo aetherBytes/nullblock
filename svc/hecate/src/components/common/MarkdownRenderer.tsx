@@ -191,6 +191,47 @@ const ImageDisplay: React.FC<{
 }> = ({ url, alt, caption }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    try {
+      setDownloading(true);
+      
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const filename = `hecate-image-${timestamp}.png`;
+      
+      if (url.startsWith('data:')) {
+        // Handle base64 data URLs
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // Handle regular URLs
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up blob URL
+        window.URL.revokeObjectURL(blobUrl);
+      }
+    } catch (error) {
+      console.error('Failed to download image:', error);
+      alert('Failed to download image. Please try right-clicking and saving the image manually.');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className={styles.imageContainer}>
@@ -208,22 +249,36 @@ const ImageDisplay: React.FC<{
           </a>
         </div>
       ) : (
-        <img
-          src={url}
-          alt={alt || 'Generated image'}
-          className={styles.chatImage}
-          onLoad={() => setImageLoading(false)}
-          onError={() => {
-            setImageError(true);
-            setImageLoading(false);
-          }}
-          loading="lazy"
-        />
-      )}
-      {caption && (
-        <div className={styles.imageCaption}>
-          {caption}
-        </div>
+        <>
+          <div className={styles.imageWrapper}>
+            <img
+              src={url}
+              alt={alt || 'Generated image'}
+              className={styles.chatImage}
+              onLoad={() => setImageLoading(false)}
+              onError={() => {
+                setImageError(true);
+                setImageLoading(false);
+              }}
+              loading="lazy"
+            />
+            <div className={styles.imageOverlay}>
+              <button
+                onClick={handleDownload}
+                className={styles.downloadButton}
+                disabled={downloading}
+                title="Download image"
+              >
+                {downloading ? '⏳' : '💾'} {downloading ? 'Downloading...' : 'Download'}
+              </button>
+            </div>
+          </div>
+          {caption && (
+            <div className={styles.imageCaption}>
+              {caption}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
