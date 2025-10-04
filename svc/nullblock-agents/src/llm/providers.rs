@@ -592,9 +592,18 @@ impl Provider for OpenRouterProvider {
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await?;
+
+            if status == reqwest::StatusCode::NOT_FOUND && error_text.contains("No endpoints found") {
+                warn!("⚠️ Model {} not found, suggesting fallback to cognitivecomputations/dolphin3.0-mistral-24b:free", config.name);
+                return Err(AppError::ModelNotAvailable(format!(
+                    "Model {} is no longer available. Please use cognitivecomputations/dolphin3.0-mistral-24b:free or deepseek/deepseek-chat-v3.1:free instead",
+                    config.name
+                )));
+            }
+
             return Err(AppError::LLMRequestFailed(format!(
-                "OpenRouter API error {}: {}", 
-                status, 
+                "OpenRouter API error {}: {}",
+                status,
                 error_text
             )));
         }

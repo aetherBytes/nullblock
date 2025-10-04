@@ -109,7 +109,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         Self {
             personality,
             running: false,
-            preferred_model: "x-ai/grok-4-fast:free".to_string(),
+            preferred_model: "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string(),
             current_model: None,
             conversation_history: Arc::new(RwLock::new(Vec::new())),
             llm_factory: None,
@@ -131,7 +131,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         info!("✅ LLM Service Factory ready");
 
         // Set current model to preferred model if available
-        if self.is_model_available(&self.preferred_model, api_keys) {
+        if self.is_model_available(&self.preferred_model, api_keys).await {
             self.current_model = Some(self.preferred_model.clone());
             info!("✅ Default model loaded: {}", self.preferred_model);
         } else {
@@ -178,7 +178,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
             return Err(AppError::AgentNotRunning);
         }
 
-        let llm_factory = self.llm_factory.as_ref()
+        let llm_factory = self.llm_factory.clone()
             .ok_or(AppError::AgentNotInitialized)?;
 
         let start_time = std::time::Instant::now();
@@ -257,6 +257,9 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         // Check if this is an image generation request (before moving message)
         let is_image_request = self.is_image_generation_request(&message);
 
+        // Clone message early for potential retry
+        let message_clone = message.clone();
+
         // For image generation, use summarized context with NullBlock info and recent conversation
         let (system_prompt, messages) = if is_image_request {
             info!("🎨 Image generation detected - using summarized context with project info");
@@ -313,7 +316,60 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
 
         let llm_response = {
             let factory = llm_factory.read().await;
-            factory.generate(&request, Some(requirements)).await?
+            let result = factory.generate(&request, Some(requirements.clone())).await;
+            drop(factory); // Drop the lock before potentially calling trim_conversation_history
+
+            match result {
+                Ok(response) => response,
+                Err(e) => {
+                    let error_msg = e.to_string().to_lowercase();
+
+                    // Check if this is a context limit error
+                    if error_msg.contains("maximum context length") ||
+                       error_msg.contains("context length") ||
+                       error_msg.contains("too many tokens") ||
+                       error_msg.contains("reduce the length") ||
+                       error_msg.contains("middle-out") {
+
+                        warn!("⚠️ Context limit exceeded, auto-compacting conversation and retrying...");
+
+                        // Force trim conversation history
+                        self.trim_conversation_history().await;
+
+                        // Rebuild context with trimmed history
+                        let context = self.build_conversation_context(&user_context).await;
+
+                        let (system_prompt, messages) = if is_image_request {
+                            let (prompt, msgs) = self.build_image_generation_context(&user_context).await;
+                            (Some(prompt), msgs)
+                        } else {
+                            (Some(context.system_prompt), Some(context.messages))
+                        };
+
+                        let retry_request = LLMRequest {
+                            prompt: message_clone,
+                            system_prompt,
+                            messages,
+                            max_tokens,
+                            temperature: Some(0.8),
+                            top_p: None,
+                            stop_sequences: None,
+                            tools: None,
+                            model_override: self.current_model.clone(),
+                            concise: false,
+                            max_chars: None,
+                            reasoning: None,
+                        };
+
+                        info!("🔄 Retrying with compacted conversation history...");
+                        let factory = llm_factory.read().await;
+                        factory.generate(&retry_request, Some(requirements)).await?
+                    } else {
+                        // Not a context limit error, propagate the original error
+                        return Err(e);
+                    }
+                }
+            }
         };
 
         // Strip thinking tags from response content
@@ -454,7 +510,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
     }
 
     pub async fn set_preferred_model(&mut self, model_name: String, api_keys: &ApiKeys) -> bool {
-        if self.is_model_available(&model_name, api_keys) {
+        if self.is_model_available(&model_name, api_keys).await {
             let previous_model = self.preferred_model.clone();
             self.preferred_model = model_name.clone();
             self.current_model = Some(model_name.clone());
@@ -471,21 +527,50 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         }
     }
 
-    pub fn is_model_available(&self, model_name: &str, api_keys: &ApiKeys) -> bool {
-        if let Some(_llm_factory) = &self.llm_factory {
-            // Use a simple check for now - in reality we'd check the factory's model registry
-            model_name == "x-ai/grok-4-fast:free" && api_keys.openrouter.is_some()
-                || (model_name.contains("/") || model_name.contains(":")) && api_keys.openrouter.is_some()
+    pub async fn is_model_available(&self, model_name: &str, _api_keys: &ApiKeys) -> bool {
+        if let Some(llm_factory_arc) = &self.llm_factory {
+            let llm_factory = llm_factory_arc.read().await;
+            match llm_factory.fetch_available_models().await {
+                Ok(models) => {
+                    let model_exists = models.iter().any(|model| {
+                        model.get("id")
+                            .and_then(|id| id.as_str())
+                            .map(|id| id == model_name)
+                            .unwrap_or(false)
+                    });
+
+                    if model_exists {
+                        info!("✅ Model {} is available", model_name);
+                    } else {
+                        warn!("⚠️ Model {} not found in OpenRouter catalog", model_name);
+                    }
+
+                    model_exists
+                }
+                Err(e) => {
+                    warn!("⚠️ Could not fetch available models: {}", e);
+                    model_name.contains("/") || model_name.contains(":")
+                }
+            }
         } else {
             false
         }
     }
 
-    pub fn get_model_availability_reason(&self, model_name: &str, api_keys: &ApiKeys) -> String {
-        if let Some(_llm_factory) = &self.llm_factory {
-            // In a real implementation, we'd delegate to the factory
-            if !self.is_model_available(model_name, api_keys) {
-                format!("Model '{}' is not available. Check API keys and try again.", model_name)
+    pub async fn get_model_availability_reason(&self, model_name: &str, api_keys: &ApiKeys) -> String {
+        if let Some(llm_factory_arc) = &self.llm_factory {
+            if !self.is_model_available(model_name, api_keys).await {
+                let llm_factory = llm_factory_arc.read().await;
+                let fallbacks = llm_factory.get_free_model_fallbacks().await;
+                if !fallbacks.is_empty() {
+                    let suggestions = fallbacks.iter().take(3).map(|s| s.as_str()).collect::<Vec<_>>().join(", ");
+                    format!(
+                        "Model '{}' is not available. Try one of these free alternatives: {}",
+                        model_name, suggestions
+                    )
+                } else {
+                    format!("Model '{}' is not available. Check API keys and model name.", model_name)
+                }
             } else {
                 format!("Model '{}' is available.", model_name)
             }

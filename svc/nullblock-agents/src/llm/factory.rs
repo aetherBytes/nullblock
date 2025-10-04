@@ -22,6 +22,8 @@ pub struct LLMServiceFactory {
     router: Arc<RwLock<ModelRouter>>,
     request_stats: Arc<RwLock<HashMap<String, usize>>>,
     cost_tracking: Arc<RwLock<HashMap<String, f64>>>,
+    available_models_cache: Arc<RwLock<Option<(Vec<serde_json::Value>, std::time::Instant)>>>,
+    api_keys: Option<ApiKeys>,
 }
 
 impl LLMServiceFactory {
@@ -31,11 +33,15 @@ impl LLMServiceFactory {
             router: Arc::new(RwLock::new(ModelRouter::new())),
             request_stats: Arc::new(RwLock::new(HashMap::new())),
             cost_tracking: Arc::new(RwLock::new(HashMap::new())),
+            available_models_cache: Arc::new(RwLock::new(None)),
+            api_keys: None,
         }
     }
 
     pub async fn initialize(&mut self, api_keys: &ApiKeys) -> AppResult<()> {
         info!("🧠 Initializing LLM Service Factory...");
+
+        self.api_keys = Some(api_keys.clone());
 
         // Initialize providers based on available API keys
         let mut available_providers = Vec::new();
@@ -132,8 +138,44 @@ impl LLMServiceFactory {
 
         info!("🧠 Using model: {} (confidence: {:.2})", selected_model, routing_decision.confidence);
 
-        // Generate response with the selected model
-        let response = self.generate_with_model(request, &model_config).await?;
+        // Try to generate response with the selected model, with fallback on 404
+        let mut response_result = self.generate_with_model(request, &model_config).await;
+
+        if let Err(AppError::ModelNotAvailable(ref msg)) = response_result {
+            if msg.contains("no longer available") {
+                warn!("⚠️ Model {} not available, fetching live free models for fallback", selected_model);
+
+                let mut fallback_models = routing_decision.fallback_models.clone();
+
+                let live_fallbacks = self.get_free_model_fallbacks().await;
+                if !live_fallbacks.is_empty() {
+                    info!("📡 Using {} live free models as fallbacks", live_fallbacks.len());
+                    fallback_models = live_fallbacks;
+                }
+
+                for fallback_model in &fallback_models {
+                    info!("🔄 Trying fallback model: {}", fallback_model);
+                    let fallback_config = self.create_model_config_for_override(fallback_model);
+                    match self.generate_with_model(request, &fallback_config).await {
+                        Ok(r) => {
+                            info!("✅ Fallback successful with model: {}", fallback_model);
+                            response_result = Ok(r);
+                            break;
+                        }
+                        Err(e) => {
+                            warn!("⚠️ Fallback model {} also failed: {}", fallback_model, e);
+                            continue;
+                        }
+                    }
+                }
+
+                if response_result.is_err() {
+                    warn!("❌ All fallback models failed for request");
+                }
+            }
+        }
+
+        let response = response_result?;
 
         // Log model info
         log_model_info!(
@@ -186,7 +228,7 @@ impl LLMServiceFactory {
             "api_providers": {},
             "local_providers": {},
             "models_available": 0,
-            "default_model": "x-ai/grok-4-fast:free",
+            "default_model": "cognitivecomputations/dolphin3.0-mistral-24b:free",
             "issues": []
         });
 
@@ -308,7 +350,7 @@ impl LLMServiceFactory {
 
     pub fn is_model_available(&self, model_name: &str, api_keys: &ApiKeys) -> bool {
         // Check if model is a known static model or a dynamic OpenRouter model
-        if model_name == "x-ai/grok-4-fast:free" {
+        if model_name == "cognitivecomputations/dolphin3.0-mistral-24b:free" {
             // This is our default free model - available if we have OpenRouter key or if it's truly free
             api_keys.openrouter.is_some()
         } else if model_name.contains("/") || model_name.contains(":") {
@@ -333,6 +375,115 @@ impl LLMServiceFactory {
             }
         } else {
             format!("Model '{}' is available.", model_name)
+        }
+    }
+
+    pub async fn fetch_available_models(&self) -> AppResult<Vec<serde_json::Value>> {
+        const CACHE_TTL_SECS: u64 = 3600;
+
+        let cache = self.available_models_cache.read().await;
+        if let Some((models, timestamp)) = cache.as_ref() {
+            if timestamp.elapsed().as_secs() < CACHE_TTL_SECS {
+                info!("📦 Using cached models ({} cached)", models.len());
+                return Ok(models.clone());
+            }
+        }
+        drop(cache);
+
+        if let Some(ref api_keys) = self.api_keys {
+            if let Some(ref api_key) = api_keys.openrouter {
+                info!("🔍 Fetching available models from OpenRouter...");
+
+                let client = reqwest::Client::new();
+                let response = client
+                    .get("https://openrouter.ai/api/v1/models")
+                    .header("Authorization", format!("Bearer {}", api_key))
+                    .header("HTTP-Referer", "https://nullblock.ai")
+                    .header("X-Title", "NullBlock Agent Platform")
+                    .timeout(std::time::Duration::from_secs(10))
+                    .send()
+                    .await?;
+
+                if !response.status().is_success() {
+                    let error_text = response.text().await.unwrap_or_default();
+                    return Err(AppError::LLMRequestFailed(format!(
+                        "OpenRouter API error: {}",
+                        error_text
+                    )));
+                }
+
+                let data: serde_json::Value = response.json().await?;
+                if let Some(models_array) = data["data"].as_array() {
+                    let models = models_array.to_vec();
+                    info!("✅ Fetched {} models from OpenRouter", models.len());
+
+                    let mut cache = self.available_models_cache.write().await;
+                    *cache = Some((models.clone(), std::time::Instant::now()));
+
+                    return Ok(models);
+                }
+            }
+        }
+
+        warn!("⚠️ No OpenRouter API key available for model discovery");
+        Ok(Vec::new())
+    }
+
+    pub async fn get_free_models(&self) -> AppResult<Vec<serde_json::Value>> {
+        let all_models = self.fetch_available_models().await?;
+
+        let free_models: Vec<serde_json::Value> = all_models
+            .into_iter()
+            .filter(|model| {
+                if let Some(pricing) = model.get("pricing") {
+                    let prompt_price = pricing.get("prompt").and_then(|p| p.as_str()).unwrap_or("1");
+                    let completion_price = pricing.get("completion").and_then(|p| p.as_str()).unwrap_or("1");
+                    prompt_price == "0" && completion_price == "0"
+                } else {
+                    false
+                }
+            })
+            .collect();
+
+        info!("💰 Found {} free models", free_models.len());
+        Ok(free_models)
+    }
+
+    pub async fn get_free_model_fallbacks(&self) -> Vec<String> {
+        match self.get_free_models().await {
+            Ok(free_models) => {
+                let mut model_names: Vec<(String, i64)> = free_models
+                    .iter()
+                    .filter_map(|model| {
+                        let id = model.get("id")?.as_str()?.to_string();
+                        let context = model.get("context_length")?.as_i64().unwrap_or(0);
+                        Some((id, context))
+                    })
+                    .collect();
+
+                model_names.sort_by(|a, b| b.1.cmp(&a.1));
+
+                let fallbacks: Vec<String> = model_names
+                    .into_iter()
+                    .take(5)
+                    .map(|(id, _)| id)
+                    .collect();
+
+                if !fallbacks.is_empty() {
+                    info!("🔄 Top 5 free model fallbacks: {:?}", fallbacks);
+                }
+
+                fallbacks
+            }
+            Err(e) => {
+                warn!("⚠️ Failed to fetch free models: {}", e);
+                vec![
+                    "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string(),
+                    "cognitivecomputations/dolphin3.0-r1-mistral-24b:free".to_string(),
+                    "deepseek/deepseek-chat-v3.1:free".to_string(),
+                    "nvidia/nemotron-nano-9b-v2:free".to_string(),
+                ]
+            }
         }
     }
 }
