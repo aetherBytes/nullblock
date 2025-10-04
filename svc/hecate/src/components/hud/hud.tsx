@@ -7,6 +7,7 @@ import { useEventSystem } from '../../hooks/useEventSystem';
 import Crossroads from '../crossroads/Crossroads';
 import HecateChat from './HecateChat';
 import Scopes from './Scopes';
+import HecateQuote from '../crossroads/shared/HecateQuote';
 import styles from './hud.module.scss';
 import { Task, TaskCreationRequest } from '../../types/tasks';
 
@@ -67,8 +68,9 @@ const HUD: React.FC<HUDProps> = ({
   >('base');
   const [mainHudActiveTab, setMainHudActiveTab] = useState<
     'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate'
-  >(publicKey ? 'hecate' : 'crossroads');
+  >('crossroads');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [quoteRefreshTrigger, setQuoteRefreshTrigger] = useState(0);
 
   // Tab functionality state
   const [logs, setLogs] = useState<any[]>([]);
@@ -122,10 +124,8 @@ const HUD: React.FC<HUDProps> = ({
       if (publicKey) {
         try {
           console.log('Wallet connected:', publicKey);
-          const savedName = localStorage.getItem(`walletName_${publicKey}`);
-          if (savedName) {
-            setWalletName(savedName);
-          }
+          // Refresh Hecate quote on login
+          setQuoteRefreshTrigger(prev => prev + 1);
         } catch (error) {
           console.error('Failed to fetch wallet data:', error);
         }
@@ -1075,44 +1075,32 @@ const HUD: React.FC<HUDProps> = ({
             <div className={styles.coreNode}></div>
           </div>
         </div>
-      </div>
-
-      {/* Mobile Menu Button */}
-      <button 
-        className={styles.mobileMenuButton}
-        onClick={() => setShowMobileMenu(!showMobileMenu)}
-        title="Toggle Navigation Menu"
-      >
-        <span className={styles.hamburgerIcon}>
-          <span></span>
-          <span></span>
-          <span></span>
-        </span>
-      </button>
-
-      {/* Center - Navigation Tabs */}
-      <div className={`${styles.navbarCenter} ${showMobileMenu ? styles.mobileMenuOpen : ''}`}>
+        
+        {/* Left Nav Buttons */}
         <button
           className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
-          onClick={() => {
-            setMainHudActiveTab('crossroads');
-            setShowMobileMenu(false);
-          }}
+          onClick={() => setMainHudActiveTab('crossroads')}
+          title="Crossroads Marketplace"
         >
           CROSSROADS
         </button>
-
+        
         {publicKey && (
           <button
             className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
-            onClick={() => {
-              setMainHudActiveTab('hecate');
-              setShowMobileMenu(false);
-            }}
+            onClick={() => setMainHudActiveTab('hecate')}
+            title="Hecate Agent Interface"
           >
             HECATE
           </button>
         )}
+        
+        {/* Hecate Quote - after buttons */}
+        <HecateQuote refreshTrigger={quoteRefreshTrigger} compact={true} />
+      </div>
+      
+      {/* Center - Empty for spacer */}
+      <div className={styles.navbarCenter}>
       </div>
 
       {/* Right side - Action Buttons */}

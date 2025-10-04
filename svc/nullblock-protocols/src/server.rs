@@ -1,15 +1,18 @@
 use axum::{routing::get, Router};
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tracing::info;
 
 use crate::health::health_check;
 use crate::protocols::a2a::routes::create_a2a_routes;
+use crate::protocols::a2a::sse::KafkaSSEBridge;
 
 #[derive(Clone)]
 pub struct AppState {
     pub http_client: reqwest::Client,
     pub agents_service_url: String,
+    pub kafka_bridge: Option<Arc<KafkaSSEBridge>>,
 }
 
 pub struct Server {
@@ -23,9 +26,27 @@ impl Server {
 
         info!("🔗 Agents Service URL: {}", agents_service_url);
 
+        let kafka_bridge = if let Ok(bootstrap_servers) = std::env::var("KAFKA_BOOTSTRAP_SERVERS") {
+            match KafkaSSEBridge::new(&bootstrap_servers) {
+                Ok(bridge) => {
+                    bridge.start_forwarding().await;
+                    info!("✅ Kafka SSE bridge initialized for task streaming");
+                    Some(Arc::new(bridge))
+                }
+                Err(e) => {
+                    tracing::warn!("⚠️ Failed to initialize Kafka SSE bridge: {}", e);
+                    None
+                }
+            }
+        } else {
+            tracing::warn!("⚠️ KAFKA_BOOTSTRAP_SERVERS not set, SSE streaming disabled");
+            None
+        };
+
         let state = AppState {
             http_client: reqwest::Client::new(),
             agents_service_url,
+            kafka_bridge,
         };
 
         let a2a_router = create_a2a_routes(state.clone());
