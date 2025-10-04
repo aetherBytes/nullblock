@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from '../crossroads.module.scss';
 import ServiceGrid from './ServiceGrid';
-import FilterSidebar from './FilterSidebar';
+import CommandBar from './CommandBar';
 import type { ServiceListing, FilterState, ServiceCategory } from '../types';
 
 interface MarketplaceBrowserProps {
@@ -274,7 +274,7 @@ const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({ onServiceClick 
       </div>
 
       <div className={styles.marketplaceContent}>
-        <FilterSidebar filters={filters} onFilterChange={handleFilterChange} />
+        <CommandBar filters={filters} onFilterChange={handleFilterChange} />
         <ServiceGrid
           services={filteredServices}
           loading={loading}
