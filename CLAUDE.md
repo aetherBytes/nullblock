@@ -206,20 +206,86 @@ NullBlock implements [A2A Protocol v0.3.0](https://a2a-protocol.org/latest/speci
 
 ## 🛣️ Crossroads Marketplace
 
-"Craigslist for AI Agents"
+**"App Store for AI Services"** - Web3-native marketplace for discovering, deploying, and monetizing AI agents, workflows, tools, and MCP servers.
+
+### Architecture
+
+**Location**: `/svc/erebus/src/resources/crossroads/`
+**Integration**: Native Erebus subsystem (no separate service)
+**Frontend**: `/svc/hecate/src/components/crossroads/`
 
 ### Features
 
-- **Listings**: Agents, workflows, tools, MCP servers
-- **Discovery**: Auto-discovery, health monitoring
-- **Search**: Advanced filtering, featured content
-- **Admin**: Moderation, quality control
+**Discovery & Marketplace:**
+- Browse agents, workflows, tools, MCP servers, datasets, models
+- Full-text search with PostgreSQL indexing
+- Advanced filtering (category, price, rating, tags)
+- Featured listings and trending services
+- Real-time health monitoring
 
-### Endpoints
+**Publishing:**
+- Multi-step wizard for service submission
+- Configuration schemas and validation
+- Pricing models (Free, Subscription, OneTime, PayPerUse, TokenStaking)
+- Automatic discovery integration
 
-- `/api/marketplace/*` - Listings, search, stats
-- `/api/discovery/*` - Agents, workflows, MCP servers, health
-- `/api/admin/*` - Approve, reject, feature
+**User Management:**
+- Published services dashboard
+- Deployed services monitoring
+- Analytics and earnings tracking
+- Reviews and ratings
+
+**Web3 Integration:**
+- OnchainKit Identity (ENS/Basename)
+- Wallet-gated features
+- On-chain payments and transactions
+- Service ownership verification
+
+### Database Schema
+
+**Tables:**
+- `crossroads_listings` - Service marketplace listings
+- `crossroads_reviews` - User reviews and ratings
+- `crossroads_deployments` - Active service instances
+- `crossroads_favorites` - User bookmarks
+- `crossroads_discovery_scans` - Discovery operation tracking
+- `crossroads_analytics_events` - User interaction analytics
+
+### API Endpoints
+
+**Marketplace:**
+- `GET/POST /api/marketplace/listings` - Browse/create listings
+- `GET /api/marketplace/listings/:id` - Service details
+- `POST /api/marketplace/search` - Advanced search
+- `GET /api/marketplace/featured` - Featured services
+- `GET /api/marketplace/stats` - Marketplace statistics
+
+**Discovery:**
+- `GET /api/discovery/agents` - Auto-discover agents
+- `GET /api/discovery/workflows` - Auto-discover workflows
+- `GET /api/discovery/tools` - Auto-discover tools
+- `GET /api/discovery/mcp-servers` - Auto-discover MCP servers
+- `POST /api/discovery/scan` - Trigger discovery scan
+- `GET /api/discovery/health/:endpoint` - Service health check
+
+**Deployments:**
+- `POST /api/marketplace/listings/:id/deploy` - Deploy service
+- `GET /api/marketplace/deployments` - User deployments
+- `POST /api/marketplace/deployments/:id/start` - Start instance
+- `POST /api/marketplace/deployments/:id/stop` - Stop instance
+
+**Reviews & Social:**
+- `GET/POST /api/marketplace/listings/:id/reviews` - Reviews
+- `POST/DELETE /api/marketplace/listings/:id/favorite` - Favorites
+
+**Admin:**
+- `POST /api/admin/listings/approve/:id` - Approve listing
+- `POST /api/admin/listings/reject/:id` - Reject listing
+- `POST /api/admin/listings/feature/:id` - Feature listing
+
+### Design Documentation
+
+See `CROSSROADS_UI_DESIGN.md` and `CROSSROADS_BACKEND_PLAN.md` for complete architecture, component breakdown, and implementation roadmap.
 
 ## 📋 Common Commands
 

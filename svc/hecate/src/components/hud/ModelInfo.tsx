@@ -31,9 +31,9 @@ interface ModelInfoProps {
   handleModelSelection: (modelName: string) => void;
   getFreeModels: (models: any[], limit?: number) => any[];
   getFastModels: (models: any[], limit?: number) => any[];
-  getPremiumModels: (models: any[], limit?: number) => any[];
   getThinkerModels: (models: any[], limit?: number) => any[];
   getInstructModels: (models: any[], limit?: number) => any[];
+  getImageModels: (models: any[], limit?: number) => any[];
   getLatestModels: (models: any[], limit?: number) => any[];
 }
 
@@ -67,9 +67,9 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
   handleModelSelection,
   getFreeModels,
   getFastModels,
-  getPremiumModels,
   getThinkerModels,
   getInstructModels,
+  getImageModels,
   getLatestModels
 }) => {
   const renderModelSelectButton = (model: any, keyPrefix: string, index: number) => (
@@ -255,9 +255,9 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
               {renderQuickAction('latest', '🆕', 'Latest', getLatestModels)}
               {renderQuickAction('free', '🆓', 'Free', getFreeModels)}
               {renderQuickAction('fast', '⚡', 'Fast', getFastModels)}
-              {renderQuickAction('premium', '💎', 'Premium', getPremiumModels)}
               {renderQuickAction('thinkers', '🧠', 'Thinkers', getThinkerModels)}
               {renderQuickAction('instruct', '💬', 'Instruct', getInstructModels)}
+              {renderQuickAction('image', '🎨', 'Image', getImageModels)}
             </div>
           </div>
 
@@ -291,12 +291,12 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
                 </div>
               )}
             </div>
-          ) : activeQuickAction && ['free', 'fast', 'premium', 'thinkers', 'instruct'].includes(activeQuickAction) ? (
+          ) : activeQuickAction && ['free', 'fast', 'thinkers', 'instruct', 'image'].includes(activeQuickAction) ? (
             (() => {
               const getModelsFn = activeQuickAction === 'free' ? getFreeModels :
                                  activeQuickAction === 'fast' ? getFastModels :
-                                 activeQuickAction === 'premium' ? getPremiumModels :
-                                 activeQuickAction === 'thinkers' ? getThinkerModels : getInstructModels;
+                                 activeQuickAction === 'thinkers' ? getThinkerModels :
+                                 activeQuickAction === 'image' ? getImageModels : getInstructModels;
               const models = getModelsFn(availableModels);
               return (
                 <div className={styles.modelSection}>
@@ -315,9 +315,9 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
                   {renderCategoryButton('latest', '🆕', 'Latest', getLatestModels)}
                   {renderCategoryButton('free', '🆓', 'Free', getFreeModels)}
                   {renderCategoryButton('fast', '⚡', 'Fast', getFastModels)}
-                  {renderCategoryButton('premium', '💎', 'Premium', getPremiumModels)}
                   {renderCategoryButton('thinkers', '🧠', 'Thinkers', getThinkerModels)}
                   {renderCategoryButton('instruct', '💬', 'Instruct', getInstructModels)}
+                  {renderCategoryButton('image', '🎨', 'Image', getImageModels)}
                 </div>
               </div>
 
@@ -327,30 +327,15 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
                   <p>📊 Total Available: {availableModels.filter(m => m.available).length}</p>
                   <p>🆓 Free Models: {getFreeModels(availableModels, 999).length}</p>
                   <p>⚡ Fast Models: {getFastModels(availableModels, 999).length}</p>
-                  <p>💎 Premium Models: {getPremiumModels(availableModels, 999).length}</p>
                   <p>🧠 Thinking Models: {getThinkerModels(availableModels, 999).length}</p>
                   <p>💬 Instruct Models: {getInstructModels(availableModels, 999).length}</p>
+                  <p>🎨 Image Gen: {getImageModels(availableModels, 999).length}</p>
                   <p>🆕 Latest Added: {getLatestModels(availableModels, 999).length}</p>
                 </div>
               </div>
             </>
           )}
 
-          {/* Old statistics block - now removed since it's incorporated above */}
-          {false && !activeQuickAction && searchResults.length === 0 && !modelSearchQuery.trim() && (
-            <div className={styles.modelSection}>
-              <h6>Database Statistics</h6>
-              <div className={styles.modelCounts}>
-                <p>📊 Total Available: {availableModels.filter(m => m.available).length}</p>
-                <p>🆓 Free Models: {getFreeModels(availableModels, 999).length}</p>
-                <p>⚡ Fast Models: {getFastModels(availableModels, 999).length}</p>
-                <p>💎 Premium Models: {getPremiumModels(availableModels, 999).length}</p>
-                <p>🧠 Thinking Models: {getThinkerModels(availableModels, 999).length}</p>
-                <p>💬 Instruct Models: {getInstructModels(availableModels, 999).length}</p>
-                <p>🆕 Latest Added: {getLatestModels(availableModels, 999).length}</p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -453,10 +438,10 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
               <span className={styles.specLabel}>Context Length:</span>
               <span className={styles.specValue}>{modelInfo.context_length?.toLocaleString() || 'N/A'} tokens</span>
             </div>
-            {modelInfo.top_provider?.max_completion_tokens && (
+            {(modelInfo.max_completion_tokens || modelInfo.top_provider?.max_completion_tokens) && (
               <div className={styles.specItem}>
                 <span className={styles.specLabel}>Max Output:</span>
-                <span className={styles.specValue}>{modelInfo.top_provider.max_completion_tokens.toLocaleString()} tokens</span>
+                <span className={styles.specValue}>{(modelInfo.max_completion_tokens || modelInfo.top_provider.max_completion_tokens).toLocaleString()} tokens</span>
               </div>
             )}
             <div className={styles.specItem}>
@@ -482,8 +467,26 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
               </span>
             </div>
             <div className={styles.specItem}>
+              <span className={styles.specLabel}>Image Generation:</span>
+              <span className={styles.specValue}>
+                {modelInfo.architecture?.output_modalities?.includes('image') ? '✅ Yes' : '❌ No'}
+              </span>
+            </div>
+            <div className={styles.specItem}>
+              <span className={styles.specLabel}>Audio:</span>
+              <span className={styles.specValue}>
+                {modelInfo.supports_audio ? '✅ Yes' : '❌ No'}
+              </span>
+            </div>
+            <div className={styles.specItem}>
               <span className={styles.specLabel}>Function Calls:</span>
               <span className={styles.specValue}>{modelInfo.supports_function_calling ? '✅ Yes' : '❌ No'}</span>
+            </div>
+            <div className={styles.specItem}>
+              <span className={styles.specLabel}>Moderated:</span>
+              <span className={styles.specValue}>
+                {modelInfo.is_moderated ? '✅ Yes' : '❌ No'}
+              </span>
             </div>
           </div>
         </div>
@@ -519,6 +522,22 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
                       : `$${(parseFloat(modelInfo.pricing.completion) * 1000000).toFixed(3)}`}
                   </span>
                 </div>
+                {modelInfo.pricing.image && parseFloat(modelInfo.pricing.image) > 0 && (
+                  <div className={styles.specItem}>
+                    <span className={styles.specLabel}>Image generation:</span>
+                    <span className={styles.specValue}>
+                      ${parseFloat(modelInfo.pricing.image).toFixed(4)} per image
+                    </span>
+                  </div>
+                )}
+                {modelInfo.pricing.request && parseFloat(modelInfo.pricing.request) > 0 && (
+                  <div className={styles.specItem}>
+                    <span className={styles.specLabel}>Per request:</span>
+                    <span className={styles.specValue}>
+                      ${parseFloat(modelInfo.pricing.request).toFixed(4)}
+                    </span>
+                  </div>
+                )}
               </>
             ) : modelInfo.cost_per_1k_tokens !== undefined ? (
               <>
@@ -561,6 +580,23 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
                   title={capability.replace('_', ' ')}
                 >
                   {capability.replace('_', ' ')}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {modelInfo.supported_parameters && modelInfo.supported_parameters.length > 0 && (
+          <div className={styles.modelInfoSection}>
+            <h6>🔧 Supported Parameters</h6>
+            <div className={styles.capabilitiesList}>
+              {modelInfo.supported_parameters.map((param: string) => (
+                <span
+                  key={param}
+                  className={styles.capabilityTag}
+                  title={param}
+                >
+                  {param}
                 </span>
               ))}
             </div>

@@ -63,9 +63,9 @@ interface ScopesProps {
   handleModelSelection: (modelName: string) => void;
   getFreeModels: (models: any[], limit?: number) => any[];
   getFastModels: (models: any[], limit?: number) => any[];
-  getPremiumModels: (models: any[], limit?: number) => any[];
   getThinkerModels: (models: any[], limit?: number) => any[];
   getInstructModels: (models: any[], limit?: number) => any[];
+  getImageModels: (models: any[], limit?: number) => any[];
   getLatestModels: (models: any[], limit?: number) => any[];
 }
 

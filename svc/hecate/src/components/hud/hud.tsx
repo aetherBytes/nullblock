@@ -4,7 +4,7 @@ import { useChat } from '../../hooks/useChat';
 import { useAuthentication } from '../../hooks/useAuthentication';
 import { useTaskManagement } from '../../hooks/useTaskManagement';
 import { useEventSystem } from '../../hooks/useEventSystem';
-import Crossroads from './Crossroads';
+import Crossroads from '../crossroads/Crossroads';
 import HecateChat from './HecateChat';
 import Scopes from './Scopes';
 import styles from './hud.module.scss';
@@ -864,13 +864,6 @@ const HUD: React.FC<HUDProps> = ({
       .slice(0, limit);
   };
 
-  const getPremiumModels = (models: any[], limit: number = 10) => {
-    return models
-      .filter(model => model.available && model.tier === 'premium')
-      .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
-      .slice(0, limit);
-  };
-
   const getFastModels = (models: any[], limit: number = 10) => {
     return models
       .filter(model => model.available && model.tier === 'fast')
@@ -896,6 +889,17 @@ const HUD: React.FC<HUDProps> = ({
         if (!model.available) return false;
         const name = (model.display_name || model.name).toLowerCase();
         return name.includes('instruct') || name.includes('it') || name.includes('chat');
+      })
+      .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+      .slice(0, limit);
+  };
+
+  const getImageModels = (models: any[], limit: number = 10) => {
+    return models
+      .filter(model => {
+        if (!model.available) return false;
+        return model.architecture?.output_modalities?.includes('image') ||
+               (model.capabilities && model.capabilities.includes('image_generation'));
       })
       .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
       .slice(0, limit);
@@ -1005,9 +1009,9 @@ const HUD: React.FC<HUDProps> = ({
                           handleModelSelection={modelManagement.handleModelSelection}
                           getFreeModels={getFreeModels}
                           getFastModels={getFastModels}
-                          getPremiumModels={getPremiumModels}
                           getThinkerModels={getThinkerModels}
                           getInstructModels={getInstructModels}
+                          getImageModels={getImageModels}
                           getLatestModels={getLatestModels}
                           activeAgent={chat.activeAgent}
                           setActiveAgent={chat.setActiveAgent}
