@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background-color: #0a0a0a; margin: 0; padding: 0;">
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/nullview_favicon.ico" />
@@ -8,9 +8,23 @@
     <title>Nullblock</title>
     <!-- Add this line below to include your index.css file -->
     <!-- <link rel="stylesheet" href="index.css" /> -->
+    <style>
+        /* Critical CSS to prevent white flash on load */
+        html, body {
+            background-color: #0a0a0a;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        #root {
+            background-color: #0a0a0a;
+            min-height: 100vh;
+        }
+    </style>
 </head>
-<body>
-    <div id="root"><!--ssr-outlet--></div>
+<body style="background-color: #0a0a0a; margin: 0; padding: 0;">
+    <div id="root" style="background-color: #0a0a0a; min-height: 100vh;"><!--ssr-outlet--></div>
     <script type="module" src="/client.ts" async></script>
 </body>
 </html>

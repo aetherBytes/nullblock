@@ -14,6 +14,7 @@ use super::handlers::{
     list_push_notification_configs, delete_push_notification_config,
 };
 use super::jsonrpc::handle_jsonrpc;
+use super::sse::{task_subscribe_handler, message_stream_handler};
 
 pub fn create_a2a_routes(state: AppState) -> Router {
     Router::new()
@@ -24,12 +25,14 @@ pub fn create_a2a_routes(state: AppState) -> Router {
         // Message endpoints
         .route("/messages", post(send_message))
         .route("/messages/stream", post(send_streaming_message))
+        .route("/messages/sse", get(message_stream_handler))
 
         // Task endpoints
         .route("/tasks", get(list_tasks))
         .route("/tasks/:id", get(get_task))
         .route("/tasks/:id/cancel", post(cancel_task))
         .route("/tasks/:id/subscribe", post(resubscribe_task))
+        .route("/tasks/:id/sse", get(task_subscribe_handler))
 
         // Push notification endpoints
         .route("/tasks/:id/pushNotificationConfigs", post(set_push_notification_config))

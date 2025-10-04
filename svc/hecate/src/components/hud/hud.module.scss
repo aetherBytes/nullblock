@@ -3057,7 +3057,73 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   .navbarLeft {
     display: flex;
     align-items: center;
+    gap: 1rem;
     flex: 0 0 auto;
+    
+    .menuButton {
+      background: none;
+      border: none;
+      color: $lightning-silver;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      
+      &::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 2px;
+        background: linear-gradient(90deg, $lightning-blue, $lightning-purple);
+        transition: width 0.3s ease;
+      }
+      
+      &:hover {
+        color: $lightning-blue;
+        text-shadow: 0 0 10px rgba($lightning-blue, 0.5);
+        
+        &::before {
+          width: 80%;
+        }
+      }
+      
+      &.active {
+        color: $lightning-blue;
+        text-shadow: 0 0 10px rgba($lightning-blue, 0.8);
+        
+        &::before {
+          width: 100%;
+        }
+      }
+      
+      @media (max-width: 768px) {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.75rem;
+      }
+    }
+    
+    .fadeIn {
+      animation: fadeIn 0.5s ease-in;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
   }
 
   .navbarCenter {
@@ -12093,3 +12159,4 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .invocationMeta:nth-of-type(4) .invocationValue {
   color: $echo-orange; // Chain
 }
+

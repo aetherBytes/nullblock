@@ -74,7 +74,7 @@ export const useTaskManagement = (
 
   // Computed state
   const filteredTasks = Array.isArray(tasks) ? tasks.filter(task => {
-    if (filter.status && !filter.status.includes(task.status)) return false;
+    if (filter.status && !filter.status.includes(task.status.state)) return false;
     if (filter.type && !filter.type.includes(task.task_type)) return false;
     if (filter.category && !filter.category.includes(task.category)) return false;
     if (filter.priority && !filter.priority.includes(task.priority)) return false;
@@ -106,12 +106,17 @@ export const useTaskManagement = (
     }
   }, [filter]);
 
-  // Auto-refresh for running tasks
+  // Auto-refresh for active tasks (non-terminal states)
   useEffect(() => {
-    const runningTasks = Array.isArray(tasks) ? tasks.filter(task => task.status === 'running') : [];
+    // Poll for tasks in any non-terminal state (A2A protocol states)
+    const activeTasks = Array.isArray(tasks) ? tasks.filter(task =>
+      task.status.state === 'submitted' ||
+      task.status.state === 'working' ||
+      task.status.state === 'input-required'
+    ) : [];
 
-    if (runningTasks.length > 0 && isConnectedRef.current) {
-      console.log(`🔄 Setting up polling for ${runningTasks.length} running tasks`);
+    if (activeTasks.length > 0 && isConnectedRef.current) {
+      console.log(`🔄 Setting up polling for ${activeTasks.length} active tasks`);
 
       const pollInterval = setInterval(async () => {
         try {
@@ -120,7 +125,7 @@ export const useTaskManagement = (
         } catch (e) {
           console.warn('⚠️ Failed to poll for task updates:', e);
         }
-      }, 5000); // Poll every 5 seconds when there are running tasks
+      }, 3000); // Poll every 3 seconds for faster updates
 
       return () => {
         console.log('⏹️ Stopping task polling');
@@ -189,19 +194,20 @@ export const useTaskManagement = (
         setTasks(prev => [response.data!, ...ensureArray(prev)]);
         console.log('✅ Task created via backend:', response.data);
 
+        // Refresh tasks immediately to show the new task
+        setTimeout(async () => {
+          try {
+            console.log('🔄 Refreshing tasks after creation');
+            await loadTasks();
+          } catch (e) {
+            console.warn('⚠️ Failed to refresh tasks after creation:', e);
+          }
+        }, 500); // Quick refresh to show task in UI
+
         // If auto_start is true, the backend handles processing automatically
         if (request.auto_start) {
           console.log('🔄 Auto-start task created, backend will handle processing automatically');
-          // Backend already processes auto_start tasks, no need for frontend processing
-          // Set up polling to monitor completion
-          setTimeout(async () => {
-            try {
-              console.log('🔄 Refreshing tasks to check auto-processing completion');
-              await loadTasks();
-            } catch (e) {
-              console.warn('⚠️ Failed to refresh tasks after auto-start:', e);
-            }
-          }, 3000); // 3 second delay to allow backend processing
+          // Backend already processes auto_start tasks, polling will monitor completion
         }
 
         return true;
@@ -483,7 +489,7 @@ export const useTaskManagement = (
 
   // Analytics & queries
   const getTasksByStatus = useCallback((status: TaskStatus): Task[] => {
-    return Array.isArray(tasks) ? tasks.filter(task => task.status === status) : [];
+    return Array.isArray(tasks) ? tasks.filter(task => task.status.state === status.state) : [];
   }, [tasks]);
 
   const getTasksByPriority = useCallback((priority: TaskPriority): Task[] => {

@@ -233,10 +233,8 @@ const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({ onServiceClick 
   return (
     <div className={styles.marketplaceBrowser}>
       <div className={styles.marketplaceHeader}>
-        <h2>Marketplace</h2>
         <div className={styles.headerControls}>
           <div className={styles.searchBar}>
-            <span className={styles.searchIcon}>🔍</span>
             <input
               type="text"
               placeholder="Search services..."

@@ -3,3 +3,4 @@ pub mod handlers;
 pub mod routes;
 pub mod jsonrpc;
 pub mod auth;
+pub mod sse;
