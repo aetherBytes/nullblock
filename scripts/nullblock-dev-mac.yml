@@ -1,0 +1,167 @@
+name: nullblock-dev
+root: ~/nullblock
+startup_window: monitoring
+
+windows:
+  - monitoring:
+      layout: tiled
+      panes:
+        - ~/nullblock/scripts/monitor-health.sh
+        - ~/nullblock/scripts/monitor-tasks.sh
+        - ~/nullblock/scripts/monitor-api.sh
+
+  - erebus:
+      layout: tiled
+      pre_window: |
+        if [ -f .env.dev ]; then
+          export $(grep -v '^#' .env.dev | xargs -0)
+        fi
+      panes:
+        - |
+          echo "🔗 Starting Erebus Server (Rust)..."
+          cd svc/erebus
+          mkdir -p logs
+          export EREBUS_HOST=127.0.0.1
+          export EREBUS_PORT=3000
+          export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus"
+          export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
+          echo "📝 Logs will be written to logs/erebus.log"
+          echo ""
+          echo "🗄️  Waiting for Erebus database to be ready..."
+          while ! docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>&1; do
+            echo "⏳ Waiting for Erebus PostgreSQL container to be ready..."
+            sleep 2
+          done
+          echo "✅ Erebus database connection ready"
+          echo ""
+          echo "📨 Waiting for Kafka to be ready..."
+          while ! docker exec nullblock-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1; do
+            echo "⏳ Waiting for Kafka container to be ready..."
+            sleep 3
+          done
+          echo "✅ Kafka connection ready"
+          echo ""
+          echo "🚀 Starting Erebus Rust server..."
+          cargo run 2>&1 | tee logs/erebus.log
+        - ~/nullblock/scripts/monitor-erebus-db.sh
+        - ~/nullblock/scripts/monitor-erebus-redis.sh
+        - ~/nullblock/scripts/tail-erebus-logs.sh
+
+  - nullblock-agents:
+      layout: tiled
+      pre_window: |
+        if [ -f .env.dev ]; then
+          export $(grep -v '^#' .env.dev | xargs -0)
+        fi
+      panes:
+        - ~/nullblock/scripts/start-agents.sh
+        - ~/nullblock/scripts/monitor-agents-db.sh
+        - ~/nullblock/scripts/monitor-kafka-simple.sh
+        - ~/nullblock/scripts/monitor-hecate-health.sh
+
+  - nullblock-protocols:
+      layout: tiled
+      pre_window: |
+        if [ -f .env.dev ]; then
+          export $(grep -v '^#' .env.dev | xargs -0)
+        fi
+      panes:
+        - |
+          echo "🌐 Starting Protocol Server..."
+          cd svc/nullblock-protocols
+          echo "🦀 Starting Rust protocol service with A2A and MCP support..."
+          export PORT=8001
+          export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
+          echo ""
+          echo "🗄️  Waiting for Agents database to be ready..."
+          while ! docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; do
+            echo "⏳ Waiting for Agents PostgreSQL container to be ready..."
+            sleep 2
+          done
+          echo "✅ Agents database connection ready"
+          echo ""
+          echo "📝 Starting protocol server with database connection..."
+          echo "🔗 A2A JSON-RPC endpoint: http://localhost:8001/a2a/jsonrpc"
+          echo "🌐 A2A REST endpoints: http://localhost:8001/v1/*"
+          echo "📄 Agent Card: http://localhost:8001/v1/card"
+          echo "📨 Messages: POST /v1/messages, /v1/messages/stream"
+          echo "📋 Tasks: GET /v1/tasks, /v1/tasks/:id, POST /v1/tasks/:id/cancel"
+          echo ""
+          cargo run 2>&1 | tee logs/protocols-server.log
+        - ~/nullblock/scripts/monitor-protocol-db.sh
+        - ~/nullblock/scripts/monitor-protocol-health.sh
+        - ~/nullblock/scripts/tail-protocol-logs.sh
+
+  - task-management:
+      layout: tiled
+      pre_window: |
+        if [ -f .env.dev ]; then
+          export $(grep -v '^#' .env.dev | xargs -0)
+        fi
+      panes:
+        - ~/nullblock/scripts/monitor-task-system.sh
+
+  - frontend:
+      panes:
+        - |
+          echo "🎨 Starting Frontend (Hecate React App)..."
+          cd svc/hecate
+          echo "Installing/updating npm dependencies..."
+          npm install
+          export VITE_PROTOCOLS_API_URL=http://localhost:8001
+          export VITE_A2A_API_URL=http://localhost:8001
+          export VITE_EREBUS_API_URL=http://localhost:3000
+          export VITE_HECATE_API_URL=http://localhost:9003
+          echo "🚀 Starting React development server..."
+          npm run develop
+
+on_project_start: |
+  if [ ! -f .env.dev ]; then
+    echo "Creating .env.dev file..."
+    echo "# Nullblock Development Environment" > .env.dev
+    echo "ETHEREUM_RPC_URL=https://eth-sepolia.alchemyapi.io/v2/your-key" >> .env.dev
+    echo "OPENROUTER_API_KEY=your-openrouter-key-here" >> .env.dev
+    echo "Please edit .env.dev with your actual API keys"
+  fi
+  echo "📁 Creating log directory structure..."
+  mkdir -p logs
+  mkdir -p svc/nullblock-agents/logs
+  mkdir -p svc/nullblock-protocols/logs
+  mkdir -p svc/erebus/logs
+  mkdir -p svc/hecate/logs
+  echo "✅ Log directories created"
+  echo ""
+  echo "🚀 Starting all infrastructure services using 'just start'..."
+  just start
+  echo ""
+  echo "🚀 Nullblock Development Environment Ready (macOS)!"
+  echo "================================================"
+  echo "🏗️  Architecture: Client ↔ Erebus ↔ Services"
+  echo "🛡️  Security: All frontend requests route through Erebus (port 3000)"
+  echo ""
+  echo "📡 Service Ports:"
+  echo "   🌐 Erebus (unified router): http://localhost:3000"
+  echo "   🌐 Protocol Server (A2A/MCP): http://localhost:8001"
+  echo "   🎯 Hecate Agent (Rust): http://localhost:9003"
+  echo "   🎨 Frontend: http://localhost:5173"
+  echo ""
+  echo "🦀 Rust Services:"
+  echo "   ✅ Hecate Agent - High-performance conversational AI"
+  echo "   ✅ Erebus Router - Unified request routing & logging"
+  echo "   ✅ Protocol Server - A2A and MCP protocol communication"
+  echo ""
+  echo "🌐 A2A Protocol Integration:"
+  echo "   📋 Specification: https://a2a-protocol.org/latest/specification/"
+  echo "   🔗 JSON-RPC endpoint: http://localhost:8001/a2a/jsonrpc"
+  echo "   🌍 REST endpoints: http://localhost:8001/v1/*"
+  echo "   📄 Agent Card: http://localhost:8001/v1/card"
+  echo ""
+  echo "🧠 LLM Integration:"
+  echo "   ⚡ Provider: OpenRouter (cloud-based)"
+  echo "   🎯 Default Model: deepseek/deepseek-chat-v3.1:free ($0.00)"
+  echo "   💰 Cost Tracking: Real-time monitoring & analytics"
+
+on_project_stop: |
+  echo "🛑 Stopping development services using 'just term'..."
+  just term
+  echo "✅ All services stopped and cleaned up"

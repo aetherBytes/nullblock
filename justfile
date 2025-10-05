@@ -1,8 +1,66 @@
 # Nullblock MVP Commands
 # Run with: just <command>
 
-# Start all infrastructure services (PostgreSQL, Redis, Kafka, Zookeeper)
+# OS detection (used by dev command)
+_os := if os() == "macos" { "macos" } else { "linux" }
+
+# Start all infrastructure services (OS-aware)
 start:
+    #!/usr/bin/env bash
+    if [[ "{{_os}}" == "macos" ]]; then
+        echo "🍎 Starting services for macOS (with port mapping)..."
+        just start-mac
+    else
+        echo "🐧 Starting services for Linux (with host networking)..."
+        just start-linux
+    fi
+
+# Start all infrastructure services (macOS with port mapping)
+start-mac:
+    @echo "🚀 Starting all NullBlock infrastructure services (macOS)..."
+    @echo "Using port mapping for Docker Desktop compatibility..."
+    @echo ""
+    @docker rm -f nullblock-postgres-erebus nullblock-postgres-agents nullblock-redis nullblock-zookeeper nullblock-kafka 2>/dev/null || true
+    @echo "📦 Starting PostgreSQL databases..."
+    @docker run -d --name nullblock-postgres-erebus -p 5440:5432 -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine
+    @docker run -d --name nullblock-postgres-agents -p 5441:5432 -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine
+    @echo "📦 Starting Redis..."
+    @docker run -d --name nullblock-redis -p 6379:6379 redis:7-alpine redis-server --appendonly yes
+    @echo "📦 Starting Zookeeper..."
+    @docker run -d --name nullblock-zookeeper -p 2181:2181 -e ZOOKEEPER_CLIENT_PORT=2181 -e ZOOKEEPER_TICK_TIME=2000 confluentinc/cp-zookeeper:7.4.0
+    @echo ""
+    @echo "⏳ Waiting for services to be ready..."
+    @sleep 3
+    @while ! docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>&1; do echo "  ⏳ Waiting for Erebus PostgreSQL..."; sleep 2; done
+    @echo "  ✅ Erebus PostgreSQL ready"
+    @while ! docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; do echo "  ⏳ Waiting for Agents PostgreSQL..."; sleep 2; done
+    @echo "  ✅ Agents PostgreSQL ready"
+    @while ! docker exec nullblock-redis redis-cli ping > /dev/null 2>&1; do echo "  ⏳ Waiting for Redis..."; sleep 2; done
+    @echo "  ✅ Redis ready"
+    @sleep 5
+    @echo "  ✅ Zookeeper ready"
+    @echo ""
+    @echo "📦 Starting Kafka (requires Zookeeper)..."
+    @docker run -d --name nullblock-kafka -p 9092:9092 -p 9093:9093 -e KAFKA_BROKER_ID=1 -e KAFKA_ZOOKEEPER_CONNECT=host.docker.internal:2181 -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://localhost:9093 -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=true confluentinc/cp-kafka:7.4.0
+    @echo "⏳ Waiting for Kafka to be ready..."
+    @sleep 15
+    @while ! docker exec nullblock-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1; do echo "  ⏳ Waiting for Kafka broker..."; sleep 3; done
+    @echo "  ✅ Kafka ready"
+    @echo ""
+    @echo "🔄 Running database migrations..."
+    @just migrate
+    @echo ""
+    @echo "✅ All infrastructure services are running!"
+    @docker ps --filter "name=nullblock" --format "table {{"{{"}}.Names}}\t{{"{{"}}.Status}}"
+    @echo ""
+    @echo "🚀 Services ready. You can now start application servers:"
+    @echo "   Erebus:    cd svc/erebus && cargo run"
+    @echo "   Agents:    cd svc/nullblock-agents && cargo run --release"
+    @echo "   Protocols: cd svc/nullblock-protocols && cargo run"
+    @echo "   Frontend:  cd svc/hecate && npm run develop"
+
+# Start all infrastructure services (Linux with host networking)
+start-linux:
     @echo "🚀 Starting all NullBlock infrastructure services..."
     @echo "Using host networking to bypass veth kernel module issues..."
     @echo ""
@@ -253,10 +311,26 @@ quick:
     ./scripts/start-nullblock.sh build
     ./scripts/start-nullblock.sh start
 
-# Launch development environment with tmuxinator
+# Launch development environment with tmuxinator (OS-aware)
+dev:
+    #!/usr/bin/env bash
+    if [[ "{{_os}}" == "macos" ]]; then
+        echo "🍎 Launching macOS development environment..."
+        ./scripts/dev-mac
+    else
+        echo "🐧 Launching Linux development environment..."
+        ./scripts/dev-tmux
+    fi
+
+# Launch development environment with tmuxinator (Linux/original)
 dev-tmux:
     @echo "🖥️ Launching development environment with tmuxinator..."
     ./scripts/dev-tmux
+
+# Launch development environment with tmuxinator (macOS)
+dev-mac:
+    @echo "🍎 Launching macOS development environment..."
+    ./scripts/dev-mac
 
 # Install tmuxinator and setup
 dev-tmux-install:
@@ -267,6 +341,21 @@ dev-tmux-install:
 dev-tmux-setup:
     @echo "⚙️ Setting up tmuxinator configuration..."
     ./scripts/dev-tmux setup
+
+# Install tmuxinator and setup (macOS)
+dev-mac-install:
+    @echo "📦 Installing tmuxinator and setup (macOS)..."
+    ./scripts/dev-mac install
+
+# Setup tmuxinator configuration (macOS)
+dev-mac-setup:
+    @echo "⚙️ Setting up tmuxinator configuration (macOS)..."
+    ./scripts/dev-mac setup
+
+# Validate Mac development environment
+dev-mac-validate:
+    @echo "🔍 Validating macOS development environment..."
+    ./scripts/test-mac-setup.sh
 
 # Initialize databases (Docker)
 init-db:
@@ -323,7 +412,9 @@ help:
     @echo "Nullblock MVP Commands:"
     @echo ""
     @echo "🚀 Quick Start Commands:"
-    @echo "  just start     - Start all infrastructure services (PostgreSQL, Redis, Kafka, Zookeeper) + migrations"
+    @echo "  just start     - Start all infrastructure services (auto-detects OS)"
+    @echo "  just start-mac - Start services for macOS (port mapping)"
+    @echo "  just start-linux - Start services for Linux (host networking)"
     @echo "  just term      - Terminate all services (stop and remove containers)"
     @echo "  just migrate   - Run all database migrations"
     @echo ""
@@ -359,9 +450,14 @@ help:
     @echo "  just test-mcp-data - Test MCP data sources"
     @echo ""
     @echo "Development Environment:"
-    @echo "  just dev-tmux        - Launch complete dev environment with tmuxinator"
-    @echo "  just dev-tmux-install - Install tmuxinator and setup"
-    @echo "  just dev-tmux-setup   - Setup tmuxinator configuration"
+    @echo "  just dev             - Launch dev environment (auto-detects OS)"
+    @echo "  just dev-tmux        - Launch Linux dev environment with tmuxinator"
+    @echo "  just dev-mac         - Launch macOS dev environment with tmuxinator"
+    @echo "  just dev-tmux-install - Install tmuxinator and setup (Linux)"
+    @echo "  just dev-tmux-setup   - Setup tmuxinator configuration (Linux)"
+    @echo "  just dev-mac-install  - Install tmuxinator and setup (macOS)"
+    @echo "  just dev-mac-setup    - Setup tmuxinator configuration (macOS)"
+    @echo "  just dev-mac-validate - Validate macOS development environment"
     @echo ""
     @echo "Service URLs:"
     @echo "  Frontend: http://localhost:5173"
