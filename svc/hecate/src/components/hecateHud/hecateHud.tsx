@@ -585,7 +585,7 @@ const HecateHud: React.FC<HecateHudProps> = ({
     const progressInterval = setInterval(() => {
       setTasks((prev) =>
         prev.map((task) => {
-          if (task.status === 'running' && task.progress !== undefined && task.progress < 100) {
+          if (task.status.state === 'working' && task.progress !== undefined && task.progress < 100) {
             return {
               ...task,
               progress: Math.min(100, task.progress + Math.random() * 5),
@@ -1417,7 +1417,7 @@ const HecateHud: React.FC<HecateHudProps> = ({
               </div>
               <div className={styles.taskStatus}>
                 <span className={styles.statusDot}></span>
-                {task.status}
+                {task.status.state}
               </div>
             </div>
             <div className={styles.taskDescription}>{task.description}</div>

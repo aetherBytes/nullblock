@@ -6,6 +6,7 @@ import type { ServiceListing } from '../types';
 interface ServiceGridProps {
   services: ServiceListing[];
   loading?: boolean;
+  viewMode?: 'grid' | 'list';
   onServiceClick?: (service: ServiceListing) => void;
 }
 
@@ -26,7 +27,7 @@ const SkeletonCard: React.FC = () => (
   </div>
 );
 
-const ServiceGrid: React.FC<ServiceGridProps> = ({ services, loading, onServiceClick }) => {
+const ServiceGrid: React.FC<ServiceGridProps> = ({ services, loading, viewMode = 'grid', onServiceClick }) => {
   if (loading) {
     return (
       <div className={styles.loadingGrid}>

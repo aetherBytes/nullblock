@@ -29,6 +29,7 @@ export interface ServiceListing {
   view_count: number;
   favorite_count: number;
   is_favorited?: boolean;
+  is_coming_soon?: boolean;
   created_at: string;
   updated_at: string;
 }

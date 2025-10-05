@@ -149,9 +149,11 @@ const Scopes: React.FC<ScopesProps> = ({
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'working':
       case 'running':
       case 'active':
         return styles.statusRunning;
+      case 'input-required':
       case 'paused':
         return styles.statusPaused;
       case 'completed':
@@ -160,8 +162,10 @@ const Scopes: React.FC<ScopesProps> = ({
       case 'failed':
       case 'error':
         return styles.statusFailed;
+      case 'canceled':
       case 'cancelled':
         return styles.statusCancelled;
+      case 'submitted':
       case 'created':
       case 'pending':
       case 'idle':
@@ -173,6 +177,7 @@ const Scopes: React.FC<ScopesProps> = ({
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case 'working':
       case 'running':
       case 'active':
         return '⚡';
@@ -224,9 +229,9 @@ const Scopes: React.FC<ScopesProps> = ({
   };
 
   // Categorize tasks
-  const todoTasks = tasks.filter(task => task.status === 'created');
-  const runningTasks = tasks.filter(task => task.status === 'running' || task.status === 'paused');
-  const completedTasks = tasks.filter(task => task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled');
+  const todoTasks = tasks.filter(task => task.status.state === 'submitted');
+  const runningTasks = tasks.filter(task => task.status.state === 'working' || task.status.state === 'input-required');
+  const completedTasks = tasks.filter(task => task.status.state === 'completed' || task.status.state === 'failed' || task.status.state === 'canceled');
 
   const getTasksForCategory = (category: TaskCategory) => {
     switch (category) {
@@ -270,8 +275,8 @@ const Scopes: React.FC<ScopesProps> = ({
               </div>
               <div className={styles.taskDetailsField}>
                 <label>Status:</label>
-                <span className={`${styles.statusBadge} ${getStatusColor(selectedTask.status)}`}>
-                  {getStatusIcon(selectedTask.status)} {selectedTask.status}
+                <span className={`${styles.statusBadge} ${getStatusColor(selectedTask.status.state)}`}>
+                  {getStatusIcon(selectedTask.status.state)} {selectedTask.status.state}
                 </span>
               </div>
               <div className={styles.taskDetailsField}>
@@ -552,7 +557,7 @@ const Scopes: React.FC<ScopesProps> = ({
                     currentCategoryTasks.map((task) => (
                   <div
                     key={task.id}
-                    className={`${styles.taskItem} ${getStatusColor(task.status)} ${styles.clickableTask}`}
+                    className={`${styles.taskItem} ${getStatusColor(task.status.state)} ${styles.clickableTask}`}
                     onClick={() => setSelectedTaskId(task.id)}
                     title="Click to view details"
                   >
@@ -562,8 +567,8 @@ const Scopes: React.FC<ScopesProps> = ({
                         <span className={styles.taskType}>{task.task_type}</span>
                       </div>
                       <div className={styles.taskStatus}>
-                        <span className={styles.statusIcon}>{getStatusIcon(task.status)}</span>
-                        {task.status}
+                        <span className={styles.statusIcon}>{getStatusIcon(task.status.state)}</span>
+                        {task.status.state}
                       </div>
                     </div>
                     <div className={styles.taskMetadata}>

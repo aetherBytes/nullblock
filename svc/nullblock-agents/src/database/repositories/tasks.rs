@@ -15,7 +15,7 @@ impl TaskRepository {
         Self { pool }
     }
 
-    pub async fn create(&self, request: &CreateTaskRequest, user_id: Option<Uuid>, assigned_agent_id: Option<Uuid>) -> Result<TaskEntity> {
+    pub async fn create(&self, request: &CreateTaskRequest, user_id: Option<Uuid>, assigned_agent_id: Option<Uuid>, source_identifier: Option<String>) -> Result<TaskEntity> {
         let task_id = Uuid::new_v4();
         let context_id = Uuid::new_v4();
         let now = Utc::now();
@@ -41,12 +41,12 @@ impl TaskRepository {
                 created_at, updated_at, started_at, progress,
                 sub_tasks, dependencies, context, parameters, logs, triggers,
                 required_capabilities, auto_retry, max_retries, current_retries,
-                user_approval_required, user_notifications
+                user_approval_required, user_notifications, source_identifier
             )
             VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
                 $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,
-                $23, $24, $25, $26, $27, $28
+                $23, $24, $25, $26, $27, $28, $29
             )
             RETURNING *
             "#
@@ -79,6 +79,7 @@ impl TaskRepository {
         .bind(0i32)
         .bind(request.user_approval_required.unwrap_or(false))
         .bind(true)
+        .bind(source_identifier)
         .fetch_one(&self.pool)
         .await?;
 

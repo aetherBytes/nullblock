@@ -172,6 +172,9 @@ export const useTaskManagement = (
   });
 
   // Auto-subscribe to active task SSE streams
+  // TEMPORARILY DISABLED: SSE endpoints need protocols service rebuild
+  // TODO: Re-enable after protocols service is rebuilt with SSE support
+  /*
   useEffect(() => {
     const activeTasks = Array.isArray(tasks) ? tasks.filter(task =>
       task.status.state === 'submitted' ||
@@ -201,6 +204,7 @@ export const useTaskManagement = (
       console.log(`🔄 Monitoring ${activeTasks.length} active tasks via SSE (fallback polling disabled)`);
     }
   }, [tasks, sseHook]);
+  */
 
   // Initialize connection
   useEffect(() => {
