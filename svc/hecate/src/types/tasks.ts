@@ -15,6 +15,14 @@ export interface TaskStatus {
   timestamp?: string;
 }
 
+export interface TaskLifecycleEvent {
+  task_id: string;
+  event_type: string;
+  state: TaskState;
+  message?: string;
+  timestamp: string;
+}
+
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent' | 'critical';
 
 export type TaskCategory =

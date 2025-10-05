@@ -5,9 +5,11 @@ import {
   TaskUpdateRequest,
   TaskFilter,
   TaskStatus,
-  TaskPriority
+  TaskPriority,
+  TaskLifecycleEvent
 } from '../types/tasks';
 import { taskService } from '../common/services/task-service';
+import { useSSE } from './useSSE';
 
 interface UseTaskManagementReturn {
   // State
@@ -71,6 +73,7 @@ export const useTaskManagement = (
 
   // Refs for cleanup
   const isConnectedRef = useRef(false);
+  const activeTaskIdsRef = useRef<Set<string>>(new Set());
 
   // Computed state
   const filteredTasks = Array.isArray(tasks) ? tasks.filter(task => {
@@ -106,33 +109,98 @@ export const useTaskManagement = (
     }
   }, [filter]);
 
-  // Auto-refresh for active tasks (non-terminal states)
+  // SSE integration for real-time task updates
+  const handleTaskUpdate = useCallback((event: TaskLifecycleEvent) => {
+    console.log('📨 Real-time task update:', event);
+
+    setTasks(prevTasks => {
+      const taskIndex = prevTasks.findIndex(t => t.id === event.task_id);
+      if (taskIndex >= 0) {
+        const updatedTasks = [...prevTasks];
+        updatedTasks[taskIndex] = {
+          ...updatedTasks[taskIndex],
+          status: {
+            state: event.state,
+            message: event.message,
+            timestamp: event.timestamp
+          },
+          updated_at: new Date(event.timestamp)
+        };
+        return updatedTasks;
+      }
+      return prevTasks;
+    });
+
+    if (activeTask?.id === event.task_id) {
+      setActiveTask(prev => prev ? {
+        ...prev,
+        status: {
+          state: event.state,
+          message: event.message,
+          timestamp: event.timestamp
+        },
+        updated_at: new Date(event.timestamp)
+      } : null);
+    }
+
+    if (event.state === 'completed' || event.state === 'failed' || event.state === 'canceled') {
+      if (addChatNotification) {
+        const task = tasks.find(t => t.id === event.task_id);
+        const taskName = task?.name || 'Task';
+        const message = event.state === 'completed'
+          ? `Task "${taskName}" completed successfully!`
+          : `Task "${taskName}" ${event.state}: ${event.message || 'No details'}`;
+        addChatNotification(event.task_id, taskName, message);
+      }
+    }
+  }, [activeTask, tasks, addChatNotification]);
+
+  const sseHook = useSSE({
+    onTaskUpdate: handleTaskUpdate,
+    onError: (error) => {
+      console.error('❌ SSE error:', error);
+      setError(error.message);
+    },
+    onConnect: () => {
+      console.log('✅ SSE connected');
+    },
+    onDisconnect: () => {
+      console.log('⚠️ SSE disconnected');
+    },
+    autoReconnect: true,
+    reconnectInterval: 5000,
+  });
+
+  // Auto-subscribe to active task SSE streams
   useEffect(() => {
-    // Poll for tasks in any non-terminal state (A2A protocol states)
     const activeTasks = Array.isArray(tasks) ? tasks.filter(task =>
       task.status.state === 'submitted' ||
       task.status.state === 'working' ||
       task.status.state === 'input-required'
     ) : [];
 
+    const currentActiveIds = new Set(activeTasks.map(t => t.id));
+
+    activeTaskIdsRef.current.forEach(taskId => {
+      if (!currentActiveIds.has(taskId)) {
+        console.log(`📡 Unsubscribing from completed task: ${taskId}`);
+        sseHook.unsubscribeFromTask(taskId);
+        activeTaskIdsRef.current.delete(taskId);
+      }
+    });
+
+    activeTasks.forEach(task => {
+      if (!activeTaskIdsRef.current.has(task.id)) {
+        console.log(`📡 Subscribing to active task: ${task.id}`);
+        sseHook.subscribeToTask(task.id);
+        activeTaskIdsRef.current.add(task.id);
+      }
+    });
+
     if (activeTasks.length > 0 && isConnectedRef.current) {
-      console.log(`🔄 Setting up polling for ${activeTasks.length} active tasks`);
-
-      const pollInterval = setInterval(async () => {
-        try {
-          console.log('🔄 Polling for task updates...');
-          await loadTasks();
-        } catch (e) {
-          console.warn('⚠️ Failed to poll for task updates:', e);
-        }
-      }, 3000); // Poll every 3 seconds for faster updates
-
-      return () => {
-        console.log('⏹️ Stopping task polling');
-        clearInterval(pollInterval);
-      };
+      console.log(`🔄 Monitoring ${activeTasks.length} active tasks via SSE (fallback polling disabled)`);
     }
-  }, [tasks, loadTasks]);
+  }, [tasks, sseHook]);
 
   // Initialize connection
   useEffect(() => {

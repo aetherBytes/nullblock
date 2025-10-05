@@ -232,8 +232,10 @@ const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({ onServiceClick 
 
   return (
     <div className={styles.marketplaceBrowser}>
-      <div className={styles.marketplaceHeader}>
-        <div className={styles.headerControls}>
+      {/* Left Sidebar with all controls */}
+      <aside className={styles.marketplaceSidebar}>
+        <div className={styles.sidebarSection}>
+          <h3 className={styles.sidebarTitle}>Search</h3>
           <div className={styles.searchBar}>
             <input
               type="text"
@@ -242,6 +244,10 @@ const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({ onServiceClick 
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+        </div>
+
+        <div className={styles.sidebarSection}>
+          <h3 className={styles.sidebarTitle}>View Mode</h3>
           <div className={styles.viewToggle}>
             <button
               className={viewMode === 'grid' ? styles.active : ''}
@@ -257,38 +263,46 @@ const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({ onServiceClick 
             </button>
           </div>
         </div>
-      </div>
 
-      <div className={styles.categoryTabs}>
-        {categories.map((cat) => (
-          <button
-            key={cat.value}
-            className={`${styles.categoryTab} ${selectedCategory === cat.value ? styles.active : ''}`}
-            onClick={() => handleCategoryTabClick(cat.value)}
-          >
-            {cat.label}
-          </button>
-        ))}
-      </div>
+        <div className={styles.sidebarSection}>
+          <h3 className={styles.sidebarTitle}>Categories</h3>
+          <div className={styles.categoryList}>
+            {categories.map((cat) => (
+              <button
+                key={cat.value}
+                className={`${styles.categoryButton} ${selectedCategory === cat.value ? styles.active : ''}`}
+                onClick={() => handleCategoryTabClick(cat.value)}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      <div className={styles.marketplaceContent}>
-        <CommandBar filters={filters} onFilterChange={handleFilterChange} />
+        <div className={styles.sidebarSection}>
+          <h3 className={styles.sidebarTitle}>Filters</h3>
+          <CommandBar filters={filters} onFilterChange={handleFilterChange} />
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className={styles.marketplaceMain}>
         <ServiceGrid
           services={filteredServices}
           loading={loading}
           onServiceClick={onServiceClick}
         />
-      </div>
 
-      {filteredServices.length > 0 && (
-        <div className={styles.pagination}>
-          <button disabled>← Previous</button>
-          <button className={styles.active}>1</button>
-          <button>2</button>
-          <button>3</button>
-          <button>Next →</button>
-        </div>
-      )}
+        {filteredServices.length > 0 && (
+          <div className={styles.pagination}>
+            <button disabled>← Previous</button>
+            <button className={styles.active}>1</button>
+            <button>2</button>
+            <button>3</button>
+            <button>Next →</button>
+          </div>
+        )}
+      </main>
     </div>
   );
 };

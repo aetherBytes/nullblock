@@ -24,41 +24,45 @@ const CommandBar: React.FC<CommandBarProps> = ({ filters, onFilterChange }) => {
 
   return (
     <div className={styles.commandBar}>
-      <span className={styles.commandLabel}>Sort:</span>
-      <button
-        className={`${styles.commandChip} ${filters.sort_by === 'trending' ? styles.active : ''}`}
-        onClick={() => handleSortChange('trending')}
-      >
-        🔥 Trending
-      </button>
-      <button
-        className={`${styles.commandChip} ${filters.sort_by === 'rating' ? styles.active : ''}`}
-        onClick={() => handleSortChange('rating')}
-      >
-        ⭐ Top Rated
-      </button>
-      <button
-        className={`${styles.commandChip} ${filters.sort_by === 'recent' ? styles.active : ''}`}
-        onClick={() => handleSortChange('recent')}
-      >
-        🆕 Recent
-      </button>
+      <div>
+        <span className={styles.commandLabel}>Sort By</span>
+        <button
+          className={`${styles.commandChip} ${filters.sort_by === 'trending' ? styles.active : ''}`}
+          onClick={() => handleSortChange('trending')}
+        >
+          🔥 Trending
+        </button>
+        <button
+          className={`${styles.commandChip} ${filters.sort_by === 'rating' ? styles.active : ''}`}
+          onClick={() => handleSortChange('rating')}
+        >
+          ⭐ Top Rated
+        </button>
+        <button
+          className={`${styles.commandChip} ${filters.sort_by === 'recent' ? styles.active : ''}`}
+          onClick={() => handleSortChange('recent')}
+        >
+          🆕 Recent
+        </button>
+      </div>
 
-      <span className={styles.commandDivider}></span>
+      <div className={styles.commandDivider}></div>
 
-      <span className={styles.commandLabel}>Price:</span>
-      <button
-        className={`${styles.commandChip} ${filters.is_free === true ? styles.active : ''}`}
-        onClick={() => handlePriceFilter(true)}
-      >
-        Free
-      </button>
-      <button
-        className={`${styles.commandChip} ${filters.is_free === false ? styles.active : ''}`}
-        onClick={() => handlePriceFilter(false)}
-      >
-        Paid
-      </button>
+      <div>
+        <span className={styles.commandLabel}>Price Filter</span>
+        <button
+          className={`${styles.commandChip} ${filters.is_free === true ? styles.active : ''}`}
+          onClick={() => handlePriceFilter(true)}
+        >
+          Free
+        </button>
+        <button
+          className={`${styles.commandChip} ${filters.is_free === false ? styles.active : ''}`}
+          onClick={() => handlePriceFilter(false)}
+        >
+          Paid
+        </button>
+      </div>
     </div>
   );
 };
