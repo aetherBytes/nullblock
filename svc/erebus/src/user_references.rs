@@ -156,7 +156,7 @@ impl UserReferenceService {
                 preferences, is_active, created_at, updated_at
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            ON CONFLICT (source_identifier, network) WHERE (source_identifier IS NOT NULL)
+            ON CONFLICT (source_identifier, network) WHERE (source_identifier IS NOT NULL AND is_active = true)
             DO UPDATE SET
                 source_type = EXCLUDED.source_type,
                 user_type = EXCLUDED.user_type,

@@ -9,8 +9,10 @@
 ```
 
 **🎯 Mission**:
-In a rapidly expanding onchain automated world, we are building the picks and axes for this digital gold rush.
-NullBlock empowers builders with the essential tools to create, deploy, and profit from intelligent agent workflows.
+In a rapidly expanding onchain automated world, we are building the picks and axes
+for this digital gold rush.
+NullBlock empowers builders with the essential tools to create, deploy,and
+profit from intelligent agent workflows.
 Together, we shape the future of autonomous commerce.
 
 ## 🌐 Connect & Follow
@@ -19,15 +21,13 @@ Together, we shape the future of autonomous commerce.
 **📦 SDK**: [nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk)
 **🌍 Site**: NullBlock.io _(Coming Soon)_
 
-**NullBlock** is a revolutionary agentic platform that democratizes AI automation. Built on Rust for performance and reliability, it enables users to create, deploy, and monetize intelligent agent workflows without complex infrastructure. Protocol-agnostic design seamlessly integrates with any system - from MCP servers to custom APIs.
-
 ### 🚧 Current Development Focus
 
 **Next 3 Priority Items:**
 
-1. **✅ A2A Task Schema & Integration** - COMPLETED: Full A2A Protocol v0.3.0 compliance with task schema, repository methods, handler population of history/artifacts, and Protocols→Agents HTTP integration
-2. **🔄 Compilation & Testing** - Fix remaining Axum router state type issues in protocols service, test end-to-end A2A task flow (create→process→retrieve via A2A endpoints)
-3. **📋 A2A Streaming (SSE)** - Implement Server-Sent Events for message/stream and tasks/resubscribe, bridge Kafka task.lifecycle events to SSE streams for real-time updates
+1.Make sure Siren / other agents do not get stuck on a default model. Should follow model selections of user. 2.**✅ A2A Task Schema & Integration** - COMPLETED: Full A2A Protocol v0.3.0 compliance with task schema, repository methods, handler population of history/artifacts, and Protocols→Agents HTTP integration 3.**🔄 Compilation & Testing** - Fix remaining Axum router state type issues in protocols service, test end-to-end A2A task flow (create→process→retrieve via A2A endpoints) 4.\*\*📋 A2A Streaming (SSE)\*\* - Implement Server-Sent Events for message/stream and tasks/resubscribe, bridge Kafka task.lifecycle events to SSE streams for real-time updates
+
+- crossroads needs to reload content after success on login.
 
 ## Architecture Overview
 
@@ -162,17 +162,20 @@ NullBlock implements [A2A Protocol v0.3.0](https://a2a-protocol.org/latest/speci
 ### Implementation Status
 
 **✅ Completed:**
+
 - Task schema aligned with A2A spec (Task, TaskStatus, TaskState, Message, Artifact, Part types)
 - Agent Card with full schema compliance
 - JSON-RPC 2.0 and REST/HTTP+JSON endpoints defined
 - All 11 protocol methods scaffolded
 
 **🔄 In Progress:**
+
 - Handler implementations (currently stubs)
 - Server-Sent Events (SSE) streaming
 - Service integration (Protocols ↔ Agents ↔ Erebus)
 
 **❌ Not Implemented:**
+
 - Push notifications (webhook system)
 - Authentication middleware (security schemes)
 - Format converters (A2A ↔ internal models)
@@ -217,6 +220,7 @@ NullBlock implements [A2A Protocol v0.3.0](https://a2a-protocol.org/latest/speci
 ### Features
 
 **Discovery & Marketplace:**
+
 - Browse agents, workflows, tools, MCP servers, datasets, models
 - Full-text search with PostgreSQL indexing
 - Advanced filtering (category, price, rating, tags)
@@ -224,18 +228,21 @@ NullBlock implements [A2A Protocol v0.3.0](https://a2a-protocol.org/latest/speci
 - Real-time health monitoring
 
 **Publishing:**
+
 - Multi-step wizard for service submission
 - Configuration schemas and validation
 - Pricing models (Free, Subscription, OneTime, PayPerUse, TokenStaking)
 - Automatic discovery integration
 
 **User Management:**
+
 - Published services dashboard
 - Deployed services monitoring
 - Analytics and earnings tracking
 - Reviews and ratings
 
 **Web3 Integration:**
+
 - OnchainKit Identity (ENS/Basename)
 - Wallet-gated features
 - On-chain payments and transactions
@@ -244,6 +251,7 @@ NullBlock implements [A2A Protocol v0.3.0](https://a2a-protocol.org/latest/speci
 ### Database Schema
 
 **Tables:**
+
 - `crossroads_listings` - Service marketplace listings
 - `crossroads_reviews` - User reviews and ratings
 - `crossroads_deployments` - Active service instances
@@ -254,6 +262,7 @@ NullBlock implements [A2A Protocol v0.3.0](https://a2a-protocol.org/latest/speci
 ### API Endpoints
 
 **Marketplace:**
+
 - `GET/POST /api/marketplace/listings` - Browse/create listings
 - `GET /api/marketplace/listings/:id` - Service details
 - `POST /api/marketplace/search` - Advanced search
@@ -261,6 +270,7 @@ NullBlock implements [A2A Protocol v0.3.0](https://a2a-protocol.org/latest/speci
 - `GET /api/marketplace/stats` - Marketplace statistics
 
 **Discovery:**
+
 - `GET /api/discovery/agents` - Auto-discover agents
 - `GET /api/discovery/workflows` - Auto-discover workflows
 - `GET /api/discovery/tools` - Auto-discover tools
@@ -269,16 +279,19 @@ NullBlock implements [A2A Protocol v0.3.0](https://a2a-protocol.org/latest/speci
 - `GET /api/discovery/health/:endpoint` - Service health check
 
 **Deployments:**
+
 - `POST /api/marketplace/listings/:id/deploy` - Deploy service
 - `GET /api/marketplace/deployments` - User deployments
 - `POST /api/marketplace/deployments/:id/start` - Start instance
 - `POST /api/marketplace/deployments/:id/stop` - Stop instance
 
 **Reviews & Social:**
+
 - `GET/POST /api/marketplace/listings/:id/reviews` - Reviews
 - `POST/DELETE /api/marketplace/listings/:id/favorite` - Favorites
 
 **Admin:**
+
 - `POST /api/admin/listings/approve/:id` - Approve listing
 - `POST /api/admin/listings/reject/:id` - Reject listing
 - `POST /api/admin/listings/feature/:id` - Feature listing
@@ -385,6 +398,7 @@ LLM_REQUEST_TIMEOUT_MS=300000
 ### Recently Completed ✅
 
 **A2A Protocol v0.3.0 Integration (Full Stack):**
+
 - ✅ Database schema with A2A fields (context_id, kind, status object, history JSONB, artifacts JSONB)
 - ✅ TaskState enum with all 9 A2A states (submitted, working, input-required, completed, canceled, failed, rejected, auth-required, unknown)
 - ✅ Message and Artifact types with Part union (Text, File, Data) in protocols service
@@ -399,6 +413,7 @@ LLM_REQUEST_TIMEOUT_MS=300000
 - ✅ **Protocols README** - Comprehensive documentation in svc/nullblock-protocols/README.md
 
 **Infrastructure:**
+
 - ✅ Source-agnostic user system with SourceType enum
 - ✅ PostgreSQL logical replication for user sync (Erebus→Agents)
 
@@ -410,40 +425,21 @@ LLM_REQUEST_TIMEOUT_MS=300000
 ### Next Up 📋
 
 **Immediate (Unblock Development):**
+
 1. **Fix Task State Alignment** - Reconcile A2A state names ("working") with internal processing states ("running", "created"). Update task handlers to accept A2A states or create state mapping layer.
 2. **Hecate Auto-Processing Flow** - Implement automatic task processing when auto_start=true. Current behavior: task transitions to "working" but Hecate doesn't execute. Need to trigger agent processing on state change.
 3. **Task Processing Endpoint** - Update `/tasks/:id/process` to accept A2A states or add state normalization before validation
 4. **Validate Artifact Population** - Once processing works, confirm Hecate adds completion artifacts with metadata (model, duration) to artifacts array
 
-**Phase 1 - Streaming & Real-time (High Priority):**
-5. Implement Server-Sent Events (SSE) for message/stream endpoint
-6. Build Kafka → SSE bridge: Subscribe to task.lifecycle topic, stream updates to A2A clients
-7. Implement tasks/resubscribe for resuming task status streams
-8. Add connection management (timeouts, keep-alive, reconnection)
+**Phase 1 - Streaming & Real-time (High Priority):** 5. Implement Server-Sent Events (SSE) for message/stream endpoint 6. Build Kafka → SSE bridge: Subscribe to task.lifecycle topic, stream updates to A2A clients 7. Implement tasks/resubscribe for resuming task status streams 8. Add connection management (timeouts, keep-alive, reconnection)
 
-**Phase 2 - Message Handling (High Priority):**
-9. Connect message/send to Agents service (create tasks from A2A messages)
-10. Implement message routing to appropriate agents based on capabilities
-11. Handle message context propagation through task lifecycle
-12. Add message validation and error responses
+**Phase 2 - Message Handling (High Priority):** 9. Connect message/send to Agents service (create tasks from A2A messages) 10. Implement message routing to appropriate agents based on capabilities 11. Handle message context propagation through task lifecycle 12. Add message validation and error responses
 
-**Phase 3 - Push Notifications (Medium Priority):**
-13. Create push_notification_configs database table (task_id, webhook_url, events, headers)
-14. Implement webhook delivery system with retry logic (exponential backoff)
-15. Add event filtering (subscribe to specific task states)
-16. Webhook authentication (HMAC signatures)
+**Phase 3 - Push Notifications (Medium Priority):** 13. Create push_notification_configs database table (task_id, webhook_url, events, headers) 14. Implement webhook delivery system with retry logic (exponential backoff) 15. Add event filtering (subscribe to specific task states) 16. Webhook authentication (HMAC signatures)
 
-**Phase 4 - Security (Medium Priority):**
-17. Implement authentication middleware (verify API keys, tokens)
-18. Add security scheme support (API Key, OAuth2, Bearer tokens)
-19. Agent Card signatures (JWS) for integrity verification
-20. Rate limiting per client
+**Phase 4 - Security (Medium Priority):** 17. Implement authentication middleware (verify API keys, tokens) 18. Add security scheme support (API Key, OAuth2, Bearer tokens) 19. Agent Card signatures (JWS) for integrity verification 20. Rate limiting per client
 
-**Phase 5 - Polish (Lower Priority):**
-21. Standardize error handling across all A2A endpoints
-22. Comprehensive A2A compliance testing suite
-23. Performance optimization (caching, connection pooling)
-24. Documentation and examples
+**Phase 5 - Polish (Lower Priority):** 21. Standardize error handling across all A2A endpoints 22. Comprehensive A2A compliance testing suite 23. Performance optimization (caching, connection pooling) 24. Documentation and examples
 
 ---
 
@@ -454,6 +450,7 @@ _NullBlock implements a cyberpunk aesthetic with neon styling and maintains imme
 ### A2A Task Schema Implementation Details
 
 **Database Changes (svc/nullblock-agents/migrations/001_create_tasks_table.sql):**
+
 - Added `context_id UUID` - Groups related tasks together
 - Added `kind VARCHAR DEFAULT 'task'` - Always "task" per A2A spec
 - Changed `status VARCHAR` to use A2A state values with CHECK constraint
@@ -463,20 +460,24 @@ _NullBlock implements a cyberpunk aesthetic with neon styling and maintains imme
 - Added `artifacts JSONB DEFAULT '[]'` - Artifact array with task outputs
 
 **Repository Methods (svc/nullblock-agents/src/database/repositories/tasks.rs):**
+
 - `add_message_to_history(task_id, message)` - Appends message to history JSONB array using PostgreSQL || operator
 - `add_artifact(task_id, artifact)` - Appends artifact to artifacts JSONB array
 - `update_status_with_message(task_id, state, message)` - Updates status with optional message and timestamp
 
 **Handler Integration (svc/nullblock-agents/src/handlers/tasks.rs):**
+
 - Task creation adds initial user message to history with task description
 - Message format: `{messageId, role: "user", parts: [{type: "text", text}], timestamp, taskId, contextId, kind: "message"}`
 
 **Agent Integration (svc/nullblock-agents/src/agents/hecate.rs:745-807):**
+
 - After task processing, adds agent response message to history with metadata (agent, model, processing_duration_ms)
 - Creates completion artifact with result text and metadata (artifact_type: "completion_result", model, duration)
 - Uses `update_status_with_message()` to set completion status with success message
 
 **Protocols Service (svc/nullblock-protocols/):**
+
 - Added reqwest HTTP client dependency for service-to-service communication
 - AppState contains http_client and agents_service_url (http://localhost:9003)
 - Task handlers proxy to Agents service: GET /api/agents/tasks/:id, GET /api/agents/tasks, POST /api/agents/tasks/:id/cancel
@@ -484,6 +485,7 @@ _NullBlock implements a cyberpunk aesthetic with neon styling and maintains imme
 - Response parsing extracts task data from `{"success": true, "data": {...}}` wrapper
 
 **Frontend Types (svc/hecate/src/types/tasks.ts):**
+
 - TaskStatus changed from string to object `{state: TaskState, message?: string, timestamp?: string}`
 - TaskState type union with 9 A2A values
 - A2AMessage interface with MessagePart union type (text | file | data)

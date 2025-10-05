@@ -7,9 +7,10 @@ Multi-protocol server supporting A2A (Agent-to-Agent) and MCP (Model Context Pro
 The Protocols service acts as a protocol gateway, exposing standardized APIs that route to internal NullBlock services. It provides:
 
 - **A2A Protocol v0.3.0** compliance for agent-to-agent communication
-- **MCP Protocol** support for model context management (planned)
+- **MCP Protocol 2025-06-18** support for model context management
 - Unified protocol abstraction layer
 - Service-to-service HTTP integration
+- JSON-RPC 2.0 endpoints for both protocols
 
 ## Architecture
 
@@ -184,23 +185,44 @@ curl -X POST http://localhost:8001/a2a/jsonrpc \
 - Axum 0.7 router with stateful handlers
 - HTTP client integration with Agents service
 - A2A task GET/LIST/CANCEL endpoints
-- JSON-RPC 2.0 request handling
+- A2A JSON-RPC 2.0 request handling
 - Agent Card endpoint
 - Health monitoring
 - CORS support
-- Authentication middleware (pass-through)
+- **MCP protocol support (Base Protocol + Server Features)**
+  - ✅ MCP JSON-RPC 2.0 endpoint
+  - ✅ Schema-compliant types (matches official TypeScript schema)
+  - ✅ Resources (agent discovery and reading)
+  - ✅ Tools (3 tools: agent messaging, task management)
+  - ✅ Prompts (2 prompts: agent chat, task templates)
+  - ✅ Lifecycle Management (initialize/initialized/ping)
+  - ✅ ContentBlock unified content types
+  - ✅ Annotations and metadata support
+- **Authentication & Authorization**
+  - ✅ OAuth 2.1-style Bearer token authentication
+  - ✅ API key authentication
+  - ✅ Service-to-service authentication
+  - ✅ Configurable auth requirements (per-protocol)
+  - ✅ Comprehensive logging
 
 ### 🔄 In Progress
 - Server-Sent Events (SSE) for streaming
 - Message handling integration
 - Push notification webhooks
+- MCP Client Features (sampling, roots)
+- MCP Authorization framework
 
-### ❌ Not Implemented
-- MCP protocol support
-- Authentication/authorization
+### ❌ Not Implemented (Optional MCP Features)
+- Pagination (cursor-based)
+- Resource subscriptions (subscribe/unsubscribe)
+- List change notifications (tools/prompts/resources)
+- Logging feature
+- Completions feature (argument autocompletion)
+- Sampling feature (client-side)
+- Roots feature (client-side)
 - Rate limiting
 - Caching layer
-- WebSocket support (if needed)
+- WebSocket transport
 
 ## Development
 
@@ -221,7 +243,12 @@ svc/nullblock-protocols/
 │   │   │   ├── jsonrpc.rs      # JSON-RPC support
 │   │   │   ├── types.rs        # A2A type definitions
 │   │   │   └── auth.rs         # Auth middleware
-│   │   └── mcp/                # MCP protocol (future)
+│   │   └── mcp/
+│   │       ├── mod.rs          # MCP module root
+│   │       ├── routes.rs       # Route definitions
+│   │       ├── handlers.rs     # Request handlers
+│   │       ├── jsonrpc.rs      # JSON-RPC support
+│   │       └── types.rs        # MCP type definitions
 │   ├── server.rs               # Server setup
 │   ├── health.rs               # Health checks
 │   ├── error.rs                # Error types
@@ -292,9 +319,183 @@ cargo build
 cargo tree | grep axum
 ```
 
+## MCP Protocol Implementation
+
+### Overview
+
+The Model Context Protocol (MCP) enables standardized communication between AI applications and context providers. All MCP messages follow the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) specification.
+
+### Specification & SDK
+
+- **Official MCP Specification**: [MCP Base Protocol 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic)
+- **Official Anthropic Rust SDK**: [modelcontextprotocol/rust-sdk](https://github.com/modelcontextprotocol/rust-sdk) - `rmcp` crate v0.8.0
+  - Available as optional dependency with `official-mcp-sdk` feature flag
+  - Core protocol implementation with tokio async runtime
+  - Procedural macros for tool generation via `rmcp-macros`
+
+### Implementation Approach
+
+NullBlock's MCP implementation uses a **custom JSON-RPC 2.0 gateway** approach rather than the official SDK:
+
+**Why Custom Implementation:**
+- Integrates seamlessly with existing Axum HTTP router
+- Provides HTTP/JSON-RPC gateway to internal services
+- Matches our A2A protocol architecture pattern
+- Allows fine-grained control over service proxying
+- No additional async runtime complexity
+
+**Official SDK Available For:**
+- Future migration if needed
+- Reference implementation for protocol compliance
+- Alternative transport mechanisms (stdio, WebSocket)
+- Native MCP server functionality
+
+The `rmcp` SDK is included as an optional dependency for future use or reference. For detailed information about the SDK and potential migration paths, see [RMCP_SDK_INTEGRATION.md](./RMCP_SDK_INTEGRATION.md).
+
+### Key Components
+
+**Required (MUST implement):**
+- **Base Protocol**: Core JSON-RPC message types (requests, responses, notifications)
+- **Lifecycle Management**: Connection initialization, capability negotiation, session control
+
+**Optional (MAY implement):**
+- **Authorization**: Authentication and authorization framework for HTTP-based transports
+- **Server Features**: Resources, prompts, and tools exposed by servers
+- **Client Features**: Sampling and root directory lists provided by clients
+- **Utilities**: Cross-cutting concerns like logging and argument completion
+
+### Endpoints
+
+**JSON-RPC 2.0:**
+- `POST /mcp/jsonrpc` - MCP JSON-RPC endpoint for all methods
+
+### Supported Methods
+
+| Method | Status | Description |
+|--------|--------|-------------|
+| `initialize` | ✅ Implemented | Initialize MCP session with capability negotiation |
+| `initialized` | ✅ Implemented | Notification that client initialization is complete |
+| `resources/list` | ✅ Implemented | List available resources (agents) |
+| `resources/read` | ✅ Implemented | Read resource content by URI |
+| `tools/list` | ✅ Implemented | List available tools |
+| `tools/call` | ✅ Implemented | Execute a tool |
+| `prompts/list` | ✅ Implemented | List available prompts |
+| `prompts/get` | ✅ Implemented | Get a prompt by name |
+| `ping` | ✅ Implemented | Health check ping |
+
+### Available Tools
+
+1. **send_agent_message** - Send a message to a NullBlock agent
+   - Parameters: `agent_name` (string), `message` (string)
+   
+2. **create_task** - Create a new task in the task system
+   - Parameters: `name` (string), `description` (string), `priority` (optional: low/medium/high/critical)
+   
+3. **get_task_status** - Get the status of a task
+   - Parameters: `task_id` (string UUID)
+
+### Available Prompts
+
+1. **agent_chat** - Chat with a NullBlock agent
+   - Arguments: `agent` (required), `context` (optional)
+   
+2. **task_template** - Create a task from a template
+   - Arguments: `type` (required: analysis/research/development)
+
+### Resources
+
+Resources are exposed as URIs in the format `agent://{agent_name}`. The MCP server automatically discovers available agents from the Agents service and exposes them as readable resources.
+
+### Example Usage
+
+**Initialize session:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "my-client",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+**List available tools:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list"
+}
+```
+
+**Call a tool:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "send_agent_message",
+    "arguments": {
+      "agent_name": "hecate",
+      "message": "Hello, how can you help me?"
+    }
+  }
+}
+```
+
+**List resources:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "resources/list"
+}
+```
+
+## Authentication & Authorization
+
+The protocols service implements a comprehensive authentication system supporting:
+
+- **OAuth 2.1-style Bearer tokens** (MCP specification compliant)
+- **API Key authentication** for trusted clients
+- **Service-to-service authentication** between NullBlock services
+
+**Configuration**:
+- `REQUIRE_AUTH` - Global auth requirement
+- `REQUIRE_MCP_AUTH` - MCP endpoint auth
+- `REQUIRE_A2A_AUTH` - A2A endpoint auth
+- `SERVICE_SECRET` - Shared secret for service-to-service calls
+- `API_KEYS` - Comma-separated API keys
+- `ENABLE_BEARER_TOKENS` - Enable OAuth-style bearer tokens
+
+**📚 See [AUTHENTICATION.md](./AUTHENTICATION.md) for complete documentation including:**
+- All authentication mechanisms
+- Configuration examples
+- Security best practices
+- Testing guide
+- Troubleshooting
+
 ## References
 
+### MCP Resources
+- [MCP Protocol Specification 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic)
+- [Official TypeScript Schema](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/schema/2025-06-18/schema.ts) - Source of truth for all types
+- [Official Anthropic Rust SDK (rmcp)](https://github.com/modelcontextprotocol/rust-sdk)
+- [rmcp crate documentation](https://docs.rs/rmcp/latest/rmcp/)
+- [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification)
+- [OAuth 2.1 Authorization](https://modelcontextprotocol.io/specification/2025-06-18/authorization)
+
+### A2A Resources
 - [A2A Protocol Specification v0.3.0](https://a2a-protocol.org/latest/specification/)
+
+### Framework & Architecture
 - [Axum Web Framework](https://docs.rs/axum/0.7/axum/)
 - [NullBlock Architecture](../../CLAUDE.md)
 

@@ -3053,12 +3053,16 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   z-index: 100;
   min-height: 60px;
   flex-shrink: 0;
+  overflow: visible;
 
   .navbarLeft {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    flex: 0 0 auto;
+    gap: 0;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: visible;
+    margin-right: auto;
     
     .menuButton {
       background: none;
@@ -3073,6 +3077,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       cursor: pointer;
       transition: all 0.3s ease;
       position: relative;
+      flex-shrink: 0;
+      white-space: nowrap;
       
       &::before {
         content: '';
@@ -3210,6 +3216,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     align-items: center;
     gap: 0.75rem;
     flex: 0 0 auto;
+    flex-shrink: 0;
+  }
+  
+  .navbarCenter {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 }
 
@@ -3263,12 +3275,13 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   letter-spacing: 0.18em;
   color: #00a8ff;
   z-index: 30;
-  padding: 0.2rem 1.1rem 0.2rem 0.7rem;
+  padding: 0.2rem 1.1rem 0.2rem 0;
   border-radius: 8px;
   box-shadow: 0 0 4px rgba(0,168,255,0.08);
   pointer-events: none;
   user-select: none;
-  margin: 0 auto;
+  margin: 0;
+  flex-shrink: 0;
 
   .irisO {
     font-size: 1.6em; /* Make the O larger */
@@ -12160,3 +12173,193 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   color: $echo-orange; // Chain
 }
 
+// ==================== Task Creation Form - New Features ====================
+
+// Sub-task row styling
+.subTaskRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+
+  input {
+    flex: 1;
+  }
+
+  select {
+    min-width: 150px;
+  }
+}
+
+.removeSubTaskBtn {
+  width: 32px;
+  height: 32px;
+  background: #ff3333;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+
+  &:hover:not(:disabled) {
+    background: #ff5555;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.addSubTaskBtn {
+  width: 100%;
+  padding: 8px;
+  background: rgba(78, 205, 196, 0.2);
+  color: #4ecdc4;
+  border: 1px dashed #4ecdc4;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 8px;
+
+  &:hover:not(:disabled) {
+    background: rgba(78, 205, 196, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Advanced configuration panel
+.advancedToggle {
+  width: 100%;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #c8c8d0;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.advancedPanel {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 12px;
+  border: 1px solid rgba(78, 205, 196, 0.2);
+}
+
+.advancedLabel {
+  display: block;
+  margin-bottom: 16px;
+  color: #c8c8d0;
+
+  input[type="range"] {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  input[type="number"] {
+    width: 100%;
+    margin-top: 4px;
+  }
+}
+
+// Display badges
+.agentBadge {
+  display: inline-block;
+  background: #45b7d1;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.modelBadge {
+  display: inline-block;
+  background: #e6c200;
+  color: #000;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+// Export button
+.exportButton {
+  background: #4ecdc4;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 12px;
+  font-size: 14px;
+
+  &:hover {
+    background: #45b7d1;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Sub-tasks display section
+.subTasksSection {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(78, 205, 196, 0.05);
+  border-radius: 8px;
+
+  h6 {
+    color: #4ecdc4;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+}
+
+.subTaskItem {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(78, 205, 196, 0.1);
+  border-left: 3px solid #4ecdc4;
+  margin-bottom: 8px;
+  border-radius: 4px;
+
+  .subTaskNumber {
+    color: #4ecdc4;
+    font-weight: bold;
+    min-width: 24px;
+  }
+
+  .subTaskDetails {
+    flex: 1;
+
+    strong {
+      color: #ffffff;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    p {
+      color: #c8c8d0;
+      margin: 4px 0;
+      font-size: 13px;
+    }
+  }
+}

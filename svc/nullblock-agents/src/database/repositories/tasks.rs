@@ -67,7 +67,7 @@ impl TaskRepository {
         .bind(now)
         .bind(started_at)
         .bind(0i16)
-        .bind(serde_json::json!([]))
+        .bind(serde_json::to_value(&request.sub_tasks.as_ref().unwrap_or(&vec![])).unwrap())
         .bind(serde_json::to_value(&request.dependencies.as_ref().unwrap_or(&vec![])).unwrap())
         .bind(serde_json::json!({}))
         .bind(serde_json::to_value(&request.parameters.as_ref().unwrap_or(&std::collections::HashMap::new())).unwrap())

@@ -101,7 +101,7 @@ pub async fn create_task(
 
     // Get user_id from wallet address
     let user_id = get_user_id_from_wallet(database, wallet_address, Some(chain)).await;
-    
+
     if let Some(wallet) = wallet_address {
         info!("🔍 Creating task for wallet: {} on chain: {}", wallet, chain);
         if user_id.is_none() {
@@ -111,21 +111,51 @@ pub async fn create_task(
         info!("📋 No wallet address provided, creating task without user association");
     }
 
-    // Get Hecate agent ID for task assignment
-    let hecate_agent_id = match agent_repo.get_by_name_and_type("hecate", "hive_mind").await {
-        Ok(Some(agent)) => Some(agent.id),
-        Ok(None) => {
-            warn!("⚠️ Hecate agent not found in database, creating task without assignment");
-            None
+    // Determine agent assignment
+    let assigned_agent_id = if let Some(agent_id_str) = &request.assigned_agent_id {
+        // User specified an agent - validate it exists
+        match agent_repo.get_by_name_and_type(agent_id_str, "").await {
+            Ok(Some(agent)) => {
+                info!("✅ User assigned task to agent: {}", agent_id_str);
+                Some(agent.id)
+            }
+            Ok(None) => {
+                warn!("⚠️ Requested agent '{}' not found, defaulting to Hecate", agent_id_str);
+                // Fall back to Hecate
+                match agent_repo.get_by_name_and_type("hecate", "hive_mind").await {
+                    Ok(Some(agent)) => Some(agent.id),
+                    _ => None
+                }
+            }
+            Err(e) => {
+                warn!("⚠️ Failed to lookup agent '{}': {}, defaulting to Hecate", agent_id_str, e);
+                // Fall back to Hecate
+                match agent_repo.get_by_name_and_type("hecate", "hive_mind").await {
+                    Ok(Some(agent)) => Some(agent.id),
+                    _ => None
+                }
+            }
         }
-        Err(e) => {
-            warn!("⚠️ Failed to lookup Hecate agent: {}, creating task without assignment", e);
-            None
+    } else {
+        // No agent specified - use Hecate as default orchestrator
+        match agent_repo.get_by_name_and_type("hecate", "hive_mind").await {
+            Ok(Some(agent)) => {
+                info!("🤖 Auto-assigned task to Hecate orchestrator");
+                Some(agent.id)
+            }
+            Ok(None) => {
+                warn!("⚠️ Hecate agent not found in database, creating task without assignment");
+                None
+            }
+            Err(e) => {
+                warn!("⚠️ Failed to lookup Hecate agent: {}, creating task without assignment", e);
+                None
+            }
         }
     };
 
     // Create task in database
-    match task_repo.create(&request, user_id, hecate_agent_id, wallet_address.map(|s| s.to_string())).await {
+    match task_repo.create(&request, user_id, assigned_agent_id, wallet_address.map(|s| s.to_string())).await {
         Ok(task_entity) => {
             // Add initial message to history with task description
             let initial_message = serde_json::json!({

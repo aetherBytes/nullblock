@@ -9,13 +9,7 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet }
   return (
     <div className={styles.landingView}>
       <div className={styles.hero}>
-        <h1>Welcome to Crossroads</h1>
-        <p className={styles.subtitle}>
-          Your gateway to autonomous agent workflows and Web3 automation
-        </p>
-        <div className={styles.stats}>
-          <span>1,234</span> Services • <span>5,678</span> Active Users • <span>$2.3M</span> Volume
-        </div>
+        {/* Hero section removed - welcome is now in navbar */}
       </div>
 
       <div className={styles.featureShowcase}>

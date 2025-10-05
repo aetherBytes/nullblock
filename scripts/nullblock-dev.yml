@@ -140,6 +140,13 @@ windows:
           done
           echo "✅ Erebus database connection ready"
           echo ""
+          echo "📨 Waiting for Kafka to be ready..."
+          while ! docker exec nullblock-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1; do
+            echo "⏳ Waiting for Kafka container to be ready..."
+            sleep 3
+          done
+          echo "✅ Kafka connection ready"
+          echo ""
           echo "🚀 Starting Erebus Rust server..."
           cargo run 2>&1 | tee logs/erebus.log
         - |
@@ -207,10 +214,10 @@ windows:
           echo "✅ Database connection ready"
           echo ""
           echo "📋 Running database migrations..."
-          psql "$DATABASE_URL" -f svc/nullblock-agents/migrations/001_create_tasks_table.sql 2>/dev/null || echo "Tasks table already exists"
-          psql "$DATABASE_URL" -f svc/nullblock-agents/migrations/002_create_agents_table.sql 2>/dev/null || echo "Agents table already exists"
-          psql "$DATABASE_URL" -f svc/nullblock-agents/migrations/003_create_user_references_table.sql 2>/dev/null || echo "User references table already exists"
-          psql "$DATABASE_URL" -f svc/nullblock-agents/migrations/004_add_foreign_key_constraints.sql 2>/dev/null || echo "Foreign key constraints already exists"
+          cat /home/sage/nullblock/svc/nullblock-agents/migrations/001_create_tasks_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 001_create_tasks_table.sql applied"
+          cat /home/sage/nullblock/svc/nullblock-agents/migrations/002_create_agents_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 002_create_agents_table.sql applied"
+          cat /home/sage/nullblock/svc/nullblock-agents/migrations/003_create_user_references_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 003_create_user_references_table.sql applied"
+          cat /home/sage/nullblock/svc/nullblock-agents/migrations/004_add_tasks_foreign_keys.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 004_add_tasks_foreign_keys.sql applied"
           echo "✅ Database schema ready"
           echo ""
           echo "📨 Waiting for Kafka to be ready..."
@@ -434,12 +441,21 @@ windows:
           echo "🦀 Starting Rust protocol service with A2A and MCP support..."
           export PORT=8001
           export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
+          echo ""
+          echo "🗄️  Waiting for Agents database to be ready..."
+          while ! docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; do
+            echo "⏳ Waiting for Agents PostgreSQL container to be ready..."
+            sleep 2
+          done
+          echo "✅ Agents database connection ready"
+          echo ""
           echo "📝 Starting protocol server with database connection..."
           echo "🔗 A2A JSON-RPC endpoint: http://localhost:8001/a2a/jsonrpc"
           echo "🌐 A2A REST endpoints: http://localhost:8001/v1/*"
           echo "📄 Agent Card: http://localhost:8001/v1/card"
           echo "📨 Messages: POST /v1/messages, /v1/messages/stream"
           echo "📋 Tasks: GET /v1/tasks, /v1/tasks/:id, POST /v1/tasks/:id/cancel"
+          echo ""
           cargo run 2>&1 | tee logs/protocols-server.log
         - |
           echo "🗄️  Protocol Service Database Integration Monitoring"
@@ -547,17 +563,8 @@ on_project_start: |
   mkdir -p svc/hecate/logs
   echo "✅ Log directories created"
   echo ""
-  echo "🗄️ Starting infrastructure services..."
-  echo "Starting PostgreSQL, Redis, Kafka, and Zookeeper containers..."
-  docker-compose up postgres-agents postgres-erebus redis kafka zookeeper -d
-  echo "⏳ Waiting for services to become healthy..."
-  sleep 15
-  echo "🔍 Checking service health..."
-  docker-compose ps | grep -E "(postgres|redis|kafka|zookeeper)" | grep -E "(healthy|Up)"
-  echo ""
-  echo "🔄 Running database migrations and syncs..."
-  echo "Applying all database schema updates and syncing data..."
-  just migrate
+  echo "🚀 Starting all infrastructure services using 'just start'..."
+  just start
   echo ""
   echo "🚀 Nullblock Development Environment Ready!"
   echo "================================================"
@@ -601,16 +608,8 @@ on_project_start: |
   echo "   🎨 frontend - React development server with wallet integration"
 
 on_project_stop: |
-  echo "Stopping development services..."
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    brew services stop postgresql@17 2>/dev/null || true
-    brew services stop redis 2>/dev/null || true
-  elif command -v systemctl &> /dev/null; then
-    systemctl --user stop postgresql 2>/dev/null || true
-    if command -v pacman &> /dev/null; then
-      systemctl --user stop redis 2>/dev/null || true
-    else
-      systemctl --user stop redis-server 2>/dev/null || true
-    fi
-  fi
+  echo "🛑 Stopping development services using 'just term'..."
+  just term
+  echo "Stopping IPFS daemon..."
   pkill -f "ipfs daemon" 2>/dev/null || true
+  echo "✅ All services stopped and cleaned up"

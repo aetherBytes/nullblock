@@ -35,6 +35,18 @@ const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet }) =
   const [currentView, setCurrentView] = useState<View>(publicKey ? 'marketplace' : 'landing');
   const [selectedService, setSelectedService] = useState<ServiceListing | null>(null);
 
+  // Watch publicKey changes - switch views on connect/disconnect
+  React.useEffect(() => {
+    if (publicKey) {
+      // Wallet connected - switch to marketplace
+      setCurrentView('marketplace');
+    } else {
+      // Wallet disconnected - reset to landing
+      setCurrentView('landing');
+      setSelectedService(null);
+    }
+  }, [publicKey]);
+
   const handleServiceClick = (service: ServiceListing) => {
     setSelectedService(service);
     setCurrentView('service-detail');

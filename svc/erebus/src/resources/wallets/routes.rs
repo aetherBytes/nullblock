@@ -22,10 +22,22 @@ use super::{PhantomWallet, MetaMaskWallet};
 use uuid::Uuid;
 
 /// Register user directly in Erebus database after successful wallet verification
-async fn register_user_in_database(wallet_address: &str, chain: &str, database: &crate::database::Database) -> Result<Uuid, String> {
-    let user_service = UserReferenceService::new(database.clone());
+async fn register_user_in_database(wallet_address: &str, chain: &str, database: &std::sync::Arc<crate::database::Database>) -> Result<Uuid, String> {
+    use tracing::{info, error};
 
-    let provider = if chain == "solana" { "phantom" } else if chain == "ethereum" { "metamask" } else { "unknown" };
+    info!("🗄️ Starting user registration for wallet: {} on chain: {}", wallet_address, chain);
+
+    let user_service = UserReferenceService::new((**database).clone());
+
+    let provider = if chain == "solana" {
+        "phantom"
+    } else if chain == "ethereum" {
+        "metamask"
+    } else {
+        "unknown"
+    };
+
+    info!("🔍 Determined provider: {} for chain: {}", provider, chain);
 
     let source_type = SourceType::Web3Wallet {
         provider: provider.to_string(),
@@ -33,15 +45,23 @@ async fn register_user_in_database(wallet_address: &str, chain: &str, database: 
         metadata: serde_json::json!({}),
     };
 
-    println!("🗄️ Registering user directly in Erebus database from wallet verification");
+    info!("📝 Creating SourceType: {:?}", source_type);
+    info!("🗄️ Calling create_or_get_user with identifier: {}, network: {}", wallet_address, chain);
 
     match user_service.create_or_get_user(wallet_address, chain, source_type, None).await {
         Ok(user_ref) => {
-            println!("✅ User registered successfully in database: {}", user_ref.id);
+            info!("✅ User registered successfully in Erebus database");
+            info!("   User ID: {}", user_ref.id);
+            info!("   Source Identifier: {}", user_ref.source_identifier);
+            info!("   Network: {}", user_ref.network);
+            info!("   Created At: {}", user_ref.created_at);
             Ok(user_ref.id)
         }
         Err(e) => {
-            println!("❌ Failed to register user in database: {}", e);
+            error!("❌ Failed to register user in Erebus database");
+            error!("   Wallet Address: {}", wallet_address);
+            error!("   Chain: {}", chain);
+            error!("   Error: {}", e);
             Err(e)
         }
     }
@@ -112,32 +132,58 @@ async fn verify_wallet_signature(
     State(app_state): State<crate::AppState>,
     Json(request): Json<WalletVerifyRequest>,
 ) -> Json<WalletVerifyResponse> {
-    let wallet_address = request.wallet_address.clone();
-    let verification_response = app_state.wallet_manager.verify_wallet_signature(request);
+    use tracing::{info, warn, error};
 
-    // If verification successful, register user via Erebus API
+    let wallet_address = request.wallet_address.clone();
+    info!("🔐 Verifying wallet signature for address: {}", wallet_address);
+
+    let mut verification_response = app_state.wallet_manager.verify_wallet_signature(request);
+
+    // If verification successful, register user via Erebus database
     if verification_response.success {
-        println!("🎯 Wallet verification successful, registering user: {}", wallet_address);
+        info!("✅ Wallet signature verification successful for: {}", wallet_address);
+        info!("🎯 Proceeding with user registration in Erebus database");
 
         // Determine chain based on wallet type
         let chain = if PhantomWallet::validate_solana_address(&wallet_address) {
+            info!("🔍 Detected Solana address format");
             "solana"
         } else if MetaMaskWallet::validate_ethereum_address(&wallet_address) {
+            info!("🔍 Detected Ethereum address format");
             "ethereum"
         } else {
+            warn!("⚠️ Unknown wallet address format: {}", wallet_address);
             "unknown"
         };
 
-        // Register user directly in database
+        // Register user directly in Erebus database
         match register_user_in_database(&wallet_address, chain, &app_state.database).await {
             Ok(user_id) => {
-                println!("✅ User registered successfully after wallet verification: {}", user_id);
+                info!("✅ User registration completed successfully");
+                info!("   User ID: {}", user_id);
+                verification_response.user_id = Some(user_id.to_string());
+                verification_response.registration_error = None;
             }
             Err(e) => {
-                println!("⚠️ Wallet verification successful but user registration failed: {}", e);
+                error!("❌ Wallet verification succeeded but user registration failed");
+                error!("   Error: {}", e);
+                verification_response.user_id = None;
+                verification_response.registration_error = Some(e.clone());
+                // Note: We still return success=true because wallet verification succeeded
+                // Frontend can check registration_error to see if there was a registration issue
+                warn!("⚠️ Wallet is verified but user not registered in database");
             }
         }
+    } else {
+        warn!("❌ Wallet signature verification failed for: {}", wallet_address);
+        verification_response.user_id = None;
+        verification_response.registration_error = None;
     }
+
+    info!("📤 Returning verification response: success={}, user_id={:?}, registration_error={:?}",
+          verification_response.success,
+          verification_response.user_id,
+          verification_response.registration_error);
 
     Json(verification_response)
 }

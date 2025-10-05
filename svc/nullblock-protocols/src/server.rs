@@ -7,6 +7,7 @@ use tracing::info;
 use crate::health::health_check;
 use crate::protocols::a2a::routes::create_a2a_routes;
 use crate::protocols::a2a::sse::KafkaSSEBridge;
+use crate::protocols::mcp::routes::create_mcp_routes;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -51,10 +52,12 @@ impl Server {
 
         let a2a_router = create_a2a_routes(state.clone());
         let v1_router = create_a2a_routes(state.clone());
+        let mcp_router = create_mcp_routes(state.clone());
 
         let app = Router::new()
             .nest("/a2a", a2a_router)
             .nest("/v1", v1_router)
+            .nest("/mcp", mcp_router)
             .route("/health", get(health_check))
             .layer(CorsLayer::permissive());
 
@@ -78,6 +81,8 @@ impl Server {
         info!("📄 Agent Card: {}/v1/card", protocols_base_url);
         info!("📨 Messages: POST {}/v1/messages, {}/v1/messages/stream", protocols_base_url, protocols_base_url);
         info!("📋 Tasks: GET {}/v1/tasks, {}/v1/tasks/:id, POST {}/v1/tasks/:id/cancel", protocols_base_url, protocols_base_url, protocols_base_url);
+        info!("🔌 MCP JSON-RPC endpoint: {}/mcp/jsonrpc", protocols_base_url);
+        info!("🧠 MCP Protocol Version: 2025-06-18", );
 
         let listener = tokio::net::TcpListener::bind(addr).await?;
         axum::serve(listener, self.app).await?;

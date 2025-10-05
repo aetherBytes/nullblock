@@ -9,15 +9,16 @@ if ! docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>
     exit 1
 fi
 
-# Run each migration file
+# Run each migration file by piping content
 for migration in svc/erebus/migrations/*.sql; do
     if [ -f "$migration" ]; then
         echo "  📄 Applying $(basename "$migration")..."
-        docker exec nullblock-postgres-erebus psql -U postgres -d erebus -f "/tmp/$(basename "$migration")" 2>/dev/null || echo "    ⚠️  Migration already applied or failed"
+        cat "$migration" | docker exec -i nullblock-postgres-erebus psql -U postgres -d erebus 2>&1 | grep -E "(ERROR|NOTICE|already exists)" || echo "    ✅ Applied successfully"
     fi
 done
 
 echo "✅ Erebus migrations completed"
+
 
 
 

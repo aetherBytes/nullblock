@@ -1,15 +1,64 @@
 # Nullblock MVP Commands
 # Run with: just <command>
 
-# Start the complete Nullblock MVP with Docker
+# Start all infrastructure services (PostgreSQL, Redis, Kafka, Zookeeper)
 start:
-    @echo "🚀 Starting Nullblock MVP..."
-    ./scripts/start-nullblock.sh start
+    @echo "🚀 Starting all NullBlock infrastructure services..."
+    @echo "Using host networking to bypass veth kernel module issues..."
+    @echo ""
+    @docker rm -f nullblock-postgres-erebus nullblock-postgres-agents nullblock-redis nullblock-zookeeper nullblock-kafka 2>/dev/null || true
+    @echo "📦 Starting PostgreSQL databases..."
+    @docker run -d --name nullblock-postgres-erebus --network=host -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS -e PGPORT=5440 postgres:15-alpine -p 5440
+    @docker run -d --name nullblock-postgres-agents --network=host -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS -e PGPORT=5441 postgres:15-alpine -p 5441
+    @echo "📦 Starting Redis..."
+    @docker run -d --name nullblock-redis --network=host redis:7-alpine redis-server --port 6379 --appendonly yes
+    @echo "📦 Starting Zookeeper..."
+    @docker run -d --name nullblock-zookeeper --network=host -e ZOOKEEPER_CLIENT_PORT=2181 -e ZOOKEEPER_TICK_TIME=2000 confluentinc/cp-zookeeper:7.4.0
+    @echo ""
+    @echo "⏳ Waiting for services to be ready..."
+    @sleep 3
+    @while ! docker exec nullblock-postgres-erebus pg_isready -U postgres > /dev/null 2>&1; do echo "  ⏳ Waiting for Erebus PostgreSQL..."; sleep 2; done
+    @echo "  ✅ Erebus PostgreSQL ready"
+    @while ! docker exec nullblock-postgres-agents pg_isready -U postgres > /dev/null 2>&1; do echo "  ⏳ Waiting for Agents PostgreSQL..."; sleep 2; done
+    @echo "  ✅ Agents PostgreSQL ready"
+    @while ! docker exec nullblock-redis redis-cli ping > /dev/null 2>&1; do echo "  ⏳ Waiting for Redis..."; sleep 2; done
+    @echo "  ✅ Redis ready"
+    @sleep 5
+    @echo "  ✅ Zookeeper ready"
+    @echo ""
+    @echo "📦 Starting Kafka (requires Zookeeper)..."
+    @docker run -d --name nullblock-kafka --network=host -e KAFKA_BROKER_ID=1 -e KAFKA_ZOOKEEPER_CONNECT=localhost:2181 -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=true confluentinc/cp-kafka:7.4.0
+    @echo "⏳ Waiting for Kafka to be ready..."
+    @sleep 15
+    @while ! docker exec nullblock-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1; do echo "  ⏳ Waiting for Kafka broker..."; sleep 3; done
+    @echo "  ✅ Kafka ready"
+    @echo ""
+    @echo "🔄 Running database migrations..."
+    @just migrate
+    @echo ""
+    @echo "✅ All infrastructure services are running!"
+    @docker ps --filter "name=nullblock" --format "table {{"{{"}}.Names}}\t{{"{{"}}.Status}}"
+    @echo ""
+    @echo "🚀 Services ready. You can now start application servers:"
+    @echo "   Erebus:    cd svc/erebus && cargo run"
+    @echo "   Agents:    cd svc/nullblock-agents && cargo run --release"
+    @echo "   Protocols: cd svc/nullblock-protocols && cargo run"
+    @echo "   Frontend:  cd svc/hecate && npm run develop"
 
-# Stop all Nullblock services
+# Terminate all services (Docker containers)
+term:
+    @echo "🛑 Terminating all NullBlock services..."
+    @echo "Stopping Docker containers..."
+    @docker stop nullblock-kafka nullblock-zookeeper nullblock-redis nullblock-postgres-agents nullblock-postgres-erebus 2>/dev/null || true
+    @echo "Removing Docker containers..."
+    @docker rm nullblock-kafka nullblock-zookeeper nullblock-redis nullblock-postgres-agents nullblock-postgres-erebus 2>/dev/null || true
+    @echo "✅ All services terminated and cleaned up"
+    @docker ps --filter "name=nullblock" --format "table {{"{{"}}.Names}}\t{{"{{"}}.Status}}"
+
+# Stop all Nullblock services (legacy - use 'term' instead)
 stop:
     @echo "🛑 Stopping Nullblock services..."
-    ./scripts/start-nullblock.sh stop
+    @just term
 
 # Kill all development services by port (cross-platform)
 kill-services:
@@ -18,7 +67,8 @@ kill-services:
 # Restart all services
 restart:
     @echo "🔄 Restarting Nullblock services..."
-    ./scripts/start-nullblock.sh restart
+    @just term
+    @just start
 
 # Build all services
 build:
@@ -242,7 +292,7 @@ docker-db-info:
 
 # Run all database migrations and syncs
 migrate:
-    @echo "🔄 Running all database migrations and syncs..."
+    @echo "🔄 Running all database migrations..."
     @echo "=============================================="
     @echo ""
     @echo "📋 Step 1: Running Erebus database migrations..."
@@ -255,26 +305,30 @@ migrate:
     @./scripts/run-agents-migrations.sh
     @echo "✅ Agents migrations completed"
     @echo ""
-    @echo "📋 Step 3: Syncing databases..."
-    @echo "Syncing user data from Erebus to Agents..."
-    @cd svc/erebus && ./scripts/manual_sync.sh
-    @echo "✅ Database sync completed"
-    @echo ""
     @echo "📊 Final status check..."
-    @echo "Erebus users:"
-    @docker exec nullblock-postgres-erebus psql -U postgres -d erebus -c "SELECT COUNT(*) as users FROM user_references WHERE is_active = true;" 2>/dev/null || echo "❌ Erebus database not accessible"
-    @echo "Agents users:"
-    @docker exec nullblock-postgres-agents psql -U postgres -d agents -c "SELECT COUNT(*) as users FROM user_references WHERE is_active = true;" 2>/dev/null || echo "❌ Agents database not accessible"
+    @echo "Erebus tables:"
+    @docker exec nullblock-postgres-erebus psql -U postgres -d erebus -c "\dt" 2>/dev/null || echo "❌ Erebus database not accessible"
     @echo ""
-    @echo "🎉 All migrations and syncs completed successfully!"
+    @echo "Agents tables:"
+    @docker exec nullblock-postgres-agents psql -U postgres -d agents -c "\dt" 2>/dev/null || echo "❌ Agents database not accessible"
+    @echo ""
+    @echo "📡 Logical replication status:"
+    @docker exec nullblock-postgres-erebus psql -U postgres -d erebus -c "SELECT pubname, puballtables FROM pg_publication WHERE pubname = 'erebus_user_sync';" 2>/dev/null || echo "⚠️  Publication not configured (run migration 002 on Erebus)"
+    @docker exec nullblock-postgres-agents psql -U postgres -d agents -c "SELECT subname, subenabled FROM pg_subscription WHERE subname = 'agents_user_sync';" 2>/dev/null || echo "ℹ️  Subscription not configured (logical replication optional for development)"
+    @echo ""
+    @echo "🎉 All migrations completed successfully!"
 
 # Show help
 help:
     @echo "Nullblock MVP Commands:"
     @echo ""
-    @echo "Docker Commands:"
-    @echo "  just start     - Start all services"
-    @echo "  just stop      - Stop all services"
+    @echo "🚀 Quick Start Commands:"
+    @echo "  just start     - Start all infrastructure services (PostgreSQL, Redis, Kafka, Zookeeper) + migrations"
+    @echo "  just term      - Terminate all services (stop and remove containers)"
+    @echo "  just migrate   - Run all database migrations"
+    @echo ""
+    @echo "📦 Docker Commands:"
+    @echo "  just stop      - Stop all services (alias for 'term')"
     @echo "  just kill-services - Kill all development services by port"
     @echo "  just restart   - Restart all services"
     @echo "  just build     - Build all services"
@@ -285,7 +339,7 @@ help:
     @echo "  just cleanup   - Clean up everything"
     @echo "  just quick     - Quick start (build + start)"
     @echo ""
-    @echo "Development Commands:"
+    @echo "🛠️  Development Commands:"
     @echo "  just dev-setup    - Complete development setup"
     @echo "  just dev-install  - Install dependencies only"
     @echo "  just dev-env      - Create environment file"
@@ -294,7 +348,6 @@ help:
     @echo "  just start-erebus - Start Erebus Rust server"
     @echo "  just build-erebus - Build Erebus Rust server"
     @echo "  just init-db      - Initialize PostgreSQL databases (local)"
-    @echo "  just migrate      - Run all database migrations and syncs"
     @echo "  just docker-db-info - Show Docker database connections"
     @echo ""
     @echo "Testing Commands:"

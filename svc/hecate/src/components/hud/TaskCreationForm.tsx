@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { TaskCreationRequest, TaskType, TaskPriority, TaskCategory } from '../../types/tasks';
+import React, { useState, useEffect } from 'react';
+import { TaskCreationRequest, TaskType, TaskPriority, TaskCategory, SubTaskRequest } from '../../types/tasks';
+import { Agent } from '../../types/agents';
+import { agentService } from '../../common/services/agent-service';
 import styles from './hud.module.scss';
 
 interface TaskCreationFormProps {
@@ -7,13 +9,15 @@ interface TaskCreationFormProps {
   isLoading: boolean;
   onCancel: () => void;
   variant?: 'default' | 'embedded' | 'fullscreen';
+  availableModels?: any[];
 }
 
 const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
   onCreateTask,
   isLoading,
   onCancel,
-  variant = 'default'
+  variant = 'default',
+  availableModels = []
 }) => {
   const [formData, setFormData] = useState<TaskCreationRequest>({
     name: '',
@@ -21,13 +25,38 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
     task_type: 'system',
     priority: 'medium',
     category: 'user_assigned',
-    auto_start: true, // Default to auto-start for better UX
+    auto_start: true,
     user_approval_required: false,
-    parameters: {},
-    dependencies: []
+    assigned_agent_id: undefined,
+    parameters: {
+      preferred_model: undefined,
+      temperature: 0.7,
+      max_tokens: 2000,
+      timeout_ms: 300000,
+    },
+    dependencies: [],
+    sub_tasks: []
   });
 
+  const [subTasks, setSubTasks] = useState<SubTaskRequest[]>([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch agents on mount
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const response = await agentService.getAgents();
+        if (response.success && response.data) {
+          setAgents(response.data.agents);
+        }
+      } catch (err) {
+        console.warn('Failed to load agents:', err);
+      }
+    };
+    fetchAgents();
+  }, []);
 
   const taskTypes: { value: TaskType; label: string }[] = [
     { value: 'system', label: 'User Generated' }
@@ -59,7 +88,11 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
     }
 
     try {
-      const success = await onCreateTask(formData);
+      const requestData = {
+        ...formData,
+        sub_tasks: subTasks.filter(st => st.name.trim() && st.description.trim())
+      };
+      const success = await onCreateTask(requestData);
       if (success) {
         onCancel();
         setFormData({
@@ -68,11 +101,19 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
           task_type: 'system',
           priority: 'medium',
           category: 'user_assigned',
-          auto_start: true, // Default to auto-start for better UX
+          auto_start: true,
           user_approval_required: false,
-          parameters: {},
-          dependencies: []
+          assigned_agent_id: undefined,
+          parameters: {
+            preferred_model: undefined,
+            temperature: 0.7,
+            max_tokens: 2000,
+            timeout_ms: 300000,
+          },
+          dependencies: [],
+          sub_tasks: []
         });
+        setSubTasks([]);
       }
     } catch (err) {
       setError((err as Error).message);
@@ -84,6 +125,27 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
       ...prev,
       [field]: value
     }));
+  };
+
+  const addSubTask = () => {
+    setSubTasks([...subTasks, { name: '', description: '', assigned_agent_id: undefined }]);
+  };
+
+  const removeSubTask = (index: number) => {
+    setSubTasks(subTasks.filter((_, i) => i !== index));
+  };
+
+  const updateSubTask = (index: number, field: keyof SubTaskRequest, value: any) => {
+    const updated = [...subTasks];
+    updated[index] = { ...updated[index], [field]: value };
+    setSubTasks(updated);
+  };
+
+  const updateParameter = (key: string, value: any) => {
+    setFormData({
+      ...formData,
+      parameters: { ...formData.parameters, [key]: value }
+    });
   };
 
   return (
@@ -138,6 +200,145 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
             rows={3}
             required
           />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="assignedAgent" className={styles.formLabel}>
+            Assigned Agent
+          </label>
+          <select
+            id="assignedAgent"
+            value={formData.assigned_agent_id || ''}
+            onChange={(e) => handleInputChange('assigned_agent_id', e.target.value || undefined)}
+            className={styles.formSelect}
+            disabled={isLoading}
+          >
+            <option value="">Auto (Hecate Orchestrator)</option>
+            {agents.map(agent => (
+              <option key={agent.name} value={agent.name}>
+                {agent.name} - {agent.capabilities?.slice(0, 2).join(', ')}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel}>Sub-tasks</label>
+          {subTasks.map((st, idx) => (
+            <div key={idx} className={styles.subTaskRow}>
+              <input
+                type="text"
+                placeholder="Sub-task name"
+                value={st.name}
+                onChange={(e) => updateSubTask(idx, 'name', e.target.value)}
+                className={styles.formInput}
+                disabled={isLoading}
+              />
+              <input
+                type="text"
+                placeholder="Description"
+                value={st.description}
+                onChange={(e) => updateSubTask(idx, 'description', e.target.value)}
+                className={styles.formInput}
+                disabled={isLoading}
+              />
+              <select
+                value={st.assigned_agent_id || ''}
+                onChange={(e) => updateSubTask(idx, 'assigned_agent_id', e.target.value || undefined)}
+                className={styles.formSelect}
+                disabled={isLoading}
+              >
+                <option value="">Auto</option>
+                {agents.map(a => <option key={a.name} value={a.name}>{a.name}</option>)}
+              </select>
+              <button
+                type="button"
+                onClick={() => removeSubTask(idx)}
+                className={styles.removeSubTaskBtn}
+                disabled={isLoading}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addSubTask}
+            className={styles.addSubTaskBtn}
+            disabled={isLoading}
+          >
+            + Add Sub-task
+          </button>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="preferredModel" className={styles.formLabel}>
+            Preferred Model
+          </label>
+          <select
+            id="preferredModel"
+            value={formData.parameters?.preferred_model || ''}
+            onChange={(e) => updateParameter('preferred_model', e.target.value || undefined)}
+            className={styles.formSelect}
+            disabled={isLoading}
+          >
+            <option value="">Use Agent Default</option>
+            {availableModels.slice(0, 10).map(model => (
+              <option key={model.name} value={model.name}>
+                {model.display_name} ({model.tier})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className={styles.formGroup}>
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className={styles.advancedToggle}
+            disabled={isLoading}
+          >
+            ⚙️ Advanced Configuration {showAdvanced ? '▼' : '▶'}
+          </button>
+
+          {showAdvanced && (
+            <div className={styles.advancedPanel}>
+              <label className={styles.advancedLabel}>
+                Temperature: {formData.parameters?.temperature?.toFixed(1)}
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={formData.parameters?.temperature || 0.7}
+                  onChange={(e) => updateParameter('temperature', parseFloat(e.target.value))}
+                  disabled={isLoading}
+                />
+              </label>
+
+              <label className={styles.advancedLabel}>
+                Max Tokens:
+                <input
+                  type="number"
+                  value={formData.parameters?.max_tokens || 2000}
+                  onChange={(e) => updateParameter('max_tokens', parseInt(e.target.value))}
+                  className={styles.formInput}
+                  disabled={isLoading}
+                />
+              </label>
+
+              <label className={styles.advancedLabel}>
+                Timeout (ms):
+                <input
+                  type="number"
+                  value={formData.parameters?.timeout_ms || 300000}
+                  onChange={(e) => updateParameter('timeout_ms', parseInt(e.target.value))}
+                  className={styles.formInput}
+                  disabled={isLoading}
+                />
+              </label>
+            </div>
+          )}
         </div>
 
         <div className={styles.formGroup}>

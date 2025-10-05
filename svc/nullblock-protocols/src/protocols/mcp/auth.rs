@@ -11,39 +11,39 @@ use crate::auth::{
     validate_api_key, validate_bearer_token, validate_service_token, AuthConfig,
 };
 
-pub async fn auth_middleware(
+pub async fn mcp_auth_middleware(
     headers: HeaderMap,
     request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
     let config = AuthConfig::default();
     
-    let require_a2a_auth = std::env::var("REQUIRE_A2A_AUTH")
+    let require_mcp_auth = std::env::var("REQUIRE_MCP_AUTH")
         .unwrap_or_else(|_| "false".to_string())
         .parse()
         .unwrap_or(false);
 
-    if !require_a2a_auth && !config.require_auth {
-        tracing::debug!("A2A auth not required, allowing request: {}", request.uri());
+    if !require_mcp_auth && !config.require_auth {
+        tracing::debug!("MCP auth not required, allowing request: {}", request.uri());
         return Ok(next.run(request).await);
     }
 
     if let Some(service_token) = extract_service_token(&headers) {
         if validate_service_token(&service_token) {
-            info!("✅ A2A: Service-to-service auth successful");
+            info!("✅ MCP: Service-to-service auth successful");
             return Ok(next.run(request).await);
         } else {
-            warn!("❌ A2A: Invalid service token");
+            warn!("❌ MCP: Invalid service token");
             return Err(StatusCode::UNAUTHORIZED);
         }
     }
 
     if let Some(api_key) = extract_api_key(&headers) {
         if validate_api_key(&api_key, &config) {
-            info!("✅ A2A: API key auth successful");
+            info!("✅ MCP: API key auth successful");
             return Ok(next.run(request).await);
         } else {
-            warn!("❌ A2A: Invalid API key");
+            warn!("❌ MCP: Invalid API key");
             return Err(StatusCode::UNAUTHORIZED);
         }
     }
@@ -52,21 +52,23 @@ pub async fn auth_middleware(
         if let Some(bearer_token) = extract_bearer_token(&headers) {
             match validate_bearer_token(&bearer_token) {
                 Ok(auth_ctx) => {
-                    info!("✅ A2A: Bearer token auth successful: {:?}", auth_ctx.identity);
+                    info!("✅ MCP: Bearer token auth successful: {:?}", auth_ctx.identity);
                     return Ok(next.run(request).await);
                 }
                 Err(e) => {
-                    warn!("❌ A2A: Invalid bearer token: {}", e);
+                    warn!("❌ MCP: Invalid bearer token: {}", e);
                     return Err(StatusCode::UNAUTHORIZED);
                 }
             }
         }
     }
 
-    if require_a2a_auth || config.require_auth {
-        warn!("❌ A2A: No valid authentication provided for: {}", request.uri());
+    if require_mcp_auth || config.require_auth {
+        warn!("❌ MCP: No valid authentication provided for: {}", request.uri());
         return Err(StatusCode::UNAUTHORIZED);
     }
 
     Ok(next.run(request).await)
 }
+
+
