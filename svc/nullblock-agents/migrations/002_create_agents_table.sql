@@ -1,7 +1,7 @@
 -- Migration: Create agents table
 -- Agents service owns full CRUD for agent registration and management
 
-CREATE TABLE agents (
+CREATE TABLE IF NOT EXISTS agents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR NOT NULL,
     agent_type VARCHAR NOT NULL, -- hecate, arbitrage, social, portfolio, etc.
@@ -31,18 +31,18 @@ CREATE TABLE agents (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_agents_agent_type ON agents(agent_type);
-CREATE INDEX idx_agents_status ON agents(status);
-CREATE INDEX idx_agents_health_status ON agents(health_status);
-CREATE INDEX idx_agents_last_health_check ON agents(last_health_check);
-CREATE INDEX idx_agents_created_at ON agents(created_at);
+CREATE INDEX IF NOT EXISTS idx_agents_agent_type ON agents(agent_type);
+CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
+CREATE INDEX IF NOT EXISTS idx_agents_health_status ON agents(health_status);
+CREATE INDEX IF NOT EXISTS idx_agents_last_health_check ON agents(last_health_check);
+CREATE INDEX IF NOT EXISTS idx_agents_created_at ON agents(created_at);
 
 -- Activity tracking indexes
-CREATE INDEX idx_agents_last_action_at ON agents(last_action_at);
-CREATE INDEX idx_agents_tasks_processed_count ON agents(tasks_processed_count);
+CREATE INDEX IF NOT EXISTS idx_agents_last_action_at ON agents(last_action_at);
+CREATE INDEX IF NOT EXISTS idx_agents_tasks_processed_count ON agents(tasks_processed_count);
 
 -- Unique constraint on name within agent_type
-CREATE UNIQUE INDEX idx_agents_name_type_unique ON agents(name, agent_type);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_agents_name_type_unique ON agents(name, agent_type);
 
 -- Enhanced update trigger with activity tracking
 CREATE OR REPLACE FUNCTION update_agent_activity()
@@ -60,5 +60,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_agents_activity ON agents;
 CREATE TRIGGER update_agents_activity BEFORE UPDATE ON agents
     FOR EACH ROW EXECUTE FUNCTION update_agent_activity();

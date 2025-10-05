@@ -370,8 +370,12 @@ OLLAMA_BASE_URL=http://localhost:11434
 VITE_EREBUS_API_URL=http://localhost:3000
 VITE_PROTOCOLS_API_URL=http://localhost:8001
 VITE_HECATE_API_URL=http://localhost:9003
+VITE_API_GATEWAY=https://randomuser.me/api
+VITE_FAST_API_BACKEND_URL=http://localhost:8000
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
+
+**⚠️ TODO**: Update all local API URL references to use environment variables consistently. Currently some services may have hardcoded URLs that need to be migrated to use the VITE_* environment variables above.
 
 ### LLM APIs
 
