@@ -5,7 +5,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE tasks (
+CREATE TABLE IF NOT EXISTS tasks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR NOT NULL,
     description TEXT,
@@ -67,23 +67,23 @@ CREATE TABLE tasks (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_tasks_user_id ON tasks(user_id);
-CREATE INDEX idx_tasks_assigned_agent_id ON tasks(assigned_agent_id);
-CREATE INDEX idx_tasks_status ON tasks(status);
-CREATE INDEX idx_tasks_context_id ON tasks(context_id);
-CREATE INDEX idx_tasks_kind ON tasks(kind);
-CREATE INDEX idx_tasks_task_type ON tasks(task_type);
-CREATE INDEX idx_tasks_category ON tasks(category);
-CREATE INDEX idx_tasks_priority ON tasks(priority);
-CREATE INDEX idx_tasks_created_at ON tasks(created_at);
-CREATE INDEX idx_tasks_updated_at ON tasks(updated_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned_agent_id ON tasks(assigned_agent_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_context_id ON tasks(context_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_kind ON tasks(kind);
+CREATE INDEX IF NOT EXISTS idx_tasks_task_type ON tasks(task_type);
+CREATE INDEX IF NOT EXISTS idx_tasks_category ON tasks(category);
+CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
+CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_updated_at ON tasks(updated_at);
 
 -- Action tracking indexes
-CREATE INDEX idx_tasks_actioned_at ON tasks(actioned_at);
-CREATE INDEX idx_tasks_action_result ON tasks(action_result) WHERE action_result IS NOT NULL;
-CREATE INDEX idx_tasks_action_duration ON tasks(action_duration);
-CREATE INDEX idx_tasks_unprocessed ON tasks(status, actioned_at) WHERE actioned_at IS NULL;
-CREATE INDEX idx_tasks_agent_actioned ON tasks(assigned_agent_id, actioned_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_actioned_at ON tasks(actioned_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_action_result ON tasks(action_result) WHERE action_result IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_tasks_action_duration ON tasks(action_duration);
+CREATE INDEX IF NOT EXISTS idx_tasks_unprocessed ON tasks(status, actioned_at) WHERE actioned_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_tasks_agent_actioned ON tasks(assigned_agent_id, actioned_at);
 
 -- Foreign key constraints moved to migration 004_add_tasks_foreign_keys.sql
 -- They will be added after all tables are created
@@ -97,5 +97,6 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_tasks_updated_at ON tasks;
 CREATE TRIGGER update_tasks_updated_at BEFORE UPDATE ON tasks
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

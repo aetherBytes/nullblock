@@ -1,10 +1,48 @@
-# **Introducing Snake Bytes: Revolutionize Your Python Projects**
+# Hecate Frontend
 
-<div align="center">
-  <img src="./branding/snakebytesblack.png" alt="Snake Bytes Logo">
-</div>
+**React-based interface for the NullBlock agent orchestration platform**
 
-Welcome to Snake Bytes, where innovation meets efficiency in python software development. Tailored for small businesses and individual entrepreneurs, our web service is not just a platform but a gateway to transforming your ideas into reality without the overhead of a full-time professional hire.
+## Overview
+
+Hecate is the primary user interface for interacting with NullBlock agents, managing tasks, and exploring the Crossroads marketplace. Built with React, TypeScript, and Vite for a modern, responsive experience.
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- Running Erebus router (port 3000)
+- Running Agents service (port 9003)
+
+### Development Setup
+
+```bash
+cd svc/hecate
+npm install
+npm run develop
+```
+
+The application will be available at `http://localhost:5173`
+
+## Environment Configuration
+
+Create a `.env` file in the `svc/hecate` directory with the following variables:
+
+```bash
+VITE_EREBUS_API_URL=http://localhost:3000
+VITE_PROTOCOLS_API_URL=http://localhost:8001
+VITE_HECATE_API_URL=http://localhost:9003
+VITE_API_GATEWAY=https://randomuser.me/api
+VITE_FAST_API_BACKEND_URL=http://localhost:8000
+```
+
+**⚠️ IMPORTANT**: All API calls must route through Erebus (port 3000). The `VITE_EREBUS_API_URL` is the primary endpoint for:
+- Task management (`/api/agents/tasks`)
+- Agent chat (`/api/agents/chat`)
+- User registration (`/api/users/register`)
+- Wallet operations (`/api/wallets/*`)
+
+**📋 TODO**: Audit and update all hardcoded API URLs in the codebase to use these environment variables consistently.
 
 ## **Why Snake Bytes?**
 

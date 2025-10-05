@@ -43,6 +43,16 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
   const [agents, setAgents] = useState<Agent[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Debug: Log button state
+  useEffect(() => {
+    console.log('🔘 Button state:', {
+      isLoading,
+      hasName: !!formData.name.trim(),
+      hasDescription: !!formData.description.trim(),
+      isDisabled: isLoading || !formData.name.trim() || !formData.description.trim()
+    });
+  }, [isLoading, formData.name, formData.description]);
+
   // Fetch agents on mount
   useEffect(() => {
     const fetchAgents = async () => {
@@ -87,13 +97,18 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
       return;
     }
 
+    console.log('📋 Submitting task creation request:', formData);
+
     try {
       const requestData = {
         ...formData,
         sub_tasks: subTasks.filter(st => st.name.trim() && st.description.trim())
       };
+      console.log('📤 Calling onCreateTask with:', requestData);
       const success = await onCreateTask(requestData);
+      console.log('📤 Task creation result:', success);
       if (success) {
+        console.log('✅ Task created successfully, closing form');
         onCancel();
         setFormData({
           name: '',
@@ -114,8 +129,12 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
           sub_tasks: []
         });
         setSubTasks([]);
+      } else {
+        console.error('❌ Task creation failed');
+        setError('Failed to create task. Please check the console for details.');
       }
     } catch (err) {
+      console.error('❌ Task creation error:', err);
       setError((err as Error).message);
     }
   };

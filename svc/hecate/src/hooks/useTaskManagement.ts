@@ -237,6 +237,7 @@ export const useTaskManagement = (
       setTasks([]);
       setActiveTask(null);
       setError(null);
+      setIsLoading(false);
       isConnectedRef.current = false;
     }
   }, [walletPublicKey]);

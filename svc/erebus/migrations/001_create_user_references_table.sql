@@ -3,7 +3,7 @@
 -- with the correct schema to support multiple source types from the start
 
 -- Create the user_references table with source-agnostic design
-CREATE TABLE user_references (
+CREATE TABLE IF NOT EXISTS user_references (
     -- Primary identification
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
@@ -29,26 +29,26 @@ CREATE TABLE user_references (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_user_references_source_identifier ON user_references(source_identifier);
-CREATE INDEX idx_user_references_network ON user_references(network);
-CREATE INDEX idx_user_references_user_type ON user_references(user_type);
-CREATE INDEX idx_user_references_email ON user_references(email);
-CREATE INDEX idx_user_references_is_active ON user_references(is_active);
-CREATE INDEX idx_user_references_created_at ON user_references(created_at);
+CREATE INDEX IF NOT EXISTS idx_user_references_source_identifier ON user_references(source_identifier);
+CREATE INDEX IF NOT EXISTS idx_user_references_network ON user_references(network);
+CREATE INDEX IF NOT EXISTS idx_user_references_user_type ON user_references(user_type);
+CREATE INDEX IF NOT EXISTS idx_user_references_email ON user_references(email);
+CREATE INDEX IF NOT EXISTS idx_user_references_is_active ON user_references(is_active);
+CREATE INDEX IF NOT EXISTS idx_user_references_created_at ON user_references(created_at);
 
 -- JSONB indexes for source_type queries
-CREATE INDEX idx_user_references_source_type_gin ON user_references USING GIN (source_type);
-CREATE INDEX idx_user_references_source_type_type ON user_references ((source_type->>'type'));
-CREATE INDEX idx_user_references_source_type_provider ON user_references ((source_type->>'provider'));
+CREATE INDEX IF NOT EXISTS idx_user_references_source_type_gin ON user_references USING GIN (source_type);
+CREATE INDEX IF NOT EXISTS idx_user_references_source_type_type ON user_references ((source_type->>'type'));
+CREATE INDEX IF NOT EXISTS idx_user_references_source_type_provider ON user_references ((source_type->>'provider'));
 
 -- JSONB indexes for metadata and preferences
-CREATE INDEX idx_user_references_metadata_gin ON user_references USING GIN (metadata);
-CREATE INDEX idx_user_references_preferences_gin ON user_references USING GIN (preferences);
+CREATE INDEX IF NOT EXISTS idx_user_references_metadata_gin ON user_references USING GIN (metadata);
+CREATE INDEX IF NOT EXISTS idx_user_references_preferences_gin ON user_references USING GIN (preferences);
 
 -- Unique constraints
-CREATE UNIQUE INDEX user_references_source_network_unique ON user_references(source_identifier, network)
+CREATE UNIQUE INDEX IF NOT EXISTS user_references_source_network_unique ON user_references(source_identifier, network)
     WHERE source_identifier IS NOT NULL AND is_active = true;
-CREATE UNIQUE INDEX user_references_email_unique ON user_references(email)
+CREATE UNIQUE INDEX IF NOT EXISTS user_references_email_unique ON user_references(email)
     WHERE email IS NOT NULL AND is_active = true;
 
 -- Add column comments for documentation
@@ -103,6 +103,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create the validation trigger
+DROP TRIGGER IF EXISTS trigger_validate_source_type_insert_update ON user_references;
 CREATE TRIGGER trigger_validate_source_type_insert_update
     BEFORE INSERT OR UPDATE ON user_references
     FOR EACH ROW EXECUTE FUNCTION trigger_validate_source_type();
@@ -116,6 +117,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create the updated_at trigger
+DROP TRIGGER IF EXISTS trigger_update_updated_at ON user_references;
 CREATE TRIGGER trigger_update_updated_at
     BEFORE UPDATE ON user_references
     FOR EACH ROW EXECUTE FUNCTION trigger_update_updated_at();
