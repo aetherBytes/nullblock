@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from '../crossroads.module.scss';
 import ServiceGrid from './ServiceGrid';
+import ServiceList from './ServiceList';
 import CommandBar from './CommandBar';
 import type { ServiceListing, FilterState, ServiceCategory } from '../types';
 
@@ -83,6 +84,7 @@ const mockServices: ServiceListing[] = [
     deployment_count: 789,
     view_count: 3400,
     favorite_count: 280,
+    is_coming_soon: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -105,6 +107,7 @@ const mockServices: ServiceListing[] = [
     deployment_count: 234,
     view_count: 1200,
     favorite_count: 90,
+    is_coming_soon: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -128,6 +131,7 @@ const mockServices: ServiceListing[] = [
     deployment_count: 1567,
     view_count: 8900,
     favorite_count: 670,
+    is_coming_soon: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -151,6 +155,7 @@ const mockServices: ServiceListing[] = [
     deployment_count: 123,
     view_count: 890,
     favorite_count: 56,
+    is_coming_soon: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -287,11 +292,20 @@ const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({ onServiceClick 
 
       {/* Main Content Area */}
       <main className={styles.marketplaceMain}>
-        <ServiceGrid
-          services={filteredServices}
-          loading={loading}
-          onServiceClick={onServiceClick}
-        />
+        {viewMode === 'grid' ? (
+          <ServiceGrid
+            services={filteredServices}
+            loading={loading}
+            viewMode={viewMode}
+            onServiceClick={onServiceClick}
+          />
+        ) : (
+          <ServiceList
+            services={filteredServices}
+            loading={loading}
+            onServiceClick={onServiceClick}
+          />
+        )}
 
         {filteredServices.length > 0 && (
           <div className={styles.pagination}>

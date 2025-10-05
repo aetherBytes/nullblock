@@ -19,8 +19,18 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
     return num.toString();
   };
 
+  const handleClick = () => {
+    if (!service.is_coming_soon) {
+      onClick?.();
+    }
+  };
+
   return (
-    <div className={styles.serviceCard} onClick={onClick}>
+    <div 
+      className={`${styles.serviceCard} ${service.is_coming_soon ? styles.comingSoon : ''}`} 
+      onClick={handleClick}
+      style={{ cursor: service.is_coming_soon ? 'not-allowed' : 'pointer' }}
+    >
       <div className={styles.cardHeader}>
         <div className={styles.headerLeft}>
           <div className={styles.serviceIcon}>
@@ -48,6 +58,12 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
         )}
       </div>
 
+      {service.is_coming_soon && (
+        <div className={styles.comingSoonOverlay}>
+          <span className={styles.comingSoonBadge}>Coming Soon</span>
+        </div>
+      )}
+      
       <div className={styles.cardBody}>
         <h3 className={styles.title}>{service.title}</h3>
         <p className={styles.description}>{service.short_description}</p>

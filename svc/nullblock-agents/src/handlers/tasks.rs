@@ -150,7 +150,7 @@ pub async fn create_task(
     };
 
     // Create task in database
-    match task_repo.create(&request, user_id, hecate_agent_id).await {
+    match task_repo.create(&request, user_id, hecate_agent_id, wallet_address.map(|s| s.to_string())).await {
         Ok(task_entity) => {
             // Add initial message to history with task description
             let initial_message = serde_json::json!({
