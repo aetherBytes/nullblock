@@ -32,49 +32,24 @@ async fn get_user_id_from_wallet(
     network: Option<&str>,
 ) -> Option<Uuid> {
     if let (Some(wallet), Some(network)) = (wallet_address, network) {
-        // Generate deterministic UUID from wallet address
-        let user_id = wallet_to_uuid(wallet, network);
         let user_repo = UserReferenceRepository::new(database.pool().clone());
 
-        // Check if user already exists
-        match user_repo.get_by_id(&user_id).await {
-            Ok(Some(_)) => {
-                // User exists, return the UUID
-                info!("✅ Found existing user for wallet: {} -> {}", wallet, user_id);
-                Some(user_id)
+        // Query user by source_identifier and network (the correct approach)
+        match user_repo.get_by_source(wallet, network).await {
+            Ok(Some(user)) => {
+                // User exists, return their UUID
+                info!("✅ Found existing user for wallet: {} -> {}", wallet, user.id);
+                Some(user.id)
             }
             Ok(None) => {
-                // User doesn't exist, create it
-                info!("🆕 Creating new user for wallet: {} -> {}", wallet, user_id);
-                let user_ref = crate::models::UserReference {
-                    id: user_id,
-                    source_identifier: wallet.to_string(),
-                    network: network.to_string(),
-                    source_type: serde_json::json!({
-                        "type": "web3_wallet",
-                        "provider": "web3",
-                        "metadata": {}
-                    }),
-                    wallet_type: Some("web3".to_string()),
-                    created_at: chrono::Utc::now(),
-                    updated_at: chrono::Utc::now(),
-                };
-                match user_repo.create(&user_ref).await {
-                    Ok(_) => {
-                        info!("✅ Successfully created user for wallet: {}", wallet);
-                        Some(user_id)
-                    }
-                    Err(e) => {
-                        error!("❌ Failed to create user for wallet {}: {}", wallet, e);
-                        // Still return the UUID since we know what it should be
-                        Some(user_id)
-                    }
-                }
+                // User doesn't exist - this shouldn't happen if Erebus registration worked
+                warn!("⚠️ No user found for wallet: {} on network: {}", wallet, network);
+                warn!("⚠️ User should be registered via Erebus /api/users/register before creating tasks");
+                None
             }
             Err(e) => {
-                error!("❌ Failed to lookup user by ID: {}", e);
-                // Return the deterministic UUID anyway - it should work for filtering
-                Some(user_id)
+                error!("❌ Failed to lookup user by source: {}", e);
+                None
             }
         }
     } else {
