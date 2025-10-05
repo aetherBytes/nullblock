@@ -33,6 +33,8 @@ pub struct WalletVerifyResponse {
     pub success: bool,
     pub session_token: Option<String>,
     pub message: String,
+    pub user_id: Option<String>,  // User UUID from registration
+    pub registration_error: Option<String>,  // Error if registration failed
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

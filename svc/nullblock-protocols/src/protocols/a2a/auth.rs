@@ -4,37 +4,69 @@ use axum::{
     middleware::Next,
     response::Response,
 };
+use tracing::{info, warn};
+
+use crate::auth::{
+    extract_bearer_token, extract_api_key, extract_service_token,
+    validate_api_key, validate_bearer_token, validate_service_token, AuthConfig,
+};
 
 pub async fn auth_middleware(
-    _headers: HeaderMap,
+    headers: HeaderMap,
     request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    // For now, just pass through all requests
-    // TODO: Implement actual authentication based on security schemes
+    let config = AuthConfig::default();
+    
+    let require_a2a_auth = std::env::var("REQUIRE_A2A_AUTH")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse()
+        .unwrap_or(false);
 
-    // Optional: Log incoming requests for debugging
-    tracing::debug!("A2A request to: {}", request.uri());
+    if !require_a2a_auth && !config.require_auth {
+        tracing::debug!("A2A auth not required, allowing request: {}", request.uri());
+        return Ok(next.run(request).await);
+    }
+
+    if let Some(service_token) = extract_service_token(&headers) {
+        if validate_service_token(&service_token) {
+            info!("✅ A2A: Service-to-service auth successful");
+            return Ok(next.run(request).await);
+        } else {
+            warn!("❌ A2A: Invalid service token");
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    }
+
+    if let Some(api_key) = extract_api_key(&headers) {
+        if validate_api_key(&api_key, &config) {
+            info!("✅ A2A: API key auth successful");
+            return Ok(next.run(request).await);
+        } else {
+            warn!("❌ A2A: Invalid API key");
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    }
+
+    if config.enable_bearer_tokens {
+        if let Some(bearer_token) = extract_bearer_token(&headers) {
+            match validate_bearer_token(&bearer_token) {
+                Ok(auth_ctx) => {
+                    info!("✅ A2A: Bearer token auth successful: {:?}", auth_ctx.identity);
+                    return Ok(next.run(request).await);
+                }
+                Err(e) => {
+                    warn!("❌ A2A: Invalid bearer token: {}", e);
+                    return Err(StatusCode::UNAUTHORIZED);
+                }
+            }
+        }
+    }
+
+    if require_a2a_auth || config.require_auth {
+        warn!("❌ A2A: No valid authentication provided for: {}", request.uri());
+        return Err(StatusCode::UNAUTHORIZED);
+    }
 
     Ok(next.run(request).await)
-}
-
-pub fn extract_bearer_token(headers: &HeaderMap) -> Option<String> {
-    headers
-        .get("authorization")
-        .and_then(|value| value.to_str().ok())
-        .and_then(|auth_header| {
-            if auth_header.starts_with("Bearer ") {
-                Some(auth_header[7..].to_string())
-            } else {
-                None
-            }
-        })
-}
-
-pub fn extract_api_key(headers: &HeaderMap, key_name: &str) -> Option<String> {
-    headers
-        .get(key_name)
-        .and_then(|value| value.to_str().ok())
-        .map(|s| s.to_string())
 }

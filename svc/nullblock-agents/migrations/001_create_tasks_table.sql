@@ -85,18 +85,8 @@ CREATE INDEX idx_tasks_action_duration ON tasks(action_duration);
 CREATE INDEX idx_tasks_unprocessed ON tasks(status, actioned_at) WHERE actioned_at IS NULL;
 CREATE INDEX idx_tasks_agent_actioned ON tasks(assigned_agent_id, actioned_at);
 
--- Foreign key constraints (will be added after other tables are created)
--- Tasks -> User References relationship
-ALTER TABLE tasks
-ADD CONSTRAINT fk_tasks_user_id
-FOREIGN KEY (user_id) REFERENCES user_references(id)
-ON DELETE SET NULL; -- If user is deleted, set task user_id to NULL but keep task
-
--- Tasks -> Agents relationship
-ALTER TABLE tasks
-ADD CONSTRAINT fk_tasks_assigned_agent_id
-FOREIGN KEY (assigned_agent_id) REFERENCES agents(id)
-ON DELETE SET NULL; -- If agent is deleted, unassign from task but keep task
+-- Foreign key constraints moved to migration 004_add_tasks_foreign_keys.sql
+-- They will be added after all tables are created
 
 -- Update trigger for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()

@@ -159,6 +159,12 @@ export interface TaskFilter {
   search_term?: string;
 }
 
+export interface SubTaskRequest {
+  name: string;
+  description: string;
+  assigned_agent_id?: string;
+}
+
 export interface TaskCreationRequest {
   name: string;
   description: string;
@@ -169,6 +175,8 @@ export interface TaskCreationRequest {
   dependencies?: string[];
   user_approval_required?: boolean;
   auto_start?: boolean;
+  assigned_agent_id?: string;
+  sub_tasks?: SubTaskRequest[];
 }
 
 export interface TaskUpdateRequest {

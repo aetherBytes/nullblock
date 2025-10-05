@@ -20,3 +20,8 @@ chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.12", features = ["json"] }
 futures = "0.3"
 rdkafka = { version = "0.36", features = ["cmake-build", "tokio"] }
+rmcp = { version = "0.8.0", features = ["server"], optional = true }
+
+[features]
+default = []
+official-mcp-sdk = ["rmcp"]

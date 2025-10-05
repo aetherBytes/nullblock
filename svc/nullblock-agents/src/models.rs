@@ -474,6 +474,13 @@ pub struct TaskOutcome {
     pub metrics: Option<HashMap<String, serde_json::Value>>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SubTaskRequest {
+    pub name: String,
+    pub description: String,
+    pub assigned_agent_id: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct CreateTaskRequest {
     pub name: String,
@@ -485,6 +492,8 @@ pub struct CreateTaskRequest {
     pub dependencies: Option<Vec<String>>,
     pub auto_start: Option<bool>,
     pub user_approval_required: Option<bool>,
+    pub assigned_agent_id: Option<String>,
+    pub sub_tasks: Option<Vec<SubTaskRequest>>,
 }
 
 #[derive(Debug, Deserialize)]

@@ -61,10 +61,12 @@ async fn call_erebus_user_registration_api(wallet_address: &str, chain: &str, so
 
     let request_body = serde_json::json!({
         "source_identifier": wallet_address,
-        "chain": chain,
+        "network": chain,  // Primary field (required by CreateUserRequest)
+        "chain": chain,    // Legacy field for backward compatibility
         "source_type": source_type.unwrap_or_else(|| serde_json::json!({
             "type": "web3_wallet",
             "provider": "unknown",
+            "network": chain,
             "metadata": {}
         })),
         "wallet_type": "unknown"
@@ -82,13 +84,19 @@ async fn call_erebus_user_registration_api(wallet_address: &str, chain: &str, so
             if response.status().is_success() {
                 match response.json::<serde_json::Value>().await {
                     Ok(json_response) => {
-                        if let Some(user_id_str) = json_response["user_id"].as_str() {
+                        info!("📥 Erebus registration response: {}", serde_json::to_string_pretty(&json_response).unwrap_or_default());
+
+                        // Try to extract user_id from response (could be at top level or nested)
+                        let user_id_str = json_response["user_id"].as_str()
+                            .or_else(|| json_response.get("user_id").and_then(|v| v.as_str()));
+
+                        if let Some(user_id_str) = user_id_str {
                             match Uuid::parse_str(user_id_str) {
                                 Ok(user_id) => Ok(user_id),
                                 Err(e) => Err(format!("Invalid UUID in response: {}", e))
                             }
                         } else {
-                            Err("No user_id in response".to_string())
+                            Err(format!("No user_id in response. Response: {}", json_response))
                         }
                     }
                     Err(e) => Err(format!("Failed to parse response JSON: {}", e))

@@ -49,26 +49,22 @@ $category-model: #ec4899;
 
 // Landing View
 .landingView {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 2rem 1.5rem;
   overflow-y: auto;
   overflow-x: hidden;
   height: 100%;
   
   @media (max-width: 768px) {
-    padding: 1rem;
+    padding: 1.5rem 1rem;
   }
 }
 
 .hero {
   text-align: center;
-  padding: 4rem 2rem;
-  margin-bottom: 3rem;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
-  border-radius: 1rem;
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  backdrop-filter: blur(4px);
+  padding: 0;
+  margin-bottom: 2rem;
   
   h1 {
     font-size: 3rem;
@@ -109,13 +105,270 @@ $category-model: #ec4899;
   }
 }
 
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 200%;
+  }
+}
+
+// Hecate Welcome Component
+.hecateWelcome {
+  margin: 0 auto;
+  max-width: 700px;
+  position: relative;
+  z-index: 1;
+  
+  .welcomeText {
+    font-size: 1.25rem;
+    line-height: 1.6;
+    color: #e2e8f0;
+    text-align: center;
+    font-weight: 300;
+    letter-spacing: 0.02em;
+    position: relative;
+    padding: 0 1.5rem;
+    min-height: 2rem;
+    
+    .cursor {
+      display: inline-block;
+      margin-left: 3px;
+      color: rgba(139, 92, 246, 0.9);
+      font-weight: 400;
+      animation: blink 1s step-end infinite;
+    }
+    
+    @media (max-width: 768px) {
+      font-size: 1rem;
+      padding: 0 1rem;
+      line-height: 1.5;
+    }
+  }
+  
+  .loadingDots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 50px;
+    
+    span {
+      font-size: 1.5rem;
+      color: rgba(139, 92, 246, 0.7);
+      animation: dotPulse 1.5s ease-in-out infinite;
+      
+      &:nth-child(1) {
+        animation-delay: 0s;
+      }
+      &:nth-child(2) {
+        animation-delay: 0.3s;
+      }
+      &:nth-child(3) {
+        animation-delay: 0.6s;
+      }
+    }
+  }
+  
+  &.compact {
+    margin: 0;
+    padding: 0 1rem;
+    max-width: 600px;
+    flex: 1 1 auto;
+    min-width: 0;
+    
+    .welcomeContainer {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      position: relative;
+    }
+    
+    .welcomeText {
+      font-size: 0.875rem;
+      padding: 0;
+      text-align: left;
+      color: #94a3b8;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      min-height: auto;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      display: block;
+      flex: 0 1 auto;
+      min-width: 0;
+      
+      @media (max-width: 1200px) {
+        font-size: 0.8125rem;
+        max-width: 400px;
+      }
+      
+      @media (max-width: 1024px) {
+        max-width: 300px;
+      }
+      
+      @media (max-width: 900px) {
+        display: none;
+      }
+    }
+    
+    .attribution {
+      font-size: 0.875rem;
+      color: rgba(139, 92, 246, 0.8);
+      font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-left: 0.25rem;
+      
+      @media (max-width: 1200px) {
+        font-size: 0.8125rem;
+      }
+      
+      @media (max-width: 900px) {
+        display: none;
+      }
+    }
+    
+    .tooltipWrapper {
+      position: static;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      z-index: 10000;
+      
+      @media (max-width: 900px) {
+        display: none;
+      }
+    }
+    
+    .expandButton {
+      background: none;
+      border: none;
+      color: rgba(139, 92, 246, 0.6);
+      cursor: pointer;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        color: rgba(139, 92, 246, 1);
+        background: rgba(139, 92, 246, 0.1);
+      }
+      
+      svg {
+        width: 14px;
+        height: 14px;
+      }
+    }
+    
+    .tooltipPortal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    
+    .tooltip {
+      position: absolute;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      min-width: 300px;
+      max-width: 500px;
+      animation: tooltipFadeIn 0.2s ease;
+      pointer-events: auto;
+      
+      &::before {
+        content: '';
+        position: absolute;
+        top: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-bottom: 6px solid rgba(30, 41, 59, 0.95);
+      }
+    }
+    
+    .tooltipContent {
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      color: #e2e8f0;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      white-space: normal;
+      word-wrap: break-word;
+    }
+    
+    .loadingDots {
+      min-height: auto;
+      justify-content: flex-start;
+      
+      span {
+        font-size: 1rem;
+      }
+    }
+    
+    .cursor {
+      font-size: 0.875rem;
+    }
+  }
+}
+
+@keyframes dotPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 .connectPrompt {
   text-align: center;
-  margin-top: 2rem;
+  margin: 3rem auto 2rem;
+  max-width: 500px;
   
   button {
     padding: 1rem 2.5rem;
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 600;
     background: linear-gradient(135deg, $crossroads-primary 0%, $crossroads-secondary 100%);
     color: white;
@@ -134,44 +387,66 @@ $category-model: #ec4899;
 .featureShowcase {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 3rem;
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 }
 
 .featureCard {
-  background: rgba(30, 41, 59, 0.35);
-  padding: 2rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(100, 116, 139, 0.3);
-  transition: all 0.3s ease;
-  backdrop-filter: blur(4px);
+  background: rgba(30, 41, 59, 0.3);
+  padding: 1.75rem 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.4), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
   
   &:hover {
     transform: translateY(-4px);
-    border-color: $crossroads-primary;
-    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
-    background: rgba(30, 41, 59, 0.5);
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 12px 32px rgba(99, 102, 241, 0.12);
+    background: rgba(30, 41, 59, 0.45);
+    
+    &::before {
+      opacity: 1;
+    }
   }
   
   .featureIcon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
+    font-size: 2rem;
+    margin-bottom: 0.875rem;
+    opacity: 0.9;
   }
   
   h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin-bottom: 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.625rem;
     color: #f1f5f9;
+    letter-spacing: -0.01em;
   }
   
   p {
     color: #94a3b8;
     line-height: 1.6;
+    font-size: 0.875rem;
   }
 }
 

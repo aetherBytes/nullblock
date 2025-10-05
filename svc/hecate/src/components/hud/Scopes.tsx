@@ -332,6 +332,69 @@ const Scopes: React.FC<ScopesProps> = ({
             </div>
           </div>
 
+          {selectedTask.assigned_agent && (
+            <div className={styles.taskDetailsSection}>
+              <h5>Agent Assignment</h5>
+              <div className={styles.taskDetailsField}>
+                <span className={styles.agentBadge}>
+                  🤖 {selectedTask.assigned_agent}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {selectedTask.parameters?.preferred_model && (
+            <div className={styles.taskDetailsSection}>
+              <h5>Model Configuration</h5>
+              <div className={styles.taskDetailsField}>
+                <label>Preferred Model:</label>
+                <span className={styles.modelBadge}>
+                  {selectedTask.parameters.preferred_model}
+                </span>
+              </div>
+              {selectedTask.parameters.temperature !== undefined && (
+                <div className={styles.taskDetailsField}>
+                  <label>Temperature:</label>
+                  <span>{selectedTask.parameters.temperature}</span>
+                </div>
+              )}
+              {selectedTask.parameters.max_tokens && (
+                <div className={styles.taskDetailsField}>
+                  <label>Max Tokens:</label>
+                  <span>{selectedTask.parameters.max_tokens}</span>
+                </div>
+              )}
+              {selectedTask.parameters.timeout_ms && (
+                <div className={styles.taskDetailsField}>
+                  <label>Timeout:</label>
+                  <span>{(selectedTask.parameters.timeout_ms / 1000).toFixed(0)}s</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {selectedTask.sub_tasks && selectedTask.sub_tasks.length > 0 && (
+            <div className={styles.subTasksSection}>
+              <h6>📝 Sub-tasks ({selectedTask.sub_tasks.length})</h6>
+              {selectedTask.sub_tasks.map((subTask: any, idx: number) => (
+                <div key={idx} className={styles.subTaskItem}>
+                  <div className={styles.subTaskNumber}>{idx + 1}.</div>
+                  <div className={styles.subTaskDetails}>
+                    <strong>{subTask.name || `Sub-task ${idx + 1}`}</strong>
+                    <p>{subTask.description || 'No description'}</p>
+                    {subTask.assigned_agent_id && (
+                      <p>
+                        <span className={styles.agentBadge}>
+                          🤖 {subTask.assigned_agent_id}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className={styles.taskDetailsSection}>
             <h5>Invocation Trail</h5>
             <div className={styles.executionTrail}>
@@ -512,6 +575,7 @@ const Scopes: React.FC<ScopesProps> = ({
                   isLoading={taskManagement.isLoading}
                   onCancel={() => setShowTaskForm(false)}
                   variant="fullscreen"
+                  availableModels={modelInfoProps.availableModels}
                 />
               </div>
             ) : (

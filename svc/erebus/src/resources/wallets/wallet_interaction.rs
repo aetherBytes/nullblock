@@ -98,6 +98,8 @@ impl WalletManager {
                     success: false,
                     session_token: None,
                     message: "Invalid or expired challenge".to_string(),
+                    user_id: None,
+                    registration_error: None,
                 };
             }
         };
@@ -108,6 +110,8 @@ impl WalletManager {
                 success: false,
                 session_token: None,
                 message: "Wallet address mismatch".to_string(),
+                user_id: None,
+                registration_error: None,
             };
         }
 
@@ -121,6 +125,8 @@ impl WalletManager {
                 success: false,
                 session_token: None,
                 message: "Unable to determine wallet type".to_string(),
+                user_id: None,
+                registration_error: None,
             };
         };
 
@@ -147,24 +153,30 @@ impl WalletManager {
                     sessions.insert(session_token.clone(), session);
                 }
 
-                println!("✅ {} wallet authenticated successfully for {}, session: {}", 
+                println!("✅ {} wallet authenticated successfully for {}, session: {}",
                          wallet_type, request.wallet_address, session_token);
 
                 WalletVerifyResponse {
                     success: true,
                     session_token: Some(session_token),
                     message: "Wallet authenticated successfully".to_string(),
+                    user_id: None,
+                    registration_error: None,
                 }
             }
             Ok(false) => WalletVerifyResponse {
                 success: false,
                 session_token: None,
                 message: "Signature verification failed".to_string(),
+                user_id: None,
+                registration_error: None,
             },
             Err(e) => WalletVerifyResponse {
                 success: false,
                 session_token: None,
                 message: format!("Verification error: {}", e),
+                user_id: None,
+                registration_error: None,
             },
         }
     }

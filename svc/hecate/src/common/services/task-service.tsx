@@ -181,12 +181,17 @@ class TaskService {
     console.log('🔗 Erebus URL:', this.erebusUrl);
 
     try {
+      // Determine provider based on chain
+      const provider = chain === 'solana' ? 'phantom' : chain === 'ethereum' ? 'metamask' : 'unknown';
+
       const requestBody = {
         source_identifier: walletAddress,
-        chain: chain,
+        network: chain,  // Primary field (required)
+        chain: chain,    // Legacy field for backward compatibility
         source_type: {
           type: "web3_wallet",
-          provider: "unknown",
+          provider: provider,
+          network: chain,
           metadata: {}
         },
         wallet_type: null

@@ -23,6 +23,7 @@ use futures::stream::Stream;
 mod database;
 mod user_references;
 mod resources;
+mod auth;
 use resources::agents::routes::{
     agent_health, hecate_chat, siren_chat, hecate_status, agent_chat, agent_status,
     hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model, hecate_model_info, hecate_search_models,

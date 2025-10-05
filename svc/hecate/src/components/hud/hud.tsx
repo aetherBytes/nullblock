@@ -7,7 +7,7 @@ import { useEventSystem } from '../../hooks/useEventSystem';
 import Crossroads from '../crossroads/Crossroads';
 import HecateChat from './HecateChat';
 import Scopes from './Scopes';
-import HecateQuote from '../crossroads/shared/HecateQuote';
+import HecateWelcome from '../crossroads/landing/HecateWelcome';
 import styles from './hud.module.scss';
 import { Task, TaskCreationRequest } from '../../types/tasks';
 
@@ -70,7 +70,6 @@ const HUD: React.FC<HUDProps> = ({
     'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate'
   >('crossroads');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [quoteRefreshTrigger, setQuoteRefreshTrigger] = useState(0);
 
   // Tab functionality state
   const [logs, setLogs] = useState<any[]>([]);
@@ -124,8 +123,6 @@ const HUD: React.FC<HUDProps> = ({
       if (publicKey) {
         try {
           console.log('Wallet connected:', publicKey);
-          // Refresh Hecate quote on login
-          setQuoteRefreshTrigger(prev => prev + 1);
         } catch (error) {
           console.error('Failed to fetch wallet data:', error);
         }
@@ -1085,6 +1082,9 @@ const HUD: React.FC<HUDProps> = ({
           CROSSROADS
         </button>
         
+        {/* Welcome message - always shown */}
+        <HecateWelcome compact={true} maxChars={80} />
+        
         {publicKey && (
           <button
             className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
@@ -1094,9 +1094,6 @@ const HUD: React.FC<HUDProps> = ({
             HECATE
           </button>
         )}
-        
-        {/* Hecate Quote - after buttons */}
-        <HecateQuote refreshTrigger={quoteRefreshTrigger} compact={true} />
       </div>
       
       {/* Center - Empty for spacer */}
