@@ -1,0 +1,308 @@
+#!/bin/bash
+
+# Nullblock Development Environment with Tmuxinator (macOS)
+# This script installs tmuxinator and launches the complete development environment on macOS
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Verify we're on macOS
+check_macos() {
+    if [[ "$OSTYPE" != "darwin"* ]]; then
+        print_error "This script is for macOS only"
+        print_status "For Linux, use: ./scripts/dev-tmux"
+        exit 1
+    fi
+    print_success "Running on macOS"
+}
+
+# Check if tmux is installed
+check_tmux() {
+    if ! command -v tmux &> /dev/null; then
+        print_error "tmux is not installed"
+        print_status "Install via: brew install tmux"
+        exit 1
+    fi
+    print_success "tmux is available"
+}
+
+# Check if Ruby is installed
+check_ruby() {
+    if ! command -v ruby &> /dev/null; then
+        print_error "Ruby is not installed"
+        print_status "Install via: brew install ruby"
+        exit 1
+    fi
+    print_success "Ruby is available"
+}
+
+# Check Docker Desktop
+check_docker() {
+    if ! command -v docker &> /dev/null; then
+        print_error "Docker is not installed"
+        print_status "Install Docker Desktop from: https://www.docker.com/products/docker-desktop"
+        exit 1
+    fi
+
+    if ! docker info &> /dev/null; then
+        print_error "Docker daemon is not running"
+        print_status "Please start Docker Desktop"
+        exit 1
+    fi
+
+    print_success "Docker Desktop is running"
+}
+
+# Check OpenRouter configuration
+check_openrouter_config() {
+    print_status "Checking OpenRouter configuration..."
+
+    if [ -z "$OPENROUTER_API_KEY" ] && [ ! -f .env.dev ]; then
+        print_warning "OpenRouter API key not found in environment or .env.dev"
+        print_status "OpenRouter provides free models for development"
+        print_status "Visit: https://openrouter.ai/ to get a free API key"
+    else
+        print_success "OpenRouter configuration ready"
+    fi
+}
+
+# Install tmuxinator
+install_tmuxinator() {
+    print_status "Installing tmuxinator..."
+
+    # Get the actual gem user installation directory
+    GEM_USER_DIR=$(gem environment | grep "USER INSTALLATION DIRECTORY" | cut -d: -f2 | xargs)
+    GEM_BIN_PATH="$GEM_USER_DIR/bin"
+
+    # Add gem bin to PATH if not already there
+    if [[ ":$PATH:" != *":$GEM_BIN_PATH"* ]]; then
+        export PATH="$GEM_BIN_PATH:$PATH"
+    fi
+
+    # Check if tmuxinator is available in the gem bin path
+    if [ -f "$GEM_BIN_PATH/tmuxinator" ] || command -v tmuxinator &> /dev/null; then
+        print_success "tmuxinator is already installed"
+        return 0
+    fi
+
+    # Try to install with gem
+    if gem install --user-install tmuxinator; then
+        print_success "tmuxinator installed successfully"
+    else
+        print_error "Failed to install tmuxinator with gem"
+        print_status "Trying with sudo..."
+        if sudo gem install tmuxinator; then
+            print_success "tmuxinator installed successfully with sudo"
+        else
+            print_error "Failed to install tmuxinator. Please install manually:"
+            echo "  gem install tmuxinator"
+            exit 1
+        fi
+    fi
+}
+
+# Link tmuxinator config to proper location (Mac-specific)
+setup_tmuxinator_config() {
+    print_status "Setting up tmuxinator configuration..."
+
+    # Create tmuxinator config directory
+    mkdir -p ~/.config/tmuxinator
+
+    # Remove existing config if it exists
+    if [ -f ~/.config/tmuxinator/nullblock-dev.yml ] || [ -L ~/.config/tmuxinator/nullblock-dev.yml ]; then
+        rm ~/.config/tmuxinator/nullblock-dev.yml
+    fi
+
+    # Use Mac-specific config
+    if [ -f "$(pwd)/scripts/nullblock-dev-mac.yml" ]; then
+        ln -s "$(pwd)/scripts/nullblock-dev-mac.yml" ~/.config/tmuxinator/nullblock-dev.yml
+        print_success "tmuxinator configuration linked (Mac config)"
+    else
+        print_error "Mac-specific tmuxinator config not found at scripts/nullblock-dev-mac.yml"
+        exit 1
+    fi
+}
+
+# Check if tmuxinator config exists
+check_config() {
+    if [ ! -f ~/.config/tmuxinator/nullblock-dev.yml ]; then
+        print_error "tmuxinator configuration not found"
+        print_status "Setting up configuration..."
+        setup_tmuxinator_config
+    fi
+}
+
+# Kill existing services (Mac-specific)
+kill_existing_services() {
+    print_status "Cleaning up existing development services..."
+
+    # Use the cross-platform kill-services script
+    if [ -f "./scripts/kill-services.sh" ]; then
+        ./scripts/kill-services.sh
+    elif command -v just &> /dev/null; then
+        just kill-services
+    else
+        print_warning "No kill script found, performing manual cleanup..."
+
+        # Stop brew-managed services
+        print_status "Stopping Homebrew-managed services..."
+        brew services stop postgresql@17 2>/dev/null || true
+        brew services stop redis 2>/dev/null || true
+
+        # Kill services on development ports
+        print_status "Killing services on development ports..."
+        lsof -ti:8001 | xargs kill -9 2>/dev/null || true  # Protocols Server
+        lsof -ti:8002 | xargs kill -9 2>/dev/null || true  # Orchestration
+        lsof -ti:9001 | xargs kill -9 2>/dev/null || true  # General Agents
+        lsof -ti:9003 | xargs kill -9 2>/dev/null || true  # Hecate Agent (Rust)
+        lsof -ti:3000 | xargs kill -9 2>/dev/null || true  # Erebus
+        lsof -ti:5173 | xargs kill -9 2>/dev/null || true  # Vite dev server
+
+        # Kill tmuxinator sessions
+        print_status "Killing tmuxinator sessions..."
+        tmux kill-session -t nullblock-dev 2>/dev/null || true
+
+        print_success "Service cleanup completed"
+    fi
+}
+
+# Launch development environment
+launch_dev() {
+    print_status "Launching Nullblock development environment..."
+
+    # Step 1: Kill existing services first
+    kill_existing_services
+
+    # Step 2: Brief pause to let services fully stop
+    print_status "Waiting for services to fully stop..."
+    sleep 3
+
+    # Step 3: Ensure tmuxinator is in PATH and launch
+    print_status "Starting tmuxinator session..."
+
+    # Get the actual gem user installation directory
+    GEM_USER_DIR=$(gem environment | grep "USER INSTALLATION DIRECTORY" | cut -d: -f2 | xargs)
+    GEM_BIN_PATH="$GEM_USER_DIR/bin"
+    export PATH="$GEM_BIN_PATH:$PATH"
+
+    # Verify tmuxinator is available
+    if ! command -v tmuxinator &> /dev/null; then
+        print_error "tmuxinator command not found even after setting PATH"
+        print_status "Expected location: $GEM_BIN_PATH/tmuxinator"
+        print_status "Current PATH: $PATH"
+        if [ -f "$GEM_BIN_PATH/tmuxinator" ]; then
+            print_status "Using full path to tmuxinator..."
+            "$GEM_BIN_PATH/tmuxinator" start nullblock-dev
+        else
+            print_error "tmuxinator binary not found. Please run: ./scripts/dev-mac install"
+            exit 1
+        fi
+    else
+        tmuxinator start nullblock-dev
+    fi
+}
+
+# Show usage
+show_usage() {
+    echo "Usage: $0 [install|launch|setup|validate|help]"
+    echo ""
+    echo "Commands:"
+    echo "  install   - Install tmuxinator and setup configuration"
+    echo "  launch    - Launch development environment (default)"
+    echo "  setup     - Setup tmuxinator configuration only"
+    echo "  validate  - Validate Mac development environment setup"
+    echo "  help      - Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0              # Launch development environment"
+    echo "  $0 install      # Install tmuxinator"
+    echo "  $0 setup        # Setup configuration"
+    echo "  $0 validate     # Validate system requirements"
+    echo ""
+    echo "macOS-Specific Features:"
+    echo "  - Docker Desktop integration (no --network=host needed)"
+    echo "  - Homebrew service management"
+    echo "  - Optimized for macOS paths and tools"
+    echo ""
+    echo "After launching, you'll have:"
+    echo "  - Infrastructure services (PostgreSQL, Redis, Kafka via Docker)"
+    echo "  - Backend services (Protocols:8001, Erebus:3000)"
+    echo "  - Agent services (Hecate Agent:9003)"
+    echo "  - Frontend development (Vite:5173 with hot reload)"
+    echo "  - LLM services (OpenRouter cloud models)"
+    echo "  - Master logs tab (unified log monitoring)"
+    echo "  - Development tools and shell"
+}
+
+# Main function
+main() {
+    # Always check for macOS first
+    check_macos
+
+    case "${1:-launch}" in
+        "install")
+            check_tmux
+            check_ruby
+            check_docker
+            install_tmuxinator
+            setup_tmuxinator_config
+            print_success "Installation complete!"
+            ;;
+        "launch")
+            check_tmux
+            check_ruby
+            check_docker
+            check_openrouter_config
+            install_tmuxinator
+            check_config
+            launch_dev
+            ;;
+        "setup")
+            setup_tmuxinator_config
+            print_success "Configuration setup complete!"
+            ;;
+        "validate")
+            if [ -f "./scripts/test-mac-setup.sh" ]; then
+                print_status "Running Mac environment validation..."
+                ./scripts/test-mac-setup.sh
+            else
+                print_error "Validation script not found at ./scripts/test-mac-setup.sh"
+                exit 1
+            fi
+            ;;
+        "help")
+            show_usage
+            ;;
+        *)
+            print_error "Unknown command: $1"
+            show_usage
+            exit 1
+            ;;
+    esac
+}
+
+# Run main function
+main "$@"
