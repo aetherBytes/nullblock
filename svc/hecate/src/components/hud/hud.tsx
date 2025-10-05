@@ -1081,19 +1081,22 @@ const HUD: React.FC<HUDProps> = ({
         >
           CROSSROADS
         </button>
-        
-        {/* Welcome message - always shown */}
-        <HecateWelcome compact={true} maxChars={80} />
-        
+
         {publicKey && (
-          <button
-            className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
-            onClick={() => setMainHudActiveTab('hecate')}
-            title="Hecate Agent Interface"
-          >
-            HECATE
-          </button>
+          <>
+            <button
+              className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
+              onClick={() => setMainHudActiveTab('hecate')}
+              title="Hecate Agent Interface"
+            >
+              HECATE
+            </button>
+            <span className={styles.separator}>|</span>
+            <HecateWelcome compact={true} maxChars={80} />
+          </>
         )}
+
+        {!publicKey && <HecateWelcome compact={true} maxChars={80} />}
       </div>
       
       {/* Center - Empty for spacer */}
