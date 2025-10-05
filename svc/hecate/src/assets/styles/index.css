@@ -1,8 +1,8 @@
 :root {
-  background-color: #242424;
+  background-color: #0a0a0a;
   color: rgba(255, 255, 255, 0.87);
 
-  color-scheme: light dark;
+  color-scheme: dark;
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -19,6 +19,8 @@
   /* max-width: 1 /px; */
   /* padding: 2rem; */
   text-align: center;
+  background-color: #0a0a0a;
+  min-height: 100vh;
 }
 
 a {
@@ -37,6 +39,7 @@ body {
   min-height: 100vh;
   min-width: 320px;
   place-items: center;
+  background-color: #0a0a0a;
 }
 
 h1 {
@@ -69,15 +72,19 @@ button:focus-visible {
   margin-top: 20px;
 }
 
+/* Force dark theme - override system preferences */
 @media (prefers-color-scheme: light) {
   :root {
-    background-color: #ffffff;
-    color: #213547;
+    background-color: #0a0a0a !important;
+    color: rgba(255, 255, 255, 0.87) !important;
+  }
+  body {
+    background-color: #0a0a0a !important;
   }
   a:hover {
-    color: #747bff;
+    color: #646cff;
   }
   button {
-    background-color: #f9f9f9;
+    background-color: #1a1a1a;
   }
 }
