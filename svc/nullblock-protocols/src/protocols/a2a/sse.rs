@@ -89,7 +89,7 @@ impl KafkaSSEBridge {
         self.tx.subscribe()
     }
 
-    pub fn subscribe_to_task(&self, task_id: String) -> broadcast::Receiver<TaskLifecycleEvent> {
+    pub fn subscribe_to_task(&self, _task_id: String) -> broadcast::Receiver<TaskLifecycleEvent> {
         let rx = self.tx.subscribe();
         rx
     }

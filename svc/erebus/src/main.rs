@@ -1,19 +1,22 @@
 use axum::{
-    extract::{Request, State},
-    response::Json,
+    extract::{Request, State, Path},
+    response::{Json, IntoResponse, Response, Sse, sse::Event},
     routing::{get, post, put, delete},
     Router,
     middleware::{self, Next},
-    http::StatusCode,
+    http::{StatusCode, Uri},
+    body::Body,
 };
 use serde::Serialize;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::convert::Infallible;
 use tokio;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{info, error, warn};
 use tracing_subscriber::{prelude::*, EnvFilter, fmt, Layer};
 use tracing_appender::{rolling, non_blocking};
+use futures::stream::Stream;
 
 
 // Import our modules
@@ -77,9 +80,69 @@ async fn root() -> Json<StatusResponse> {
         version: "0.1.0".to_string(),
         message: "💡 Erebus - Nullblock Wallet & MCP Server".to_string(),
     };
-    
+
     info!("📤 Root endpoint response: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
     Json(response)
+}
+
+async fn proxy_task_sse(
+    Path(task_id): Path<String>,
+) -> Result<Response, StatusCode> {
+    let protocols_url = std::env::var("PROTOCOLS_SERVICE_URL")
+        .unwrap_or_else(|_| "http://localhost:8001".to_string());
+
+    let url = format!("{}/a2a/tasks/{}/sse", protocols_url, task_id);
+
+    info!("🔌 Proxying SSE request to: {}", url);
+
+    let client = reqwest::Client::new();
+    match client.get(&url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                let stream = response.bytes_stream();
+                Ok((
+                    [(axum::http::header::CONTENT_TYPE, "text/event-stream")],
+                    axum::body::Body::from_stream(stream)
+                ).into_response())
+            } else {
+                error!("❌ SSE proxy failed: {}", response.status());
+                Err(StatusCode::BAD_GATEWAY)
+            }
+        }
+        Err(e) => {
+            error!("❌ SSE proxy connection failed: {}", e);
+            Err(StatusCode::SERVICE_UNAVAILABLE)
+        }
+    }
+}
+
+async fn proxy_message_sse() -> Result<Response, StatusCode> {
+    let protocols_url = std::env::var("PROTOCOLS_SERVICE_URL")
+        .unwrap_or_else(|_| "http://localhost:8001".to_string());
+
+    let url = format!("{}/a2a/messages/sse", protocols_url);
+
+    info!("🔌 Proxying message SSE request to: {}", url);
+
+    let client = reqwest::Client::new();
+    match client.get(&url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                let stream = response.bytes_stream();
+                Ok((
+                    [(axum::http::header::CONTENT_TYPE, "text/event-stream")],
+                    axum::body::Body::from_stream(stream)
+                ).into_response())
+            } else {
+                error!("❌ Message SSE proxy failed: {}", response.status());
+                Err(StatusCode::BAD_GATEWAY)
+            }
+        }
+        Err(e) => {
+            error!("❌ Message SSE proxy connection failed: {}", e);
+            Err(StatusCode::SERVICE_UNAVAILABLE)
+        }
+    }
 }
 
 /// Comprehensive logging middleware for all requests and responses
@@ -317,6 +380,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/agents/tasks/suggestions", post(get_task_suggestions))
         .route("/api/agents/tasks/:task_id/learn", post(learn_from_task))
         .route("/api/agents/tasks/:task_id/process", post(process_task))
+        // A2A SSE streaming endpoints
+        .route("/a2a/tasks/:task_id/sse", get(proxy_task_sse))
+        .route("/a2a/messages/sse", get(proxy_message_sse))
         // User management endpoints
         .route("/api/users/register", post(create_user_endpoint))
         .route("/api/users/lookup", post(lookup_user_endpoint))
