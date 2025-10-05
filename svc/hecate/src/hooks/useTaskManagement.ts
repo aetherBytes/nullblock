@@ -171,10 +171,7 @@ export const useTaskManagement = (
     reconnectInterval: 5000,
   });
 
-  // Auto-subscribe to active task SSE streams
-  // TEMPORARILY DISABLED: SSE endpoints need protocols service rebuild
-  // TODO: Re-enable after protocols service is rebuilt with SSE support
-  /*
+  // Fallback polling for active tasks (until SSE is fully working)
   useEffect(() => {
     const activeTasks = Array.isArray(tasks) ? tasks.filter(task =>
       task.status.state === 'submitted' ||
@@ -182,29 +179,24 @@ export const useTaskManagement = (
       task.status.state === 'input-required'
     ) : [];
 
-    const currentActiveIds = new Set(activeTasks.map(t => t.id));
-
-    activeTaskIdsRef.current.forEach(taskId => {
-      if (!currentActiveIds.has(taskId)) {
-        console.log(`📡 Unsubscribing from completed task: ${taskId}`);
-        sseHook.unsubscribeFromTask(taskId);
-        activeTaskIdsRef.current.delete(taskId);
-      }
-    });
-
-    activeTasks.forEach(task => {
-      if (!activeTaskIdsRef.current.has(task.id)) {
-        console.log(`📡 Subscribing to active task: ${task.id}`);
-        sseHook.subscribeToTask(task.id);
-        activeTaskIdsRef.current.add(task.id);
-      }
-    });
-
     if (activeTasks.length > 0 && isConnectedRef.current) {
-      console.log(`🔄 Monitoring ${activeTasks.length} active tasks via SSE (fallback polling disabled)`);
+      console.log(`🔄 Polling ${activeTasks.length} active tasks for real-time updates`);
+
+      const pollInterval = setInterval(async () => {
+        try {
+          console.log('🔄 Polling for task status updates...');
+          await loadTasks();
+        } catch (e) {
+          console.warn('⚠️ Failed to poll for task updates:', e);
+        }
+      }, 2000); // Poll every 2 seconds for smooth updates
+
+      return () => {
+        console.log('⏹️ Stopping task polling');
+        clearInterval(pollInterval);
+      };
     }
-  }, [tasks, sseHook]);
-  */
+  }, [tasks, loadTasks]);
 
   // Initialize connection
   useEffect(() => {
