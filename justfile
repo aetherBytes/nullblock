@@ -20,12 +20,18 @@ start-mac:
     @echo "🚀 Starting all NullBlock infrastructure services (macOS)..."
     @echo "Using port mapping for Docker Desktop compatibility..."
     @echo ""
+    @echo "📦 Creating persistent volumes..."
+    @docker volume create nullblock-postgres-erebus-data 2>/dev/null || true
+    @docker volume create nullblock-postgres-agents-data 2>/dev/null || true
+    @docker volume create nullblock-redis-data 2>/dev/null || true
+    @echo "  ✅ Volumes ready"
+    @echo ""
     @docker rm -f nullblock-postgres-erebus nullblock-postgres-agents nullblock-redis nullblock-zookeeper nullblock-kafka 2>/dev/null || true
     @echo "📦 Starting PostgreSQL databases..."
-    @docker run -d --name nullblock-postgres-erebus -p 5440:5432 -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine
-    @docker run -d --name nullblock-postgres-agents -p 5441:5432 -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine
+    @docker run -d --name nullblock-postgres-erebus -p 5440:5432 -v nullblock-postgres-erebus-data:/var/lib/postgresql/data -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine
+    @docker run -d --name nullblock-postgres-agents -p 5441:5432 -v nullblock-postgres-agents-data:/var/lib/postgresql/data -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS postgres:15-alpine
     @echo "📦 Starting Redis..."
-    @docker run -d --name nullblock-redis -p 6379:6379 redis:7-alpine redis-server --appendonly yes
+    @docker run -d --name nullblock-redis -p 6379:6379 -v nullblock-redis-data:/data redis:7-alpine redis-server --appendonly yes
     @echo "📦 Starting Zookeeper..."
     @docker run -d --name nullblock-zookeeper -p 2181:2181 -e ZOOKEEPER_CLIENT_PORT=2181 -e ZOOKEEPER_TICK_TIME=2000 confluentinc/cp-zookeeper:7.4.0
     @echo ""
@@ -64,12 +70,18 @@ start-linux:
     @echo "🚀 Starting all NullBlock infrastructure services..."
     @echo "Using host networking to bypass veth kernel module issues..."
     @echo ""
+    @echo "📦 Creating persistent volumes..."
+    @docker volume create nullblock-postgres-erebus-data 2>/dev/null || true
+    @docker volume create nullblock-postgres-agents-data 2>/dev/null || true
+    @docker volume create nullblock-redis-data 2>/dev/null || true
+    @echo "  ✅ Volumes ready"
+    @echo ""
     @docker rm -f nullblock-postgres-erebus nullblock-postgres-agents nullblock-redis nullblock-zookeeper nullblock-kafka 2>/dev/null || true
     @echo "📦 Starting PostgreSQL databases..."
-    @docker run -d --name nullblock-postgres-erebus --network=host -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS -e PGPORT=5440 postgres:15-alpine -p 5440
-    @docker run -d --name nullblock-postgres-agents --network=host -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS -e PGPORT=5441 postgres:15-alpine -p 5441
+    @docker run -d --name nullblock-postgres-erebus --network=host -v nullblock-postgres-erebus-data:/var/lib/postgresql/data -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS -e PGPORT=5440 postgres:15-alpine -p 5440
+    @docker run -d --name nullblock-postgres-agents --network=host -v nullblock-postgres-agents-data:/var/lib/postgresql/data -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=REDACTED_DB_PASS -e PGPORT=5441 postgres:15-alpine -p 5441
     @echo "📦 Starting Redis..."
-    @docker run -d --name nullblock-redis --network=host redis:7-alpine redis-server --port 6379 --appendonly yes
+    @docker run -d --name nullblock-redis --network=host -v nullblock-redis-data:/data redis:7-alpine redis-server --port 6379 --appendonly yes
     @echo "📦 Starting Zookeeper..."
     @docker run -d --name nullblock-zookeeper --network=host -e ZOOKEEPER_CLIENT_PORT=2181 -e ZOOKEEPER_TICK_TIME=2000 confluentinc/cp-zookeeper:7.4.0
     @echo ""
@@ -258,6 +270,20 @@ cleanup:
     @echo "🧹 Cleaning up..."
     ./scripts/start-nullblock.sh cleanup
 
+# Wipe database volumes and start fresh
+wipe-db:
+    @echo "⚠️  WARNING: This will DELETE ALL DATABASE DATA!"
+    @echo "⚠️  This action cannot be undone."
+    @echo ""
+    @echo "Stopping all services..."
+    @just term
+    @echo ""
+    @echo "🗑️  Removing database volumes..."
+    @docker volume rm nullblock-postgres-erebus-data nullblock-postgres-agents-data 2>/dev/null || true
+    @echo "✅ Database volumes removed"
+    @echo ""
+    @echo "💡 Run 'just start' to create fresh databases with migrations"
+
 # Setup development environment
 dev-setup:
     @echo "⚙️ Setting up development environment..."
@@ -428,6 +454,7 @@ help:
     @echo "  just status    - Check service status"
     @echo "  just health    - Run health checks"
     @echo "  just cleanup   - Clean up everything"
+    @echo "  just wipe-db   - ⚠️  DELETE all database data (fresh start)"
     @echo "  just quick     - Quick start (build + start)"
     @echo ""
     @echo "🛠️  Development Commands:"
