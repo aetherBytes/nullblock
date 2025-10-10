@@ -125,18 +125,12 @@ const HecateChat: React.FC<HecateChatProps> = ({
       <div className={styles.messageHeader}>
         <span className={styles.messageSender}>
           <span className={styles.hecateMessageSender}>
-            <div className={`${styles.nullviewChat} ${styles['chat-thinking']} ${styles.clickableNulleyeChat}`}>
-              <div className={styles.staticFieldChat}></div>
-              <div className={styles.coreNodeChat}></div>
-              <div className={styles.streamLineChat}></div>
-              <div className={styles.lightningSparkChat}></div>
-            </div>
             <span
               className={styles.clickableAgentName}
               onClick={() => handleAgentSwitch(activeAgent === 'hecate' ? 'siren' : 'hecate')}
               title={`Switch to ${activeAgent === 'hecate' ? 'Siren' : 'Hecate'} agent`}
             >
-              {activeAgent || 'Hecate'}
+              🤖 {activeAgent || 'Hecate'}
             </span>
           </span>
         </span>
@@ -164,18 +158,12 @@ const HecateChat: React.FC<HecateChatProps> = ({
         <span className={styles.messageSender}>
           {message.sender === 'hecate' || message.sender === 'siren' ? (
             <span className={message.sender === 'siren' ? styles.sirenMessageSender : styles.hecateMessageSender}>
-              <div className={`${styles.nullviewChat} ${styles[`chat-${nullviewState === 'thinking' ? 'thinking' : (message.type || 'base')}`]} ${styles.clickableNulleyeChat}`}>
-                <div className={styles.staticFieldChat}></div>
-                <div className={styles.coreNodeChat}></div>
-                <div className={styles.streamLineChat}></div>
-                <div className={styles.lightningSparkChat}></div>
-              </div>
               <span
                 className={styles.clickableAgentName}
                 onClick={() => handleAgentSwitch(message.sender)}
                 title={`Switch to ${message.sender === 'hecate' ? 'Hecate' : 'Siren'} agent`}
               >
-                {message.sender === 'hecate' ? 'Hecate' : message.sender === 'siren' ? 'Siren' : 'Agent'}
+                🤖 {message.sender === 'hecate' ? 'Hecate' : message.sender === 'siren' ? 'Siren' : 'Agent'}
               </span>
             </span>
           ) : (

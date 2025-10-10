@@ -434,6 +434,7 @@ LLM_REQUEST_TIMEOUT_MS=300000
 2. **Hecate Auto-Processing Flow** - Implement automatic task processing when auto_start=true. Current behavior: task transitions to "working" but Hecate doesn't execute. Need to trigger agent processing on state change.
 3. **Task Processing Endpoint** - Update `/tasks/:id/process` to accept A2A states or add state normalization before validation
 4. **Validate Artifact Population** - Once processing works, confirm Hecate adds completion artifacts with metadata (model, duration) to artifacts array
+5. **Fix Image Generation** - Three issues blocking image display: (1) useChat.ts parseContentForImages() removes image markdown from content string, (2) max_tokens too low (4096) for base64 images (need 16384+), (3) No error handling for truncated/timeout responses. Fix: Keep images in markdown for MarkdownRenderer, increase token limit, add validation and timeout handling
 
 **Phase 1 - Streaming & Real-time (High Priority):** 5. Implement Server-Sent Events (SSE) for message/stream endpoint 6. Build Kafka → SSE bridge: Subscribe to task.lifecycle topic, stream updates to A2A clients 7. Implement tasks/resubscribe for resuming task status streams 8. Add connection management (timeouts, keep-alive, reconnection)
 

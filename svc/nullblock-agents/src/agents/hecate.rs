@@ -271,7 +271,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
 
         // For image generation, use higher max_tokens to allow for base64 image data
         let max_tokens = if is_image_request {
-            Some(4096)  // Increased for image generation responses
+            Some(16384)  // Increased for full base64 image responses (50-200KB+)
         } else {
             Some(1200)
         };

@@ -39,64 +39,43 @@ const isImageGenerationRequest = (message: string): boolean => {
 // Helper function to parse content and extract images
 const parseContentForImages = (content: string): { content: string; images: Array<{ url: string; alt?: string; caption?: string }> } => {
   const images: Array<{ url: string; alt?: string; caption?: string }> = [];
-  let processedContent = content;
 
   // Regex patterns to detect various image formats
-  const imagePatterns = [
-    // Base64 images
-    /data:image\/([a-zA-Z]*);base64,([^"\s]+)/g,
-    // HTTP/HTTPS URLs
-    /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s]*)?/gi,
-    // Markdown image syntax
-    /!\[([^\]]*)\]\(([^)]+)\)/g,
-    // OpenAI DALL-E style URLs
-    /https:\/\/oaidalleapiprodscus\.blob\.core\.windows\.net\/[^\s]+/g,
-    // Generic image URLs
-    /https:\/\/[^\s]*\.(jpg|jpeg|png|gif|webp|svg)/gi
-  ];
+  const markdownImagePattern = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  const base64ImagePattern = /data:image\/([a-zA-Z]*);base64,([^"\s)]+)/g;
+  const urlImagePattern = /https?:\/\/[^\s)]+\.(jpg|jpeg|png|gif|webp|svg)(\?[^\s)]*)?/gi;
 
-  imagePatterns.forEach(pattern => {
-    let match;
-    while ((match = pattern.exec(content)) !== null) {
-      let url = '';
-      let alt = '';
-      let caption = '';
-
-      if (match[0].startsWith('data:')) {
-        // Base64 image
-        url = match[0];
-        alt = 'Generated image';
-      } else if (match[0].startsWith('![')) {
-        // Markdown syntax: ![alt](url)
-        alt = match[1] || 'Generated image';
-        url = match[2];
-      } else {
-        // Direct URL
-        url = match[0];
-        alt = 'Generated image';
-      }
-
-      // Extract caption from surrounding text if available
-      const beforeMatch = content.substring(0, match.index);
-      const captionMatch = beforeMatch.match(/([^.!?]*[.!?])\s*$/);
-      if (captionMatch) {
-        caption = captionMatch[1].trim();
-      }
-
-      images.push({ url, alt, caption: caption || undefined });
-    }
-  });
-
-  // Remove image URLs from text content to avoid duplication
-  if (images.length > 0) {
-    imagePatterns.forEach(pattern => {
-      processedContent = processedContent.replace(pattern, '');
-    });
-    // Clean up extra whitespace
-    processedContent = processedContent.replace(/\s+/g, ' ').trim();
+  // Extract markdown images
+  let match;
+  while ((match = markdownImagePattern.exec(content)) !== null) {
+    const alt = match[1] || 'Generated image';
+    const url = match[2];
+    images.push({ url, alt, caption: undefined });
   }
 
-  return { content: processedContent, images };
+  // Extract standalone base64 images (not in markdown)
+  const base64Matches = content.match(base64ImagePattern);
+  if (base64Matches) {
+    base64Matches.forEach(url => {
+      if (!images.some(img => img.url === url)) {
+        images.push({ url, alt: 'Generated image', caption: undefined });
+      }
+    });
+  }
+
+  // Extract standalone URL images (not in markdown)
+  const urlMatches = content.match(urlImagePattern);
+  if (urlMatches) {
+    urlMatches.forEach(url => {
+      if (!images.some(img => img.url === url)) {
+        images.push({ url, alt: 'Generated image', caption: undefined });
+      }
+    });
+  }
+
+  // IMPORTANT: Keep original content with markdown images intact for MarkdownRenderer
+  // The images array is just for metadata and fallback display
+  return { content, images };
 };
 
 export const useChat = (_publicKey: string | null) => {
@@ -216,6 +195,16 @@ export const useChat = (_publicKey: string | null) => {
 
       // Parse content to detect images
       const { content, images } = parseContentForImages(response.data.content);
+
+      // Validate image generation responses
+      if (isImageRequest) {
+        if (images.length === 0 && !content.includes('data:image')) {
+          console.warn('⚠️ Image generation request but no image found in response');
+          console.warn('⚠️ Response may have been truncated. Content length:', content.length);
+        } else if (images.length > 0) {
+          console.log(`✅ Found ${images.length} image(s) in response`);
+        }
+      }
 
       const agentMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),

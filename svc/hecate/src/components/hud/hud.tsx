@@ -8,6 +8,7 @@ import Crossroads from '../crossroads/Crossroads';
 import HecateChat from './HecateChat';
 import Scopes from './Scopes';
 import HecateWelcome from '../crossroads/landing/HecateWelcome';
+import NullblockLogo from './NullblockLogo';
 import styles from './hud.module.scss';
 import { Task, TaskCreationRequest } from '../../types/tasks';
 
@@ -67,7 +68,7 @@ const HUD: React.FC<HUDProps> = ({
     | 'idle'
   >('base');
   const [mainHudActiveTab, setMainHudActiveTab] = useState<
-    'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate'
+    'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas'
   >('crossroads');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
@@ -907,6 +908,15 @@ const HUD: React.FC<HUDProps> = ({
       switch (mainHudActiveTab) {
         case 'crossroads':
           return <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} />;
+        case 'canvas':
+          return (
+            <div className={styles.canvasView}>
+              <div className={styles.canvasEmpty}>
+                <p className={styles.canvasMessage}>Empty Canvas</p>
+                <p className={styles.canvasHint}>Click the logo to return to Hecate</p>
+              </div>
+            </div>
+          );
         default:
           return (
             <div className={styles.defaultTab}>
@@ -916,6 +926,15 @@ const HUD: React.FC<HUDProps> = ({
       }
     } else {
       switch (mainHudActiveTab) {
+        case 'canvas':
+          return (
+            <div className={styles.canvasView}>
+              <div className={styles.canvasEmpty}>
+                <p className={styles.canvasMessage}>Empty Canvas</p>
+                <p className={styles.canvasHint}>Click the logo to return to Hecate</p>
+              </div>
+            </div>
+          );
         case 'crossroads':
           return <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} />;
         case 'hecate':
@@ -1031,72 +1050,59 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderUnifiedNavigation = () => (
     <div className={styles.unifiedNavbar}>
-      {/* Left side - Brand and NullView */}
+      {/* Left side - Brand and Logo */}
       <div className={styles.navbarLeft}>
-        <div className={styles.nullblockTitle}>
-          NULLBL<span className={styles.irisO}>O</span>CK
-          <div
-            className={`${styles.nullview} ${styles[nullviewState]}`}
-            onClick={() => {
-              if (!publicKey) {
-                setNulleyeState('error');
-                setTimeout(() => setNulleyeState('base'), 1500);
-                alert(
-                  '🔒 SECURE ACCESS REQUIRED\n\nConnect your Web3 wallet to unlock the NullView interface and access advanced features.',
-                );
-                return;
-              }
+        <NullblockLogo
+          state={nullviewState}
+          theme={theme}
+          size="medium"
+          onClick={() => {
+            if (!publicKey) {
+              setNulleyeState('error');
+              setTimeout(() => setNulleyeState('base'), 1500);
+              alert(
+                '🔒 SECURE ACCESS REQUIRED\n\nConnect your Web3 wallet to unlock the NullView interface and access advanced features.',
+              );
+              return;
+            }
 
+            if (mainHudActiveTab === 'canvas') {
               setMainHudActiveTab('hecate');
               setNulleyeState('thinking');
-            }}
-            title={!publicKey ? '🔒 Connect wallet to unlock NullView' : '🔓 Access NullView Interface'}
-          >
-            <div className={styles.pulseRing}></div>
-            <div className={styles.dataStream}>
-              <div className={styles.streamLine}></div>
-              <div className={styles.streamLine}></div>
-              <div className={styles.streamLine}></div>
-            </div>
-            <div className={styles.lightningContainer}>
-              <div className={styles.lightningArc}></div>
-              <div className={styles.lightningArc}></div>
-              <div className={styles.lightningArc}></div>
-              <div className={styles.lightningArc}></div>
-              <div className={styles.lightningArc}></div>
-              <div className={styles.lightningArc}></div>
-              <div className={styles.lightningArc}></div>
-              <div className={styles.lightningArc}></div>
-            </div>
-            <div className={styles.staticField}></div>
-            <div className={styles.coreNode}></div>
-          </div>
-        </div>
-        
-        {/* Left Nav Buttons */}
-        <button
-          className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
-          onClick={() => setMainHudActiveTab('crossroads')}
-          title="Crossroads Marketplace"
-        >
-          CROSSROADS
-        </button>
+            } else {
+              setMainHudActiveTab('canvas');
+              setNulleyeState('base');
+            }
+          }}
+          title={!publicKey ? '🔒 Connect wallet to unlock NullView' : mainHudActiveTab === 'canvas' ? 'Return to Hecate' : 'View Canvas'}
+        />
 
-        {publicKey && (
-          <>
-            <button
-              className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
-              onClick={() => setMainHudActiveTab('hecate')}
-              title="Hecate Agent Interface"
-            >
-              HECATE
-            </button>
+        {/* Left Nav Buttons */}
+        <div className={styles.navButtonGroup}>
+          <button
+            className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
+            onClick={() => setMainHudActiveTab('crossroads')}
+            title="Crossroads Marketplace"
+          >
+            CROSSROADS
+          </button>
+
+          {publicKey && (
+            <>
+              <button
+                className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
+                onClick={() => setMainHudActiveTab('hecate')}
+                title="Hecate Agent Interface"
+              >
+                HECATE
+              </button>
             <span className={styles.separator}>|</span>
             <HecateWelcome compact={true} maxChars={80} />
           </>
         )}
 
         {!publicKey && <HecateWelcome compact={true} maxChars={80} />}
+        </div>
       </div>
       
       {/* Center - Empty for spacer */}
