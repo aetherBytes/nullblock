@@ -257,9 +257,9 @@ impl AgentProxy {
     pub async fn get_agent_status(&self) -> Result<AgentStatus, AgentErrorResponse> {
         let client = reqwest::Client::new();
         let url = format!("{}/hecate/model-status", self.agent_base_url);
-        
+
         info!("🔍 Checking agent status: {}", url);
-        
+
         match client
             .get(&url)
             .timeout(std::time::Duration::from_secs(10))
@@ -299,6 +299,58 @@ impl AgentProxy {
                     error: "connection_error".to_string(),
                     code: "STATUS_UNAVAILABLE".to_string(),
                     message: format!("Agent status unavailable: {}", e),
+                    agent_available: false,
+                })
+            }
+        }
+    }
+
+    /// Get Siren agent status and health
+    pub async fn get_siren_status(&self) -> Result<AgentStatus, AgentErrorResponse> {
+        let client = reqwest::Client::new();
+        let url = format!("{}/siren/model-status", self.agent_base_url);
+
+        info!("🔍 Checking Siren agent status: {}", url);
+
+        match client
+            .get(&url)
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await
+        {
+            Ok(response) => {
+                if response.status().is_success() {
+                    match response.json::<AgentStatus>().await {
+                        Ok(status) => {
+                            info!("✅ Siren agent status retrieved: {}", status.status);
+                            Ok(status)
+                        }
+                        Err(e) => {
+                            error!("❌ Failed to parse Siren agent status: {}", e);
+                            Err(AgentErrorResponse {
+                                error: "parse_error".to_string(),
+                                code: "STATUS_PARSE_ERROR".to_string(),
+                                message: format!("Failed to parse Siren status: {}", e),
+                                agent_available: true,
+                            })
+                        }
+                    }
+                } else {
+                    warn!("⚠️ Siren agent status endpoint error: {}", response.status());
+                    Err(AgentErrorResponse {
+                        error: "status_error".to_string(),
+                        code: "STATUS_HTTP_ERROR".to_string(),
+                        message: format!("Siren status endpoint error: {}", response.status()),
+                        agent_available: false,
+                    })
+                }
+            }
+            Err(e) => {
+                error!("❌ Failed to connect to Siren agent for status: {}", e);
+                Err(AgentErrorResponse {
+                    error: "connection_error".to_string(),
+                    code: "STATUS_UNAVAILABLE".to_string(),
+                    message: format!("Siren agent status unavailable: {}", e),
                     agent_available: false,
                 })
             }

@@ -146,7 +146,7 @@ pub async fn get_siren_health(
     info!("🏥 Checking Siren agent health");
 
     let marketing_agent = state.marketing_agent.read().await;
-    
+
     let health_status = if marketing_agent.running {
         "healthy"
     } else {
@@ -168,6 +168,41 @@ pub async fn get_siren_health(
     });
 
     Ok(Json(health_data))
+}
+
+pub async fn model_status(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    info!("📊 Checking Siren model status");
+
+    let marketing_agent = state.marketing_agent.read().await;
+
+    let status_data = serde_json::json!({
+        "status": if marketing_agent.running { "ready" } else { "not_started" },
+        "current_model": marketing_agent.current_model.clone(),
+        "health": {
+            "overall_status": if marketing_agent.running { "healthy" } else { "unhealthy" },
+            "llm_factory": if marketing_agent.llm_factory.is_some() { "ready" } else { "not_initialized" },
+            "default_model": marketing_agent.preferred_model.clone(),
+            "models_available": if marketing_agent.llm_factory.is_some() { 1 } else { 0 },
+            "api_providers": {
+                "openrouter": marketing_agent.llm_factory.is_some()
+            },
+            "local_providers": {
+                "ollama": false
+            },
+            "issues": []
+        },
+        "stats": {
+            "request_stats": {},
+            "cost_tracking": {},
+            "router_stats": {}
+        },
+        "conversation_length": 0,
+        "models_available": if marketing_agent.llm_factory.is_some() { 1 } else { 0 }
+    });
+
+    Ok(Json(status_data))
 }
 
 pub async fn get_content_themes(

@@ -331,9 +331,9 @@ pub async fn siren_set_model(Json(request): Json<Value>) -> Result<ResponseJson<
 /// Get Hecate agent status
 pub async fn hecate_status() -> Result<ResponseJson<AgentStatus>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📊 Hecate status request received");
-    
+
     let proxy = get_hecate_proxy();
-    
+
     match proxy.get_agent_status().await {
         Ok(status) => {
             info!("✅ Hecate status retrieved successfully");
@@ -343,14 +343,42 @@ pub async fn hecate_status() -> Result<ResponseJson<AgentStatus>, (StatusCode, R
         Err(error) => {
             error!("❌ Hecate status request failed");
             error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
-            
+
             let status_code = match error.code.as_str() {
                 "STATUS_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
                 "STATUS_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
                 "STATUS_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
-            
+
+            Err((status_code, ResponseJson(error)))
+        }
+    }
+}
+
+/// Get Siren agent status
+pub async fn siren_status() -> Result<ResponseJson<AgentStatus>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("📊 Siren status request received");
+
+    let proxy = get_siren_proxy();
+
+    match proxy.get_siren_status().await {
+        Ok(status) => {
+            info!("✅ Siren status retrieved successfully");
+            info!("📤 Status payload: {}", serde_json::to_string_pretty(&status).unwrap_or_default());
+            Ok(ResponseJson(status))
+        }
+        Err(error) => {
+            error!("❌ Siren status request failed");
+            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+
+            let status_code = match error.code.as_str() {
+                "STATUS_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
+                "STATUS_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
+                "STATUS_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+
             Err((status_code, ResponseJson(error)))
         }
     }
@@ -388,9 +416,10 @@ pub async fn agent_status(
     Path(agent_name): Path<String>
 ) -> Result<ResponseJson<AgentStatus>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📊 Generic agent status request for: {}", agent_name);
-    
+
     match agent_name.as_str() {
         "hecate" => hecate_status().await,
+        "siren" => siren_status().await,
         _ => {
             let error = AgentErrorResponse {
                 error: "agent_not_found".to_string(),
@@ -398,10 +427,10 @@ pub async fn agent_status(
                 message: format!("Agent '{}' is not supported", agent_name),
                 agent_available: false,
             };
-            
+
             warn!("⚠️ Unsupported agent status requested: {}", agent_name);
             error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
-            
+
             Err((StatusCode::NOT_FOUND, ResponseJson(error)))
         }
     }
