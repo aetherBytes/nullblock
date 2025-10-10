@@ -84,13 +84,40 @@ impl AgentProxy {
                         }
                     }
                 } else {
-                    warn!("⚠️ Agent returned error status: {}", response.status());
-                    Err(AgentErrorResponse {
-                        error: "agent_error".to_string(),
-                        code: "AGENT_HTTP_ERROR".to_string(),
-                        message: format!("Agent returned status: {}", response.status()),
-                        agent_available: true,
-                    })
+                    let status = response.status();
+                    warn!("⚠️ Agent returned error status: {}", status);
+
+                    // Try to parse the error response body to get detailed error message
+                    match response.json::<serde_json::Value>().await {
+                        Ok(error_json) => {
+                            // Extract the error message from the JSON response
+                            let error_message = error_json.get("message")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or_else(|| "Agent returned an error");
+
+                            let error_type = error_json.get("error")
+                                .and_then(|e| e.as_str())
+                                .unwrap_or("agent_error");
+
+                            info!("📤 Agent error message: {}", error_message);
+
+                            Err(AgentErrorResponse {
+                                error: error_type.to_string(),
+                                code: "AGENT_HTTP_ERROR".to_string(),
+                                message: error_message.to_string(),
+                                agent_available: true,
+                            })
+                        }
+                        Err(e) => {
+                            error!("❌ Failed to parse agent error response: {}", e);
+                            Err(AgentErrorResponse {
+                                error: "agent_error".to_string(),
+                                code: "AGENT_HTTP_ERROR".to_string(),
+                                message: format!("Agent returned status: {}", status),
+                                agent_available: true,
+                            })
+                        }
+                    }
                 }
             }
             Err(e) => {
@@ -158,13 +185,40 @@ impl AgentProxy {
                         }
                     }
                 } else {
-                    warn!("⚠️ Marketing agent returned error status: {}", response.status());
-                    Err(AgentErrorResponse {
-                        error: "agent_error".to_string(),
-                        code: "AGENT_HTTP_ERROR".to_string(),
-                        message: format!("Marketing agent returned status: {}", response.status()),
-                        agent_available: true,
-                    })
+                    let status = response.status();
+                    warn!("⚠️ Marketing agent returned error status: {}", status);
+
+                    // Try to parse the error response body to get detailed error message
+                    match response.json::<serde_json::Value>().await {
+                        Ok(error_json) => {
+                            // Extract the error message from the JSON response
+                            let error_message = error_json.get("message")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or_else(|| "Marketing agent returned an error");
+
+                            let error_type = error_json.get("error")
+                                .and_then(|e| e.as_str())
+                                .unwrap_or("agent_error");
+
+                            info!("📤 Marketing agent error message: {}", error_message);
+
+                            Err(AgentErrorResponse {
+                                error: error_type.to_string(),
+                                code: "AGENT_HTTP_ERROR".to_string(),
+                                message: error_message.to_string(),
+                                agent_available: true,
+                            })
+                        }
+                        Err(e) => {
+                            error!("❌ Failed to parse marketing agent error response: {}", e);
+                            Err(AgentErrorResponse {
+                                error: "agent_error".to_string(),
+                                code: "AGENT_HTTP_ERROR".to_string(),
+                                message: format!("Marketing agent returned status: {}", status),
+                                agent_available: true,
+                            })
+                        }
+                    }
                 }
             }
             Err(e) => {

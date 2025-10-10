@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 
-export const useModelManagement = (publicKey: string | null) => {
+export const useModelManagement = (publicKey: string | null, activeAgent: 'hecate' | 'siren' = 'hecate') => {
   const [availableModels, setAvailableModels] = useState<any[]>([]);
-  const [currentSelectedModel, setCurrentSelectedModel] = useState<string | null>(null);
+  const [hecateModel, setHecateModel] = useState<string | null>(null);
+  const [sirenModel, setSirenModel] = useState<string | null>(null);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [defaultModelReady, setDefaultModelReady] = useState(false);
   const [defaultModelLoaded, setDefaultModelLoaded] = useState(false);
@@ -14,6 +15,10 @@ export const useModelManagement = (publicKey: string | null) => {
 
   const isLoadingModelsRef = useRef(false);
   const defaultModelLoadingRef = useRef(false);
+
+  // Computed property for current selected model based on active agent
+  const currentSelectedModel = activeAgent === 'hecate' ? hecateModel : sirenModel;
+  const setCurrentSelectedModel = activeAgent === 'hecate' ? setHecateModel : setSirenModel;
 
   const loadDefaultModel = async () => {
     if (defaultModelReady || !publicKey || defaultModelLoadingRef.current) {
@@ -152,34 +157,73 @@ export const useModelManagement = (publicKey: string | null) => {
     try {
       setIsModelChanging(true);
 
-      console.log(`=== MODEL SWITCH START: ${currentSelectedModel} -> ${modelName} ===`);
+      console.log(`=== MODEL SWITCH START (${activeAgent}): ${currentSelectedModel} -> ${modelName} ===`);
 
-      const { hecateAgent } = await import('../common/services/hecate-agent');
+      const { agentService } = await import('../common/services/agent-service');
 
-      const connected = await hecateAgent.connect();
+      const connected = await agentService.connect();
       if (!connected) {
-        throw new Error('Failed to connect to Hecate agent');
+        throw new Error(`Failed to connect to ${activeAgent} agent`);
       }
 
-      console.log(`Loading new model: ${modelName}`);
+      console.log(`Loading new model for ${activeAgent}: ${modelName}`);
 
-      const success = await hecateAgent.setModel(modelName);
+      const response = await agentService.setAgentModel(activeAgent, modelName);
 
-      if (!success) {
+      if (!response.success) {
         throw new Error(`Failed to switch to model: ${modelName}`);
       }
 
-      console.log(`Successfully switched to model: ${modelName}`);
+      console.log(`Successfully switched ${activeAgent} to model: ${modelName}`);
       console.log(`=== MODEL SWITCH COMPLETE ===`);
 
       setCurrentSelectedModel(modelName);
 
     } catch (error) {
-      console.error('Error setting model:', error);
+      console.error(`Error setting model for ${activeAgent}:`, error);
     } finally {
       setIsModelChanging(false);
     }
   };
+
+  // Effect to sync model state when active agent changes
+  useEffect(() => {
+    const syncAgentModel = async () => {
+      if (!publicKey) return;
+
+      try {
+        console.log(`🔄 Active agent changed to ${activeAgent}, syncing model state...`);
+
+        const { agentService } = await import('../common/services/agent-service');
+        const connected = await agentService.connect();
+
+        if (!connected) {
+          console.warn(`Failed to connect to get ${activeAgent} model status`);
+          return;
+        }
+
+        // Query the agent's health endpoint to get current model
+        const response = await agentService.getAgentHealth(activeAgent);
+
+        if (response.success && response.data?.current_model) {
+          console.log(`✅ ${activeAgent} current model: ${response.data.current_model}`);
+
+          // Update the appropriate model state
+          if (activeAgent === 'hecate') {
+            setHecateModel(response.data.current_model);
+          } else {
+            setSirenModel(response.data.current_model);
+          }
+        } else {
+          console.log(`ℹ️ ${activeAgent} has no current model set yet`);
+        }
+      } catch (error) {
+        console.error(`Error syncing ${activeAgent} model:`, error);
+      }
+    };
+
+    syncAgentModel();
+  }, [activeAgent, publicKey]);
 
   return {
     availableModels,

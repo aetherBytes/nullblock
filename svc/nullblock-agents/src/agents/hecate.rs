@@ -725,23 +725,56 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         system_msg.insert("content".to_string(), base_system_prompt.clone());
         messages.push(system_msg);
 
-        // Add conversation history with images stripped
+        // Add conversation history with images replaced by lightweight references
         let history = self.conversation_history.read().await;
         for msg in history.iter() {
             if msg.role != "system" {
-                // Strip any image data from the content
-                let content_without_images = get_image_data_regex()
-                    .replace_all(&msg.content, "[Image generated]")
-                    .to_string();
-                
+                // Replace base64 image data with lightweight references that preserve context
+                let content_with_refs = if msg.content.contains("data:image") {
+                    let regex = get_image_data_regex();
+                    let mut result = msg.content.clone();
+                    let mut image_count = 0;
+
+                    // Extract description/alt text from markdown if present
+                    let alt_regex = regex::Regex::new(r"!\[([^\]]*)\]\(data:image").unwrap();
+                    let descriptions: Vec<String> = alt_regex
+                        .captures_iter(&msg.content)
+                        .map(|cap| cap.get(1).map_or("image".to_string(), |m| m.as_str().to_string()))
+                        .collect();
+
+                    // Replace each image with a lightweight reference including description
+                    for (idx, desc) in descriptions.iter().enumerate() {
+                        image_count += 1;
+                        let replacement = if !desc.is_empty() && desc != "Generated Image" {
+                            format!("[Image {}: {}]", idx + 1, desc)
+                        } else {
+                            format!("[Image {}]", idx + 1)
+                        };
+                        // Only replace the first occurrence each time to preserve order
+                        if let Some(pos) = result.find("data:image") {
+                            let end_pos = result[pos..].find(')').unwrap_or(result.len() - pos) + pos;
+                            let markdown_start = result[..pos].rfind("![").unwrap_or(pos);
+                            result.replace_range(markdown_start..end_pos + 1, &replacement);
+                        }
+                    }
+
+                    // Handle any remaining base64 images without markdown
+                    result = regex.replace_all(&result, "[Image]").to_string();
+
+                    info!("🖼️ Replaced {} image(s) with lightweight references in history", image_count);
+                    result
+                } else {
+                    msg.content.clone()
+                };
+
                 let mut message = HashMap::new();
                 message.insert("role".to_string(), msg.role.clone());
-                message.insert("content".to_string(), content_without_images);
+                message.insert("content".to_string(), content_with_refs);
                 messages.push(message);
             }
         }
 
-        info!("🎨 Image generation: Full personality with {} messages (images stripped for efficiency)", messages.len());
+        info!("🎨 Image generation: Full personality with {} messages (images replaced with refs)", messages.len());
 
         (base_system_prompt, Some(messages))
     }

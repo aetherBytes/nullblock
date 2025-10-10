@@ -262,8 +262,12 @@ export const useChat = (_publicKey: string | null) => {
       if (error instanceof Error) {
         const errorMsg = error.message.toLowerCase();
 
-        // Check for API key configuration errors first
-        if (errorMsg.includes('api key') || errorMsg.includes('openrouter') ||
+        // Check for model not available errors first (most specific)
+        if (errorMsg.includes('not available') || errorMsg.includes('not found') || errorMsg.includes('not currently available')) {
+          userFriendlyMessage = "🚫 The selected AI model is not currently available. Please select a different model from the model selection dropdown. We recommend trying DeepSeek Chat v3.1 or Dolphin Mistral 24B (both free).";
+        }
+        // Check for API key configuration errors
+        else if (errorMsg.includes('api key') || errorMsg.includes('openrouter') ||
             errorMsg.includes('config_required') || errorMsg.includes('no working models') ||
             errorMsg.includes('provider not available') || errorMsg.includes('no llm api keys detected')) {
           userFriendlyMessage = "🔑 I need API keys to work properly. Please configure your OpenRouter API key in settings. Visit https://openrouter.ai/ to get a free API key.";

@@ -126,13 +126,17 @@ impl AppError {
                 format!("🧠 The model '{}' is not currently available. Please select a different model or check your API keys.", model)
             }
             AppError::LLMRequestFailed(details) => {
-                if details.to_lowercase().contains("no auth credentials") ||
-                   details.to_lowercase().contains("401 unauthorized") ||
-                   details.to_lowercase().contains("api key") {
+                let details_lower = details.to_lowercase();
+
+                if details_lower.contains("model not found") || details_lower.contains("404") && details_lower.contains("model") {
+                    "🚫 The selected AI model is not currently available. Please select a different model from the model selection dropdown. We recommend trying DeepSeek Chat v3.1 or Dolphin Mistral 24B (both free).".to_string()
+                } else if details_lower.contains("no auth credentials") ||
+                   details_lower.contains("401 unauthorized") ||
+                   details_lower.contains("api key") {
                     "🔑 No LLM API keys detected. Please check your OpenRouter API key configuration in .env.dev and restart the service. Visit https://openrouter.ai/ to get a free API key.".to_string()
-                } else if details.to_lowercase().contains("timeout") {
+                } else if details_lower.contains("timeout") {
                     "⏰ The AI service is taking too long to respond. Please try again in a moment.".to_string()
-                } else if details.to_lowercase().contains("rate limit") {
+                } else if details_lower.contains("rate limit") {
                     "🚦 Too many requests. Please wait a moment before trying again.".to_string()
                 } else {
                     "🌐 There was an issue communicating with the AI service. Please try again.".to_string()

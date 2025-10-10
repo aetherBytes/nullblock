@@ -111,6 +111,7 @@ fn create_router(state: server::AppState) -> Router {
         .route("/siren/analyze-project", get(siren_marketing::analyze_project_progress))
         .route("/siren/health", get(siren_marketing::get_siren_health))
         .route("/siren/themes", get(siren_marketing::get_content_themes))
+        .route("/siren/set-model", post(siren_marketing::set_model))
         // User reference endpoints
         .route("/user-references", post(user_references::create_user_reference))
         .route("/user-references", get(user_references::list_user_references))

@@ -258,6 +258,76 @@ pub async fn siren_chat(Json(request): Json<AgentRequest>) -> Result<ResponseJso
     }
 }
 
+/// Set Siren model selection
+pub async fn siren_set_model(Json(request): Json<Value>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("🎯 Siren set model request received");
+    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+
+    let client = reqwest::Client::new();
+    let siren_url = std::env::var("AGENTS_SERVICE_URL")
+        .unwrap_or_else(|_| "http://localhost:9003".to_string());
+    let url = format!("{}/siren/set-model", siren_url);
+
+    info!("🔗 Proxying set-model request to Siren: {}", url);
+
+    match client
+        .post(&url)
+        .json(&request)
+        .timeout(std::time::Duration::from_secs(30))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if response.status().is_success() {
+                match response.json::<serde_json::Value>().await {
+                    Ok(json_response) => {
+                        info!("✅ Siren model set successfully");
+                        info!("📤 Response payload: {}", serde_json::to_string_pretty(&json_response).unwrap_or_default());
+                        Ok(ResponseJson(json_response))
+                    }
+                    Err(e) => {
+                        error!("❌ Failed to parse Siren set-model response: {}", e);
+                        Err((
+                            StatusCode::BAD_GATEWAY,
+                            ResponseJson(AgentErrorResponse {
+                                error: "parse_error".to_string(),
+                                code: "AGENT_PARSE_ERROR".to_string(),
+                                message: format!("Failed to parse response: {}", e),
+                                agent_available: true,
+                            }),
+                        ))
+                    }
+                }
+            } else {
+                let status = response.status();
+                let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+                error!("❌ Siren set-model request failed with status {}: {}", status, error_text);
+                Err((
+                    StatusCode::BAD_GATEWAY,
+                    ResponseJson(AgentErrorResponse {
+                        error: "http_error".to_string(),
+                        code: "AGENT_HTTP_ERROR".to_string(),
+                        message: format!("Agent returned status {}: {}", status, error_text),
+                        agent_available: status.is_server_error(),
+                    }),
+                ))
+            }
+        }
+        Err(e) => {
+            error!("❌ Failed to connect to Siren agent: {}", e);
+            Err((
+                StatusCode::SERVICE_UNAVAILABLE,
+                ResponseJson(AgentErrorResponse {
+                    error: "connection_error".to_string(),
+                    code: "AGENT_UNAVAILABLE".to_string(),
+                    message: format!("Failed to connect to agent: {}", e),
+                    agent_available: false,
+                }),
+            ))
+        }
+    }
+}
+
 /// Get Hecate agent status
 pub async fn hecate_status() -> Result<ResponseJson<AgentStatus>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("📊 Hecate status request received");

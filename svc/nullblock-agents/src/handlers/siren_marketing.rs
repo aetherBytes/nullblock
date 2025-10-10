@@ -157,6 +157,8 @@ pub async fn get_siren_health(
         "status": health_status,
         "service": "siren_agent",
         "timestamp": chrono::Utc::now().to_rfc3339(),
+        "current_model": marketing_agent.current_model.clone(),
+        "preferred_model": marketing_agent.preferred_model.clone(),
         "components": {
             "llm_factory": if marketing_agent.llm_factory.is_some() { "ready" } else { "not_initialized" },
             "twitter_integration": if marketing_agent.twitter_api_key.is_some() { "configured" } else { "not_configured" },
@@ -211,20 +213,20 @@ pub async fn chat(
     match marketing_agent.chat(request.message, request.user_context).await {
         Ok(response) => {
             info!("✅ Marketing chat response generated: {} chars", response.content.len());
-            
+
             // Extract latency_ms and confidence_score from metadata
             let latency_ms = response.metadata
                 .as_ref()
                 .and_then(|meta| meta.get("latency_ms"))
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.0);
-            
+
             let confidence_score = response.metadata
                 .as_ref()
                 .and_then(|meta| meta.get("confidence_score"))
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.85);
-            
+
             Ok(Json(serde_json::json!({
                 "content": response.content,
                 "model_used": response.model_used,
@@ -243,6 +245,36 @@ pub async fn chat(
                 )),
             ))
         }
+    }
+}
+
+pub async fn set_model(
+    State(state): State<AppState>,
+    Json(request): Json<crate::models::ModelSelectionRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
+    info!("🎯 Siren model selection request: {}", request.model_name);
+
+    let mut marketing_agent = state.marketing_agent.write().await;
+    let api_keys = state.config.get_api_keys();
+
+    let success = marketing_agent.set_preferred_model(request.model_name.clone(), &api_keys).await;
+
+    if success {
+        info!("✅ Siren model successfully set to: {}", request.model_name);
+        Ok(Json(serde_json::json!({
+            "success": true,
+            "model": request.model_name,
+            "message": "Model successfully updated"
+        })))
+    } else {
+        error!("❌ Failed to set Siren model to: {}", request.model_name);
+        Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse::new(
+                "model_not_available".to_string(),
+                format!("Model {} is not available", request.model_name),
+            )),
+        ))
     }
 }
 

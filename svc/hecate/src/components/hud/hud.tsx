@@ -101,8 +101,8 @@ const HUD: React.FC<HUDProps> = ({
   const scopeDropdownRef = useRef<HTMLDivElement>(null);
 
   // Use custom hooks
-  const modelManagement = useModelManagement(publicKey);
   const chat = useChat(publicKey);
+  const modelManagement = useModelManagement(publicKey, chat.activeAgent);
   const taskManagement = useTaskManagement(publicKey, {}, true, chat.addTaskNotification);
   const eventSystem = useEventSystem(true, 3000);
 

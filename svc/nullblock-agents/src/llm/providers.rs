@@ -593,14 +593,37 @@ impl Provider for OpenRouterProvider {
             let status = response.status();
             let error_text = response.text().await?;
 
-            if status == reqwest::StatusCode::NOT_FOUND && error_text.contains("No endpoints found") {
-                warn!("⚠️ Model {} not found, suggesting fallback to cognitivecomputations/dolphin3.0-mistral-24b:free", config.name);
-                return Err(AppError::ModelNotAvailable(format!(
-                    "Model {} is no longer available. Please use cognitivecomputations/dolphin3.0-mistral-24b:free or deepseek/deepseek-chat-v3.1:free instead",
-                    config.name
-                )));
+            // Try to parse error as JSON to extract structured error details
+            if let Ok(error_json) = serde_json::from_str::<Value>(&error_text) {
+                // Check for model not found errors
+                if status == reqwest::StatusCode::NOT_FOUND {
+                    // Check for "model not found" in metadata.raw
+                    if let Some(metadata_raw) = error_json.get("error")
+                        .and_then(|e| e.get("metadata"))
+                        .and_then(|m| m.get("raw"))
+                        .and_then(|r| r.as_str())
+                    {
+                        if metadata_raw.contains("model not found") {
+                            warn!("⚠️ Model {} not found in OpenRouter", config.name);
+                            return Err(AppError::ModelNotAvailable(format!(
+                                "Model '{}' is not currently available. Please select a different model such as 'deepseek/deepseek-chat-v3.1:free' or 'cognitivecomputations/dolphin3.0-mistral-24b:free'",
+                                config.name
+                            )));
+                        }
+                    }
+
+                    // Legacy check for "No endpoints found"
+                    if error_text.contains("No endpoints found") {
+                        warn!("⚠️ Model {} has no endpoints, suggesting fallback", config.name);
+                        return Err(AppError::ModelNotAvailable(format!(
+                            "Model '{}' is no longer available. Please use 'deepseek/deepseek-chat-v3.1:free' or 'cognitivecomputations/dolphin3.0-mistral-24b:free' instead",
+                            config.name
+                        )));
+                    }
+                }
             }
 
+            // Generic error handling for other non-success responses
             return Err(AppError::LLMRequestFailed(format!(
                 "OpenRouter API error {}: {}",
                 status,

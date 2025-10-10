@@ -154,7 +154,7 @@ impl MarketingAgent {
         info!("✅ LLM Service Factory ready");
 
         // Set current model to preferred model if available
-        if self.is_model_available(&self.preferred_model, api_keys) {
+        if self.is_model_available(&self.preferred_model, api_keys).await {
             self.current_model = Some(self.preferred_model.clone());
             info!("✅ Default model loaded: {}", self.preferred_model);
         } else {
@@ -622,11 +622,50 @@ I create content that educates, engages, and excites our community about the fut
         info!("💬 Started new Siren session: {:?}", self.current_session_id);
     }
 
-    fn is_model_available(&self, model_name: &str, api_keys: &ApiKeys) -> bool {
-        if let Some(_llm_factory) = &self.llm_factory {
-            model_name == "x-ai/grok-4-fast:free" && api_keys.openrouter.is_some()
-                || (model_name.contains("/") || model_name.contains(":")) && api_keys.openrouter.is_some()
+    async fn is_model_available(&self, model_name: &str, _api_keys: &ApiKeys) -> bool {
+        if let Some(llm_factory_arc) = &self.llm_factory {
+            let llm_factory = llm_factory_arc.read().await;
+            match llm_factory.fetch_available_models().await {
+                Ok(models) => {
+                    let model_exists = models.iter().any(|model| {
+                        model.get("id")
+                            .and_then(|id| id.as_str())
+                            .map(|id| id == model_name)
+                            .unwrap_or(false)
+                    });
+
+                    if model_exists {
+                        info!("✅ Model {} is available", model_name);
+                    } else {
+                        warn!("⚠️ Model {} not found in OpenRouter catalog", model_name);
+                    }
+
+                    model_exists
+                }
+                Err(e) => {
+                    warn!("⚠️ Failed to fetch available models: {}", e);
+                    false
+                }
+            }
         } else {
+            false
+        }
+    }
+
+    pub async fn set_preferred_model(&mut self, model_name: String, api_keys: &ApiKeys) -> bool {
+        if self.is_model_available(&model_name, api_keys).await {
+            let previous_model = self.preferred_model.clone();
+            self.preferred_model = model_name.clone();
+            self.current_model = Some(model_name.clone());
+            info!("🎯 Siren preferred model set to: {}", model_name);
+
+            if previous_model != model_name {
+                info!("📤 Siren switched from {} to {}", previous_model, model_name);
+            }
+
+            true
+        } else {
+            warn!("⚠️ Siren: Model not available: {}", model_name);
             false
         }
     }
