@@ -107,6 +107,15 @@ class AgentService {
     });
   }
 
+  async setAgentModel(agentName: string, modelName: string): Promise<AgentServiceResponse<any>> {
+    console.log(`🎯 Setting model for ${agentName} to: ${modelName}`);
+
+    return this.makeRequest<any>(`/api/agents/${agentName}/set-model`, {
+      method: 'POST',
+      body: JSON.stringify({ model_name: modelName }),
+    });
+  }
+
   async assignTaskToAgent(agentName: string, taskId: string): Promise<AgentServiceResponse<any>> {
     console.log(`📋 Assigning task ${taskId} to agent ${agentName}`);
 

@@ -25,7 +25,7 @@ mod user_references;
 mod resources;
 mod auth;
 use resources::agents::routes::{
-    agent_health, hecate_chat, siren_chat, hecate_status, agent_chat, agent_status,
+    agent_health, hecate_chat, siren_chat, siren_set_model, hecate_status, agent_chat, agent_status,
     hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model, hecate_model_info, hecate_search_models,
     // Task management routes
     create_task, get_tasks, get_task, update_task, delete_task,
@@ -346,6 +346,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/agents/health", get(agent_health))
         .route("/api/agents/hecate/chat", post(hecate_chat))
         .route("/api/agents/siren/chat", post(siren_chat))
+        .route("/api/agents/siren/set-model", post(siren_set_model))
         .route("/api/agents/hecate/status", get(hecate_status))
         .route("/api/agents/hecate/personality", post(hecate_personality))
         .route("/api/agents/hecate/clear", post(hecate_clear))
