@@ -24,6 +24,7 @@ mod database;
 mod user_references;
 mod resources;
 mod auth;
+mod utils;
 use resources::agents::routes::{
     agent_health, hecate_chat, siren_chat, siren_set_model, hecate_status, agent_chat, agent_status,
     hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model, hecate_model_info, hecate_search_models,

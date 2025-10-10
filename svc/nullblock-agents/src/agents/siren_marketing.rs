@@ -203,6 +203,9 @@ impl MarketingAgent {
 
         info!("🎭 Siren agent received chat message: {}", message);
 
+        // Check if this is an image generation request
+        let is_image_request = self.is_image_generation_request(&message);
+
         // Build Siren-focused prompt
         let system_prompt = "You are Siren, the Marketing and Community Orchestrator within NullBlock's agentic intelligence platform.
 
@@ -231,11 +234,18 @@ Always provide engaging, hype-fueled marketing advice with cyberpunk flair. Keep
             format!("{}\n\nUser: {}", system_prompt, message)
         };
 
+        // For image generation, use higher max_tokens to allow for base64 image data
+        let max_tokens = if is_image_request {
+            Some(16384)  // Increased for full base64 image responses (50-200KB+)
+        } else {
+            Some(1000)
+        };
+
         let request = crate::models::LLMRequest {
             prompt: full_prompt,
             system_prompt: None,
             messages: None,
-            max_tokens: Some(1000),
+            max_tokens,
             temperature: Some(0.7),
             top_p: None,
             stop_sequences: None,
@@ -620,6 +630,16 @@ I create content that educates, engages, and excites our community about the fut
     fn start_new_chat_session(&mut self) {
         self.current_session_id = Some(format!("session_{}", Utc::now().format("%Y%m%d_%H%M%S")));
         info!("💬 Started new Siren session: {:?}", self.current_session_id);
+    }
+
+    fn is_image_generation_request(&self, message: &str) -> bool {
+        let image_keywords = [
+            "logo", "image", "picture", "photo", "draw", "create", "generate", "design",
+            "visual", "graphic", "illustration", "artwork", "sketch", "render", "icon", "banner"
+        ];
+
+        let lower_message = message.to_lowercase();
+        image_keywords.iter().any(|&keyword| lower_message.contains(keyword))
     }
 
     async fn is_model_available(&self, model_name: &str, _api_keys: &ApiKeys) -> bool {
