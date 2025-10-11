@@ -1006,8 +1006,6 @@ const HUD: React.FC<HUDProps> = ({
           size="medium"
           onClick={() => {
             if (!publicKey) {
-              setNulleyeState('error');
-              setTimeout(() => setNulleyeState('base'), 1500);
               alert(
                 '🔒 SECURE ACCESS REQUIRED\n\nConnect your Web3 wallet to unlock the NullView interface and access advanced features.',
               );
@@ -1016,10 +1014,8 @@ const HUD: React.FC<HUDProps> = ({
 
             if (mainHudActiveTab === 'canvas') {
               setMainHudActiveTab('hecate');
-              setNulleyeState('thinking');
             } else {
               setMainHudActiveTab('canvas');
-              setNulleyeState('base');
             }
           }}
           title={!publicKey ? '🔒 Connect wallet to unlock NullView' : mainHudActiveTab === 'canvas' ? 'Return to Hecate' : 'View Canvas'}
