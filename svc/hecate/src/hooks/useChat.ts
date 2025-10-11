@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 
 interface ChatMessage {
   id: string;
@@ -16,12 +16,14 @@ interface ChatMessage {
   content?: {
     type: 'text' | 'image' | 'mixed';
     text?: string;
-    images?: Array<{
-      url: string;
-      alt?: string;
-      caption?: string;
-    }>;
+    imageIds?: string[];
   };
+}
+
+interface ImageData {
+  url: string;
+  alt?: string;
+  caption?: string;
 }
 
 // Helper function to detect if a request is for image generation
@@ -90,6 +92,7 @@ export const useChat = (_publicKey: string | null) => {
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const imageStorageRef = useRef<Map<string, ImageData>>(new Map());
 
   // Function to add task notifications to chat
   const addTaskNotification = (taskId: string, taskName: string, message: string, processingTime?: number) => {
@@ -206,8 +209,19 @@ export const useChat = (_publicKey: string | null) => {
         }
       }
 
+      const messageId = (Date.now() + 1).toString();
+      const imageIds: string[] = [];
+
+      if (images.length > 0) {
+        images.forEach((image, index) => {
+          const imageId = `${messageId}-img-${index}`;
+          imageStorageRef.current.set(imageId, image);
+          imageIds.push(imageId);
+        });
+      }
+
       const agentMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: messageId,
         timestamp: new Date(),
         sender: activeAgent,
         message: content,
@@ -218,7 +232,7 @@ export const useChat = (_publicKey: string | null) => {
         content: {
           type: images.length > 0 ? (content ? 'mixed' : 'image') : 'text',
           text: content,
-          images: images
+          imageIds: imageIds
         }
       };
 
@@ -344,6 +358,15 @@ export const useChat = (_publicKey: string | null) => {
     }
   };
 
+  const getImagesForMessage = (messageId: string): ImageData[] => {
+    const message = chatMessages.find(msg => msg.id === messageId);
+    if (!message?.content?.imageIds) return [];
+
+    return message.content.imageIds
+      .map(id => imageStorageRef.current.get(id))
+      .filter((img): img is ImageData => img !== undefined);
+  };
+
   return {
     chatMessages,
     setChatMessages,
@@ -365,6 +388,7 @@ export const useChat = (_publicKey: string | null) => {
     handleChatInputChange,
     handleChatScroll,
     scrollToBottom,
-    addTaskNotification
+    addTaskNotification,
+    getImagesForMessage
   };
 };

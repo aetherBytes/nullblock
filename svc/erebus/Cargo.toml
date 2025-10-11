@@ -21,3 +21,4 @@ hex = "0.4"
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
 regex = "1.10"
 lazy_static = "1.4"
+async-stream = "0.3"

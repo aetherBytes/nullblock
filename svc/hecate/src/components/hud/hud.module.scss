@@ -12381,3 +12381,55 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     }
   }
 }
+
+// Enhanced Cyberpunk Logs Styles
+.logsHeaderTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.logsSanitizedBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba($echo-green, 0.15);
+  border: 1px solid rgba($echo-green, 0.4);
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
+  color: $echo-green;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 8px rgba($echo-green, 0.2);
+
+  .lockIcon {
+    font-size: 0.9rem;
+  }
+}
+
+.logsEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: rgba($text-color, 0.5);
+  text-align: center;
+
+  .emptyIcon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.4;
+  }
+
+  p {
+    margin: 0.25rem 0;
+  }
+
+  .emptyHint {
+    font-size: 0.85rem;
+    opacity: 0.6;
+  }
+}

@@ -40,7 +40,7 @@ use resources::agents::routes::{
 };
 use resources::users::routes::{create_user_endpoint, lookup_user_endpoint, get_user_endpoint};
 use resources::wallets::routes::create_wallet_routes;
-use resources::{WalletManager, create_crossroads_routes, ExternalService};
+use resources::{WalletManager, create_crossroads_routes, ExternalService, create_logs_routes, LogsService};
 
 #[derive(Serialize)]
 struct StatusResponse {
@@ -332,6 +332,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create external service
     let external_service = Arc::new(ExternalService::new());
 
+    // Create logs service and load recent logs
+    info!("📋 Initializing logs service...");
+    let logs_service = Arc::new(resources::LogsService::new(500));
+    logs_service.load_recent_logs_from_files();
+    info!("✅ Logs service initialized");
+
     // Create app state
     let app_state = AppState {
         wallet_manager,
@@ -397,6 +403,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Merge crossroads routes
         .merge(create_crossroads_routes(&app_state.external_service))
         .with_state(app_state.clone())
+        // Merge logs routes (after with_state since it has its own state)
+        .nest("/api/logs", create_logs_routes(logs_service.clone()))
         // Add logging middleware
         .layer(middleware::from_fn(logging_middleware))
         // Add CORS layer

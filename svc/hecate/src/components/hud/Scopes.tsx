@@ -1076,11 +1076,17 @@ const Scopes: React.FC<ScopesProps> = ({
         return (
           <div className={styles.logsScope}>
             <div className={styles.logsHeader}>
-              <h6>📄 System Logs</h6>
+              <div className={styles.logsHeaderTop}>
+                <h6>📄 System Logs</h6>
+                <div className={styles.logsSanitizedBadge}>
+                  <span className={styles.lockIcon}>🔒</span>
+                  <span>SANITIZED</span>
+                </div>
+              </div>
               <div className={styles.logsControls}>
                 <input
                   type="text"
-                  placeholder="Search logs..."
+                  placeholder="🔍 Search logs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className={styles.searchInput}
@@ -1091,11 +1097,11 @@ const Scopes: React.FC<ScopesProps> = ({
                   className={styles.filterSelect}
                 >
                   <option value="all">All Levels</option>
-                  <option value="info">Info</option>
-                  <option value="warning">Warning</option>
-                  <option value="error">Error</option>
-                  <option value="success">Success</option>
-                  <option value="debug">Debug</option>
+                  <option value="info">💬 Info</option>
+                  <option value="warning">⚠️ Warning</option>
+                  <option value="error">❌ Error</option>
+                  <option value="success">✅ Success</option>
+                  <option value="debug">🔧 Debug</option>
                 </select>
                 <label className={styles.autoScrollLabel}>
                   <input
@@ -1108,23 +1114,33 @@ const Scopes: React.FC<ScopesProps> = ({
               </div>
             </div>
             <div className={styles.logsContainer}>
-              {filteredLogs.map((log) => (
-                <div key={log.id} className={`${styles.logEntry} ${getLogLevelColor(log.level)}`}>
-                  <div className={styles.logHeader}>
-                    <span className={styles.logTimestamp}>
-                      {log.timestamp.toLocaleTimeString()}
-                    </span>
-                    <span className={styles.logLevel}>[{log.level.toUpperCase()}]</span>
-                    <span className={styles.logSource}>{log.source}</span>
-                  </div>
-                  <div className={styles.logMessage}>{log.message}</div>
-                  {log.data && (
-                    <div className={styles.logData}>
-                      <pre>{JSON.stringify(log.data, null, 2)}</pre>
-                    </div>
-                  )}
+              {filteredLogs.length === 0 ? (
+                <div className={styles.logsEmpty}>
+                  <span className={styles.emptyIcon}>📋</span>
+                  <p>No logs available</p>
+                  <p className={styles.emptyHint}>Logs will appear here in real-time</p>
                 </div>
-              ))}
+              ) : (
+                filteredLogs.map((log) => (
+                  <div key={log.id} className={`${styles.logEntry} ${getLogLevelColor(log.level)}`}>
+                    <div className={styles.logHeader}>
+                      <span className={styles.logTimestamp}>
+                        {log.timestamp.toLocaleTimeString()}
+                      </span>
+                      <span className={`${styles.logLevel} ${styles[`level_${log.level}`]}`}>
+                        {log.level.toUpperCase()}
+                      </span>
+                      <span className={styles.logSource}>{log.source}</span>
+                    </div>
+                    <div className={styles.logMessage}>{log.message}</div>
+                    {log.data && (
+                      <div className={styles.logData}>
+                        <pre>{JSON.stringify(log.data, null, 2)}</pre>
+                      </div>
+                    )}
+                </div>
+                ))
+              )}
               <div ref={logsEndRef} />
             </div>
           </div>

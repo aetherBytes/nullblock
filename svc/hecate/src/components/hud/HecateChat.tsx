@@ -17,12 +17,14 @@ interface ChatMessage {
   content?: {
     type: 'text' | 'image' | 'mixed';
     text?: string;
-    images?: Array<{
-      url: string;
-      alt?: string;
-      caption?: string;
-    }>;
+    imageIds?: string[];
   };
+}
+
+interface ImageData {
+  url: string;
+  alt?: string;
+  caption?: string;
 }
 
 interface HecateChatProps {
@@ -52,7 +54,71 @@ interface HecateChatProps {
   chatAutoScroll: boolean;
   activeAgent?: 'hecate' | 'siren';
   setActiveAgent?: (agent: 'hecate' | 'siren') => void;
+  getImagesForMessage: (messageId: string) => ImageData[];
 }
+
+const ChatMessageComponent = React.memo<{
+  message: ChatMessage;
+  getImagesForMessage: (messageId: string) => ImageData[];
+  handleAgentSwitch: (agent: 'hecate' | 'siren') => void;
+}>(({ message, getImagesForMessage, handleAgentSwitch }) => {
+  const images = getImagesForMessage(message.id);
+
+  return (
+    <div
+      className={`${styles.chatMessage} ${styles[`message-${message.sender}`]} ${message.type ? styles[`type-${message.type}`] : ''}`}
+    >
+      <div className={styles.messageHeader}>
+        <span className={styles.messageSender}>
+          {message.sender === 'hecate' || message.sender === 'siren' ? (
+            <span className={message.sender === 'siren' ? styles.sirenMessageSender : styles.hecateMessageSender}>
+              <span
+                className={styles.clickableAgentName}
+                onClick={() => handleAgentSwitch(message.sender)}
+                title={`Switch to ${message.sender === 'hecate' ? 'Hecate' : 'Siren'} agent`}
+              >
+                🤖 {message.sender === 'hecate' ? 'Hecate' : message.sender === 'siren' ? 'Siren' : 'Agent'}
+              </span>
+            </span>
+          ) : (
+            '👤 You'
+          )}
+        </span>
+        <span className={styles.messageTime}>
+          {message.timestamp.toLocaleTimeString()}
+        </span>
+      </div>
+      <div className={styles.messageContent}>
+        {message.isTaskResult && (
+          <div className={styles.taskResultHeader}>
+            <div className={styles.taskResultBadge}>
+              <span className={styles.taskIcon}>✅</span>
+              <span className={styles.taskLabel}>Task Result</span>
+              {message.taskName && <span className={styles.taskName}>"{message.taskName}"</span>}
+            </div>
+            {message.processingTime && (
+              <div className={styles.taskMetrics}>
+                <span className={styles.processingTime}>⏱️ {message.processingTime}ms</span>
+              </div>
+            )}
+          </div>
+        )}
+        <MarkdownRenderer
+          content={message.message}
+          images={images}
+        />
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.message === nextProps.message.message &&
+    prevProps.message.type === nextProps.message.type
+  );
+});
+
+ChatMessageComponent.displayName = 'ChatMessageComponent';
 
 const HecateChat: React.FC<HecateChatProps> = ({
   chatMessages,
@@ -80,7 +146,8 @@ const HecateChat: React.FC<HecateChatProps> = ({
   isUserScrolling,
   chatAutoScroll,
   activeAgent = 'hecate',
-  setActiveAgent
+  setActiveAgent,
+  getImagesForMessage
 }) => {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -150,51 +217,12 @@ const HecateChat: React.FC<HecateChatProps> = ({
   );
 
   const renderChatMessage = (message: ChatMessage) => (
-    <div
+    <ChatMessageComponent
       key={message.id}
-      className={`${styles.chatMessage} ${styles[`message-${message.sender}`]} ${message.type ? styles[`type-${message.type}`] : ''}`}
-    >
-      <div className={styles.messageHeader}>
-        <span className={styles.messageSender}>
-          {message.sender === 'hecate' || message.sender === 'siren' ? (
-            <span className={message.sender === 'siren' ? styles.sirenMessageSender : styles.hecateMessageSender}>
-              <span
-                className={styles.clickableAgentName}
-                onClick={() => handleAgentSwitch(message.sender)}
-                title={`Switch to ${message.sender === 'hecate' ? 'Hecate' : 'Siren'} agent`}
-              >
-                🤖 {message.sender === 'hecate' ? 'Hecate' : message.sender === 'siren' ? 'Siren' : 'Agent'}
-              </span>
-            </span>
-          ) : (
-            '👤 You'
-          )}
-        </span>
-        <span className={styles.messageTime}>
-          {message.timestamp.toLocaleTimeString()}
-        </span>
-      </div>
-      <div className={styles.messageContent}>
-        {message.isTaskResult && (
-          <div className={styles.taskResultHeader}>
-            <div className={styles.taskResultBadge}>
-              <span className={styles.taskIcon}>✅</span>
-              <span className={styles.taskLabel}>Task Result</span>
-              {message.taskName && <span className={styles.taskName}>"{message.taskName}"</span>}
-            </div>
-            {message.processingTime && (
-              <div className={styles.taskMetrics}>
-                <span className={styles.processingTime}>⏱️ {message.processingTime}ms</span>
-              </div>
-            )}
-          </div>
-        )}
-        <MarkdownRenderer 
-          content={message.message} 
-          images={message.content?.images || []}
-        />
-      </div>
-    </div>
+      message={message}
+      getImagesForMessage={getImagesForMessage}
+      handleAgentSwitch={handleAgentSwitch}
+    />
   );
 
   const expandedChatContent = (
