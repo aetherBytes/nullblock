@@ -25,6 +25,10 @@ interface UseEventSystemReturn {
   addRule: (rule: EventRule) => void;
   removeRule: (ruleId: string) => boolean;
 
+  // Performance controls
+  setPerformanceMode: (enabled: boolean) => void;
+  isPerformanceMode: boolean;
+
   // Integration with task management
   onTaskCreated?: (task: TaskCreationRequest) => void;
 }
@@ -36,6 +40,7 @@ export const useEventSystem = (
   const [recentEvents, setRecentEvents] = useState<TaskEvent[]>([]);
   const [rules, setRules] = useState<EventRule[]>([]);
   const [subscriptions, setSubscriptions] = useState<EventSubscription[]>([]);
+  const [isPerformanceMode, setIsPerformanceMode] = useState(false);
 
   // Refresh data from event system
   const refreshData = useCallback(() => {
@@ -44,15 +49,17 @@ export const useEventSystem = (
     setSubscriptions(eventSystem.getSubscriptions());
   }, []);
 
+  const currentInterval = isPerformanceMode ? 10000 : refreshInterval;
+
   // Auto-refresh effect
   useEffect(() => {
     refreshData();
 
     if (enableAutoRefresh) {
-      const interval = setInterval(refreshData, refreshInterval);
+      const interval = setInterval(refreshData, currentInterval);
       return () => clearInterval(interval);
     }
-  }, [enableAutoRefresh, refreshInterval, refreshData]);
+  }, [enableAutoRefresh, currentInterval, refreshData]);
 
   // Event publishing functions
   const publishEvent = useCallback(async (event: Omit<TaskEvent, 'id'>) => {
@@ -123,6 +130,11 @@ export const useEventSystem = (
     return result;
   }, [refreshData]);
 
+  const setPerformanceMode = useCallback((enabled: boolean) => {
+    console.log(`🎯 Event system performance mode: ${enabled ? 'ENABLED (10s interval)' : 'DISABLED (normal interval)'}`);
+    setIsPerformanceMode(enabled);
+  }, []);
+
   return {
     // Event publishing
     publishEvent,
@@ -144,6 +156,10 @@ export const useEventSystem = (
 
     // Automation rules
     addRule,
-    removeRule
+    removeRule,
+
+    // Performance controls
+    setPerformanceMode,
+    isPerformanceMode
   };
 };

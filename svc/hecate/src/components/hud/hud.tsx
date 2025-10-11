@@ -4,6 +4,7 @@ import { useChat } from '../../hooks/useChat';
 import { useAuthentication } from '../../hooks/useAuthentication';
 import { useTaskManagement } from '../../hooks/useTaskManagement';
 import { useEventSystem } from '../../hooks/useEventSystem';
+import { useLogs } from '../../hooks/useLogs';
 import Crossroads from '../crossroads/Crossroads';
 import HecateChat from './HecateChat';
 import Scopes from './Scopes';
@@ -73,7 +74,6 @@ const HUD: React.FC<HUDProps> = ({
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Tab functionality state
-  const [logs, setLogs] = useState<any[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [logFilter, setLogFilter] = useState<'all' | 'info' | 'warning' | 'error' | 'success' | 'debug'>('all');
@@ -106,6 +106,18 @@ const HUD: React.FC<HUDProps> = ({
   const modelManagement = useModelManagement(publicKey, chat.activeAgent);
   const taskManagement = useTaskManagement(publicKey, {}, true, chat.addTaskNotification);
   const eventSystem = useEventSystem(true, 3000);
+  const logsHook = useLogs({ autoConnect: !!publicKey, maxLogs: 500 });
+
+  useEffect(() => {
+    const hasImages = chat.chatMessages.some(msg => msg.content?.imageIds && msg.content.imageIds.length > 0);
+    if (hasImages && !eventSystem.isPerformanceMode) {
+      console.log('🖼️ Images detected in chat - enabling performance mode');
+      eventSystem.setPerformanceMode(true);
+    } else if (!hasImages && eventSystem.isPerformanceMode) {
+      console.log('✅ No images in chat - disabling performance mode');
+      eventSystem.setPerformanceMode(false);
+    }
+  }, [chat.chatMessages, eventSystem]);
 
   // Debug: Log task management state
   useEffect(() => {
@@ -374,81 +386,15 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [isChatExpanded, chat.isProcessingChat]);
 
-  // Initialize demo tasks and live updates for logs
-  useEffect(() => {
-    if (!publicKey) return;
-
-    // Demo task creation is now handled by the useTaskManagement hook fallback
-
-    const mockLogs = [
-      {
-        id: '1',
-        timestamp: new Date(),
-        level: 'info',
-        source: 'main.js:124',
-        message: 'NullView interface initialized',
-        data: { component: 'HUD', loadTime: '45ms', memory: '12.4MB' }
-      },
-      {
-        id: '2',
-        timestamp: new Date(Date.now() - 1000),
-        level: 'info',
-        source: 'mcp-client.ts:87',
-        message: 'WebSocket connection established to localhost:8001',
-        data: { protocol: 'ws', latency: '23ms', status: 'connected' }
-      },
-      {
-        id: '3',
-        timestamp: new Date(Date.now() - 2000),
-        level: 'success',
-        source: 'arbitrage.service.ts:203',
-        message: 'DEX opportunity found: ETH/USDC spread 0.23%',
-        data: { pair: 'ETH/USDC', spread: '0.23%', volume: '$15,234', dex: ['Uniswap', 'SushiSwap'] }
-      },
-      {
-        id: '4',
-        timestamp: new Date(Date.now() - 3000),
-        level: 'warning',
-        source: 'portfolio.controller.ts:156',
-        message: 'Portfolio variance exceeded threshold (5.2% > 5.0%)',
-        data: { currentVariance: '5.2%', threshold: '5.0%', recommendation: 'rebalance' }
-      },
-      {
-        id: '5',
-        timestamp: new Date(Date.now() - 4000),
-        level: 'error',
-        source: 'social.api.ts:45',
-        message: 'Failed to fetch Twitter API data',
-        data: { status: 429, error: 'Rate limit exceeded', retryAfter: '15min' }
-      },
-    ];
-
-    setLogs(mockLogs);
-
-    const interval = setInterval(() => {
-      const logMessages = [
-        { level: 'info', source: 'market.feed.ts:89', message: 'Price update received', data: { symbol: 'ETH/USD', price: '$2,847.32', change: '+1.2%' }},
-        { level: 'success', source: 'flashbots.client.ts:203', message: 'MEV bundle included in block', data: { blockNumber: 18945672, profit: '$23.45' }},
-        { level: 'warning', source: 'gas.monitor.ts:67', message: 'Gas price spike detected', data: { currentGas: '95 gwei', increase: '111%' }},
-      ];
-
-      const randomLog = logMessages[Math.floor(Math.random() * logMessages.length)];
-      const newLog = {
-        id: Date.now().toString(),
-        timestamp: new Date(),
-        level: randomLog.level,
-        source: randomLog.source,
-        message: randomLog.message,
-        data: randomLog.data,
-      };
-
-      setLogs((prev) => [...prev, newLog]);
-    }, 4000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [publicKey]);
+  // Transform logs from useLogs hook to match existing log structure
+  const transformedLogs = logsHook.logs.map((log) => ({
+    id: `${log.timestamp}-${Math.random()}`,
+    timestamp: new Date(log.timestamp),
+    level: log.level,
+    source: log.source,
+    message: log.message,
+    data: Object.keys(log.metadata).length > 0 ? log.metadata : undefined,
+  }));
 
   // Event-driven motivation system demo
   useEffect(() => {
@@ -544,7 +490,7 @@ const HUD: React.FC<HUDProps> = ({
     if (autoScroll && logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [logs, autoScroll]);
+  }, [transformedLogs, autoScroll]);
 
   // Auto-scroll effect for chat messages - DISABLED to prevent forced scrolling
   // Users can manually scroll to bottom using the scroll button
@@ -971,6 +917,7 @@ const HUD: React.FC<HUDProps> = ({
                         chatAutoScroll={chat.chatAutoScroll}
                         activeAgent={chat.activeAgent}
                         setActiveAgent={chat.setActiveAgent}
+                        getImagesForMessage={chat.getImagesForMessage}
                       />
 
                       <Scopes
@@ -986,7 +933,7 @@ const HUD: React.FC<HUDProps> = ({
                           nullviewState={nullviewState}
                           tasks={taskManagement.filteredTasks}
                           taskManagement={taskManagement}
-                          logs={logs}
+                          logs={transformedLogs}
                           searchTerm={searchTerm}
                           setSearchTerm={setSearchTerm}
                           logFilter={logFilter}

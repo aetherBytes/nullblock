@@ -284,7 +284,7 @@ const ImageDisplay: React.FC<{
   );
 };
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className, images = [] }) => {
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(({ content, className, images = [] }) => {
   return (
     <div className={`${styles.markdownContainer} ${className || ''}`}>
       {/* Render images first if they exist */}
@@ -300,7 +300,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className,
           ))}
         </div>
       )}
-      
+
       <ReactMarkdown
         components={{
           // Custom styling for code blocks with syntax highlighting
@@ -409,6 +409,15 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className,
       </ReactMarkdown>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.content === nextProps.content &&
+    prevProps.className === nextProps.className &&
+    prevProps.images?.length === nextProps.images?.length &&
+    prevProps.images?.every((img, idx) => img.url === nextProps.images?.[idx]?.url)
+  );
+});
+
+MarkdownRenderer.displayName = 'MarkdownRenderer';
 
 export default MarkdownRenderer;
