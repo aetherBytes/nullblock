@@ -23,11 +23,17 @@ Together, we shape the future of autonomous commerce.
 
 ### 🚧 Current Development Focus
 
-**Next 3 Priority Items:**
+**Priority Tasks:**
 
-1.Make sure Siren / other agents do not get stuck on a default model. Should follow model selections of user. 2.**✅ A2A Task Schema & Integration** - COMPLETED: Full A2A Protocol v0.3.0 compliance with task schema, repository methods, handler population of history/artifacts, and Protocols→Agents HTTP integration 3.**🔄 Compilation & Testing** - Fix remaining Axum router state type issues in protocols service, test end-to-end A2A task flow (create→process→retrieve via A2A endpoints) 4.\*\*📋 A2A Streaming (SSE)\*\* - Implement Server-Sent Events for message/stream and tasks/resubscribe, bridge Kafka task.lifecycle events to SSE streams for real-time updates
-
-- crossroads needs to reload content after success on login.
+1. **🔵 Get X Account Verified** - Obtain verified status for [@Nullblock_io](https://x.com/Nullblock_io) to establish credibility and official presence
+2. **💰 Marketing & Token Strategy** - Develop marketing strategy, purchase additional supply in dev wallet, implement token lock mechanisms
+3. **💬 Community Channels** - Set up Discord and Telegram channels - the people are demanding it!
+4. **🌐 WEB3 WILDS X Community** - Start planning the "WEB3 WILDS" X community initiative - branding, content strategy, launch timeline, and engagement mechanics
+5. **🤖 Agent Model Selection** - Make sure Siren / other agents do not get stuck on a default model. Should follow model selections of user.
+6. **🔄 Crossroads Login Reload** - Crossroads needs to reload content after success on login
+7. **✅ A2A Task Schema & Integration** - COMPLETED: Full A2A Protocol v0.3.0 compliance with task schema, repository methods, handler population of history/artifacts, and Protocols→Agents HTTP integration
+8. **🔄 Compilation & Testing** - Fix remaining Axum router state type issues in protocols service, test end-to-end A2A task flow (create→process→retrieve via A2A endpoints)
+9. **📋 A2A Streaming (SSE)** - Implement Server-Sent Events for message/stream and tasks/resubscribe, bridge Kafka task.lifecycle events to SSE streams for real-time updates
 
 ## Architecture Overview
 

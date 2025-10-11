@@ -17,6 +17,19 @@ $lightning-red: #ff3333;
 $lightning-purple: #b967ff;
 $text-color: #c8c8d0;
 
+// Utility class for hiding tab content while keeping it mounted
+.hidden {
+  display: none !important;
+}
+
+// Wrapper for tab content to maintain layout when switching tabs
+.tabWrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 // Additional text and border variables
 $text-primary: #ffffff;
 $text-secondary: #c8c8d0;

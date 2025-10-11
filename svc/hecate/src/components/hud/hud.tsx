@@ -851,40 +851,41 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderTabContent = () => {
     if (!publicKey) {
-      switch (mainHudActiveTab) {
-        case 'crossroads':
-          return <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} />;
-        case 'canvas':
-          return (
+      return (
+        <>
+          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' ? '' : styles.hidden}`}>
+            <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} />
+          </div>
+          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'canvas' ? '' : styles.hidden}`}>
             <div className={styles.canvasView}>
               <div className={styles.canvasEmpty}>
                 <p className={styles.canvasMessage}>Empty Canvas</p>
                 <p className={styles.canvasHint}>Click the logo to return to Hecate</p>
               </div>
             </div>
-          );
-        default:
-          return (
+          </div>
+          {mainHudActiveTab !== 'crossroads' && mainHudActiveTab !== 'canvas' && (
             <div className={styles.defaultTab}>
               <p>Connect your wallet to access full features</p>
             </div>
-          );
-      }
+          )}
+        </>
+      );
     } else {
-      switch (mainHudActiveTab) {
-        case 'canvas':
-          return (
+      return (
+        <>
+          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'canvas' ? '' : styles.hidden}`}>
             <div className={styles.canvasView}>
               <div className={styles.canvasEmpty}>
                 <p className={styles.canvasMessage}>Empty Canvas</p>
                 <p className={styles.canvasHint}>Click the logo to return to Hecate</p>
               </div>
             </div>
-          );
-        case 'crossroads':
-          return <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} />;
-        case 'hecate':
-          return (
+          </div>
+          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' ? '' : styles.hidden}`}>
+            <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} />
+          </div>
+          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'hecate' ? '' : styles.hidden}`}>
             <div className={`${styles.hecateContainer} ${isChatExpanded ? styles.chatExpanded : ''} ${isScopesExpanded ? styles.scopesExpanded : ''}`}>
               <div className={styles.hecateContent}>
                 <div className={styles.hecateMain}>
@@ -984,14 +985,14 @@ const HUD: React.FC<HUDProps> = ({
                 </div>
               </div>
             </div>
-          );
-        default:
-          return (
+          </div>
+          {mainHudActiveTab !== 'canvas' && mainHudActiveTab !== 'crossroads' && mainHudActiveTab !== 'hecate' && (
             <div className={styles.defaultTab}>
               <p>Select a tab to view content</p>
             </div>
-          );
-      }
+          )}
+        </>
+      );
     }
   };
 
