@@ -21,6 +21,7 @@ migrations=(
     "svc/nullblock-agents/migrations/002_create_agents_table.sql"
     "svc/nullblock-agents/migrations/003_create_user_references_table.sql"
     "svc/nullblock-agents/migrations/004_add_tasks_foreign_keys.sql"
+    "svc/nullblock-agents/migrations/006_fix_user_references_constraint_name.sql"
     "svc/nullblock-agents/migrations/005_setup_replication_subscription.sql"
 )
 

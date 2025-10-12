@@ -151,7 +151,11 @@ interface StarsCanvasProps {
 
 const StarsCanvas = ({ theme = 'light' }: StarsCanvasProps) => (
   <div className={`${styles.starsCanvas} ${styles[theme]}`}>
-    <Canvas camera={{ position: [0, 0, 1] }}>
+    <Canvas
+      camera={{ position: [0, 0, 1] }}
+      gl={{ alpha: true, antialias: true }}
+      style={{ background: 'transparent' }}
+    >
       <Suspense fallback={null}>
         <Stars theme={theme} />
       </Suspense>
