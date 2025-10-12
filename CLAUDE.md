@@ -211,7 +211,22 @@ NullBlock implements [A2A Protocol v0.3.0](https://a2a-protocol.org/latest/speci
 
 **Sync**: PostgreSQL logical replication (`erebus_user_sync` publication → `agents_user_sync` subscription)
 
-**Benefits**: Service isolation, real-time sync (<1s), 99.9% reliability, zero maintenance
+**Setup (Automatic via Migrations)**:
+1. Erebus migration `002_setup_logical_replication.sql` creates publication
+2. Agents migration `005_setup_replication_subscription.sql` creates subscription
+3. Run migrations: `./scripts/run-erebus-migrations.sh && ./scripts/run-agents-migrations.sh`
+4. Replication starts automatically with initial data backfill
+
+**Benefits**: Service isolation, real-time sync (<1s), automatic recovery, persistent across container restarts
+
+**Monitoring**:
+```sql
+-- Check subscription status (Agents DB)
+SELECT subname, subenabled, srsubstate FROM pg_subscription sub LEFT JOIN pg_subscription_rel rel ON sub.oid = rel.srsubid WHERE subname = 'agents_user_sync';
+
+-- Verify user sync count
+SELECT (SELECT COUNT(*) FROM erebus.user_references) as erebus_users, (SELECT COUNT(*) FROM agents.user_references) as agents_users;
+```
 
 ## 🛣️ Crossroads Marketplace
 

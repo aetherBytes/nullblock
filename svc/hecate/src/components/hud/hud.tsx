@@ -998,7 +998,7 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderUnifiedNavigation = () => (
     <div className={styles.unifiedNavbar}>
-      {/* Left side - Brand and Logo */}
+      {/* Left side - Logo, NULLBLOCK Text, and Nav Buttons */}
       <div className={styles.navbarLeft}>
         <NullblockLogo
           state={nullviewState}
@@ -1020,7 +1020,9 @@ const HUD: React.FC<HUDProps> = ({
           }}
           title={!publicKey ? '🔒 Connect wallet to unlock NullView' : mainHudActiveTab === 'canvas' ? 'Return to Hecate' : 'View Canvas'}
         />
-
+        <div className={styles.nullblockTextLogo}>
+          NULLBLOCK
+        </div>
         {/* Left Nav Buttons */}
         <div className={styles.navButtonGroup}>
           <button
@@ -1048,7 +1050,7 @@ const HUD: React.FC<HUDProps> = ({
         {!publicKey && <HecateWelcome compact={true} maxChars={80} />}
         </div>
       </div>
-      
+
       {/* Center - Empty for spacer */}
       <div className={styles.navbarCenter}>
       </div>

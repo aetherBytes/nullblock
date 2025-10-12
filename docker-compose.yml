@@ -5,6 +5,12 @@ services:
   postgres-erebus:
     image: postgres:15-alpine
     container_name: nullblock-postgres-erebus
+    command: >
+      postgres
+      -c wal_level=logical
+      -c max_replication_slots=4
+      -c max_wal_senders=4
+      -c max_logical_replication_workers=4
     environment:
       POSTGRES_DB: erebus
       POSTGRES_USER: postgres
@@ -13,6 +19,8 @@ services:
       - postgres_erebus_data:/var/lib/postgresql/data
     ports:
       - "5440:5432"
+    networks:
+      - default
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s
@@ -23,6 +31,12 @@ services:
   postgres-agents:
     image: postgres:15-alpine
     container_name: nullblock-postgres-agents
+    command: >
+      postgres
+      -c wal_level=logical
+      -c max_replication_slots=4
+      -c max_wal_senders=4
+      -c max_logical_replication_workers=4
     environment:
       POSTGRES_DB: agents
       POSTGRES_USER: postgres
@@ -31,6 +45,10 @@ services:
       - postgres_agents_data:/var/lib/postgresql/data
     ports:
       - "5441:5432"
+    networks:
+      - default
+    depends_on:
+      - postgres-erebus
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s

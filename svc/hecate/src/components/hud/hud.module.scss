@@ -179,7 +179,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 
     .hudWindow {
       background-color: rgba(248, 249, 250, 0.95);
-      background-image: 
+      background-image:
         linear-gradient(rgba(42, 74, 106, 0.1) 1px, transparent 1px),
         linear-gradient(90deg, rgba(42, 74, 106, 0.1) 1px, transparent 1px),
         linear-gradient(135deg, rgba(42, 74, 106, 0.05) 1px, transparent 1px),
@@ -187,7 +187,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       background-size: 20px 20px, 20px 20px, 10px 10px, 10px 10px;
       background-position: 0 0, 0 0, 0 0, 0 0;
       border: 2px solid rgba(42, 74, 106, 0.3);
-      box-shadow: 
+      box-shadow:
         0 0 20px rgba(42, 74, 106, 0.2),
         inset 0 0 20px rgba(42, 74, 106, 0.1);
       backdrop-filter: blur(1px);
@@ -3103,7 +3103,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       position: relative;
       flex-shrink: 0;
       white-space: nowrap;
-      
+
       &::before {
         content: '';
         position: absolute;
@@ -3115,35 +3115,35 @@ $light-shadow: rgba(0, 0, 0, 0.1);
         background: linear-gradient(90deg, $lightning-blue, $lightning-purple);
         transition: width 0.3s ease;
       }
-      
+
       &:hover {
         color: $lightning-blue;
         text-shadow: 0 0 10px rgba($lightning-blue, 0.5);
-        
+
         &::before {
           width: 80%;
         }
       }
-      
+
       &.active {
         color: $lightning-blue;
         text-shadow: 0 0 10px rgba($lightning-blue, 0.8);
-        
+
         &::before {
           width: 100%;
         }
       }
-      
+
       @media (max-width: 768px) {
         font-size: 0.75rem;
         padding: 0.4rem 0.75rem;
       }
     }
-    
+
     .fadeIn {
       animation: fadeIn 0.5s ease-in;
     }
-    
+
     @keyframes fadeIn {
       from {
         opacity: 0;
@@ -3241,11 +3241,45 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     gap: 0.75rem;
     flex: 0 0 auto;
     flex-shrink: 0;
+
+    .nullblockLogo {
+      margin-right: 5rem !important;
+    }
   }
-  
+
   .navbarCenter {
     flex: 1 1 auto;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nullblockTextLogo {
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 3px;
+    color: $lightning-silver;
+    text-shadow:
+      0 0 10px rgba($echo-blue, 0.6),
+      0 0 20px rgba($echo-blue, 0.3);
+    animation: textLogoGlow 3s ease-in-out infinite;
+    cursor: default;
+    user-select: none;
+  }
+
+  @keyframes textLogoGlow {
+    0%, 100% {
+      text-shadow:
+        0 0 10px rgba($echo-blue, 0.6),
+        0 0 20px rgba($echo-blue, 0.3);
+    }
+    50% {
+      text-shadow:
+        0 0 15px rgba($echo-blue, 0.8),
+        0 0 30px rgba($echo-blue, 0.5);
+    }
   }
 }
 
@@ -3970,7 +4004,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .echoContainer.light {
   .hudScreen {
     background-color: rgba(248, 249, 250, 0.95);
-    background-image: 
+    background-image:
       linear-gradient(rgba(42, 74, 106, 0.1) 1px, transparent 1px),
       linear-gradient(90deg, rgba(42, 74, 106, 0.1) 1px, transparent 1px),
       linear-gradient(135deg, rgba(42, 74, 106, 0.05) 1px, transparent 1px),
@@ -3978,7 +4012,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     background-size: 20px 20px, 20px 20px, 10px 10px, 10px 10px;
     background-position: 0 0, 0 0, 0 0, 0 0;
     border: 2px solid rgba(42, 74, 106, 0.3);
-    box-shadow: 
+    box-shadow:
       0 0 20px rgba(42, 74, 106, 0.2),
       inset 0 0 20px rgba(42, 74, 106, 0.1);
     backdrop-filter: blur(1px);
@@ -3988,7 +4022,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     background: rgba(248, 249, 250, 0.9);
     border: 2px solid rgba(42, 74, 106, 0.3);
     color: #1a1a1a;
-    box-shadow: 
+    box-shadow:
       0 0 15px rgba(42, 74, 106, 0.2),
       inset 0 0 15px rgba(42, 74, 106, 0.1);
   }
@@ -4064,7 +4098,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     .walletButton, .docsButton, .themeButton, .socialButton {
       background: rgba(248, 249, 250, 0.9);
       border: 2px solid rgba(42, 74, 106, 0.3);
-      box-shadow: 
+      box-shadow:
         0 0 15px rgba(42, 74, 106, 0.2),
         inset 0 0 15px rgba(42, 74, 106, 0.1);
       color: #1a1a1a;
@@ -4072,7 +4106,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       &:hover {
         background: rgba(42, 74, 106, 0.1);
         border-color: rgba(42, 74, 106, 0.5);
-        box-shadow: 
+        box-shadow:
           0 0 20px rgba(42, 74, 106, 0.3),
           inset 0 0 20px rgba(42, 74, 106, 0.15);
       }
@@ -4098,7 +4132,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     background: rgba(248, 249, 250, 0.95);
     border: 2px solid rgba(42, 74, 106, 0.3);
     color: #1a1a1a;
-    box-shadow: 
+    box-shadow:
       0 0 20px rgba(42, 74, 106, 0.2),
       inset 0 0 20px rgba(42, 74, 106, 0.1);
   }
@@ -4118,14 +4152,14 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     background: rgba(248, 249, 250, 0.9);
     border: 2px solid rgba(42, 74, 106, 0.3);
     color: #1a1a1a;
-    box-shadow: 
+    box-shadow:
       0 0 10px rgba(42, 74, 106, 0.1),
       inset 0 0 10px rgba(42, 74, 106, 0.05);
 
     &:hover {
       background: rgba(42, 74, 106, 0.1);
       border-color: rgba(42, 74, 106, 0.5);
-      box-shadow: 
+      box-shadow:
         0 0 15px rgba(42, 74, 106, 0.2),
         inset 0 0 15px rgba(42, 74, 106, 0.1);
     }
@@ -4152,13 +4186,13 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     background: rgba(248, 249, 250, 0.9);
     border: 2px solid rgba(42, 74, 106, 0.3);
     color: #1a1a1a;
-    box-shadow: 
+    box-shadow:
       0 0 10px rgba(42, 74, 106, 0.1),
       inset 0 0 10px rgba(42, 74, 106, 0.05);
 
     &:focus {
       border-color: rgba(42, 74, 106, 0.5);
-      box-shadow: 
+      box-shadow:
         0 0 15px rgba(42, 74, 106, 0.2),
         inset 0 0 15px rgba(42, 74, 106, 0.1);
     }
@@ -4168,14 +4202,14 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     background: rgba(248, 249, 250, 0.9);
     border: 2px solid rgba(42, 74, 106, 0.3);
     color: #1a1a1a;
-    box-shadow: 
+    box-shadow:
       0 0 10px rgba(42, 74, 106, 0.1),
       inset 0 0 10px rgba(42, 74, 106, 0.05);
 
     &:hover {
       background: rgba(42, 74, 106, 0.1);
       border-color: rgba(42, 74, 106, 0.5);
-      box-shadow: 
+      box-shadow:
         0 0 15px rgba(42, 74, 106, 0.2),
         inset 0 0 15px rgba(42, 74, 106, 0.1);
     }
@@ -4186,7 +4220,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     background: rgba(248, 249, 250, 0.9);
     border: 1px solid rgba(42, 74, 106, 0.3);
     color: #1a1a1a;
-    box-shadow: 
+    box-shadow:
       0 0 5px rgba(42, 74, 106, 0.1),
       inset 0 0 5px rgba(42, 74, 106, 0.05);
 
@@ -5674,14 +5708,14 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 .clickableTask {
   cursor: pointer;
   user-select: none;
-  
+
   &:hover {
     border-color: rgba($echo-blue, 0.5);
     background: rgba($background-dark, 0.5);
     transform: translateY(-3px);
     box-shadow: 0 6px 16px rgba($echo-blue, 0.15);
   }
-  
+
   &:active {
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba($echo-blue, 0.2);
@@ -6331,7 +6365,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     align-items: center;
     gap: 0.25rem;
     white-space: nowrap;
-    
+
     &::before {
       content: "🕒";
       font-size: 0.7rem;
@@ -12092,7 +12126,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   .taskTabs {
     flex-direction: column;
     gap: 0.5rem;
-    
+
     .taskTab {
       width: 100%;
       text-align: left;

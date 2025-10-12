@@ -34,6 +34,10 @@ windows:
           done
           echo "✅ Erebus database connection ready"
           echo ""
+          echo "📋 Running Erebus database migrations..."
+          ~/nullblock/scripts/run-erebus-migrations.sh
+          echo "✅ Erebus migrations complete"
+          echo ""
           echo "📨 Waiting for Kafka to be ready..."
           while ! docker exec nullblock-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1; do
             echo "⏳ Waiting for Kafka container to be ready..."

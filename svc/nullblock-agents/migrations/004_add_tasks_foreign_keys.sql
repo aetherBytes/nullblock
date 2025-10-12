@@ -2,7 +2,7 @@
 -- This migration must run after migrations 001, 002, and 003
 -- It adds the foreign key constraints that reference agents and user_references tables
 
--- Tasks -> User References relationship
+-- Tasks -> User References relationship (synced from Erebus)
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -12,6 +12,8 @@ BEGIN
         ADD CONSTRAINT fk_tasks_user_id
         FOREIGN KEY (user_id) REFERENCES user_references(id)
         ON DELETE SET NULL;
+
+        COMMENT ON CONSTRAINT fk_tasks_user_id ON tasks IS 'References user_references table which is synced from Erebus DB via logical replication';
     END IF;
 END $$;
 

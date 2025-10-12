@@ -1,7 +1,7 @@
 -- Migration: Create user_references table
--- READ-ONLY sync cache from Erebus user_references table
--- Populated via PostgreSQL logical replication
--- Schema matches Erebus exactly for seamless replication
+-- READ-ONLY: Synced from Erebus DB via PostgreSQL logical replication
+-- This table is a real-time replica of erebus.user_references
+-- All user CRUD operations MUST go through Erebus /api/users/* endpoints
 
 CREATE TABLE IF NOT EXISTS user_references (
     id UUID PRIMARY KEY,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS user_references (
     -- Source type (replaces old user_type with structured data)
     source_type JSONB DEFAULT '{"type": "web3_wallet", "provider": "unknown", "metadata": {}}'::jsonb,
 
-    -- Timestamps from Erebus
+    -- Timestamps from Erebus (replicated)
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
 
@@ -37,6 +37,9 @@ CREATE INDEX IF NOT EXISTS idx_user_references_source_type_gin ON user_reference
 CREATE INDEX IF NOT EXISTS idx_user_references_source_type_type ON user_references((source_type->>'type'));
 CREATE INDEX IF NOT EXISTS idx_user_references_source_type_provider ON user_references((source_type->>'provider'));
 
--- Unique constraints
+-- Unique constraints (matches Erebus)
 CREATE UNIQUE INDEX IF NOT EXISTS user_references_source_network_unique ON user_references(source_identifier, network)
-    WHERE source_identifier IS NOT NULL;
+    WHERE source_identifier IS NOT NULL AND is_active = true;
+
+-- Table documentation
+COMMENT ON TABLE user_references IS 'READ-ONLY: This table is synchronized from Erebus DB (port 5440) via PostgreSQL logical replication. The data originates from erebus.user_references and is replicated in real-time. All user CRUD operations MUST go through Erebus /api/users/* endpoints. Direct writes to this table will be overwritten by replication.';
