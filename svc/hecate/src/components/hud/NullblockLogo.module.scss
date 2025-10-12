@@ -31,8 +31,8 @@ $echo-orange: #ff7f00;
   }
 
   &.medium {
-    width: 60px;
-    height: 60px;
+    width: 54px;
+    height: 54px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -41,7 +41,7 @@ $echo-orange: #ff7f00;
     margin-bottom: auto;
 
     .logoImage {
-      transform: scale(3.6);
+      transform: scale(3.24);
       transform-origin: center center;
     }
   }

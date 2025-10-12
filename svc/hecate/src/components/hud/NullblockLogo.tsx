@@ -16,7 +16,7 @@ const NullblockLogo: React.FC<NullblockLogoProps> = ({
   title,
   size = 'medium'
 }) => {
-  const logoSrc = theme === 'light' ? '/nb_logo_circle_black.png' : '/nb_logo_circle_white.png';
+  const logoSrc = '/nb_logo_circle_color.png';
 
   return (
     <div

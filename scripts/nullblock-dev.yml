@@ -140,6 +140,10 @@ windows:
           done
           echo "✅ Erebus database connection ready"
           echo ""
+          echo "📋 Running Erebus database migrations..."
+          /home/sage/nullblock/scripts/run-erebus-migrations.sh
+          echo "✅ Erebus migrations complete"
+          echo ""
           echo "📨 Waiting for Kafka to be ready..."
           while ! docker exec nullblock-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1; do
             echo "⏳ Waiting for Kafka container to be ready..."
@@ -218,6 +222,7 @@ windows:
           cat /home/sage/nullblock/svc/nullblock-agents/migrations/002_create_agents_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 002_create_agents_table.sql applied"
           cat /home/sage/nullblock/svc/nullblock-agents/migrations/003_create_user_references_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 003_create_user_references_table.sql applied"
           cat /home/sage/nullblock/svc/nullblock-agents/migrations/004_add_tasks_foreign_keys.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 004_add_tasks_foreign_keys.sql applied"
+          cat /home/sage/nullblock/svc/nullblock-agents/migrations/005_setup_replication_subscription.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|NOTICE|Created)" || echo "✅ 005_setup_replication_subscription.sql applied"
           echo "✅ Database schema ready"
           echo ""
           echo "📨 Waiting for Kafka to be ready..."
