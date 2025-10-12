@@ -222,6 +222,7 @@ windows:
           cat /home/sage/nullblock/svc/nullblock-agents/migrations/002_create_agents_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 002_create_agents_table.sql applied"
           cat /home/sage/nullblock/svc/nullblock-agents/migrations/003_create_user_references_table.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 003_create_user_references_table.sql applied"
           cat /home/sage/nullblock/svc/nullblock-agents/migrations/004_add_tasks_foreign_keys.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|already exists)" || echo "✅ 004_add_tasks_foreign_keys.sql applied"
+          cat /home/sage/nullblock/svc/nullblock-agents/migrations/006_fix_user_references_constraint_name.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|NOTICE|Renamed)" || echo "✅ 006_fix_user_references_constraint_name.sql applied"
           cat /home/sage/nullblock/svc/nullblock-agents/migrations/005_setup_replication_subscription.sql | docker exec -i nullblock-postgres-agents psql -U postgres -d agents 2>&1 | grep -E "(ERROR|NOTICE|Created)" || echo "✅ 005_setup_replication_subscription.sql applied"
           echo "✅ Database schema ready"
           echo ""

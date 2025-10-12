@@ -56,7 +56,7 @@ html, body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background-color: #0a0a0a;
+  background-color: transparent;
 }
 
 @keyframes subtle-shift {
@@ -108,6 +108,9 @@ html, body {
   height: 100%;
   z-index: -100;
   background-color: $background-dark;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 
   &::after {
     content: '';
@@ -118,8 +121,8 @@ html, body {
     bottom: 0;
     background: linear-gradient(to bottom,
       transparent,
-      $fog-color 20%,
-      $fog-color 80%,
+      rgba(20, 20, 20, 0.15) 20%,
+      rgba(20, 20, 20, 0.15) 80%,
       transparent
     );
     pointer-events: none;
@@ -133,9 +136,17 @@ html, body {
     bottom: 0;
     width: 100%;
     height: 150px;
-    background: radial-gradient(ellipse at center, $flame-glow 0%, transparent 70%);
+    background: radial-gradient(ellipse at center, rgba(40, 10, 0, 0.1) 0%, transparent 70%);
     pointer-events: none;
     z-index: 1;
+  }
+
+  &.loggedOut {
+    background-image: url('/bg_with_logo.png');
+  }
+
+  &.loggedIn {
+    background-image: url('/bg_without_logo.png');
   }
 }
 
@@ -144,7 +155,7 @@ body {
   font-family: $batman-font;
   color: $text-color;
   font-size: $base-font-size;
-  background-color: #0a0a0a;
+  background-color: transparent;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -241,10 +252,11 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
   height: 100vh;
   overflow: hidden;
+  background-color: transparent;
 }
 
 .theme-null {
-  background: $null-bg;
+  background: transparent;
   color: $null-text;
 }
 
@@ -525,7 +537,7 @@ h1, h2, h3, h4, h5, h6 {
 // Theme variations for consistency
 .theme-null {
   .appContainer {
-    background-color: $matrix-bg;
+    background-color: transparent;
     color: $matrix-text;
   }
   

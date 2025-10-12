@@ -1,5 +1,5 @@
 :root {
-  background-color: #0a0a0a;
+  background-color: transparent;
   color: rgba(255, 255, 255, 0.87);
 
   color-scheme: dark;
@@ -19,7 +19,7 @@
   /* max-width: 1 /px; */
   /* padding: 2rem; */
   text-align: center;
-  background-color: #0a0a0a;
+  background-color: transparent;
   min-height: 100vh;
 }
 
@@ -39,7 +39,7 @@ body {
   min-height: 100vh;
   min-width: 320px;
   place-items: center;
-  background-color: #0a0a0a;
+  background-color: transparent;
 }
 
 h1 {
@@ -75,11 +75,11 @@ button:focus-visible {
 /* Force dark theme - override system preferences */
 @media (prefers-color-scheme: light) {
   :root {
-    background-color: #0a0a0a !important;
+    background-color: transparent !important;
     color: rgba(255, 255, 255, 0.87) !important;
   }
   body {
-    background-color: #0a0a0a !important;
+    background-color: transparent !important;
   }
   a:hover {
     color: #646cff;

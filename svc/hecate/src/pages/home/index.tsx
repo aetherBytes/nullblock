@@ -663,7 +663,7 @@ const Home: React.FC = () => {
     <div
       className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]} ${isInitialized ? styles.initialized : ''}`}
     >
-      <div className={styles.backgroundImage} />
+      <div className={`${styles.backgroundImage} ${publicKey ? styles.loggedIn : styles.loggedOut}`} />
       <StarsCanvas theme={currentTheme === 'light' ? 'light' : (currentTheme === 'null' ? 'null' : 'null')} />
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`}>
         {/* System status panel moved to HUD component */}
