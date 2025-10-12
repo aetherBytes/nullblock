@@ -858,6 +858,7 @@ const HUD: React.FC<HUDProps> = ({
           </div>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'canvas' ? '' : styles.hidden}`}>
             <div className={styles.canvasView}>
+              <div className={styles.canvasBackground} />
               <div className={styles.canvasEmpty}>
                 <p className={styles.canvasMessage}>Empty Canvas</p>
                 <p className={styles.canvasHint}>Click the logo to return to Hecate</p>
@@ -876,6 +877,7 @@ const HUD: React.FC<HUDProps> = ({
         <>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'canvas' ? '' : styles.hidden}`}>
             <div className={styles.canvasView}>
+              <div className={styles.canvasBackground} />
               <div className={styles.canvasEmpty}>
                 <p className={styles.canvasMessage}>Empty Canvas</p>
                 <p className={styles.canvasHint}>Click the logo to return to Hecate</p>
