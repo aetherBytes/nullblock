@@ -136,7 +136,7 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet }
             </div>
             {hoveredCard === index && (
               <div className={styles.featureTooltip}>
-                <p>{feature.description}</p>
+                <p><strong>{feature.title}</strong><br />{feature.description}</p>
               </div>
             )}
           </div>
