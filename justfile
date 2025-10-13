@@ -20,6 +20,10 @@ start-mac:
     @echo "🚀 Starting all NullBlock infrastructure services (macOS)..."
     @echo "Using port mapping for Docker Desktop compatibility..."
     @echo ""
+    @echo "📦 Creating Docker network for container communication..."
+    @docker network create nullblock-network 2>/dev/null || true
+    @echo "  ✅ Network ready"
+    @echo ""
     @echo "📦 Creating persistent volumes..."
     @docker volume create nullblock-postgres-erebus-data 2>/dev/null || true
     @docker volume create nullblock-postgres-agents-data 2>/dev/null || true
@@ -28,12 +32,12 @@ start-mac:
     @echo ""
     @docker rm -f nullblock-postgres-erebus nullblock-postgres-agents nullblock-redis nullblock-zookeeper nullblock-kafka 2>/dev/null || true
     @echo "📦 Starting PostgreSQL databases..."
-    @docker run -d --name nullblock-postgres-erebus -p 5440:5432 -v nullblock-postgres-erebus-data:/var/lib/postgresql/data -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres_secure_pass postgres:15-alpine
-    @docker run -d --name nullblock-postgres-agents -p 5441:5432 -v nullblock-postgres-agents-data:/var/lib/postgresql/data -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres_secure_pass postgres:15-alpine
+    @docker run -d --name nullblock-postgres-erebus --network nullblock-network -p 5440:5432 -v nullblock-postgres-erebus-data:/var/lib/postgresql/data -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres_secure_pass postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
+    @docker run -d --name nullblock-postgres-agents --network nullblock-network -p 5441:5432 -v nullblock-postgres-agents-data:/var/lib/postgresql/data -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres_secure_pass postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
     @echo "📦 Starting Redis..."
-    @docker run -d --name nullblock-redis -p 6379:6379 -v nullblock-redis-data:/data redis:7-alpine redis-server --appendonly yes
+    @docker run -d --name nullblock-redis --network nullblock-network -p 6379:6379 -v nullblock-redis-data:/data redis:7-alpine redis-server --appendonly yes
     @echo "📦 Starting Zookeeper..."
-    @docker run -d --name nullblock-zookeeper -p 2181:2181 -e ZOOKEEPER_CLIENT_PORT=2181 -e ZOOKEEPER_TICK_TIME=2000 confluentinc/cp-zookeeper:7.4.0
+    @docker run -d --name nullblock-zookeeper --network nullblock-network -p 2181:2181 -e ZOOKEEPER_CLIENT_PORT=2181 -e ZOOKEEPER_TICK_TIME=2000 confluentinc/cp-zookeeper:7.4.0
     @echo ""
     @echo "⏳ Waiting for services to be ready..."
     @sleep 3
@@ -47,7 +51,7 @@ start-mac:
     @echo "  ✅ Zookeeper ready"
     @echo ""
     @echo "📦 Starting Kafka (requires Zookeeper)..."
-    @docker run -d --name nullblock-kafka -p 9092:9092 -p 9093:9093 -e KAFKA_BROKER_ID=1 -e KAFKA_ZOOKEEPER_CONNECT=host.docker.internal:2181 -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://localhost:9093 -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=true confluentinc/cp-kafka:7.4.0
+    @docker run -d --name nullblock-kafka --network nullblock-network -p 9092:9092 -p 9093:9093 -e KAFKA_BROKER_ID=1 -e KAFKA_ZOOKEEPER_CONNECT=nullblock-zookeeper:2181 -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://nullblock-kafka:9093 -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT_INTERNAL -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=true confluentinc/cp-kafka:7.4.0
     @echo "⏳ Waiting for Kafka to be ready..."
     @sleep 15
     @while ! docker exec nullblock-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1; do echo "  ⏳ Waiting for Kafka broker..."; sleep 3; done
@@ -65,10 +69,14 @@ start-mac:
     @echo "   Protocols: cd svc/nullblock-protocols && cargo run"
     @echo "   Frontend:  cd svc/hecate && npm run develop"
 
-# Start all infrastructure services (Linux with host networking)
+# Start all infrastructure services (Linux with bridge networking)
 start-linux:
     @echo "🚀 Starting all NullBlock infrastructure services..."
-    @echo "Using host networking to bypass veth kernel module issues..."
+    @echo "Using Docker bridge networking for container-to-container communication..."
+    @echo ""
+    @echo "📦 Creating Docker network for container communication..."
+    @docker network create nullblock-network 2>/dev/null || true
+    @echo "  ✅ Network ready"
     @echo ""
     @echo "📦 Creating persistent volumes..."
     @docker volume create nullblock-postgres-erebus-data 2>/dev/null || true
@@ -78,12 +86,12 @@ start-linux:
     @echo ""
     @docker rm -f nullblock-postgres-erebus nullblock-postgres-agents nullblock-redis nullblock-zookeeper nullblock-kafka 2>/dev/null || true
     @echo "📦 Starting PostgreSQL databases..."
-    @docker run -d --name nullblock-postgres-erebus --network=host -v nullblock-postgres-erebus-data:/var/lib/postgresql/data -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres_secure_pass -e PGPORT=5440 postgres:15-alpine -p 5440
-    @docker run -d --name nullblock-postgres-agents --network=host -v nullblock-postgres-agents-data:/var/lib/postgresql/data -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres_secure_pass -e PGPORT=5441 postgres:15-alpine -p 5441
+    @docker run -d --name nullblock-postgres-erebus --network nullblock-network -p 5440:5432 -v nullblock-postgres-erebus-data:/var/lib/postgresql/data -e POSTGRES_DB=erebus -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres_secure_pass postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
+    @docker run -d --name nullblock-postgres-agents --network nullblock-network -p 5441:5432 -v nullblock-postgres-agents-data:/var/lib/postgresql/data -e POSTGRES_DB=agents -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres_secure_pass postgres:15-alpine postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4 -c max_logical_replication_workers=4
     @echo "📦 Starting Redis..."
-    @docker run -d --name nullblock-redis --network=host -v nullblock-redis-data:/data redis:7-alpine redis-server --port 6379 --appendonly yes
+    @docker run -d --name nullblock-redis --network nullblock-network -p 6379:6379 -v nullblock-redis-data:/data redis:7-alpine redis-server --appendonly yes
     @echo "📦 Starting Zookeeper..."
-    @docker run -d --name nullblock-zookeeper --network=host -e ZOOKEEPER_CLIENT_PORT=2181 -e ZOOKEEPER_TICK_TIME=2000 confluentinc/cp-zookeeper:7.4.0
+    @docker run -d --name nullblock-zookeeper --network nullblock-network -p 2181:2181 -e ZOOKEEPER_CLIENT_PORT=2181 -e ZOOKEEPER_TICK_TIME=2000 confluentinc/cp-zookeeper:7.4.0
     @echo ""
     @echo "⏳ Waiting for services to be ready..."
     @sleep 3
@@ -97,7 +105,7 @@ start-linux:
     @echo "  ✅ Zookeeper ready"
     @echo ""
     @echo "📦 Starting Kafka (requires Zookeeper)..."
-    @docker run -d --name nullblock-kafka --network=host -e KAFKA_BROKER_ID=1 -e KAFKA_ZOOKEEPER_CONNECT=localhost:2181 -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=true confluentinc/cp-kafka:7.4.0
+    @docker run -d --name nullblock-kafka --network nullblock-network -p 9092:9092 -e KAFKA_BROKER_ID=1 -e KAFKA_ZOOKEEPER_CONNECT=nullblock-zookeeper:2181 -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://nullblock-kafka:9093 -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT_INTERNAL -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=true confluentinc/cp-kafka:7.4.0
     @echo "⏳ Waiting for Kafka to be ready..."
     @sleep 15
     @while ! docker exec nullblock-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1; do echo "  ⏳ Waiting for Kafka broker..."; sleep 3; done
@@ -122,6 +130,8 @@ term:
     @docker stop nullblock-kafka nullblock-zookeeper nullblock-redis nullblock-postgres-agents nullblock-postgres-erebus 2>/dev/null || true
     @echo "Removing Docker containers..."
     @docker rm nullblock-kafka nullblock-zookeeper nullblock-redis nullblock-postgres-agents nullblock-postgres-erebus 2>/dev/null || true
+    @echo "Removing Docker network..."
+    @docker network rm nullblock-network 2>/dev/null || true
     @echo "✅ All services terminated and cleaned up"
     @docker ps --filter "name=nullblock" --format "table {{"{{"}}.Names}}\t{{"{{"}}.Status}}"
 

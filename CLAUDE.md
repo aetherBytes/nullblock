@@ -32,8 +32,9 @@ Together, we shape the future of autonomous commerce.
 5. **🤖 Agent Model Selection** - Make sure Siren / other agents do not get stuck on a default model. Should follow model selections of user.
 6. **🔄 Crossroads Login Reload** - Crossroads needs to reload content after success on login
 7. **✅ A2A Task Schema & Integration** - COMPLETED: Full A2A Protocol v0.3.0 compliance with task schema, repository methods, handler population of history/artifacts, and Protocols→Agents HTTP integration
-8. **🔄 Compilation & Testing** - Fix remaining Axum router state type issues in protocols service, test end-to-end A2A task flow (create→process→retrieve via A2A endpoints)
-9. **📋 A2A Streaming (SSE)** - Implement Server-Sent Events for message/stream and tasks/resubscribe, bridge Kafka task.lifecycle events to SSE streams for real-time updates
+8. **✅ Docker & Replication Infrastructure** - COMPLETED: Fixed PostgreSQL logical replication with container-first architecture, system-agnostic design working on macOS and Linux
+9. **🔄 Task State Alignment** - A2A protocol uses "working" state but Hecate expects "created"/"running" - reconcile state transitions and implement auto-processing for auto_start=true tasks
+10. **📋 A2A Streaming (SSE)** - Implement Server-Sent Events for message/stream and tasks/resubscribe, bridge Kafka task.lifecycle events to SSE streams for real-time updates
 
 ## Architecture Overview
 
@@ -92,6 +93,54 @@ Together, we shape the future of autonomous commerce.
 - **5173**: Hecate frontend
 - **8001**: Protocol server (A2A/MCP)
 - **9003**: Hecate agent API
+
+## 🐳 Docker & Container Golden Rules
+
+### Container-First Architecture 🚨
+
+**CRITICAL**: All infrastructure runs in Docker containers with container-to-container communication.
+
+#### Golden Rules:
+
+1. **🔗 Container-to-Container Communication**
+   - ✅ **ALWAYS** use container names for service-to-service communication
+   - ✅ **ALWAYS** use internal ports (5432, not 5440) for container communication
+   - ✅ **ALWAYS** use Docker bridge networks (never `--network=host` unless absolutely necessary)
+   - ❌ **NEVER** use `localhost` or `127.0.0.1` for container-to-container communication
+   - ❌ **NEVER** use `host.docker.internal` (macOS-specific, breaks on Linux)
+   - ❌ **NEVER** use external ports (5440/5441) for container communication
+
+2. **📦 Network Configuration**
+   - All containers MUST join the `nullblock-network` bridge network
+   - External access uses port mapping: `-p 5440:5432` (host:container)
+   - Internal access uses container name: `nullblock-postgres-erebus:5432`
+   - Docker DNS automatically resolves container names within the network
+
+3. **🔧 Configuration Examples**
+   ```bash
+   # ✅ CORRECT - Container to container
+   docker run --network nullblock-network postgres
+   CONNECTION='host=nullblock-postgres-erebus port=5432'
+
+   # ✅ CORRECT - Host to container (external)
+   psql -h localhost -p 5440
+
+   # ❌ WRONG - Using host.docker.internal
+   CONNECTION='host=host.docker.internal port=5440'
+
+   # ❌ WRONG - Using localhost in container
+   CONNECTION='host=localhost port=5432'
+   ```
+
+4. **🎯 System-Agnostic Design**
+   - Container configurations MUST work identically on macOS and Linux
+   - Use Docker networking features, not OS-specific workarounds
+   - Test on both platforms before committing
+
+5. **🗄️ Database Replication Example**
+   - Erebus DB publishes: `nullblock-postgres-erebus:5432`
+   - Agents DB subscribes: `host=nullblock-postgres-erebus port=5432`
+   - External access: `localhost:5440` (Erebus), `localhost:5441` (Agents)
 
 ## 🏗️ Architecture Rules
 
@@ -211,21 +260,31 @@ NullBlock implements [A2A Protocol v0.3.0](https://a2a-protocol.org/latest/speci
 
 **Sync**: PostgreSQL logical replication (`erebus_user_sync` publication → `agents_user_sync` subscription)
 
+**Container Communication**:
+- **Internal (container-to-container)**: `nullblock-postgres-erebus:5432`, `nullblock-postgres-agents:5432`
+- **External (host access)**: `localhost:5440` (Erebus), `localhost:5441` (Agents)
+- **Network**: All containers on `nullblock-network` bridge network
+- **Replication**: Agents container subscribes to Erebus via `host=nullblock-postgres-erebus port=5432`
+
 **Setup (Automatic via Migrations)**:
-1. Erebus migration `002_setup_logical_replication.sql` creates publication
-2. Agents migration `005_setup_replication_subscription.sql` creates subscription
-3. Run migrations: `./scripts/run-erebus-migrations.sh && ./scripts/run-agents-migrations.sh`
+1. Infrastructure: `just start` creates network and containers with replication config
+2. Erebus migration `002_setup_logical_replication.sql` creates publication
+3. Agents migration `005_setup_replication_subscription.sql` creates subscription
 4. Replication starts automatically with initial data backfill
 
-**Benefits**: Service isolation, real-time sync (<1s), automatic recovery, persistent across container restarts
+**Benefits**: Service isolation, real-time sync (<1s), automatic recovery, persistent across container restarts, system-agnostic (works on macOS and Linux)
 
 **Monitoring**:
-```sql
--- Check subscription status (Agents DB)
-SELECT subname, subenabled, srsubstate FROM pg_subscription sub LEFT JOIN pg_subscription_rel rel ON sub.oid = rel.srsubid WHERE subname = 'agents_user_sync';
+```bash
+# Check replication status
+PGPASSWORD="postgres_secure_pass" psql -h localhost -p 5441 -U postgres -d agents -c \
+  "SELECT subname, subenabled FROM pg_subscription WHERE subname = 'agents_user_sync';"
 
--- Verify user sync count
-SELECT (SELECT COUNT(*) FROM erebus.user_references) as erebus_users, (SELECT COUNT(*) FROM agents.user_references) as agents_users;
+# Verify user counts match
+PGPASSWORD="postgres_secure_pass" psql -h localhost -p 5440 -U postgres -d erebus -c \
+  "SELECT COUNT(*) as erebus_users FROM user_references;"
+PGPASSWORD="postgres_secure_pass" psql -h localhost -p 5441 -U postgres -d agents -c \
+  "SELECT COUNT(*) as agents_users FROM user_references;"
 ```
 
 ## 🛣️ Crossroads Marketplace
@@ -442,6 +501,17 @@ LLM_REQUEST_TIMEOUT_MS=300000
 - ✅ Source-agnostic user system with SourceType enum
 - ✅ PostgreSQL logical replication for user sync (Erebus→Agents)
 
+**Docker & Container Architecture (October 2025):**
+
+- ✅ **Container-First Architecture** - All infrastructure runs in Docker containers with bridge networking
+- ✅ **System-Agnostic Design** - Identical behavior on macOS and Linux using Docker networking features
+- ✅ **PostgreSQL Replication Fix** - Fixed subscription to use container names (`nullblock-postgres-erebus:5432`) instead of OS-specific workarounds (`host.docker.internal`)
+- ✅ **Network Configuration** - All containers join `nullblock-network` bridge network for container-to-container communication
+- ✅ **Justfile Updates** - Both `start-mac` and `start-linux` now use Docker bridge networking with proper port mapping
+- ✅ **Replication Verification** - Tested and confirmed <1 second replication latency from Erebus→Agents
+- ✅ **Container Golden Rules** - Added comprehensive documentation to CLAUDE.md preventing future networking issues
+- ✅ **Migration Script Updates** - Subscription migration now uses internal container ports (5432) instead of external host ports
+
 ### In Progress 🔄
 
 - 🔄 **Task State Naming Mismatch** - A2A protocol uses "working" state, but Hecate process endpoint expects "created" or "running" - need to align state transitions and validate task lifecycle
@@ -455,7 +525,8 @@ LLM_REQUEST_TIMEOUT_MS=300000
 2. **Hecate Auto-Processing Flow** - Implement automatic task processing when auto_start=true. Current behavior: task transitions to "working" but Hecate doesn't execute. Need to trigger agent processing on state change.
 3. **Task Processing Endpoint** - Update `/tasks/:id/process` to accept A2A states or add state normalization before validation
 4. **Validate Artifact Population** - Once processing works, confirm Hecate adds completion artifacts with metadata (model, duration) to artifacts array
-5. **Fix Image Generation** - Three issues blocking image display: (1) useChat.ts parseContentForImages() removes image markdown from content string, (2) max_tokens too low (4096) for base64 images (need 16384+), (3) No error handling for truncated/timeout responses. Fix: Keep images in markdown for MarkdownRenderer, increase token limit, add validation and timeout handling
+5. **Service Container Integration** - Update Erebus, Agents, and Protocols Rust services to use container names for inter-service communication (e.g., `http://nullblock-protocols:8001` instead of `http://localhost:8001`)
+6. **Fix Image Generation** - Three issues blocking image display: (1) useChat.ts parseContentForImages() removes image markdown from content string, (2) max_tokens too low (4096) for base64 images (need 16384+), (3) No error handling for truncated/timeout responses. Fix: Keep images in markdown for MarkdownRenderer, increase token limit, add validation and timeout handling
 
 **Phase 1 - Streaming & Real-time (High Priority):** 5. Implement Server-Sent Events (SSE) for message/stream endpoint 6. Build Kafka → SSE bridge: Subscribe to task.lifecycle topic, stream updates to A2A clients 7. Implement tasks/resubscribe for resuming task status streams 8. Add connection management (timeouts, keep-alive, reconnection)
 

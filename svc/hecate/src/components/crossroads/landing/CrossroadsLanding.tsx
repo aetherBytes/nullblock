@@ -1,74 +1,59 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from '../crossroads.module.scss';
 
 interface CrossroadsLandingProps {
   onConnectWallet: () => void;
 }
 
+interface FeatureData {
+  icon: string;
+  title: string;
+  description: string;
+}
+
+const features: FeatureData[] = [
+  {
+    icon: '🤖',
+    title: 'Agent Marketplace',
+    description: 'Discover and deploy autonomous agents for trading, social monitoring, and DeFi operations. Browse hundreds of pre-built agents or publish your own.'
+  },
+  {
+    icon: '🔗',
+    title: 'MCP Integration',
+    description: 'Model Context Protocol for seamless AI agent communication and coordination. Connect any MCP-compatible service instantly.'
+  },
+  {
+    icon: '⚡',
+    title: 'One-Click Deploy',
+    description: 'From discovery to deployment in seconds. No infrastructure setup required. Start using services immediately.'
+  },
+  {
+    icon: '💰',
+    title: 'Monetize Services',
+    description: 'Publish your agents and workflows to earn from your creations. Flexible pricing models including subscriptions and one-time payments.'
+  },
+  {
+    icon: '📊',
+    title: 'Analytics & Insights',
+    description: 'Real-time analytics, performance monitoring, and usage insights for all your deployed services and published offerings.'
+  },
+  {
+    icon: '🔒',
+    title: 'Web3 Native',
+    description: 'Built on Base with OnchainKit. Wallet-based authentication, on-chain payments, and verifiable service ownership.'
+  }
+];
+
 const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet }) => {
+  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+
   return (
     <div className={styles.landingView}>
       <div className={styles.hero}>
         {/* Hero section removed - welcome is now in navbar */}
       </div>
 
-      <div className={styles.featureShowcase}>
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>🤖</div>
-          <h3>Agent Marketplace</h3>
-          <p>
-            Discover and deploy autonomous agents for trading, social monitoring, and DeFi operations.
-            Browse hundreds of pre-built agents or publish your own.
-          </p>
-        </div>
-
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>🔗</div>
-          <h3>MCP Integration</h3>
-          <p>
-            Model Context Protocol for seamless AI agent communication and coordination. Connect any
-            MCP-compatible service instantly.
-          </p>
-        </div>
-
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>⚡</div>
-          <h3>One-Click Deploy</h3>
-          <p>
-            From discovery to deployment in seconds. No infrastructure setup required. Start using
-            services immediately.
-          </p>
-        </div>
-
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>💰</div>
-          <h3>Monetize Services</h3>
-          <p>
-            Publish your agents and workflows to earn from your creations. Flexible pricing models
-            including subscriptions and one-time payments.
-          </p>
-        </div>
-
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>📊</div>
-          <h3>Analytics & Insights</h3>
-          <p>
-            Real-time analytics, performance monitoring, and usage insights for all your deployed
-            services and published offerings.
-          </p>
-        </div>
-
-        <div className={styles.featureCard}>
-          <div className={styles.featureIcon}>🔒</div>
-          <h3>Web3 Native</h3>
-          <p>
-            Built on Base with OnchainKit. Wallet-based authentication, on-chain payments, and
-            verifiable service ownership.
-          </p>
-        </div>
-      </div>
-
-      <div className={styles.connectPrompt}>
+      <div className={styles.connectPrompt} style={{ marginTop: '1rem' }}>
         <button onClick={onConnectWallet}>
           🚀 Connect Wallet & Explore
         </button>
@@ -77,7 +62,7 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet }
         </p>
       </div>
 
-      <div className={styles.featureShowcase} style={{ marginTop: '3rem' }}>
+      <div className={styles.featureShowcaseBottom}>
         <div className={styles.featureCard}>
           <h3>📚 Documentation</h3>
           <p>Complete guides and API references</p>
@@ -134,6 +119,28 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet }
             Join Discord
           </button>
         </div>
+      </div>
+
+      <div className={styles.featureShowcaseRight}>
+        {features.map((feature, index) => (
+          <div
+            key={index}
+            className={styles.featureCardCompact}
+            onMouseEnter={() => setHoveredCard(index)}
+            onMouseLeave={() => setHoveredCard(null)}
+            onClick={() => setHoveredCard(hoveredCard === index ? null : index)}
+          >
+            <div className={styles.cardContent}>
+              <div className={styles.featureIcon}>{feature.icon}</div>
+              <h3>{feature.title}</h3>
+            </div>
+            {hoveredCard === index && (
+              <div className={styles.featureTooltip}>
+                <p>{feature.description}</p>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

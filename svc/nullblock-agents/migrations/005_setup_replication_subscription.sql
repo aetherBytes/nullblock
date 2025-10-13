@@ -15,7 +15,8 @@ DROP SUBSCRIPTION IF EXISTS agents_user_sync;
 
 -- Create subscription to Erebus publication
 -- This will automatically create a replication slot on Erebus
--- Using container hostname 'nullblock-postgres-erebus' which resolves via Docker network
+-- Using container name for Docker DNS resolution (system-agnostic, works on all platforms)
+-- Port 5432 is internal container port for container-to-container communication
 CREATE SUBSCRIPTION agents_user_sync
 CONNECTION 'host=nullblock-postgres-erebus port=5432 dbname=erebus user=postgres password=postgres_secure_pass'
 PUBLICATION erebus_user_sync
