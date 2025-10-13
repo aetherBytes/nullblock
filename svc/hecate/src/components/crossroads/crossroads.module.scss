@@ -49,15 +49,22 @@ $category-model: #ec4899;
 
 // Landing View
 .landingView {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
   padding: 2rem 1.5rem;
   overflow-y: auto;
   overflow-x: hidden;
   height: 100%;
-  
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
   @media (max-width: 768px) {
     padding: 1.5rem 1rem;
+  }
+
+  > * {
+    max-width: 1200px;
+    width: 100%;
   }
 }
 
@@ -389,10 +396,70 @@ $category-model: #ec4899;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.25rem;
   margin-bottom: 2.5rem;
-  
+
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+}
+
+.featureShowcaseBottom {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: 1.25rem;
+  max-width: 1200px;
+  width: calc(100% - 3rem);
+  z-index: 40;
+  padding: 0 1.5rem;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    width: calc(100% - 2rem);
+    padding: 0 1rem;
+    bottom: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    position: static;
+    transform: none;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-top: 3rem;
+    margin-bottom: 2.5rem;
+    width: 100%;
+    padding: 0;
+  }
+}
+
+.featureShowcaseRight {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: fit-content;
+  max-width: 350px;
+  align-items: flex-end;
+  z-index: 50;
+
+  @media (max-width: 1024px) {
+    right: 1rem;
+    max-width: 300px;
+    bottom: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+    align-items: stretch;
+    margin-bottom: 2.5rem;
   }
 }
 
@@ -447,6 +514,130 @@ $category-model: #ec4899;
     color: #94a3b8;
     line-height: 1.6;
     font-size: 0.875rem;
+  }
+}
+
+.featureCardCompact {
+  position: relative;
+  background: rgba(30, 41, 59, 0.3);
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  width: 100%;
+  min-width: 280px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, transparent, rgba(99, 102, 241, 0.4), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover {
+    transform: translateX(-4px);
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: -8px 8px 24px rgba(99, 102, 241, 0.12);
+    background: rgba(30, 41, 59, 0.45);
+
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  .cardContent {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+
+    .featureIcon {
+      font-size: 1.5rem;
+      opacity: 0.9;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      letter-spacing: -0.01em;
+      margin: 0;
+      flex: 1;
+    }
+  }
+
+  .featureTooltip {
+    position: absolute;
+    right: calc(100% + 1rem);
+    top: 50%;
+    transform: translateY(-50%);
+    min-width: 300px;
+    max-width: 400px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+    box-shadow: -8px 8px 32px rgba(0, 0, 0, 0.4);
+    animation: tooltipSlideIn 0.25s ease;
+    z-index: 100;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: -6px;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-left: 6px solid rgba(15, 23, 42, 0.95);
+    }
+
+    p {
+      color: #cbd5e1;
+      line-height: 1.6;
+      font-size: 0.875rem;
+      margin: 0;
+    }
+
+    @media (max-width: 768px) {
+      position: fixed;
+      left: 50%;
+      top: auto;
+      bottom: 1rem;
+      right: auto;
+      transform: translateX(-50%);
+      min-width: calc(100vw - 2rem);
+      max-width: calc(100vw - 2rem);
+
+      &::after {
+        display: none;
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    min-width: 100%;
+  }
+}
+
+@keyframes tooltipSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
   }
 }
 
