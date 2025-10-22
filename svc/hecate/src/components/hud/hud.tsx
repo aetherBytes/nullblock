@@ -1000,7 +1000,7 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderUnifiedNavigation = () => (
     <div className={styles.unifiedNavbar}>
-      {/* Left side - Logo, NULLBLOCK Text, and Nav Buttons */}
+      {/* Left side - Logo, NULLBLOCK Text, and Welcome Quote */}
       <div className={styles.navbarLeft}>
         <NullblockLogo
           state={nullviewState}
@@ -1025,53 +1025,39 @@ const HUD: React.FC<HUDProps> = ({
         <div className={styles.nullblockTextLogo}>
           NULLBLOCK
         </div>
-        {/* Left Nav Buttons */}
-        <div className={styles.navButtonGroup}>
-          <button
-            className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
-            onClick={() => setMainHudActiveTab('crossroads')}
-            title="Crossroads Marketplace"
-          >
-            CROSSROADS
-          </button>
-
-          {publicKey && (
-            <>
-              <button
-                className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
-                onClick={() => setMainHudActiveTab('hecate')}
-                title="Hecate Agent Interface"
-              >
-                HECATE
-              </button>
-            <span className={styles.separator}>|</span>
-            <HecateWelcome compact={true} maxChars={80} />
-          </>
-        )}
-
-        {!publicKey && <HecateWelcome compact={true} maxChars={80} />}
-        </div>
+        <HecateWelcome compact={true} maxChars={80} />
       </div>
 
       {/* Center - Empty for spacer */}
       <div className={styles.navbarCenter}>
       </div>
 
-      {/* Right side - Action Buttons */}
+      {/* Right side - All Buttons */}
       <div className={styles.navbarRight}>
+        <button
+          className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
+          onClick={() => setMainHudActiveTab('crossroads')}
+          title="Crossroads Marketplace"
+        >
+          <span>CROSSROADS</span>
+        </button>
+
+        {publicKey && (
+          <button
+            className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
+            onClick={() => setMainHudActiveTab('hecate')}
+            title="Hecate Agent Interface"
+          >
+            <span>HECATE</span>
+          </button>
+        )}
+
         <button
           className={`${styles.walletMenuButton} ${publicKey ? styles.connected : ''}`}
           onClick={publicKey ? onDisconnect : () => onConnectWallet()}
           title={publicKey ? 'Disconnect Wallet' : 'Connect Wallet'}
         >
           <span className={styles.walletMenuText}>{publicKey ? 'Disconnect' : 'Connect'}</span>
-        </button>
-        <button
-          className={styles.docsMenuButton}
-          onClick={() => window.open('https://aetherbytes.github.io/nullblock-sdk/', '_blank')}
-          title="Documentation & Developer Resources"
-        >
-          <span className={styles.docsMenuText}>Docs</span>
         </button>
       </div>
     </div>
