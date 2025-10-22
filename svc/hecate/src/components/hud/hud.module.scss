@@ -3991,6 +3991,29 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+// Logged out - clean style with no overlays
+.echoContainer.loggedOut {
+  &::before,
+  &::after {
+    display: none !important;
+  }
+
+  .hudScreen {
+    background: transparent !important;
+    background-image: none !important;
+    backdrop-filter: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .unifiedNavbar {
+    &::before,
+    &::after {
+      display: none !important;
+    }
+  }
+}
+
 // Null theme overrides for matrix-style green
 .echoContainer.null {
   .hudScreen {

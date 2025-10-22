@@ -1084,7 +1084,7 @@ const HUD: React.FC<HUDProps> = ({
   );
 
   return (
-    <div className={`${styles.echoContainer} ${styles[theme]}`}>
+    <div className={`${styles.echoContainer} ${publicKey ? styles[theme] : styles.loggedOut}`}>
       {renderUnifiedNavigation()}
       {renderMainContent()}
     </div>
