@@ -69,8 +69,8 @@ const HUD: React.FC<HUDProps> = ({
     | 'idle'
   >('base');
   const [mainHudActiveTab, setMainHudActiveTab] = useState<
-    'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas'
-  >('crossroads');
+    'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null
+  >(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Tab functionality state
@@ -853,7 +853,7 @@ const HUD: React.FC<HUDProps> = ({
     if (!publicKey) {
       return (
         <>
-          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' ? '' : styles.hidden}`}>
+          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' || mainHudActiveTab === null ? '' : styles.hidden}`}>
             <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} />
           </div>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'canvas' ? '' : styles.hidden}`}>
@@ -865,7 +865,7 @@ const HUD: React.FC<HUDProps> = ({
               </div>
             </div>
           </div>
-          {mainHudActiveTab !== 'crossroads' && mainHudActiveTab !== 'canvas' && (
+          {mainHudActiveTab !== 'crossroads' && mainHudActiveTab !== 'canvas' && mainHudActiveTab !== null && (
             <div className={styles.defaultTab}>
               <p>Connect your wallet to access full features</p>
             </div>
