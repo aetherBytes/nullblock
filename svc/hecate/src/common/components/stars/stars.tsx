@@ -147,10 +147,11 @@ const Stars = ({ theme = 'light' }: StarsProps) => {
 
 interface StarsCanvasProps {
   theme?: 'null' | 'matrix' | 'light';
+  loggedIn?: boolean;
 }
 
-const StarsCanvas = ({ theme = 'light' }: StarsCanvasProps) => (
-  <div className={`${styles.starsCanvas} ${styles[theme]}`}>
+const StarsCanvas = ({ theme = 'light', loggedIn = false }: StarsCanvasProps) => (
+  <div className={`${styles.starsCanvas} ${loggedIn ? styles[theme] : styles.clean}`}>
     <Canvas
       camera={{ position: [0, 0, 1] }}
       gl={{ alpha: true, antialias: true }}

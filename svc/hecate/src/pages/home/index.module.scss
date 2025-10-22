@@ -143,6 +143,14 @@ html, body {
 
   &.loggedOut {
     background-image: url('/bg_with_logo.png');
+
+    &::after {
+      display: none;
+    }
+
+    &::before {
+      display: none;
+    }
   }
 
   &.loggedIn {
