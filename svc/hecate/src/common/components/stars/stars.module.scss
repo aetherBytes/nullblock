@@ -7,6 +7,12 @@
   z-index: 1;
 }
 
+// Clean style - no filters or effects
+.clean {
+  filter: none;
+  background: transparent;
+}
+
 // Theme-specific styles
 .null {
   filter: hue-rotate(90deg) brightness(1.2);
