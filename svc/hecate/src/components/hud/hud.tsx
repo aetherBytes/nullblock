@@ -74,6 +74,8 @@ const HUD: React.FC<HUDProps> = ({
     'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null
   >(initialTab);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showCrossroadsMarketplace, setShowCrossroadsMarketplace] = useState(false);
+  const [resetCrossroadsToLanding, setResetCrossroadsToLanding] = useState(false);
 
   // Tab functionality state
   const [autoScroll, setAutoScroll] = useState(true);
@@ -138,6 +140,20 @@ const HUD: React.FC<HUDProps> = ({
       setMainHudActiveTab(initialTab);
     }
   }, [initialTab]);
+
+  // Reset the showCrossroadsMarketplace flag after it's been used
+  useEffect(() => {
+    if (showCrossroadsMarketplace) {
+      setShowCrossroadsMarketplace(false);
+    }
+  }, [showCrossroadsMarketplace]);
+
+  // Reset the resetCrossroadsToLanding flag after it's been used
+  useEffect(() => {
+    if (resetCrossroadsToLanding) {
+      setResetCrossroadsToLanding(false);
+    }
+  }, [resetCrossroadsToLanding]);
 
   // MCP initialization is now handled by useAuthentication hook
   useEffect(() => {
@@ -863,7 +879,7 @@ const HUD: React.FC<HUDProps> = ({
       return (
         <>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' || mainHudActiveTab === null ? '' : styles.hidden}`}>
-            <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} />
+            <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} showMarketplace={showCrossroadsMarketplace} resetToLanding={resetCrossroadsToLanding} />
           </div>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'canvas' ? '' : styles.hidden}`}>
             <div className={styles.canvasView}>
@@ -894,7 +910,7 @@ const HUD: React.FC<HUDProps> = ({
             </div>
           </div>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' ? '' : styles.hidden}`}>
-            <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} />
+            <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} showMarketplace={showCrossroadsMarketplace} resetToLanding={resetCrossroadsToLanding} />
           </div>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'hecate' ? '' : styles.hidden}`}>
             <div className={`${styles.hecateContainer} ${isChatExpanded ? styles.chatExpanded : ''} ${isScopesExpanded ? styles.scopesExpanded : ''}`}>
@@ -1017,12 +1033,18 @@ const HUD: React.FC<HUDProps> = ({
           size="medium"
           onClick={() => {
             setMainHudActiveTab(null);
+            setShowCrossroadsMarketplace(false);
+            setResetCrossroadsToLanding(true);
           }}
           title="Return to Landing Page"
         />
         <div
           className={styles.nullblockTextLogo}
-          onClick={() => setMainHudActiveTab(null)}
+          onClick={() => {
+            setMainHudActiveTab(null);
+            setShowCrossroadsMarketplace(false);
+            setResetCrossroadsToLanding(true);
+          }}
           style={{ cursor: 'pointer' }}
           title="Return to Landing Page"
         >
@@ -1039,7 +1061,10 @@ const HUD: React.FC<HUDProps> = ({
       <div className={styles.navbarRight}>
         <button
           className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
-          onClick={() => setMainHudActiveTab('crossroads')}
+          onClick={() => {
+            setMainHudActiveTab('crossroads');
+            setShowCrossroadsMarketplace(true);
+          }}
           title="Crossroads Marketplace"
         >
           <span>CROSSROADS</span>

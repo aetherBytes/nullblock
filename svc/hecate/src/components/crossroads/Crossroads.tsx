@@ -12,6 +12,8 @@ import type { ServiceListing } from './types';
 interface CrossroadsProps {
   publicKey: string | null;
   onConnectWallet: (walletType?: 'phantom' | 'metamask') => void;
+  showMarketplace?: boolean;
+  resetToLanding?: boolean;
 }
 
 const config = createConfig({
@@ -31,11 +33,11 @@ const queryClient = new QueryClient();
 
 type View = 'landing' | 'marketplace' | 'service-detail' | 'my-services';
 
-const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet }) => {
-  const [currentView, setCurrentView] = useState<View>(publicKey ? 'marketplace' : 'landing');
+const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet, showMarketplace, resetToLanding }) => {
+  const [currentView, setCurrentView] = useState<View>('landing');
   const [selectedService, setSelectedService] = useState<ServiceListing | null>(null);
 
-  // Watch publicKey changes - switch views on connect/disconnect
+  // Watch publicKey changes - switch to marketplace when connected, landing when disconnected
   React.useEffect(() => {
     if (publicKey) {
       // Wallet connected - switch to marketplace
@@ -46,6 +48,21 @@ const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet }) =
       setSelectedService(null);
     }
   }, [publicKey]);
+
+  // Watch showMarketplace prop - show marketplace when CROSSROADS button is clicked
+  React.useEffect(() => {
+    if (showMarketplace) {
+      setCurrentView('marketplace');
+    }
+  }, [showMarketplace]);
+
+  // Watch resetToLanding prop - reset to landing when NULLBLOCK logo is clicked
+  React.useEffect(() => {
+    if (resetToLanding) {
+      setCurrentView('landing');
+      setSelectedService(null);
+    }
+  }, [resetToLanding]);
 
   const handleServiceClick = (service: ServiceListing) => {
     setSelectedService(service);
@@ -70,7 +87,7 @@ const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet }) =
         );
 
       case 'marketplace':
-        return <MarketplaceBrowser onServiceClick={handleServiceClick} />;
+        return <MarketplaceBrowser onServiceClick={handleServiceClick} publicKey={publicKey} onConnectWallet={onConnectWallet} />;
 
       case 'service-detail':
         return (
