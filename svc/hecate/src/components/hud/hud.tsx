@@ -36,6 +36,7 @@ interface HUDProps {
   onClose: () => void;
   onThemeChange: (theme: 'null' | 'light' | 'dark') => void;
   systemStatus: SystemStatus;
+  initialTab?: 'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null;
 }
 
 interface AscentLevel {
@@ -55,6 +56,7 @@ const HUD: React.FC<HUDProps> = ({
   onConnectWallet,
   theme = 'light',
   onThemeChange,
+  initialTab = null,
 }) => {
   const [nullviewState, setNulleyeState] = useState<
     | 'base'
@@ -70,7 +72,7 @@ const HUD: React.FC<HUDProps> = ({
   >('base');
   const [mainHudActiveTab, setMainHudActiveTab] = useState<
     'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null
-  >(null);
+  >(initialTab);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Tab functionality state
@@ -129,6 +131,13 @@ const HUD: React.FC<HUDProps> = ({
       walletConnected: !!publicKey
     });
   }, [taskManagement.tasks, taskManagement.filteredTasks, taskManagement.isLoading, taskManagement.error, publicKey]);
+
+  // Watch for initialTab prop changes
+  useEffect(() => {
+    if (initialTab !== undefined && initialTab !== mainHudActiveTab) {
+      setMainHudActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // MCP initialization is now handled by useAuthentication hook
   useEffect(() => {
@@ -1007,22 +1016,16 @@ const HUD: React.FC<HUDProps> = ({
           theme={theme}
           size="medium"
           onClick={() => {
-            if (!publicKey) {
-              alert(
-                '🔒 SECURE ACCESS REQUIRED\n\nConnect your Web3 wallet to unlock the NullView interface and access advanced features.',
-              );
-              return;
-            }
-
-            if (mainHudActiveTab === 'canvas') {
-              setMainHudActiveTab('hecate');
-            } else {
-              setMainHudActiveTab('canvas');
-            }
+            setMainHudActiveTab(null);
           }}
-          title={!publicKey ? '🔒 Connect wallet to unlock NullView' : mainHudActiveTab === 'canvas' ? 'Return to Hecate' : 'View Canvas'}
+          title="Return to Landing Page"
         />
-        <div className={styles.nullblockTextLogo}>
+        <div
+          className={styles.nullblockTextLogo}
+          onClick={() => setMainHudActiveTab(null)}
+          style={{ cursor: 'pointer' }}
+          title="Return to Landing Page"
+        >
           NULLBLOCK
         </div>
         <HecateWelcome compact={true} maxChars={80} />

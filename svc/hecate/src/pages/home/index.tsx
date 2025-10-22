@@ -30,6 +30,7 @@ const Home: React.FC = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'error' | 'info'>('error');
   const lastConnectionAttempt = React.useRef<number>(0);
+  const [hudInitialTab, setHudInitialTab] = useState<'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null>(null);
 
   // Debug showWalletModal state changes
   useEffect(() => {
@@ -675,6 +676,7 @@ const Home: React.FC = () => {
           onConnectWallet={(walletType?: 'phantom' | 'metamask') => handleConnectWallet(walletType)}
           theme={currentTheme}
           systemStatus={systemStatus}
+          initialTab={hudInitialTab}
           onClose={() => {
             setShowHUD(false);
           }}
@@ -689,12 +691,16 @@ const Home: React.FC = () => {
 
       {/* Floating hint for new features */}
       {isInitialized && systemStatus.portfolio && systemStatus.defi && (
-        <div className={styles.newFeaturesHint}>
+        <div
+          className={styles.newFeaturesHint}
+          onClick={() => setHudInitialTab('crossroads')}
+        >
           <div className={styles.hintContent}>
-            <span className={styles.hintIcon}>🚀</span>
+            <span className={styles.hintIcon}>✨</span>
             <span className={styles.hintText}>
-              NEW: Portfolio & DeFi Trading Agents Available - Access via NullView
+              Check out <strong>CROSSROADS</strong> - Your gateway to the agentic marketplace
             </span>
+            <span className={styles.hintArrow}>→</span>
           </div>
         </div>
       )}

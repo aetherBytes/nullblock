@@ -21,7 +21,7 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet }
           <div className={styles.heroContent}>
             <div className={styles.buttonContainer}>
               <button className={styles.connectButton} onClick={onConnectWallet}>
-                🚀 Connect Wallet & Explore
+                <span>🚀 Connect Wallet & Explore</span>
               </button>
               <p className={styles.missionTagline}>
                 Picks and shovels for the new age.
