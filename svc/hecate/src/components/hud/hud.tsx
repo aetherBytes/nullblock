@@ -138,6 +138,10 @@ const HUD: React.FC<HUDProps> = ({
   useEffect(() => {
     if (initialTab !== undefined && initialTab !== mainHudActiveTab) {
       setMainHudActiveTab(initialTab);
+      // If initialTab is 'crossroads', also show the marketplace
+      if (initialTab === 'crossroads') {
+        setShowCrossroadsMarketplace(true);
+      }
     }
   }, [initialTab]);
 
