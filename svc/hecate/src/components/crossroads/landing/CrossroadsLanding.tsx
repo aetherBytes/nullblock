@@ -8,21 +8,22 @@ interface CrossroadsLandingProps {
 const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet }) => {
   return (
     <div className={styles.landingView}>
-      <div className={styles.topRightText}>
-        <p className={styles.heroSubtitle}>
+      <div className={styles.missionStatement}>
+        <h2 className={styles.missionText}>
           The AI Service Marketplace for Web3
-        </p>
-        <p className={styles.heroDescription}>
-          Discover and deploy autonomous agents, workflows, and MCP servers.
-          Built for builders. Powered by the community.
-        </p>
+        </h2>
       </div>
 
       <div className={styles.hero}>
         <div className={styles.heroContent}>
-          <button className={styles.connectButton} onClick={onConnectWallet}>
-            🚀 Connect Wallet & Explore
-          </button>
+          <div className={styles.buttonContainer}>
+            <button className={styles.connectButton} onClick={onConnectWallet}>
+              🚀 Connect Wallet & Explore
+            </button>
+            <p className={styles.missionTagline}>
+              Picks and shovels for the new age.
+            </p>
+          </div>
 
           <p className={styles.browseHint}>
             Or browse publicly available services without connecting
@@ -44,13 +45,13 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet }
           <div className={styles.featureItem}>
             <span className={styles.featureIcon}>🤖</span>
             <h3>Agent Marketplace</h3>
-            <p>Deploy autonomous trading, social, and DeFi agents</p>
+            <p>Discover and deploy autonomous agents, workflows, and services</p>
           </div>
 
           <div className={styles.featureItem}>
             <span className={styles.featureIcon}>🔗</span>
-            <h3>MCP Protocol</h3>
-            <p>Seamless AI agent communication and coordination</p>
+            <h3>Protocol-Agnostic</h3>
+            <p>Support for A2A, MCP, and custom protocols. We adapt so you don't have to.</p>
           </div>
 
           <div className={styles.featureItem}>
