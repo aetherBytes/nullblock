@@ -357,10 +357,10 @@ h1, h2, h3, h4, h5, h6 {
 
 .newFeaturesHint {
   position: fixed;
-  bottom: 2rem;
+  top: 6rem;
   right: 2rem;
   z-index: 1003;
-  animation: slideInRight 0.5s ease-out, fadeInOut 15s ease-in-out;
+  animation: slideInFromTop 0.5s ease-out, fadeInOut 15s ease-in-out;
   animation-delay: 4s, 4s;
   opacity: 0;
   cursor: pointer;
@@ -368,6 +368,11 @@ h1, h2, h3, h4, h5, h6 {
 
   &:hover {
     transform: translateX(-5px) scale(1.02);
+  }
+
+  @media (max-width: 768px) {
+    top: 5rem;
+    right: 1rem;
   }
 }
 
@@ -448,6 +453,17 @@ h1, h2, h3, h4, h5, h6 {
   }
   to {
     transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
     opacity: 1;
   }
 }
