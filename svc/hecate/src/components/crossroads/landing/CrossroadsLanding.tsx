@@ -15,19 +15,24 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet }
       </div>
 
       <div className={styles.hero}>
-        <div className={styles.heroContent}>
-          <div className={styles.buttonContainer}>
-            <button className={styles.connectButton} onClick={onConnectWallet}>
-              🚀 Connect Wallet & Explore
-            </button>
-            <p className={styles.missionTagline}>
-              Picks and shovels for the new age.
-            </p>
+        <div className={styles.initialViewport}>
+          <div className={styles.heroContent}>
+            <div className={styles.buttonContainer}>
+              <button className={styles.connectButton} onClick={onConnectWallet}>
+                🚀 Connect Wallet & Explore
+              </button>
+              <p className={styles.missionTagline}>
+                Picks and shovels for the new age.
+              </p>
+            </div>
           </div>
 
-          <p className={styles.browseHint}>
-            Or browse publicly available services without connecting
-          </p>
+          <div className={styles.browseHintContainer}>
+            <p className={styles.browseHint}>
+              Or browse publicly available services without connecting
+            </p>
+            <span className={styles.downArrow}>↓</span>
+          </div>
         </div>
 
         <div className={styles.crossroadsSection}>
