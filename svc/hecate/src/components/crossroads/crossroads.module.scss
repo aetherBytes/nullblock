@@ -83,11 +83,43 @@ $category-model: #ec4899;
   font-size: 2rem;
   font-weight: 700;
   line-height: 1.2;
-  color: rgba(241, 245, 249, 0.85);
+  color: #e2e8f0;
   letter-spacing: -0.01em;
   max-width: 800px;
   text-align: left;
   white-space: normal;
+  background: radial-gradient(circle at center, 
+    #1a1a2e 0%, 
+    #16213e 30%, 
+    #0f3460 60%, 
+    #533483 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 
+    0 0 15px rgba(26, 26, 46, 0.8),
+    0 0 30px rgba(22, 33, 62, 0.6),
+    0 0 45px rgba(15, 52, 96, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.9);
+  filter: drop-shadow(0 0 8px rgba(26, 26, 46, 0.6));
+  position: relative;
+  animation: voidBreath 6s ease-in-out infinite;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    background: radial-gradient(circle at center, 
+      rgba(26, 26, 46, 0.2) 0%, 
+      rgba(22, 33, 62, 0.1) 50%, 
+      transparent 100%);
+    border-radius: 1rem;
+    z-index: -1;
+    animation: voidPulse 8s ease-in-out infinite;
+  }
 
   @media (max-width: 1200px) {
     font-size: 1.6rem;
@@ -103,6 +135,19 @@ $category-model: #ec4899;
 .missionPrimary {
   font-size: 2.5rem;
   font-weight: 800;
+  background: radial-gradient(circle at center, 
+    #16213e 0%, 
+    #0f3460 50%, 
+    #533483 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 
+    0 0 12px rgba(22, 33, 62, 0.6),
+    0 0 24px rgba(15, 52, 96, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.7);
+  filter: drop-shadow(0 0 6px rgba(22, 33, 62, 0.5));
+  animation: voidDrift 10s ease-in-out infinite;
 
   @media (max-width: 1200px) {
     font-size: 2rem;
@@ -113,9 +158,23 @@ $category-model: #ec4899;
   }
 }
 
+
 .missionSecondary {
   font-size: 1.26rem;
   font-weight: 600;
+  background: radial-gradient(circle at center, 
+    #16213e 0%, 
+    #0f3460 50%, 
+    #533483 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 
+    0 0 12px rgba(22, 33, 62, 0.6),
+    0 0 24px rgba(15, 52, 96, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.7);
+  filter: drop-shadow(0 0 6px rgba(22, 33, 62, 0.5));
+  animation: voidDrift 10s ease-in-out infinite;
 
   @media (max-width: 1200px) {
     font-size: 1.008rem;
@@ -125,6 +184,7 @@ $category-model: #ec4899;
     font-size: 0.63rem;
   }
 }
+
 
 .buttonContainer {
   display: flex;
@@ -2317,4 +2377,66 @@ $category-model: #ec4899;
     }
   }
 }
+
+// Void Animations
+@keyframes voidBreath {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(26, 26, 46, 0.6));
+    text-shadow: 
+      0 0 15px rgba(26, 26, 46, 0.8),
+      0 0 30px rgba(22, 33, 62, 0.6),
+      0 0 45px rgba(15, 52, 96, 0.4),
+      0 2px 4px rgba(0, 0, 0, 0.9);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(26, 26, 46, 0.8));
+    text-shadow: 
+      0 0 20px rgba(26, 26, 46, 0.9),
+      0 0 40px rgba(22, 33, 62, 0.7),
+      0 0 60px rgba(15, 52, 96, 0.5),
+      0 2px 4px rgba(0, 0, 0, 0.9);
+  }
+}
+
+@keyframes voidGravity {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px rgba(10, 10, 10, 0.8));
+    text-shadow: 
+      0 0 20px rgba(10, 10, 10, 0.9),
+      0 0 40px rgba(26, 26, 46, 0.7),
+      0 0 60px rgba(22, 33, 62, 0.5),
+      0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+  50% {
+    filter: drop-shadow(0 0 18px rgba(10, 10, 10, 0.9));
+    text-shadow: 
+      0 0 30px rgba(10, 10, 10, 0.9),
+      0 0 60px rgba(26, 26, 46, 0.8),
+      0 0 90px rgba(22, 33, 62, 0.6),
+      0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+}
+
+@keyframes voidDrift {
+  0%, 100% {
+    transform: translateY(0px);
+    filter: drop-shadow(0 0 6px rgba(22, 33, 62, 0.5));
+  }
+  50% {
+    transform: translateY(-1px);
+    filter: drop-shadow(0 0 8px rgba(22, 33, 62, 0.6));
+  }
+}
+
+@keyframes voidPulse {
+  0%, 100% {
+    opacity: 0.1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.2;
+    transform: scale(1.02);
+  }
+}
+
 
