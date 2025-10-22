@@ -181,20 +181,20 @@ $category-model: #ec4899;
   align-items: center;
   padding: 2rem;
   padding-top: 0;
-  padding-bottom: 5rem;
+  padding-bottom: 2rem;
 
   @media (max-width: 768px) {
     min-height: calc(100vh - 80px);
     padding: 1rem;
     padding-top: 0;
-    padding-bottom: 3rem;
+    padding-bottom: 1.5rem;
   }
 }
 
 .heroContent {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
   width: 100%;
   margin-bottom: 0;
@@ -447,6 +447,7 @@ $category-model: #ec4899;
   justify-content: center;
   gap: 1.5rem;
   flex-wrap: wrap;
+  margin-top: 1.5rem;
 }
 
 .communityLink {
