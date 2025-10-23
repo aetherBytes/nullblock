@@ -37,6 +37,7 @@ interface HUDProps {
   onThemeChange: (theme: 'null' | 'light' | 'dark') => void;
   systemStatus: SystemStatus;
   initialTab?: 'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null;
+  onToggleMobileMenu?: () => void;
 }
 
 interface AscentLevel {
@@ -57,6 +58,7 @@ const HUD: React.FC<HUDProps> = ({
   theme = 'light',
   onThemeChange,
   initialTab = null,
+  onToggleMobileMenu,
 }) => {
   const [nullviewState, setNulleyeState] = useState<
     | 'base'
@@ -134,16 +136,20 @@ const HUD: React.FC<HUDProps> = ({
     });
   }, [taskManagement.tasks, taskManagement.filteredTasks, taskManagement.isLoading, taskManagement.error, publicKey]);
 
-  // Watch for initialTab prop changes
+  // Watch for initialTab prop changes and mobile menu toggle
   useEffect(() => {
     if (initialTab !== undefined && initialTab !== mainHudActiveTab) {
       setMainHudActiveTab(initialTab);
       // If initialTab is 'crossroads', also show the marketplace
       if (initialTab === 'crossroads') {
         setShowCrossroadsMarketplace(true);
+        // Toggle mobile menu if callback is provided (mobile hint clicked)
+        if (onToggleMobileMenu) {
+          setShowMobileMenu(true);
+        }
       }
     }
-  }, [initialTab]);
+  }, [initialTab, onToggleMobileMenu]);
 
   // Reset the showCrossroadsMarketplace flag after it's been used
   useEffect(() => {
@@ -1039,6 +1045,7 @@ const HUD: React.FC<HUDProps> = ({
             setMainHudActiveTab(null);
             setShowCrossroadsMarketplace(false);
             setResetCrossroadsToLanding(true);
+            setShowMobileMenu(false);
           }}
           title="Return to Landing Page"
         />
@@ -1048,6 +1055,7 @@ const HUD: React.FC<HUDProps> = ({
             setMainHudActiveTab(null);
             setShowCrossroadsMarketplace(false);
             setResetCrossroadsToLanding(true);
+            setShowMobileMenu(false);
           }}
           style={{ cursor: 'pointer' }}
           title="Return to Landing Page"
@@ -1057,41 +1065,113 @@ const HUD: React.FC<HUDProps> = ({
         <HecateWelcome compact={true} maxChars={80} />
       </div>
 
-      {/* Center - Empty for spacer */}
+      {/* Center - NULLBLOCK Text (visible on mobile) */}
       <div className={styles.navbarCenter}>
-      </div>
-
-      {/* Right side - All Buttons */}
-      <div className={styles.navbarRight}>
-        <button
-          className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
+        <div
+          className={styles.nullblockTextLogo}
           onClick={() => {
-            setMainHudActiveTab('crossroads');
-            setShowCrossroadsMarketplace(true);
+            setMainHudActiveTab(null);
+            setShowCrossroadsMarketplace(false);
+            setResetCrossroadsToLanding(true);
+            setShowMobileMenu(false);
           }}
-          title="Crossroads Marketplace"
+          title="Return to Landing Page"
         >
-          <span>CROSSROADS</span>
-        </button>
+          NULLBLOCK
+        </div>
+      </div>
 
-        {publicKey && (
+      {/* Right side - All Buttons (Desktop) + Hamburger (Mobile) */}
+      <div className={styles.navbarRight}>
+        {/* Desktop Menu Buttons */}
+        <div className={styles.desktopMenu}>
           <button
-            className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
-            onClick={() => setMainHudActiveTab('hecate')}
-            title="Hecate Agent Interface"
+            className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
+            onClick={() => {
+              setMainHudActiveTab('crossroads');
+              setShowCrossroadsMarketplace(true);
+            }}
+            title="Crossroads Marketplace"
           >
-            <span>HECATE</span>
+            <span>CROSSROADS</span>
           </button>
-        )}
 
+          {publicKey && (
+            <button
+              className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
+              onClick={() => setMainHudActiveTab('hecate')}
+              title="Hecate Agent Interface"
+            >
+              <span>HECATE</span>
+            </button>
+          )}
+
+          <button
+            className={`${styles.walletMenuButton} ${publicKey ? styles.connected : ''}`}
+            onClick={publicKey ? onDisconnect : () => onConnectWallet()}
+            title={publicKey ? 'Disconnect Wallet' : 'Connect Wallet'}
+          >
+            <span className={styles.walletMenuText}>{publicKey ? 'Disconnect' : 'Connect'}</span>
+          </button>
+        </div>
+
+        {/* Mobile Hamburger Menu */}
         <button
-          className={`${styles.walletMenuButton} ${publicKey ? styles.connected : ''}`}
-          onClick={publicKey ? onDisconnect : () => onConnectWallet()}
-          title={publicKey ? 'Disconnect Wallet' : 'Connect Wallet'}
+          className={`${styles.hamburgerButton} ${showMobileMenu ? styles.active : ''}`}
+          onClick={() => setShowMobileMenu(!showMobileMenu)}
+          title="Menu"
+          aria-label="Toggle navigation menu"
         >
-          <span className={styles.walletMenuText}>{publicKey ? 'Disconnect' : 'Connect'}</span>
+          <span></span>
+          <span></span>
+          <span></span>
         </button>
       </div>
+
+      {/* Mobile Dropdown Menu */}
+      {showMobileMenu && (
+        <div className={styles.mobileMenuDropdown}>
+          <button
+            className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
+            onClick={() => {
+              setMainHudActiveTab('crossroads');
+              setShowCrossroadsMarketplace(true);
+              setShowMobileMenu(false);
+            }}
+          >
+            <span>🛣️</span>
+            <span>CROSSROADS</span>
+          </button>
+
+          {publicKey && (
+            <button
+              className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
+              onClick={() => {
+                setMainHudActiveTab('hecate');
+                setShowMobileMenu(false);
+              }}
+            >
+              <span>🤖</span>
+              <span>HECATE</span>
+            </button>
+          )}
+
+          <button
+            className={`${styles.mobileMenuItem} ${publicKey ? styles.connected : ''}`}
+            onClick={() => {
+              if (publicKey) {
+                onDisconnect();
+              } else {
+                onConnectWallet();
+              }
+              setShowMobileMenu(false);
+            }}
+          >
+            <span>{publicKey ? '🔌' : '🔗'}</span>
+            <span>{publicKey ? 'DISCONNECT' : 'CONNECT WALLET'}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 

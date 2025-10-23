@@ -31,6 +31,7 @@ const Home: React.FC = () => {
   const [messageType, setMessageType] = useState<'error' | 'info'>('error');
   const lastConnectionAttempt = React.useRef<number>(0);
   const [hudInitialTab, setHudInitialTab] = useState<'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null>(null);
+  const [isMobileView, setIsMobileView] = useState<boolean>(false);
 
   // Debug showWalletModal state changes
   useEffect(() => {
@@ -59,6 +60,18 @@ const Home: React.FC = () => {
       setCurrentTheme('null');
       localStorage.setItem('currentTheme', 'null');
     }
+  }, []);
+
+  // Detect mobile view on mount and resize
+  useEffect(() => {
+    const checkMobileView = () => {
+      setIsMobileView(window.innerWidth <= 768);
+    };
+
+    checkMobileView();
+    window.addEventListener('resize', checkMobileView);
+
+    return () => window.removeEventListener('resize', checkMobileView);
   }, []);
 
   // Initialize state from localStorage on component mount
@@ -677,6 +690,7 @@ const Home: React.FC = () => {
           theme={currentTheme}
           systemStatus={systemStatus}
           initialTab={hudInitialTab}
+          onToggleMobileMenu={isMobileView ? () => {} : undefined}
           onClose={() => {
             setShowHUD(false);
           }}
@@ -698,7 +712,8 @@ const Home: React.FC = () => {
           <div className={styles.hintContent}>
             <span className={styles.hintIcon}>✨</span>
             <span className={styles.hintText}>
-              Check out <strong>CROSSROADS</strong> - Your gateway to the agentic marketplace
+              <span className={styles.hintTextFull}>Check out <strong>CROSSROADS</strong> - Your gateway to the agentic marketplace</span>
+              <span className={styles.hintTextMobile}>Check menu items!</span>
             </span>
             <span className={styles.hintArrow}>→</span>
           </div>
