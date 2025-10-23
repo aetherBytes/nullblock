@@ -181,6 +181,14 @@ html, body {
   &.loggedIn {
     background-image: url('/bg_without_logo.png');
 
+    &::after {
+      display: none;
+    }
+
+    &::before {
+      display: none;
+    }
+
     @media (max-width: 768px) {
       background-size: cover;
     }
