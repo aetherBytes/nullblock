@@ -61,6 +61,10 @@ $category-model: #ec4899;
     max-width: 1200px;
     width: 100%;
   }
+
+  @media (max-width: 480px) and (orientation: landscape) {
+    overflow: visible;
+  }
 }
 
 .missionStatement {
@@ -193,6 +197,14 @@ $category-model: #ec4899;
     padding: 0 0.75rem;
     margin-bottom: 0;
   }
+
+  @media (max-width: 480px) and (orientation: landscape) {
+    display: none !important;
+  }
+
+  @media (max-width: 768px) and (orientation: landscape) {
+    display: none !important;
+  }
 }
 
 .missionTagline {
@@ -231,6 +243,10 @@ $category-model: #ec4899;
   padding: 0;
   margin: 0 auto;
   max-width: 900px;
+
+  @media (max-width: 480px) and (orientation: landscape) {
+    overflow: visible;
+  }
 }
 
 .initialViewport {
@@ -258,6 +274,14 @@ $category-model: #ec4899;
     padding-bottom: 1.5rem;
     justify-content: flex-end;
   }
+
+  @media (max-width: 480px) and (orientation: landscape) {
+    overflow: visible;
+    padding-right: 5rem;
+    min-height: 100vh;
+    justify-content: flex-end;
+    padding-bottom: 2rem;
+  }
 }
 
 .heroContent {
@@ -270,6 +294,11 @@ $category-model: #ec4899;
 
   @media (max-width: 768px) {
     margin-bottom: 0;
+  }
+
+  @media (max-width: 480px) and (orientation: landscape) {
+    position: static !important;
+    margin-bottom: 0 !important;
   }
 }
 
@@ -357,6 +386,12 @@ $category-model: #ec4899;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
+  @media (max-width: 480px) and (orientation: landscape) {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    min-height: 36px;
+  }
 
   &::before {
     content: '';
@@ -542,6 +577,17 @@ $category-model: #ec4899;
     margin-top: 0.625rem;
     margin-bottom: 0.5rem;
   }
+
+  @media (max-width: 480px) and (orientation: landscape) {
+    position: fixed;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    flex-direction: column;
+    margin: 0;
+    gap: 0;
+    z-index: 100;
+  }
 }
 
 .communityLink {
@@ -583,6 +629,28 @@ $category-model: #ec4899;
     padding: 0.75rem 0.75rem;
     font-size: 0.7rem;
     min-height: 48px;
+  }
+
+  @media (max-width: 480px) and (orientation: landscape) {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.65rem;
+    min-height: 36px;
+    justify-content: flex-start;
+
+    &:not(:last-child)::after {
+      content: '-';
+      position: absolute;
+      right: auto;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(99, 102, 241, 0.3);
+      font-weight: 300;
+    }
+
+    &:hover {
+      transform: translateX(-2px);
+    }
   }
 }
 

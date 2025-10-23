@@ -168,8 +168,13 @@ html, body {
     }
 
     @media (max-width: 480px) and (orientation: landscape) {
-      background-size: auto 90%;
-      background-position: center center;
+      background-size: auto 200%;
+      background-position: center 35%;
+    }
+
+    @media (max-width: 768px) and (orientation: landscape) {
+      background-size: auto 175%;
+      background-position: center 40%;
     }
   }
 
@@ -408,6 +413,14 @@ h1, h2, h3, h4, h5, h6 {
 
   @media (max-width: 480px) {
     bottom: 15rem;
+  }
+
+  @media (max-width: 480px) and (orientation: landscape) {
+    display: none !important;
+  }
+
+  @media (max-width: 768px) and (orientation: landscape) {
+    display: none !important;
   }
 }
 
