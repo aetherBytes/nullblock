@@ -96,26 +96,30 @@ impl ModelRouter {
 
     pub async fn route_request(&self, requirements: &TaskRequirements) -> AppResult<RoutingDecision> {
         let available_models = self.get_available_models(requirements)?;
-        
+
         if available_models.is_empty() {
             return Err(AppError::ModelNotAvailable(
                 "No models available for the specified requirements".to_string()
             ));
         }
 
-        let selected_model = self.select_optimal_model(&available_models, requirements)?;
-        
+        let (selected_model, confidence, reasoning) = self.select_optimal_model_with_confidence(&available_models, requirements)?;
+
         Ok(RoutingDecision {
             selected_model: selected_model.name.clone(),
-            model_config: selected_model,
-            confidence: 0.9, // TODO: Calculate based on actual matching criteria
-            reasoning: vec!["Model selected based on requirements".to_string()],
+            model_config: selected_model.clone(),
+            confidence,
+            reasoning,
             alternatives: available_models.into_iter()
                 .map(|m| m.name)
                 .take(3)
                 .collect(),
-            estimated_cost: 0.001, // TODO: Calculate based on model metrics
-            estimated_latency_ms: 1000.0, // TODO: Calculate based on model metrics
+            estimated_cost: selected_model.metrics.cost_per_1k_tokens,
+            estimated_latency_ms: if selected_model.metrics.tokens_per_second > 0.0 {
+                1000.0 / selected_model.metrics.tokens_per_second
+            } else {
+                1000.0
+            },
             fallback_models: self.get_fallback_models().unwrap_or_default(),
         })
     }
@@ -199,6 +203,74 @@ impl ModelRouter {
 
         // Return the best model
         Ok(scored_models[0].1.clone())
+    }
+
+    fn select_optimal_model_with_confidence(&self, available_models: &[ModelConfig], requirements: &TaskRequirements) -> AppResult<(ModelConfig, f64, Vec<String>)> {
+        if available_models.is_empty() {
+            return Err(AppError::ModelNotAvailable("No available models".to_string()));
+        }
+
+        let mut scored_models: Vec<(f64, &ModelConfig)> = available_models
+            .iter()
+            .map(|model| (self.calculate_model_score(model, requirements), model))
+            .collect();
+
+        // Sort by score (higher is better)
+        scored_models.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+
+        let best_model = scored_models[0].1.clone();
+        let best_score = scored_models[0].0;
+
+        // Calculate confidence based on:
+        // 1. Score separation from next best model (higher separation = higher confidence)
+        // 2. Number of alternatives (fewer alternatives = higher confidence in selection)
+        // 3. Absolute score value (higher score = higher confidence)
+
+        let mut confidence: f64 = 0.5; // Base confidence
+        let mut reasoning = Vec::new();
+
+        // Factor 1: Score separation (0.0 - 0.3 confidence)
+        if scored_models.len() > 1 {
+            let second_score = scored_models[1].0;
+            let score_gap = (best_score - second_score) / best_score.max(1.0);
+
+            if score_gap > 0.3 {
+                confidence += 0.3;
+                reasoning.push(format!("Strong lead over alternatives ({:.1}% better)", score_gap * 100.0));
+            } else if score_gap > 0.15 {
+                confidence += 0.2;
+                reasoning.push(format!("Moderate lead over alternatives ({:.1}% better)", score_gap * 100.0));
+            } else {
+                confidence += 0.1;
+                reasoning.push(format!("Close competition with alternatives ({:.1}% better)", score_gap * 100.0));
+            }
+        } else {
+            confidence += 0.3;
+            reasoning.push("Only available model matching requirements".to_string());
+        }
+
+        // Factor 2: Number of alternatives (0.0 - 0.1 confidence)
+        if available_models.len() <= 3 {
+            confidence += 0.1;
+            reasoning.push(format!("Limited alternatives ({} models)", available_models.len()));
+        } else {
+            confidence += 0.05;
+        }
+
+        // Factor 3: Absolute score quality (0.0 - 0.1 confidence)
+        if best_score > 80.0 {
+            confidence += 0.1;
+            reasoning.push("High quality score".to_string());
+        } else if best_score > 60.0 {
+            confidence += 0.05;
+        }
+
+        // Cap confidence at 1.0
+        confidence = confidence.min(1.0);
+
+        reasoning.insert(0, format!("Selected {} with score {:.1}", best_model.name, best_score));
+
+        Ok((best_model, confidence, reasoning))
     }
 
     fn calculate_model_score(&self, model: &ModelConfig, requirements: &TaskRequirements) -> f64 {
@@ -359,5 +431,179 @@ impl ModelRouter {
                 created: None,
             },
         ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_model(
+        name: &str,
+        provider: ModelProvider,
+        quality: f64,
+        reliability: f64,
+        cost: f64,
+    ) -> ModelConfig {
+        ModelConfig {
+            name: name.to_string(),
+            display_name: name.to_string(),
+            icon: "🤖".to_string(),
+            provider,
+            tier: ModelTier::Standard,
+            capabilities: vec![ModelCapability::Conversation],
+            metrics: crate::models::ModelMetrics {
+                context_window: 4096,
+                max_output_tokens: 2048,
+                quality_score: quality,
+                cost_per_1k_tokens: cost,
+                tokens_per_second: 50.0,
+                reliability_score: reliability,
+                avg_latency_ms: 500.0,
+            },
+            api_endpoint: format!("https://test.com/{}", name),
+            api_key_env: None,
+            description: format!("Test model {}", name),
+            enabled: true,
+            supports_reasoning: false,
+            is_popular: false,
+            created: None,
+        }
+    }
+
+    #[test]
+    fn test_confidence_high_score_gap() {
+        let router = ModelRouter::new();
+        let models = vec![
+            create_test_model("high-model", ModelProvider::OpenRouter, 0.9, 0.95, 0.01),
+            create_test_model("low-model", ModelProvider::OpenRouter, 0.5, 0.6, 0.01),
+        ];
+
+        let requirements = TaskRequirements::default();
+        let (_, confidence, reasoning) = router
+            .select_optimal_model_with_confidence(&models, &requirements)
+            .unwrap();
+
+        assert!(confidence > 0.8, "High score gap should yield high confidence");
+        assert!(!reasoning.is_empty(), "Should have reasoning");
+        assert!(
+            reasoning.iter().any(|r| r.contains("Strong lead")),
+            "Should mention strong lead in reasoning"
+        );
+    }
+
+    #[test]
+    fn test_confidence_close_competition() {
+        let router = ModelRouter::new();
+        let models = vec![
+            create_test_model("model-a", ModelProvider::OpenRouter, 0.85, 0.9, 0.01),
+            create_test_model("model-b", ModelProvider::OpenRouter, 0.83, 0.88, 0.01),
+        ];
+
+        let requirements = TaskRequirements::default();
+        let (_, confidence, reasoning) = router
+            .select_optimal_model_with_confidence(&models, &requirements)
+            .unwrap();
+
+        assert!(
+            confidence < 0.85,
+            "Close competition should yield moderate confidence"
+        );
+        assert!(
+            reasoning
+                .iter()
+                .any(|r| r.contains("competition") || r.contains("Close")),
+            "Should mention close competition"
+        );
+    }
+
+    #[test]
+    fn test_confidence_single_model() {
+        let router = ModelRouter::new();
+        let models = vec![create_test_model(
+            "only-model",
+            ModelProvider::OpenRouter,
+            0.8,
+            0.85,
+            0.01,
+        )];
+
+        let requirements = TaskRequirements::default();
+        let (_, confidence, reasoning) = router
+            .select_optimal_model_with_confidence(&models, &requirements)
+            .unwrap();
+
+        assert!(
+            confidence > 0.7,
+            "Single available model should have high confidence"
+        );
+        assert!(
+            reasoning.iter().any(|r| r.contains("Only available")),
+            "Should mention being only available model"
+        );
+    }
+
+    #[test]
+    fn test_confidence_bounds() {
+        let router = ModelRouter::new();
+
+        let test_cases = vec![
+            vec![create_test_model(
+                "perfect",
+                ModelProvider::OpenRouter,
+                1.0,
+                1.0,
+                0.0,
+            )],
+            vec![
+                create_test_model("good", ModelProvider::OpenRouter, 0.9, 0.9, 0.01),
+                create_test_model("bad", ModelProvider::OpenRouter, 0.1, 0.1, 0.01),
+            ],
+            vec![
+                create_test_model("a", ModelProvider::OpenRouter, 0.7, 0.7, 0.01),
+                create_test_model("b", ModelProvider::OpenRouter, 0.69, 0.69, 0.01),
+                create_test_model("c", ModelProvider::OpenRouter, 0.68, 0.68, 0.01),
+            ],
+        ];
+
+        for models in test_cases {
+            let requirements = TaskRequirements::default();
+            let result = router.select_optimal_model_with_confidence(&models, &requirements);
+
+            assert!(result.is_ok(), "Should successfully select model");
+            let (_, confidence, _) = result.unwrap();
+
+            assert!(
+                confidence >= 0.5 && confidence <= 1.0,
+                "Confidence should be in valid range [0.5, 1.0], got {}",
+                confidence
+            );
+        }
+    }
+
+    #[test]
+    fn test_reasoning_always_provided() {
+        let router = ModelRouter::new();
+        let models = vec![create_test_model(
+            "test",
+            ModelProvider::OpenRouter,
+            0.8,
+            0.8,
+            0.01,
+        )];
+
+        let requirements = TaskRequirements::default();
+        let (_, _, reasoning) = router
+            .select_optimal_model_with_confidence(&models, &requirements)
+            .unwrap();
+
+        assert!(
+            !reasoning.is_empty(),
+            "Reasoning should always be provided"
+        );
+        assert!(
+            reasoning[0].contains("Selected"),
+            "First reasoning should mention selection"
+        );
     }
 }

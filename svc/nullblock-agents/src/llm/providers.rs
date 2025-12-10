@@ -122,6 +122,7 @@ impl Provider for OpenAIProvider {
             latency_ms,
             cost_estimate,
             finish_reason: choice["finish_reason"].as_str().unwrap_or("stop").to_string(),
+            confidence_score: 1.0,
             tool_calls: choice["message"]["tool_calls"].as_array().map(|calls| {
                 calls.iter().cloned().collect()
             }),
@@ -250,6 +251,7 @@ impl Provider for AnthropicProvider {
             latency_ms,
             cost_estimate,
             finish_reason: data.get("stop_reason").and_then(|v| v.as_str()).unwrap_or("stop").to_string(),
+            confidence_score: 1.0,
             tool_calls: None,
             metadata: Some({
                 let mut meta = HashMap::new();
@@ -367,6 +369,7 @@ impl Provider for GroqProvider {
             latency_ms,
             cost_estimate,
             finish_reason: choice["finish_reason"].as_str().unwrap_or("stop").to_string(),
+            confidence_score: 1.0,
             tool_calls: None,
             metadata: Some({
                 let mut meta = HashMap::new();
@@ -468,6 +471,7 @@ impl Provider for OllamaProvider {
             latency_ms,
             cost_estimate: 0.0, // Local models are free
             finish_reason: "stop".to_string(),
+            confidence_score: 1.0,
             tool_calls: None,
             metadata: Some({
                 let mut meta = HashMap::new();
@@ -819,6 +823,7 @@ impl Provider for OpenRouterProvider {
             latency_ms,
             cost_estimate,
             finish_reason: choice["finish_reason"].as_str().unwrap_or("stop").to_string(),
+            confidence_score: 1.0,
             tool_calls: choice["message"]["tool_calls"].as_array().map(|calls| {
                 calls.iter().cloned().collect()
             }),

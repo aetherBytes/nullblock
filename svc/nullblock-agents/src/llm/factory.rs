@@ -191,7 +191,10 @@ impl LLMServiceFactory {
             }
         }
 
-        let response = response_result?;
+        let mut response = response_result?;
+
+        // Override confidence_score with routing confidence
+        response.confidence_score = routing_decision.confidence;
 
         // Log model info
         log_model_info!(

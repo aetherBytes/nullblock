@@ -226,6 +226,7 @@ pub struct LLMResponse {
     pub latency_ms: f64,
     pub cost_estimate: f64,
     pub finish_reason: String,
+    pub confidence_score: f64,
     pub tool_calls: Option<Vec<serde_json::Value>>,
     pub metadata: Option<HashMap<String, serde_json::Value>>,
     pub reasoning: Option<String>,
