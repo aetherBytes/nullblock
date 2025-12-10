@@ -173,14 +173,21 @@ export const useTaskManagement = (
 
   // Fallback polling for active tasks (until SSE is fully working)
   useEffect(() => {
+    console.log('🔍 Polling effect triggered. tasks:', tasks?.length, 'isConnected:', isConnectedRef.current);
+
     const activeTasks = Array.isArray(tasks) ? tasks.filter(task =>
       task.status.state === 'submitted' ||
       task.status.state === 'working' ||
       task.status.state === 'input-required'
     ) : [];
 
+    console.log('🔍 Active tasks found:', activeTasks.length);
+    if (activeTasks.length > 0) {
+      console.log('🔍 Active task states:', activeTasks.map(t => ({ id: t.id, name: t.name, state: t.status.state })));
+    }
+
     if (activeTasks.length > 0 && isConnectedRef.current) {
-      console.log(`🔄 Polling ${activeTasks.length} active tasks for real-time updates`);
+      console.log(`🔄 STARTING POLLING for ${activeTasks.length} active tasks`);
 
       const pollInterval = setInterval(async () => {
         try {
@@ -195,6 +202,8 @@ export const useTaskManagement = (
         console.log('⏹️ Stopping task polling');
         clearInterval(pollInterval);
       };
+    } else {
+      console.log('⏸️ Polling not started. activeTasks:', activeTasks.length, 'isConnected:', isConnectedRef.current);
     }
   }, [tasks, loadTasks]);
 
@@ -255,6 +264,11 @@ export const useTaskManagement = (
     try {
       setIsLoading(true);
       const response = await taskService.createTask(request);
+      console.log('🔍 useTaskManagement received response:', response);
+      console.log('🔍 response.success:', response.success);
+      console.log('🔍 response.data:', response.data);
+      console.log('🔍 Check result:', response.success && response.data);
+
       if (response.success && response.data) {
         setTasks(prev => [response.data!, ...ensureArray(prev)]);
         console.log('✅ Task created via backend:', response.data);
@@ -277,6 +291,7 @@ export const useTaskManagement = (
 
         return true;
       } else {
+        console.error('❌ Task creation check failed. success:', response.success, 'data:', !!response.data);
         setError(response.error || 'Failed to create task');
         return false;
       }

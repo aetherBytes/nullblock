@@ -55,7 +55,7 @@ export const useModelManagement = (publicKey: string | null, activeAgent: 'hecat
       setAgentHealthStatus(healthStatus === 'healthy' ? 'healthy' : 'unhealthy');
 
       if (status.current_model && healthStatus === 'healthy') {
-        console.log('✅ Model already loaded on backend:', status.current_model);
+        console.log('✅ Model already validated on backend:', status.current_model);
         setCurrentSelectedModel(status.current_model);
         setDefaultModelReady(true);
 
@@ -71,19 +71,10 @@ export const useModelManagement = (publicKey: string | null, activeAgent: 'hecat
         return;
       }
 
-      const defaultModelName = 'deepseek/deepseek-chat-v3.1:free';
-      console.log('Loading default model:', defaultModelName);
-
-      const success = await hecateAgent.setModel(defaultModelName);
-      if (success) {
-        setCurrentSelectedModel(defaultModelName);
-        setDefaultModelReady(true);
-        setLastStatusMessageModel(defaultModelName);
-
-        console.log('✅ Default model loaded successfully');
-      } else {
-        console.warn('Failed to load default model');
-      }
+      console.warn('⚠️ No validated model from backend - backend should validate model at startup');
+      console.warn('💡 Model selection will use router auto-selection per request');
+      setCurrentSelectedModel(null);
+      setDefaultModelReady(false);
     } catch (error) {
       console.error('Error loading default model:', error);
     } finally {

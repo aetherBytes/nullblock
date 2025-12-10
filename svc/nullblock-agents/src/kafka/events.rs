@@ -108,13 +108,16 @@ impl TaskLifecycleEvent {
         priority: String,
         progress: u8,
     ) -> Self {
+        // Map A2A protocol states to Kafka event types
+        // Valid A2A states: submitted, working, input-required, completed, canceled, failed, rejected, auth-required, unknown
         let event_type = match new_status.as_str() {
-            "running" => TaskEventType::TaskStarted,
-            "paused" => TaskEventType::TaskPaused,
-            "completed" => TaskEventType::TaskCompleted,
-            "failed" => TaskEventType::TaskFailed,
-            "cancelled" => TaskEventType::TaskCancelled,
-            _ => TaskEventType::TaskProgress,
+            "working" => TaskEventType::TaskStarted,           // A2A "working" = task is being processed
+            "input-required" => TaskEventType::TaskPaused,     // A2A "input-required" = waiting for user
+            "completed" => TaskEventType::TaskCompleted,       // A2A "completed" = task finished successfully
+            "failed" => TaskEventType::TaskFailed,             // A2A "failed" = task execution failed
+            "canceled" => TaskEventType::TaskCancelled,        // A2A "canceled" = task was cancelled
+            "rejected" => TaskEventType::TaskFailed,           // A2A "rejected" = task was rejected
+            _ => TaskEventType::TaskProgress,                  // Other states (submitted, auth-required, unknown)
         };
 
         let mut metadata = HashMap::new();

@@ -150,25 +150,22 @@ const Scopes: React.FC<ScopesProps> = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'working':
-      case 'running':
-      case 'active':
         return styles.statusRunning;
       case 'input-required':
-      case 'paused':
         return styles.statusPaused;
       case 'completed':
-      case 'success':
         return styles.statusCompleted;
       case 'failed':
-      case 'error':
+        return styles.statusFailed;
+      case 'rejected':
         return styles.statusFailed;
       case 'canceled':
-      case 'cancelled':
         return styles.statusCancelled;
       case 'submitted':
-      case 'created':
-      case 'pending':
-      case 'idle':
+        return styles.statusPending;
+      case 'auth-required':
+        return styles.statusPaused;
+      case 'unknown':
         return styles.statusPending;
       default:
         return styles.statusPending;
@@ -178,23 +175,23 @@ const Scopes: React.FC<ScopesProps> = ({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'working':
-      case 'running':
-      case 'active':
         return '⚡';
-      case 'paused':
+      case 'input-required':
         return '⏸️';
       case 'completed':
-      case 'success':
         return '✅';
       case 'failed':
-      case 'error':
         return '❌';
-      case 'cancelled':
+      case 'rejected':
         return '🚫';
-      case 'created':
-      case 'pending':
-      case 'idle':
+      case 'canceled':
+        return '🚫';
+      case 'submitted':
         return '⏳';
+      case 'auth-required':
+        return '🔐';
+      case 'unknown':
+        return '❓';
       default:
         return '❓';
     }
@@ -299,11 +296,11 @@ const Scopes: React.FC<ScopesProps> = ({
                   <div className={styles.progressBar}>
                     <div
                       className={styles.progressFill}
-                      style={{ width: `${selectedTask.status === 'completed' ? 100 : selectedTask.progress}%` }}
+                      style={{ width: `${selectedTask.status.state === 'completed' ? 100 : selectedTask.progress}%` }}
                     ></div>
                   </div>
                   <span>
-                    {selectedTask.status === 'completed' ? '100' : Math.round(selectedTask.progress)}%
+                    {selectedTask.status.state === 'completed' ? '100' : Math.round(selectedTask.progress)}%
                   </span>
                 </div>
               </div>
@@ -454,7 +451,7 @@ const Scopes: React.FC<ScopesProps> = ({
           )}
 
           <div className={styles.taskDetailsActions}>
-            {selectedTask.status === 'created' && (
+            {selectedTask.status.state === 'submitted' && (
               <button
                 onClick={() => {
                   taskManagement.startTask(selectedTask.id);
@@ -465,7 +462,7 @@ const Scopes: React.FC<ScopesProps> = ({
                 ▶️ Start Task
               </button>
             )}
-            {selectedTask.status === 'running' && (
+            {selectedTask.status.state === 'working' && (
               <>
                 <button
                   onClick={() => {
@@ -487,7 +484,18 @@ const Scopes: React.FC<ScopesProps> = ({
                 </button>
               </>
             )}
-            {selectedTask.status === 'failed' && (
+            {selectedTask.status.state === 'input-required' && (
+              <button
+                onClick={() => {
+                  taskManagement.resumeTask(selectedTask.id);
+                  setSelectedTaskId(null);
+                }}
+                className={styles.taskActionButton}
+              >
+                ▶️ Resume
+              </button>
+            )}
+            {selectedTask.status.state === 'failed' && (
               <button
                 onClick={() => {
                   taskManagement.retryTask(selectedTask.id);
@@ -658,7 +666,7 @@ const Scopes: React.FC<ScopesProps> = ({
                       </span>
                     </div>
                     <div className={styles.taskActions}>
-                      {task.status === 'created' && (
+                      {task.status.state === 'submitted' && (
                         <>
                           <button
                             onClick={(e) => {
@@ -682,7 +690,7 @@ const Scopes: React.FC<ScopesProps> = ({
                           </button>
                         </>
                       )}
-                      {task.status === 'running' && (
+                      {task.status.state === 'working' && (
                         <>
                           <button
                             onClick={(e) => {
@@ -706,7 +714,7 @@ const Scopes: React.FC<ScopesProps> = ({
                           </button>
                         </>
                       )}
-                      {task.status === 'paused' && (
+                      {task.status.state === 'input-required' && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -718,7 +726,7 @@ const Scopes: React.FC<ScopesProps> = ({
                           ▶️ Resume
                         </button>
                       )}
-                      {task.status === 'failed' && (
+                      {task.status.state === 'failed' && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

@@ -7,7 +7,7 @@ use reqwest::Client;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::time::Instant;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 #[async_trait]
 pub trait Provider: Send + Sync {
@@ -595,6 +595,20 @@ impl Provider for OpenRouterProvider {
 
             // Try to parse error as JSON to extract structured error details
             if let Ok(error_json) = serde_json::from_str::<Value>(&error_text) {
+                // Check if response indicates anonymous usage (no API key being used)
+                if let Some(user_id) = error_json.get("user_id").and_then(|u| u.as_str()) {
+                    if user_id.starts_with("user_") && status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                        error!("🔑 CRITICAL: OpenRouter is using anonymous/free tier access!");
+                        error!("   Your API key is NOT being sent or loaded properly.");
+                        error!("   Check that OPENROUTER_API_KEY is set in .env.dev");
+                        error!("   Anonymous user detected: {}", user_id);
+                        return Err(AppError::LLMRequestFailed(format!(
+                            "OpenRouter API key not configured properly. Using anonymous access (user: {}) which has strict rate limits. Set OPENROUTER_API_KEY in .env.dev",
+                            user_id
+                        )));
+                    }
+                }
+
                 // Check for model not found errors
                 if status == reqwest::StatusCode::NOT_FOUND {
                     // Check for "model not found" in metadata.raw

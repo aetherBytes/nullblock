@@ -76,16 +76,24 @@ class TaskService {
 
       const responseJson = await response.json();
       console.log('📤 Response data:', responseJson);
+      console.log('🔍 Response has success field:', 'success' in responseJson);
+      console.log('🔍 Response.success value:', responseJson.success);
+      console.log('🔍 Response has data field:', 'data' in responseJson);
+      console.log('🔍 Response.data exists:', !!responseJson.data);
 
       // Handle backend API response format which wraps data in { data: [...], success: true }
       const actualData = response.ok && responseJson.data !== undefined ? responseJson.data : responseJson;
+      console.log('🔍 actualData:', actualData);
 
-      return {
+      const result = {
         success: response.ok,
         data: response.ok ? actualData : undefined,
         error: response.ok ? undefined : responseJson.message || responseJson.error || 'Request failed',
         timestamp: new Date(),
       };
+      console.log('🔍 Returning from task-service:', result);
+
+      return result;
     } catch (error) {
       console.error('Task service request failed:', error);
       return {

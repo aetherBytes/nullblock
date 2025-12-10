@@ -48,6 +48,19 @@ pub async fn health_check(State(state): State<AppState>) -> Json<HealthResponse>
     // Add agent status
     components.insert("agent_running".to_string(), serde_json::json!(hecate_agent.running));
 
+    // Add validated model information
+    let validated_model = hecate_agent.current_model.clone();
+    let validation_status = if validated_model.is_some() {
+        "passed"
+    } else {
+        "failed_using_router"
+    };
+
+    components.insert("validated_model".to_string(), serde_json::json!({
+        "model": validated_model,
+        "validation_status": validation_status
+    }));
+
     drop(hecate_agent);
 
     Json(HealthResponse {
