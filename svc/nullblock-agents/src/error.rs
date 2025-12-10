@@ -26,10 +26,7 @@ pub enum AppError {
     
     #[error("Conversation error: {0}")]
     ConversationError(String),
-    
-    #[error("Arbitrage service error: {0}")]
-    ArbitrageError(String),
-    
+
     #[error("Configuration error: {0}")]
     ConfigError(String),
     
@@ -85,7 +82,6 @@ impl AppError {
             AppError::LLMRequestFailed(_)
             | AppError::LLMError(_)
             | AppError::ConversationError(_)
-            | AppError::ArbitrageError(_)
             | AppError::ConfigError(_)
             | AppError::NetworkError(_)
             | AppError::SerializationError(_)
@@ -103,7 +99,6 @@ impl AppError {
             AppError::LLMError(_) => "llm_error",
             AppError::InvalidModelConfig(_) => "invalid_model_config",
             AppError::ConversationError(_) => "conversation_error",
-            AppError::ArbitrageError(_) => "arbitrage_error",
             AppError::ConfigError(_) => "config_error",
             AppError::NetworkError(_) => "network_error",
             AppError::SerializationError(_) => "serialization_error",

@@ -21,7 +21,7 @@ mod server;
 mod utils;
 
 use crate::config::Config;
-use crate::handlers::{arbitrage, health, hecate, siren_marketing, tasks, user_references};
+use crate::handlers::{health, hecate, siren_marketing, tasks, user_references};
 use crate::logging::setup_logging;
 
 #[tokio::main]
@@ -63,7 +63,6 @@ async fn main() -> anyhow::Result<()> {
     info!("📡 Server will bind to: {}", addr);
     info!("🏥 Health check: {}/health", agents_base_url);
     info!("🤖 Hecate agent: {}/hecate", agents_base_url);
-    info!("📊 Arbitrage: {}/arbitrage", agents_base_url);
     info!("📱 Siren agent: {}/siren", agents_base_url);
     info!("📚 API docs: {}/docs (future)", agents_base_url);
 
@@ -93,10 +92,6 @@ fn create_router(state: server::AppState) -> Router {
         .route("/hecate/clear", post(hecate::clear_conversation))
         .route("/hecate/history", get(hecate::get_history))
         .route("/hecate/model-info", get(hecate::get_model_info))
-        // Arbitrage endpoints
-        .route("/arbitrage/opportunities", get(arbitrage::get_opportunities))
-        .route("/arbitrage/summary", get(arbitrage::get_summary))
-        .route("/arbitrage/execute", post(arbitrage::execute))
         // Task management endpoints
         .route("/tasks", post(tasks::create_task_handler))
         .route("/tasks", get(tasks::get_tasks_handler))

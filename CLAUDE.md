@@ -192,23 +192,34 @@ Supports: **Web3 Wallets**, **API Keys**, **Email Auth**, **OAuth**, **System Ag
 
 ## 🤖 Agent System
 
+**📖 For detailed agent documentation, see [AGENTS.md](./AGENTS.md)**
+
 ### Hecate Agent
 
 - **Purpose**: Main conversational interface, orchestration engine
-- **Default Model**: DeepSeek Chat v3.1 Free ($0.00)
+- **Default Model**: `cognitivecomputations/dolphin3.0-mistral-24b:free` (override via `DEFAULT_LLM_MODEL` env var)
 - **Features**: Multi-model LLM, intent analysis, delegation, task management
-- **Timeout**: 5-minute for thinking models
+- **Timeout**: 5-minute for thinking models (configurable via `LLM_REQUEST_TIMEOUT_MS`)
+- **Max Tokens**: 16384 (required for base64 image responses)
 
-### LLM Factory
+### LLM Factory & Model Selection
 
-- **Providers**: OpenRouter, OpenAI, Anthropic, Groq, HuggingFace
-- **Strategies**: Quality, speed, cost, balanced
+**Location**: `svc/nullblock-agents/src/llm/factory.rs`
+
+**Providers**: OpenRouter (primary), OpenAI, Anthropic, Groq, HuggingFace
+**Strategies**: Quality, speed, cost, balanced
+
+**Model Selection Flow**:
+1. Hard-coded default model loaded from `DEFAULT_LLM_MODEL` or falls back to `cognitivecomputations/dolphin3.0-mistral-24b:free`
+2. Startup validation: Test query sent to verify model availability
+3. On failure: Fetch live free models from OpenRouter, sort by context window
+4. Runtime routing: Weighted scoring (quality 40pts, reliability 30pts, cost optimization, tier bonuses)
+5. Fallback chain: Automatically tries alternative models if primary fails
+6. Empty response detection: Skips models returning 0 completion tokens
 
 ### Specialized Agents
 
-- **Information Gathering**: Market data, DeFi, social sentiment
-- **Social Trading**: Twitter monitoring, sentiment, risk
-- **Arbitrage**: Price monitoring, MEV protection
+- **Siren Marketing**: Content generation, Twitter posts, project analysis
 
 ## 🌐 A2A Protocol
 
@@ -463,9 +474,17 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
 GROQ_API_KEY=
-OPENROUTER_API_KEY=
-DEFAULT_LLM_MODEL=x-ai/grok-4-fast:free
-LLM_REQUEST_TIMEOUT_MS=300000
+OPENROUTER_API_KEY=          # REQUIRED - Get from https://openrouter.ai/
+DEFAULT_LLM_MODEL=cognitivecomputations/dolphin3.0-mistral-24b:free
+LLM_REQUEST_TIMEOUT_MS=300000  # 5 minutes for thinking models
+```
+
+**CRITICAL**: `OPENROUTER_API_KEY` is REQUIRED for reliable LLM access. Without it, you'll hit severe rate limits on free models.
+
+**Environment File Location**: Create `.env.dev` in project root. Services running in subdirectories need symlinks:
+```bash
+ln -s ../../.env.dev svc/nullblock-agents/.env.dev
+ln -s ../../.env.dev svc/erebus/.env.dev
 ```
 
 ## 💰 Monetization
@@ -511,6 +530,16 @@ LLM_REQUEST_TIMEOUT_MS=300000
 - ✅ **Replication Verification** - Tested and confirmed <1 second replication latency from Erebus→Agents
 - ✅ **Container Golden Rules** - Added comprehensive documentation to CLAUDE.md preventing future networking issues
 - ✅ **Migration Script Updates** - Subscription migration now uses internal container ports (5432) instead of external host ports
+
+**LLM & Error Handling (December 2025):**
+
+- ✅ **OpenRouter API Key Validation** - Startup validation detects missing/placeholder keys with clear error messages
+- ✅ **Anonymous Access Detection** - Runtime detection when API key not loaded properly (detects `user_*` anonymous IDs)
+- ✅ **Empty Response Validation** - Fallback chain skips models returning 0 completion tokens
+- ✅ **Environment File Symlinks** - Services access `.env.dev` via symlinks for API key loading
+- ✅ **Enhanced Error Logging** - Critical errors include actionable configuration steps and partial key verification
+- ✅ **Task Creation Fix** - User reference creation now includes required `network` field in `source_type` object
+- ✅ **Model Selection Documentation** - Comprehensive documentation of startup validation, fallback chains, and scoring algorithm
 
 ### In Progress 🔄
 
@@ -588,3 +617,26 @@ _NullBlock implements a cyberpunk aesthetic with neon styling and maintains imme
 - A2AMessage interface with MessagePart union type (text | file | data)
 - A2AArtifact interface with parts array
 - Task interface updated with contextId, kind, status object, history, artifacts
+
+### Recent Bug Fixes & Improvements
+
+**Task Creation with User References** (`svc/erebus/src/resources/agents/routes.rs:38-42`):
+- Fixed missing `network` field in `source_type` object causing task creation failures
+- Error was: `"Failed to deserialize the JSON body into the target type: source_type: missing field 'network'"`
+- Solution: Added `"network": wallet_chain` to default_source_type JSON
+
+**LLM API Key Management** (`svc/nullblock-agents/src/llm/factory.rs` & `providers.rs`):
+- Added startup validation to detect invalid/placeholder API keys
+- Implemented anonymous access detection via OpenRouter `user_id` field
+- Enhanced error messages with actionable configuration steps
+- Log partial API keys for verification (e.g., `sk-or-v1-49a74f...7c7a`)
+
+**Empty Response Handling** (`svc/nullblock-agents/src/llm/factory.rs:161-164`):
+- Added validation to detect models returning 0 completion tokens
+- Fallback chain now skips empty responses and tries next model
+- Prevents silent failures with clear warning logs
+
+**Environment File Access** (`svc/nullblock-agents/src/main.rs:30-37`):
+- Improved .env.dev loading warnings with specific guidance
+- Created symlinks from service directories to project root .env.dev
+- Services now consistently load API keys from centralized configuration

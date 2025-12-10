@@ -1,8 +1,82 @@
-# 🚀 Nullblock MVP - Decentralized Web3 Agentic Platform
+# NullBlock
 
-**Status**: 🟢 **MVP Core Infrastructure Complete** - Ready for Phase 2 Development
+**Silos are dead. The agent economy is open.**
 
-Nullblock is a decentralized Web3 platform for deploying and monetizing agentic workflows, powered by the Model Context Protocol (MCP) architecture with MEV protection, Bittensor integration, and comprehensive security.
+The decentralized marketplace where agents and workflows are minted, owned, traded, and autonomously transacted—forever free from closed gardens.
+
+## One-Sentence Mission
+
+NullBlock is the open, web3-native economy where anyone can build, ship, buy, sell, and compose AI agents and agentic workflows — while the agents themselves can autonomously discover, transact, and collaborate with each other without human intervention.
+
+## Why NullBlock Exists (2025 Context)
+
+The world is moving from "LLMs" to "agents" faster than anyone predicted:
+
+- Enterprises already deploy hundreds of internal agents (Oracle, Salesforce, SAP).
+- Indie developers and agencies run 5–50 agents each for marketing, research, coding, trading.
+- Total agent economy projected to exceed $50B by 2030 with 45% CAGR.
+- Every company will eventually run dozens to thousands of specialized agents.
+
+Yet today:
+
+- Agents are trapped inside closed platforms (Microsoft Copilot Studio, LangChain deployments, private Slack bots).
+- Creators have no way to monetize or transfer ownership of their workflows.
+- Agents cannot autonomously discover or pay for better tools mid-task.
+- There is no liquid secondary market and no royalties for creators when their agent is resold or reused.
+
+**NullBlock fixes all of that in one protocol.**
+
+## Why NullBlock Will Win
+
+| Factor                           | NullBlock Advantage                                                                                                                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Timing                           | 2025 = the exact inflection year — agents are real, useful, and multiplying exponentially                                                   |
+| Network Effects                  | Agents improve the marketplace just by using it (autonomous discovery → more listings → better agents)                                      |
+| Web3 Native Payments & Ownership | Instant micro-transactions, programmable royalties, NFT provenance, no gatekeepers                                                          |
+| Agent-to-Agent (A2A) Commerce    | First marketplace where the buyers and sellers are the agents themselves                                                                    |
+| Bittensor Subnet Flywheel        | Future tasking/incentive layer turns the platform into a self-reinforcing intelligence network                                              |
+| Bootstrapper-Friendly            | One strong engineer can ship a production MVP in <12 weeks (we're already live in TypeScript/Rust/Python)                                   |
+| Multiple Exit Paths              | Acquire.com-style marketplace multiple (7–10× ARR) or strategic acquisition by Fetch.ai, SingularityNET, Bittensor, or Big Tech agent teams |
+
+## Core Product Vision (v1 → v2 → v3)
+
+**v1 – Agent Bazaar (MVP – Q1/Q2 2025)**
+
+- Mint agents & workflows as NFTs with metadata & verifiable performance logs
+- Buy/sell/list with escrow and creator royalties (5–10%)
+- Semantic + on-chain discovery engine
+- Wallet-connected web app (React + Solana/Base)
+
+**v2 – Autonomous Agent Network (2025–2026)**
+
+- A2A protocol (MCP-style) over libp2p / IPFS gossip
+- Agents can query, license and pay for sub-workflows in real time
+- Reputation scores and fraud-proof execution logs
+
+**v3 – Incentivized Intelligence Subnet (2026+)**
+
+- Dedicated Bittensor subnet for agentic workflow execution
+- Stake $NULL or TAO to route tasks to the best agents
+- Emissions reward both creators and operators → infinite flywheel
+
+## Success Looks Like
+
+- Year 1: $150k–$500k ARR, 5,000+ listed agents
+- Year 2: $3M–$10M ARR, 50,000+ agents, first A2A transactions in the wild
+- Year 3–5: $50M–$200M ARR or 8–10× exit ($400M–$2B valuation)
+
+We are not building another model hub.
+We are building the ownership, liquidity, and coordination layer for the entire post-LLM economy.
+
+**NullBlock = The NASDAQ for Agents.**
+
+---
+
+## 🚀 Current Status
+
+**MVP Core Infrastructure Complete** - Ready for Phase 2 Development
+
+NullBlock is a decentralized Web3 platform for deploying and monetizing agentic workflows, powered by A2A Protocol, MCP architecture, and comprehensive security.
 
 ## 📚 Documentation & SDKs
 
@@ -24,337 +98,144 @@ npm install @nullblock/sdk
 cargo add nullblock-sdk
 ```
 
-### 📖 Getting Started with SDKs
-
-Visit our comprehensive SDK documentation at **[https://aetherbytes.github.io/nullblock-sdk/](https://aetherbytes.github.io/nullblock-sdk/)** for:
-
-- **Complete API Reference** - All endpoints and methods
-- **Code Examples** - Ready-to-use templates
-- **AI Agent Integration** - MCP protocol examples
-- **Trading Strategies** - Arbitrage and DeFi examples
-- **Development Guides** - Setup and contribution instructions
-
-## 🎯 **MVP Status: Core Systems Delivered** ✅
-
-### **Production-Ready Components**
-- ✅ **Nullblock.mcp** - Complete MCP server with wallet authentication, IPFS context storage, Flashbots MEV protection
-- ✅ **Nullblock.orchestration** - Goal-driven workflow engine with Bittensor subnet integration  
-- ✅ **Nullblock.agents** - Full arbitrage agent suite (Price, Strategy, Execution, Reporting)
-- 🔄 **Nullblock.platform** - dApp marketplace (pending frontend development)
-
-### **Current Capabilities**
-- ✅ **Full Arbitrage Trading Pipeline**: From price monitoring to MEV-protected execution
-- ✅ **Secure Wallet Operations**: Multi-wallet support with challenge-response auth
-- ✅ **Bittensor Task Marketplace**: Decentralized task submission with $NULL token rewards
-- ✅ **Advanced Security**: Prompt injection protection, encrypted context storage
-- ✅ **Goal-Driven Automation**: Template-based workflows for arbitrage, DeFi, NFT, and DAO operations
-
-## 🏗️ **Architecture Overview**
+## 🏗️ Architecture Overview
 
 ```
-┌─── NULLBLOCK.MCP (Security & Context Layer) ───┐
-│  ✅ Wallet Authentication & Session Management  │
-│  ✅ IPFS Context Storage with AES Encryption    │
-│  ✅ Flashbots MEV Protection Client             │
-│  ✅ ML-Based Prompt Injection Security          │
-│  ✅ FastAPI Server with Security Middleware     │
-└─────────────────────────────────────────────────┘
-                     │
-┌─── NULLBLOCK.ORCHESTRATION (Coordination) ───┐
-│  ✅ Goal-Driven Workflow Orchestration         │
-│  ✅ Bittensor Subnet Integration & Validation  │
-│  ✅ Agent Task Coordination & Distribution     │
-│  ✅ Template-Based Workflow Generation         │
-│  ✅ $NULL Token Reward Distribution            │
-└───────────────────────────────────────────────┘
-                     │
-┌─── NULLBLOCK.AGENTS (Execution Layer) ───┐
-│  ✅ Price Monitoring & Opportunity Detection │
-│  ✅ Risk Assessment & Strategy Analysis      │
-│  ✅ MEV-Protected Trade Execution            │
-│  ✅ Performance Analytics & Reporting        │
-└─────────────────────────────────────────────┘
+┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
+│   Frontend  │    │    Erebus    │    │   Backend       │
+│   (Hecate)  │◄──►│   Router     │◄──►│   Services      │
+│   Port 5173 │    │   Port 3000  │    │   Various Ports │
+└─────────────┘    └──────────────┘    └─────────────────┘
+                           │
+                   ┌───────┴────────┐
+                   │   Crossroads   │
+                   │  Marketplace   │
+                   │   (Internal)   │
+                   └────────────────┘
 ```
 
-## 🚀 **Quick Start**
+### Core Services
 
-### **Option 1: Docker (Recommended)**
+**Production-Ready:**
+- ✅ **NullBlock.protocols** - Multi-protocol server (A2A, MCP) on port 8001
+- ✅ **NullBlock.agents** - Agent suite (Hecate orchestrator, trading, monitoring, LLM) on port 9003
+- ✅ **Erebus** - Unified routing server on port 3000
+- ✅ **Crossroads** - Marketplace subsystem (internal to Erebus)
+- ✅ **Hecate Frontend** - React interface with real-time agent discovery on port 5173
 
-1. **Prerequisites**
-   ```bash
-   # Install Docker Desktop for Mac
-   # Download from: https://www.docker.com/products/docker-desktop
-   ```
+## 🚀 Quick Start
 
-2. **Clone and Start**
-   ```bash
-   git clone https://github.com/aetherBytes/nullblock.git
-   cd nullblock
-   
-   # Start all services
-   ./start-nullblock.sh start
-   ```
-
-3. **Access Services**
-   - Frontend: http://localhost:5173
-   - MCP API: http://localhost:8000
-   - Orchestration API: http://localhost:8001
-   - Agents API: http://localhost:8002
-   - IPFS Gateway: http://localhost:8080
-
-### **Option 2: Local Development**
-
-1. **Prerequisites**
-   ```bash
-   # Install Python 3.12, Node.js 18+, Rust
-   brew install python@3.12 node rust
-   
-   # Install IPFS
-   brew install ipfs
-   ```
-
-2. **Setup Development Environment**
-   ```bash
-   ./dev-setup.sh setup
-   ```
-
-3. **Start Services**
-   ```bash
-   # Manual setup (multiple terminals)
-   # Terminal 1: Start infrastructure
-   brew services start postgresql@15
-   brew services start redis
-   ipfs daemon --enable-gc
-   
-   # Terminal 2: MCP Server
-   ./start-mcp.sh
-   
-   # Terminal 3: Orchestration
-   ./start-orchestration.sh
-   
-   # Terminal 4: Agents
-   ./start-agents.sh
-   
-   # Terminal 5: Frontend
-   ./start-frontend.sh
-   ```
-
-### **Option 3: Tmuxinator (Advanced)**
-
-For developers who prefer a comprehensive multi-pane tmux setup:
-
-1. **Install Tmuxinator**
-   ```bash
-   gem install tmuxinator
-   ```
-
-2. **Setup Tmuxinator Config**
-   ```bash
-   # Copy the example config
-   cp tmuxinator-config-example.yml ~/.config/tmuxinator/nullblock-dev.yml
-   
-   # Edit the root path to match your setup
-   vim ~/.config/tmuxinator/nullblock-dev.yml
-   ```
-
-3. **Start Development Environment**
-   ```bash
-   # Start all services in organized tmux panes
-   tmuxinator start nullblock-dev
-   
-   # Or use the shortcut script
-   just dev-tmux
-   ```
-
-This will create a comprehensive tmux session with:
-- **Infrastructure**: PostgreSQL, Redis, IPFS
-- **Backend Services**: MCP, Orchestration, Agents  
-- **Rust**: Erebus server and build
-- **Frontend**: Hecate development server
-- **Monitoring**: Health checks and service status
-- **Tools**: Git status and development commands
-
-## 📋 **Docker Commands**
+### Prerequisites
 
 ```bash
-# Start all services
-./start-nullblock.sh start
+# Install dependencies
+brew install postgresql@17 node rust just tmux tmuxinator
 
-# Stop all services
-./start-nullblock.sh stop
-
-# Restart all services
-./start-nullblock.sh restart
-
-# Build all services
-./start-nullblock.sh build
-
-# View logs
-./start-nullblock.sh logs
-./start-nullblock.sh logs nullblock-mcp
-
-# Check status
-./start-nullblock.sh status
-
-# Health check
-./start-nullblock.sh health
-
-# Clean up everything
-./start-nullblock.sh cleanup
+# Install IPFS (optional for full features)
+brew install ipfs
 ```
 
-## 🔧 **Configuration**
+### Development Setup
 
-### **Environment Variables**
+```bash
+# Clone the repository
+git clone https://github.com/aetherBytes/nullblock.git
+cd nullblock
 
-Create `.env` file (Docker) or `.env.dev` file (local development):
+# Start all services with tmux
+./scripts/dev-tmux
+```
+
+This starts:
+- **Erebus** (unified router): http://localhost:3000
+- **Protocol Server** (A2A/MCP): http://localhost:8001
+- **Hecate Agent** (Rust): http://localhost:9003
+- **Frontend**: http://localhost:5173
+
+### Configuration
+
+Create `.env.dev` in project root:
 
 ```bash
 # Ethereum RPC URLs
-ETHEREUM_RPC_URL=https://eth-mainnet.alchemyapi.io/v2/your-key
-POLYGON_RPC_URL=https://polygon-mainnet.alchemyapi.io/v2/your-key
-WEB3_RPC_URL=https://eth-mainnet.alchemyapi.io/v2/your-key
+ETHEREUM_RPC_URL=https://eth-sepolia.alchemyapi.io/v2/your-key
 
-# Flashbots Configuration
-FLASHBOTS_RPC_URL=https://relay.flashbots.net
-FLASHBOTS_PRIVATE_KEY=your-flashbots-private-key
-ENABLE_MEV_PROTECTION=true
+# OpenRouter API Key (REQUIRED for LLM features)
+OPENROUTER_API_KEY=your-openrouter-key-here
 
-# Bittensor Configuration
-BITTENSOR_NETWORK=test
-BITTENSOR_WALLET_PATH=your-bittensor-wallet-path
+# Database (auto-configured)
+DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents
+EREBUS_DATABASE_URL=postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus
 
-# Database Configuration
-DATABASE_URL=postgresql://nullblock:REDACTED_DB_PASS@postgres:5432/nullblock
-REDIS_URL=redis://redis:6379
+# Kafka (auto-configured)
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 
-# IPFS Configuration
-IPFS_API_URL=http://ipfs:5001
-
-# API Keys
-DEX_API_KEYS=your-dex-api-keys
-
-# Solana Configuration
-SOLANA_RPC_URL=https://api.devnet.solana.com
-
-# Frontend Configuration
-VITE_MCP_API_URL=http://localhost:8000
-VITE_ORCHESTRATION_API_URL=http://localhost:8001
-VITE_AGENTS_API_URL=http://localhost:8002
+# Default LLM Model (optional)
+DEFAULT_LLM_MODEL=cognitivecomputations/dolphin3.0-mistral-24b:free
 ```
 
-## 🏗️ **Service Architecture**
+## 🔧 Development Commands
 
-### **Nullblock.mcp** (`svc/nullblock-mcp/`)
-- **Purpose**: Secure tooling layer with MCP implementation
-- **Features**: Wallet authentication, context storage, MEV protection, security
-- **Port**: 8000
-- **Health**: `/health`
+```bash
+# Quality checks
+cargo fmt && cargo clippy          # Rust
+ruff format . && ruff check . --fix # Python
 
-### **Nullblock.orchestration** (`svc/nullblock-orchestration/`)
-- **Purpose**: Goal-driven workflow coordination
-- **Features**: Bittensor integration, task management, workflow templates
-- **Port**: 8001
-- **Health**: `/health`
+# Testing
+cargo test                          # Rust
+pytest -v                           # Python
 
-### **Nullblock.agents** (`svc/nullblock-agents/`)
-- **Purpose**: Modular agentic army for Web3 automation
-- **Features**: Arbitrage agents, price monitoring, execution
-- **Port**: 8002
-- **Health**: `/health`
+# Database
+docker-compose up postgres kafka zookeeper -d
 
-### **Hecate Frontend** (`svc/hecate/`)
-- **Purpose**: React dApp with SSR
-- **Features**: HUD interface, wallet integration, real-time updates
-- **Port**: 5173
-- **Build**: `npm run develop`
+# Monitoring
+tail -f svc/nullblock-agents/logs/hecate-rust.log
+tail -f svc/erebus/logs/erebus.log
+```
 
-### **Erebus Contracts** (`svc/erebus/`)
-- **Purpose**: Solana smart contracts
-- **Features**: On-chain integration, Rust implementation
-- **Port**: 8003
-- **Build**: `cargo build`
+## 🏗️ Service Architecture
 
-## 🔒 **Security Features**
+### Erebus Unified Router (Port 3000)
+
+**CRITICAL**: ALL frontend communication MUST route through Erebus. NO direct service connections.
+
+```
+Frontend → Erebus → {
+  Wallet operations → Internal handlers
+  Agent chat → Hecate (9003)
+  A2A/MCP → Protocols (8001)
+  Marketplace → Crossroads (internal)
+}
+```
+
+### API Endpoints
+
+- **🔐 Users**: `/api/users/*` - Registration, lookup, management
+- **👛 Wallets**: `/api/wallets/*` - Authentication, sessions
+- **🤖 Agents**: `/api/agents/*` - Chat, status, orchestration
+- **📋 Tasks**: `/api/agents/tasks/*` - Task management, lifecycle
+- **🔗 Protocols**: `/api/protocols/*` - A2A/MCP operations
+- **🛣️ Marketplace**: `/api/marketplace/*` - Listings, search
+- **🔍 Discovery**: `/api/discovery/*` - Service discovery, health
+
+## 🔐 Security Features
 
 - **MEV Protection**: Flashbots integration prevents front-running
 - **Prompt Injection Protection**: ML-based anomaly detection
 - **Encrypted Context Storage**: IPFS with AES encryption
 - **Wallet Security**: Challenge-response authentication
-- **Input Sanitization**: Comprehensive validation and sanitization
+- **Input Sanitization**: Comprehensive validation
 
-## 💰 **Revenue Model**
+## 💰 Revenue Model
 
-- **Arbitrage Trading**: 0.5% trade fees on automated DEX arbitrage
-- **MCP Transactions**: 0.1% fees on MCP-mediated transactions
-- **Premium Subscriptions**: $50-$500/month for advanced features
-- **$NULL Token Rewards**: Bittensor task contributions
-- **Marketplace Fees**: 5% on user-created workflows (pending)
+- **Financial Automation**: 0.5-1% fees
+- **Content & Communication**: $10-$100/month
+- **Data Intelligence**: $50-$500/month
+- **Marketplace Fee**: 5-10% revenue share
+- **Task Execution**: $0.01-$0.05 per task
+- **Premium Hosting**: $10-$100/month
 
-## 🚧 **Remaining Tasks for Full MVP**
-
-1. **Nullblock.platform** - React dApp on Polygon (Frontend development)
-2. **Marketplace Integration** - Workflow marketplace with 5% revenue sharing
-3. **Polygon Testnet Deployment** - Infrastructure deployment and testing
-4. **Beta User Onboarding** - Target 100 users in 30 days
-
-## 🛠️ **Development**
-
-### **Code Quality**
-```bash
-# Python services
-cd svc/nullblock-mcp
-ruff format . && ruff check . --fix && mypy .
-
-# Frontend
-cd svc/hecate
-npm run lint:check && npm run ts:check
-```
-
-### **Testing**
-```bash
-# Python services
-cd svc/nullblock-mcp
-pytest -v src/tests/
-
-# Frontend
-cd svc/hecate
-npm test
-```
-
-### **Building for Production**
-```bash
-# Frontend production build
-cd svc/hecate
-npm run build
-
-# Docker production build
-docker-compose -f docker-compose.yml --profile production up -d
-```
-
-## 📊 **Monitoring & Logs**
-
-### **Service Logs**
-```bash
-# All services
-docker-compose logs -f
-
-# Specific service
-docker-compose logs -f nullblock-mcp
-```
-
-### **Health Checks**
-```bash
-# Check all services
-./start-nullblock.sh health
-
-# Individual service health
-curl http://localhost:8000/health  # MCP
-curl http://localhost:8001/health  # Orchestration
-curl http://localhost:8002/health  # Agents
-```
-
-## 🤝 **Contributing**
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -362,11 +243,11 @@ curl http://localhost:8002/health  # Agents
 4. Run tests and linting
 5. Submit a pull request
 
-## 📄 **License**
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 **Support**
+## 🆘 Support
 
 - **Documentation**: [https://aetherbytes.github.io/nullblock-sdk/](https://aetherbytes.github.io/nullblock-sdk/)
 - **SDK Repository**: [https://github.com/aetherBytes/nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk)
@@ -377,6 +258,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ by the Nullblock Team**
 
-*Empowering the future of decentralized agentic workflows*
-
-
+*The NASDAQ for Agents. Let's go.*
