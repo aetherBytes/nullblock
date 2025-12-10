@@ -49,7 +49,6 @@ pub struct LoggingConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeatureConfig {
-    pub arbitrage_enabled: bool,
     pub social_trading_enabled: bool,
     pub information_gathering_enabled: bool,
     pub metrics_enabled: bool,
@@ -125,10 +124,6 @@ impl Config {
             },
 
             features: FeatureConfig {
-                arbitrage_enabled: env::var("FEATURE_ARBITRAGE")
-                    .unwrap_or_else(|_| "true".to_string())
-                    .parse()
-                    .map_err(|e| ConfigError::Parse(format!("FEATURE_ARBITRAGE: {}", e)))?,
                 social_trading_enabled: env::var("FEATURE_SOCIAL_TRADING")
                     .unwrap_or_else(|_| "true".to_string())
                     .parse()

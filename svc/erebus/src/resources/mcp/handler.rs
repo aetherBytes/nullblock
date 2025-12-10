@@ -26,7 +26,6 @@ impl McpHandler {
             "resources/read" => self.handle_read_resource(&request.params),
             "wallets/list" => self.handle_wallet_integration(&request.params),
             "social_trading/analyze" => self.handle_social_trading(&request.params),
-            "arbitrage/execute" => self.handle_arbitrage(&request.params),
             "worker/status" => self.handle_worker_status(&request.params),
             "worker/list" => self.handle_worker_list(&request.params),
             "worker/stats" => self.handle_worker_stats(&request.params),
@@ -68,7 +67,6 @@ impl McpHandler {
                     "wallet_verify".to_string(),
                     "session_validate".to_string(),
                     "social_trading_analyze".to_string(),
-                    "arbitrage_execute".to_string(),
                 ],
                 prompts: vec![
                     "wallet_connection_flow".to_string(),
@@ -102,7 +100,7 @@ impl McpHandler {
             serde_json::json!({
                 "uri": "erebus://trading_agents",
                 "name": "Trading Agents",
-                "description": "Social trading and arbitrage agent workflows",
+                "description": "Social trading agent workflows",
                 "mimeType": "application/json",
                 "category": "trading"
             }),
@@ -146,21 +144,6 @@ impl McpHandler {
                         "sources": {"type": "array", "items": {"type": "string"}, "default": ["twitter", "telegram"]}
                     },
                     "required": ["token"]
-                }
-            }),
-            serde_json::json!({
-                "name": "arbitrage_execute",
-                "description": "Execute arbitrage opportunity across DEXes with MEV protection",
-                "category": "trading",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "token_pair": {"type": "string", "description": "Trading pair (e.g., SOL/USDC)"},
-                        "amount": {"type": "number", "description": "Amount to trade"},
-                        "max_slippage": {"type": "number", "default": 0.5, "description": "Maximum slippage %"},
-                        "use_mev_protection": {"type": "boolean", "default": true}
-                    },
-                    "required": ["token_pair", "amount"]
                 }
             })
         ];
@@ -231,7 +214,6 @@ impl McpHandler {
 
         match tool_name {
             "social_trading_analyze" => self.delegate_to_nullblock_mcp("social_trading", arguments),
-            "arbitrage_execute" => self.delegate_to_nullblock_mcp("arbitrage", arguments),
             _ => McpResponse::error(format!("Tool '{}' requires delegation to nullblock.mcp", tool_name))
         }
     }
@@ -275,11 +257,6 @@ impl McpHandler {
     fn handle_social_trading(&self, params: &Option<serde_json::Value>) -> McpResponse {
         println!("📱 Social trading analysis requested: {}", params.as_ref().unwrap_or(&serde_json::json!({})));
         self.delegate_to_nullblock_mcp("social_trading", params.as_ref().unwrap_or(&serde_json::json!({})))
-    }
-
-    fn handle_arbitrage(&self, params: &Option<serde_json::Value>) -> McpResponse {
-        println!("💹 Arbitrage execution requested: {}", params.as_ref().unwrap_or(&serde_json::json!({})));
-        self.delegate_to_nullblock_mcp("arbitrage", params.as_ref().unwrap_or(&serde_json::json!({})))
     }
 
     fn handle_wallet_integration(&self, _params: &Option<serde_json::Value>) -> McpResponse {
