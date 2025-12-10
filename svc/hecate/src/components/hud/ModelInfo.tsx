@@ -297,7 +297,7 @@ const ModelInfo: React.FC<ModelInfoProps> = ({
                                  activeQuickAction === 'fast' ? getFastModels :
                                  activeQuickAction === 'thinkers' ? getThinkerModels :
                                  activeQuickAction === 'image' ? getImageModels : getInstructModels;
-              const models = getModelsFn(availableModels);
+              const models = getModelsFn(availableModels, 999);
               return (
                 <div className={styles.modelSection}>
                   <h6>{activeQuickAction.charAt(0).toUpperCase() + activeQuickAction.slice(1)} Models ({models.length})</h6>

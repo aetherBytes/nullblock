@@ -580,8 +580,8 @@ pub async fn start_task(
                             None, // user_id
                             None, // agent_id
                             task.name.clone(),
-                            "created".to_string(), // assume previous status
-                            "running".to_string(),
+                            "submitted".to_string(), // previous A2A state
+                            "working".to_string(),   // new A2A state
                             serde_json::to_string(&task.priority).unwrap().trim_matches('"').to_string(),
                             task.progress,
                         );
@@ -926,9 +926,10 @@ async fn process_task_internal(
         }
     };
 
-    // Check if task is in a processable state - if it's created, start it automatically
-    if task_entity.status == "created" || task_entity.status == "submitted" {
-        info!("🚀 Auto-starting task {} before processing", task_id);
+    // Check if task is in a processable state - if it's submitted, start it automatically
+    // Valid A2A states: submitted, working, input-required, completed, canceled, failed, rejected, auth-required, unknown
+    if task_entity.status == "submitted" {
+        info!("🚀 Auto-starting task {} before processing (status: submitted → working)", task_id);
         match task_repo.update_status(&task_id, crate::models::TaskState::Working).await {
             Ok(Some(updated_task)) => {
                 info!("✅ Task {} automatically started", task_id);
@@ -941,8 +942,8 @@ async fn process_task_internal(
                             None, // No user_id available in Task domain model
                             None, // No agent_id yet
                             task_model.name.clone(),
-                            task_entity.status.clone(),
-                            "working".to_string(),
+                            "submitted".to_string(), // previous A2A state
+                            "working".to_string(),   // new A2A state
                             format!("{:?}", task_model.priority), // Use Debug format
                             0, // progress: u8 (0% when starting)
                         );
@@ -959,9 +960,10 @@ async fn process_task_internal(
                 return Err(format!("Failed to start task: {}", e));
             }
         }
-    } else if task_entity.status != "working" && task_entity.status != "running" {
+    } else if task_entity.status != "working" {
+        // Task must be in 'submitted' (to auto-start) or 'working' (already started) to process
         warn!("⚠️ Task {} is not in a processable state: {}", task_id, task_entity.status);
-        return Err(format!("Task must be in 'submitted', 'created', 'working', or 'running' state to process. Current state: {}", task_entity.status));
+        return Err(format!("Task must be in 'submitted' or 'working' state to process. Current state: {}", task_entity.status));
     }
 
     // Execute the task using Hecate
@@ -977,21 +979,21 @@ async fn process_task_internal(
                 Ok(Some(updated_task)) => {
                     match updated_task.to_domain_model() {
                         Ok(task_model) => {
-                            // Publish Kafka event
+                            // Publish Kafka event for task completion
                             if let Some(kafka_producer) = &state.kafka_producer {
                                 let event = TaskLifecycleEvent::task_status_changed(
                                     task_id.clone(),
                                     None, // user_id
                                     hecate_agent.get_agent_id(),
                                     task_model.name.clone(),
-                                    "running".to_string(),
-                                    "processed".to_string(), // Custom status for processed tasks
+                                    "working".to_string(),   // previous A2A state
+                                    "completed".to_string(), // final A2A state
                                     serde_json::to_string(&task_model.priority).unwrap().trim_matches('"').to_string(),
                                     task_model.progress,
                                 );
 
                                 if let Err(e) = kafka_producer.publish_task_event(event).await {
-                                    warn!("⚠️ Failed to publish task processed event: {}", e);
+                                    warn!("⚠️ Failed to publish task completed event: {}", e);
                                 }
                             }
 

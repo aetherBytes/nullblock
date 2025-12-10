@@ -28,7 +28,12 @@ use crate::logging::setup_logging;
 async fn main() -> anyhow::Result<()> {
     // Load environment from .env.dev if available
     if let Err(e) = dotenv::from_filename(".env.dev") {
-        warn!("Could not load .env.dev file: {}", e);
+        warn!("⚠️ Could not load .env.dev file: {}", e);
+        warn!("   Expected location: .env.dev in current directory");
+        warn!("   Without .env.dev, OpenRouter API key won't be loaded!");
+        warn!("   You may experience rate limiting with anonymous access.");
+    } else {
+        println!("✅ Loaded configuration from .env.dev");
     }
 
     // Setup logging

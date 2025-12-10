@@ -2,7 +2,7 @@ use crate::{
     config::ApiKeys,
     database::repositories::AgentRepository,
     error::{AppError, AppResult},
-    llm::{LLMServiceFactory, OptimizationGoal, Priority, TaskRequirements},
+    llm::{LLMServiceFactory, OptimizationGoal, Priority, TaskRequirements, validator::{ModelValidator, sort_models_by_context_length}},
     log_agent_shutdown, log_agent_startup, log_request_complete, log_request_start,
     models::{ChatResponse, ConversationMessage, LLMRequest, ModelCapability},
 };
@@ -127,15 +127,68 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         info!("🧠 Initializing LLM Service Factory...");
         let mut llm_factory = LLMServiceFactory::new();
         llm_factory.initialize(api_keys).await?;
-        self.llm_factory = Some(Arc::new(RwLock::new(llm_factory)));
+        let llm_factory_arc = Arc::new(RwLock::new(llm_factory));
+        self.llm_factory = Some(llm_factory_arc.clone());
         info!("✅ LLM Service Factory ready");
 
-        // Set current model to preferred model if available
-        if self.is_model_available(&self.preferred_model, api_keys).await {
-            self.current_model = Some(self.preferred_model.clone());
-            info!("✅ Default model loaded: {}", self.preferred_model);
-        } else {
-            warn!("⚠️ Could not load default model {}, will use routing", self.preferred_model);
+        // Validate default model
+        info!("🔍 Validating default model: {}", self.preferred_model);
+        let validator = ModelValidator::new(llm_factory_arc.clone());
+
+        match validator.validate_model(&self.preferred_model, api_keys).await {
+            Ok(true) => {
+                self.current_model = Some(self.preferred_model.clone());
+                info!("✅ Default model validated: {}", self.preferred_model);
+            }
+            Ok(false) | Err(_) => {
+                warn!("⚠️ Default model failed validation, trying fallbacks...");
+
+                // Get live free models from OpenRouter
+                let factory = llm_factory_arc.read().await;
+                match factory.get_free_models().await {
+                    Ok(free_models) => {
+                        drop(factory);
+
+                        if free_models.is_empty() {
+                            error!("❌ No free models available from OpenRouter API");
+                            error!("💡 Will use LLM router auto-selection per request");
+                        } else {
+                            let sorted_models = sort_models_by_context_length(free_models).await;
+                            info!("🔄 Testing up to 10 free model candidates...");
+
+                            let mut validated = false;
+                            for (idx, candidate) in sorted_models.iter().take(10).enumerate() {
+                                info!("🧪 Testing candidate {}/{}: {}", idx + 1, sorted_models.len().min(10), candidate);
+
+                                match validator.validate_model(candidate, api_keys).await {
+                                    Ok(true) => {
+                                        self.current_model = Some(candidate.clone());
+                                        info!("✅ Fallback model validated: {}", candidate);
+                                        validated = true;
+                                        break;
+                                    }
+                                    Ok(false) => {
+                                        warn!("⚠️ Candidate {} failed validation, trying next...", candidate);
+                                    }
+                                    Err(e) => {
+                                        warn!("⚠️ Candidate {} error: {}, trying next...", candidate, e);
+                                    }
+                                }
+                            }
+
+                            if !validated {
+                                error!("❌ All free models failed validation");
+                                error!("💡 Will use LLM router auto-selection per request");
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        drop(factory);
+                        error!("❌ Failed to fetch free models: {}", e);
+                        error!("💡 Will use LLM router auto-selection per request");
+                    }
+                }
+            }
         }
 
         // Start new chat session

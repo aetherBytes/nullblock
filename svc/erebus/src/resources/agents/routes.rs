@@ -39,6 +39,7 @@ async fn extract_wallet_and_create_user(headers: &HeaderMap) -> Option<Uuid> {
     let default_source_type = serde_json::json!({
         "type": "web3_wallet",
         "provider": "unknown",
+        "network": wallet_chain,
         "metadata": {}
     });
     match call_erebus_user_registration_api(wallet_address, wallet_chain, Some(default_source_type)).await {

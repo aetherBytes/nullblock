@@ -7,7 +7,7 @@ use crate::{
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 use super::{
     providers::{
@@ -82,14 +82,26 @@ impl LLMServiceFactory {
 
         // OpenRouter
         if let Some(api_key) = &api_keys.openrouter {
-            self.providers.insert(
-                ModelProvider::OpenRouter,
-                Arc::new(OpenRouterProvider::new(api_key.clone())),
-            );
-            available_providers.push("openrouter");
-            info!("OpenRouter is configured as the cloud model aggregator");
+            if api_key.is_empty() || api_key == "your-openrouter-key-here" {
+                error!("🔑 CRITICAL: OpenRouter API key is invalid or placeholder!");
+                error!("   Set OPENROUTER_API_KEY in .env.dev to a valid key from https://openrouter.ai/");
+                error!("   Without a valid OpenRouter key, you'll hit severe rate limits on free models.");
+                missing_providers.push("openrouter (invalid key)");
+            } else {
+                self.providers.insert(
+                    ModelProvider::OpenRouter,
+                    Arc::new(OpenRouterProvider::new(api_key.clone())),
+                );
+                available_providers.push("openrouter");
+                info!("✅ OpenRouter is configured as the cloud model aggregator (key: {}...{})",
+                    &api_key[..15.min(api_key.len())],
+                    if api_key.len() > 15 { &api_key[api_key.len()-4..] } else { "" });
+            }
         } else {
-            missing_providers.push("openrouter");
+            error!("🔑 CRITICAL: OpenRouter API key is missing!");
+            error!("   Set OPENROUTER_API_KEY in .env.dev with a key from https://openrouter.ai/");
+            error!("   Free tier has very strict rate limits - you need your own key for reliable access.");
+            missing_providers.push("openrouter (missing)");
         }
 
         // Ollama (local, no API key needed)
@@ -158,6 +170,10 @@ impl LLMServiceFactory {
                     let fallback_config = self.create_model_config_for_override(fallback_model);
                     match self.generate_with_model(request, &fallback_config).await {
                         Ok(r) => {
+                            if r.content.trim().is_empty() {
+                                warn!("⚠️ Fallback model {} returned empty response, trying next fallback", fallback_model);
+                                continue;
+                            }
                             info!("✅ Fallback successful with model: {}", fallback_model);
                             response_result = Ok(r);
                             break;
@@ -476,13 +492,10 @@ impl LLMServiceFactory {
                 fallbacks
             }
             Err(e) => {
-                warn!("⚠️ Failed to fetch free models: {}", e);
-                vec![
-                    "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string(),
-                    "cognitivecomputations/dolphin3.0-r1-mistral-24b:free".to_string(),
-                    "deepseek/deepseek-chat-v3.1:free".to_string(),
-                    "nvidia/nemotron-nano-9b-v2:free".to_string(),
-                ]
+                error!("❌ Failed to fetch free models from OpenRouter API: {}", e);
+                error!("💡 Check OPENROUTER_API_KEY and network connectivity");
+                error!("💡 No fallback models available - validation will fail gracefully");
+                vec![]
             }
         }
     }
