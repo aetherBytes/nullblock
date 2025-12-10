@@ -22,3 +22,5 @@ sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chron
 regex = "1.10"
 lazy_static = "1.4"
 async-stream = "0.3"
+tokio-stream = "0.1"
+strip-ansi-escapes = "0.2"

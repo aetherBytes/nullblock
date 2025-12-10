@@ -389,6 +389,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/users/:user_id", get(get_user_endpoint))
         // Legacy agent user registration (deprecated - use /api/users/register)
         .route("/api/agents/users/register", post(register_user))
+        // Logging endpoints
+        .route("/api/logs/recent", get(resources::logs::routes::get_recent_logs))
+        .route("/api/logs/stream", get(resources::logs::routes::stream_logs))
         // Merge wallet routes
         .merge(create_wallet_routes())
         // Merge crossroads routes
