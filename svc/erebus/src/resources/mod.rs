@@ -6,6 +6,7 @@ pub mod mcp;
 pub mod agents;
 pub mod users;
 pub mod crossroads;
+pub mod logs;
 pub mod external_service;
 
 // Re-export commonly used types and traits
