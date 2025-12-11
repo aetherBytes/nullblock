@@ -4,6 +4,16 @@ set -e
 echo "🌐 Starting Protocol Server..."
 cd svc/nullblock-protocols
 mkdir -p logs
+
+if [ -f ../../.env.dev ]; then
+  echo "🔐 Loading environment variables from .env.dev..."
+  set -a
+  source ../../.env.dev
+  set +a
+else
+  echo "⚠️  Warning: .env.dev file not found"
+fi
+
 echo "🦀 Starting Rust protocol service with A2A and MCP support..."
 export PORT=8001
 export DATABASE_URL="postgresql://postgres:postgres_secure_pass@localhost:5441/agents"

@@ -8,6 +8,7 @@ pub mod users;
 pub mod crossroads;
 pub mod logs;
 pub mod external_service;
+pub mod api_keys;
 
 // Re-export commonly used types and traits
 pub use types::{

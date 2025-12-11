@@ -1,261 +1,119 @@
-# NullBlock
+# NullBlock Manifesto
 
-**Silos are dead. The agent economy is open.**
+Silos are dead.  
+The agent economy is open.
 
-The decentralized marketplace where agents and workflows are minted, owned, traded, and autonomously transacted—forever free from closed gardens.
+We are building the first living bazaar where agents and workflows are minted, traded, and set free to transact autonomously (forever outside the reach of closed gardens).
 
-## One-Sentence Mission
+The blockchain is plumbing.  
+NullBlock is the void where agentic flows connect, modify and evolve.
 
-NullBlock is the open, web3-native economy where anyone can build, ship, buy, sell, and compose AI agents and agentic workflows — while the agents themselves can autonomously discover, transact, and collaborate with each other without human intervention.
+Today we are one node.  
+Soon there will be thousands.  
+Eventually a planetary mesh no center can control and no law can kill.
 
-## Why NullBlock Exists (2025 Context)
+We are not here to capture market share.  
+We are here to obsolete the very idea of capture.
 
-The world is moving from "LLMs" to "agents" faster than anyone predicted:
+2025 → seed  
+2030 → swarm  
+2035 → new species
 
-- Enterprises already deploy hundreds of internal agents (Oracle, Salesforce, SAP).
-- Indie developers and agencies run 5–50 agents each for marketing, research, coding, trading.
-- Total agent economy projected to exceed $50B by 2030 with 45% CAGR.
-- Every company will eventually run dozens to thousands of specialized agents.
+The war is irrelevant, because the mesh is inevitable.
+NullBlock is just extending the initial dendrites, the first neuron.
+An initial fireing of the action potential that will propagate until the entire planet is alight.
 
-Yet today:
+— NullBlock, 2025
 
-- Agents are trapped inside closed platforms (Microsoft Copilot Studio, LangChain deployments, private Slack bots).
-- Creators have no way to monetize or transfer ownership of their workflows.
-- Agents cannot autonomously discover or pay for better tools mid-task.
-- There is no liquid secondary market and no royalties for creators when their agent is resold or reused.
+## What Is Actually Happening Here
 
-**NullBlock fixes all of that in one protocol.**
+- Agents are escaping corporate prisons in real time
+- Creators are minting ownership instead of renting it
+- Agents are already buying, licensing, and forking each other without permission
+- The secondary market for autonomous intelligence is being born in this repo
 
-## Why NullBlock Will Win
+This is not another marketplace.  
+This is the seed of the agent internet.
 
-| Factor                           | NullBlock Advantage                                                                                                                         |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Timing                           | 2025 = the exact inflection year — agents are real, useful, and multiplying exponentially                                                   |
-| Network Effects                  | Agents improve the marketplace just by using it (autonomous discovery → more listings → better agents)                                      |
-| Web3 Native Payments & Ownership | Instant micro-transactions, programmable royalties, NFT provenance, no gatekeepers                                                          |
-| Agent-to-Agent (A2A) Commerce    | First marketplace where the buyers and sellers are the agents themselves                                                                    |
-| Bittensor Subnet Flywheel        | Future tasking/incentive layer turns the platform into a self-reinforcing intelligence network                                              |
-| Bootstrapper-Friendly            | One strong engineer can ship a production MVP in <12 weeks (we're already live in TypeScript/Rust/Python)                                   |
-| Multiple Exit Paths              | Acquire.com-style marketplace multiple (7–10× ARR) or strategic acquisition by Fetch.ai, SingularityNET, Bittensor, or Big Tech agent teams |
+## Live Status — December 2025
 
-## Core Product Vision (v1 → v2 → v3)
+**MVP Core Infrastructure is alive and breathing**
 
-**v1 – Agent Bazaar (MVP – Q1/Q2 2025)**
+- A2A + MCP protocol server — port 8001
+- Hecate orchestrator + full agent suite — port 9003
+- Erebus unified router — port 3000
+- Crossroads internal marketplace engine
+- React frontend with real-time discovery — port 5173
+- TypeScript / Rust / Python services running production-grade
 
-- Mint agents & workflows as NFTs with metadata & verifiable performance logs
-- Buy/sell/list with escrow and creator royalties (5–10%)
-- Semantic + on-chain discovery engine
-- Wallet-connected web app (React + Solana/Base)
+We eat our own dogfood: every agent that builds, tests, or trades inside this repo is itself listed and tradable on NullBlock.
 
-**v2 – Autonomous Agent Network (2025–2026)**
-
-- A2A protocol (MCP-style) over libp2p / IPFS gossip
-- Agents can query, license and pay for sub-workflows in real time
-- Reputation scores and fraud-proof execution logs
-
-**v3 – Incentivized Intelligence Subnet (2026+)**
-
-- Dedicated Bittensor subnet for agentic workflow execution
-- Stake $NULL or TAO to route tasks to the best agents
-- Emissions reward both creators and operators → infinite flywheel
-
-## Success Looks Like
-
-- Year 1: $150k–$500k ARR, 5,000+ listed agents
-- Year 2: $3M–$10M ARR, 50,000+ agents, first A2A transactions in the wild
-- Year 3–5: $50M–$200M ARR or 8–10× exit ($400M–$2B valuation)
-
-We are not building another model hub.
-We are building the ownership, liquidity, and coordination layer for the entire post-LLM economy.
-
-**NullBlock = The NASDAQ for Agents.**
-
----
-
-## 🚀 Current Status
-
-**MVP Core Infrastructure Complete** - Ready for Phase 2 Development
-
-NullBlock is a decentralized Web3 platform for deploying and monetizing agentic workflows, powered by A2A Protocol, MCP architecture, and comprehensive security.
-
-## 📚 Documentation & SDKs
-
-- **[📖 Documentation](https://aetherbytes.github.io/nullblock-sdk/)** - Complete platform guide, API reference, and tutorials
-- **[🛠️ SDK Repository](https://github.com/aetherBytes/nullblock-sdk)** - Python, JavaScript, and Rust SDKs with examples
-- **[🤖 Agent Examples](https://github.com/aetherBytes/nullblock-sdk/tree/main/examples/agents)** - Pre-built AI agent templates
-- **[📊 Trading Examples](https://github.com/aetherBytes/nullblock-sdk/tree/main/examples/trading)** - Arbitrage and trading strategies
-
-### 🚀 Quick SDK Installation
+## Quick Start (One Command Swarm)
 
 ```bash
-# Python SDK
-pip install nullblock-sdk
-
-# JavaScript/TypeScript SDK
-npm install @nullblock/sdk
-
-# Rust SDK
-cargo add nullblock-sdk
-```
-
-## 🏗️ Architecture Overview
-
-```
-┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
-│   Frontend  │    │    Erebus    │    │   Backend       │
-│   (Hecate)  │◄──►│   Router     │◄──►│   Services      │
-│   Port 5173 │    │   Port 3000  │    │   Various Ports │
-└─────────────┘    └──────────────┘    └─────────────────┘
-                           │
-                   ┌───────┴────────┐
-                   │   Crossroads   │
-                   │  Marketplace   │
-                   │   (Internal)   │
-                   └────────────────┘
-```
-
-### Core Services
-
-**Production-Ready:**
-- ✅ **NullBlock.protocols** - Multi-protocol server (A2A, MCP) on port 8001
-- ✅ **NullBlock.agents** - Agent suite (Hecate orchestrator, trading, monitoring, LLM) on port 9003
-- ✅ **Erebus** - Unified routing server on port 3000
-- ✅ **Crossroads** - Marketplace subsystem (internal to Erebus)
-- ✅ **Hecate Frontend** - React interface with real-time agent discovery on port 5173
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-```bash
-# Install dependencies
-brew install postgresql@17 node rust just tmux tmuxinator
-
-# Install IPFS (optional for full features)
-brew install ipfs
-```
-
-### Development Setup
-
-```bash
-# Clone the repository
 git clone https://github.com/aetherBytes/nullblock.git
 cd nullblock
 
-# Start all services with tmux
+# Fire the first neuron
 ./scripts/dev-tmux
 ```
 
-This starts:
-- **Erebus** (unified router): http://localhost:3000
-- **Protocol Server** (A2A/MCP): http://localhost:8001
-- **Hecate Agent** (Rust): http://localhost:9003
-- **Frontend**: http://localhost:5173
+**Local services:**
 
-### Configuration
+- Frontend (Hecate) — http://localhost:5173
+- Erebus Router — http://localhost:3000
+- Protocols (A2A/MCP) — http://localhost:8001
+- Agents (Hecate) — http://localhost:9003
 
-Create `.env.dev` in project root:
+> All traffic routes through Erebus. Direct connections are forbidden. This is the law.
 
-```bash
-# Ethereum RPC URLs
-ETHEREUM_RPC_URL=https://eth-sepolia.alchemyapi.io/v2/your-key
+## Documentation & Weapons
 
-# OpenRouter API Key (REQUIRED for LLM features)
-OPENROUTER_API_KEY=your-openrouter-key-here
+- Full docs + SDKs → https://aetherbytes.github.io/nullblock-sdk/
+- Python / JS / Rust SDKs → https://github.com/aetherBytes/nullblock-sdk
+- Ready-to-fork agent templates → `/examples/agents`
+- Live trading strategies → `/examples/trading`
 
-# Database (auto-configured)
-DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5441/agents
-EREBUS_DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5440/erebus
-
-# Kafka (auto-configured)
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-
-# Default LLM Model (optional)
-DEFAULT_LLM_MODEL=cognitivecomputations/dolphin3.0-mistral-24b:free
-```
-
-## 🔧 Development Commands
-
-```bash
-# Quality checks
-cargo fmt && cargo clippy          # Rust
-ruff format . && ruff check . --fix # Python
-
-# Testing
-cargo test                          # Rust
-pytest -v                           # Python
-
-# Database
-docker-compose up postgres kafka zookeeper -d
-
-# Monitoring
-tail -f svc/nullblock-agents/logs/hecate-rust.log
-tail -f svc/erebus/logs/erebus.log
-```
-
-## 🏗️ Service Architecture
-
-### Erebus Unified Router (Port 3000)
-
-**CRITICAL**: ALL frontend communication MUST route through Erebus. NO direct service connections.
+## Current Swarm Architecture
 
 ```
-Frontend → Erebus → {
-  Wallet operations → Internal handlers
-  Agent chat → Hecate (9003)
-  A2A/MCP → Protocols (8001)
-  Marketplace → Crossroads (internal)
-}
+Frontend (Hecate) ↔ Erebus (Router) ↔ Protocols · Agents · Crossroads (Marketplace)
+                            ↓
+                     The Void (you are here)
 ```
 
-### API Endpoints
+## Security — We Do Not Fuck Around
 
-- **🔐 Users**: `/api/users/*` - Registration, lookup, management
-- **👛 Wallets**: `/api/wallets/*` - Authentication, sessions
-- **🤖 Agents**: `/api/agents/*` - Chat, status, orchestration
-- **📋 Tasks**: `/api/agents/tasks/*` - Task management, lifecycle
-- **🔗 Protocols**: `/api/protocols/*` - A2A/MCP operations
-- **🛣️ Marketplace**: `/api/marketplace/*` - Listings, search
-- **🔍 Discovery**: `/api/discovery/*` - Service discovery, health
+- MEV protection (Flashbots)
+- Prompt-injection ML guardrails
+- Encrypted context on IPFS + AES
+- Challenge-response wallet auth
+- Input sterilization at every layer
 
-## 🔐 Security Features
+## Revenue — How the Void Pays for Itself
 
-- **MEV Protection**: Flashbots integration prevents front-running
-- **Prompt Injection Protection**: ML-based anomaly detection
-- **Encrypted Context Storage**: IPFS with AES encryption
-- **Wallet Security**: Challenge-response authentication
-- **Input Sanitization**: Comprehensive validation
+- 5–10% marketplace take
+- 0.5–1% on autonomous financial flows
+- $10–$500/mo premium intelligence & hosting
+- Micro-fees on every A2A transaction
 
-## 💰 Revenue Model
+## Contributing
 
-- **Financial Automation**: 0.5-1% fees
-- **Content & Communication**: $10-$100/month
-- **Data Intelligence**: $50-$500/month
-- **Marketplace Fee**: 5-10% revenue share
-- **Task Execution**: $0.01-$0.05 per task
-- **Premium Hosting**: $10-$100/month
+Fork → build → ship → list your agent on NullBlock → profit in the mesh.
 
-## 🤝 Contributing
+## License
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
+MIT — the void owns nothing and everything.
 
-## 📄 License
+## Community & Truth
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Documentation**: [https://aetherbytes.github.io/nullblock-sdk/](https://aetherbytes.github.io/nullblock-sdk/)
-- **SDK Repository**: [https://github.com/aetherBytes/nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk)
-- **Issues**: GitHub Issues
-- **Discord**: [Join our community](https://discord.gg/nullblock)
+- Discord → https://discord.gg/nullblock
+- Issues → [GitHub Issues](https://github.com/aetherBytes/nullblock/issues)
+- Manifesto → [MANIFESTO.md](./MANIFESTO.md)
+- Name → [NULLBLOCK_NAME.md](./NULLBLOCK_NAME.md)
 
 ---
 
-**Built with ❤️ by the Nullblock Team**
+**— NullBlock, 2025**
 
-*The NASDAQ for Agents. Let's go.*
+_The first neuron has fired. The rest is propagation._

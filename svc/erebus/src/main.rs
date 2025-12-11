@@ -22,6 +22,7 @@ mod user_references;
 mod resources;
 mod auth;
 mod utils;
+mod crypto;
 use resources::agents::routes::{
     agent_health, hecate_chat, siren_chat, siren_set_model, hecate_status, agent_chat, agent_status,
     hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model, hecate_model_info, hecate_search_models,
@@ -174,19 +175,34 @@ async fn logging_middleware(request: Request, next: Next) -> Result<axum::respon
     info!("🌐 [{}] User-Agent: {}", request_id, user_agent);
     info!("📋 [{}] Headers: {:#?}", request_id, headers);
     
-    // Log request body with size limit for security
+    // Log request body with size limit for security (sanitize API keys)
     if !body_bytes.is_empty() {
         let body_size = body_bytes.len();
         if body_size > 10_000 {
             info!("📝 [{}] Request body: {} bytes (truncated for security)", request_id, body_size);
         } else {
             match serde_json::from_slice::<serde_json::Value>(&body_bytes) {
-                Ok(json) => {
+                Ok(mut json) => {
+                    // Sanitize sensitive fields before logging
+                    if let Some(obj) = json.as_object_mut() {
+                        if obj.contains_key("api_key") {
+                            obj.insert("api_key".to_string(), serde_json::Value::String("***REDACTED***".to_string()));
+                        }
+                        if obj.contains_key("encrypted_key") {
+                            obj.insert("encrypted_key".to_string(), serde_json::Value::String("***REDACTED***".to_string()));
+                        }
+                    }
                     info!("📝 [{}] Request body (JSON): {}", request_id, serde_json::to_string_pretty(&json).unwrap_or_default());
                 }
                 Err(_) => {
                     match String::from_utf8(body_bytes.to_vec()) {
-                        Ok(text) => info!("📝 [{}] Request body (Text): {}", request_id, text),
+                        Ok(text) => {
+                            if text.contains("api_key") || text.contains("encrypted_key") {
+                                info!("📝 [{}] Request body: ***CONTAINS SENSITIVE DATA - REDACTED***", request_id);
+                            } else {
+                                info!("📝 [{}] Request body (Text): {}", request_id, text);
+                            }
+                        }
                         Err(_) => info!("📝 [{}] Request body: {} bytes (binary)", request_id, body_size),
                     }
                 }
@@ -223,12 +239,37 @@ async fn logging_middleware(request: Request, next: Next) -> Result<axum::respon
                     info!("📄 [{}] Response body: {} bytes (truncated for log size)", request_id, body_size);
                 } else {
                     match serde_json::from_slice::<serde_json::Value>(&bytes) {
-                        Ok(json) => {
+                        Ok(mut json) => {
+                            // Sanitize sensitive fields in response
+                            if let Some(obj) = json.as_object_mut() {
+                                // Sanitize decrypted API keys in response data
+                                if let Some(data) = obj.get_mut("data") {
+                                    if let Some(arr) = data.as_array_mut() {
+                                        for item in arr.iter_mut() {
+                                            if let Some(item_obj) = item.as_object_mut() {
+                                                if item_obj.contains_key("api_key") {
+                                                    item_obj.insert("api_key".to_string(), serde_json::Value::String("***REDACTED***".to_string()));
+                                                }
+                                            }
+                                        }
+                                    } else if let Some(data_obj) = data.as_object_mut() {
+                                        if data_obj.contains_key("api_key") {
+                                            data_obj.insert("api_key".to_string(), serde_json::Value::String("***REDACTED***".to_string()));
+                                        }
+                                    }
+                                }
+                            }
                             info!("📄 [{}] Response body (JSON): {}", request_id, serde_json::to_string_pretty(&json).unwrap_or_default());
                         }
                         Err(_) => {
                             match String::from_utf8(bytes.to_vec()) {
-                                Ok(text) => info!("📄 [{}] Response body (Text): {}", request_id, text),
+                                Ok(text) => {
+                                    if text.contains("api_key") {
+                                        info!("📄 [{}] Response body: ***CONTAINS SENSITIVE DATA - REDACTED***", request_id);
+                                    } else {
+                                        info!("📄 [{}] Response body (Text): {}", request_id, text);
+                                    }
+                                }
                                 Err(_) => info!("📄 [{}] Response body: {} bytes (binary)", request_id, body_size),
                             }
                         }
@@ -323,6 +364,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     info!("✅ Database health check passed");
 
+    // Initialize encryption service
+    let encryption_key = std::env::var("ENCRYPTION_MASTER_KEY")
+        .expect("ENCRYPTION_MASTER_KEY must be set in environment");
+
+    info!("🔐 Initializing encryption service...");
+    let encryption_service = match crypto::EncryptionService::new(&encryption_key) {
+        Ok(service) => {
+            info!("✅ Encryption service initialized successfully");
+            Arc::new(service)
+        }
+        Err(e) => {
+            error!("❌ Failed to initialize encryption service: {}", e);
+            return Err(format!("Encryption initialization failed: {}", e).into());
+        }
+    };
+
+    // Create API key service
+    let api_key_service = Arc::new(resources::api_keys::ApiKeyService::new(
+        Arc::new(database.pool().clone()),
+        encryption_service,
+    ));
+    info!("✅ API key service initialized");
+
     // Create wallet manager
     let wallet_manager = WalletManager::new();
 
@@ -396,6 +460,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(create_wallet_routes())
         // Merge crossroads routes
         .merge(create_crossroads_routes(&app_state.external_service))
+        // Merge API key routes
+        .merge(resources::api_keys::create_api_key_routes(api_key_service.clone()))
         .with_state(app_state.clone())
         // Add logging middleware
         .layer(middleware::from_fn(logging_middleware))
@@ -436,6 +502,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🔍 Discovery service: {}/api/discovery", erebus_base_url);
     info!("⚙️  Admin panel: {}/api/admin", erebus_base_url);
     info!("🏥 Crossroads health: {}/api/crossroads/health", erebus_base_url);
+    info!("🔐 API key management: {}/api/users/:user_id/api-keys", erebus_base_url);
+    info!("🔒 Internal API keys: {}/internal/users/:user_id/api-keys/decrypted", erebus_base_url);
     info!("💡 Ready for agentic workflows, marketplace operations, and service discovery");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
