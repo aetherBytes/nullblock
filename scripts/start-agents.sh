@@ -6,6 +6,16 @@ echo "🦀 High-performance Rust implementation with database & events"
 echo ""
 cd ~/nullblock/svc/nullblock-agents
 mkdir -p logs
+
+if [ -f ../../.env.dev ]; then
+  echo "🔐 Loading environment variables from .env.dev..."
+  set -a
+  source ../../.env.dev
+  set +a
+else
+  echo "⚠️  Warning: .env.dev file not found"
+fi
+
 export AGENTS_PORT=9003
 export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
 export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"

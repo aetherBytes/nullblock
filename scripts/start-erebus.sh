@@ -4,6 +4,16 @@ set -e
 echo "🔗 Starting Erebus Server (Rust)..."
 cd svc/erebus
 mkdir -p logs
+
+if [ -f ../../.env.dev ]; then
+  echo "🔐 Loading environment variables from .env.dev..."
+  set -a
+  source ../../.env.dev
+  set +a
+else
+  echo "⚠️  Warning: .env.dev file not found - ENCRYPTION_MASTER_KEY may not be set"
+fi
+
 export EREBUS_HOST=127.0.0.1
 export EREBUS_PORT=3000
 export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus"
