@@ -34,9 +34,12 @@ export const useUserProfile = (publicKey: string | null) => {
 
   const fetchUserProfile = async () => {
     if (!publicKey) {
+      console.log('👤 useUserProfile: No publicKey, skipping fetch');
       setUserProfile(null);
       return;
     }
+
+    console.log('👤 useUserProfile: Starting fetch for', publicKey);
 
     const cached = localStorage.getItem(CACHE_KEY);
     const cacheTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
@@ -76,13 +79,21 @@ export const useUserProfile = (publicKey: string | null) => {
         console.log('🔍 Inferred network from address:', network);
       }
 
+      console.log('👤 useUserProfile: Calling API lookup with', { publicKey, network });
       const lookupResult = await userApi.lookupUser(publicKey, network);
+      console.log('👤 useUserProfile: API response:', lookupResult);
 
-      if (lookupResult.success && lookupResult.data) {
-        setUserProfile(lookupResult.data);
-        localStorage.setItem(CACHE_KEY, JSON.stringify(lookupResult.data));
+      // Handle both response formats: {success, data} and {found, user}
+      const isSuccess = lookupResult.success || (lookupResult as any).found;
+      const userData = lookupResult.data || (lookupResult as any).user;
+
+      if (isSuccess && userData) {
+        console.log('✅ useUserProfile: Profile loaded successfully:', userData);
+        setUserProfile(userData);
+        localStorage.setItem(CACHE_KEY, JSON.stringify(userData));
         localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
       } else {
+        console.error('❌ useUserProfile: Profile lookup failed:', lookupResult.error);
         setError(lookupResult.error || 'User not found');
       }
     } catch (err) {

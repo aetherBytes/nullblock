@@ -228,6 +228,23 @@ $bg-dark: rgba(10, 10, 10, 0.95);
       font-style: italic;
       margin-top: 0.5rem;
     }
+
+    .refreshButton {
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      background: $echo-blue;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+
+      &:hover {
+        background: lighten($echo-blue, 10%);
+        box-shadow: 0 0 15px rgba($echo-blue, 0.5);
+      }
+    }
   }
 
   @keyframes spin {

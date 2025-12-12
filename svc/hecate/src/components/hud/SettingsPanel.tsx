@@ -84,7 +84,17 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <div className={styles.errorState}>
                 <p className={styles.errorIcon}>⚠️</p>
                 <p>User profile not found</p>
-                <p className={styles.errorHint}>Please try disconnecting and reconnecting your wallet</p>
+                <p className={styles.errorHint}>Your wallet is connected but profile didn't load.</p>
+                <button
+                  className={styles.refreshButton}
+                  onClick={() => {
+                    localStorage.removeItem('userProfile');
+                    localStorage.removeItem('userProfileTimestamp');
+                    window.location.reload();
+                  }}
+                >
+                  🔄 Refresh Page
+                </button>
               </div>
             ) : (
               <div className={styles.noUser}>
