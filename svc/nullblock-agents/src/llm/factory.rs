@@ -84,7 +84,7 @@ impl LLMServiceFactory {
         if let Some(api_key) = &api_keys.openrouter {
             if api_key.is_empty() || api_key == "your-openrouter-key-here" {
                 error!("🔑 CRITICAL: OpenRouter API key is invalid or placeholder!");
-                error!("   Set OPENROUTER_API_KEY in .env.dev to a valid key from https://openrouter.ai/");
+                error!("   Add your OpenRouter API key via Settings → API Keys in the UI");
                 error!("   Without a valid OpenRouter key, you'll hit severe rate limits on free models.");
                 missing_providers.push("openrouter (invalid key)");
             } else {
@@ -99,7 +99,7 @@ impl LLMServiceFactory {
             }
         } else {
             error!("🔑 CRITICAL: OpenRouter API key is missing!");
-            error!("   Set OPENROUTER_API_KEY in .env.dev with a key from https://openrouter.ai/");
+            error!("   Add your OpenRouter API key via Settings → API Keys in the UI");
             error!("   Free tier has very strict rate limits - you need your own key for reliable access.");
             missing_providers.push("openrouter (missing)");
         }

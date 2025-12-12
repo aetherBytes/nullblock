@@ -140,7 +140,6 @@ const Scopes: React.FC<ScopesProps> = ({
     { id: 'tasks', icon: '📋', title: 'Tasks', description: 'Active agent tasks', color: '#4ecdc4' },
     { id: 'agents', icon: '🤖', title: 'Agents', description: 'Agent monitoring', color: '#45b7d1' },
     { id: 'logs', icon: '📄', title: 'Logs', description: 'System logs', color: '#96ceb4' },
-    { id: 'settings', icon: '⚙️', title: 'Settings', description: 'Theme & social links', color: '#747d8c' },
   ];
 
   const getCurrentScopeInfo = () => {
@@ -1150,71 +1149,6 @@ const Scopes: React.FC<ScopesProps> = ({
                 ))
               )}
               <div ref={logsEndRef} />
-            </div>
-          </div>
-        );
-
-      case 'settings':
-        return (
-          <div className={styles.settingsScope}>
-            <div className={styles.settingsSection}>
-              <h6>🎨 Theme</h6>
-              <div className={styles.themeSelector}>
-                <button
-                  className={`${styles.themeButton} ${theme === 'null' ? styles.active : ''}`}
-                  onClick={() => onThemeChange('null')}
-                >
-                  🌙 Dark
-                  <span className={styles.wipBadge}>WIP</span>
-                </button>
-                <button
-                  className={`${styles.themeButton} ${theme === 'dark' ? styles.active : ''}`}
-                  onClick={() => onThemeChange('dark')}
-                >
-                  🌌 Null
-                </button>
-                <button
-                  className={`${styles.themeButton} ${theme === 'light' ? styles.active : ''}`}
-                  onClick={() => onThemeChange('light')}
-                >
-                  ☀️ Light
-                  <span className={styles.wipBadge}>WIP</span>
-                </button>
-              </div>
-            </div>
-
-            <div className={styles.settingsSection}>
-              <h6>ℹ️ Version Info</h6>
-              <div className={styles.versionInfo}>
-                <p><strong>NullBlock Platform:</strong> v1.0.0-beta</p>
-                <p><strong>Hecate Agent:</strong> v0.8.2</p>
-                <p><strong>MCP Protocol:</strong> v0.1.0</p>
-                <p><strong>Build:</strong> {new Date().toLocaleDateString()}</p>
-              </div>
-            </div>
-
-            <div className={styles.settingsSection}>
-              <h6>🔗 Social Links</h6>
-              <div className={styles.socialLinks}>
-                <button
-                  onClick={() => window.open('https://x.com/Nullblock_io', '_blank')}
-                  className={styles.socialButton}
-                >
-                  🐦 𝕏
-                </button>
-                <button
-                  onClick={() => window.open('https://discord.gg/nullblock', '_blank')}
-                  className={styles.socialButton}
-                >
-                  💬 Discord
-                </button>
-                <button
-                  onClick={() => window.open('https://aetherbytes.github.io/nullblock-sdk/', '_blank')}
-                  className={styles.socialButton}
-                >
-                  📚 Docs
-                </button>
-              </div>
             </div>
           </div>
         );

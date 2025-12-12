@@ -1,0 +1,509 @@
+$echo-blue: #00a8ff;
+$lightning-gold: #e6c200;
+$text-primary: #ffffff;
+$text-secondary: #c8c8d0;
+$bg-dark: rgba(10, 10, 10, 0.95);
+
+.apiKeyManagement {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 51, 51, 0.1);
+  border: 1px solid rgba(255, 51, 51, 0.3);
+  border-radius: 6px;
+  animation: slideDown 0.3s ease-out;
+
+  span {
+    font-size: 18px;
+  }
+
+  p {
+    flex: 1;
+    margin: 0;
+    font-size: 14px;
+    color: #ff6666;
+  }
+
+  button {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid rgba(255, 51, 51, 0.3);
+    border-radius: 4px;
+    color: #ff6666;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(255, 51, 51, 0.2);
+      border-color: rgba(255, 51, 51, 0.5);
+    }
+  }
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: rgba(0, 168, 255, 0.1);
+  border: 1px solid rgba(0, 168, 255, 0.4);
+  border-radius: 8px;
+  color: $text-primary;
+  font-family: 'Orbitron', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.2);
+    border-color: rgba(0, 168, 255, 0.6);
+    box-shadow: 0 0 20px rgba(0, 168, 255, 0.4);
+  }
+
+  span:first-child {
+    font-size: 18px;
+  }
+}
+
+.addForm {
+  padding: 20px;
+  background: rgba(0, 168, 255, 0.05);
+  border: 1px solid rgba(0, 168, 255, 0.3);
+  border-radius: 8px;
+  animation: expandDown 0.3s ease-out;
+
+  h4 {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: $echo-blue;
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.formGroup {
+  margin-bottom: 16px;
+
+  &:last-of-type {
+    margin-bottom: 0;
+  }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-secondary;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  input,
+  select {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 168, 255, 0.3);
+    border-radius: 6px;
+    color: $text-primary;
+    font-family: 'Fira Code', monospace;
+    font-size: 14px;
+    transition: all 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: rgba(0, 168, 255, 0.6);
+      box-shadow: 0 0 10px rgba(0, 168, 255, 0.3);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &::placeholder {
+      color: rgba(200, 200, 208, 0.5);
+    }
+  }
+
+  select {
+    cursor: pointer;
+  }
+}
+
+.passwordInput {
+  position: relative;
+
+  input {
+    padding-right: 44px;
+  }
+
+  .toggleVisibility {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: $text-secondary;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: $echo-blue;
+    }
+  }
+}
+
+.formActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+
+  button {
+    flex: 1;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .saveButton {
+    background: rgba(0, 168, 255, 0.2);
+    border: 1px solid rgba(0, 168, 255, 0.5);
+    color: $text-primary;
+
+    &:hover:not(:disabled) {
+      background: rgba(0, 168, 255, 0.3);
+      border-color: rgba(0, 168, 255, 0.7);
+      box-shadow: 0 0 15px rgba(0, 168, 255, 0.4);
+    }
+  }
+
+  .cancelButton {
+    background: rgba(100, 100, 100, 0.2);
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    color: $text-secondary;
+
+    &:hover:not(:disabled) {
+      background: rgba(100, 100, 100, 0.3);
+      border-color: rgba(100, 100, 100, 0.7);
+    }
+  }
+}
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 16px;
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(0, 168, 255, 0.2);
+    border-top-color: $echo-blue;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  p {
+    font-size: 14px;
+    color: $text-secondary;
+    margin: 0;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+
+  .emptyIcon {
+    font-size: 48px;
+    opacity: 0.3;
+    margin-bottom: 16px;
+  }
+
+  p {
+    font-size: 14px;
+    color: $text-secondary;
+    margin: 0 0 8px 0;
+
+    &.emptyHint {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+  }
+}
+
+.keysList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.keyCard {
+  padding: 16px;
+  background: rgba(0, 168, 255, 0.05);
+  border: 1px solid rgba(0, 168, 255, 0.3);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba(0, 168, 255, 0.5);
+    box-shadow: 0 4px 20px rgba(0, 168, 255, 0.2);
+  }
+}
+
+.keyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+
+  .keyTitle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .providerIcon {
+      font-size: 20px;
+    }
+
+    h5 {
+      font-family: 'Orbitron', monospace;
+      font-size: 15px;
+      font-weight: 600;
+      color: $text-primary;
+      margin: 0;
+    }
+  }
+
+  .statusBadge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    &.active {
+      background: rgba(0, 255, 157, 0.15);
+      border: 1px solid rgba(0, 255, 157, 0.4);
+      color: #00ff9d;
+    }
+
+    &.inactive {
+      background: rgba(100, 100, 100, 0.15);
+      border: 1px solid rgba(100, 100, 100, 0.4);
+      color: #999;
+    }
+  }
+}
+
+.keyDetails {
+  margin-bottom: 12px;
+}
+
+.keyValue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 168, 255, 0.2);
+  border-radius: 6px;
+  font-family: 'Fira Code', monospace;
+  font-size: 13px;
+  color: $text-secondary;
+  margin-bottom: 12px;
+
+  .keyPrefix,
+  .keySuffix {
+    color: $text-primary;
+  }
+}
+
+.keyMeta {
+  display: flex;
+  gap: 20px;
+
+  .metaItem {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .metaLabel {
+      font-size: 11px;
+      color: $text-secondary;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .metaValue {
+      font-size: 13px;
+      color: $text-primary;
+      font-weight: 600;
+    }
+  }
+}
+
+.keyActions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 168, 255, 0.2);
+}
+
+.deleteButton {
+  padding: 8px 16px;
+  background: rgba(255, 51, 51, 0.1);
+  border: 1px solid rgba(255, 51, 51, 0.3);
+  border-radius: 6px;
+  color: #ff6666;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 51, 51, 0.2);
+    border-color: rgba(255, 51, 51, 0.5);
+    box-shadow: 0 0 10px rgba(255, 51, 51, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.confirmDelete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  p {
+    flex: 1;
+    margin: 0;
+    font-size: 13px;
+    color: $text-secondary;
+  }
+
+  button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .confirmButton {
+    background: rgba(255, 51, 51, 0.2);
+    border: 1px solid rgba(255, 51, 51, 0.5);
+    color: #ff6666;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 51, 51, 0.3);
+      border-color: rgba(255, 51, 51, 0.7);
+      box-shadow: 0 0 10px rgba(255, 51, 51, 0.3);
+    }
+  }
+
+  .cancelButton {
+    background: rgba(100, 100, 100, 0.2);
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    color: $text-secondary;
+
+    &:hover:not(:disabled) {
+      background: rgba(100, 100, 100, 0.3);
+      border-color: rgba(100, 100, 100, 0.7);
+    }
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes expandDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 800px;
+  }
+}
+
+@media (max-width: 768px) {
+  .keyMeta {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .confirmDelete {
+    flex-direction: column;
+    align-items: stretch;
+
+    p {
+      text-align: center;
+    }
+
+    button {
+      width: 100%;
+    }
+  }
+}

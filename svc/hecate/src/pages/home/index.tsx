@@ -336,8 +336,15 @@ const Home: React.FC = () => {
       throw new Error('Invalid Phantom provider');
     }
 
-    // Give Phantom a moment to fully initialize
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Give Phantom more time to fully initialize (increased from 100ms to 500ms)
+    // This helps prevent -32603 errors from premature connection attempts
+    console.log('⏳ Waiting for Phantom to fully initialize...');
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Verify Phantom is ready
+    if (!provider.isPhantom) {
+      throw new Error('Phantom provider not properly initialized');
+    }
 
     try {
       console.log('Phantom detected, checking status...');
@@ -376,8 +383,31 @@ const Home: React.FC = () => {
         // For error code -32603 (Internal error), do a simple connect without options
         // This error often happens when provider isn't fully ready or has internal state issues
         console.log('Attempting direct connection (no options)...');
-        response = await provider.connect();
-        console.log('Phantom connection response:', response);
+
+        let retryCount = 0;
+        const maxRetries = 2;
+
+        while (retryCount <= maxRetries) {
+          try {
+            response = await provider.connect();
+            console.log('Phantom connection response:', response);
+            break;
+          } catch (retryError: any) {
+            if (retryError?.code === -32603 && retryCount < maxRetries) {
+              retryCount++;
+              console.log(`⚠️ Phantom -32603 error, retrying (attempt ${retryCount}/${maxRetries})...`);
+              setInfoMessage(`⏳ Phantom initializing, retrying (${retryCount}/${maxRetries})...`);
+              // Increase delay between retries from 500ms to 1000ms
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            } else {
+              throw retryError;
+            }
+          }
+        }
+
+        if (!response) {
+          throw new Error('Failed to connect after retries');
+        }
       } catch (connectError: any) {
         console.error('Phantom connect() error:', connectError);
         console.error('Error type:', typeof connectError);
@@ -398,7 +428,7 @@ const Home: React.FC = () => {
           throw new Error('Request pending');
         } else if (connectError?.code === -32603) {
           // Internal error from Phantom - usually a timing or state issue
-          setErrorMessage('Phantom internal error. Please try:\n\n1. REFRESH this page\n2. Click the Phantom extension icon to make sure it\'s responsive\n3. If still failing, try disconnecting this site from Phantom:\n   - Open Phantom → Settings → Trusted Apps\n   - Remove this site if listed\n   - Then try connecting again\n\nIf the problem persists, try restarting your browser.');
+          setErrorMessage('⚠️ Phantom connection failed after automatic retries.\n\nQuick fixes (try in order):\n\n1. 🔓 Make sure Phantom is UNLOCKED (click extension)\n2. 🔄 REFRESH this page and try again\n3. 🔌 Disconnect & reconnect:\n   • Open Phantom → Settings → Trusted Apps\n   • Remove this site if listed\n   • Refresh page and connect again\n4. 🔄 Restart your browser if still failing\n\nThis is usually a temporary Phantom state issue.');
           throw new Error('Phantom internal error (-32603)');
         } else if (connectError?.message?.includes('locked')) {
           setInfoMessage('Phantom wallet is locked. Please unlock it and try again.');
@@ -525,12 +555,30 @@ const Home: React.FC = () => {
           console.log('📤 Registration result:', registrationResult);
           if (registrationResult.success) {
             console.log('✅ User registered successfully:', registrationResult.data);
+
+            // Show success message to user
+            setInfoMessage('✅ Account registered successfully! Loading profile...');
+
+            // Invalidate profile cache
+            localStorage.removeItem('userProfile');
+            localStorage.removeItem('userProfileTimestamp');
+
+            // Dispatch event to trigger profile refresh
+            window.dispatchEvent(new CustomEvent('user-registered', {
+              detail: {
+                walletAddress,
+                network: 'solana'
+              }
+            }));
           } else {
             console.warn('⚠️ User registration failed:', registrationResult.error);
           }
         } catch (err) {
           console.warn('⚠️ User registration error:', err);
           console.error('❌ Full error details:', err);
+
+          const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+          setErrorMessage(`Account registration failed: ${errorMsg}. You can continue, but some features may be limited.`);
         }
       } else {
         throw new Error(`Authentication failed: ${verifyResponse.message}`);
@@ -731,12 +779,27 @@ const Home: React.FC = () => {
           console.log('📤 Registration result:', registrationResult);
           if (registrationResult.success) {
             console.log('✅ User registered successfully:', registrationResult.data);
+
+            setInfoMessage('✅ Account registered successfully! Loading profile...');
+
+            localStorage.removeItem('userProfile');
+            localStorage.removeItem('userProfileTimestamp');
+
+            window.dispatchEvent(new CustomEvent('user-registered', {
+              detail: {
+                walletAddress,
+                network: 'ethereum'
+              }
+            }));
           } else {
             console.warn('⚠️ User registration failed:', registrationResult.error);
           }
         } catch (err) {
           console.warn('⚠️ User registration error:', err);
           console.error('❌ Full error details:', err);
+
+          const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+          setErrorMessage(`Account registration failed: ${errorMsg}. You can continue, but some features may be limited.`);
         }
       } else {
         throw new Error(`Authentication failed: ${verifyResponse.message}`);
