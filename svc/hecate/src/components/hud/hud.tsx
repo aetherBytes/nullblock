@@ -5,13 +5,18 @@ import { useAuthentication } from '../../hooks/useAuthentication';
 import { useTaskManagement } from '../../hooks/useTaskManagement';
 import { useEventSystem } from '../../hooks/useEventSystem';
 import { useLogs } from '../../hooks/useLogs';
+import { useUserProfile } from '../../hooks/useUserProfile';
+import { useApiKeyCheck } from '../../hooks/useApiKeyCheck';
 import Crossroads from '../crossroads/Crossroads';
 import HecateChat from './HecateChat';
 import Scopes from './Scopes';
 import HecateWelcome from '../crossroads/landing/HecateWelcome';
 import NullblockLogo from './NullblockLogo';
+import MemoriesMenu from './MemoriesMenu';
+import SettingsPanel from './SettingsPanel';
 import styles from './hud.module.scss';
 import { Task, TaskCreationRequest } from '../../types/tasks';
+import { UserProfile } from '../../types/user';
 
 type Theme = 'null' | 'light' | 'dark';
 
@@ -78,6 +83,13 @@ const HUD: React.FC<HUDProps> = ({
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showCrossroadsMarketplace, setShowCrossroadsMarketplace] = useState(false);
   const [resetCrossroadsToLanding, setResetCrossroadsToLanding] = useState(false);
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+
+  // User profile state
+  const { userProfile, isLoading: isLoadingUser } = useUserProfile(publicKey);
+
+  // API key check state
+  const { hasApiKeys, isLoading: isLoadingApiKeys } = useApiKeyCheck(userProfile?.id || null);
 
   // Tab functionality state
   const [autoScroll, setAutoScroll] = useState(true);
@@ -924,6 +936,18 @@ const HUD: React.FC<HUDProps> = ({
           </div>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'hecate' ? '' : styles.hidden}`}>
             <div className={`${styles.hecateContainer} ${isChatExpanded ? styles.chatExpanded : ''} ${isScopesExpanded ? styles.scopesExpanded : ''}`}>
+              {mainHudActiveTab === 'hecate' && !isLoadingApiKeys && !hasApiKeys && (
+                <div className={styles.blockedOverlay}>
+                  <div className={styles.warningCard}>
+                    <h3>🔑 API Keys Required</h3>
+                    <p>Without loaded API keys, you will have limited features.</p>
+                    <p><strong>For now, all Hecate features are locked.</strong></p>
+                    <button onClick={() => setShowSettingsPanel(true)}>
+                      Configure API Keys
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className={styles.hecateContent}>
                 <div className={styles.hecateMain}>
                   <div className={styles.hecateInterface}>
@@ -1106,13 +1130,23 @@ const HUD: React.FC<HUDProps> = ({
             </button>
           )}
 
-          <button
-            className={`${styles.walletMenuButton} ${publicKey ? styles.connected : ''}`}
-            onClick={publicKey ? onDisconnect : () => onConnectWallet()}
-            title={publicKey ? 'Disconnect Wallet' : 'Connect Wallet'}
-          >
-            <span className={styles.walletMenuText}>{publicKey ? 'Disconnect' : 'Connect'}</span>
-          </button>
+          {publicKey ? (
+            <MemoriesMenu
+              publicKey={publicKey}
+              userProfile={userProfile}
+              isLoadingUser={isLoadingUser}
+              onDisconnect={onDisconnect}
+              onOpenSettings={() => setShowSettingsPanel(true)}
+            />
+          ) : (
+            <button
+              className={styles.walletMenuButton}
+              onClick={() => onConnectWallet()}
+              title="Connect Wallet"
+            >
+              <span className={styles.walletMenuText}>Connect</span>
+            </button>
+          )}
         </div>
 
         {/* Mobile Hamburger Menu */}
@@ -1156,20 +1190,33 @@ const HUD: React.FC<HUDProps> = ({
             </button>
           )}
 
-          <button
-            className={`${styles.mobileMenuItem} ${publicKey ? styles.connected : ''}`}
-            onClick={() => {
-              if (publicKey) {
+          {publicKey ? (
+            <MemoriesMenu
+              publicKey={publicKey}
+              userProfile={userProfile}
+              isLoadingUser={isLoadingUser}
+              onDisconnect={() => {
                 onDisconnect();
-              } else {
+                setShowMobileMenu(false);
+              }}
+              onOpenSettings={() => {
+                setShowSettingsPanel(true);
+                setShowMobileMenu(false);
+              }}
+              isMobile={true}
+            />
+          ) : (
+            <button
+              className={styles.mobileMenuItem}
+              onClick={() => {
                 onConnectWallet();
-              }
-              setShowMobileMenu(false);
-            }}
-          >
-            <span>{publicKey ? '🔌' : '🔗'}</span>
-            <span>{publicKey ? 'DISCONNECT' : 'CONNECT WALLET'}</span>
-          </button>
+                setShowMobileMenu(false);
+              }}
+            >
+              <span>🔗</span>
+              <span>CONNECT WALLET</span>
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -1185,6 +1232,13 @@ const HUD: React.FC<HUDProps> = ({
     <div className={`${styles.echoContainer} ${publicKey ? styles[theme] : styles.loggedOut}`}>
       {renderUnifiedNavigation()}
       {renderMainContent()}
+      <SettingsPanel
+        isOpen={showSettingsPanel}
+        onClose={() => setShowSettingsPanel(false)}
+        userId={userProfile?.id || null}
+        publicKey={publicKey}
+        isLoadingUser={isLoadingUser}
+      />
     </div>
   );
 };

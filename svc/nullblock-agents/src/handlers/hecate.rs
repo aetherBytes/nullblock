@@ -55,7 +55,7 @@ pub async fn health(State(state): State<AppState>) -> Result<Json<serde_json::Va
                 let llm_status = health_info["overall_status"].as_str().unwrap_or("unknown");
 
                 if models_available == 0 || llm_status == "unhealthy" {
-                    return Err(AppError::LLMRequestFailed("No working LLM models available. Please check your OpenRouter API key configuration in .env.dev and restart the service. Visit https://openrouter.ai/ to get a free API key.".to_string()));
+                    return Err(AppError::LLMRequestFailed("No working LLM models available. Please add your API keys via Settings → API Keys in the UI. Visit https://openrouter.ai/ to get a free API key.".to_string()));
                 }
             }
             Err(e) => {

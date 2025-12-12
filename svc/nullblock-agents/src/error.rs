@@ -128,7 +128,7 @@ impl AppError {
                 } else if details_lower.contains("no auth credentials") ||
                    details_lower.contains("401 unauthorized") ||
                    details_lower.contains("api key") {
-                    "🔑 No LLM API keys detected. Please check your OpenRouter API key configuration in .env.dev and restart the service. Visit https://openrouter.ai/ to get a free API key.".to_string()
+                    "🔑 No LLM API keys configured. Please add your API keys via Settings → API Keys in the UI. Visit https://openrouter.ai/ to get a free API key.".to_string()
                 } else if details_lower.contains("timeout") {
                     "⏰ The AI service is taking too long to respond. Please try again in a moment.".to_string()
                 } else if details_lower.contains("rate limit") {
@@ -144,7 +144,7 @@ impl AppError {
                 "⏰ Request timed out. The service might be under heavy load. Please try again.".to_string()
             }
             AppError::AuthError(_) => {
-                "🔑 Authentication failed. Please check your API keys and try again.".to_string()
+                "🔑 Authentication failed. Please add or update your API keys via Settings → API Keys in the UI.".to_string()
             }
             AppError::RateLimitError(_) => {
                 "🚦 Rate limit exceeded. Please wait a moment before making another request.".to_string()

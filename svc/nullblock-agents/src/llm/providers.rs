@@ -604,10 +604,10 @@ impl Provider for OpenRouterProvider {
                     if user_id.starts_with("user_") && status == reqwest::StatusCode::TOO_MANY_REQUESTS {
                         error!("🔑 CRITICAL: OpenRouter is using anonymous/free tier access!");
                         error!("   Your API key is NOT being sent or loaded properly.");
-                        error!("   Check that OPENROUTER_API_KEY is set in .env.dev");
+                        error!("   Please add your OpenRouter API key via Settings → API Keys in the UI");
                         error!("   Anonymous user detected: {}", user_id);
                         return Err(AppError::LLMRequestFailed(format!(
-                            "OpenRouter API key not configured properly. Using anonymous access (user: {}) which has strict rate limits. Set OPENROUTER_API_KEY in .env.dev",
+                            "OpenRouter API key not configured properly. Using anonymous access (user: {}) which has strict rate limits. Please add your API key via Settings → API Keys in the UI.",
                             user_id
                         )));
                     }

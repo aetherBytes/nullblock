@@ -1,0 +1,288 @@
+$echo-blue: #00a8ff;
+$lightning-gold: #e6c200;
+$lightning-green: #00ff9d;
+$text-primary: #ffffff;
+$text-secondary: #c8c8d0;
+$bg-dark: rgba(10, 10, 10, 0.95);
+
+.memoriesMenuContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.memoriesButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(0, 168, 255, 0.1);
+  border: 1px solid rgba(0, 168, 255, 0.4);
+  border-radius: 6px;
+  color: $text-primary;
+  font-family: 'Orbitron', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.2);
+    box-shadow: 0 0 15px rgba(0, 168, 255, 0.4);
+    border-color: rgba(0, 168, 255, 0.6);
+  }
+
+  .icon {
+    font-size: 18px;
+  }
+
+  .label {
+    font-size: 14px;
+  }
+
+  .chevron {
+    font-size: 10px;
+    margin-left: 4px;
+    opacity: 0.7;
+  }
+}
+
+.memoriesDropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  min-width: 280px;
+  background: $bg-dark;
+  border: 1px solid rgba(0, 168, 255, 0.4);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 168, 255, 0.2);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  animation: slideDown 0.2s ease-out;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 24px;
+    width: 12px;
+    height: 12px;
+    background: $bg-dark;
+    border-left: 1px solid rgba(0, 168, 255, 0.4);
+    border-top: 1px solid rgba(0, 168, 255, 0.4);
+    transform: rotate(45deg);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.userInfo {
+  margin-bottom: 12px;
+
+  .walletAddress {
+    font-family: 'Fira Code', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: $echo-blue;
+    margin: 0 0 8px 0;
+    letter-spacing: 0.5px;
+  }
+
+  .accountAge {
+    font-size: 13px;
+    color: $text-secondary;
+    margin: 0 0 10px 0;
+  }
+
+  .userBadge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(230, 194, 0, 0.15);
+    border: 1px solid rgba(230, 194, 0, 0.4);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: $lightning-gold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.separator {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 168, 255, 0.3) 50%,
+    transparent
+  );
+  margin: 12px 0;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: $text-primary;
+  font-family: 'Orbitron', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:not(:last-child) {
+    margin-bottom: 6px;
+  }
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.1);
+    border-color: rgba(0, 168, 255, 0.3);
+    box-shadow: 0 0 10px rgba(0, 168, 255, 0.2);
+  }
+
+  .menuIcon {
+    font-size: 16px;
+  }
+
+  .menuLabel {
+    flex: 1;
+    text-align: left;
+  }
+}
+
+.skeleton {
+  .skeletonLine {
+    height: 12px;
+    background: linear-gradient(
+      90deg,
+      rgba(0, 168, 255, 0.1) 25%,
+      rgba(0, 168, 255, 0.2) 50%,
+      rgba(0, 168, 255, 0.1) 75%
+    );
+    background-size: 200% 100%;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    animation: shimmer 1.5s infinite;
+
+    &:last-child {
+      margin-bottom: 0;
+      width: 60%;
+    }
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.mobileMemoriesSection {
+  width: 100%;
+  border-bottom: 1px solid rgba(0, 168, 255, 0.2);
+
+  .mobileMemoriesHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    border: none;
+    color: $text-primary;
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: rgba(0, 168, 255, 0.05);
+    }
+
+    .chevron {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+  }
+
+  .mobileMemoriesContent {
+    padding: 0 16px 16px 16px;
+    animation: expandDown 0.2s ease-out;
+
+    .userInfo {
+      margin-bottom: 16px;
+      padding: 12px;
+      background: rgba(0, 168, 255, 0.05);
+      border-radius: 6px;
+      border: 1px solid rgba(0, 168, 255, 0.2);
+    }
+
+    .mobileActions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      .mobileActionBtn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px;
+        background: rgba(0, 168, 255, 0.1);
+        border: 1px solid rgba(0, 168, 255, 0.3);
+        border-radius: 6px;
+        color: $text-primary;
+        font-family: 'Orbitron', monospace;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: rgba(0, 168, 255, 0.2);
+          border-color: rgba(0, 168, 255, 0.5);
+        }
+      }
+    }
+  }
+}
+
+@keyframes expandDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+@media (max-width: 768px) {
+  .memoriesDropdown {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: calc(100vw - 32px);
+    max-width: 400px;
+  }
+}
