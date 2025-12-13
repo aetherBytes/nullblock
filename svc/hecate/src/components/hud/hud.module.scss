@@ -3122,7 +3122,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     .menuButton {
       background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
       border: 1px solid rgba(99, 102, 241, 0.3);
-      color: rgba(255, 255, 255, 0.95);
+      color: #e8e8e8;
       font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
       font-size: 0.85rem;
       font-weight: 700;
@@ -3168,10 +3168,11 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       span {
         position: relative;
         z-index: 1;
+        color: inherit !important;
       }
 
       &:hover {
-        color: rgba(255, 255, 255, 1);
+        color: #ffffff;
         border-color: rgba(139, 92, 246, 0.6);
         transform: translateY(-3px) scale(1.02);
         box-shadow:
@@ -3194,7 +3195,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       &.active {
         background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
         border-color: rgba(139, 92, 246, 0.8);
-        color: rgba(255, 255, 255, 1);
+        color: #ffffff;
         box-shadow:
           0 8px 32px rgba(99, 102, 241, 0.5),
           0 0 60px rgba(139, 92, 246, 0.4),
@@ -3342,7 +3343,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     .menuButton {
       background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)) !important;
       border: 1px solid rgba(99, 102, 241, 0.3) !important;
-      color: rgba(255, 255, 255, 0.95) !important;
+      color: #e8e8e8 !important;
       font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif !important;
       font-size: 0.85rem !important;
       font-weight: 700 !important;
@@ -3389,10 +3390,11 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       span {
         position: relative;
         z-index: 1;
+        color: inherit !important;
       }
 
       &:hover {
-        color: rgba(255, 255, 255, 1) !important;
+        color: #ffffff !important;
         border-color: rgba(139, 92, 246, 0.6) !important;
         transform: translateY(-3px) scale(1.02) !important;
         box-shadow:
@@ -3415,7 +3417,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       &.active {
         background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2)) !important;
         border-color: rgba(139, 92, 246, 0.8) !important;
-        color: rgba(255, 255, 255, 1) !important;
+        color: #ffffff !important;
         box-shadow:
           0 8px 32px rgba(99, 102, 241, 0.5),
           0 0 60px rgba(139, 92, 246, 0.4),
@@ -12399,10 +12401,35 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 }
 
 // Desktop Menu - Hidden on Mobile
-.desktopMenu {
+.navbarRight .desktopMenu {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+
+  .menuButton,
+  button.menuButton {
+    color: #e8e8e8 !important;
+
+    span {
+      color: #e8e8e8 !important;
+    }
+
+    &:hover {
+      color: #ffffff !important;
+
+      span {
+        color: #ffffff !important;
+      }
+    }
+
+    &.active {
+      color: #ffffff !important;
+
+      span {
+        color: #ffffff !important;
+      }
+    }
+  }
 
   @media (max-width: 768px) {
     display: none;
@@ -13159,4 +13186,20 @@ $light-shadow: rgba(0, 0, 0, 0.1);
       }
     }
   }
+}
+
+// FORCE SILVER COLOR ON MENU BUTTONS - MAXIMUM SPECIFICITY
+.unifiedNavbar .navbarRight .desktopMenu button.menuButton,
+.unifiedNavbar .navbarRight .desktopMenu button.menuButton span {
+  color: #e8e8e8 !important;
+}
+
+.unifiedNavbar .navbarRight .desktopMenu button.menuButton:hover,
+.unifiedNavbar .navbarRight .desktopMenu button.menuButton:hover span {
+  color: #ffffff !important;
+}
+
+.unifiedNavbar .navbarRight .desktopMenu button.menuButton.active,
+.unifiedNavbar .navbarRight .desktopMenu button.menuButton.active span {
+  color: #ffffff !important;
 }

@@ -15,29 +15,77 @@ $bg-dark: rgba(10, 10, 10, 0.95);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  background: rgba(0, 168, 255, 0.1);
-  border: 1px solid rgba(0, 168, 255, 0.4);
-  border-radius: 6px;
-  color: $text-primary;
-  font-family: 'Orbitron', monospace;
-  font-size: 14px;
-  font-weight: 600;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)) !important;
+  border: 1px solid rgba(99, 102, 241, 0.3) !important;
+  color: #e8e8e8 !important;
+  font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif !important;
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
   cursor: pointer;
-  transition: all 0.3s ease;
+  padding: 0.75rem 1.75rem !important;
+  margin: 0 0.5rem !important;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  position: relative;
+  border-radius: 0 !important;
+  backdrop-filter: blur(20px) !important;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+  overflow: hidden;
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-shadow: none !important;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #6366f1, #ec4899);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 20px currentColor;
+  }
+
+  span {
+    position: relative;
+    z-index: 1;
+    color: inherit !important;
+  }
 
   &:hover {
-    background: rgba(0, 168, 255, 0.2);
-    box-shadow: 0 0 15px rgba(0, 168, 255, 0.4);
-    border-color: rgba(0, 168, 255, 0.6);
+    color: #ffffff !important;
+    border-color: rgba(139, 92, 246, 0.6) !important;
+    transform: translateY(-3px) scale(1.02) !important;
+    box-shadow:
+      0 8px 32px rgba(99, 102, 241, 0.4),
+      0 0 60px rgba(139, 92, 246, 0.3) !important;
+
+    &::before {
+      opacity: 0.2;
+    }
+
+    &::after {
+      transform: scaleX(1);
+    }
   }
 
-  .icon {
-    font-size: 18px;
-  }
-
-  .label {
-    font-size: 14px;
+  &:active {
+    transform: translateY(-1px) scale(0.98) !important;
   }
 
   .chevron {
@@ -58,7 +106,7 @@ $bg-dark: rgba(10, 10, 10, 0.95);
   padding: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 168, 255, 0.2);
   backdrop-filter: blur(10px);
-  z-index: 1000;
+  z-index: 10000;
   animation: slideDown 0.2s ease-out;
 
   &::before {
