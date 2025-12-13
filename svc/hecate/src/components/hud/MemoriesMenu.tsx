@@ -110,7 +110,7 @@ const MemoriesMenu: React.FC<MemoriesMenuProps> = ({
           className={styles.mobileMemoriesHeader}
           onClick={handleToggle}
         >
-          <span>🧠 Memories</span>
+          <span>MEMORIES</span>
           <span className={styles.chevron}>{isOpen ? '▲' : '▼'}</span>
         </button>
 
@@ -165,8 +165,7 @@ const MemoriesMenu: React.FC<MemoriesMenuProps> = ({
         onClick={handleToggle}
         title="Memories"
       >
-        <span className={styles.icon}>🧠</span>
-        <span className={styles.label}>Memories</span>
+        <span>MEMORIES</span>
         <span className={styles.chevron}>{isOpen ? '▲' : '▼'}</span>
       </button>
 

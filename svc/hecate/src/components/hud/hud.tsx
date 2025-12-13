@@ -1112,8 +1112,13 @@ const HUD: React.FC<HUDProps> = ({
           <button
             className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
             onClick={() => {
-              setMainHudActiveTab('crossroads');
-              setShowCrossroadsMarketplace(true);
+              if (mainHudActiveTab === 'crossroads') {
+                setMainHudActiveTab(null);
+                setShowCrossroadsMarketplace(false);
+              } else {
+                setMainHudActiveTab('crossroads');
+                setShowCrossroadsMarketplace(true);
+              }
             }}
             title="Crossroads Marketplace"
           >
@@ -1123,7 +1128,13 @@ const HUD: React.FC<HUDProps> = ({
           {publicKey && (
             <button
               className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
-              onClick={() => setMainHudActiveTab('hecate')}
+              onClick={() => {
+                if (mainHudActiveTab === 'hecate') {
+                  setMainHudActiveTab(null);
+                } else {
+                  setMainHudActiveTab('hecate');
+                }
+              }}
               title="Hecate Agent Interface"
             >
               <span>HECATE</span>
@@ -1168,8 +1179,13 @@ const HUD: React.FC<HUDProps> = ({
           <button
             className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
             onClick={() => {
-              setMainHudActiveTab('crossroads');
-              setShowCrossroadsMarketplace(true);
+              if (mainHudActiveTab === 'crossroads') {
+                setMainHudActiveTab(null);
+                setShowCrossroadsMarketplace(false);
+              } else {
+                setMainHudActiveTab('crossroads');
+                setShowCrossroadsMarketplace(true);
+              }
               setShowMobileMenu(false);
             }}
           >
@@ -1181,7 +1197,11 @@ const HUD: React.FC<HUDProps> = ({
             <button
               className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
               onClick={() => {
-                setMainHudActiveTab('hecate');
+                if (mainHudActiveTab === 'hecate') {
+                  setMainHudActiveTab(null);
+                } else {
+                  setMainHudActiveTab('hecate');
+                }
                 setShowMobileMenu(false);
               }}
             >
