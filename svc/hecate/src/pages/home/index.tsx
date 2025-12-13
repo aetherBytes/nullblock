@@ -894,23 +894,6 @@ const Home: React.FC = () => {
         />
       )}
 
-      {/* Floating hint for new features */}
-      {isInitialized && systemStatus.portfolio && systemStatus.defi && (
-        <div
-          className={styles.newFeaturesHint}
-          onClick={() => setHudInitialTab('crossroads')}
-        >
-          <div className={styles.hintContent}>
-            <span className={styles.hintIcon}>✨</span>
-            <span className={styles.hintText}>
-              <span className={styles.hintTextFull}>Check out <strong>CROSSROADS</strong> - Your gateway to the agentic marketplace</span>
-              <span className={styles.hintTextMobile}>Check menu items!</span>
-            </span>
-            <span className={styles.hintArrow}>→</span>
-          </div>
-        </div>
-      )}
-
       {/* Wallet Selection Modal */}
       {showWalletModal && (
         <div 
