@@ -18,9 +18,42 @@ declare global {
   }
 }
 
+// Login animation phases: black → stars → background → navbar → complete
+type LoginAnimationPhase = 'idle' | 'black' | 'stars' | 'background' | 'navbar' | 'complete';
+
+// Session timeout constant
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+// Helper to check if user has valid session (client-side only)
+const checkExistingSession = (): { hasSession: boolean; publicKey: string | null } => {
+  // Only run on client side (SSR safety)
+  if (typeof window === 'undefined') {
+    return { hasSession: false, publicKey: null };
+  }
+
+  try {
+    const savedPublicKey = localStorage.getItem('walletPublickey');
+    const lastAuth = localStorage.getItem('lastAuthTime');
+
+    if (savedPublicKey && lastAuth) {
+      const timeSinceAuth = Date.now() - Number.parseInt(lastAuth);
+      if (timeSinceAuth < SESSION_TIMEOUT_MS) {
+        return { hasSession: true, publicKey: savedPublicKey };
+      }
+    }
+  } catch (e) {
+    console.warn('Error checking existing session:', e);
+  }
+  return { hasSession: false, publicKey: null };
+};
+
+// Check session synchronously at module load for initial state (client-side only)
+const initialSession = checkExistingSession();
+
 const Home: React.FC = () => {
-  const [walletConnected, setWalletConnected] = useState<boolean>(false);
-  const [publicKey, setPublicKey] = useState<string | null>(null);
+  // Initialize with existing session if available - start in 'black' phase to trigger animation
+  const [walletConnected, setWalletConnected] = useState<boolean>(initialSession.hasSession);
+  const [publicKey, setPublicKey] = useState<string | null>(initialSession.publicKey);
   const [showHUD, setShowHUD] = useState<boolean>(true);
   const [currentTheme, setCurrentTheme] = useState<'null' | 'light' | 'dark'>('null');
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
@@ -32,6 +65,13 @@ const Home: React.FC = () => {
   const lastConnectionAttempt = React.useRef<number>(0);
   const [hudInitialTab, setHudInitialTab] = useState<'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null>(null);
   const [isMobileView, setIsMobileView] = useState<boolean>(false);
+
+  // Login animation state - start in 'black' if user has existing session (triggers animation on refresh)
+  const [loginAnimationPhase, setLoginAnimationPhase] = useState<LoginAnimationPhase>(
+    initialSession.hasSession ? 'black' : 'idle'
+  );
+  const previousPublicKey = React.useRef<string | null>(initialSession.publicKey);
+  const animationTriggered = React.useRef<boolean>(false);
 
   // Debug showWalletModal state changes
   useEffect(() => {
@@ -74,19 +114,89 @@ const Home: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobileView);
   }, []);
 
-  // Initialize state from localStorage on component mount
+  // Start animation immediately on mount if user has session (page refresh scenario)
   useEffect(() => {
-    // Check if we have a saved wallet connection
-    const savedPublicKey = localStorage.getItem('walletPublickey');
-    const lastAuth = localStorage.getItem('lastAuthTime');
+    if (initialSession.hasSession && !animationTriggered.current) {
+      console.log('🎬 Immediate animation start for returning user');
+      animationTriggered.current = true;
 
-    // Set initial states based on localStorage
-    if (savedPublicKey && lastAuth && isSessionValid()) {
-      setPublicKey(savedPublicKey);
-      setWalletConnected(true);
-    } else {
-      setWalletConnected(false);
-      setPublicKey(null);
+      // Already in 'black' phase from initial state, start the sequence
+      setTimeout(() => {
+        console.log('🌟 Stars fading in...');
+        setLoginAnimationPhase('stars');
+      }, 400);
+
+      setTimeout(() => {
+        console.log('🌌 Background fading in...');
+        setLoginAnimationPhase('background');
+      }, 2000);
+
+      setTimeout(() => {
+        console.log('⚡ Navbar flickering in...');
+        setLoginAnimationPhase('navbar');
+      }, 3200);
+
+      setTimeout(() => {
+        console.log('✅ Login animation complete');
+        setLoginAnimationPhase('complete');
+      }, 4700);
+    }
+  }, []); // Empty deps - run once on mount
+
+  // Login animation sequence - triggers on fresh login (not page refresh)
+  useEffect(() => {
+    // Detect fresh login (publicKey changed from null to value)
+    const isNewLogin = previousPublicKey.current === null && publicKey !== null;
+    previousPublicKey.current = publicKey;
+
+    if (isNewLogin && !animationTriggered.current) {
+      animationTriggered.current = true;
+      console.log('🎬 Starting login animation for new login...');
+
+      // Phase 1: Start with black screen
+      setLoginAnimationPhase('black');
+
+      // Phase 2: Stars fade in (after 400ms)
+      setTimeout(() => {
+        console.log('🌟 Stars fading in...');
+        setLoginAnimationPhase('stars');
+      }, 400);
+
+      // Phase 3: Background/void fades in (after 2000ms)
+      setTimeout(() => {
+        console.log('🌌 Background fading in...');
+        setLoginAnimationPhase('background');
+      }, 2000);
+
+      // Phase 4: Navbar flickers in (after 3200ms)
+      setTimeout(() => {
+        console.log('⚡ Navbar flickering in...');
+        setLoginAnimationPhase('navbar');
+      }, 3200);
+
+      // Phase 5: Animation complete (after 4700ms)
+      setTimeout(() => {
+        console.log('✅ Login animation complete');
+        setLoginAnimationPhase('complete');
+      }, 4700);
+    }
+
+    // Reset animation when logging out
+    if (publicKey === null && loginAnimationPhase !== 'idle') {
+      setLoginAnimationPhase('idle');
+      animationTriggered.current = false; // Allow animation to trigger again on next login
+    }
+  }, [publicKey, loginAnimationPhase]);
+
+  // Initialize system on component mount
+  // Note: publicKey and walletConnected are already initialized synchronously from localStorage
+  useEffect(() => {
+    // If no valid session was found during synchronous init, clear any stale data
+    if (!initialSession.hasSession) {
+      localStorage.removeItem('walletPublickey');
+      localStorage.removeItem('walletType');
+      localStorage.removeItem('lastAuthTime');
+      localStorage.removeItem('hasSeenHUD');
     }
 
     // Set initialization flag with slight delay for smooth startup
@@ -128,8 +238,6 @@ const Home: React.FC = () => {
     }
   }, []);
 
-  const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
-
   // Helper functions for setting different types of messages
   const setInfoMessage = (message: string) => {
     setConnectionError(message);
@@ -155,7 +263,7 @@ const Home: React.FC = () => {
 
     const timeSinceAuth = Date.now() - Number.parseInt(lastAuth);
 
-    return timeSinceAuth < SESSION_TIMEOUT;
+    return timeSinceAuth < SESSION_TIMEOUT_MS;
   };
 
   const updateAuthTime = () => {
@@ -864,11 +972,46 @@ const Home: React.FC = () => {
     }
   };
 
+  // Determine animation phase CSS class
+  const getAnimationClass = () => {
+    switch (loginAnimationPhase) {
+      case 'black':
+        return styles.animPhaseBlack;
+      case 'stars':
+        return styles.animPhaseStars;
+      case 'background':
+        return styles.animPhaseBackground;
+      case 'navbar':
+        return styles.animPhaseNavbar;
+      case 'complete':
+        return styles.animPhaseComplete;
+      default:
+        return '';
+    }
+  };
+
+  // Determine if we should hide the loading overlay
+  const hideOverlay = isInitialized && (!publicKey || loginAnimationPhase !== 'black');
+
   return (
     <div
-      className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]} ${isInitialized ? styles.initialized : ''}`}
+      className={`${styles.appContainer} ${styles[`theme-${currentTheme}`]} ${isInitialized ? styles.initialized : ''} ${getAnimationClass()}`}
     >
-      <div className={`${styles.backgroundImage} ${publicKey ? styles.loggedIn : styles.loggedOut}`} />
+      {/* Loading overlay - always rendered, hidden via CSS when ready */}
+      <div className={`${styles.loadingOverlay} ${hideOverlay ? styles.overlayHidden : ''}`} />
+
+      <div
+        className={`${styles.backgroundImage} ${publicKey ? styles.loggedIn : styles.loggedOut} ${
+          // Show background only after client-side init: for logged-out users OR after animation completes
+          (isInitialized && (!publicKey || loginAnimationPhase === 'complete')) ? styles.bgReady : ''
+        }`}
+        style={{
+          // Set background-image via inline style to avoid SSR hydration mismatch
+          backgroundImage: isInitialized
+            ? `url('${publicKey ? '/bg_without_logo.png' : '/bg_with_logo.png'}')`
+            : 'none'
+        }}
+      />
       <StarsCanvas theme={currentTheme === 'light' ? 'light' : (currentTheme === 'null' ? 'null' : 'null')} loggedIn={!!publicKey} />
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`}>
         {/* System status panel moved to HUD component */}
@@ -882,6 +1025,7 @@ const Home: React.FC = () => {
           systemStatus={systemStatus}
           initialTab={hudInitialTab}
           onToggleMobileMenu={isMobileView ? () => {} : undefined}
+          loginAnimationPhase={loginAnimationPhase}
           onClose={() => {
             setShowHUD(false);
           }}

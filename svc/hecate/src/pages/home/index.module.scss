@@ -111,6 +111,13 @@ html, body {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  // Start hidden to prevent SSR flash - revealed by animation or .bgReady class
+  opacity: 0;
+
+  // Ready class added by JavaScript after hydration for non-animated states
+  &.bgReady {
+    opacity: 1;
+  }
 
   &::after {
     content: '';
@@ -142,7 +149,7 @@ html, body {
   }
 
   &.loggedOut {
-    background-image: url('/bg_with_logo.png');
+    // background-image set via inline style in JS to prevent SSR flash
 
     &::after {
       display: none;
@@ -179,7 +186,7 @@ html, body {
   }
 
   &.loggedIn {
-    background-image: url('/bg_without_logo.png');
+    // background-image set via inline style in JS to prevent SSR flash
 
     &::after {
       display: none;
@@ -1140,5 +1147,154 @@ h1, h2, h3, h4, h5, h6 {
   0%, 100% { transform: translateX(0); }
   10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
   20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+/* ============================================
+   LOADING OVERLAY - Prevents SSR flash
+   Always shows black until JS is ready
+   ============================================ */
+.loadingOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  z-index: 99999; // Above everything
+  pointer-events: none;
+
+  &.overlayHidden {
+    display: none;
+  }
+}
+
+/* ============================================
+   LOGIN ANIMATION SEQUENCE
+   Order: black → stars → background → navbar
+   ============================================ */
+
+// Phase 1: Everything pitch black - completely hide all visual elements
+.animPhaseBlack {
+  // Use a black overlay that covers everything including z-index: -100 background
+  &::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: -99; // Above backgroundImage (-100) but below content
+    pointer-events: none;
+  }
+
+  // Also add overlay above all content
+  &::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 10000;
+    pointer-events: none;
+  }
+
+  .backgroundImage {
+    opacity: 0 !important;
+  }
+
+  [data-stars-canvas] {
+    opacity: 0 !important;
+  }
+}
+
+// Phase 2: Stars fade in (background still hidden, black overlay fades out)
+.animPhaseStars {
+  // Fade out the black overlay to reveal stars
+  &::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: -1; // Behind stars now
+    pointer-events: none;
+  }
+
+  .backgroundImage {
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+
+  [data-stars-canvas] {
+    animation: starsFadeIn 1.2s ease-out forwards;
+  }
+}
+
+// Phase 3: Background fades in (stars visible, navbar still hidden)
+.animPhaseBackground {
+  .backgroundImage {
+    opacity: 0; // Start at 0, animation will fade in
+    animation: backgroundFadeIn 1s ease-out forwards !important;
+  }
+
+  [data-stars-canvas] {
+    opacity: 1;
+  }
+}
+
+// Phase 4: Navbar flickers in like neon
+.animPhaseNavbar {
+  .backgroundImage {
+    opacity: 1 !important;
+  }
+
+  [data-stars-canvas] {
+    opacity: 1;
+  }
+}
+
+// Phase 5: Animation complete - all elements visible
+.animPhaseComplete {
+  .backgroundImage {
+    opacity: 1 !important;
+  }
+
+  [data-stars-canvas] {
+    opacity: 1;
+  }
+}
+
+// Stars fade in animation
+@keyframes starsFadeIn {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+  }
+  30% {
+    opacity: 0.3;
+    filter: blur(5px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+// Background fade in animation
+@keyframes backgroundFadeIn {
+  0% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
