@@ -13152,39 +13152,82 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(10, 10, 10, 0.95);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
+  animation: fadeIn 0.3s ease-out;
 
   .warningCard {
-    background: rgba(255, 51, 51, 0.1);
-    border: 2px solid rgba(255, 51, 51, 0.5);
+    background: rgba(10, 10, 10, 0.95);
+    border: 2px solid rgba(255, 51, 51, 0.4);
     border-radius: 12px;
-    padding: 2rem;
+    padding: 2.5rem;
     max-width: 500px;
     text-align: center;
+    box-shadow: 0 0 40px rgba(255, 51, 51, 0.2);
+    animation: slideInFromTop 0.4s ease-out;
 
     h3 {
-      color: #ff3333;
+      color: #ff6666;
       margin-bottom: 1rem;
+      font-family: 'Orbitron', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 0 0 15px rgba(255, 51, 51, 0.5);
+      font-size: 1.25rem;
+    }
+
+    p {
+      color: #c8c8d0;
+      line-height: 1.6;
+      margin-bottom: 0.5rem;
+
+      strong {
+        color: #ff6666;
+      }
     }
 
     button {
-      margin-top: 1rem;
-      padding: 0.75rem 1.5rem;
-      background: $echo-blue;
-      border: none;
-      border-radius: 6px;
-      color: white;
+      margin-top: 1.5rem;
+      padding: 12px 32px;
+      background: rgba(0, 168, 255, 0.1);
+      border: 2px solid $echo-blue;
+      border-radius: 8px;
+      color: $echo-blue;
       cursor: pointer;
+      font-family: 'Orbitron', monospace;
       font-weight: 600;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.2s ease;
+      text-shadow: 0 0 10px rgba(0, 168, 255, 0.3);
 
       &:hover {
-        background: lighten($echo-blue, 10%);
+        background: rgba(0, 168, 255, 0.2);
+        border-color: lighten($echo-blue, 10%);
+        box-shadow: 0 0 20px rgba(0, 168, 255, 0.4);
+        transform: translateY(-2px);
+      }
+
+      &:active {
+        transform: translateY(0);
       }
     }
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import ApiKeyManagement from './ApiKeyManagement';
 import styles from './SettingsPanel.module.scss';
 
@@ -17,8 +17,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   publicKey,
   isLoadingUser,
 }) => {
+  const [isClosing, setIsClosing] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
+      setIsClosing(false);
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -32,7 +35,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
-        onClose();
+        handleClose();
       }
     };
 
@@ -42,14 +45,25 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) {
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+    }, 300);
+  };
+
+  if (!isOpen && !isClosing) {
     return null;
   }
 
   return (
-    <div className={styles.settingsOverlay} onClick={onClose}>
+    <div
+      className={`${styles.settingsOverlay} ${isClosing ? styles.closing : ''}`}
+      onClick={handleClose}
+    >
       <div
-        className={styles.settingsPanel}
+        className={`${styles.settingsPanel} ${isClosing ? styles.closing : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.settingsHeader}>
@@ -59,8 +73,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </div>
           <button
             className={styles.closeButton}
-            onClick={onClose}
-            title="Close Settings"
+            onClick={handleClose}
+            title="Close Settings (Esc)"
           >
             ✕
           </button>
@@ -102,6 +116,15 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </div>
             )}
           </div>
+        </div>
+
+        <div className={styles.settingsFooter}>
+          <button
+            className={styles.closeFooterButton}
+            onClick={handleClose}
+          >
+            Close Settings
+          </button>
         </div>
       </div>
     </div>
