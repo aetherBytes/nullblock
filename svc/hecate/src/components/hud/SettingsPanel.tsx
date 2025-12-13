@@ -71,13 +71,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <span className={styles.headerIcon}>⚙️</span>
             <h2 className={styles.headerTitle}>Settings</h2>
           </div>
-          <button
-            className={styles.closeButton}
-            onClick={handleClose}
-            title="Close Settings (Esc)"
-          >
-            ✕
-          </button>
         </div>
 
         <div className={styles.settingsContent}>

@@ -10,10 +10,10 @@ import { useApiKeyCheck } from '../../hooks/useApiKeyCheck';
 import Crossroads from '../crossroads/Crossroads';
 import HecateChat from './HecateChat';
 import Scopes from './Scopes';
-import HecateWelcome from '../crossroads/landing/HecateWelcome';
 import NullblockLogo from './NullblockLogo';
 import MemoriesMenu from './MemoriesMenu';
 import SettingsPanel from './SettingsPanel';
+import MemFeed from './MemFeed';
 import styles from './hud.module.scss';
 import { Task, TaskCreationRequest } from '../../types/tasks';
 import { UserProfile } from '../../types/user';
@@ -1073,7 +1073,7 @@ const HUD: React.FC<HUDProps> = ({
 
   const renderUnifiedNavigation = () => (
     <div className={styles.unifiedNavbar}>
-      {/* Left side - Logo, NULLBLOCK Text, and Welcome Quote */}
+      {/* Left side - Logo, NULLBLOCK Text, and MEM FEED */}
       <div className={styles.navbarLeft}>
         <NullblockLogo
           state={nullviewState}
@@ -1100,7 +1100,7 @@ const HUD: React.FC<HUDProps> = ({
         >
           NULLBLOCK
         </div>
-        <HecateWelcome compact={true} maxChars={80} />
+        <MemFeed />
       </div>
 
       {/* Center - NULLBLOCK Text (visible on mobile) */}
@@ -1123,21 +1123,23 @@ const HUD: React.FC<HUDProps> = ({
       <div className={styles.navbarRight}>
         {/* Desktop Menu Buttons */}
         <div className={styles.desktopMenu}>
-          <button
-            className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
-            onClick={() => {
-              if (mainHudActiveTab === 'crossroads') {
-                setMainHudActiveTab(null);
-                setShowCrossroadsMarketplace(false);
-              } else {
-                setMainHudActiveTab('crossroads');
-                setShowCrossroadsMarketplace(true);
-              }
-            }}
-            title="Crossroads Marketplace"
-          >
-            <span>CROSSROADS</span>
-          </button>
+          {publicKey && (
+            <button
+              className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
+              onClick={() => {
+                if (mainHudActiveTab === 'crossroads') {
+                  setMainHudActiveTab(null);
+                  setShowCrossroadsMarketplace(false);
+                } else {
+                  setMainHudActiveTab('crossroads');
+                  setShowCrossroadsMarketplace(true);
+                }
+              }}
+              title="Crossroads Marketplace"
+            >
+              <span>CROSSROADS</span>
+            </button>
+          )}
 
           {publicKey && (
             <button
@@ -1190,22 +1192,24 @@ const HUD: React.FC<HUDProps> = ({
       {/* Mobile Dropdown Menu */}
       {showMobileMenu && (
         <div className={styles.mobileMenuDropdown}>
-          <button
-            className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
-            onClick={() => {
-              if (mainHudActiveTab === 'crossroads') {
-                setMainHudActiveTab(null);
-                setShowCrossroadsMarketplace(false);
-              } else {
-                setMainHudActiveTab('crossroads');
-                setShowCrossroadsMarketplace(true);
-              }
-              setShowMobileMenu(false);
-            }}
-          >
-            <span>🛣️</span>
-            <span>CROSSROADS</span>
-          </button>
+          {publicKey && (
+            <button
+              className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
+              onClick={() => {
+                if (mainHudActiveTab === 'crossroads') {
+                  setMainHudActiveTab(null);
+                  setShowCrossroadsMarketplace(false);
+                } else {
+                  setMainHudActiveTab('crossroads');
+                  setShowCrossroadsMarketplace(true);
+                }
+                setShowMobileMenu(false);
+              }}
+            >
+              <span>🛣️</span>
+              <span>CROSSROADS</span>
+            </button>
+          )}
 
           {publicKey && (
             <button
