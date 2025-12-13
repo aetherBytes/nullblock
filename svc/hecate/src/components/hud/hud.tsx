@@ -250,6 +250,20 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [mainHudActiveTab]);
 
+  // Auto-close settings panel when navigating away or disconnecting
+  useEffect(() => {
+    if (showSettingsPanel) {
+      setShowSettingsPanel(false);
+    }
+  }, [mainHudActiveTab, publicKey]);
+
+  // Auto-close mobile menu when settings panel opens
+  useEffect(() => {
+    if (showSettingsPanel && showMobileMenu) {
+      setShowMobileMenu(false);
+    }
+  }, [showSettingsPanel]);
+
   // Load models when Hecate tab becomes active (use cached data)
   useEffect(() => {
     if (mainHudActiveTab === 'hecate' && publicKey) {
@@ -1245,13 +1259,6 @@ const HUD: React.FC<HUDProps> = ({
   const renderMainContent = () => (
     <div className={styles.mainContent}>
       {renderTabContent()}
-    </div>
-  );
-
-  return (
-    <div className={`${styles.echoContainer} ${publicKey ? styles[theme] : styles.loggedOut}`}>
-      {renderUnifiedNavigation()}
-      {renderMainContent()}
       <SettingsPanel
         isOpen={showSettingsPanel}
         onClose={() => setShowSettingsPanel(false)}
@@ -1259,6 +1266,13 @@ const HUD: React.FC<HUDProps> = ({
         publicKey={publicKey}
         isLoadingUser={isLoadingUser}
       />
+    </div>
+  );
+
+  return (
+    <div className={`${styles.echoContainer} ${publicKey ? styles[theme] : styles.loggedOut}`}>
+      {renderUnifiedNavigation()}
+      {renderMainContent()}
     </div>
   );
 };
