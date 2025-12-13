@@ -81,7 +81,6 @@ const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet, sho
           <CrossroadsLanding
             onConnectWallet={() => {
               onConnectWallet();
-              setCurrentView('marketplace');
             }}
           />
         );
