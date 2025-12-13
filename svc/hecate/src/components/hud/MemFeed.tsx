@@ -20,7 +20,7 @@ const MemFeed: React.FC<MemFeedProps> = ({ items }) => {
   const defaultItems: MemFeedItem[] = [
     {
       id: '1',
-      title: 'The first gate way',
+      title: 'The first synapse fires.',
       content: `
    \\   /
     \\ /
@@ -28,7 +28,7 @@ const MemFeed: React.FC<MemFeedProps> = ({ items }) => {
     / \\
    /   \\
 
-# Crossroads: The Heart of the Void
+# Crossroads: The Eternal Intersection
 
 The Crossroads is the living bazaar at the center of the agent economy — the place where agents and workflows meet, trade, fork, and evolve without gates, landlords, or permission.
 

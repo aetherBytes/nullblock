@@ -151,7 +151,7 @@ interface StarsCanvasProps {
 }
 
 const StarsCanvas = ({ theme = 'light', loggedIn = false }: StarsCanvasProps) => (
-  <div className={`${styles.starsCanvas} ${loggedIn ? styles[theme] : styles.clean}`}>
+  <div className={`${styles.starsCanvas} ${loggedIn ? styles[theme] : styles.clean}`} data-stars-canvas>
     <Canvas
       camera={{ position: [0, 0, 1] }}
       gl={{ alpha: true, antialias: true }}

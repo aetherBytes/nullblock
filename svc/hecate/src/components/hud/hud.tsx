@@ -33,6 +33,9 @@ interface SystemStatus {
   erebus: boolean;
 }
 
+// Login animation phases from home/index.tsx
+type LoginAnimationPhase = 'idle' | 'black' | 'stars' | 'background' | 'navbar' | 'complete';
+
 interface HUDProps {
   publicKey: string | null;
   onDisconnect: () => void;
@@ -43,6 +46,7 @@ interface HUDProps {
   systemStatus: SystemStatus;
   initialTab?: 'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null;
   onToggleMobileMenu?: () => void;
+  loginAnimationPhase?: LoginAnimationPhase;
 }
 
 interface AscentLevel {
@@ -64,6 +68,7 @@ const HUD: React.FC<HUDProps> = ({
   onThemeChange,
   initialTab = null,
   onToggleMobileMenu,
+  loginAnimationPhase = 'idle',
 }) => {
   const [nullviewState, setNulleyeState] = useState<
     | 'base'
@@ -1071,8 +1076,19 @@ const HUD: React.FC<HUDProps> = ({
     }
   };
 
+  // Get navbar animation class based on login animation phase
+  const getNavbarAnimationClass = () => {
+    if (loginAnimationPhase === 'navbar') {
+      return styles.neonFlickerIn;
+    }
+    if (loginAnimationPhase === 'black' || loginAnimationPhase === 'stars' || loginAnimationPhase === 'background') {
+      return styles.navbarHidden;
+    }
+    return '';
+  };
+
   const renderUnifiedNavigation = () => (
-    <div className={styles.unifiedNavbar}>
+    <div className={`${styles.unifiedNavbar} ${getNavbarAnimationClass()}`}>
       {/* Left side - Logo, NULLBLOCK Text, and MEM FEED */}
       <div className={styles.navbarLeft}>
         <NullblockLogo
