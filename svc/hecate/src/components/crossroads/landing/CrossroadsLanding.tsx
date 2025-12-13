@@ -10,9 +10,13 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet }
     <div className={styles.landingView}>
       <div className={styles.missionStatement}>
         <h2 className={styles.missionText}>
-          <span className={styles.missionPrimary}>Marketplace for the agentic economy.</span>
+          <span className={styles.missionPrimary}>
+            Silos are dead.
+            <br />
+            The agent economy is open.
+          </span>
           <br />
-          <span className={styles.missionSecondary}>Mods, Tooling and Interfaces. Web3 Native.</span>
+          <span className={styles.missionSecondary}>The first living bazaar. Web3 Native.</span>
         </h2>
       </div>
 
