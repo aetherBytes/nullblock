@@ -70,8 +70,13 @@ const Home: React.FC = () => {
   const [loginAnimationPhase, setLoginAnimationPhase] = useState<LoginAnimationPhase>(
     initialSession.hasSession ? 'black' : 'idle'
   );
+  // Pre-login animation state - for logged-out users landing page
+  const [preLoginAnimationPhase, setPreLoginAnimationPhase] = useState<LoginAnimationPhase>(
+    !initialSession.hasSession ? 'black' : 'idle'
+  );
   const previousPublicKey = React.useRef<string | null>(initialSession.publicKey);
   const animationTriggered = React.useRef<boolean>(false);
+  const preLoginAnimationTriggered = React.useRef<boolean>(false);
 
   // Debug showWalletModal state changes
   useEffect(() => {
@@ -121,25 +126,50 @@ const Home: React.FC = () => {
       animationTriggered.current = true;
 
       // Already in 'black' phase from initial state, start the sequence
+      // Stars and background fade in together
       setTimeout(() => {
-        console.log('🌟 Stars fading in...');
-        setLoginAnimationPhase('stars');
-      }, 400);
-
-      setTimeout(() => {
-        console.log('🌌 Background fading in...');
+        console.log('🌟🌌 Stars + Background fading in together...');
         setLoginAnimationPhase('background');
-      }, 2000);
+      }, 400);
 
       setTimeout(() => {
         console.log('⚡ Navbar flickering in...');
         setLoginAnimationPhase('navbar');
-      }, 3200);
+      }, 2500);
 
       setTimeout(() => {
         console.log('✅ Login animation complete');
         setLoginAnimationPhase('complete');
-      }, 4700);
+      }, 4000);
+    }
+  }, []); // Empty deps - run once on mount
+
+  // Pre-login animation - for logged-out users on page load
+  useEffect(() => {
+    if (!initialSession.hasSession && !preLoginAnimationTriggered.current) {
+      console.log('🎬 Pre-login animation start for new visitor');
+      preLoginAnimationTriggered.current = true;
+
+      // Already in 'black' phase from initial state, start the sequence
+      setTimeout(() => {
+        console.log('🌟 [Pre-login] Stars fading in...');
+        setPreLoginAnimationPhase('stars');
+      }, 400);
+
+      setTimeout(() => {
+        console.log('🌌 [Pre-login] Background + Mission text fading in...');
+        setPreLoginAnimationPhase('background');
+      }, 2000);
+
+      setTimeout(() => {
+        console.log('⚡ [Pre-login] Navbar + CTA flickering in...');
+        setPreLoginAnimationPhase('navbar');
+      }, 4500);
+
+      setTimeout(() => {
+        console.log('✅ [Pre-login] Animation complete');
+        setPreLoginAnimationPhase('complete');
+      }, 6000);
     }
   }, []); // Empty deps - run once on mount
 
@@ -156,35 +186,55 @@ const Home: React.FC = () => {
       // Phase 1: Start with black screen
       setLoginAnimationPhase('black');
 
-      // Phase 2: Stars fade in (after 400ms)
+      // Phase 2: Stars and background fade in together (after 400ms)
       setTimeout(() => {
-        console.log('🌟 Stars fading in...');
-        setLoginAnimationPhase('stars');
+        console.log('🌟🌌 Stars + Background fading in together...');
+        setLoginAnimationPhase('background');
       }, 400);
 
-      // Phase 3: Background/void fades in (after 2000ms)
-      setTimeout(() => {
-        console.log('🌌 Background fading in...');
-        setLoginAnimationPhase('background');
-      }, 2000);
-
-      // Phase 4: Navbar flickers in (after 3200ms)
+      // Phase 3: Navbar flickers in (after 2500ms)
       setTimeout(() => {
         console.log('⚡ Navbar flickering in...');
         setLoginAnimationPhase('navbar');
-      }, 3200);
+      }, 2500);
 
-      // Phase 5: Animation complete (after 4700ms)
+      // Phase 4: Animation complete (after 4000ms)
       setTimeout(() => {
         console.log('✅ Login animation complete');
         setLoginAnimationPhase('complete');
-      }, 4700);
+      }, 4000);
     }
 
-    // Reset animation when logging out
+    // Reset animation when logging out and trigger pre-login animation
     if (publicKey === null && loginAnimationPhase !== 'idle') {
       setLoginAnimationPhase('idle');
       animationTriggered.current = false; // Allow animation to trigger again on next login
+
+      // Trigger pre-login animation on logout
+      preLoginAnimationTriggered.current = false;
+      console.log('🎬 Starting pre-login animation after logout...');
+      setPreLoginAnimationPhase('black');
+
+      setTimeout(() => {
+        console.log('🌟 [Post-logout] Stars fading in...');
+        setPreLoginAnimationPhase('stars');
+      }, 400);
+
+      setTimeout(() => {
+        console.log('🌌 [Post-logout] Background + Mission text fading in...');
+        setPreLoginAnimationPhase('background');
+      }, 2000);
+
+      setTimeout(() => {
+        console.log('⚡ [Post-logout] Navbar + CTA flickering in...');
+        setPreLoginAnimationPhase('navbar');
+      }, 4500);
+
+      setTimeout(() => {
+        console.log('✅ [Post-logout] Animation complete');
+        setPreLoginAnimationPhase('complete');
+        preLoginAnimationTriggered.current = true;
+      }, 6000);
     }
   }, [publicKey, loginAnimationPhase]);
 
@@ -972,9 +1022,12 @@ const Home: React.FC = () => {
     }
   };
 
+  // Get the current animation phase (use login or pre-login based on auth state)
+  const currentAnimationPhase = publicKey ? loginAnimationPhase : preLoginAnimationPhase;
+
   // Determine animation phase CSS class
   const getAnimationClass = () => {
-    switch (loginAnimationPhase) {
+    switch (currentAnimationPhase) {
       case 'black':
         return styles.animPhaseBlack;
       case 'stars':
@@ -991,7 +1044,7 @@ const Home: React.FC = () => {
   };
 
   // Determine if we should hide the loading overlay
-  const hideOverlay = isInitialized && (!publicKey || loginAnimationPhase !== 'black');
+  const hideOverlay = isInitialized && currentAnimationPhase !== 'black';
 
   return (
     <div
@@ -1002,8 +1055,8 @@ const Home: React.FC = () => {
 
       <div
         className={`${styles.backgroundImage} ${publicKey ? styles.loggedIn : styles.loggedOut} ${
-          // Show background only after client-side init: for logged-out users OR after animation completes
-          (isInitialized && (!publicKey || loginAnimationPhase === 'complete')) ? styles.bgReady : ''
+          // Show background only after animation completes
+          (isInitialized && currentAnimationPhase === 'complete') ? styles.bgReady : ''
         }`}
         style={{
           // Set background-image via inline style to avoid SSR hydration mismatch
@@ -1025,7 +1078,7 @@ const Home: React.FC = () => {
           systemStatus={systemStatus}
           initialTab={hudInitialTab}
           onToggleMobileMenu={isMobileView ? () => {} : undefined}
-          loginAnimationPhase={loginAnimationPhase}
+          loginAnimationPhase={currentAnimationPhase}
           onClose={() => {
             setShowHUD(false);
           }}

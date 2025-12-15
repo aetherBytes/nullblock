@@ -1235,15 +1235,16 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-// Phase 3: Background fades in (stars visible, navbar still hidden)
+// Phase 3: Background fades in (stars also fade in together for post-login)
 .animPhaseBackground {
   .backgroundImage {
     opacity: 0; // Start at 0, animation will fade in
-    animation: backgroundFadeIn 1s ease-out forwards !important;
+    animation: backgroundFadeIn 1.5s ease-out forwards !important;
   }
 
   [data-stars-canvas] {
-    opacity: 1;
+    // Fade in stars together with background (for post-login when skipping stars phase)
+    animation: starsFadeIn 1.5s ease-out forwards;
   }
 }
 

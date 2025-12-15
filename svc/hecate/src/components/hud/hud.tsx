@@ -920,7 +920,7 @@ const HUD: React.FC<HUDProps> = ({
       return (
         <>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' || mainHudActiveTab === null ? '' : styles.hidden}`}>
-            <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} showMarketplace={showCrossroadsMarketplace} resetToLanding={resetCrossroadsToLanding} />
+            <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} showMarketplace={showCrossroadsMarketplace} resetToLanding={resetCrossroadsToLanding} animationPhase={loginAnimationPhase} />
           </div>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'canvas' ? '' : styles.hidden}`}>
             <div className={styles.canvasView}>
@@ -951,7 +951,7 @@ const HUD: React.FC<HUDProps> = ({
             </div>
           </div>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' ? '' : styles.hidden}`}>
-            <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} showMarketplace={showCrossroadsMarketplace} resetToLanding={resetCrossroadsToLanding} />
+            <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} showMarketplace={showCrossroadsMarketplace} resetToLanding={resetCrossroadsToLanding} animationPhase={loginAnimationPhase} />
           </div>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'hecate' ? '' : styles.hidden}`}>
             <div className={`${styles.hecateContainer} ${isChatExpanded ? styles.chatExpanded : ''} ${isScopesExpanded ? styles.scopesExpanded : ''}`}>

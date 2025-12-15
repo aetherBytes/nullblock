@@ -9,11 +9,15 @@ import CrossroadsLanding from './landing/CrossroadsLanding';
 import MarketplaceBrowser from './marketplace/MarketplaceBrowser';
 import type { ServiceListing } from './types';
 
+// Animation phase type (matches home/index.tsx)
+type AnimationPhase = 'idle' | 'black' | 'stars' | 'background' | 'navbar' | 'complete';
+
 interface CrossroadsProps {
   publicKey: string | null;
   onConnectWallet: (walletType?: 'phantom' | 'metamask') => void;
   showMarketplace?: boolean;
   resetToLanding?: boolean;
+  animationPhase?: AnimationPhase;
 }
 
 const config = createConfig({
@@ -33,7 +37,7 @@ const queryClient = new QueryClient();
 
 type View = 'landing' | 'marketplace' | 'service-detail' | 'my-services';
 
-const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet, showMarketplace, resetToLanding }) => {
+const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet, showMarketplace, resetToLanding, animationPhase = 'complete' }) => {
   const [currentView, setCurrentView] = useState<View>('landing');
   const [selectedService, setSelectedService] = useState<ServiceListing | null>(null);
 
@@ -82,6 +86,7 @@ const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet, sho
             onConnectWallet={() => {
               onConnectWallet();
             }}
+            animationPhase={animationPhase}
           />
         );
 
