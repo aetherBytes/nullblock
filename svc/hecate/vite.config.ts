@@ -2,6 +2,7 @@ import MobxManager from '@lomray/react-mobx-manager/plugins/vite/index';
 import SsrBoost from '@lomray/vite-ssr-boost/plugin';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -10,6 +11,19 @@ export default defineConfig({
   envDir: '../',
   build: {
     outDir: '../build',
+  },
+  resolve: {
+    alias: {
+      '@assets': path.resolve(__dirname, 'src/assets'),
+      '@components': path.resolve(__dirname, 'src/common/components'),
+      '@helpers': path.resolve(__dirname, 'src/common/helpers'),
+      '@services': path.resolve(__dirname, 'src/common/services'),
+      '@providers': path.resolve(__dirname, 'src/common/providers'),
+      '@constants': path.resolve(__dirname, 'src/constants'),
+      '@interfaces': path.resolve(__dirname, 'src/interfaces'),
+      '@pages': path.resolve(__dirname, 'src/pages'),
+      '@routes': path.resolve(__dirname, 'src/routes'),
+    },
   },
   server: {
     host: true,

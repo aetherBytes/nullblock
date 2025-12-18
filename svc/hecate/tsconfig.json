@@ -26,6 +26,7 @@
       "@components/*": ["./common/components/*"],
       "@helpers/*": ["./common/helpers/*"],
       "@services/*": ["./common/services/*"],
+      "@providers/*": ["./common/providers/*"],
       "@constants/*": ["./constants/*"],
       "@interfaces/*": ["./interfaces/*"],
       "@pages/*": ["./pages/*"],

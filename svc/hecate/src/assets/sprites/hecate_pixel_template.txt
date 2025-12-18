@@ -1,0 +1,169 @@
+HECATE PIXEL TEMPLATE - 64x64 Canvas
+=====================================
+South-Facing View (Primary)
+
+Grid: Each character = 1 pixel
+Legend:
+  . = Transparent
+  H = Hair (Raven Black #1a1425)
+  h = Hair highlight (Dark Purple #2d1b4e)
+  F = Face/Skin (Ghostly Pale #c9bfd4)
+  f = Face shadow (Shadow Flesh #8a7a99)
+  R = Robe dark (Midnight Blue #1a1a2e)
+  r = Robe mid (Dark Purple #2d1b4e)
+  P = Robe light (Royal Purple #4a2878)
+  B = Belt/Gray (Ethereal Gray #3d3d5c)
+  K = Keys (Ethereal Gray #3d3d5c)
+  T = Torch handle (Raven Black #1a1425)
+  O = Flame orange (Torch Orange #ff6b35)
+  Y = Flame yellow (Flame Yellow #ffd93d)
+  G = Magic green (Magic Green #39ff14)
+  A = Aura purple (Aura Purple #8b5cf6)
+  D = Hellhound (Void Black #0d0d1a)
+  X = Outline (Void Black #0d0d1a)
+
+ROW 01-10 (Top - Hair & Heads)
+================================================================
+         1111111111222222222233333333334444444444555555555566666
+1234567890123456789012345678901234567890123456789012345678901234
+----------------------------------------------------------------
+................................................................  01
+................................................................  02
+................................................................  03
+................................................................  04
+................................................................  05
+................................................................  06
+................................................................  07
+..........................HHHHhhhh..............................  08
+........................HHHHHHHHHHhh............................  09
+......................HHHHHHHHHHHHHHhh..........................  10
+
+ROW 11-20 (Heads & Upper Body)
+================================================================
+         1111111111222222222233333333334444444444555555555566666
+1234567890123456789012345678901234567890123456789012345678901234
+----------------------------------------------------------------
+....................HHHHHHHHHHHHHHHHHHhh........................  11
+...................HHHHHHHHHHHHHHHHHHHHH........................  12
+..................HHHHHHffFFffHHffFFffHHHH......................  13
+..................HHHHHfFFFFfHHfFFFFfHHHHH......................  14
+...................HHHffFFFFffHffFFFFffHHH......................  15
+....................HHfFFFFFFfHfFFFFFFfHH.......................  16
+....................HHHffFFffHHHffFFffHHH.......................  17
+.....................HHHHHHHHHHHHHHHHHHHH.......................  18
+......................RRRRRRRRRRRRRRRRRR........................  19
+.....................RRRRRRRRrRRRRRRRRRRR.......................  20
+
+ROW 21-30 (Arms & Torches)
+================================================================
+         1111111111222222222233333333334444444444555555555566666
+1234567890123456789012345678901234567890123456789012345678901234
+----------------------------------------------------------------
+....................RRRRRRRRrrRRRRRRRRRRRR......................  21
+...................RRRRRfRRrrrrRRfRRRRRRRR......................  22
+..................TRRRRffRRrrrrRRffRRRRRRT......................  23
+.................TTRRRfRRRrrrrRRRfRRRRRTT.......................  24
+................YYTRRRfRRRrPPrRRRfRRRRTYY......................  25
+...............OYYTTRRRRRRPBPPRRRRRRTTYOO......................  26
+..............OOYYTTRRRRRBBBBBRRRRRTTYOOO......................  27
+..............OOYYTRRRRRRBKKKBRRRRRRTYOOO......................  28
+...............OYYTRRRRRRRBKBRRRRRRRTYOO.......................  29
+................YYTTRRRRRRRKRRRRRRRTTYY........................  30
+
+ROW 31-40 (Lower Body & Robes)
+================================================================
+         1111111111222222222233333333334444444444555555555566666
+1234567890123456789012345678901234567890123456789012345678901234
+----------------------------------------------------------------
+.................TTRRRRRRRRRRRRRRRRRRTT.........................  31
+..................RRRRRRRRRRRRRRRRRRRR..........................  32
+.................RRRRRRRRRRrRRRRRRRRRRR.........................  33
+................RRRRRRRRRRrrRRRRRRRRRRRR........................  34
+...............RRRRRRRRRRrrrRRRRRRRRRRRRR.......................  35
+..............RRRRRRRRRRrrrrRRRRRRRRRRRRRR......................  36
+.............RRRRRRRRRRrrrrrRRRRRRRRRRRRRRR.....................  37
+............RRRRRRRRRRrrrrrrRRRRRRRRRRRRRRRR....................  38
+...........RRRRRRRRRRrrrrrrrRRRRRRRRRRRRRRRR....................  39
+..........RRRRRRRRRRRDDDDDDRRRRRRRRRRRRRRRRR....................  40
+
+ROW 41-50 (Lower Robes & Hellhound)
+================================================================
+         1111111111222222222233333333334444444444555555555566666
+1234567890123456789012345678901234567890123456789012345678901234
+----------------------------------------------------------------
+.........RRRRRRRRRRRDDdGdDDRRRRRRRRRRRRRRRRR....................  41
+........RRRRRRRRRRRDDDDdDDDRRRRRRRRRRRRRRRRRR...................  42
+.......RRRRRRRRRRRRDDDDDDDDRRRRRRRRRRRRRRRRRRr..................  43
+......RRRRRRRRRRRRRRDDDDDDRRRRRRRRRRRRRRRRRRRr..................  44
+.....RRRRRRRRRRRRRRRRDDDDRRRRRRRRRRRRRRRRRRRRrr.................  45
+.....RRRRRRRRRRRRRRRRRDDRRRRRRRRRRRRRRRRRRRRRrr.................  46
+....RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRrrr................  47
+....RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRrrr................  48
+...RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRrrrr...............  49
+...RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRrrrr...............  50
+
+ROW 51-60 (Base & Aura)
+================================================================
+         1111111111222222222233333333334444444444555555555566666
+1234567890123456789012345678901234567890123456789012345678901234
+----------------------------------------------------------------
+..RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRrrrrr..............  51
+..RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRrrrrr..............  52
+.RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRrrrrrr.............  53
+.RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRrrrrrr.............  54
+.G..G.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.G..G.............  55
+..G..AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.G...............  56
+.....AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA................  57
+.G...AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA..G.............  58
+................................................................  59
+................................................................  60
+
+ROW 61-64 (Bottom Margin)
+================================================================
+         1111111111222222222233333333334444444444555555555566666
+1234567890123456789012345678901234567890123456789012345678901234
+----------------------------------------------------------------
+................................................................  61
+................................................................  62
+................................................................  63
+................................................................  64
+
+
+ANIMATION FRAME 2 CHANGES:
+==========================
+- Torch flames: Shift Y pixels 1px right, add extra O pixel on right
+- Hair highlight (h): Shift 1px right on rows 8-12
+- Green wisps (G): Move to different positions in aura area
+- Aura (A): Slight shimmer variation
+
+TORCH FLAME DETAIL (Zoomed):
+============================
+Frame 1:        Frame 2:
+   .Y.             ..Y
+  .YY.            .YYY
+  OYY.            OYY.
+  OOO.            .OOO
+   OO              OO.
+   T.              .T.
+
+KEY RING DETAIL (Zoomed 6x8):
+=============================
+  .XX.
+  X..X
+  X..X
+  .XX.
+  ..X.
+  ..X.
+  .XXX
+  ..X.
+
+HELLHOUND DETAIL (Zoomed 10x8):
+===============================
+  ...DD...
+  ..DDDD..
+  .DGDDGD.   <- G = green eyes
+  .DDDDDD.
+  DDDDDDDD
+  .DD..DD.
+  .DD..DD.
+  ..D..D..

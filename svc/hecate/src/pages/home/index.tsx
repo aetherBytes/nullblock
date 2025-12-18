@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import StarsCanvas from '@components/stars/stars';
 import HUD from '../../components/hud/hud';
-import { 
-  createWalletChallenge, 
-  verifyWalletSignature, 
+import {
+  createWalletChallenge,
+  verifyWalletSignature,
   checkErebusHealth,
   detectWallets,
   initiateWalletConnection,
   getWalletStatus
 } from '../../common/services/erebus-api';
 import styles from './index.module.scss';
+
 
 // Extend Window interface for ethereum
 declare global {
@@ -473,274 +474,112 @@ const Home: React.FC = () => {
   };
 
   const connectPhantomWallet = async () => {
-    console.log('=== PHANTOM WALLET CONNECTION START ===');
-    console.log('Attempting to connect Phantom wallet via backend...');
-
-    if (!('phantom' in window)) {
-      setInfoMessage('Phantom wallet not found. Please install the Phantom browser extension.');
-      window.open('https://phantom.app/', '_blank');
-      throw new Error('Phantom not installed');
-    }
-
-    const provider = (window as any).phantom?.solana;
-
-    if (!provider) {
-      setInfoMessage('Phantom wallet extension found but not properly initialized. Please refresh the page.');
-      throw new Error('Phantom not initialized');
-    }
-
-    if (!provider.isPhantom) {
-      setInfoMessage('Invalid Phantom provider detected. Please refresh the page.');
-      throw new Error('Invalid Phantom provider');
-    }
-
-    // Give Phantom more time to fully initialize (increased from 100ms to 500ms)
-    // This helps prevent -32603 errors from premature connection attempts
-    console.log('⏳ Waiting for Phantom to fully initialize...');
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Verify Phantom is ready
-    if (!provider.isPhantom) {
-      throw new Error('Phantom provider not properly initialized');
-    }
+    console.log('=== PHANTOM WALLET CONNECTION START (using PhantomWalletAdapter) ===');
 
     try {
-      console.log('Phantom detected, checking status...');
-      console.log('Provider info:', {
-        isPhantom: provider.isPhantom,
-        isConnected: provider.isConnected,
-        publicKey: provider.publicKey?.toString(),
-      });
+      // Use PhantomWalletAdapter directly - it handles:
+      // - Service worker disconnections (-32603 errors)
+      // - Provider re-acquisition
+      // - Connection state management
+      const { PhantomWalletAdapter } = await import('@solana/wallet-adapter-wallets');
 
-      // If already connected, use existing connection
-      if (provider.isConnected && provider.publicKey) {
-        console.log('Phantom is already connected, using existing connection');
-        const walletAddress = provider.publicKey.toString();
-        console.log('Using existing Phantom connection:', walletAddress);
+      const adapter = new PhantomWalletAdapter();
 
-        // Skip signature and go straight to backend verification
-        await processPhantomConnection(walletAddress, provider);
-        return;
-      }
+      console.log('Created PhantomWalletAdapter, connecting...');
+      setInfoMessage('Connecting to Phantom...');
 
-      // First connect to get public key
-      let response;
-      try {
-        console.log('Requesting new Phantom connection...');
+      // Connect using the adapter - this handles all edge cases
+      await adapter.connect();
 
-        // Proactively disconnect to clear any stale internal state
-        // This prevents -32603 errors from previous failed connection attempts
-        try {
-          console.log('Disconnecting any existing Phantom connection to ensure clean state...');
-          await provider.disconnect();
-          console.log('Phantom disconnected successfully');
-        } catch (disconnectError) {
-          console.log('Phantom disconnect before connection failed (safe to ignore):', disconnectError);
-        }
-
-        // For error code -32603 (Internal error), do a simple connect without options
-        // This error often happens when provider isn't fully ready or has internal state issues
-        console.log('Attempting direct connection (no options)...');
-
-        let retryCount = 0;
-        const maxRetries = 2;
-
-        while (retryCount <= maxRetries) {
-          try {
-            response = await provider.connect();
-            console.log('Phantom connection response:', response);
-            break;
-          } catch (retryError: any) {
-            if (retryError?.code === -32603 && retryCount < maxRetries) {
-              retryCount++;
-              console.log(`⚠️ Phantom -32603 error, retrying (attempt ${retryCount}/${maxRetries})...`);
-              setInfoMessage(`⏳ Phantom initializing, retrying (${retryCount}/${maxRetries})...`);
-              // Increase delay between retries from 500ms to 1000ms
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            } else {
-              throw retryError;
-            }
-          }
-        }
-
-        if (!response) {
-          throw new Error('Failed to connect after retries');
-        }
-      } catch (connectError: any) {
-        console.error('Phantom connect() error:', connectError);
-        console.error('Error type:', typeof connectError);
-        console.error('Error properties:', Object.keys(connectError));
-        console.error('Error code:', connectError?.code);
-        console.error('Error data:', connectError?.data);
-        console.error('Error message:', connectError?.message);
-
-        // Handle common Phantom errors
-        if (connectError?.message?.includes('User rejected') || connectError?.message?.includes('rejected')) {
-          setInfoMessage('Connection cancelled. Please approve the connection in Phantom wallet.');
-          throw new Error('User rejected connection');
-        } else if (connectError?.code === 4001) {
-          setInfoMessage('Connection cancelled. Please approve the connection in Phantom wallet.');
-          throw new Error('User rejected connection');
-        } else if (connectError?.code === -32002) {
-          setInfoMessage('Phantom is busy processing another request. Please wait and try again.');
-          throw new Error('Request pending');
-        } else if (connectError?.code === -32603) {
-          // Internal error from Phantom - usually a timing or state issue
-          setErrorMessage('⚠️ Phantom connection failed after automatic retries.\n\nQuick fixes (try in order):\n\n1. 🔓 Make sure Phantom is UNLOCKED (click extension)\n2. 🔄 REFRESH this page and try again\n3. 🔌 Disconnect & reconnect:\n   • Open Phantom → Settings → Trusted Apps\n   • Remove this site if listed\n   • Refresh page and connect again\n4. 🔄 Restart your browser if still failing\n\nThis is usually a temporary Phantom state issue.');
-          throw new Error('Phantom internal error (-32603)');
-        } else if (connectError?.message?.includes('locked')) {
-          setInfoMessage('Phantom wallet is locked. Please unlock it and try again.');
-          throw new Error('Wallet locked');
-        } else if (connectError?.message === 'Unexpected error' || connectError?.message?.includes('Unexpected error')) {
-          // Check if error.data has more details
-          const errorDetails = connectError?.data ? JSON.stringify(connectError.data) : 'none';
-          console.error('Unexpected error details from data:', errorDetails);
-
-          // This is the generic error - provide helpful troubleshooting
-          let troubleshootingMsg = 'Cannot connect to Phantom. Troubleshooting steps:\n\n';
-          troubleshootingMsg += '1. Make sure Phantom is UNLOCKED (click the extension)\n';
-          troubleshootingMsg += '2. Ensure you have at least ONE Solana account in Phantom\n';
-          troubleshootingMsg += '3. Try REFRESHING this page\n';
-          troubleshootingMsg += '4. If still failing, try RESTARTING your browser\n';
-          troubleshootingMsg += '5. Check if Phantom extension needs an update';
-
-          setErrorMessage(troubleshootingMsg);
-          throw new Error('Phantom unexpected error');
-        } else {
-          const errorMsg = connectError?.message || connectError?.toString() || 'Unknown error';
-          setErrorMessage(`Failed to connect to Phantom: ${errorMsg}. Please make sure Phantom is unlocked and has at least one account.`);
-          throw connectError;
-        }
-      }
-
-      if (!response.publicKey) {
+      if (!adapter.publicKey) {
         throw new Error('Failed to get public key from Phantom');
       }
 
-      const walletAddress = response.publicKey.toString();
-      console.log('Connected to Phantom wallet:', walletAddress);
+      const walletAddress = adapter.publicKey.toBase58();
+      console.log('✅ Connected to Phantom via adapter:', walletAddress);
 
-      // Process the connection
-      await processPhantomConnection(walletAddress, provider);
+      // Now do the backend authentication
+      await processPhantomConnectionWithAdapter(walletAddress, adapter);
+
     } catch (error: any) {
       console.error('Phantom connection failed:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        name: error.name,
-        stack: error.stack,
-        fullError: error
-      });
 
-      if (error.code === 4001 || error.message?.includes('User rejected')) {
-        setInfoMessage('Connection cancelled by user.');
-        throw new Error('User rejected connection');
-      } else if (error.code === -32002) {
-        setInfoMessage('Phantom is processing another request. Please check your extension or wait a moment and try again.');
-        throw new Error('Request pending');
-      } else if (error.message?.includes('Wallet locked')) {
-        throw error;
-      } else if (error.message === 'Phantom not installed' || error.message === 'Phantom not initialized') {
-        throw error;
-      } else {
-        const errorMsg = error.message || error.toString() || 'Unknown error';
-        console.error('Unhandled Phantom error:', errorMsg);
-
-        if (errorMsg.length < 5 || errorMsg.match(/^[A-Z][a-z]:/)) {
-          setErrorMessage('Phantom wallet connection failed. Please make sure Phantom is unlocked, refresh the page, and try again.');
+      if (error.name === 'WalletNotReadyError') {
+        setInfoMessage('Phantom wallet not found. Please install the Phantom browser extension.');
+        window.open('https://phantom.app/', '_blank');
+      } else if (error.name === 'WalletConnectionError') {
+        if (error.message?.includes('User rejected')) {
+          setInfoMessage('Connection cancelled. Please approve the connection in Phantom.');
         } else {
-          setErrorMessage(`Phantom connection failed: ${errorMsg}`);
+          setErrorMessage('Failed to connect to Phantom. Please make sure Phantom is unlocked and try again.');
         }
-        throw error;
+      } else if (error.message?.includes('-32603')) {
+        setErrorMessage('Phantom service worker disconnected. Please refresh the page and try again.');
+      } else {
+        setErrorMessage(`Phantom connection failed: ${error.message || 'Unknown error'}`);
       }
+
+      throw error;
     }
   };
 
-  const processPhantomConnection = async (walletAddress: string, provider: any) => {
+  const processPhantomConnectionWithAdapter = async (walletAddress: string, adapter: any) => {
     // Initiate connection via backend
     console.log('Initiating wallet connection via backend...');
     const connectionResponse = await initiateWalletConnection('phantom', walletAddress, walletAddress);
-      
-      if (!connectionResponse.success) {
-        throw new Error(`Connection failed: ${connectionResponse.message}`);
-      }
 
-      // Create challenge via Erebus
-      console.log('Creating authentication challenge via Erebus...');
-      const challengeResponse = await createWalletChallenge(walletAddress, 'phantom');
-      
-      // Sign the challenge message
-      console.log('Requesting signature for challenge...');
-      const message = new TextEncoder().encode(challengeResponse.message);
-      const signedMessage = await provider.signMessage(message, 'utf8');
-      
-      // Convert signature to string format expected by Erebus
-      const signature = Array.from(signedMessage.signature).toString();
-      
-      // Verify signature via Erebus
-      console.log('Verifying signature via Erebus...');
-      const verifyResponse = await verifyWalletSignature(
-        challengeResponse.challenge_id, 
-        signature, 
-        walletAddress
-      );
+    if (!connectionResponse.success) {
+      throw new Error(`Connection failed: ${connectionResponse.message}`);
+    }
 
-      if (verifyResponse.success) {
-        // Store authentication data
-        setPublicKey(walletAddress);
-        setWalletConnected(true);
-        localStorage.setItem('walletPublickey', walletAddress);
-        localStorage.setItem('walletType', 'phantom');
-        localStorage.setItem('hasSeenHUD', 'true');
-        localStorage.setItem('sessionToken', verifyResponse.session_token || '');
-        updateAuthTime();
+    // Create challenge via Erebus
+    console.log('Creating authentication challenge via Erebus...');
+    const challengeResponse = await createWalletChallenge(walletAddress, 'phantom');
 
-        console.log('Phantom wallet authenticated successfully via backend!');
-        console.log('🎯 REACHED USER REGISTRATION SECTION');
-        
-        // Register user with Erebus after successful wallet connection
-        try {
-          console.log('👤 Registering user with Erebus...');
-          console.log('📝 Wallet address:', walletAddress);
-          console.log('📝 Wallet chain: solana');
-          console.log('📝 About to import task service...');
-          const { taskService } = await import('../../common/services/task-service');
-          console.log('📝 Task service imported successfully');
-          taskService.setWalletContext(walletAddress, 'solana');
-          console.log('🔗 Task service wallet context set');
-          console.log('📝 About to call registerUser...');
-          const registrationResult = await taskService.registerUser(walletAddress, 'solana');
-          console.log('📤 Registration result:', registrationResult);
-          if (registrationResult.success) {
-            console.log('✅ User registered successfully:', registrationResult.data);
+    // Sign the challenge message using the adapter
+    console.log('Requesting signature for challenge...');
+    const message = new TextEncoder().encode(challengeResponse.message);
+    const signedMessage = await adapter.signMessage(message);
 
-            // Show success message to user
-            setInfoMessage('✅ Account registered successfully! Loading profile...');
+    // Convert signature to string format expected by Erebus
+    const signature = Array.from(signedMessage).toString();
 
-            // Invalidate profile cache
-            localStorage.removeItem('userProfile');
-            localStorage.removeItem('userProfileTimestamp');
+    // Verify signature via Erebus
+    console.log('Verifying signature via Erebus...');
+    const verifyResponse = await verifyWalletSignature(
+      challengeResponse.challenge_id,
+      signature,
+      walletAddress
+    );
 
-            // Dispatch event to trigger profile refresh
-            window.dispatchEvent(new CustomEvent('user-registered', {
-              detail: {
-                walletAddress,
-                network: 'solana'
-              }
-            }));
-          } else {
-            console.warn('⚠️ User registration failed:', registrationResult.error);
-          }
-        } catch (err) {
-          console.warn('⚠️ User registration error:', err);
-          console.error('❌ Full error details:', err);
+    if (verifyResponse.success) {
+      // Store authentication data
+      setPublicKey(walletAddress);
+      setWalletConnected(true);
+      localStorage.setItem('walletPublickey', walletAddress);
+      localStorage.setItem('walletType', 'phantom');
+      localStorage.setItem('hasSeenHUD', 'true');
+      localStorage.setItem('sessionToken', verifyResponse.session_token || '');
+      updateAuthTime();
 
-          const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-          setErrorMessage(`Account registration failed: ${errorMsg}. You can continue, but some features may be limited.`);
+      console.log('✅ Phantom wallet authenticated successfully!');
+
+      // Register user with Erebus
+      try {
+        console.log('👤 Registering user with Erebus...');
+        const { taskService } = await import('../../common/services/task-service');
+        taskService.setWalletContext(walletAddress, 'solana');
+        const registrationResult = await taskService.registerUser(walletAddress, 'solana');
+        if (registrationResult.success) {
+          console.log('✅ User registered successfully:', registrationResult.data);
+          setInfoMessage('✅ Wallet connected and account ready!');
         }
-      } else {
-        throw new Error(`Authentication failed: ${verifyResponse.message}`);
+      } catch (regError) {
+        console.error('Registration error (non-fatal):', regError);
       }
+    } else {
+      throw new Error(verifyResponse.message || 'Signature verification failed');
+    }
   };
 
   const connectMetaMaskWallet = async () => {
