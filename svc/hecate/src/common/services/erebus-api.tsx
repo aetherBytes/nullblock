@@ -151,6 +151,56 @@ export const verifyWalletSignature = async (
   }
 };
 
+// Register wallet user with Erebus
+interface UserRegistrationRequest {
+  source_identifier: string;
+  source_type: {
+    type: string;
+    network: string;
+  };
+  session_token?: string;
+}
+
+interface UserRegistrationResponse {
+  success: boolean;
+  user?: {
+    user_id: string;
+    source_identifier: string;
+    created_at: string;
+  };
+  message?: string;
+}
+
+export const registerWalletUser = async (
+  walletAddress: string,
+  sessionToken: string,
+  network: string = 'solana'
+): Promise<UserRegistrationResponse> => {
+  try {
+    const request: UserRegistrationRequest = {
+      source_identifier: walletAddress,
+      source_type: {
+        type: 'web3_wallet',
+        network: network,
+      },
+      session_token: sessionToken,
+    };
+
+    console.log('Registering wallet user:', request);
+    const response = await axios.post<UserRegistrationResponse>(
+      `${EREBUS_API_BASE_URL}/api/users/register`,
+      request
+    );
+
+    console.log('User registration response:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('Failed to register wallet user:', error);
+    console.error('Registration error details:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
 // Check Erebus health
 export const checkErebusHealth = async (): Promise<any> => {
   try {
