@@ -14,6 +14,7 @@ import NullblockLogo from './NullblockLogo';
 import MemoriesMenu from './MemoriesMenu';
 import SettingsPanel from './SettingsPanel';
 import MemFeed from './MemFeed';
+import VoidOverlay from './VoidOverlay';
 import styles from './hud.module.scss';
 import { Task, TaskCreationRequest } from '../../types/tasks';
 import { UserProfile } from '../../types/user';
@@ -89,6 +90,18 @@ const HUD: React.FC<HUDProps> = ({
   const [showCrossroadsMarketplace, setShowCrossroadsMarketplace] = useState(false);
   const [resetCrossroadsToLanding, setResetCrossroadsToLanding] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+
+  // Void mode state
+  const [hasSeenVoidWelcome, setHasSeenVoidWelcome] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('nullblock_void_welcome_seen') === 'true';
+    }
+    return false;
+  });
+
+  // Detect if we're in void mode (logged in but no tab selected)
+  // Note: We check for void mode during ALL animation phases to prevent old HUD from flickering in
+  const inVoidMode = !!publicKey && mainHudActiveTab === null;
 
   // User profile state
   const { userProfile, isLoading: isLoadingUser } = useUserProfile(publicKey);
@@ -1066,7 +1079,7 @@ const HUD: React.FC<HUDProps> = ({
               </div>
             </div>
           </div>
-          {mainHudActiveTab !== 'canvas' && mainHudActiveTab !== 'crossroads' && mainHudActiveTab !== 'hecate' && (
+          {mainHudActiveTab !== 'canvas' && mainHudActiveTab !== 'crossroads' && mainHudActiveTab !== 'hecate' && !inVoidMode && (
             <div className={styles.defaultTab}>
               <p>Select a tab to view content</p>
             </div>
@@ -1087,7 +1100,13 @@ const HUD: React.FC<HUDProps> = ({
     return '';
   };
 
-  const renderUnifiedNavigation = () => (
+  const renderUnifiedNavigation = () => {
+    // Hide navigation in void mode
+    if (inVoidMode) {
+      return null;
+    }
+
+    return (
     <div className={`${styles.unifiedNavbar} ${getNavbarAnimationClass()}`}>
       {/* Left side - Logo, NULLBLOCK Text, and MEM FEED */}
       <div className={styles.navbarLeft}>
@@ -1274,7 +1293,20 @@ const HUD: React.FC<HUDProps> = ({
         </div>
       )}
     </div>
-  );
+    );
+  };
+
+  // Handle void overlay actions
+  const handleOpenSynapse = () => {
+    setShowSettingsPanel(true);
+  };
+
+  const handleDismissVoidWelcome = () => {
+    setHasSeenVoidWelcome(true);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nullblock_void_welcome_seen', 'true');
+    }
+  };
 
   const renderMainContent = () => (
     <div className={styles.mainContent}>
@@ -1293,6 +1325,16 @@ const HUD: React.FC<HUDProps> = ({
     <div className={`${styles.echoContainer} ${publicKey ? styles[theme] : styles.loggedOut}`}>
       {renderUnifiedNavigation()}
       {renderMainContent()}
+      {/* VoidOverlay only shows after login animation is complete */}
+      {inVoidMode && loginAnimationPhase === 'complete' && (
+        <VoidOverlay
+          onOpenSynapse={handleOpenSynapse}
+          onTabSelect={(tab) => setMainHudActiveTab(tab)}
+          onDisconnect={onDisconnect}
+          showWelcome={!hasSeenVoidWelcome}
+          onDismissWelcome={handleDismissVoidWelcome}
+        />
+      )}
     </div>
   );
 };

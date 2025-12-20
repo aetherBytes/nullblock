@@ -11,9 +11,11 @@ interface MemFeedItem {
 
 interface MemFeedProps {
   items?: MemFeedItem[];
+  minimal?: boolean;
+  scrollSpeed?: 'normal' | 'slow' | 'fast';
 }
 
-const MemFeed: React.FC<MemFeedProps> = ({ items }) => {
+const MemFeed: React.FC<MemFeedProps> = ({ items, minimal = false, scrollSpeed = 'normal' }) => {
   const [showPopup, setShowPopup] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MemFeedItem | null>(null);
 
@@ -121,10 +123,17 @@ This is the seed.
     });
   };
 
+  const containerClasses = [
+    styles.memFeedContainer,
+    minimal && styles.minimal,
+    scrollSpeed === 'slow' && styles.slow,
+    scrollSpeed === 'fast' && styles.fast,
+  ].filter(Boolean).join(' ');
+
   return (
     <>
-      <div className={styles.memFeedContainer}>
-        <div className={styles.memFeedLabel}>MEM FEED:</div>
+      <div className={containerClasses}>
+        {!minimal && <div className={styles.memFeedLabel}>MEM FEED:</div>}
         <div className={styles.memFeedScroller}>
           <div className={styles.memFeedTrack}>
             {feedItems.map((item) => (

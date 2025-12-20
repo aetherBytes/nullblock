@@ -10,6 +10,36 @@
   @media (max-width: 768px) {
     display: none;
   }
+
+  // Minimal mode for void overlay
+  &.minimal {
+    margin-left: 0;
+    gap: 0;
+
+    @media (max-width: 768px) {
+      display: flex;
+    }
+
+    .memFeedItem {
+      font-size: 12px;
+      opacity: 0.8;
+
+      &::before {
+        content: '◆';
+        margin-right: 8px;
+        font-size: 8px;
+      }
+    }
+  }
+
+  // Scroll speed modifiers
+  &.slow .memFeedTrack {
+    animation-duration: 60s;
+  }
+
+  &.fast .memFeedTrack {
+    animation-duration: 15s;
+  }
 }
 
 .memFeedLabel {

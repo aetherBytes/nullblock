@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import StarsCanvas from '@components/stars/stars';
+import { VoidExperience } from '../../components/void-experience';
 import HUD from '../../components/hud/hud';
 import {
   createWalletChallenge,
@@ -183,26 +183,15 @@ const Home: React.FC = () => {
       animationTriggered.current = true;
       console.log('🎬 Starting login animation for new login...');
 
-      // Phase 1: Start with black screen
-      setLoginAnimationPhase('black');
+      // Skip black phase - void is already visible, just transition smoothly
+      // Go directly to 'background' phase to start the transition
+      setLoginAnimationPhase('background');
 
-      // Phase 2: Stars and background fade in together (after 400ms)
-      setTimeout(() => {
-        console.log('🌟🌌 Stars + Background fading in together...');
-        setLoginAnimationPhase('background');
-      }, 400);
-
-      // Phase 3: Navbar flickers in (after 2500ms)
-      setTimeout(() => {
-        console.log('⚡ Navbar flickering in...');
-        setLoginAnimationPhase('navbar');
-      }, 2500);
-
-      // Phase 4: Animation complete (after 4000ms)
+      // Phase 2: Complete the transition (clusters fade in via CSS)
       setTimeout(() => {
         console.log('✅ Login animation complete');
         setLoginAnimationPhase('complete');
-      }, 4000);
+      }, 1500);
     }
 
     // Reset animation when logging out and trigger pre-login animation
@@ -506,7 +495,13 @@ const Home: React.FC = () => {
       if (errorMsg.includes('User rejected')) {
         setInfoMessage('Connection cancelled. Please approve the connection in Phantom.');
       } else if (errorMsg.includes('Unexpected error') || errorMsg.includes('-32603')) {
-        setErrorMessage('Phantom connection failed. Please click the Phantom extension icon to wake it up, then try again.');
+        // Phantom service worker issue - provide helpful triage steps
+        setErrorMessage(
+          'Phantom wallet is not responding. This is usually a browser issue. Try these steps:\n\n' +
+          '1. Quit your browser completely and reopen it\n' +
+          '2. If that doesn\'t work, disable and re-enable the Phantom extension\n' +
+          '3. As a last resort, clear Phantom\'s cache in its settings'
+        );
       } else if (errorMsg.includes('WalletNotReady')) {
         setInfoMessage('Phantom wallet not found. Please install the Phantom browser extension.');
         window.open('https://phantom.app/', '_blank');
@@ -885,7 +880,13 @@ const Home: React.FC = () => {
             : 'none'
         }}
       />
-      <StarsCanvas theme={currentTheme === 'light' ? 'light' : (currentTheme === 'null' ? 'null' : 'null')} loggedIn={!!publicKey} />
+      {/* Void Experience - minimal mode for pre-login, full mode after login */}
+      <VoidExperience
+        publicKey={publicKey}
+        theme={currentTheme}
+        loginAnimationPhase={currentAnimationPhase}
+        minimal={!publicKey || currentAnimationPhase !== 'complete'}
+      />
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`}>
         {/* System status panel moved to HUD component */}
       </div>
