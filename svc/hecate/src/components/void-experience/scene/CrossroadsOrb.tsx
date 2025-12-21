@@ -1,5 +1,5 @@
-import React, { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import React, { useRef, useMemo, useCallback } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 interface CrossroadsOrbProps {
@@ -33,8 +33,8 @@ const createGlowTexture = () => {
   return texture;
 };
 
-// Create a circular particle texture
-const createParticleTexture = () => {
+// Create a circular particle texture with color parameter
+const createParticleTexture = (color: 'black' | 'silver' | 'white') => {
   const size = 64;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -45,10 +45,23 @@ const createParticleTexture = () => {
     size / 2, size / 2, 0,
     size / 2, size / 2, size / 2
   );
-  gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
-  gradient.addColorStop(0.3, 'rgba(0, 0, 0, 0.8)');
-  gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0.4)');
-  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+  if (color === 'black') {
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
+    gradient.addColorStop(0.3, 'rgba(0, 0, 0, 0.8)');
+    gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0.4)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  } else if (color === 'silver') {
+    gradient.addColorStop(0, 'rgba(200, 200, 210, 1)');
+    gradient.addColorStop(0.3, 'rgba(180, 180, 195, 0.8)');
+    gradient.addColorStop(0.6, 'rgba(160, 160, 180, 0.4)');
+    gradient.addColorStop(1, 'rgba(140, 140, 160, 0)');
+  } else {
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+    gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.4)');
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  }
 
   ctx.fillStyle = gradient;
   ctx.beginPath();
@@ -60,75 +73,224 @@ const createParticleTexture = () => {
   return texture;
 };
 
+// Particle data structure for interactive solar particles
+interface SolarParticle {
+  basePosition: THREE.Vector3;
+  currentPosition: THREE.Vector3;
+  targetPosition: THREE.Vector3;
+  velocity: THREE.Vector3;
+  orbitSpeed: number;
+  orbitAxis: THREE.Vector3;
+  phase: number;
+  size: number;
+  type: 'black' | 'silver' | 'white';
+}
+
 const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) => {
   const groupRef = useRef<THREE.Group>(null);
   const sunRef = useRef<THREE.Mesh>(null);
   const glowRef = useRef<THREE.Sprite>(null);
   const glow2Ref = useRef<THREE.Sprite>(null);
-  const particlesRef = useRef<THREE.Points>(null);
-  const outerParticlesRef = useRef<THREE.Points>(null);
+  const blackParticlesRef = useRef<THREE.Points>(null);
+  const silverParticlesRef = useRef<THREE.Points>(null);
+  const whiteParticlesRef = useRef<THREE.Points>(null);
+  const solarFlareRef = useRef<THREE.Points>(null);
+
+  const { camera, raycaster, pointer } = useThree();
+  const mouseWorldPos = useRef(new THREE.Vector3());
+  const isHovered = useRef(false);
 
   const sunRadius = 1.6;
+  const interactionRadius = 4.0;
+  const avoidanceStrength = 0.8;
+  const returnSpeed = 0.05;
 
   // Create textures once
   const glowTexture = useMemo(() => createGlowTexture(), []);
-  const particleTexture = useMemo(() => createParticleTexture(), []);
+  const blackTexture = useMemo(() => createParticleTexture('black'), []);
+  const silverTexture = useMemo(() => createParticleTexture('silver'), []);
+  const whiteTexture = useMemo(() => createParticleTexture('white'), []);
 
-  // Sparse ephemeral particles - drifting randomly
-  const particles = useMemo(() => {
-    const count = 80;
-    const positions = new Float32Array(count * 3);
-    const offsets = new Float32Array(count * 3); // For random drift
-
+  // Generate particles with orbital properties
+  const generateParticles = useCallback((
+    count: number,
+    minRadius: number,
+    maxRadius: number,
+    type: 'black' | 'silver' | 'white'
+  ): SolarParticle[] => {
+    const particles: SolarParticle[] = [];
     for (let i = 0; i < count; i++) {
-      const i3 = i * 3;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
-      const r = sunRadius + 0.2 + Math.random() * 2.0;
+      const r = minRadius + Math.random() * (maxRadius - minRadius);
 
-      positions[i3] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      positions[i3 + 2] = r * Math.cos(phi);
+      const pos = new THREE.Vector3(
+        r * Math.sin(phi) * Math.cos(theta),
+        r * Math.sin(phi) * Math.sin(theta),
+        r * Math.cos(phi)
+      );
 
-      // Random drift directions
-      offsets[i3] = (Math.random() - 0.5) * 2;
-      offsets[i3 + 1] = (Math.random() - 0.5) * 2;
-      offsets[i3 + 2] = (Math.random() - 0.5) * 2;
+      // Random orbit axis for swirling effect
+      const orbitAxis = new THREE.Vector3(
+        Math.random() - 0.5,
+        Math.random() - 0.5,
+        Math.random() - 0.5
+      ).normalize();
+
+      particles.push({
+        basePosition: pos.clone(),
+        currentPosition: pos.clone(),
+        targetPosition: pos.clone(),
+        velocity: new THREE.Vector3(),
+        orbitSpeed: 0.1 + Math.random() * 0.3,
+        orbitAxis,
+        phase: Math.random() * Math.PI * 2,
+        size: 0.08 + Math.random() * 0.12,
+        type,
+      });
     }
+    return particles;
+  }, []);
 
-    return { positions, offsets };
+  // Black particles - inner layer
+  const blackParticles = useMemo(() =>
+    generateParticles(60, sunRadius + 0.1, sunRadius + 1.5, 'black'),
+    [generateParticles, sunRadius]
+  );
+
+  // Silver particles - mid layer (solar fissures)
+  const silverParticles = useMemo(() =>
+    generateParticles(40, sunRadius + 0.3, sunRadius + 2.0, 'silver'),
+    [generateParticles, sunRadius]
+  );
+
+  // White particles - outer rays
+  const whiteParticles = useMemo(() =>
+    generateParticles(25, sunRadius + 0.5, sunRadius + 2.5, 'white'),
+    [generateParticles, sunRadius]
+  );
+
+  // Solar flare particles - dramatic rays shooting out
+  const solarFlares = useMemo(() => {
+    const flares: SolarParticle[] = [];
+    const rayCount = 8;
+    const particlesPerRay = 12;
+
+    for (let ray = 0; ray < rayCount; ray++) {
+      const rayTheta = (ray / rayCount) * Math.PI * 2 + Math.random() * 0.3;
+      const rayPhi = Math.PI / 2 + (Math.random() - 0.5) * 0.8;
+
+      for (let p = 0; p < particlesPerRay; p++) {
+        const t = p / particlesPerRay;
+        const r = sunRadius + 0.2 + t * 3.0;
+        const spread = t * 0.3;
+
+        const pos = new THREE.Vector3(
+          r * Math.sin(rayPhi + (Math.random() - 0.5) * spread) * Math.cos(rayTheta + (Math.random() - 0.5) * spread),
+          r * Math.sin(rayPhi + (Math.random() - 0.5) * spread) * Math.sin(rayTheta + (Math.random() - 0.5) * spread),
+          r * Math.cos(rayPhi + (Math.random() - 0.5) * spread)
+        );
+
+        flares.push({
+          basePosition: pos.clone(),
+          currentPosition: pos.clone(),
+          targetPosition: pos.clone(),
+          velocity: new THREE.Vector3(),
+          orbitSpeed: 0.05 + Math.random() * 0.1,
+          orbitAxis: new THREE.Vector3(0, 1, 0),
+          phase: Math.random() * Math.PI * 2,
+          size: 0.06 + (1 - t) * 0.1,
+          type: Math.random() > 0.5 ? 'silver' : 'white',
+        });
+      }
+    }
+    return flares;
   }, [sunRadius]);
 
-  // Outer wisps
-  const outerParticles = useMemo(() => {
-    const count = 50;
-    const positions = new Float32Array(count * 3);
-    const offsets = new Float32Array(count * 3);
+  // Create Float32Arrays for GPU
+  const blackPositions = useMemo(() => new Float32Array(blackParticles.length * 3), [blackParticles]);
+  const silverPositions = useMemo(() => new Float32Array(silverParticles.length * 3), [silverParticles]);
+  const whitePositions = useMemo(() => new Float32Array(whiteParticles.length * 3), [whiteParticles]);
+  const flarePositions = useMemo(() => new Float32Array(solarFlares.length * 3), [solarFlares]);
 
-    for (let i = 0; i < count; i++) {
+  // Update mouse world position
+  const updateMousePosition = useCallback(() => {
+    if (!groupRef.current) return;
+
+    raycaster.setFromCamera(pointer, camera);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+    raycaster.ray.intersectPlane(plane, mouseWorldPos.current);
+
+    // Transform to group local space
+    const groupWorldPos = new THREE.Vector3();
+    groupRef.current.getWorldPosition(groupWorldPos);
+    mouseWorldPos.current.sub(groupWorldPos);
+  }, [camera, raycaster, pointer]);
+
+  // Animate particle with swirling orbit and mouse avoidance
+  const animateParticle = useCallback((
+    particle: SolarParticle,
+    time: number,
+    deltaTime: number
+  ) => {
+    // Orbital swirl around base position
+    const orbitAngle = time * particle.orbitSpeed + particle.phase;
+    const orbitRadius = 0.15;
+
+    // Create swirling motion
+    const swirl = new THREE.Vector3(
+      Math.sin(orbitAngle) * orbitRadius,
+      Math.cos(orbitAngle * 1.3) * orbitRadius * 0.5,
+      Math.sin(orbitAngle * 0.7) * orbitRadius * 0.8
+    );
+
+    // Apply orbit axis rotation
+    const quaternion = new THREE.Quaternion();
+    quaternion.setFromAxisAngle(particle.orbitAxis, orbitAngle * 0.2);
+    swirl.applyQuaternion(quaternion);
+
+    // Set target to base + swirl
+    particle.targetPosition.copy(particle.basePosition).add(swirl);
+
+    // Mouse avoidance
+    if (isHovered.current) {
+      const toMouse = new THREE.Vector3().subVectors(particle.currentPosition, mouseWorldPos.current);
+      const distance = toMouse.length();
+
+      if (distance < interactionRadius && distance > 0.1) {
+        const avoidance = toMouse.normalize().multiplyScalar(
+          avoidanceStrength * (1 - distance / interactionRadius)
+        );
+        particle.targetPosition.add(avoidance);
+      }
+    }
+
+    // Smooth interpolation toward target
+    particle.currentPosition.lerp(particle.targetPosition, returnSpeed + deltaTime * 2);
+
+    return particle.currentPosition;
+  }, [interactionRadius, avoidanceStrength, returnSpeed]);
+
+  // Update positions array from particles
+  const updatePositionsArray = useCallback((
+    particles: SolarParticle[],
+    positions: Float32Array,
+    time: number,
+    deltaTime: number
+  ) => {
+    for (let i = 0; i < particles.length; i++) {
+      const pos = animateParticle(particles[i], time, deltaTime);
       const i3 = i * 3;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const r = sunRadius + 2.0 + Math.random() * 2.5;
-
-      positions[i3] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      positions[i3 + 2] = r * Math.cos(phi);
-
-      offsets[i3] = (Math.random() - 0.5) * 2;
-      offsets[i3 + 1] = (Math.random() - 0.5) * 2;
-      offsets[i3 + 2] = (Math.random() - 0.5) * 2;
+      positions[i3] = pos.x;
+      positions[i3 + 1] = pos.y;
+      positions[i3 + 2] = pos.z;
     }
+  }, [animateParticle]);
 
-    return { positions, offsets };
-  }, [sunRadius]);
-
-  // Store base positions for drift animation
-  const basePositions = useRef<Float32Array | null>(null);
-  const outerBasePositions = useRef<Float32Array | null>(null);
-
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const time = state.clock.elapsedTime;
+
+    updateMousePosition();
 
     if (groupRef.current) {
       groupRef.current.position.y = position[1] + Math.sin(time * 0.5) * 0.1;
@@ -148,58 +310,51 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
       glow2Ref.current.scale.set(pulse, pulse, 1);
     }
 
-    // Animate particles with ephemeral random drift
-    if (particlesRef.current) {
-      if (!basePositions.current) {
-        basePositions.current = new Float32Array(particles.positions);
-      }
+    // Update all particle systems
+    updatePositionsArray(blackParticles, blackPositions, time, delta);
+    updatePositionsArray(silverParticles, silverPositions, time, delta);
+    updatePositionsArray(whiteParticles, whitePositions, time, delta);
+    updatePositionsArray(solarFlares, flarePositions, time, delta);
 
-      const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
-      const count = positions.length / 3;
-
-      for (let i = 0; i < count; i++) {
-        const i3 = i * 3;
-
-        // Gentle random drift with noise
-        const driftX = Math.sin(time * 0.3 + i * 0.5) * particles.offsets[i3] * 0.15;
-        const driftY = Math.cos(time * 0.4 + i * 0.7) * particles.offsets[i3 + 1] * 0.15;
-        const driftZ = Math.sin(time * 0.35 + i * 0.6) * particles.offsets[i3 + 2] * 0.15;
-
-        positions[i3] = basePositions.current[i3] + driftX;
-        positions[i3 + 1] = basePositions.current[i3 + 1] + driftY;
-        positions[i3 + 2] = basePositions.current[i3 + 2] + driftZ;
-      }
-      particlesRef.current.geometry.attributes.position.needsUpdate = true;
-      particlesRef.current.rotation.y = time * 0.02;
+    // Notify GPU of position updates
+    if (blackParticlesRef.current) {
+      blackParticlesRef.current.geometry.attributes.position.needsUpdate = true;
+      blackParticlesRef.current.rotation.y = time * 0.02;
     }
-
-    // Outer particles drift
-    if (outerParticlesRef.current) {
-      if (!outerBasePositions.current) {
-        outerBasePositions.current = new Float32Array(outerParticles.positions);
-      }
-
-      const positions = outerParticlesRef.current.geometry.attributes.position.array as Float32Array;
-      const count = positions.length / 3;
-
-      for (let i = 0; i < count; i++) {
-        const i3 = i * 3;
-
-        const driftX = Math.sin(time * 0.2 + i * 0.8) * outerParticles.offsets[i3] * 0.2;
-        const driftY = Math.cos(time * 0.25 + i * 0.9) * outerParticles.offsets[i3 + 1] * 0.2;
-        const driftZ = Math.sin(time * 0.22 + i * 0.7) * outerParticles.offsets[i3 + 2] * 0.2;
-
-        positions[i3] = outerBasePositions.current[i3] + driftX;
-        positions[i3 + 1] = outerBasePositions.current[i3 + 1] + driftY;
-        positions[i3 + 2] = outerBasePositions.current[i3 + 2] + driftZ;
-      }
-      outerParticlesRef.current.geometry.attributes.position.needsUpdate = true;
-      outerParticlesRef.current.rotation.y = -time * 0.01;
+    if (silverParticlesRef.current) {
+      silverParticlesRef.current.geometry.attributes.position.needsUpdate = true;
+      silverParticlesRef.current.rotation.y = -time * 0.015;
+    }
+    if (whiteParticlesRef.current) {
+      whiteParticlesRef.current.geometry.attributes.position.needsUpdate = true;
+      whiteParticlesRef.current.rotation.y = time * 0.01;
+    }
+    if (solarFlareRef.current) {
+      solarFlareRef.current.geometry.attributes.position.needsUpdate = true;
+      solarFlareRef.current.rotation.y = time * 0.008;
     }
   });
 
+  const handlePointerEnter = useCallback(() => {
+    isHovered.current = true;
+  }, []);
+
+  const handlePointerLeave = useCallback(() => {
+    isHovered.current = false;
+  }, []);
+
   return (
     <group ref={groupRef} position={position}>
+      {/* Invisible interaction sphere */}
+      <mesh
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
+        visible={false}
+      >
+        <sphereGeometry args={[sunRadius + 3, 16, 16]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
+
       {/* Corona glow - back layer */}
       <sprite ref={glow2Ref} scale={[12, 12, 1]}>
         <spriteMaterial
@@ -228,45 +383,87 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
         <meshBasicMaterial color="#000000" />
       </mesh>
 
-      {/* Ephemeral drifting particles - circular */}
-      <points ref={particlesRef}>
+      {/* Black particles - inner swirl */}
+      <points ref={blackParticlesRef}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={particles.positions.length / 3}
-            array={particles.positions}
+            count={blackParticles.length}
+            array={blackPositions}
             itemSize={3}
           />
         </bufferGeometry>
         <pointsMaterial
-          map={particleTexture}
-          size={0.15}
+          map={blackTexture}
+          size={0.18}
           transparent
-          opacity={0.85}
+          opacity={0.9}
           sizeAttenuation
           depthWrite={false}
           blending={THREE.NormalBlending}
         />
       </points>
 
-      {/* Outer wisps - circular */}
-      <points ref={outerParticlesRef}>
+      {/* Silver particles - solar fissures */}
+      <points ref={silverParticlesRef}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={outerParticles.positions.length / 3}
-            array={outerParticles.positions}
+            count={silverParticles.length}
+            array={silverPositions}
             itemSize={3}
           />
         </bufferGeometry>
         <pointsMaterial
-          map={particleTexture}
+          map={silverTexture}
+          size={0.14}
+          transparent
+          opacity={0.85}
+          sizeAttenuation
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+
+      {/* White particles - bright rays */}
+      <points ref={whiteParticlesRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={whiteParticles.length}
+            array={whitePositions}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          map={whiteTexture}
           size={0.12}
+          transparent
+          opacity={0.9}
+          sizeAttenuation
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+
+      {/* Solar flares - dramatic rays */}
+      <points ref={solarFlareRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={solarFlares.length}
+            array={flarePositions}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          map={silverTexture}
+          size={0.1}
           transparent
           opacity={0.7}
           sizeAttenuation
           depthWrite={false}
-          blending={THREE.NormalBlending}
+          blending={THREE.AdditiveBlending}
         />
       </points>
 
