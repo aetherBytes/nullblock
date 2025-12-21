@@ -36,41 +36,12 @@ const ClusterPanel: React.FC<ClusterPanelProps> = ({
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch mock logs for the cluster
+  // Real log fetching would connect to an API here
   useEffect(() => {
-    const fetchLogs = async () => {
-      setIsLoading(true);
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Generate mock logs based on cluster
-      const mockLogs: LogEntry[] = [
-        {
-          id: `${cluster.id}-1`,
-          timestamp: new Date(Date.now() - 5000).toISOString(),
-          message: `${cluster.name} initialized successfully`,
-          level: 'success',
-        },
-        {
-          id: `${cluster.id}-2`,
-          timestamp: new Date(Date.now() - 30000).toISOString(),
-          message: `Processing request batch #${Math.floor(Math.random() * 1000)}`,
-          level: 'info',
-        },
-        {
-          id: `${cluster.id}-3`,
-          timestamp: new Date(Date.now() - 60000).toISOString(),
-          message: `Health check passed`,
-          level: 'info',
-        },
-      ];
-
-      setLogs(mockLogs);
-      setIsLoading(false);
-    };
-
-    fetchLogs();
-  }, [cluster.id, cluster.name]);
+    // No mock data - show empty state until real logging is implemented
+    setIsLoading(false);
+    setLogs([]);
+  }, [cluster.id]);
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);

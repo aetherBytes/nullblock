@@ -124,77 +124,29 @@ class EventSystem {
     }
   }
 
-  // Event Handlers
-  private async handlePriceChange(event: TaskEvent): Promise<void> {
-    const { symbol, price, change } = event.data;
-    console.log(`💰 Price change: ${symbol} now at ${price} (${change})`);
-
-    // Example: Create arbitrage task if significant price movement
-    if (Math.abs(parseFloat(change.replace('%', ''))) > 5) {
-      await this.publishEvent({
-        type: 'market_opportunity',
-        data: {
-          type: 'arbitrage',
-          symbol,
-          price,
-          change,
-          urgency: 'high'
-        },
-        source: 'price_monitor',
-        timestamp: new Date(),
-        processed: false
-      });
-    }
+  // Event Handlers - infrastructure for future real event processing
+  private async handlePriceChange(_event: TaskEvent): Promise<void> {
+    // Reserved for real price feed integration
   }
 
-  private async handleMarketOpportunity(event: TaskEvent): Promise<void> {
-    const { type, urgency } = event.data;
-    console.log(`📈 Market opportunity detected: ${type} (${urgency})`);
-
-    // Auto-create tasks for high urgency opportunities
-    if (urgency === 'high') {
-      // This would trigger task creation through the task service
-      console.log(`🚀 Auto-creating task for ${type} opportunity`);
-    }
+  private async handleMarketOpportunity(_event: TaskEvent): Promise<void> {
+    // Reserved for real market opportunity detection
   }
 
-  private async handleUserInteraction(event: TaskEvent): Promise<void> {
-    const { action, context } = event.data;
-    console.log(`👤 User interaction: ${action}`);
-
-    // Update motivation state based on user interactions
-    if (action === 'chat_message') {
-      // Analyze user intent and suggest tasks
-      console.log('🧠 Analyzing user intent for task suggestions');
-    }
+  private async handleUserInteraction(_event: TaskEvent): Promise<void> {
+    // Reserved for real user interaction analysis
   }
 
-  private async handleAgentCompletion(event: TaskEvent): Promise<void> {
-    const { agentName, taskId, result } = event.data;
-    console.log(`🤖 Agent ${agentName} completed task ${taskId}: ${result}`);
-
-    // Trigger follow-up tasks if needed
-    if (result === 'success') {
-      console.log('✅ Checking for follow-up tasks');
-    }
+  private async handleAgentCompletion(_event: TaskEvent): Promise<void> {
+    // Reserved for real agent completion handling
   }
 
-  private async handleSystemAlert(event: TaskEvent): Promise<void> {
-    const { level, message } = event.data;
-    console.log(`🚨 System alert (${level}): ${message}`);
-
-    // Create maintenance or monitoring tasks for critical alerts
-    if (level === 'critical') {
-      console.log('🔧 Creating emergency response task');
-    }
+  private async handleSystemAlert(_event: TaskEvent): Promise<void> {
+    // Reserved for real system alert handling
   }
 
-  private async handleThresholdBreach(event: TaskEvent): Promise<void> {
-    const { metric, value, threshold } = event.data;
-    console.log(`⚠️ Threshold breach: ${metric} = ${value} (threshold: ${threshold})`);
-
-    // Auto-create rebalancing or adjustment tasks
-    console.log('📊 Creating adjustment task for threshold breach');
+  private async handleThresholdBreach(_event: TaskEvent): Promise<void> {
+    // Reserved for real threshold monitoring
   }
 
   // Subscriber Notification
@@ -212,61 +164,9 @@ class EventSystem {
     }
   }
 
-  // Automation Rules
+  // Automation Rules - infrastructure for future real automation
   private initializeDefaultRules(): void {
-    // Rule: Auto-create arbitrage tasks on price opportunities
-    this.addRule({
-      id: 'auto_arbitrage',
-      name: 'Auto Arbitrage Detection',
-      description: 'Automatically create arbitrage tasks when profitable opportunities are detected',
-      eventType: 'market_opportunity',
-      condition: (event) => event.data.type === 'arbitrage' && event.data.profit > 0.1,
-      action: async (event) => {
-        return {
-          name: `Arbitrage Opportunity: ${event.data.symbol}`,
-          description: `Automated arbitrage task for ${event.data.symbol} with ${event.data.profit}% profit potential`,
-          type: 'arbitrage',
-          category: 'event-triggered',
-          priority: 'high',
-          parameters: {
-            symbol: event.data.symbol,
-            expectedProfit: event.data.profit,
-            exchanges: event.data.exchanges
-          },
-          autoStart: true
-        };
-      },
-      enabled: true,
-      priority: 1,
-      cooldown: 30000 // 30 seconds
-    });
-
-    // Rule: Auto-create monitoring tasks for system alerts
-    this.addRule({
-      id: 'auto_monitoring',
-      name: 'Auto System Monitoring',
-      description: 'Create monitoring tasks for critical system alerts',
-      eventType: 'system_alert',
-      condition: (event) => event.data.level === 'critical',
-      action: async (event) => {
-        return {
-          name: `System Monitoring: ${event.data.component}`,
-          description: `Monitor and resolve critical issue: ${event.data.message}`,
-          type: 'monitoring',
-          category: 'event-triggered',
-          priority: 'urgent',
-          parameters: {
-            component: event.data.component,
-            issue: event.data.message,
-            severity: event.data.level
-          },
-          autoStart: true
-        };
-      },
-      enabled: true,
-      priority: 2,
-      cooldown: 60000 // 1 minute
-    });
+    // No default rules - add real automation rules as needed
   }
 
   addRule(rule: EventRule): void {
