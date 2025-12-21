@@ -7,13 +7,13 @@ interface ApiKeyManagementProps {
   userId: string;
 }
 
-const PROVIDERS: { value: ApiKeyProvider; label: string }[] = [
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic' },
-  { value: 'groq', label: 'Groq' },
-  { value: 'openrouter', label: 'OpenRouter' },
-  { value: 'huggingface', label: 'HuggingFace' },
-  { value: 'ollama', label: 'Ollama (Local)' },
+const PROVIDERS: { value: ApiKeyProvider; label: string; supported: boolean; note?: string }[] = [
+  { value: 'openrouter', label: 'OpenRouter', supported: true, note: 'Get your key at openrouter.ai' },
+  { value: 'openai', label: 'OpenAI', supported: false, note: 'Coming soon' },
+  { value: 'anthropic', label: 'Anthropic', supported: false, note: 'Coming soon' },
+  { value: 'groq', label: 'Groq', supported: false, note: 'Coming soon' },
+  { value: 'huggingface', label: 'HuggingFace', supported: false, note: 'Coming soon' },
+  { value: 'ollama', label: 'Ollama (Local)', supported: false, note: 'Coming soon' },
 ];
 
 const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({ userId }) => {
@@ -173,12 +173,15 @@ const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({ userId }) => {
               onChange={(e) => setSelectedProvider(e.target.value as ApiKeyProvider)}
               disabled={isSubmitting}
             >
-              {PROVIDERS.map((provider) => (
+              {PROVIDERS.filter(p => p.supported).map((provider) => (
                 <option key={provider.value} value={provider.value}>
                   {provider.label}
                 </option>
               ))}
             </select>
+            <span className={styles.providerHint}>
+              🌐 Get your free API key at <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer">openrouter.ai</a>
+            </span>
           </div>
 
           <div className={styles.formGroup}>
@@ -247,7 +250,11 @@ const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({ userId }) => {
         <div className={styles.emptyState}>
           <span className={styles.emptyIcon}>🔑</span>
           <p>No API keys configured</p>
-          <p className={styles.emptyHint}>Add your first API key to get started</p>
+          <p className={styles.emptyHint}>
+            Add your OpenRouter API key for unlimited access to all models.
+            <br />
+            Without a key, you have 100 free calls per day.
+          </p>
         </div>
       )}
 

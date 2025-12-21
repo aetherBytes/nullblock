@@ -15,6 +15,17 @@ use tracing::{info, error, warn};
 use tracing_subscriber::{prelude::*, EnvFilter, fmt, Layer};
 use tracing_appender::{rolling, non_blocking};
 
+fn load_env() {
+    // Try .env.dev first (development), then .env (production)
+    if dotenvy::from_filename(".env.dev").is_ok() {
+        println!("📁 Loaded environment from .env.dev");
+    } else if dotenvy::dotenv().is_ok() {
+        println!("📁 Loaded environment from .env");
+    } else {
+        println!("⚠️ No .env file found, using system environment variables");
+    }
+}
+
 
 // Import our modules
 mod database;
@@ -334,6 +345,9 @@ fn setup_logging() -> tracing_appender::non_blocking::WorkerGuard {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Load environment variables from .env.dev or .env first
+    load_env();
+
     let _guard = setup_logging();
 
     info!("🚀 Starting Erebus server...");

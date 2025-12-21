@@ -65,7 +65,7 @@ Together, we shape the future of autonomous commerce.
 ### Production-Ready ✅
 
 - **NullBlock.protocols** (`/svc/nullblock-protocols/`): Multi-protocol server (A2A, MCP)
-- **NullBlock.agents** (`/svc/nullblock-agents/`): Agent suite (Hecate orchestrator, trading, monitoring, LLM)
+- **NullBlock.agents** (`/svc/nullblock-agents/`): Agent suite (HECATE vessel AI, trading, monitoring, LLM)
 - **Erebus** (`/svc/erebus/`): Unified routing server
 - **Crossroads** (`/svc/erebus/src/resources/crossroads/`): Marketplace subsystem
 - **Hecate Frontend** (`/svc/hecate/`): React interface with real-time agent discovery
@@ -194,13 +194,18 @@ Supports: **Web3 Wallets**, **API Keys**, **Email Auth**, **OAuth**, **System Ag
 
 **📖 For detailed agent documentation, see [AGENTS.md](./AGENTS.md)**
 
-### Hecate Agent
+### HECATE Agent
 
-- **Purpose**: Main conversational interface, orchestration engine
+**HECATE** = Harmonic Exploration Companion & Autonomous Threshold Entity
+
+- **Identity**: Von Neumann-class vessel AI loaded into the MK1 hull
+- **Purpose**: Your exploration companion guiding you through the agent mesh
+- **Voice**: Calm authority with dry wit, addresses user as "visitor"
 - **Default Model**: `cognitivecomputations/dolphin3.0-mistral-24b:free` (override via `DEFAULT_LLM_MODEL` env var)
-- **Features**: Multi-model LLM, intent analysis, delegation, task management
+- **Features**: Multi-model LLM, void navigation, cluster detection, engram storage
 - **Timeout**: 5-minute for thinking models (configurable via `LLM_REQUEST_TIMEOUT_MS`)
 - **Max Tokens**: 16384 (required for base64 image responses)
+- **Signature**: "The crossroads await, visitor. Shall we explore?"
 
 ### LLM Factory & Model Selection
 
@@ -446,7 +451,7 @@ THE VOID
 ├── NeuralLines (constellations) - Minor nodes representing Tools/Services/Servers
 ├── CrossroadsOrb (center) - The Crossroads Bazaar marketplace hub
 └── AgentClusters (major nodes) - AI Agents orbiting the center
-    ├── Hecate (orchestrator) - Gold glow
+    ├── HECATE (vessel AI) - Gold glow
     ├── Siren (marketing) - Purple accent
     └── Erebus (router) - Blue accent
 ```

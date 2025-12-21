@@ -159,3 +159,100 @@ pub struct DecryptedApiKeysResponse {
     pub error: Option<String>,
     pub timestamp: String,
 }
+
+// ==================== Agent API Keys ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct AgentApiKey {
+    pub id: Uuid,
+    pub agent_name: String,
+    pub provider: String,
+    pub encrypted_key: Vec<u8>,
+    pub encryption_iv: Vec<u8>,
+    pub encryption_tag: Vec<u8>,
+    pub key_prefix: Option<String>,
+    pub key_suffix: Option<String>,
+    pub key_name: Option<String>,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub usage_count: i64,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AgentApiKeyResponse {
+    pub id: String,
+    pub agent_name: String,
+    pub provider: String,
+    pub key_prefix: Option<String>,
+    pub key_suffix: Option<String>,
+    pub key_name: Option<String>,
+    pub last_used_at: Option<String>,
+    pub usage_count: i64,
+    pub is_active: bool,
+}
+
+impl From<AgentApiKey> for AgentApiKeyResponse {
+    fn from(key: AgentApiKey) -> Self {
+        Self {
+            id: key.id.to_string(),
+            agent_name: key.agent_name,
+            provider: key.provider,
+            key_prefix: key.key_prefix,
+            key_suffix: key.key_suffix,
+            key_name: key.key_name,
+            last_used_at: key.last_used_at.map(|dt| dt.to_rfc3339()),
+            usage_count: key.usage_count,
+            is_active: key.is_active,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateAgentApiKeyRequest {
+    pub agent_name: String,
+    pub provider: String,
+    pub api_key: String,
+    pub key_name: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DecryptedAgentApiKeyResponse {
+    pub success: bool,
+    pub agent_name: String,
+    pub provider: String,
+    pub api_key: Option<String>,
+    pub error: Option<String>,
+    pub timestamp: String,
+}
+
+// ==================== Rate Limits ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct UserRateLimit {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub agent_name: String,
+    pub daily_count: i32,
+    pub last_reset_date: chrono::NaiveDate,
+    pub daily_limit: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RateLimitStatus {
+    pub allowed: bool,
+    pub remaining: i32,
+    pub limit: i32,
+    pub resets_at: String,  // Midnight UTC
+}
+
+#[derive(Debug, Serialize)]
+pub struct RateLimitResponse {
+    pub success: bool,
+    pub data: Option<RateLimitStatus>,
+    pub error: Option<String>,
+    pub timestamp: String,
+}

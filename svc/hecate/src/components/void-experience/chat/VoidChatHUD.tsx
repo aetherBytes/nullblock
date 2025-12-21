@@ -137,7 +137,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Speak to the void..."
+              placeholder="Transmit to HECATE..."
               className={styles.voidInput}
               disabled={isProcessing}
               rows={1}

@@ -1,6 +1,9 @@
-use super::models::{ApiKey, ApiKeyProvider, CreateApiKeyRequest, DecryptedApiKey, UpdateApiKeyRequest};
+use super::models::{
+    AgentApiKey, ApiKey, ApiKeyProvider, CreateAgentApiKeyRequest, CreateApiKeyRequest,
+    DecryptedApiKey, RateLimitStatus, UpdateApiKeyRequest, UserRateLimit,
+};
 use crate::crypto::{EncryptedData, EncryptionService};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use sqlx::{FromRow, PgPool};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -261,5 +264,234 @@ impl ApiKeyService {
         .map_err(|e| format!("Failed to increment usage: {}", e))?;
 
         Ok(())
+    }
+
+    // ==================== Agent API Keys ====================
+
+    pub async fn create_or_update_agent_api_key(
+        &self,
+        request: CreateAgentApiKeyRequest,
+    ) -> Result<AgentApiKey, String> {
+        let encrypted = self
+            .encryption
+            .encrypt(&request.api_key)
+            .map_err(|e| format!("Encryption failed: {}", e))?;
+
+        let (key_prefix, key_suffix) = EncryptionService::extract_prefix_suffix(&request.api_key);
+
+        // Check if key exists for this agent+provider
+        let existing = sqlx::query_as::<_, (Uuid,)>(
+            "SELECT id FROM agent_api_keys WHERE agent_name = $1 AND provider = $2"
+        )
+        .bind(&request.agent_name)
+        .bind(&request.provider)
+        .fetch_optional(&*self.pool)
+        .await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+        if let Some((existing_id,)) = existing {
+            // Update existing key
+            let row = sqlx::query_as::<_, AgentApiKey>(
+                r#"
+                UPDATE agent_api_keys
+                SET encrypted_key = $1, encryption_iv = $2, encryption_tag = $3,
+                    key_prefix = $4, key_suffix = $5, key_name = $6,
+                    is_active = true, updated_at = NOW()
+                WHERE id = $7
+                RETURNING *
+                "#
+            )
+            .bind(&encrypted.ciphertext)
+            .bind(&encrypted.iv)
+            .bind(&encrypted.tag)
+            .bind(&key_prefix)
+            .bind(&key_suffix)
+            .bind(&request.key_name)
+            .bind(&existing_id)
+            .fetch_one(&*self.pool)
+            .await
+            .map_err(|e| format!("Failed to update agent API key: {}", e))?;
+
+            Ok(row)
+        } else {
+            // Create new key
+            let row = sqlx::query_as::<_, AgentApiKey>(
+                r#"
+                INSERT INTO agent_api_keys
+                (agent_name, provider, encrypted_key, encryption_iv, encryption_tag, key_prefix, key_suffix, key_name)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                RETURNING *
+                "#
+            )
+            .bind(&request.agent_name)
+            .bind(&request.provider)
+            .bind(&encrypted.ciphertext)
+            .bind(&encrypted.iv)
+            .bind(&encrypted.tag)
+            .bind(&key_prefix)
+            .bind(&key_suffix)
+            .bind(&request.key_name)
+            .fetch_one(&*self.pool)
+            .await
+            .map_err(|e| format!("Failed to create agent API key: {}", e))?;
+
+            Ok(row)
+        }
+    }
+
+    pub async fn get_decrypted_agent_key(
+        &self,
+        agent_name: &str,
+        provider: &str,
+    ) -> Result<Option<String>, String> {
+        let row = sqlx::query_as::<_, AgentApiKey>(
+            r#"
+            SELECT * FROM agent_api_keys
+            WHERE agent_name = $1 AND provider = $2 AND is_active = true
+            "#
+        )
+        .bind(agent_name)
+        .bind(provider)
+        .fetch_optional(&*self.pool)
+        .await
+        .map_err(|e| format!("Failed to fetch agent API key: {}", e))?;
+
+        match row {
+            Some(key) => {
+                let encrypted_data = EncryptedData {
+                    ciphertext: key.encrypted_key,
+                    iv: key.encryption_iv,
+                    tag: key.encryption_tag,
+                };
+
+                let decrypted = self
+                    .encryption
+                    .decrypt(&encrypted_data)
+                    .map_err(|e| format!("Decryption failed: {}", e))?;
+
+                // Update usage stats
+                let _ = sqlx::query(
+                    "UPDATE agent_api_keys SET usage_count = usage_count + 1, last_used_at = NOW() WHERE agent_name = $1 AND provider = $2"
+                )
+                .bind(agent_name)
+                .bind(provider)
+                .execute(&*self.pool)
+                .await;
+
+                Ok(Some(decrypted))
+            }
+            None => Ok(None),
+        }
+    }
+
+    // ==================== Rate Limits ====================
+
+    pub async fn check_rate_limit(
+        &self,
+        user_id: Uuid,
+        agent_name: &str,
+    ) -> Result<RateLimitStatus, String> {
+        let today = Utc::now().date_naive();
+
+        // Get or create rate limit record
+        let record = sqlx::query_as::<_, UserRateLimit>(
+            r#"
+            INSERT INTO user_rate_limits (user_id, agent_name, daily_count, last_reset_date)
+            VALUES ($1, $2, 0, $3)
+            ON CONFLICT (user_id, agent_name)
+            DO UPDATE SET
+                daily_count = CASE
+                    WHEN user_rate_limits.last_reset_date < $3 THEN 0
+                    ELSE user_rate_limits.daily_count
+                END,
+                last_reset_date = CASE
+                    WHEN user_rate_limits.last_reset_date < $3 THEN $3
+                    ELSE user_rate_limits.last_reset_date
+                END,
+                updated_at = NOW()
+            RETURNING *
+            "#
+        )
+        .bind(&user_id)
+        .bind(agent_name)
+        .bind(&today)
+        .fetch_one(&*self.pool)
+        .await
+        .map_err(|e| format!("Failed to check rate limit: {}", e))?;
+
+        let remaining = record.daily_limit - record.daily_count;
+        let allowed = remaining > 0;
+
+        // Calculate next midnight UTC
+        let tomorrow = today.succ_opt().unwrap_or(today);
+        let resets_at = format!("{}T00:00:00Z", tomorrow);
+
+        Ok(RateLimitStatus {
+            allowed,
+            remaining: remaining.max(0),
+            limit: record.daily_limit,
+            resets_at,
+        })
+    }
+
+    pub async fn increment_rate_limit(
+        &self,
+        user_id: Uuid,
+        agent_name: &str,
+    ) -> Result<RateLimitStatus, String> {
+        let today = Utc::now().date_naive();
+
+        // Increment the counter (reset if new day)
+        let record = sqlx::query_as::<_, UserRateLimit>(
+            r#"
+            INSERT INTO user_rate_limits (user_id, agent_name, daily_count, last_reset_date)
+            VALUES ($1, $2, 1, $3)
+            ON CONFLICT (user_id, agent_name)
+            DO UPDATE SET
+                daily_count = CASE
+                    WHEN user_rate_limits.last_reset_date < $3 THEN 1
+                    ELSE user_rate_limits.daily_count + 1
+                END,
+                last_reset_date = CASE
+                    WHEN user_rate_limits.last_reset_date < $3 THEN $3
+                    ELSE user_rate_limits.last_reset_date
+                END,
+                updated_at = NOW()
+            RETURNING *
+            "#
+        )
+        .bind(&user_id)
+        .bind(agent_name)
+        .bind(&today)
+        .fetch_one(&*self.pool)
+        .await
+        .map_err(|e| format!("Failed to increment rate limit: {}", e))?;
+
+        let remaining = record.daily_limit - record.daily_count;
+        let allowed = remaining >= 0;
+
+        let tomorrow = today.succ_opt().unwrap_or(today);
+        let resets_at = format!("{}T00:00:00Z", tomorrow);
+
+        Ok(RateLimitStatus {
+            allowed,
+            remaining: remaining.max(0),
+            limit: record.daily_limit,
+            resets_at,
+        })
+    }
+
+    /// Check if user has their own API key for a provider
+    pub async fn user_has_api_key(&self, user_id: Uuid, provider: &str) -> Result<bool, String> {
+        let exists = sqlx::query_as::<_, (bool,)>(
+            "SELECT EXISTS(SELECT 1 FROM user_api_keys WHERE user_id = $1 AND provider = $2 AND is_active = true)"
+        )
+        .bind(&user_id)
+        .bind(provider)
+        .fetch_one(&*self.pool)
+        .await
+        .map_err(|e| format!("Database error: {}", e))?;
+
+        Ok(exists.0)
     }
 }

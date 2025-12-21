@@ -8,8 +8,12 @@ use crate::{
 use axum::{extract::{Query, State}, Json};
 use serde::Deserialize;
 use serde_json::json;
-// use std::collections::HashMap;  // For future feature development
+use std::collections::HashMap;
 use tracing::{info, warn, error};
+
+// Free tier limits to prevent resource exhaustion
+const FREE_TIER_MAX_INPUT_CHARS: usize = 8000;  // ~2000 tokens
+const FREE_TIER_MAX_OUTPUT_TOKENS: u32 = 1500;  // Reasonable response length
 
 #[derive(Deserialize)]
 pub struct SearchModelsQuery {
@@ -27,15 +31,118 @@ pub async fn chat(
     State(state): State<AppState>,
     Json(request): Json<ChatRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    // Extract user_id from user_context if available
+    let user_id = request.user_context
+        .as_ref()
+        .and_then(|ctx| ctx.get("user_id"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    // Track if this is a free tier user (no own API key)
+    let mut is_free_tier = false;
+    let mut rate_limit_info = None;
+
+    if let Some(ref uid) = user_id {
+        // Check if user has their own OpenRouter API key
+        let has_own_key = state.erebus_client
+            .user_has_api_key(uid, "openrouter")
+            .await
+            .unwrap_or(false);
+
+        if !has_own_key {
+            is_free_tier = true;
+
+            // User is using agent's key - check rate limit
+            match state.erebus_client.check_rate_limit(uid, "hecate").await {
+                Ok(status) => {
+                    if !status.allowed {
+                        return Err(AppError::FreeTierRateLimitExceeded {
+                            remaining: status.remaining,
+                            limit: status.limit,
+                            resets_at: status.resets_at,
+                        });
+                    }
+                    info!("📊 Rate limit check passed: {}/{} remaining", status.remaining, status.limit);
+                    rate_limit_info = Some(status);
+                }
+                Err(e) => {
+                    warn!("⚠️ Rate limit check failed, allowing request: {}", e);
+                }
+            }
+        } else {
+            info!("🔑 User {} has their own API key, skipping limits", uid);
+        }
+    } else {
+        // No user_id means anonymous/unauthenticated - treat as free tier
+        is_free_tier = true;
+    }
+
+    // Apply free tier input length limit
+    if is_free_tier && request.message.len() > FREE_TIER_MAX_INPUT_CHARS {
+        return Err(AppError::BadRequest(format!(
+            "Message too long for free tier. Maximum {} characters allowed. Add your own API key for unlimited message length.",
+            FREE_TIER_MAX_INPUT_CHARS
+        )));
+    }
+
+    // Build user context with free tier constraints if applicable
+    let user_context = if is_free_tier {
+        let mut ctx = request.user_context.unwrap_or_default();
+        ctx.insert("free_tier".to_string(), json!(true));
+        ctx.insert("max_output_tokens".to_string(), json!(FREE_TIER_MAX_OUTPUT_TOKENS));
+        info!("🆓 Free tier user: limiting output to {} tokens", FREE_TIER_MAX_OUTPUT_TOKENS);
+        Some(ctx)
+    } else {
+        request.user_context
+    };
+
+    // For free-tier users, validate the current model is allowed
+    if is_free_tier {
+        let agent = state.hecate_agent.read().await;
+        if let Some(ref current_model) = agent.current_model {
+            // Check if model is free by name pattern (quick check)
+            if !current_model.ends_with(":free") {
+                // Get llm_factory to do full validation
+                if let Some(ref llm_factory) = agent.llm_factory {
+                    let factory = llm_factory.read().await;
+                    if let Err(msg) = factory.validate_model_for_free_tier(current_model).await {
+                        drop(factory);
+                        drop(agent);
+                        return Err(AppError::BadRequest(msg));
+                    }
+                }
+            }
+        }
+        drop(agent);
+    }
+
+    // Execute the chat
     let mut agent = state.hecate_agent.write().await;
-    let response = agent.chat(request.message, request.user_context).await?;
+    let response = agent.chat(request.message, user_context).await?;
+
+    // Increment rate limit after successful chat (only for free tier users)
+    if let (Some(ref uid), Some(_)) = (&user_id, &rate_limit_info) {
+        if let Err(e) = state.erebus_client.increment_rate_limit(uid, "hecate").await {
+            warn!("⚠️ Failed to increment rate limit: {}", e);
+        }
+    }
+
+    // Include rate limit info in response metadata
+    let mut metadata = response.metadata.clone();
+    if let Some(status) = rate_limit_info {
+        metadata.insert("rate_limit".to_string(), json!({
+            "remaining": status.remaining - 1,
+            "limit": status.limit,
+            "resets_at": status.resets_at
+        }));
+    }
 
     Ok(Json(json!({
         "content": response.content,
         "model_used": response.model_used,
         "latency_ms": response.latency_ms,
         "confidence_score": response.confidence_score,
-        "metadata": response.metadata
+        "metadata": metadata
     })))
 }
 
@@ -606,12 +713,40 @@ pub async fn set_model(
     State(state): State<AppState>,
     Json(request): Json<ModelSelectionRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let mut agent = state.hecate_agent.write().await;
     let api_keys = state.config.get_api_keys();
-    
+
+    // Check if user is free tier
+    let mut is_free_tier = false;
+    if let Some(ref user_id) = request.user_id {
+        let has_own_key = state.erebus_client
+            .user_has_api_key(user_id, "openrouter")
+            .await
+            .unwrap_or(false);
+        is_free_tier = !has_own_key;
+    } else {
+        // No user_id means treat as free tier (conservative approach)
+        is_free_tier = true;
+    }
+
+    // For free-tier users, validate the requested model is free
+    if is_free_tier {
+        let agent = state.hecate_agent.read().await;
+        if let Some(ref llm_factory) = agent.llm_factory {
+            let factory = llm_factory.read().await;
+            if let Err(msg) = factory.validate_model_for_free_tier(&request.model_name).await {
+                drop(factory);
+                drop(agent);
+                return Err(AppError::BadRequest(msg));
+            }
+            info!("✅ Model '{}' validated for free-tier user", request.model_name);
+        }
+        drop(agent);
+    }
+
+    let mut agent = state.hecate_agent.write().await;
     let old_model = agent.get_preferred_model();
     let success = agent.set_preferred_model(request.model_name.clone(), &api_keys).await;
-    
+
     if success {
         Ok(Json(json!({
             "success": true,
