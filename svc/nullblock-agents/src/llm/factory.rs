@@ -502,4 +502,50 @@ impl LLMServiceFactory {
             }
         }
     }
+
+    /// Check if a model is free based on its name pattern (quick check)
+    /// Returns true for models ending with `:free` suffix
+    pub fn is_free_model_by_name(&self, model_name: &str) -> bool {
+        model_name.ends_with(":free")
+    }
+
+    /// Validate that a model is allowed for free-tier users
+    /// Uses both name pattern and API lookup for comprehensive check
+    pub async fn validate_model_for_free_tier(&self, model_name: &str) -> Result<(), String> {
+        // Quick check: models with :free suffix are always allowed
+        if self.is_free_model_by_name(model_name) {
+            return Ok(());
+        }
+
+        // For models without :free suffix, check via API
+        match self.get_free_models().await {
+            Ok(free_models) => {
+                let is_free = free_models.iter().any(|model| {
+                    model.get("id").and_then(|id| id.as_str()) == Some(model_name)
+                });
+
+                if is_free {
+                    Ok(())
+                } else {
+                    Err(format!(
+                        "Model '{}' requires a paid API key. Free-tier users can only use models ending with ':free' suffix or models with zero cost. Add your OpenRouter API key in Settings → API Keys to unlock all models.",
+                        model_name
+                    ))
+                }
+            }
+            Err(e) => {
+                // If we can't verify via API, only allow :free suffix models
+                warn!("⚠️ Could not verify model pricing via API: {}", e);
+                Err(format!(
+                    "Could not verify if model '{}' is free. Free-tier users can only use models with ':free' suffix when API verification fails. Add your OpenRouter API key to unlock all models.",
+                    model_name
+                ))
+            }
+        }
+    }
+
+    /// Get the default free model for free-tier users
+    pub fn get_default_free_model(&self) -> String {
+        "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string()
+    }
 }

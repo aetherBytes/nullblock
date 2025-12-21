@@ -2,9 +2,15 @@
 name = "erebus"
 version = "0.1.0"
 edition = "2021"
+default-run = "erebus"
+
+[[bin]]
+name = "seed-agent-keys"
+path = "src/bin/seed_agent_keys.rs"
 
 [dependencies]
 axum = "0.7"
+dotenvy = "0.15"
 tokio = { version = "1.35", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

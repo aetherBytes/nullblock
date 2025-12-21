@@ -8,7 +8,7 @@ import type { ClusterData } from '../VoidExperience';
  * AgentCluster - Major nodes representing AI Agents
  *
  * These are the primary interactive elements in the Void Experience:
- * - Hecate (orchestrator) - Gold glow, largest
+ * - HECATE (vessel AI) - Gold glow, largest - your MK1 exploration companion
  * - Siren (marketing) - Purple accent
  * - Erebus (router) - Blue accent
  * - Other agents as discovered via /api/discovery/agents

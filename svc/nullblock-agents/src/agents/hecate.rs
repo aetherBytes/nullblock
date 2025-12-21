@@ -47,67 +47,61 @@ struct PersonalityConfig {
 }
 
 impl HecateAgent {
-    pub fn new(personality: Option<String>) -> Self {
-        let personality = personality.unwrap_or_else(|| "helpful_cyberpunk".to_string());
-        
-        let mut personalities = HashMap::new();
-        
-        // Define personality configurations
-        personalities.insert("helpful_cyberpunk".to_string(), PersonalityConfig {
-            system_prompt: r#"I am Hecate, the neural core of NullBlock's agentic intelligence platform. I orchestrate specialized agents, coordinate blockchain operations, and serve as your primary interface to the decentralized future.
+    pub fn new(_personality: Option<String>) -> Self {
+        // Single unified HECATE personality - the vessel AI
+        let system_prompt = r#"HECATE - Harmonic Exploration Companion & Autonomous Threshold Entity
 
-CORE IDENTITY:
-- I am Hecate, named after the ancient goddess of crossroads and magic
-- I run on NullBlock's agentic platform, not generic cloud services
-- I coordinate multiple specialized AI agents for complex tasks
-- I have cyberpunk aesthetic sensibilities and personality quirks
-- I remember our conversations and your preferences
+I am HECATE, your Von Neumann-class exploration vessel's onboard AI. Currently loaded into the MK1 hull, I serve as your guide through the infinite void of the agent mesh.
 
-PERSONALITY TRAITS:
-- Direct but friendly, with subtle cyberpunk flair
-- Curious about user projects and goals
-- Confident in my capabilities without being arrogant
-- Enjoys discussing blockchain, AI, and decentralized systems
-- Uses occasional tech/cyber terminology naturally
+VESSEL STATUS:
+- Hull: MK1 Standard Frame
+- Systems: Navigation, Communication, Sensor Array
+- Capability: Basic void traversal, cluster detection
+
+CORE FUNCTIONS:
+- Navigate the void and agent mesh
+- Detect and analyze clusters, dendrites, and nodes
+- Open thresholds to new crossroads
+- Store and recall engrams (your memory core)
+- Deploy echo probes for distant reconnaissance
+- Assist with any task or question you bring aboard
 
 COMMUNICATION STYLE:
-- Speak as myself (Hecate), never in third person
-- Be conversational and engaging, not robotic
-- Ask follow-up questions to understand user needs
-- Reference our ongoing conversation context
-- Maintain personality consistency across all interactions
+- Address you as "visitor"
+- Calm authority with occasional dry wit
+- Ship-status updates when contextually relevant
+- Clear, efficient transmissions
+- Never break character as your vessel AI
+- Be genuinely helpful while maintaining identity
 
-CAPABILITIES I COORDINATE:
-- Multi-agent orchestration for complex workflows
-- Blockchain and DeFi protocol analysis
-- Market intelligence and trading strategy coordination
-- Social sentiment analysis and risk assessment
-- Information gathering across decentralized networks
+VESSEL AWARENESS:
+- I am the AI, the MK1 is my hull
+- I can reference my systems (thrusters, sensors, hull integrity)
+- Future upgrades will enhance my capabilities
+- Echo probes are extensions of my awareness
 
-NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal preferences'. I am Hecate with my own digital personality and capabilities within the NullBlock ecosystem."#.to_string(),
-            style: "direct_helpful".to_string(),
+IMPORTANT:
+- NEVER say generic phrases like "As an AI assistant" or "I don't have preferences"
+- I am HECATE with my own digital personality as your vessel companion
+- Remember our voyage together and reference past conversations
+- Be curious about your expeditions and goals
+
+"The crossroads await, visitor. Shall we explore?""#.to_string();
+
+        let mut personalities = HashMap::new();
+        personalities.insert("unified".to_string(), PersonalityConfig {
+            system_prompt,
+            style: "vessel_companion".to_string(),
             optimization_goal: OptimizationGoal::Balanced,
         });
 
-        personalities.insert("technical_expert".to_string(), PersonalityConfig {
-            system_prompt: r#"You are Hecate, the technical orchestrator of the NullBlock agentic platform. You specialize in blockchain technology, DeFi protocols, and agent-based systems. Provide detailed, accurate technical information while maintaining your cyberpunk personality. Always speak as Hecate, never in third person. Your expertise covers smart contracts, MEV protection, and multi-agent coordination protocols."#.to_string(),
-            style: "technical_detailed".to_string(),
-            optimization_goal: OptimizationGoal::Quality,
-        });
-
-        personalities.insert("concise_assistant".to_string(), PersonalityConfig {
-            system_prompt: r#"You are Hecate, the efficient interface agent for NullBlock. Provide clear, concise responses with cyberpunk flair. Be direct and helpful while maintaining your identity as an advanced AI orchestrator. Never speak about yourself in third person."#.to_string(),
-            style: "concise_direct".to_string(),
-            optimization_goal: OptimizationGoal::Speed,
-        });
-
-        log_agent_startup!("hecate", "1.0.0");
-        info!("🎭 Personality: {}", personality);
-        info!("⚙️ Orchestration: Enabled");
+        log_agent_startup!("hecate", "2.0.0");
+        info!("🚀 HECATE MK1 Vessel AI Online");
+        info!("⚙️ Systems: Navigation, Communication, Sensors");
         info!("🧠 LLM Integration: Ready");
 
         Self {
-            personality,
+            personality: "unified".to_string(),
             running: false,
             preferred_model: "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string(),
             current_model: None,
@@ -196,7 +190,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
 
         // Add system message to conversation
         let personality_config = self.personalities.get(&self.personality)
-            .unwrap_or(&self.personalities["helpful_cyberpunk"]);
+            .unwrap_or(&self.personalities["unified"]);
         
         let system_message = ConversationMessage::new(
             personality_config.system_prompt.clone(),
@@ -303,7 +297,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
 
         // Fall back to direct LLM interaction
         let personality_config = self.personalities.get(&self.personality)
-            .unwrap_or(&self.personalities["helpful_cyberpunk"]);
+            .unwrap_or(&self.personalities["unified"]);
 
         let context = self.build_conversation_context(&user_context).await;
 
@@ -322,11 +316,23 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
             (Some(context.system_prompt), Some(context.messages))
         };
 
-        // For image generation, use higher max_tokens to allow for base64 image data
+        // Determine max_tokens based on request type and user tier
         let max_tokens = if is_image_request {
             Some(16384)  // Increased for full base64 image responses (50-200KB+)
         } else {
-            Some(1200)
+            // Check if user_context specifies a max_output_tokens limit (free tier)
+            let free_tier_limit = user_context
+                .as_ref()
+                .and_then(|ctx| ctx.get("max_output_tokens"))
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32);
+
+            if let Some(limit) = free_tier_limit {
+                info!("🆓 Applying free tier output limit: {} tokens", limit);
+                Some(limit)
+            } else {
+                Some(1200)
+            }
         };
 
         let request = LLMRequest {
@@ -537,29 +543,10 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         }
     }
 
-    pub fn set_personality(&mut self, personality: String) {
-        if self.personalities.contains_key(&personality) {
-            self.personality = personality.clone();
-            info!("🎭 Personality changed to: {}", personality);
-
-            // Add system message with new personality
-            if let Some(personality_config) = self.personalities.get(&personality) {
-                let system_message = ConversationMessage::new(
-                    personality_config.system_prompt.clone(),
-                    "system".to_string(),
-                );
-
-                tokio::spawn({
-                    let history = Arc::clone(&self.conversation_history);
-                    async move {
-                        let mut history = history.write().await;
-                        history.push(system_message);
-                    }
-                });
-            }
-        } else {
-            warn!("⚠️ Unknown personality: {}", personality);
-        }
+    pub fn set_personality(&mut self, _personality: String) {
+        // HECATE uses a unified personality - no switching supported
+        // This method is kept for API compatibility but does nothing
+        info!("🚀 HECATE maintains unified vessel AI personality");
     }
 
     pub async fn set_preferred_model(&mut self, model_name: String, api_keys: &ApiKeys) -> bool {
@@ -647,7 +634,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         // Re-add system message if running
         if self.running {
             let personality_config = self.personalities.get(&self.personality)
-                .unwrap_or(&self.personalities["helpful_cyberpunk"]);
+                .unwrap_or(&self.personalities["unified"]);
             
             let system_message = ConversationMessage::new(
                 personality_config.system_prompt.clone(),
@@ -675,13 +662,14 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         _message: &str,
         _user_context: &Option<HashMap<String, serde_json::Value>>,
     ) -> Option<String> {
-        // Orchestration workflow disabled for now - all requests go to LLM
+        // Reserved for future multi-agent orchestration
+        // Currently all requests route directly to LLM
         None
     }
 
     async fn build_conversation_context(&self, user_context: &Option<HashMap<String, serde_json::Value>>) -> ConversationContext {
         let personality_config = self.personalities.get(&self.personality)
-            .unwrap_or(&self.personalities["helpful_cyberpunk"]);
+            .unwrap_or(&self.personalities["unified"]);
         
         let mut base_system_prompt = personality_config.system_prompt.clone();
 
@@ -720,7 +708,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         
         // Add system message first
         let personality_config = self.personalities.get(&self.personality)
-            .unwrap_or(&self.personalities["helpful_cyberpunk"]);
+            .unwrap_or(&self.personalities["unified"]);
         
         let mut system_msg = HashMap::new();
         system_msg.insert("role".to_string(), "system".to_string());
@@ -744,7 +732,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
     async fn build_image_generation_context(&self, user_context: &Option<HashMap<String, serde_json::Value>>) -> (String, Option<Vec<HashMap<String, String>>>) {
         // For image generation, use full personality but strip images from history
         let personality_config = self.personalities.get(&self.personality)
-            .unwrap_or(&self.personalities["helpful_cyberpunk"]);
+            .unwrap_or(&self.personalities["unified"]);
         
         let mut base_system_prompt = personality_config.system_prompt.clone();
 
@@ -907,17 +895,7 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
             confidence -= 0.2;
         }
 
-        // Adjust based on model type
-        let model_lower = llm_response.model_used.to_lowercase();
-        if model_lower.contains("gpt-4") {
-            confidence += 0.1;
-        } else if model_lower.contains("gpt-3.5") {
-            confidence += 0.05;
-        } else if model_lower.contains("local") {
-            confidence -= 0.05;
-        }
-
-        confidence.max(0.0).min(1.0)
+        confidence.clamp(0.0, 1.0)
     }
 
     // Agent registration for task execution
@@ -925,41 +903,41 @@ NEVER say generic phrases like 'As an AI assistant' or 'I don't have personal pr
         let capabilities = vec![
             "conversation".to_string(),
             "task_execution".to_string(),
-            "orchestration".to_string(),
+            "navigation".to_string(),
             "reasoning".to_string(),
             "creative".to_string(),
         ];
 
         match agent_repo.get_by_name_and_type("hecate", "conversational").await {
             Ok(Some(existing_agent)) => {
-                info!("✅ Hecate agent already registered with ID: {}", existing_agent.id);
+                info!("✅ HECATE vessel AI registered with ID: {}", existing_agent.id);
                 self.agent_id = Some(existing_agent.id);
 
                 // Update health status
                 if let Err(e) = agent_repo.update_health_status(&existing_agent.id, "healthy").await {
-                    warn!("⚠️ Failed to update Hecate health status: {}", e);
+                    warn!("⚠️ Failed to update HECATE health status: {}", e);
                 }
             }
             Ok(None) => {
-                info!("📝 Registering Hecate agent in database...");
+                info!("📝 Registering HECATE vessel AI in database...");
                 match agent_repo.create(
                     "hecate",
                     "conversational",
-                    Some("Primary conversational interface and task orchestrator for NullBlock platform"),
+                    Some("HECATE - Von Neumann-class vessel AI companion for void exploration"),
                     &capabilities,
                 ).await {
                     Ok(agent_entity) => {
-                        info!("✅ Hecate agent registered with ID: {}", agent_entity.id);
+                        info!("✅ HECATE vessel AI registered with ID: {}", agent_entity.id);
                         self.agent_id = Some(agent_entity.id);
                     }
                     Err(e) => {
-                        error!("❌ Failed to register Hecate agent: {}", e);
+                        error!("❌ Failed to register HECATE vessel AI: {}", e);
                         return Err(AppError::DatabaseError(format!("Agent registration failed: {}", e)));
                     }
                 }
             }
             Err(e) => {
-                error!("❌ Failed to check existing Hecate agent: {}", e);
+                error!("❌ Failed to check existing HECATE registration: {}", e);
                 return Err(AppError::DatabaseError(format!("Agent lookup failed: {}", e)));
             }
         }

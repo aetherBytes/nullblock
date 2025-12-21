@@ -144,6 +144,23 @@ $bg-dark: rgba(10, 10, 10, 0.95);
   }
 }
 
+.providerHint {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: $text-secondary;
+
+  a {
+    color: $echo-blue;
+    text-decoration: none;
+    font-weight: 600;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
 .passwordInput {
   position: relative;
 

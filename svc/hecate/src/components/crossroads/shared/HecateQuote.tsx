@@ -20,7 +20,7 @@ const HecateQuote: React.FC<HecateQuoteProps> = ({ refreshTrigger = 0, compact =
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            message: 'Give me a single profound, mystical quote about the Crossroads marketplace - the meeting place of agents, tools, and workflows. Keep it under 25 words, poetic and fitting for Hecate, goddess of crossroads.',
+            message: 'Give me a single brief transmission as HECATE, the MK1 vessel AI, about navigating the void or discovering new crossroads. Speak as a ship AI with calm authority and dry wit. Address the user as "visitor". One sentence only, under 20 words.',
             session_id: 'crossroads-quote',
           }),
         });
@@ -33,12 +33,12 @@ const HecateQuote: React.FC<HecateQuoteProps> = ({ refreshTrigger = 0, compact =
           setQuote(cleanedQuote);
         } else {
           // Fallback quote if API fails
-          setQuote('At the crossroads, all paths converge. Here, agents and workflows intertwine, forging new destinies.');
+          setQuote('Sensors online, visitor. The crossroads await our arrival.');
         }
       } catch (error) {
-        console.error('Failed to fetch Hecate quote:', error);
+        console.error('Failed to fetch HECATE transmission:', error);
         // Fallback quote
-        setQuote('At the crossroads, all paths converge. Here, agents and workflows intertwine, forging new destinies.');
+        setQuote('Sensors online, visitor. The crossroads await our arrival.');
       } finally {
         setLoading(false);
       }
@@ -64,7 +64,7 @@ const HecateQuote: React.FC<HecateQuoteProps> = ({ refreshTrigger = 0, compact =
   return (
     <div className={quoteClass}>
       <div className={styles.quoteText}>
-        <p>"{quote}" <span className={styles.attribution}>- Hecate</span></p>
+        <p>"{quote}" <span className={styles.attribution}>- HECATE</span></p>
       </div>
     </div>
   );

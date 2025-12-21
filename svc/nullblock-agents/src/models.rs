@@ -88,6 +88,7 @@ pub struct ChatRequest {
 #[derive(Debug, Deserialize)]
 pub struct ModelSelectionRequest {
     pub model_name: String,
+    pub user_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

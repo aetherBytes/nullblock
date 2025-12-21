@@ -5,7 +5,7 @@ import type { ClusterData } from '../VoidExperience';
 
 // Color mapping for different agent types
 const TYPE_COLORS: Record<string, string> = {
-  conversational: '#e6c200', // Gold for main orchestrator
+  conversational: '#e6c200', // Gold for HECATE vessel AI
   specialized: '#b967ff',    // Purple for specialized agents
   system: '#00d4ff',         // Cyan for system services
   protocol: '#00ff9d',       // Green for protocols
@@ -76,10 +76,10 @@ const agentToCluster = (agent: Agent, index: number): ClusterData => {
 const FALLBACK_CLUSTERS: ClusterData[] = [
   {
     id: 'hecate-fallback',
-    name: 'Hecate',
+    name: 'HECATE',
     type: 'agent',
     status: 'unknown',
-    description: 'Orchestration Agent',
+    description: 'MK1 Vessel AI',
     color: '#e6c200',
   },
   {

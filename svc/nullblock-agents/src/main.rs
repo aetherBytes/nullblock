@@ -18,6 +18,7 @@ mod llm;
 mod logging;
 mod models;
 mod server;
+mod services;
 mod utils;
 
 use crate::config::Config;

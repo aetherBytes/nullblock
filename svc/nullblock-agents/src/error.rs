@@ -59,6 +59,19 @@ pub enum AppError {
 
     #[error("LLM error: {0}")]
     LLMError(String),
+
+    #[error("API key resolution failed: {0}")]
+    ApiKeyResolutionFailed(String),
+
+    #[error("Rate limit check failed: {0}")]
+    RateLimitCheckFailed(String),
+
+    #[error("Free tier rate limit exceeded")]
+    FreeTierRateLimitExceeded {
+        remaining: i32,
+        limit: i32,
+        resets_at: String,
+    },
 }
 
 impl AppError {
@@ -74,8 +87,12 @@ impl AppError {
             AppError::TaskAlreadyActioned(_) => StatusCode::CONFLICT,
             
             AppError::AuthError(_) => StatusCode::UNAUTHORIZED,
-            
-            AppError::RateLimitError(_) => StatusCode::TOO_MANY_REQUESTS,
+
+            AppError::RateLimitError(_)
+            | AppError::FreeTierRateLimitExceeded { .. } => StatusCode::TOO_MANY_REQUESTS,
+
+            AppError::ApiKeyResolutionFailed(_)
+            | AppError::RateLimitCheckFailed(_) => StatusCode::SERVICE_UNAVAILABLE,
             
             AppError::TimeoutError(_) => StatusCode::REQUEST_TIMEOUT,
             
@@ -109,6 +126,9 @@ impl AppError {
             AppError::BadRequest(_) => "bad_request",
             AppError::DatabaseError(_) => "database_error",
             AppError::TaskAlreadyActioned(_) => "task_already_actioned",
+            AppError::ApiKeyResolutionFailed(_) => "api_key_resolution_failed",
+            AppError::RateLimitCheckFailed(_) => "rate_limit_check_failed",
+            AppError::FreeTierRateLimitExceeded { .. } => "free_tier_rate_limit_exceeded",
         }
     }
 
@@ -148,6 +168,18 @@ impl AppError {
             }
             AppError::RateLimitError(_) => {
                 "🚦 Rate limit exceeded. Please wait a moment before making another request.".to_string()
+            }
+            AppError::FreeTierRateLimitExceeded { remaining, limit, resets_at } => {
+                format!(
+                    "🚦 Daily free tier limit reached ({}/{}). Resets at {}. Add your own API key for unlimited access → Settings → API Keys",
+                    limit - remaining, limit, resets_at
+                )
+            }
+            AppError::ApiKeyResolutionFailed(_) => {
+                "🔑 Unable to retrieve API keys. Please try again later.".to_string()
+            }
+            AppError::RateLimitCheckFailed(_) => {
+                "🚦 Unable to check rate limit. Please try again later.".to_string()
             }
             _ => {
                 format!("❌ {}", self.to_string())

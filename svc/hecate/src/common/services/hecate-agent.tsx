@@ -1,8 +1,9 @@
 /**
- * Hecate Agent Service
- * 
- * Frontend service for communicating with the Hecate agent backend.
- * Handles chat messages, model information, and agent status.
+ * HECATE Agent Service
+ *
+ * Frontend service for communicating with the HECATE vessel AI backend.
+ * HECATE (Harmonic Exploration Companion & Autonomous Threshold Entity)
+ * is your MK1 vessel's onboard AI, guiding you through the agent mesh.
  */
 
 interface ChatMessage {
@@ -212,27 +213,14 @@ class HecateAgentService {
 
 
   /**
-   * Set agent personality
+   * Set agent personality (deprecated - HECATE uses unified vessel AI personality)
+   * Kept for API compatibility but has no effect.
    */
-  async setPersonality(personality: 'helpful_cyberpunk' | 'technical_expert' | 'concise_assistant'): Promise<boolean> {
-    if (!this.isConnected) {
-      throw new Error('Not connected to Hecate agent. Call connect() first.');
-    }
-
-    try {
-      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/personality`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ personality }),
-      });
-
-      return response.ok;
-    } catch (error) {
-      console.error('Failed to set personality:', error);
-      return false;
-    }
+  async setPersonality(_personality: string): Promise<boolean> {
+    // HECATE now uses a unified vessel AI personality
+    // This method is kept for backwards compatibility but does nothing
+    console.info('HECATE maintains unified vessel AI personality');
+    return true;
   }
 
   /**
