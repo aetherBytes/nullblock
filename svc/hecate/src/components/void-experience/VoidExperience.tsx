@@ -38,8 +38,8 @@ interface CameraTarget {
 }
 
 // Camera positions
-const PRE_LOGIN_CAMERA = new THREE.Vector3(4, 3, 12); // Far back, offset to the side
-const POST_LOGIN_CAMERA = new THREE.Vector3(0, 0.5, 8); // Centered on Crossroads, zoomed out to see HECATE
+const PRE_LOGIN_CAMERA = new THREE.Vector3(8, 6, 24); // Very far back, dramatic reveal
+const POST_LOGIN_CAMERA = new THREE.Vector3(4, 3, 12); // Previous pre-login position, now the zoomed-in view
 
 const VoidExperience: React.FC<VoidExperienceProps> = ({
   publicKey,
@@ -179,9 +179,9 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   const isFullyLoggedIn = isLoggedIn && hasZoomedToHecate;
 
   // Keep distance limits wide during zoom to prevent OrbitControls from clamping the camera
-  // PRE_LOGIN_CAMERA is at z=12, so maxDistance must stay >= 15 until zoom completes
-  const minDist = isFullyLoggedIn ? 3 : 1;
-  const maxDist = isFullyLoggedIn ? 15 : 20;
+  // PRE_LOGIN_CAMERA is at z=24, so maxDistance must stay >= 30 until zoom completes
+  const minDist = isFullyLoggedIn ? 5 : 1;
+  const maxDist = isFullyLoggedIn ? 20 : 35;
 
   return (
     <div className={styles.voidContainer}>
