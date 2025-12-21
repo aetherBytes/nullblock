@@ -1,20 +1,23 @@
 import React, { useMemo } from 'react';
+import * as THREE from 'three';
 import AgentCluster from './AgentCluster';
 import { useAgentClusters } from '../hooks/useAgentClusters';
 import type { ClusterData } from '../VoidExperience';
 
 interface AgentClustersProps {
   hoveredCluster: string | null;
+  selectedClusterId: string | null;
   onClusterHover: (clusterId: string | null) => void;
-  onClusterClick: (cluster: ClusterData) => void;
-  isVisible?: boolean;
+  onClusterClick: (cluster: ClusterData, position: THREE.Vector3) => void;
+  isInteractive?: boolean; // Controls whether clusters can be clicked/hovered
 }
 
 const AgentClusters: React.FC<AgentClustersProps> = ({
   hoveredCluster,
+  selectedClusterId,
   onClusterHover,
   onClusterClick,
-  isVisible = true,
+  isInteractive = true,
 }) => {
   const { clusters } = useAgentClusters();
 
@@ -51,12 +54,13 @@ const AgentClusters: React.FC<AgentClustersProps> = ({
           key={cluster.id}
           cluster={cluster}
           basePosition={basePosition}
-          isHovered={hoveredCluster === cluster.id}
+          isHovered={isInteractive && hoveredCluster === cluster.id}
+          isSelected={selectedClusterId === cluster.id}
           onHover={onClusterHover}
           onClick={onClusterClick}
           orbitPhase={orbitPhase}
           orbitRadius={orbitRadius}
-          isVisible={isVisible}
+          isInteractive={isInteractive}
           fadeDelay={index * 0.15} // Stagger fade-in by 150ms per cluster
         />
       ))}

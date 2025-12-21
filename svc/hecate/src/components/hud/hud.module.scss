@@ -152,6 +152,17 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   max-height: calc(98vh - 10px);
   overflow: visible;
 
+  // Void mode - disable pointer events on container to allow canvas interaction
+  // VoidOverlay has its own pointer-events handling for interactive elements
+  &.voidMode {
+    pointer-events: none;
+
+    // Hide mainContent in void mode as it's not needed
+    .mainContent {
+      display: none;
+    }
+  }
+
   &.null {
     @include theme-colors($null-bg, $null-border, $null-text);
   }

@@ -1322,7 +1322,7 @@ const HUD: React.FC<HUDProps> = ({
   );
 
   return (
-    <div className={`${styles.echoContainer} ${publicKey ? styles[theme] : styles.loggedOut}`}>
+    <div className={`${styles.echoContainer} ${publicKey ? styles[theme] : styles.loggedOut} ${inVoidMode ? styles.voidMode : ''}`}>
       {renderUnifiedNavigation()}
       {renderMainContent()}
       {/* VoidOverlay only shows after login animation is complete */}

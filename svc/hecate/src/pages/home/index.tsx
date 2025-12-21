@@ -880,12 +880,12 @@ const Home: React.FC = () => {
             : 'none'
         }}
       />
-      {/* Void Experience - minimal mode for pre-login, full mode after login */}
+      {/* Void Experience - all activity visible, interactive only when logged in */}
       <VoidExperience
         publicKey={publicKey}
         theme={currentTheme}
         loginAnimationPhase={currentAnimationPhase}
-        minimal={!publicKey || currentAnimationPhase !== 'complete'}
+        isLoggedIn={!!publicKey && currentAnimationPhase === 'complete'}
       />
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`}>
         {/* System status panel moved to HUD component */}

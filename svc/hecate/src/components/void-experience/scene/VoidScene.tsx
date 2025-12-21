@@ -1,23 +1,25 @@
 import React from 'react';
-import HecateOrb from './HecateOrb';
+import * as THREE from 'three';
+import CrossroadsOrb from './CrossroadsOrb';
 import ParticleField from './ParticleField';
 import NeuralLines from './NeuralLines';
 import AgentClusters from './AgentClusters';
-import Dendrites from './Dendrites';
 import type { ClusterData } from '../VoidExperience';
 
 interface VoidSceneProps {
   hoveredCluster: string | null;
+  selectedClusterId: string | null;
   onClusterHover: (clusterId: string | null) => void;
-  onClusterClick: (cluster: ClusterData) => void;
-  showClusters?: boolean;
+  onClusterClick: (cluster: ClusterData, position: THREE.Vector3) => void;
+  isInteractive?: boolean; // Controls whether clusters can be clicked/hovered
 }
 
 const VoidScene: React.FC<VoidSceneProps> = ({
   hoveredCluster,
+  selectedClusterId,
   onClusterHover,
   onClusterClick,
-  showClusters = true,
+  isInteractive = true,
 }) => {
   return (
     <group>
@@ -29,19 +31,17 @@ const VoidScene: React.FC<VoidSceneProps> = ({
       <ParticleField count={1500} />
       <NeuralLines count={30} />
 
-      {/* Central Hecate Orb */}
-      <HecateOrb position={[0, 0, 0]} />
+      {/* Central Crossroads Orb - The marketplace bazaar hub */}
+      <CrossroadsOrb position={[0, 0, 0]} />
 
-      {/* Floating agent clusters - always rendered, visibility controlled via prop */}
+      {/* Floating agent clusters - always visible, interactivity controlled via prop */}
       <AgentClusters
         hoveredCluster={hoveredCluster}
+        selectedClusterId={selectedClusterId}
         onClusterHover={onClusterHover}
         onClusterClick={onClusterClick}
-        isVisible={showClusters}
+        isInteractive={isInteractive}
       />
-
-      {/* Dynamic connection lines - only shown when clusters visible */}
-      {showClusters && <Dendrites />}
     </group>
   );
 };

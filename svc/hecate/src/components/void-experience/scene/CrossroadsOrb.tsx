@@ -2,11 +2,16 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-interface HecateOrbProps {
+/**
+ * CrossroadsOrb - The central node representing the Crossroads Bazaar
+ * This is the marketplace hub at the center of the Void Experience.
+ * Agents orbit around this central point.
+ */
+interface CrossroadsOrbProps {
   position?: [number, number, number];
 }
 
-const HecateOrb: React.FC<HecateOrbProps> = ({ position = [0, 0, 0] }) => {
+const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) => {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
@@ -98,4 +103,4 @@ const HecateOrb: React.FC<HecateOrbProps> = ({ position = [0, 0, 0] }) => {
   );
 };
 
-export default HecateOrb;
+export default CrossroadsOrb;
