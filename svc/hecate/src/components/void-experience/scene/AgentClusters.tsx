@@ -28,15 +28,34 @@ const AgentClusters: React.FC<AgentClustersProps> = ({
 
     return clusters.map((cluster, index) => {
       const count = clusters.length;
-      const phase = (index / count) * Math.PI * 2;
+      const isHecate = cluster.name.toLowerCase().includes('hecate');
+      const isSiren = cluster.name.toLowerCase().includes('siren');
+
+      // Give HECATE and Siren distinct orbital positions
+      let phase = (index / count) * Math.PI * 2;
+      if (isHecate) {
+        phase = 0; // Front position
+      } else if (isSiren) {
+        phase = Math.PI * 0.5; // 90 degrees - tangent to HECATE
+      }
 
       // Vary the radius slightly for each cluster
-      const radius = baseRadius + (Math.sin(phase * 3) * radiusVariation);
+      // HECATE gets extra distance from Crossroads orb
+      const radius = baseRadius + (Math.sin(phase * 3) * radiusVariation) + (isHecate ? 1.0 : 0);
 
       // Calculate base position (will be animated)
-      const x = Math.cos(phase) * radius;
-      const z = Math.sin(phase) * radius;
-      const y = Math.sin(phase * 2) * 0.3;
+      // Siren orbits on a tilted plane for extreme angle from HECATE
+      let x, y, z;
+      if (isSiren) {
+        // Tilted orbit - more vertical, crossing above/below
+        x = Math.cos(phase) * radius * 0.3;
+        z = Math.sin(phase) * radius;
+        y = Math.cos(phase) * radius * 0.8; // High vertical component
+      } else {
+        x = Math.cos(phase) * radius;
+        z = Math.sin(phase) * radius;
+        y = Math.sin(phase * 2) * 0.3;
+      }
 
       return {
         cluster,

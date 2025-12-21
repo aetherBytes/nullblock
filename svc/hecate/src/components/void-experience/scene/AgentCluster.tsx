@@ -1,8 +1,58 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import { Html, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { ClusterData } from '../VoidExperience';
+
+const HECATE_MODEL_PATH = '/models/hecate-orb.glb';
+
+interface HecateModelProps {
+  isInteractive: boolean;
+  onPointerOver?: (e: { stopPropagation: () => void }) => void;
+  onPointerOut?: (e: { stopPropagation: () => void }) => void;
+  onClick?: (e: { stopPropagation: () => void }) => void;
+}
+
+const HecateModel: React.FC<HecateModelProps> = ({
+  isInteractive,
+  onPointerOver,
+  onPointerOut,
+  onClick,
+}) => {
+  const { scene } = useGLTF(HECATE_MODEL_PATH);
+  const modelRef = useRef<THREE.Group>(null);
+
+  const clonedScene = useMemo(() => {
+    const clone = scene.clone();
+    clone.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.castShadow = true;
+      }
+    });
+    return clone;
+  }, [scene]);
+
+  useFrame((state) => {
+    if (modelRef.current) {
+      modelRef.current.rotation.y = state.clock.elapsedTime * 0.3;
+    }
+  });
+
+  return (
+    <primitive
+      ref={modelRef}
+      object={clonedScene}
+      scale={0.00225}
+      rotation={[-0.3, 0, 0]}
+      onPointerOver={isInteractive ? onPointerOver : undefined}
+      onPointerOut={isInteractive ? onPointerOut : undefined}
+      onClick={isInteractive ? onClick : undefined}
+    />
+  );
+};
+
+useGLTF.preload(HECATE_MODEL_PATH);
 
 /**
  * AgentCluster - Major nodes representing AI Agents
@@ -51,11 +101,14 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
   // Store frozen position when selected
   const frozenPosition = useRef<THREE.Vector3 | null>(null);
 
-  // Determine cluster size based on type (Hecate is larger)
-  const baseSize = cluster.name.toLowerCase().includes('hecate') ? 0.25 : 0.18;
+  // Check if this is HECATE for special rendering
+  const isHecate = cluster.name.toLowerCase().includes('hecate');
 
-  // Apply hover scale when interactive, otherwise just show at normal scale
-  const targetScale = isHovered && isInteractive ? 1.3 : 1.0;
+  // Determine cluster size based on type (Hecate is larger)
+  const baseSize = isHecate ? 0.25 : 0.18;
+
+  // No hover scale effect - just show at normal scale
+  const targetScale = 1.0;
 
   // Create particle positions for nebula effect
   const particlePositions = useMemo(() => {
@@ -96,9 +149,21 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
         frozenPosition.current = null;
 
         // Normal orbital motion
-        const x = Math.cos(time * 0.15 + orbitPhase) * orbitRadius;
-        const z = Math.sin(time * 0.15 + orbitPhase) * orbitRadius;
-        const y = basePosition[1] + Math.sin(time * 0.3 + orbitPhase) * 0.2;
+        // Siren has a tilted orbit plane for extreme angle from HECATE
+        const isSiren = cluster.name.toLowerCase().includes('siren');
+        const animPhase = time * 0.15 + orbitPhase;
+
+        let x, y, z;
+        if (isSiren) {
+          // Tilted orbit - more vertical
+          x = Math.cos(animPhase) * orbitRadius * 0.3;
+          z = Math.sin(animPhase) * orbitRadius;
+          y = Math.cos(animPhase) * orbitRadius * 0.8;
+        } else {
+          x = Math.cos(animPhase) * orbitRadius;
+          z = Math.sin(animPhase) * orbitRadius;
+          y = basePosition[1] + Math.sin(time * 0.3 + orbitPhase) * 0.2;
+        }
 
         groupRef.current.position.set(x, y, z);
       }
@@ -144,38 +209,62 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
       ref={groupRef}
       position={basePosition}
     >
-      {/* Core orb - clickable when interactive */}
-      <mesh
-        ref={meshRef}
-        castShadow
-        onPointerOver={isInteractive ? (e) => {
-          e.stopPropagation();
-          onHover(cluster.id);
-          setShowTooltip(true);
-        } : undefined}
-        onPointerOut={isInteractive ? (e) => {
-          e.stopPropagation();
-          onHover(null);
-          setShowTooltip(false);
-        } : undefined}
-        onClick={isInteractive ? (e) => {
-          e.stopPropagation();
-          const worldPos = new THREE.Vector3();
-          if (groupRef.current) {
-            groupRef.current.getWorldPosition(worldPos);
-          }
-          onClick(cluster, worldPos);
-        } : undefined}
-      >
-        <sphereGeometry args={[baseSize, 32, 32]} />
-        <meshStandardMaterial
-          color={cluster.color}
-          emissive={cluster.color}
-          emissiveIntensity={glowIntensity}
-          metalness={0.5}
-          roughness={0.3}
+      {/* Core orb - HECATE uses custom GLB model, others use sphere */}
+      {isHecate ? (
+        <HecateModel
+          isInteractive={isInteractive}
+          onPointerOver={(e) => {
+            e.stopPropagation();
+            onHover(cluster.id);
+            setShowTooltip(true);
+          }}
+          onPointerOut={(e) => {
+            e.stopPropagation();
+            onHover(null);
+            setShowTooltip(false);
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            const worldPos = new THREE.Vector3();
+            if (groupRef.current) {
+              groupRef.current.getWorldPosition(worldPos);
+            }
+            onClick(cluster, worldPos);
+          }}
         />
-      </mesh>
+      ) : (
+        <mesh
+          ref={meshRef}
+          castShadow
+          onPointerOver={isInteractive ? (e) => {
+            e.stopPropagation();
+            onHover(cluster.id);
+            setShowTooltip(true);
+          } : undefined}
+          onPointerOut={isInteractive ? (e) => {
+            e.stopPropagation();
+            onHover(null);
+            setShowTooltip(false);
+          } : undefined}
+          onClick={isInteractive ? (e) => {
+            e.stopPropagation();
+            const worldPos = new THREE.Vector3();
+            if (groupRef.current) {
+              groupRef.current.getWorldPosition(worldPos);
+            }
+            onClick(cluster, worldPos);
+          } : undefined}
+        >
+          <sphereGeometry args={[baseSize, 32, 32]} />
+          <meshStandardMaterial
+            color={cluster.color}
+            emissive={cluster.color}
+            emissiveIntensity={glowIntensity}
+            metalness={0.5}
+            roughness={0.3}
+          />
+        </mesh>
+      )}
 
       {/* Outer glow */}
       <mesh>
@@ -183,7 +272,7 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
         <meshBasicMaterial
           color={cluster.color}
           transparent
-          opacity={isHovered ? 0.2 : 0.1}
+          opacity={0.1}
           side={THREE.BackSide}
         />
       </mesh>
@@ -212,7 +301,7 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
       {/* Point light */}
       <pointLight
         color={cluster.color}
-        intensity={isHovered ? 1.5 : 0.8}
+        intensity={0.8}
         distance={3}
         decay={2}
       />

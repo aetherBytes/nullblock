@@ -39,7 +39,7 @@ interface CameraTarget {
 
 // Camera positions
 const PRE_LOGIN_CAMERA = new THREE.Vector3(4, 3, 12); // Far back, offset to the side
-const POST_LOGIN_CAMERA = new THREE.Vector3(0, 0.5, 6); // Centered on Crossroads
+const POST_LOGIN_CAMERA = new THREE.Vector3(0, 0.5, 8); // Centered on Crossroads, zoomed out to see HECATE
 
 const VoidExperience: React.FC<VoidExperienceProps> = ({
   publicKey,
