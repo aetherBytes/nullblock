@@ -434,6 +434,57 @@ curl -X POST http://localhost:3000/api/agents/tasks -H "Content-Type: applicatio
 - NEVER use test credentials in production
 - Subsystems in own directories (wallets/, mcp/, agents/)
 
+## 🌌 Void Experience (Home Screen)
+
+The Void Experience is the immersive Three.js post-login home screen. Users awaken in a living agent mesh void.
+
+### Architecture
+
+```
+THE VOID
+├── ParticleField (stars) - Ambient drifting particles
+├── NeuralLines (constellations) - Minor nodes representing Tools/Services/Servers
+├── CrossroadsOrb (center) - The Crossroads Bazaar marketplace hub
+└── AgentClusters (major nodes) - AI Agents orbiting the center
+    ├── Hecate (orchestrator) - Gold glow
+    ├── Siren (marketing) - Purple accent
+    └── Erebus (router) - Blue accent
+```
+
+### Node Types
+
+| Type | Component | Represents |
+|------|-----------|------------|
+| **Center** | `CrossroadsOrb` | Crossroads Bazaar (marketplace) |
+| **Major** | `AgentCluster` | AI Agents (clickable, opens panel) |
+| **Minor** | `NeuralLines` nodes | Tools, Services, MCP Servers |
+| **Background** | `ParticleField` | Ambient stars |
+
+### Camera Behavior
+
+- **Pre-login**: Position `[4, 3, 12]` - Far back, offset view (all visible, non-interactive, slow auto-rotate)
+- **Post-login**: Position `[0, 0.5, 6]` - Centered on Crossroads (interactive, static camera, no wobble)
+- **Logout**: Smooth zoom-out animation back to pre-login position
+- **Cluster Click**: Camera zooms to cluster, cluster freezes in place, panel opens
+
+### File Structure
+
+```
+svc/hecate/src/components/void-experience/
+├── VoidExperience.tsx       # Canvas wrapper, state management
+├── scene/
+│   ├── CrossroadsOrb.tsx    # Central bazaar node
+│   ├── AgentCluster.tsx     # Individual agent node
+│   ├── AgentClusters.tsx    # Agent collection manager
+│   ├── NeuralLines.tsx      # Service constellation network
+│   ├── ParticleField.tsx    # Ambient star particles
+│   └── CameraController.tsx # Smooth camera traversal
+├── hooks/
+│   └── useAgentClusters.ts  # Fetch from /api/discovery/agents
+└── chat/
+    └── VoidChatHUD.tsx      # Chat input overlay
+```
+
 ## 🎨 UI/UX Standards
 
 - **NullEye Animations**: 8 lightning arcs, silver-gold (#e8e8e8, #e6c200)

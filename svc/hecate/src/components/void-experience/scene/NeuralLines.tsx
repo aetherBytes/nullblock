@@ -2,12 +2,23 @@ import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
+/**
+ * NeuralLines - Background constellation network representing Tools, Services, and Servers
+ *
+ * These minor nodes and connecting lines visualize the infrastructure layer:
+ * - Tools being invoked
+ * - Services communicating
+ * - MCP servers and protocols in action
+ *
+ * The pulsing animations represent active data flow between systems.
+ * Unlike Agent nodes (major nodes), these are decorative background elements.
+ */
 interface NeuralLinesProps {
   count?: number;
   radius?: number;
 }
 
-interface NeuralNode {
+interface ServiceNode {
   position: THREE.Vector3;
   connections: number[];
 }
@@ -19,9 +30,9 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
   const groupRef = useRef<THREE.Group>(null);
   const linesRef = useRef<THREE.LineSegments>(null);
 
-  // Generate neural network nodes and connections
+  // Generate service network nodes and connections
   const { nodes, linePositions, lineOpacities } = useMemo(() => {
-    const nodes: NeuralNode[] = [];
+    const nodes: ServiceNode[] = [];
 
     // Create nodes in 3D space
     for (let i = 0; i < count; i++) {
@@ -83,7 +94,7 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
         );
 
         // Random base opacity for each line
-        const baseOpacity = 0.03 + Math.random() * 0.05;
+        const baseOpacity = 0.1 + Math.random() * 0.12;
         lineOpacities.push(baseOpacity, baseOpacity);
       }
     }
@@ -139,20 +150,20 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
         <lineBasicMaterial
           color="#ffffff"
           transparent
-          opacity={0.05}
+          opacity={0.2}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
         />
       </lineSegments>
 
-      {/* Small glowing nodes at intersections */}
+      {/* Service nodes - small glowing points representing tools/services/servers */}
       {nodes.map((node, i) => (
         <mesh key={i} position={node.position}>
-          <sphereGeometry args={[0.03, 8, 8]} />
+          <sphereGeometry args={[0.04, 8, 8]} />
           <meshBasicMaterial
             color="#00d4ff"
             transparent
-            opacity={0.1}
+            opacity={0.35}
           />
         </mesh>
       ))}

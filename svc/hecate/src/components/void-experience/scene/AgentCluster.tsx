@@ -4,15 +4,28 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import type { ClusterData } from '../VoidExperience';
 
+/**
+ * AgentCluster - Major nodes representing AI Agents
+ *
+ * These are the primary interactive elements in the Void Experience:
+ * - Hecate (orchestrator) - Gold glow, largest
+ * - Siren (marketing) - Purple accent
+ * - Erebus (router) - Blue accent
+ * - Other agents as discovered via /api/discovery/agents
+ *
+ * Agents orbit around the central CrossroadsOrb (the marketplace bazaar).
+ * Clicking an agent freezes it in place and opens the ClusterPanel.
+ */
 interface AgentClusterProps {
   cluster: ClusterData;
   basePosition: [number, number, number];
   isHovered: boolean;
+  isSelected?: boolean; // When selected, freeze orbital motion
   onHover: (clusterId: string | null) => void;
-  onClick: (cluster: ClusterData) => void;
+  onClick: (cluster: ClusterData, position: THREE.Vector3) => void;
   orbitPhase: number;
   orbitRadius: number;
-  isVisible?: boolean;
+  isInteractive?: boolean; // Controls whether cluster can be clicked/hovered
   fadeDelay?: number;
 }
 
@@ -20,11 +33,12 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
   cluster,
   basePosition,
   isHovered,
+  isSelected = false,
   onHover,
   onClick,
   orbitPhase,
   orbitRadius,
-  isVisible = true,
+  isInteractive = true,
   fadeDelay = 0,
 }) => {
   const groupRef = useRef<THREE.Group>(null);
@@ -32,12 +46,16 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
   const particlesRef = useRef<THREE.Points>(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const fadeStartTime = useRef<number | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Store frozen position when selected
+  const frozenPosition = useRef<THREE.Vector3 | null>(null);
 
   // Determine cluster size based on type (Hecate is larger)
   const baseSize = cluster.name.toLowerCase().includes('hecate') ? 0.25 : 0.18;
 
-  // When not visible, scale to 0. When visible, apply hover scale.
-  const targetScale = isVisible ? (isHovered ? 1.3 : 1.0) : 0;
+  // Apply hover scale when interactive, otherwise just show at normal scale
+  const targetScale = isHovered && isInteractive ? 1.3 : 1.0;
 
   // Create particle positions for nebula effect
   const particlePositions = useMemo(() => {
@@ -59,36 +77,50 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
   useFrame((state) => {
     const time = state.clock.elapsedTime;
 
-    // Track when visibility becomes true for staggered fade-in
-    if (isVisible && fadeStartTime.current === null) {
+    // Track when component mounts for staggered fade-in
+    if (fadeStartTime.current === null) {
       fadeStartTime.current = time;
-    }
-    if (!isVisible) {
-      fadeStartTime.current = null;
     }
 
     if (groupRef.current) {
-      // Orbital motion
-      const x = Math.cos(time * 0.15 + orbitPhase) * orbitRadius;
-      const z = Math.sin(time * 0.15 + orbitPhase) * orbitRadius;
-      const y = basePosition[1] + Math.sin(time * 0.3 + orbitPhase) * 0.2;
-
-      groupRef.current.position.set(x, y, z);
-
-      // Calculate effective target scale with fade delay
-      let effectiveTargetScale = targetScale;
-      if (isVisible && fadeStartTime.current !== null) {
-        const timeSinceVisible = time - fadeStartTime.current;
-        if (timeSinceVisible < fadeDelay) {
-          effectiveTargetScale = 0; // Still waiting for delay
+      // When selected, freeze at current position
+      if (isSelected) {
+        if (!frozenPosition.current) {
+          // Capture current position when first selected
+          frozenPosition.current = groupRef.current.position.clone();
         }
+        // Stay at frozen position
+        groupRef.current.position.copy(frozenPosition.current);
+      } else {
+        // Clear frozen position when deselected
+        frozenPosition.current = null;
+
+        // Normal orbital motion
+        const x = Math.cos(time * 0.15 + orbitPhase) * orbitRadius;
+        const z = Math.sin(time * 0.15 + orbitPhase) * orbitRadius;
+        const y = basePosition[1] + Math.sin(time * 0.3 + orbitPhase) * 0.2;
+
+        groupRef.current.position.set(x, y, z);
       }
 
-      // Smooth scale transition with slower lerp for fade-in effect
+      // Calculate effective target scale with fade delay for initial appearance
+      let effectiveTargetScale = targetScale;
+      const timeSinceMount = time - fadeStartTime.current;
+      if (timeSinceMount < fadeDelay) {
+        effectiveTargetScale = 0; // Still waiting for delay
+      } else if (!isVisible) {
+        setIsVisible(true);
+      }
+
+      // Smooth scale transition
       const currentScale = groupRef.current.scale.x;
-      const lerpSpeed = isVisible ? 0.05 : 0.1; // Slower fade-in, faster fade-out
+      const lerpSpeed = 0.12;
       const newScale = THREE.MathUtils.lerp(currentScale, effectiveTargetScale, lerpSpeed);
-      groupRef.current.scale.setScalar(newScale);
+
+      // Set minimum scale after fade delay to ensure visibility
+      const minScale = timeSinceMount >= fadeDelay ? 0.4 : 0;
+      const finalScale = Math.max(newScale, minScale);
+      groupRef.current.scale.setScalar(finalScale);
     }
 
     if (meshRef.current) {
@@ -111,23 +143,30 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
     <group
       ref={groupRef}
       position={basePosition}
-      onPointerEnter={(e) => {
-        e.stopPropagation();
-        onHover(cluster.id);
-        setShowTooltip(true);
-      }}
-      onPointerLeave={(e) => {
-        e.stopPropagation();
-        onHover(null);
-        setShowTooltip(false);
-      }}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick(cluster);
-      }}
     >
-      {/* Core orb */}
-      <mesh ref={meshRef} castShadow>
+      {/* Core orb - clickable when interactive */}
+      <mesh
+        ref={meshRef}
+        castShadow
+        onPointerOver={isInteractive ? (e) => {
+          e.stopPropagation();
+          onHover(cluster.id);
+          setShowTooltip(true);
+        } : undefined}
+        onPointerOut={isInteractive ? (e) => {
+          e.stopPropagation();
+          onHover(null);
+          setShowTooltip(false);
+        } : undefined}
+        onClick={isInteractive ? (e) => {
+          e.stopPropagation();
+          const worldPos = new THREE.Vector3();
+          if (groupRef.current) {
+            groupRef.current.getWorldPosition(worldPos);
+          }
+          onClick(cluster, worldPos);
+        } : undefined}
+      >
         <sphereGeometry args={[baseSize, 32, 32]} />
         <meshStandardMaterial
           color={cluster.color}

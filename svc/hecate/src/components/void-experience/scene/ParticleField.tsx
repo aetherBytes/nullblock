@@ -93,10 +93,10 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
       <PointMaterial
         transparent
         color="#ffffff"
-        size={0.015}
+        size={0.02}
         sizeAttenuation
         depthWrite={false}
-        opacity={0.4}
+        opacity={0.7}
         blending={THREE.AdditiveBlending}
       />
     </Points>
