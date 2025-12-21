@@ -73,6 +73,7 @@ const agentToCluster = (agent: Agent, index: number): ClusterData => {
 };
 
 // Fallback clusters when no agents are discovered
+// Only HECATE orbits Crossroads - other agents are in constellations
 const FALLBACK_CLUSTERS: ClusterData[] = [
   {
     id: 'hecate-fallback',
@@ -81,30 +82,6 @@ const FALLBACK_CLUSTERS: ClusterData[] = [
     status: 'unknown',
     description: 'MK1 Vessel AI',
     color: '#e6c200',
-  },
-  {
-    id: 'siren-fallback',
-    name: 'Siren',
-    type: 'agent',
-    status: 'unknown',
-    description: 'Marketing Agent',
-    color: '#b967ff',
-  },
-  {
-    id: 'erebus-fallback',
-    name: 'Erebus',
-    type: 'service',
-    status: 'unknown',
-    description: 'Router Service',
-    color: '#00d4ff',
-  },
-  {
-    id: 'protocols-fallback',
-    name: 'Protocols',
-    type: 'protocol',
-    status: 'unknown',
-    description: 'A2A/MCP Protocols',
-    color: '#00ff9d',
   },
 ];
 
@@ -130,9 +107,14 @@ export const useAgentClusters = (): UseAgentClustersResult => {
       if (response.success && response.data?.agents) {
         const agentClusters = response.data.agents.map(agentToCluster);
 
-        // If we got agents, use them; otherwise keep fallback
-        if (agentClusters.length > 0) {
-          setClusters(agentClusters);
+        // Only HECATE orbits Crossroads - filter to just HECATE
+        const hecateOnly = agentClusters.filter(c =>
+          c.name.toLowerCase().includes('hecate')
+        );
+
+        // If we found HECATE, use it; otherwise keep fallback
+        if (hecateOnly.length > 0) {
+          setClusters(hecateOnly);
         } else {
           setClusters(FALLBACK_CLUSTERS);
         }

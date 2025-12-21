@@ -13,6 +13,34 @@ interface HecateModelProps {
   onClick?: (e: { stopPropagation: () => void }) => void;
 }
 
+// Create a soft glow texture for HECATE
+const createHecateGlowTexture = () => {
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  const gradient = ctx.createRadialGradient(
+    size / 2, size / 2, 0,
+    size / 2, size / 2, size / 2
+  );
+  // Cool steel-blue glow - contrasts with Crossroads white
+  gradient.addColorStop(0, 'rgba(140, 170, 210, 0.9)');
+  gradient.addColorStop(0.15, 'rgba(120, 155, 200, 0.6)');
+  gradient.addColorStop(0.3, 'rgba(100, 140, 190, 0.35)');
+  gradient.addColorStop(0.5, 'rgba(80, 125, 180, 0.15)');
+  gradient.addColorStop(0.7, 'rgba(70, 110, 165, 0.05)');
+  gradient.addColorStop(1, 'rgba(60, 100, 150, 0)');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+};
+
 const HecateModel: React.FC<HecateModelProps> = ({
   isInteractive,
   onPointerOver,
@@ -21,6 +49,9 @@ const HecateModel: React.FC<HecateModelProps> = ({
 }) => {
   const { scene } = useGLTF(HECATE_MODEL_PATH);
   const modelRef = useRef<THREE.Group>(null);
+  const glowRef = useRef<THREE.Sprite>(null);
+
+  const glowTexture = useMemo(() => createHecateGlowTexture(), []);
 
   const clonedScene = useMemo(() => {
     const clone = scene.clone();
@@ -28,6 +59,16 @@ const HecateModel: React.FC<HecateModelProps> = ({
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
         mesh.castShadow = true;
+        // Enhance material for better reflections from Crossroads light
+        if (mesh.material) {
+          const mat = mesh.material as THREE.MeshStandardMaterial;
+          if (mat.isMeshStandardMaterial) {
+            mat.envMapIntensity = 1.5;
+            mat.metalness = Math.min(mat.metalness + 0.2, 1.0);
+            mat.roughness = Math.max(mat.roughness - 0.1, 0.1);
+            mat.needsUpdate = true;
+          }
+        }
       }
     });
     return clone;
@@ -37,18 +78,36 @@ const HecateModel: React.FC<HecateModelProps> = ({
     if (modelRef.current) {
       modelRef.current.rotation.y = state.clock.elapsedTime * 0.3;
     }
+    // Gentle glow pulse
+    if (glowRef.current) {
+      const pulse = 1.8 + Math.sin(state.clock.elapsedTime * 1.5) * 0.15;
+      glowRef.current.scale.set(pulse, pulse, 1);
+    }
   });
 
   return (
-    <primitive
-      ref={modelRef}
-      object={clonedScene}
-      scale={0.00225}
-      rotation={[-0.3, 0, 0]}
-      onPointerOver={isInteractive ? onPointerOver : undefined}
-      onPointerOut={isInteractive ? onPointerOut : undefined}
-      onClick={isInteractive ? onClick : undefined}
-    />
+    <group>
+      {/* White glow around HECATE */}
+      <sprite ref={glowRef} scale={[1.8, 1.8, 1]} position={[0, 0, -0.05]}>
+        <spriteMaterial
+          map={glowTexture}
+          transparent
+          opacity={1.0}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </sprite>
+
+      <primitive
+        ref={modelRef}
+        object={clonedScene}
+        scale={0.00291}
+        rotation={[-0.3, 0, 0]}
+        onPointerOver={isInteractive ? onPointerOver : undefined}
+        onPointerOut={isInteractive ? onPointerOut : undefined}
+        onClick={isInteractive ? onClick : undefined}
+      />
+    </group>
   );
 };
 
@@ -149,21 +208,10 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
         frozenPosition.current = null;
 
         // Normal orbital motion
-        // Siren has a tilted orbit plane for extreme angle from HECATE
-        const isSiren = cluster.name.toLowerCase().includes('siren');
         const animPhase = time * 0.15 + orbitPhase;
-
-        let x, y, z;
-        if (isSiren) {
-          // Tilted orbit - more vertical
-          x = Math.cos(animPhase) * orbitRadius * 0.3;
-          z = Math.sin(animPhase) * orbitRadius;
-          y = Math.cos(animPhase) * orbitRadius * 0.8;
-        } else {
-          x = Math.cos(animPhase) * orbitRadius;
-          z = Math.sin(animPhase) * orbitRadius;
-          y = basePosition[1] + Math.sin(time * 0.3 + orbitPhase) * 0.2;
-        }
+        const x = Math.cos(animPhase) * orbitRadius;
+        const z = Math.sin(animPhase) * orbitRadius;
+        const y = basePosition[1] + Math.sin(time * 0.3 + orbitPhase) * 0.2;
 
         groupRef.current.position.set(x, y, z);
       }
@@ -266,45 +314,51 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
         </mesh>
       )}
 
-      {/* Outer glow */}
-      <mesh>
-        <sphereGeometry args={[baseSize * 1.4, 16, 16]} />
-        <meshBasicMaterial
-          color={cluster.color}
-          transparent
-          opacity={0.1}
-          side={THREE.BackSide}
-        />
-      </mesh>
-
-      {/* Particle nebula */}
-      <points ref={particlesRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={particlePositions.length / 3}
-            array={particlePositions}
-            itemSize={3}
+      {/* Outer glow - not for HECATE */}
+      {!isHecate && (
+        <mesh>
+          <sphereGeometry args={[baseSize * 1.4, 16, 16]} />
+          <meshBasicMaterial
+            color={cluster.color}
+            transparent
+            opacity={0.1}
+            side={THREE.BackSide}
           />
-        </bufferGeometry>
-        <pointsMaterial
-          color={cluster.color}
-          size={0.02}
-          transparent
-          opacity={0.6}
-          sizeAttenuation
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </points>
+        </mesh>
+      )}
 
-      {/* Point light */}
-      <pointLight
-        color={cluster.color}
-        intensity={0.8}
-        distance={3}
-        decay={2}
-      />
+      {/* Particle nebula - not for HECATE */}
+      {!isHecate && (
+        <points ref={particlesRef}>
+          <bufferGeometry>
+            <bufferAttribute
+              attach="attributes-position"
+              count={particlePositions.length / 3}
+              array={particlePositions}
+              itemSize={3}
+            />
+          </bufferGeometry>
+          <pointsMaterial
+            color={cluster.color}
+            size={0.02}
+            transparent
+            opacity={0.6}
+            sizeAttenuation
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </points>
+      )}
+
+      {/* Point light - not for HECATE */}
+      {!isHecate && (
+        <pointLight
+          color={cluster.color}
+          intensity={0.8}
+          distance={3}
+          decay={2}
+        />
+      )}
 
       {/* Tooltip */}
       {showTooltip && (

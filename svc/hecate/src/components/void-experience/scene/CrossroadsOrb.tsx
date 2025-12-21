@@ -68,7 +68,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
   const particlesRef = useRef<THREE.Points>(null);
   const outerParticlesRef = useRef<THREE.Points>(null);
 
-  const sunRadius = 0.8;
+  const sunRadius = 1.6;
 
   // Create textures once
   const glowTexture = useMemo(() => createGlowTexture(), []);
@@ -140,11 +140,11 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
 
     // Pulse the glow
     if (glowRef.current) {
-      const pulse = 4.5 + Math.sin(time * 1.5) * 0.3;
+      const pulse = 9 + Math.sin(time * 1.5) * 0.5;
       glowRef.current.scale.set(pulse, pulse, 1);
     }
     if (glow2Ref.current) {
-      const pulse = 6 + Math.sin(time * 1.2 + 1) * 0.4;
+      const pulse = 12 + Math.sin(time * 1.2 + 1) * 0.6;
       glow2Ref.current.scale.set(pulse, pulse, 1);
     }
 
@@ -201,7 +201,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
   return (
     <group ref={groupRef} position={position}>
       {/* Corona glow - back layer */}
-      <sprite ref={glow2Ref} scale={[6, 6, 1]}>
+      <sprite ref={glow2Ref} scale={[12, 12, 1]}>
         <spriteMaterial
           map={glowTexture}
           transparent
@@ -212,7 +212,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
       </sprite>
 
       {/* Corona glow - front layer */}
-      <sprite ref={glowRef} scale={[4.5, 4.5, 1]}>
+      <sprite ref={glowRef} scale={[9, 9, 1]}>
         <spriteMaterial
           map={glowTexture}
           transparent
@@ -270,11 +270,11 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
         />
       </points>
 
-      {/* Central white light */}
+      {/* Central white light - illuminates surrounding agents */}
       <pointLight
         color="#ffffff"
-        intensity={3}
-        distance={6}
+        intensity={5}
+        distance={12}
         decay={2}
       />
     </group>
