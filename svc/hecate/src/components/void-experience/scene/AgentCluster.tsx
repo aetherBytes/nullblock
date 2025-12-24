@@ -25,13 +25,46 @@ const createHecateGlowTexture = () => {
     size / 2, size / 2, 0,
     size / 2, size / 2, size / 2
   );
-  // Cool steel-blue glow - contrasts with Crossroads white
-  gradient.addColorStop(0, 'rgba(140, 170, 210, 0.9)');
-  gradient.addColorStop(0.15, 'rgba(120, 155, 200, 0.6)');
-  gradient.addColorStop(0.3, 'rgba(100, 140, 190, 0.35)');
-  gradient.addColorStop(0.5, 'rgba(80, 125, 180, 0.15)');
+  // Brighter steel-blue glow for visibility
+  gradient.addColorStop(0, 'rgba(180, 210, 255, 1.0)');
+  gradient.addColorStop(0.1, 'rgba(150, 190, 240, 0.8)');
+  gradient.addColorStop(0.2, 'rgba(130, 170, 220, 0.5)');
+  gradient.addColorStop(0.35, 'rgba(110, 150, 200, 0.3)');
+  gradient.addColorStop(0.5, 'rgba(90, 130, 185, 0.15)');
   gradient.addColorStop(0.7, 'rgba(70, 110, 165, 0.05)');
   gradient.addColorStop(1, 'rgba(60, 100, 150, 0)');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+};
+
+// Create a ping/beacon ring texture
+const createPingTexture = () => {
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  // Ring shape - bright at a specific radius, fading in and out
+  const centerX = size / 2;
+  const centerY = size / 2;
+  const ringRadius = size * 0.35;
+  const ringWidth = size * 0.08;
+
+  const gradient = ctx.createRadialGradient(
+    centerX, centerY, ringRadius - ringWidth,
+    centerX, centerY, ringRadius + ringWidth
+  );
+  gradient.addColorStop(0, 'rgba(150, 200, 255, 0)');
+  gradient.addColorStop(0.3, 'rgba(180, 220, 255, 0.8)');
+  gradient.addColorStop(0.5, 'rgba(200, 230, 255, 1.0)');
+  gradient.addColorStop(0.7, 'rgba(180, 220, 255, 0.8)');
+  gradient.addColorStop(1, 'rgba(150, 200, 255, 0)');
 
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
@@ -50,8 +83,22 @@ const HecateModel: React.FC<HecateModelProps> = ({
   const { scene } = useGLTF(HECATE_MODEL_PATH);
   const modelRef = useRef<THREE.Group>(null);
   const glowRef = useRef<THREE.Sprite>(null);
+  const outerGlowRef = useRef<THREE.Sprite>(null);
+  const ping1Ref = useRef<THREE.Sprite>(null);
+  const ping2Ref = useRef<THREE.Sprite>(null);
+  const orbitalRef = useRef<THREE.Group>(null);
+  const lightRef = useRef<THREE.PointLight>(null);
 
   const glowTexture = useMemo(() => createHecateGlowTexture(), []);
+  const pingTexture = useMemo(() => createPingTexture(), []);
+
+  // Ping animation state - triggers periodically
+  const pingState = useRef({
+    ping1Phase: -1, // -1 = inactive
+    ping2Phase: -1,
+    nextPingTime: 4 + Math.random() * 3, // First ping in 4-7 seconds
+    isPinging: false,
+  });
 
   const clonedScene = useMemo(() => {
     const clone = scene.clone();
@@ -63,9 +110,9 @@ const HecateModel: React.FC<HecateModelProps> = ({
         if (mesh.material) {
           const mat = mesh.material as THREE.MeshStandardMaterial;
           if (mat.isMeshStandardMaterial) {
-            mat.envMapIntensity = 1.5;
-            mat.metalness = Math.min(mat.metalness + 0.2, 1.0);
-            mat.roughness = Math.max(mat.roughness - 0.1, 0.1);
+            mat.envMapIntensity = 2.0;
+            mat.metalness = Math.min(mat.metalness + 0.3, 1.0);
+            mat.roughness = Math.max(mat.roughness - 0.15, 0.05);
             mat.needsUpdate = true;
           }
         }
@@ -74,21 +121,144 @@ const HecateModel: React.FC<HecateModelProps> = ({
     return clone;
   }, [scene]);
 
-  useFrame((state) => {
-    if (modelRef.current) {
-      modelRef.current.rotation.y = state.clock.elapsedTime * 0.3;
+  // Orbital particle positions
+  const orbitalParticles = useMemo(() => {
+    const particles: { angle: number; radius: number; speed: number; yOffset: number }[] = [];
+    for (let i = 0; i < 6; i++) {
+      particles.push({
+        angle: (i / 6) * Math.PI * 2,
+        radius: 0.35 + Math.random() * 0.1,
+        speed: 0.8 + Math.random() * 0.4,
+        yOffset: (Math.random() - 0.5) * 0.15,
+      });
     }
-    // Gentle glow pulse
+    return particles;
+  }, []);
+
+  useFrame((state, delta) => {
+    const time = state.clock.elapsedTime;
+
+    if (modelRef.current) {
+      modelRef.current.rotation.y = time * 0.3;
+    }
+
+    // Inner glow pulse
     if (glowRef.current) {
-      const pulse = 1.8 + Math.sin(state.clock.elapsedTime * 1.5) * 0.15;
+      const pulse = 2.2 + Math.sin(time * 1.5) * 0.2;
       glowRef.current.scale.set(pulse, pulse, 1);
+    }
+
+    // Outer atmospheric glow - slower, larger pulse
+    if (outerGlowRef.current) {
+      const outerPulse = 4.0 + Math.sin(time * 0.8) * 0.4;
+      outerGlowRef.current.scale.set(outerPulse, outerPulse, 1);
+    }
+
+    // Ping beacon animation - triggers every 8-15 seconds
+    const ps = pingState.current;
+    ps.nextPingTime -= delta;
+
+    // Start a new ping sequence
+    if (!ps.isPinging && ps.nextPingTime <= 0) {
+      ps.isPinging = true;
+      ps.ping1Phase = 0;
+      ps.ping2Phase = -0.3; // Second ping starts slightly after first
+    }
+
+    // Animate active pings
+    if (ps.isPinging) {
+      ps.ping1Phase += delta * 0.8;
+      ps.ping2Phase += delta * 0.8;
+
+      // End ping sequence when both are done
+      if (ps.ping1Phase > 1.2 && ps.ping2Phase > 1.2) {
+        ps.isPinging = false;
+        ps.ping1Phase = -1;
+        ps.ping2Phase = -1;
+        ps.nextPingTime = 8 + Math.random() * 7; // Next ping in 8-15 seconds
+      }
+    }
+
+    // Ping 1 - expands and fades
+    if (ping1Ref.current) {
+      if (ps.ping1Phase >= 0 && ps.ping1Phase <= 1.2) {
+        const scale = 0.5 + ps.ping1Phase * 3.5;
+        const opacity = Math.max(0, 1 - ps.ping1Phase * 0.9);
+        ping1Ref.current.scale.set(scale, scale, 1);
+        (ping1Ref.current.material as THREE.SpriteMaterial).opacity = opacity * 0.8;
+        ping1Ref.current.visible = true;
+      } else {
+        ping1Ref.current.visible = false;
+      }
+    }
+
+    // Ping 2 - offset timing
+    if (ping2Ref.current) {
+      if (ps.ping2Phase >= 0 && ps.ping2Phase <= 1.2) {
+        const scale = 0.5 + ps.ping2Phase * 3.5;
+        const opacity = Math.max(0, 1 - ps.ping2Phase * 0.9);
+        ping2Ref.current.scale.set(scale, scale, 1);
+        (ping2Ref.current.material as THREE.SpriteMaterial).opacity = opacity * 0.6;
+        ping2Ref.current.visible = true;
+      } else {
+        ping2Ref.current.visible = false;
+      }
+    }
+
+    // Orbital particles
+    if (orbitalRef.current) {
+      orbitalRef.current.children.forEach((child, i) => {
+        const p = orbitalParticles[i];
+        const angle = p.angle + time * p.speed;
+        child.position.x = Math.cos(angle) * p.radius;
+        child.position.z = Math.sin(angle) * p.radius;
+        child.position.y = p.yOffset + Math.sin(time * 2 + i) * 0.05;
+      });
+    }
+
+    // Pulsing light
+    if (lightRef.current) {
+      lightRef.current.intensity = 1.5 + Math.sin(time * 2) * 0.5;
     }
   });
 
   return (
     <group>
-      {/* White glow around HECATE */}
-      <sprite ref={glowRef} scale={[1.8, 1.8, 1]} position={[0, 0, -0.05]}>
+      {/* Outer atmospheric glow - large, soft */}
+      <sprite ref={outerGlowRef} scale={[4, 4, 1]} position={[0, 0, -0.1]}>
+        <spriteMaterial
+          map={glowTexture}
+          transparent
+          opacity={0.4}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </sprite>
+
+      {/* Ping beacon ring 1 */}
+      <sprite ref={ping1Ref} scale={[1, 1, 1]} position={[0, 0, 0]}>
+        <spriteMaterial
+          map={pingTexture}
+          transparent
+          opacity={0.7}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </sprite>
+
+      {/* Ping beacon ring 2 - offset */}
+      <sprite ref={ping2Ref} scale={[1, 1, 1]} position={[0, 0, 0]}>
+        <spriteMaterial
+          map={pingTexture}
+          transparent
+          opacity={0.5}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </sprite>
+
+      {/* Inner core glow */}
+      <sprite ref={glowRef} scale={[2.2, 2.2, 1]} position={[0, 0, -0.05]}>
         <spriteMaterial
           map={glowTexture}
           transparent
@@ -98,6 +268,21 @@ const HecateModel: React.FC<HecateModelProps> = ({
         />
       </sprite>
 
+      {/* Orbiting particles */}
+      <group ref={orbitalRef}>
+        {orbitalParticles.map((_, i) => (
+          <mesh key={i}>
+            <sphereGeometry args={[0.025, 8, 8]} />
+            <meshBasicMaterial
+              color="#a0d0ff"
+              transparent
+              opacity={0.8}
+            />
+          </mesh>
+        ))}
+      </group>
+
+      {/* The MK1 model */}
       <primitive
         ref={modelRef}
         object={clonedScene}
@@ -106,6 +291,15 @@ const HecateModel: React.FC<HecateModelProps> = ({
         onPointerOver={isInteractive ? onPointerOver : undefined}
         onPointerOut={isInteractive ? onPointerOut : undefined}
         onClick={isInteractive ? onClick : undefined}
+      />
+
+      {/* Point light for visibility and reflections */}
+      <pointLight
+        ref={lightRef}
+        color="#88bbff"
+        intensity={1.5}
+        distance={8}
+        decay={2}
       />
     </group>
   );
@@ -207,11 +401,17 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
         // Clear frozen position when deselected
         frozenPosition.current = null;
 
-        // Normal orbital motion
-        const animPhase = time * 0.15 + orbitPhase;
+        // HECATE gets slower, more dramatic orbit
+        const orbitSpeed = isHecate ? 0.06 : 0.15;
+        const animPhase = time * orbitSpeed + orbitPhase;
+
         const x = Math.cos(animPhase) * orbitRadius;
         const z = Math.sin(animPhase) * orbitRadius;
-        const y = basePosition[1] + Math.sin(time * 0.3 + orbitPhase) * 0.2;
+
+        // HECATE has more dramatic vertical movement
+        const yAmplitude = isHecate ? 0.8 : 0.2;
+        const ySpeed = isHecate ? 0.12 : 0.3;
+        const y = basePosition[1] + Math.sin(time * ySpeed + orbitPhase) * yAmplitude;
 
         groupRef.current.position.set(x, y, z);
       }
@@ -225,10 +425,21 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
         setIsVisible(true);
       }
 
+      // Depth-based scaling for HECATE - smaller when on far side of Crossroads
+      let depthScale = 1.0;
+      if (isHecate && !isSelected) {
+        const z = groupRef.current.position.z;
+        // z > 0 = behind Crossroads (far), z < 0 = in front (near)
+        // Scale from 0.6 (far) to 1.2 (near) for dramatic perspective
+        depthScale = THREE.MathUtils.mapLinear(z, orbitRadius, -orbitRadius, 0.55, 1.15);
+        depthScale = THREE.MathUtils.clamp(depthScale, 0.55, 1.15);
+      }
+
       // Smooth scale transition
       const currentScale = groupRef.current.scale.x;
       const lerpSpeed = 0.12;
-      const newScale = THREE.MathUtils.lerp(currentScale, effectiveTargetScale, lerpSpeed);
+      const targetWithDepth = effectiveTargetScale * depthScale;
+      const newScale = THREE.MathUtils.lerp(currentScale, targetWithDepth, lerpSpeed);
 
       // Set minimum scale after fade delay to ensure visibility
       const minScale = timeSinceMount >= fadeDelay ? 0.4 : 0;
