@@ -646,6 +646,7 @@ extend({ SunSurfaceMaterial, CoronaRingMaterial, SolarFlareMaterial, DendriteMat
 interface CrossroadsOrbProps {
   position?: [number, number, number];
   constellationNodes?: ConstellationNode[];
+  onActiveNodesChange?: (activeNodes: Set<number>) => void;
 }
 
 // Outer glow texture - very smooth exponential falloff
@@ -712,7 +713,7 @@ interface SolarParticle {
   radius: number;
 }
 
-const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], constellationNodes = [] }) => {
+const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], constellationNodes = [], onActiveNodesChange }) => {
   const groupRef = useRef<THREE.Group>(null);
   const sunPlaneRef = useRef<THREE.Mesh>(null);
   const coronaGroupRef = useRef<THREE.Group>(null);
@@ -779,6 +780,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
   }
 
   const dendritesState = useRef<DendriteState[]>([]);
+  const prevActiveNodes = useRef<Set<number>>(new Set());
 
   // Initialize dendrite slots with well-staggered timing
   useMemo(() => {
@@ -1102,6 +1104,27 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
           break;
       }
     });
+
+    // Track which constellation nodes have active tendrils connected
+    if (onActiveNodesChange) {
+      const activeNodes = new Set<number>();
+      dendritesState.current.forEach((d) => {
+        // Node is active if tendril is growing, holding, or fading (still visible)
+        if (d.targetNodeIndex >= 0 && d.state !== 'waiting') {
+          activeNodes.add(d.targetNodeIndex);
+        }
+      });
+
+      // Only call callback if the set changed
+      const prevSet = prevActiveNodes.current;
+      const hasChanged = activeNodes.size !== prevSet.size ||
+        [...activeNodes].some(n => !prevSet.has(n));
+
+      if (hasChanged) {
+        prevActiveNodes.current = activeNodes;
+        onActiveNodesChange(activeNodes);
+      }
+    }
 
     // Update mesh positions and rotations based on state
     if (dendritesRef.current) {

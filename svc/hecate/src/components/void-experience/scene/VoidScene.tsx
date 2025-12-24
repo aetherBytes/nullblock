@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import CrossroadsOrb from './CrossroadsOrb';
 import ParticleField from './ParticleField';
@@ -27,6 +27,13 @@ const VoidScene: React.FC<VoidSceneProps> = ({
   onClusterClick,
   isInteractive = true,
 }) => {
+  // Track which constellation nodes have active tendrils
+  const [activeNodes, setActiveNodes] = useState<Set<number>>(new Set());
+
+  const handleActiveNodesChange = useCallback((nodes: Set<number>) => {
+    setActiveNodes(nodes);
+  }, []);
+
   // Generate constellation nodes - shared between NeuralLines and CrossroadsOrb
   const constellationNodes = useMemo(() => {
     const count = 30;
@@ -86,10 +93,14 @@ const VoidScene: React.FC<VoidSceneProps> = ({
 
       {/* Background layers */}
       <ParticleField count={1500} />
-      <NeuralLines nodes={constellationNodes} />
+      <NeuralLines nodes={constellationNodes} activeNodes={activeNodes} />
 
       {/* Central Crossroads Orb - The marketplace bazaar hub */}
-      <CrossroadsOrb position={[0, 0, 0]} constellationNodes={constellationNodes} />
+      <CrossroadsOrb
+        position={[0, 0, 0]}
+        constellationNodes={constellationNodes}
+        onActiveNodesChange={handleActiveNodesChange}
+      />
 
       {/* Floating agent clusters - always visible, interactivity controlled via prop */}
       <AgentClusters

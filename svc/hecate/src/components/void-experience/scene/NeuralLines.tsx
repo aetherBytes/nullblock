@@ -3,6 +3,35 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { ConstellationNode } from './VoidScene';
 
+// Create a soft radial glow texture for active nodes
+const createNodeGlowTexture = () => {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  const gradient = ctx.createRadialGradient(
+    size / 2, size / 2, 0,
+    size / 2, size / 2, size / 2
+  );
+  // Soft white glow that fades out
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+  gradient.addColorStop(0.1, 'rgba(255, 255, 255, 0.8)');
+  gradient.addColorStop(0.25, 'rgba(255, 255, 255, 0.5)');
+  gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.25)');
+  gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.1)');
+  gradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.03)');
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+};
+
 /**
  * NeuralLines - Background constellation network representing Tools, Services, and Servers
  *
@@ -16,11 +45,15 @@ import type { ConstellationNode } from './VoidScene';
  */
 interface NeuralLinesProps {
   nodes: ConstellationNode[];
+  activeNodes?: Set<number>;
 }
 
-const NeuralLines: React.FC<NeuralLinesProps> = ({ nodes }) => {
+const NeuralLines: React.FC<NeuralLinesProps> = ({ nodes, activeNodes = new Set() }) => {
   const groupRef = useRef<THREE.Group>(null);
   const linesRef = useRef<THREE.LineSegments>(null);
+
+  // Create glow texture once
+  const glowTexture = useMemo(() => createNodeGlowTexture(), []);
 
   // Build line geometry from nodes
   const { linePositions, lineOpacities } = useMemo(() => {
@@ -101,16 +134,50 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({ nodes }) => {
       </lineSegments>
 
       {/* Service nodes - small glowing points representing tools/services/servers */}
-      {nodes.map((node, i) => (
-        <mesh key={i} position={[node.position.x, node.position.y, node.position.z]}>
-          <sphereGeometry args={[0.08, 8, 8]} />
-          <meshBasicMaterial
-            color="#00d4ff"
-            transparent
-            opacity={0.5}
-          />
-        </mesh>
-      ))}
+      {nodes.map((node, i) => {
+        const isActive = activeNodes.has(i);
+        return (
+          <group key={i} position={[node.position.x, node.position.y, node.position.z]}>
+            {/* Soft radial glow when tendril is connected */}
+            {isActive && (
+              <sprite scale={[1.0, 1.0, 1]}>
+                <spriteMaterial
+                  map={glowTexture}
+                  transparent
+                  opacity={0.9}
+                  depthWrite={false}
+                  blending={THREE.AdditiveBlending}
+                />
+              </sprite>
+            )}
+            {/* Larger outer glow halo */}
+            {isActive && (
+              <sprite scale={[1.8, 1.8, 1]}>
+                <spriteMaterial
+                  map={glowTexture}
+                  transparent
+                  opacity={0.4}
+                  depthWrite={false}
+                  blending={THREE.AdditiveBlending}
+                />
+              </sprite>
+            )}
+            {/* Core node sphere */}
+            <mesh>
+              <sphereGeometry args={[0.08, 8, 8]} />
+              <meshBasicMaterial
+                color={isActive ? "#ffffff" : "#00d4ff"}
+                transparent
+                opacity={isActive ? 0.9 : 0.5}
+              />
+            </mesh>
+            {/* Point light for active nodes */}
+            {isActive && (
+              <pointLight color="#ffffff" intensity={0.3} distance={1.5} decay={2} />
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 };
