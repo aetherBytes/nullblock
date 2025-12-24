@@ -149,13 +149,16 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
           float fresnel = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
           float center = 1.0 - fresnel; // 1 at center, 0 at edge
 
-          // === DARK ELECTRIC CORE ===
-          // Pure darkness with electric accents
-          vec3 voidBlack = vec3(0.0, 0.0, 0.0);
-          vec3 deepBlack = vec3(0.01, 0.005, 0.015);
-          vec3 electricRed = vec3(0.7, 0.1, 0.15);      // Bright electric red
-          vec3 electricCrimson = vec3(0.5, 0.05, 0.1);  // Electric crimson
-          vec3 darkRed = vec3(0.08, 0.01, 0.02);        // Very dark red tint
+          // === COSMIC VOID CORE ===
+          // Cold ethereal void - deep space colors
+          vec3 voidBlack = vec3(0.0, 0.0, 0.02);
+          vec3 deepBlack = vec3(0.005, 0.01, 0.025);
+          vec3 electricCyan = vec3(0.1, 0.6, 0.8);       // Bright electric cyan
+          vec3 electricBlue = vec3(0.15, 0.35, 0.7);     // Deep electric blue
+          vec3 darkTeal = vec3(0.01, 0.04, 0.06);        // Very dark teal tint
+          vec3 electricRed = electricCyan;               // Alias for compatibility
+          vec3 electricCrimson = electricBlue;           // Alias for compatibility
+          vec3 darkRed = darkTeal;                       // Alias for compatibility
 
           // Core intensity zones - extremely tight
           float coreIntensity = pow(center, 6.0);
@@ -243,14 +246,14 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
           float rimNoise = 0.6 + noise1 * 0.3 + noise2 * 0.2;
           float flareNoise = smoothstep(0.3, 0.8, noise1 + noise3 * 0.5);
 
-          // Rim colors - warm escaping light
-          vec3 brightWhite = vec3(1.0, 0.98, 0.95);
-          vec3 warmLight = vec3(1.0, 0.9, 0.75);
-          vec3 hotEdge = vec3(1.0, 0.85, 0.7);
+          // Rim colors - cold ethereal light
+          vec3 brightWhite = vec3(0.9, 0.95, 1.0);
+          vec3 coldLight = vec3(0.6, 0.85, 1.0);
+          vec3 hotEdge = vec3(0.4, 0.7, 0.9);
 
           vec3 rimColor = vec3(0.0);
           rimColor += hotEdge * innerRim * rimNoise * 1.5;
-          rimColor += warmLight * midRim * rimNoise * 0.6;
+          rimColor += coldLight * midRim * rimNoise * 0.6;
           rimColor += brightWhite * outerRim * 0.25;
           rimColor += brightWhite * flareNoise * innerRim * 1.0;
 
@@ -957,11 +960,11 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
         />
       </points>
 
-      {/* Main white light */}
-      <pointLight color="#ffffff" intensity={8} distance={18} decay={2} />
+      {/* Main cool white light */}
+      <pointLight color="#e0f0ff" intensity={8} distance={18} decay={2} />
 
-      {/* Warm accent light */}
-      <pointLight color="#fff8f0" intensity={3} distance={10} decay={2} />
+      {/* Cold cyan accent light */}
+      <pointLight color="#80d0ff" intensity={3} distance={10} decay={2} />
     </group>
   );
 };
