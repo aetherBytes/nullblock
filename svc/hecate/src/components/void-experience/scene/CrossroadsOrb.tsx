@@ -466,20 +466,45 @@ class DendriteMaterial extends THREE.ShaderMaterial {
         varying float vTaper;
         varying vec3 vNormal;
 
+        // Simplex noise (matching corona ring shader)
+        vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+
+        float snoise(vec2 v) {
+          const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+          vec2 i = floor(v + dot(v, C.yy));
+          vec2 x0 = v - i + dot(i, C.xx);
+          vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+          vec4 x12 = x0.xyxy + C.xxzz;
+          x12.xy -= i1;
+          i = mod289(i);
+          vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+          vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+          m = m*m; m = m*m;
+          vec3 x = 2.0 * fract(p * C.www) - 1.0;
+          vec3 h = abs(x) - 0.5;
+          vec3 ox = floor(x + 0.5);
+          vec3 a0 = x - ox;
+          m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+          vec3 g;
+          g.x = a0.x * x0.x + h.x * x0.y;
+          g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+          return 130.0 * dot(m, g);
+        }
+
         void main() {
-          // Growth direction:
-          // Outward (uDirection=1): grow from base (vProgress=1) toward tip (vProgress=0)
-          // Inward (uDirection=-1): grow from tip (vProgress=0) toward base (vProgress=1)
+          float time = uTime * 0.08; // Slower, more dreamlike
+
+          // Growth direction
           float growthFront;
           bool shouldDiscard;
 
           if (uDirection > 0.0) {
-            // Outward: reveal from vProgress=1 toward vProgress=0
             float threshold = 1.0 - uGrowth;
             shouldDiscard = vProgress < threshold;
             growthFront = threshold;
           } else {
-            // Inward: reveal from vProgress=0 toward vProgress=1
             float threshold = uGrowth;
             shouldDiscard = vProgress > threshold;
             growthFront = threshold;
@@ -487,57 +512,71 @@ class DendriteMaterial extends THREE.ShaderMaterial {
 
           if (shouldDiscard) discard;
 
-          // Cylindrical shading - use normal for rim lighting
+          // Soft fresnel for ethereal glow
           vec3 viewDir = vec3(0.0, 0.0, 1.0);
-          float rim = 1.0 - abs(dot(vNormal, viewDir));
-          rim = pow(rim, 1.5);
+          float fresnel = 1.0 - abs(dot(vNormal, viewDir));
+          fresnel = pow(fresnel, 2.0); // Softer falloff
 
-          // Core brightness based on facing camera
-          float coreBrightness = 0.6 + 0.4 * (1.0 - rim);
-
-          // Energy pulse traveling along tendril
+          // Multi-layer flowing noise for ethereal wisps
           float pulseDir = uDirection > 0.0 ? 1.0 : -1.0;
-          float pulse = sin(vProgress * 10.0 + uTime * 4.0 * pulseDir) * 0.5 + 0.5;
-          pulse = pow(pulse, 2.0);
+          vec2 flowUV = vec2(vProgress * 3.0, vUv.x * 1.5);
 
-          // Secondary slower pulse
-          float pulse2 = sin(vProgress * 5.0 + uTime * 2.0 * pulseDir) * 0.5 + 0.5;
+          // Slow drifting layers
+          float noise1 = snoise(flowUV * 6.0 + vec2(time * 0.2 * pulseDir, time * 0.08));
+          float noise2 = snoise(flowUV * 12.0 + vec2(-time * 0.15, time * 0.12) - noise1 * 0.2);
+          float noise3 = snoise(flowUV * 24.0 + vec2(time * 0.1, -time * 0.06)); // Fine detail
 
-          // Tip glow at growth front
+          // Create soft, wispy effect
+          float wisp = (noise1 * 0.5 + noise2 * 0.35 + noise3 * 0.15) * 0.5 + 0.5;
+          wisp = smoothstep(0.15, 0.85, wisp); // Very soft edges
+
+          // Add shimmer - subtle twinkling
+          float shimmer = snoise(flowUV * 40.0 + vec2(uTime * 0.8, uTime * 0.6));
+          shimmer = pow(max(shimmer, 0.0), 3.0) * 0.3;
+
+          // Very gentle pulse - almost breathing
+          float pulse = 0.85 + 0.15 * sin(uTime * 0.3 + vProgress * 4.0 * pulseDir);
+
+          // Soft tip glow at growth front
           float tipDist = abs(vProgress - growthFront);
-          float tipGlow = 1.0 - smoothstep(0.0, 0.15, tipDist);
+          float tipGlow = 1.0 - smoothstep(0.0, 0.2, tipDist);
+          tipGlow = pow(tipGlow, 1.5); // Softer glow
 
-          // Base glow - brighter where it connects to orb (vProgress=1)
-          float baseGlow = pow(vProgress, 4.0) * 0.6;
+          // Ethereal edge fade - more transparent at edges
+          float edgeFade = 1.0 - fresnel * 0.6;
 
-          // Combine intensity
-          float intensity = coreBrightness * (0.7 + vTaper * 0.3);
-          intensity += rim * 0.4; // Rim glow
-          intensity += tipGlow * 0.9;
-          intensity += baseGlow;
-          intensity *= (0.65 + pulse * 0.2 + pulse2 * 0.15);
+          // Taper creates gentle brightness variation
+          float taperBrightness = 0.6 + vTaper * 0.4;
+
+          // Combine for ethereal intensity
+          float intensity = wisp * pulse * taperBrightness * edgeFade;
+          intensity += shimmer * wisp; // Shimmer only where visible
+          intensity += tipGlow * 0.4;
+          intensity *= 0.7; // Overall softer
           intensity *= uFade;
-          intensity *= uOpacity; // Apply random opacity
+          intensity *= uOpacity;
 
-          // Color gradient - white at base, blue/green at tip
-          vec3 baseColor = vec3(1.0, 1.0, 1.0);
-          vec3 tipColorOut = vec3(0.5, 0.75, 1.0);  // Blue for outward
-          vec3 tipColorIn = vec3(0.5, 1.0, 0.8);   // Cyan-green for inward
-          vec3 tipColor = uDirection > 0.0 ? tipColorOut : tipColorIn;
-          vec3 coreColor = mix(tipColor, baseColor, vProgress);
+          // Ethereal color - pale, ghostly white with subtle warmth
+          vec3 baseColor = vec3(1.0, 0.98, 0.96);
 
-          // Add electric highlight traveling along
-          vec3 electricHighlight = uDirection > 0.0 ? vec3(0.4, 0.6, 1.0) : vec3(0.4, 0.9, 0.7);
-          coreColor = mix(coreColor, electricHighlight, pulse * 0.25);
+          // Subtle direction tint - barely perceptible
+          vec3 tintOut = vec3(0.97, 0.98, 1.0);  // Ghostly cool
+          vec3 tintIn = vec3(1.0, 0.99, 0.97);   // Ghostly warm
+          vec3 color = uDirection > 0.0 ? mix(baseColor, tintOut, 0.2) : mix(baseColor, tintIn, 0.2);
 
-          // Rim gets extra glow color
-          vec3 rimColor = uDirection > 0.0 ? vec3(0.6, 0.8, 1.0) : vec3(0.6, 1.0, 0.85);
-          coreColor = mix(coreColor, rimColor, rim * 0.3);
+          // Soft fresnel glow
+          color += vec3(0.1, 0.08, 0.06) * fresnel;
 
-          // Growth front gets extra bright glow
-          coreColor += vec3(0.5, 0.6, 0.8) * tipGlow;
+          // Ethereal tip glow
+          color += vec3(0.2, 0.18, 0.16) * tipGlow;
 
-          gl_FragColor = vec4(coreColor, intensity * 0.95);
+          // Apply intensity
+          color *= intensity;
+
+          // Very soft alpha for ethereal transparency
+          float alpha = intensity * 0.65;
+
+          gl_FragColor = vec4(color, alpha);
         }
       `,
       transparent: true,
