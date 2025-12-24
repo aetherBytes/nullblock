@@ -23,66 +23,125 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
         }
       `,
       fragmentShader: `
+        precision highp float;
+
         uniform float uTime;
         uniform float uHover;
         varying vec3 vNormal;
         varying vec3 vPosition;
         varying vec2 vUv;
 
-        // Simplex-like noise
+        // 3D Simplex noise - no seams on sphere
         vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-        vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-        vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+        vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+        vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
 
-        float snoise(vec2 v) {
-          const vec4 C = vec4(0.211324865405187, 0.366025403784439,
-                             -0.577350269189626, 0.024390243902439);
-          vec2 i  = floor(v + dot(v, C.yy));
-          vec2 x0 = v - i + dot(i, C.xx);
-          vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
-          vec4 x12 = x0.xyxy + C.xxzz;
-          x12.xy -= i1;
+        float snoise3D(vec3 v) {
+          const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+          const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+
+          vec3 i = floor(v + dot(v, C.yyy));
+          vec3 x0 = v - i + dot(i, C.xxx);
+
+          vec3 g = step(x0.yzx, x0.xyz);
+          vec3 l = 1.0 - g;
+          vec3 i1 = min(g.xyz, l.zxy);
+          vec3 i2 = max(g.xyz, l.zxy);
+
+          vec3 x1 = x0 - i1 + C.xxx;
+          vec3 x2 = x0 - i2 + C.yyy;
+          vec3 x3 = x0 - D.yyy;
+
           i = mod289(i);
-          vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
-          vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
-          m = m*m; m = m*m;
-          vec3 x = 2.0 * fract(p * C.www) - 1.0;
-          vec3 h = abs(x) - 0.5;
-          vec3 ox = floor(x + 0.5);
-          vec3 a0 = x - ox;
-          m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
-          vec3 g;
-          g.x = a0.x * x0.x + h.x * x0.y;
-          g.yz = a0.yz * x12.xz + h.yz * x12.yw;
-          return 130.0 * dot(m, g);
+          vec4 p = permute(permute(permute(
+                    i.z + vec4(0.0, i1.z, i2.z, 1.0))
+                  + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+                  + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+
+          float n_ = 0.142857142857;
+          vec3 ns = n_ * D.wyz - D.xzx;
+
+          vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+
+          vec4 x_ = floor(j * ns.z);
+          vec4 y_ = floor(j - 7.0 * x_);
+
+          vec4 x = x_ *ns.x + ns.yyyy;
+          vec4 y = y_ *ns.x + ns.yyyy;
+          vec4 h = 1.0 - abs(x) - abs(y);
+
+          vec4 b0 = vec4(x.xy, y.xy);
+          vec4 b1 = vec4(x.zw, y.zw);
+
+          vec4 s0 = floor(b0)*2.0 + 1.0;
+          vec4 s1 = floor(b1)*2.0 + 1.0;
+          vec4 sh = -step(h, vec4(0.0));
+
+          vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+          vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+
+          vec3 p0 = vec3(a0.xy, h.x);
+          vec3 p1 = vec3(a0.zw, h.y);
+          vec3 p2 = vec3(a1.xy, h.z);
+          vec3 p3 = vec3(a1.zw, h.w);
+
+          vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+          p0 *= norm.x;
+          p1 *= norm.y;
+          p2 *= norm.z;
+          p3 *= norm.w;
+
+          vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+          m = m * m;
+          return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
         }
 
-        // FBM (Fractal Brownian Motion) for layered noise
-        float fbm(vec2 p) {
+        // FBM using 3D noise - more octaves for smoothness
+        float fbm3D(vec3 p) {
           float value = 0.0;
           float amplitude = 0.5;
           float frequency = 1.0;
-          for (int i = 0; i < 6; i++) {
-            value += amplitude * snoise(p * frequency);
-            amplitude *= 0.5;
-            frequency *= 2.0;
+          for (int i = 0; i < 7; i++) {
+            value += amplitude * snoise3D(p * frequency);
+            amplitude *= 0.48;
+            frequency *= 2.1;
           }
           return value;
+        }
+
+        // Smooth hash for film grain
+        float hash(vec2 p) {
+          vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+          p3 += dot(p3, p3.yzx + 33.33);
+          return fract((p3.x + p3.y) * p3.z);
+        }
+
+        // Smooth value noise for grain
+        float valueNoise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          f = f * f * (3.0 - 2.0 * f); // Smooth interpolation
+
+          float a = hash(i);
+          float b = hash(i + vec2(1.0, 0.0));
+          float c = hash(i + vec2(0.0, 1.0));
+          float d = hash(i + vec2(1.0, 1.0));
+
+          return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
         }
 
         void main() {
           float time = uTime * 0.15;
 
-          // Use spherical coordinates from the vertex position
-          float theta = atan(vPosition.z, vPosition.x);
-          float phi = acos(vPosition.y / length(vPosition));
-          vec2 sphereUV = vec2(theta / 6.28318 + 0.5, phi / 3.14159);
+          // Use 3D position directly - no seams
+          vec3 pos = normalize(vPosition);
 
-          // Multiple noise layers
-          float noise1 = fbm(sphereUV * 4.0 + vec2(time * 0.3, -time * 0.1));
-          float noise2 = fbm(sphereUV * 8.0 + vec2(-time * 0.5, time * 0.2));
-          float noise3 = snoise(sphereUV * 16.0 + vec2(time * 0.8, -time * 0.4));
-          float noise4 = fbm(sphereUV * 2.0 + vec2(time * 0.1, time * 0.15));
+          // Multiple 3D noise layers - seamless on sphere
+          float noise1 = fbm3D(pos * 2.0 + vec3(time * 0.3, -time * 0.1, time * 0.2));
+          float noise2 = fbm3D(pos * 4.0 + vec3(-time * 0.5, time * 0.2, -time * 0.15));
+          float noise3 = snoise3D(pos * 8.0 + vec3(time * 0.8, -time * 0.4, time * 0.3));
+          float noise4 = fbm3D(pos * 1.5 + vec3(time * 0.1, time * 0.15, -time * 0.1));
 
           float combinedNoise = noise1 * 0.4 + noise2 * 0.3 + noise3 * 0.2 + noise4 * 0.1;
 
@@ -90,57 +149,91 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
           float fresnel = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
           float center = 1.0 - fresnel; // 1 at center, 0 at edge
 
-          // === ATOMIC FUSION CORE ===
-          // Nuclear plasma colors
-          vec3 plasmaBlue = vec3(0.3, 0.5, 1.0);
-          vec3 plasmaWhite = vec3(0.9, 0.95, 1.0);
-          vec3 plasmaPurple = vec3(0.6, 0.3, 1.0);
-          vec3 plasmaCore = vec3(1.0, 1.0, 1.0); // White hot center
+          // === DARK ELECTRIC CORE ===
+          // Pure darkness with electric accents
+          vec3 voidBlack = vec3(0.0, 0.0, 0.0);
+          vec3 deepBlack = vec3(0.01, 0.005, 0.015);
+          vec3 electricRed = vec3(0.7, 0.1, 0.15);      // Bright electric red
+          vec3 electricCrimson = vec3(0.5, 0.05, 0.1);  // Electric crimson
+          vec3 darkRed = vec3(0.08, 0.01, 0.02);        // Very dark red tint
 
-          // Fusion reactor pulsing - multiple frequencies like reactor oscillation
-          float fusionPulse1 = sin(uTime * 2.0) * 0.5 + 0.5;
-          float fusionPulse2 = sin(uTime * 3.7 + 1.0) * 0.5 + 0.5;
-          float fusionPulse3 = sin(uTime * 5.3 + 2.0) * 0.5 + 0.5;
-          float fusionBeat = fusionPulse1 * 0.5 + fusionPulse2 * 0.3 + fusionPulse3 * 0.2;
+          // Core intensity zones - extremely tight
+          float coreIntensity = pow(center, 6.0);
+          float innerCore = pow(center, 10.0);
+          float deepCore = pow(center, 15.0);
+          float absoluteCore = pow(center, 22.0); // Pinpoint nuclear center
 
-          // Energy waves radiating from center
-          float waveSpeed = uTime * 1.5;
-          float wave1 = sin((center * 8.0 - waveSpeed) * 3.14159) * 0.5 + 0.5;
-          float wave2 = sin((center * 12.0 - waveSpeed * 1.3) * 3.14159) * 0.5 + 0.5;
-          float wave3 = sin((center * 6.0 - waveSpeed * 0.7) * 3.14159) * 0.5 + 0.5;
-          float energyWaves = wave1 * 0.4 + wave2 * 0.35 + wave3 * 0.25;
+          // Slow ambient pulse
+          float slowPulse = sin(uTime * 0.3) * 0.5 + 0.5;
 
-          // Plasma turbulence - chaotic fusion reaction
-          float plasmaTurb = fbm(sphereUV * 12.0 + vec2(time * 2.0, -time * 1.5));
-          float plasmaDetail = snoise(sphereUV * 24.0 + vec2(-time * 3.0, time * 2.0));
+          // === LIQUID ELECTRIC LAYERS ===
+          // Flowing 3D layers - like liquid plasma
+          vec3 flowOffset1 = vec3(time * 0.4, -time * 0.3, time * 0.25);
+          vec3 flowOffset2 = vec3(-time * 0.35, time * 0.28, -time * 0.2);
+          vec3 flowOffset3 = vec3(time * 0.22, time * 0.18, time * 0.3);
 
-          // Core intensity - brightest at very center
-          float coreIntensity = pow(center, 2.0);
-          float innerCore = pow(center, 4.0); // Very bright center spot
+          float liquid1 = fbm3D(pos * 3.0 + flowOffset1);
+          float liquid2 = fbm3D(pos * 4.0 + flowOffset2);
+          float liquid3 = fbm3D(pos * 2.5 + flowOffset3);
 
-          // Swirling plasma vortex
-          float vortexAngle = theta + time * 0.5 + plasmaTurb * 0.5;
-          float vortex = sin(vortexAngle * 4.0 + phi * 2.0) * 0.5 + 0.5;
-          vortex *= center; // Only visible in center region
+          // Very wide smoothstep for liquid feel - no hard edges
+          float flow1 = smoothstep(-0.2, 0.6, liquid1);
+          float flow2 = smoothstep(-0.15, 0.65, liquid2);
+          float flow3 = smoothstep(-0.1, 0.7, liquid3);
 
-          // === BUILD CORE COLOR ===
-          vec3 coreColor = vec3(0.0);
+          // Blend into smooth flowing field
+          float electricField = (flow1 * 0.35 + flow2 * 0.35 + flow3 * 0.3);
+          electricField = smoothstep(0.2, 0.8, electricField); // Extra smoothing
+          electricField *= innerCore;
 
-          // White-hot fusion center
-          coreColor += plasmaCore * innerCore * (1.5 + fusionBeat * 0.5);
+          // Gentle shimmer layer
+          float shimmer = fbm3D(pos * 5.0 + vec3(time * 0.8, -time * 0.6, time * 0.5));
+          float shimmerIntensity = smoothstep(0.0, 0.8, shimmer) * deepCore * 0.3;
 
-          // Blue plasma glow
-          coreColor += plasmaBlue * coreIntensity * (0.6 + plasmaTurb * 0.4) * energyWaves;
+          // === NUCLEAR CENTER ===
+          // Pulsing core reactor
+          float reactorPulse = sin(uTime * 1.5) * 0.5 + 0.5;
+          float reactorBeat = pow(reactorPulse, 4.0);
 
-          // Purple energy wisps
-          coreColor += plasmaPurple * vortex * 0.4 * (0.8 + plasmaDetail * 0.4);
+          // Spinning energy using 3D noise - seamless
+          float spinNoise = snoise3D(pos * 4.0 + vec3(uTime * 0.3, uTime * 0.2, -uTime * 0.25));
+          float coreSpinner = smoothstep(0.0, 0.7, spinNoise) * absoluteCore;
 
-          // Bright plasma flashes
-          float plasmaFlash = pow(plasmaTurb * 0.5 + 0.5, 4.0) * innerCore;
-          coreColor += plasmaWhite * plasmaFlash * fusionBeat * 2.0;
+          // Smooth concentric waves from center
+          float wave1 = sin(center * 20.0 - uTime * 0.8) * 0.5 + 0.5;
+          float wave2 = sin(center * 35.0 + uTime * 0.6) * 0.5 + 0.5;
+          float waves = smoothstep(0.3, 0.7, wave1 * wave2) * deepCore;
 
-          // Energy ripples
-          coreColor += plasmaWhite * energyWaves * coreIntensity * 0.3;
+          // === BUILD COLOR - ALMOST PURE BLACK ===
+          vec3 coreColor = voidBlack;
+
+          // Barely visible dark red ambient
+          coreColor = mix(coreColor, darkRed, deepCore * 0.1 * slowPulse);
+
+          // LIQUID ELECTRIC FLOW - smooth gradients
+          coreColor += electricRed * electricField * 0.35;
+          coreColor += electricCrimson * flow2 * innerCore * 0.2;
+
+          // Shimmer highlights - gentle
+          coreColor += electricRed * shimmerIntensity * 0.4;
+
+          // Smooth glow falloff
+          float smoothGlow = smoothstep(0.0, 1.0, electricField) * 0.03 * coreIntensity;
+          coreColor += electricCrimson * smoothGlow;
+
+          // === NUCLEAR CORE CENTER ===
+          // Smooth waves - faint
+          coreColor += electricCrimson * waves * 0.2;
+
+          // Spinning core energy - dim
+          coreColor += electricRed * coreSpinner * 0.5;
+
+          // Pulsing nuclear heart - small bright point
+          coreColor += electricRed * absoluteCore * reactorBeat * 1.5;
+
+          // Constant core visibility - pinpoint
+          coreColor += electricCrimson * absoluteCore * 0.4;
+          coreColor += darkRed * deepCore * 0.08;
 
           // === ESCAPING LIGHT RIM (black hole edge) ===
           float innerRim = pow(fresnel, 4.0);
@@ -161,32 +254,37 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
           rimColor += brightWhite * outerRim * 0.25;
           rimColor += brightWhite * flareNoise * innerRim * 1.0;
 
-          // === DARK VOID TRANSITION ===
-          // Transition zone between core and rim - the void
-          float voidZone = smoothstep(0.3, 0.6, center) * (1.0 - smoothstep(0.7, 0.95, center));
-          vec3 voidColor = vec3(0.02, 0.01, 0.02) * (0.5 + noise1 * 0.3);
-
           // === COMBINE ALL ===
           vec3 color = vec3(0.0);
 
-          // Core fusion (center)
-          color += coreColor * smoothstep(0.5, 0.9, center);
+          // Dark energy core (center) - mostly black with lightning
+          color += coreColor * smoothstep(0.4, 0.85, center);
 
-          // Void ring (between core and rim)
-          color = mix(color, voidColor, voidZone * 0.8);
-
-          // Escaping light rim (edge)
+          // Escaping light rim (edge) - the only bright part
           color += rimColor;
 
-          // Global pulse
-          float globalPulse = 1.0 + sin(uTime * 0.5) * 0.1;
+          // Subtle global pulse
+          float globalPulse = 1.0 + sin(uTime * 0.25) * 0.02;
           color *= globalPulse;
 
-          // Occasional reactor surge
-          float surge = pow(sin(uTime * 0.2) * 0.5 + 0.5, 6.0);
-          color += plasmaWhite * surge * innerCore * 0.5;
+          // Rare electric surge - faint
+          float surgeCycle = pow(sin(uTime * 0.1 + noise1 * 2.0) * 0.5 + 0.5, 18.0);
+          color += electricRed * surgeCycle * innerCore * 0.2;
 
-          gl_FragColor = vec4(color, 1.0);
+          // Smooth film grain to break up any grid patterns
+          float grain1 = valueNoise(gl_FragCoord.xy * 0.5 + uTime * 10.0);
+          float grain2 = valueNoise(gl_FragCoord.xy * 0.8 - uTime * 8.0);
+          float grain3 = valueNoise(gl_FragCoord.xy * 1.2 + uTime * 6.0);
+          float smoothGrain = (grain1 + grain2 + grain3) / 3.0;
+
+          // Apply subtle grain
+          color += (smoothGrain - 0.5) * 0.015;
+
+          // Extra smooth dither layer
+          float microGrain = valueNoise(gl_FragCoord.xy * 2.0 + uTime * 20.0);
+          color += (microGrain - 0.5) * 0.005;
+
+          gl_FragColor = vec4(max(color, vec3(0.0)), 1.0);
         }
       `,
       transparent: false,
@@ -744,7 +842,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
 
       {/* Main sun sphere with animated noise shader */}
       <mesh ref={sunPlaneRef}>
-        <sphereGeometry args={[sunRadius, 64, 64]} />
+        <sphereGeometry args={[sunRadius, 128, 128]} />
         {/* @ts-ignore */}
         <sunSurfaceMaterial ref={sunMaterialRef} />
       </mesh>
