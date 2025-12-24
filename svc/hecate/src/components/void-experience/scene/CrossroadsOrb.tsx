@@ -86,61 +86,105 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
 
           float combinedNoise = noise1 * 0.4 + noise2 * 0.3 + noise3 * 0.2 + noise4 * 0.1;
 
-          // === BLACK HOLE VOID EFFECT ===
-          // Fresnel for rim detection
+          // Fresnel for rim/center detection
           float fresnel = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
+          float center = 1.0 - fresnel; // 1 at center, 0 at edge
 
-          // DEEP VOID CENTER - almost pure black with subtle turbulence
-          // The center should feel like an abyss
-          float voidDepth = 1.0 - fresnel; // 1 at center, 0 at edge
-          voidDepth = pow(voidDepth, 0.8);
+          // === ATOMIC FUSION CORE ===
+          // Nuclear plasma colors
+          vec3 plasmaBlue = vec3(0.3, 0.5, 1.0);
+          vec3 plasmaWhite = vec3(0.9, 0.95, 1.0);
+          vec3 plasmaPurple = vec3(0.6, 0.3, 1.0);
+          vec3 plasmaCore = vec3(1.0, 1.0, 1.0); // White hot center
 
-          // Very subtle dark turbulence in the void
-          vec3 voidColor = vec3(0.0); // Pure black base
-          float voidNoise = (noise1 * 0.5 + noise3 * 0.3) * 0.5 + 0.5;
-          voidColor += vec3(0.015, 0.008, 0.01) * voidNoise * voidDepth;
+          // Fusion reactor pulsing - multiple frequencies like reactor oscillation
+          float fusionPulse1 = sin(uTime * 2.0) * 0.5 + 0.5;
+          float fusionPulse2 = sin(uTime * 3.7 + 1.0) * 0.5 + 0.5;
+          float fusionPulse3 = sin(uTime * 5.3 + 2.0) * 0.5 + 0.5;
+          float fusionBeat = fusionPulse1 * 0.5 + fusionPulse2 * 0.3 + fusionPulse3 * 0.2;
 
-          // === ESCAPING LIGHT RIM ===
-          // Multiple rim layers for depth
-          float innerRim = pow(fresnel, 4.0); // Tight bright edge
-          float midRim = pow(fresnel, 2.0);   // Broader glow
-          float outerRim = pow(fresnel, 1.2); // Soft outer halo
+          // Energy waves radiating from center
+          float waveSpeed = uTime * 1.5;
+          float wave1 = sin((center * 8.0 - waveSpeed) * 3.14159) * 0.5 + 0.5;
+          float wave2 = sin((center * 12.0 - waveSpeed * 1.3) * 3.14159) * 0.5 + 0.5;
+          float wave3 = sin((center * 6.0 - waveSpeed * 0.7) * 3.14159) * 0.5 + 0.5;
+          float energyWaves = wave1 * 0.4 + wave2 * 0.35 + wave3 * 0.25;
 
-          // Noise variation on the rim - like turbulent escaping light
+          // Plasma turbulence - chaotic fusion reaction
+          float plasmaTurb = fbm(sphereUV * 12.0 + vec2(time * 2.0, -time * 1.5));
+          float plasmaDetail = snoise(sphereUV * 24.0 + vec2(-time * 3.0, time * 2.0));
+
+          // Core intensity - brightest at very center
+          float coreIntensity = pow(center, 2.0);
+          float innerCore = pow(center, 4.0); // Very bright center spot
+
+          // Swirling plasma vortex
+          float vortexAngle = theta + time * 0.5 + plasmaTurb * 0.5;
+          float vortex = sin(vortexAngle * 4.0 + phi * 2.0) * 0.5 + 0.5;
+          vortex *= center; // Only visible in center region
+
+          // === BUILD CORE COLOR ===
+          vec3 coreColor = vec3(0.0);
+
+          // White-hot fusion center
+          coreColor += plasmaCore * innerCore * (1.5 + fusionBeat * 0.5);
+
+          // Blue plasma glow
+          coreColor += plasmaBlue * coreIntensity * (0.6 + plasmaTurb * 0.4) * energyWaves;
+
+          // Purple energy wisps
+          coreColor += plasmaPurple * vortex * 0.4 * (0.8 + plasmaDetail * 0.4);
+
+          // Bright plasma flashes
+          float plasmaFlash = pow(plasmaTurb * 0.5 + 0.5, 4.0) * innerCore;
+          coreColor += plasmaWhite * plasmaFlash * fusionBeat * 2.0;
+
+          // Energy ripples
+          coreColor += plasmaWhite * energyWaves * coreIntensity * 0.3;
+
+          // === ESCAPING LIGHT RIM (black hole edge) ===
+          float innerRim = pow(fresnel, 4.0);
+          float midRim = pow(fresnel, 2.0);
+          float outerRim = pow(fresnel, 1.2);
+
           float rimNoise = 0.6 + noise1 * 0.3 + noise2 * 0.2;
           float flareNoise = smoothstep(0.3, 0.8, noise1 + noise3 * 0.5);
 
-          // Colors - bright white/warm escaping light
+          // Rim colors - warm escaping light
           vec3 brightWhite = vec3(1.0, 0.98, 0.95);
           vec3 warmLight = vec3(1.0, 0.9, 0.75);
-          vec3 hotCore = vec3(1.0, 0.85, 0.7);
+          vec3 hotEdge = vec3(1.0, 0.85, 0.7);
 
-          // Build the rim glow
           vec3 rimColor = vec3(0.0);
+          rimColor += hotEdge * innerRim * rimNoise * 1.5;
+          rimColor += warmLight * midRim * rimNoise * 0.6;
+          rimColor += brightWhite * outerRim * 0.25;
+          rimColor += brightWhite * flareNoise * innerRim * 1.0;
 
-          // Inner burning edge - very bright
-          rimColor += hotCore * innerRim * rimNoise * 2.0;
+          // === DARK VOID TRANSITION ===
+          // Transition zone between core and rim - the void
+          float voidZone = smoothstep(0.3, 0.6, center) * (1.0 - smoothstep(0.7, 0.95, center));
+          vec3 voidColor = vec3(0.02, 0.01, 0.02) * (0.5 + noise1 * 0.3);
 
-          // Mid corona
-          rimColor += warmLight * midRim * rimNoise * 0.8;
+          // === COMBINE ALL ===
+          vec3 color = vec3(0.0);
 
-          // Outer soft glow
-          rimColor += brightWhite * outerRim * 0.3;
+          // Core fusion (center)
+          color += coreColor * smoothstep(0.5, 0.9, center);
 
-          // Add flare bursts - brighter spots on the rim
-          rimColor += brightWhite * flareNoise * innerRim * 1.5;
+          // Void ring (between core and rim)
+          color = mix(color, voidColor, voidZone * 0.8);
 
-          // === COMBINE ===
-          // Void in center, escaping light at edges
-          vec3 color = voidColor + rimColor;
+          // Escaping light rim (edge)
+          color += rimColor;
 
-          // Subtle pulsing
-          float pulse = 1.0 + sin(uTime * 0.5) * 0.08;
-          color *= pulse;
+          // Global pulse
+          float globalPulse = 1.0 + sin(uTime * 0.5) * 0.1;
+          color *= globalPulse;
 
-          // Occasional bright flash
-          float flash = pow(sin(uTime * 0.3 + noise1 * 3.0) * 0.5 + 0.5, 8.0);
-          color += brightWhite * flash * innerRim * 0.3;
+          // Occasional reactor surge
+          float surge = pow(sin(uTime * 0.2) * 0.5 + 0.5, 6.0);
+          color += plasmaWhite * surge * innerCore * 0.5;
 
           gl_FragColor = vec4(color, 1.0);
         }
