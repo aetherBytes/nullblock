@@ -406,41 +406,50 @@ class DendriteMaterial extends THREE.ShaderMaterial {
         uFade: { value: 1 },   // 1 = visible, 0 = faded out
         uThickness: { value: 1.0 }, // Base thickness multiplier (randomized per tendril)
         uDirection: { value: 1.0 }, // 1.0 = outward (sending), -1.0 = inward (receiving)
+        uOpacity: { value: 1.0 }, // Random opacity per tendril
       },
       vertexShader: `
         uniform float uTime;
         uniform float uGrowth;
         uniform float uThickness;
+        uniform float uDirection;
         varying vec2 vUv;
         varying float vProgress;
         varying float vTaper;
+        varying vec3 vNormal;
 
         void main() {
           vUv = uv;
           vProgress = uv.y;
+          vNormal = normalize(normalMatrix * normal);
 
           vec3 pos = position;
 
           // With -Y to d.dir rotation: uv.y=1 is BASE (near orb), uv.y=0 is TIP (far)
-          // Taper: thick at base (high vProgress), thin at tip (low vProgress)
-          float taperCurve = pow(vProgress, 0.6);
+          // Taper direction depends on growth direction:
+          // - Outward (uDirection=1): thick at base (origin), thin at tip (destination)
+          // - Inward (uDirection=-1): thick at tip (origin), thin at base (destination)
+          float taperProgress = uDirection > 0.0 ? vProgress : 1.0 - vProgress;
+          float taperCurve = pow(taperProgress, 0.6);
           vTaper = taperCurve;
 
-          // Apply taper to X position (width)
-          // Base (vProgress=1) gets full width, tip (vProgress=0) narrows to ~8%
+          // Apply taper to XZ (radius) for cylindrical geometry
           float taperAmount = 0.08 + 0.92 * taperCurve;
           pos.x *= taperAmount * uThickness;
+          pos.z *= taperAmount * uThickness;
 
-          // Organic wave motion - more pronounced at tip (low vProgress)
-          float tipness = 1.0 - vProgress;
-          float waveStrength = tipness * tipness;
-          float wave1 = sin(tipness * 5.0 + uTime * 2.5) * 0.06 * waveStrength;
-          float wave2 = sin(tipness * 8.0 - uTime * 3.5) * 0.04 * waveStrength;
-          pos.x += wave1 + wave2;
+          // Organic wave motion - more pronounced at the thin end (destination)
+          float thinness = 1.0 - taperProgress;
+          float waveStrength = thinness * thinness;
+          float wave1 = sin(thinness * 5.0 + uTime * 2.5) * 0.08 * waveStrength;
+          float wave2 = sin(thinness * 8.0 - uTime * 3.5) * 0.05 * waveStrength;
+          pos.x += wave1;
+          pos.z += wave2;
 
-          // Slight Z wave for 3D movement
-          float zWave = cos(tipness * 6.0 + uTime * 2.0) * 0.04 * waveStrength;
-          pos.z += zWave;
+          // Slight spiral motion
+          float spiral = sin(thinness * 4.0 + uTime * 1.5) * 0.03 * waveStrength;
+          pos.x += cos(uTime * 2.0) * spiral;
+          pos.z += sin(uTime * 2.0) * spiral;
 
           gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
         }
@@ -451,9 +460,11 @@ class DendriteMaterial extends THREE.ShaderMaterial {
         uniform float uFade;
         uniform float uThickness;
         uniform float uDirection; // 1.0 = outward, -1.0 = inward
+        uniform float uOpacity;   // Random opacity per tendril
         varying vec2 vUv;
         varying float vProgress;
         varying float vTaper;
+        varying vec3 vNormal;
 
         void main() {
           // Growth direction:
@@ -476,16 +487,13 @@ class DendriteMaterial extends THREE.ShaderMaterial {
 
           if (shouldDiscard) discard;
 
-          // Energy core - adjusts with taper
-          float edgeDist = abs(vUv.x - 0.5) * 2.0;
+          // Cylindrical shading - use normal for rim lighting
+          vec3 viewDir = vec3(0.0, 0.0, 1.0);
+          float rim = 1.0 - abs(dot(vNormal, viewDir));
+          rim = pow(rim, 1.5);
 
-          // Core width varies with taper - thicker at base (high vTaper)
-          float coreWidth = 0.25 + 0.25 * vTaper;
-          float coreLine = 1.0 - smoothstep(0.0, coreWidth, edgeDist);
-
-          // Outer glow - wider at base
-          float glowWidth = 0.6 + 0.4 * vTaper;
-          float outerGlow = 1.0 - smoothstep(0.0, glowWidth, edgeDist);
+          // Core brightness based on facing camera
+          float coreBrightness = 0.6 + 0.4 * (1.0 - rim);
 
           // Energy pulse traveling along tendril
           float pulseDir = uDirection > 0.0 ? 1.0 : -1.0;
@@ -500,18 +508,18 @@ class DendriteMaterial extends THREE.ShaderMaterial {
           float tipGlow = 1.0 - smoothstep(0.0, 0.15, tipDist);
 
           // Base glow - brighter where it connects to orb (vProgress=1)
-          float baseGlow = pow(vProgress, 4.0) * 0.5;
+          float baseGlow = pow(vProgress, 4.0) * 0.6;
 
           // Combine intensity
-          float intensity = coreLine * (0.7 + vTaper * 0.3);
-          intensity += outerGlow * 0.2 * vTaper;
-          intensity += tipGlow * 0.8;
+          float intensity = coreBrightness * (0.7 + vTaper * 0.3);
+          intensity += rim * 0.4; // Rim glow
+          intensity += tipGlow * 0.9;
           intensity += baseGlow;
           intensity *= (0.65 + pulse * 0.2 + pulse2 * 0.15);
           intensity *= uFade;
+          intensity *= uOpacity; // Apply random opacity
 
-          // Color gradient - white at base, blue at tip
-          // For inward, we can tint slightly different (greenish) to distinguish
+          // Color gradient - white at base, blue/green at tip
           vec3 baseColor = vec3(1.0, 1.0, 1.0);
           vec3 tipColorOut = vec3(0.5, 0.75, 1.0);  // Blue for outward
           vec3 tipColorIn = vec3(0.5, 1.0, 0.8);   // Cyan-green for inward
@@ -521,6 +529,10 @@ class DendriteMaterial extends THREE.ShaderMaterial {
           // Add electric highlight traveling along
           vec3 electricHighlight = uDirection > 0.0 ? vec3(0.4, 0.6, 1.0) : vec3(0.4, 0.9, 0.7);
           coreColor = mix(coreColor, electricHighlight, pulse * 0.25);
+
+          // Rim gets extra glow color
+          vec3 rimColor = uDirection > 0.0 ? vec3(0.6, 0.8, 1.0) : vec3(0.6, 1.0, 0.85);
+          coreColor = mix(coreColor, rimColor, rim * 0.3);
 
           // Growth front gets extra bright glow
           coreColor += vec3(0.5, 0.6, 0.8) * tipGlow;
@@ -712,6 +724,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
     length: number;
     width: number;
     thickness: number;   // Random thickness multiplier for variety
+    opacity: number;     // Random opacity per tendril
     dir: THREE.Vector3;
     quaternion: THREE.Quaternion;
     // Lifecycle
@@ -736,6 +749,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
         length: 2.0,
         width: 0.1,
         thickness: 1.0,
+        opacity: 1.0,
         dir: new THREE.Vector3(0, 1, 0),
         quaternion: new THREE.Quaternion(),
         state: 'waiting',
@@ -760,7 +774,8 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
     d.phi = phi;
     d.length = 2.0 + Math.random() * 3.0;  // 2-5 units long
     d.width = 0.12 + Math.random() * 0.15; // Base width 0.12-0.27
-    d.thickness = 0.6 + Math.random() * 0.8; // Thickness variation 0.6-1.4
+    d.thickness = 0.5 + Math.random() * 0.48; // Thickness variation 0.5-0.98 (70% of previous max)
+    d.opacity = 0.4 + Math.random() * 0.6; // Random opacity 0.4-1.0
 
     // Random direction: outward (sending) or inward (receiving)
     d.growsOutward = Math.random() > 0.4; // 60% outward, 40% inward
@@ -981,6 +996,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
             material.uniforms.uGrowth.value = d.growth;
             material.uniforms.uFade.value = 1;
             material.uniforms.uDirection.value = d.growsOutward ? 1.0 : -1.0;
+            material.uniforms.uOpacity.value = d.opacity;
           }
           // Transition to holding when fully grown
           if (d.growth >= 1.0) {
@@ -996,6 +1012,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
             material.uniforms.uGrowth.value = 1;
             material.uniforms.uFade.value = 1;
             material.uniforms.uDirection.value = d.growsOutward ? 1.0 : -1.0;
+            material.uniforms.uOpacity.value = d.opacity;
           }
           // Transition to fading after hold time
           if (d.elapsed > d.lifetime) {
@@ -1012,6 +1029,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
             material.uniforms.uGrowth.value = 1;
             material.uniforms.uFade.value = d.fade;
             material.uniforms.uDirection.value = d.growsOutward ? 1.0 : -1.0;
+            material.uniforms.uOpacity.value = d.opacity;
           }
           // Transition to waiting when fully faded
           if (d.fade <= 0) {
@@ -1257,7 +1275,9 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
             key={`dendrite-${i}`}
             position={[0, sunRadius + 1, 0]}
           >
-            <planeGeometry args={[0.08, 2.0, 1, 24]} />
+            {/* Cylinder: radiusTop, radiusBottom, height, radialSegments, heightSegments */}
+            {/* Using same radius for both - shader handles the taper */}
+            <cylinderGeometry args={[0.04, 0.04, 2.0, 8, 24]} />
             {/* @ts-ignore */}
             <dendriteMaterial
               ref={(el: DendriteMaterial | null) => {
