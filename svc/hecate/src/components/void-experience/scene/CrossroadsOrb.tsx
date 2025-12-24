@@ -439,16 +439,26 @@ class DendriteMaterial extends THREE.ShaderMaterial {
           pos.x *= taperAmount * uThickness;
           pos.z *= taperAmount * uThickness;
 
-          // Organic wave motion - more pronounced at the thin end (destination)
+          // Organic wave motion - in the middle section only
+          // Pin both ends: origin (thick end) and destination (thin end/tip)
           float thinness = 1.0 - taperProgress;
-          float waveStrength = thinness * thinness;
-          float wave1 = sin(thinness * 5.0 + uTime * 2.5) * 0.08 * waveStrength;
-          float wave2 = sin(thinness * 8.0 - uTime * 3.5) * 0.05 * waveStrength;
+
+          // Reduce wave at the very tip (last 15%) so it stays affixed to the node
+          float tipPinning = smoothstep(0.0, 0.15, taperProgress); // 0 at tip, 1 elsewhere
+
+          // Also reduce wave near the base (first 15%)
+          float basePinning = smoothstep(0.0, 0.15, thinness); // 0 at base, 1 elsewhere
+
+          // Wave is strongest in the middle, pinned at both ends
+          float waveStrength = thinness * thinness * tipPinning * basePinning;
+
+          float wave1 = sin(thinness * 5.0 + uTime * 2.5) * 0.06 * waveStrength;
+          float wave2 = sin(thinness * 8.0 - uTime * 3.5) * 0.04 * waveStrength;
           pos.x += wave1;
           pos.z += wave2;
 
-          // Slight spiral motion
-          float spiral = sin(thinness * 4.0 + uTime * 1.5) * 0.03 * waveStrength;
+          // Slight spiral motion - also pinned at ends
+          float spiral = sin(thinness * 4.0 + uTime * 1.5) * 0.02 * waveStrength;
           pos.x += cos(uTime * 2.0) * spiral;
           pos.z += sin(uTime * 2.0) * spiral;
 
