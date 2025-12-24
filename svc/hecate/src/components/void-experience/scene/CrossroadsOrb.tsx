@@ -396,6 +396,146 @@ class CoronaRingMaterial extends THREE.ShaderMaterial {
   }
 }
 
+// Dendrite/energy tendril shader - grows from surface outward like tentacles
+class DendriteMaterial extends THREE.ShaderMaterial {
+  constructor() {
+    super({
+      uniforms: {
+        uTime: { value: 0 },
+        uGrowth: { value: 0 }, // 0 = not visible, 1 = fully grown
+        uFade: { value: 1 },   // 1 = visible, 0 = faded out
+        uThickness: { value: 1.0 }, // Base thickness multiplier (randomized per tendril)
+        uDirection: { value: 1.0 }, // 1.0 = outward (sending), -1.0 = inward (receiving)
+      },
+      vertexShader: `
+        uniform float uTime;
+        uniform float uGrowth;
+        uniform float uThickness;
+        varying vec2 vUv;
+        varying float vProgress;
+        varying float vTaper;
+
+        void main() {
+          vUv = uv;
+          vProgress = uv.y;
+
+          vec3 pos = position;
+
+          // With -Y to d.dir rotation: uv.y=1 is BASE (near orb), uv.y=0 is TIP (far)
+          // Taper: thick at base (high vProgress), thin at tip (low vProgress)
+          float taperCurve = pow(vProgress, 0.6);
+          vTaper = taperCurve;
+
+          // Apply taper to X position (width)
+          // Base (vProgress=1) gets full width, tip (vProgress=0) narrows to ~8%
+          float taperAmount = 0.08 + 0.92 * taperCurve;
+          pos.x *= taperAmount * uThickness;
+
+          // Organic wave motion - more pronounced at tip (low vProgress)
+          float tipness = 1.0 - vProgress;
+          float waveStrength = tipness * tipness;
+          float wave1 = sin(tipness * 5.0 + uTime * 2.5) * 0.06 * waveStrength;
+          float wave2 = sin(tipness * 8.0 - uTime * 3.5) * 0.04 * waveStrength;
+          pos.x += wave1 + wave2;
+
+          // Slight Z wave for 3D movement
+          float zWave = cos(tipness * 6.0 + uTime * 2.0) * 0.04 * waveStrength;
+          pos.z += zWave;
+
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform float uGrowth;
+        uniform float uFade;
+        uniform float uThickness;
+        uniform float uDirection; // 1.0 = outward, -1.0 = inward
+        varying vec2 vUv;
+        varying float vProgress;
+        varying float vTaper;
+
+        void main() {
+          // Growth direction:
+          // Outward (uDirection=1): grow from base (vProgress=1) toward tip (vProgress=0)
+          // Inward (uDirection=-1): grow from tip (vProgress=0) toward base (vProgress=1)
+          float growthFront;
+          bool shouldDiscard;
+
+          if (uDirection > 0.0) {
+            // Outward: reveal from vProgress=1 toward vProgress=0
+            float threshold = 1.0 - uGrowth;
+            shouldDiscard = vProgress < threshold;
+            growthFront = threshold;
+          } else {
+            // Inward: reveal from vProgress=0 toward vProgress=1
+            float threshold = uGrowth;
+            shouldDiscard = vProgress > threshold;
+            growthFront = threshold;
+          }
+
+          if (shouldDiscard) discard;
+
+          // Energy core - adjusts with taper
+          float edgeDist = abs(vUv.x - 0.5) * 2.0;
+
+          // Core width varies with taper - thicker at base (high vTaper)
+          float coreWidth = 0.25 + 0.25 * vTaper;
+          float coreLine = 1.0 - smoothstep(0.0, coreWidth, edgeDist);
+
+          // Outer glow - wider at base
+          float glowWidth = 0.6 + 0.4 * vTaper;
+          float outerGlow = 1.0 - smoothstep(0.0, glowWidth, edgeDist);
+
+          // Energy pulse traveling along tendril
+          float pulseDir = uDirection > 0.0 ? 1.0 : -1.0;
+          float pulse = sin(vProgress * 10.0 + uTime * 4.0 * pulseDir) * 0.5 + 0.5;
+          pulse = pow(pulse, 2.0);
+
+          // Secondary slower pulse
+          float pulse2 = sin(vProgress * 5.0 + uTime * 2.0 * pulseDir) * 0.5 + 0.5;
+
+          // Tip glow at growth front
+          float tipDist = abs(vProgress - growthFront);
+          float tipGlow = 1.0 - smoothstep(0.0, 0.15, tipDist);
+
+          // Base glow - brighter where it connects to orb (vProgress=1)
+          float baseGlow = pow(vProgress, 4.0) * 0.5;
+
+          // Combine intensity
+          float intensity = coreLine * (0.7 + vTaper * 0.3);
+          intensity += outerGlow * 0.2 * vTaper;
+          intensity += tipGlow * 0.8;
+          intensity += baseGlow;
+          intensity *= (0.65 + pulse * 0.2 + pulse2 * 0.15);
+          intensity *= uFade;
+
+          // Color gradient - white at base, blue at tip
+          // For inward, we can tint slightly different (greenish) to distinguish
+          vec3 baseColor = vec3(1.0, 1.0, 1.0);
+          vec3 tipColorOut = vec3(0.5, 0.75, 1.0);  // Blue for outward
+          vec3 tipColorIn = vec3(0.5, 1.0, 0.8);   // Cyan-green for inward
+          vec3 tipColor = uDirection > 0.0 ? tipColorOut : tipColorIn;
+          vec3 coreColor = mix(tipColor, baseColor, vProgress);
+
+          // Add electric highlight traveling along
+          vec3 electricHighlight = uDirection > 0.0 ? vec3(0.4, 0.6, 1.0) : vec3(0.4, 0.9, 0.7);
+          coreColor = mix(coreColor, electricHighlight, pulse * 0.25);
+
+          // Growth front gets extra bright glow
+          coreColor += vec3(0.5, 0.6, 0.8) * tipGlow;
+
+          gl_FragColor = vec4(coreColor, intensity * 0.95);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+  }
+}
+
 // Solar flare shader - elongated rays
 class SolarFlareMaterial extends THREE.ShaderMaterial {
   constructor() {
@@ -449,7 +589,7 @@ class SolarFlareMaterial extends THREE.ShaderMaterial {
   }
 }
 
-extend({ SunSurfaceMaterial, CoronaRingMaterial, SolarFlareMaterial });
+extend({ SunSurfaceMaterial, CoronaRingMaterial, SolarFlareMaterial, DendriteMaterial });
 
 interface CrossroadsOrbProps {
   position?: [number, number, number];
@@ -536,6 +676,8 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
   const corona2MaterialRef = useRef<CoronaRingMaterial>(null);
   const corona3MaterialRef = useRef<CoronaRingMaterial>(null);
   const flareMaterialsRef = useRef<SolarFlareMaterial[]>([]);
+  const dendritesRef = useRef<THREE.Group>(null);
+  const dendriteMaterialsRef = useRef<DendriteMaterial[]>([]);
 
   const { camera, pointer, raycaster } = useThree();
   const mouseWorld = useRef(new THREE.Vector3());
@@ -546,6 +688,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
   const brightParticleCount = 250;
   const streamParticleCount = 200;
   const flareCount = 8;
+  const dendriteCount = 12;
 
   // Solar flare positions - distributed around the sphere
   const flareData = useMemo(() => {
@@ -561,6 +704,86 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
     }
     return flares;
   }, [flareCount]);
+
+  // Dynamic dendrite state - each tendril has a lifecycle
+  interface DendriteState {
+    theta: number;
+    phi: number;
+    length: number;
+    width: number;
+    thickness: number;   // Random thickness multiplier for variety
+    dir: THREE.Vector3;
+    quaternion: THREE.Quaternion;
+    // Lifecycle
+    state: 'growing' | 'holding' | 'fading' | 'waiting';
+    growth: number;      // 0-1 how much has grown
+    fade: number;        // 1-0 fade out
+    lifetime: number;    // How long to hold
+    elapsed: number;     // Time in current state
+    growSpeed: number;   // How fast to grow
+    growsOutward: boolean; // true = outward (sending), false = inward (receiving)
+  }
+
+  const dendritesState = useRef<DendriteState[]>([]);
+
+  // Initialize dendrite slots with well-staggered timing
+  useMemo(() => {
+    dendritesState.current = [];
+    for (let i = 0; i < dendriteCount; i++) {
+      dendritesState.current.push({
+        theta: 0,
+        phi: 0,
+        length: 2.0,
+        width: 0.1,
+        thickness: 1.0,
+        dir: new THREE.Vector3(0, 1, 0),
+        quaternion: new THREE.Quaternion(),
+        state: 'waiting',
+        growth: 0,
+        fade: 1,
+        lifetime: 0,
+        // Spread initial spawns over 0-10 seconds for natural staggering
+        elapsed: (i / dendriteCount) * 6 + Math.random() * 4,
+        growSpeed: 0.5,
+        growsOutward: true,
+      });
+    }
+  }, [dendriteCount]);
+
+  // Function to spawn a new tendril - can grow outward (sending) or inward (receiving)
+  const spawnDendrite = useCallback((d: DendriteState) => {
+    // Random position on sphere surface
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.PI * 0.2 + Math.random() * Math.PI * 0.6; // Avoid poles
+
+    d.theta = theta;
+    d.phi = phi;
+    d.length = 2.0 + Math.random() * 3.0;  // 2-5 units long
+    d.width = 0.12 + Math.random() * 0.15; // Base width 0.12-0.27
+    d.thickness = 0.6 + Math.random() * 0.8; // Thickness variation 0.6-1.4
+
+    // Random direction: outward (sending) or inward (receiving)
+    d.growsOutward = Math.random() > 0.4; // 60% outward, 40% inward
+
+    // Direction pointing OUTWARD from sphere center
+    const dirX = Math.sin(phi) * Math.cos(theta);
+    const dirY = Math.cos(phi);
+    const dirZ = Math.sin(phi) * Math.sin(theta);
+    d.dir = new THREE.Vector3(dirX, dirY, dirZ).normalize();
+
+    // Calculate rotation to point the tendril outward
+    // Rotate from -Y to d.dir so that the plane's bottom (uv.y=0) points outward
+    // This makes uv.y=0 the TIP and uv.y=1 the BASE (at orb surface)
+    d.quaternion = new THREE.Quaternion();
+    d.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), d.dir);
+
+    d.state = 'growing';
+    d.growth = 0;
+    d.fade = 1;
+    d.lifetime = 0.8 + Math.random() * 4.0; // Hold for 0.8-4.8 seconds (more variety)
+    d.elapsed = 0;
+    d.growSpeed = 0.3 + Math.random() * 0.9; // Growth speed 0.3-1.2 (more variety)
+  }, []);
 
   // Textures
   const glowTexture = useMemo(() => createGlowTexture(), []);
@@ -730,6 +953,110 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
         // Subtle scale pulsing per flare
         const pulseFactor = 0.9 + Math.sin(time * 2 + i * 1.5) * 0.15;
         flare.scale.y = pulseFactor;
+      });
+    }
+
+    // Animate dendrites with dynamic lifecycle
+    dendritesState.current.forEach((d, i) => {
+      const material = dendriteMaterialsRef.current[i];
+
+      switch (d.state) {
+        case 'waiting':
+          d.elapsed += delta;
+          // Random spawn after waiting period - more staggered (2-8 seconds)
+          if (d.elapsed > 2.0 + Math.random() * 6.0) {
+            spawnDendrite(d);
+          }
+          if (material) {
+            material.uniforms.uGrowth.value = 0;
+            material.uniforms.uFade.value = 0;
+          }
+          break;
+
+        case 'growing':
+          d.elapsed += delta;
+          d.growth = Math.min(1.0, d.growth + delta * d.growSpeed);
+          if (material) {
+            material.uniforms.uTime.value = time;
+            material.uniforms.uGrowth.value = d.growth;
+            material.uniforms.uFade.value = 1;
+            material.uniforms.uDirection.value = d.growsOutward ? 1.0 : -1.0;
+          }
+          // Transition to holding when fully grown
+          if (d.growth >= 1.0) {
+            d.state = 'holding';
+            d.elapsed = 0;
+          }
+          break;
+
+        case 'holding':
+          d.elapsed += delta;
+          if (material) {
+            material.uniforms.uTime.value = time;
+            material.uniforms.uGrowth.value = 1;
+            material.uniforms.uFade.value = 1;
+            material.uniforms.uDirection.value = d.growsOutward ? 1.0 : -1.0;
+          }
+          // Transition to fading after hold time
+          if (d.elapsed > d.lifetime) {
+            d.state = 'fading';
+            d.elapsed = 0;
+          }
+          break;
+
+        case 'fading':
+          d.elapsed += delta;
+          d.fade = Math.max(0, d.fade - delta * 1.2); // Slower fade
+          if (material) {
+            material.uniforms.uTime.value = time;
+            material.uniforms.uGrowth.value = 1;
+            material.uniforms.uFade.value = d.fade;
+            material.uniforms.uDirection.value = d.growsOutward ? 1.0 : -1.0;
+          }
+          // Transition to waiting when fully faded
+          if (d.fade <= 0) {
+            d.state = 'waiting';
+            d.elapsed = Math.random() * 4; // Random wait before next spawn
+          }
+          break;
+      }
+    });
+
+    // Update mesh positions and rotations based on state
+    if (dendritesRef.current) {
+      dendritesRef.current.children.forEach((mesh, i) => {
+        const d = dendritesState.current[i];
+        const material = dendriteMaterialsRef.current[i];
+        if (!d) return;
+
+        // Control visibility based on state
+        mesh.visible = d.state !== 'waiting';
+
+        if (d.state !== 'waiting') {
+          // Position: CENTER of tendril mesh, with base at surface
+          // Plane geometry: center at origin, extends -height/2 to +height/2 in local Y
+          // After scaling by d.length/2.0, actual height = d.length
+          // To place BASE at surface: center = surface + halfLength along direction
+          const meshCenter = sunRadius + d.length * 0.5;
+          mesh.position.set(
+            d.dir.x * meshCenter,
+            d.dir.y * meshCenter,
+            d.dir.z * meshCenter
+          );
+
+          // Apply stored quaternion to point local +Y toward d.dir (outward from sphere)
+          mesh.quaternion.copy(d.quaternion);
+
+          // Scale: width and length relative to base geometry (0.08 x 2.0)
+          const widthScale = d.width / 0.08;
+          const lengthScale = d.length / 2.0;
+          mesh.scale.set(widthScale, lengthScale, 1);
+
+          // Update thickness uniform for shader-based taper variation
+          if (material) {
+            material.uniforms.uThickness.value = d.thickness;
+          }
+        }
       });
     }
 
@@ -921,6 +1248,24 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
             </mesh>
           );
         })}
+      </group>
+
+      {/* Dendrites/wisps - flowing energy tendrils (dynamic lifecycle) */}
+      <group ref={dendritesRef}>
+        {Array.from({ length: dendriteCount }).map((_, i) => (
+          <mesh
+            key={`dendrite-${i}`}
+            position={[0, sunRadius + 1, 0]}
+          >
+            <planeGeometry args={[0.08, 2.0, 1, 24]} />
+            {/* @ts-ignore */}
+            <dendriteMaterial
+              ref={(el: DendriteMaterial | null) => {
+                if (el) dendriteMaterialsRef.current[i] = el;
+              }}
+            />
+          </mesh>
+        ))}
       </group>
 
       {/* Curl stream particles - living fluid effect */}
