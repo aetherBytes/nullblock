@@ -118,65 +118,79 @@ class ConstellationCoreMaterial extends THREE.ShaderMaterial {
         }
 
         void main() {
-          float time = uTime * 0.2;
+          float time = uTime * 0.3;
 
           vec3 pos = normalize(vPosition);
 
-          // Noise layers for surface detail
-          float noise1 = fbm3D(pos * 3.0 + vec3(time * 0.2, -time * 0.1, time * 0.15));
-          float noise2 = fbm3D(pos * 5.0 + vec3(-time * 0.3, time * 0.15, -time * 0.1));
-          float noise3 = snoise3D(pos * 8.0 + vec3(time * 0.4, -time * 0.2, time * 0.25));
+          // Multiple noise layers for gaseous, flowing effect
+          float noise1 = fbm3D(pos * 2.0 + vec3(time * 0.3, -time * 0.2, time * 0.25));
+          float noise2 = fbm3D(pos * 4.0 + vec3(-time * 0.4, time * 0.2, -time * 0.15));
+          float noise3 = snoise3D(pos * 6.0 + vec3(time * 0.5, -time * 0.3, time * 0.35));
+          float noise4 = snoise3D(pos * 10.0 + vec3(-time * 0.6, time * 0.4, -time * 0.2));
 
-          float combinedNoise = noise1 * 0.5 + noise2 * 0.3 + noise3 * 0.2;
+          // Combine for wispy, flowing patterns
+          float gasFlow = noise1 * 0.4 + noise2 * 0.3 + noise3 * 0.2 + noise4 * 0.1;
+          float wispyNoise = smoothstep(-0.3, 0.6, gasFlow);
 
-          // Fresnel
+          // Fresnel for edge softness
           float fresnel = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
           float center = 1.0 - fresnel;
 
-          // Core intensities
-          float coreIntensity = pow(center, 4.0);
-          float innerCore = pow(center, 8.0);
-          float deepCore = pow(center, 12.0);
+          // Softer core gradients for gaseous look
+          float coreIntensity = pow(center, 2.0);
+          float innerCore = pow(center, 4.0);
+          float deepCore = pow(center, 6.0);
 
           // Pulse
-          float pulse = sin(uTime * 0.4) * 0.5 + 0.5;
+          float pulse = sin(uTime * 0.5 + gasFlow * 2.0) * 0.5 + 0.5;
 
-          // Blue color palette based on hue uniform
-          vec3 darkBlue = hsv2rgb(vec3(uHue, 0.8, 0.1));
-          vec3 midBlue = hsv2rgb(vec3(uHue, 0.7, 0.3 * uBrightness));
+          // Blue color palette - more variation for gas clouds
+          vec3 voidBlue = hsv2rgb(vec3(uHue + 0.02, 0.9, 0.05));
+          vec3 darkBlue = hsv2rgb(vec3(uHue, 0.8, 0.15 * uBrightness));
+          vec3 midBlue = hsv2rgb(vec3(uHue - 0.02, 0.6, 0.4 * uBrightness));
           vec3 paleBlue = hsv2rgb(vec3(uHue - 0.05, 0.4, 0.7 * uBrightness));
-          vec3 brightBlue = hsv2rgb(vec3(uHue - 0.02, 0.5, 0.9 * uBrightness));
-          vec3 coreWhite = vec3(0.8, 0.9, 1.0) * uBrightness;
+          vec3 brightBlue = hsv2rgb(vec3(uHue - 0.08, 0.3, 0.9 * uBrightness));
+          vec3 coreWhite = vec3(0.85, 0.92, 1.0) * uBrightness;
 
-          // Build color
-          vec3 color = darkBlue;
+          // Build gaseous color with noise-driven layers
+          vec3 color = voidBlue;
 
-          // Inner glow
-          color = mix(color, midBlue, innerCore * 0.6);
-          color = mix(color, paleBlue, deepCore * 0.8);
+          // Wispy gas layers driven by noise
+          color = mix(color, darkBlue, wispyNoise * 0.7);
+          color = mix(color, midBlue, wispyNoise * innerCore * 0.8);
+          color = mix(color, paleBlue, smoothstep(0.3, 0.8, gasFlow) * coreIntensity * 0.6);
 
-          // Noise-based surface detail
-          float surfaceDetail = smoothstep(-0.2, 0.5, combinedNoise);
-          color = mix(color, brightBlue, surfaceDetail * coreIntensity * 0.4);
+          // Bright wisps flowing through
+          float brightWisps = smoothstep(0.4, 0.9, noise2 + noise3 * 0.5);
+          color = mix(color, brightBlue, brightWisps * deepCore * 0.5);
 
-          // Core brightness
-          color = mix(color, coreWhite, deepCore * pulse * 0.5);
+          // Pulsing core glow
+          color = mix(color, coreWhite, deepCore * pulse * 0.4);
 
-          // Rim glow
-          float rim = pow(fresnel, 2.0);
-          vec3 rimColor = hsv2rgb(vec3(uHue + 0.05, 0.5, 0.6));
-          color += rimColor * rim * 0.4;
+          // Soft diffuse rim - not sharp edge
+          float softRim = pow(fresnel, 1.5);
+          vec3 rimColor = hsv2rgb(vec3(uHue + 0.03, 0.4, 0.5 * uBrightness));
+          color += rimColor * softRim * wispyNoise * 0.5;
 
-          // Bright edge
-          float edgeGlow = pow(fresnel, 4.0);
-          color += paleBlue * edgeGlow * 0.3;
+          // Calculate alpha for gaseous transparency
+          // More transparent at edges, denser toward center
+          float coreAlpha = smoothstep(0.0, 0.5, center);
+          float noiseAlpha = 0.3 + wispyNoise * 0.4;
+          float edgeFade = 1.0 - pow(fresnel, 1.2);
 
-          gl_FragColor = vec4(color, 1.0);
+          float alpha = coreAlpha * noiseAlpha * edgeFade + deepCore * 0.5;
+          alpha = clamp(alpha * 1.5, 0.0, 0.95);
+
+          // Boost color intensity to compensate for transparency
+          color *= 1.3;
+
+          gl_FragColor = vec4(color, alpha);
         }
       `,
-      transparent: false,
-      depthWrite: true,
-      side: THREE.FrontSide,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
     });
   }
 }
