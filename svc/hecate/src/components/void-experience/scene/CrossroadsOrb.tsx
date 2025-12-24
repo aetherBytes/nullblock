@@ -152,23 +152,22 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
   }
 }
 
-// Corona shell shader - fluid flowing wisps with smooth blending
-class CoronaMaterial extends THREE.ShaderMaterial {
+// Corona RING shader - for torus geometry
+class CoronaRingMaterial extends THREE.ShaderMaterial {
   constructor() {
     super({
       uniforms: {
         uTime: { value: 0 },
         uIntensity: { value: 1.0 },
-        uFresnelPower: { value: 2.5 },
       },
       vertexShader: `
         varying vec3 vNormal;
-        varying vec3 vPosition;
+        varying vec2 vUv;
         varying vec3 vViewDir;
 
         void main() {
           vNormal = normalize(normalMatrix * normal);
-          vPosition = position;
+          vUv = uv;
           vec4 worldPos = modelMatrix * vec4(position, 1.0);
           vViewDir = normalize(cameraPosition - worldPos.xyz);
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -177,12 +176,11 @@ class CoronaMaterial extends THREE.ShaderMaterial {
       fragmentShader: `
         uniform float uTime;
         uniform float uIntensity;
-        uniform float uFresnelPower;
         varying vec3 vNormal;
-        varying vec3 vPosition;
+        varying vec2 vUv;
         varying vec3 vViewDir;
 
-        // Noise functions
+        // Noise
         vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
         vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
         vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -209,70 +207,40 @@ class CoronaMaterial extends THREE.ShaderMaterial {
           return 130.0 * dot(m, g);
         }
 
-        // FBM for smoother, more fluid noise
-        float fbm(vec2 p) {
-          float value = 0.0;
-          float amplitude = 0.5;
-          float frequency = 1.0;
-          for (int i = 0; i < 5; i++) {
-            value += amplitude * snoise(p * frequency);
-            amplitude *= 0.5;
-            frequency *= 2.0;
-          }
-          return value;
-        }
-
         void main() {
-          float time = uTime * 0.08;
+          float time = uTime * 0.1;
 
-          // Smooth fresnel using view direction
+          // Fresnel for glow at edges
           float fresnel = 1.0 - abs(dot(vNormal, vViewDir));
-          fresnel = pow(fresnel, uFresnelPower);
+          fresnel = pow(fresnel, 1.5);
 
-          // Spherical coords
-          float theta = atan(vPosition.z, vPosition.x);
-          float phi = acos(vPosition.y / length(vPosition));
+          // Flowing noise along the ring
+          vec2 flowUV = vUv + vec2(time * 0.3, time * 0.1);
+          float noise1 = snoise(flowUV * 8.0);
+          float noise2 = snoise(flowUV * 16.0 - noise1 * 0.3);
 
-          // Flowing UV - theta flows over time for swirling effect
-          vec2 flowUV = vec2(theta / 6.28318 + time * 0.3, phi / 3.14159);
-          vec2 flowUV2 = vec2(theta / 6.28318 - time * 0.2, phi / 3.14159 + time * 0.1);
+          // Combine
+          float wisp = (noise1 * 0.6 + noise2 * 0.4) * 0.5 + 0.5;
+          wisp = smoothstep(0.3, 0.7, wisp);
 
-          // Multi-layer fluid noise
-          float flow1 = fbm(flowUV * 3.0);
-          float flow2 = fbm(flowUV2 * 5.0 + flow1 * 0.3);
-          float flow3 = fbm(flowUV * 8.0 - flow2 * 0.2 + vec2(time * 0.5, 0.0));
-          float detail = snoise(flowUV * 12.0 + flow1 * 0.5);
+          // Pulse
+          float pulse = 0.8 + 0.2 * sin(uTime * 0.5 + vUv.x * 6.28);
 
-          // Combine for smooth, flowing wisps
-          float wisp = flow1 * 0.4 + flow2 * 0.35 + flow3 * 0.2 + detail * 0.1;
-          wisp = wisp * 0.5 + 0.5; // Normalize to 0-1
-          wisp = smoothstep(0.2, 0.8, wisp); // Smooth contrast
+          // Final intensity
+          float intensity = (0.5 + fresnel * 0.5) * wisp * pulse * uIntensity;
 
-          // Soft pulsing
-          float pulse = 0.85 + 0.15 * sin(uTime * 0.4 + flow1 * 2.0);
+          // Color - bright white/warm
+          vec3 color = vec3(1.0, 0.95, 0.9) * intensity;
 
-          // Multiple fresnel layers for depth
-          float softFresnel = pow(fresnel, uFresnelPower * 0.7);
-          float hardFresnel = pow(fresnel, uFresnelPower * 1.5);
-
-          // Blend layers
-          float corona = mix(softFresnel, hardFresnel, wisp) * pulse;
-
-          // Color gradient - warmer at edges
-          vec3 innerColor = vec3(1.0, 0.98, 0.95);
-          vec3 outerColor = vec3(1.0, 0.92, 0.85);
-          vec3 color = mix(innerColor, outerColor, hardFresnel) * corona * uIntensity;
-
-          // Smooth alpha falloff
-          float alpha = corona * wisp * 0.7;
-          alpha = smoothstep(0.0, 0.3, alpha);
+          // Alpha
+          float alpha = intensity * 0.8;
 
           gl_FragColor = vec4(color, alpha);
         }
       `,
       transparent: true,
       depthWrite: false,
-      side: THREE.BackSide,
+      side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
     });
   }
@@ -331,7 +299,7 @@ class SolarFlareMaterial extends THREE.ShaderMaterial {
   }
 }
 
-extend({ SunSurfaceMaterial, CoronaMaterial, SolarFlareMaterial });
+extend({ SunSurfaceMaterial, CoronaRingMaterial, SolarFlareMaterial });
 
 interface CrossroadsOrbProps {
   position?: [number, number, number];
@@ -404,9 +372,9 @@ interface SolarParticle {
 const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) => {
   const groupRef = useRef<THREE.Group>(null);
   const sunPlaneRef = useRef<THREE.Mesh>(null);
-  const coronaRef = useRef<THREE.Mesh>(null);
-  const corona2Ref = useRef<THREE.Mesh>(null);
-  const corona3Ref = useRef<THREE.Mesh>(null);
+  const coronaGroupRef = useRef<THREE.Group>(null);
+  const corona2GroupRef = useRef<THREE.Group>(null);
+  const corona3GroupRef = useRef<THREE.Group>(null);
   const glowRef = useRef<THREE.Sprite>(null);
   const glow2Ref = useRef<THREE.Sprite>(null);
   const brightParticlesRef = useRef<THREE.Points>(null);
@@ -414,9 +382,9 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
   const flaresRef = useRef<THREE.Group>(null);
 
   const sunMaterialRef = useRef<SunSurfaceMaterial>(null);
-  const coronaMaterialRef = useRef<CoronaMaterial>(null);
-  const corona2MaterialRef = useRef<CoronaMaterial>(null);
-  const corona3MaterialRef = useRef<CoronaMaterial>(null);
+  const coronaMaterialRef = useRef<CoronaRingMaterial>(null);
+  const corona2MaterialRef = useRef<CoronaRingMaterial>(null);
+  const corona3MaterialRef = useRef<CoronaRingMaterial>(null);
   const flareMaterialsRef = useRef<SolarFlareMaterial[]>([]);
 
   const { camera, pointer, raycaster } = useThree();
@@ -583,21 +551,22 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
       corona3MaterialRef.current.uniforms.uTime.value = time;
     }
 
-    // Animate corona shells - different rotation speeds for fluid blending
-    if (coronaRef.current) {
-      coronaRef.current.rotation.y += delta * 0.04;
-      coronaRef.current.rotation.x = Math.sin(time * 0.25) * 0.08;
-      coronaRef.current.rotation.z = Math.cos(time * 0.18) * 0.05;
+    // Animate corona shells - TRUE GYROSCOPE EFFECT
+    // Rotate the groups on different axes so the fresnel rings tilt in 3D
+    if (coronaGroupRef.current) {
+      // Inner ring: rotates around X axis (tilts forward/back)
+      coronaGroupRef.current.rotation.x += delta * 0.3;
+      coronaGroupRef.current.rotation.z += delta * 0.1;
     }
-    if (corona2Ref.current) {
-      corona2Ref.current.rotation.y -= delta * 0.025;
-      corona2Ref.current.rotation.x = Math.sin(time * 0.15 + 1.0) * 0.1;
-      corona2Ref.current.rotation.z = Math.sin(time * 0.12) * 0.07;
+    if (corona2GroupRef.current) {
+      // Middle ring: rotates around Z axis (tilts side to side)
+      corona2GroupRef.current.rotation.z -= delta * 0.25;
+      corona2GroupRef.current.rotation.y += delta * 0.12;
     }
-    if (corona3Ref.current) {
-      corona3Ref.current.rotation.y += delta * 0.015;
-      corona3Ref.current.rotation.x = Math.cos(time * 0.1 + 2.0) * 0.12;
-      corona3Ref.current.rotation.z = Math.cos(time * 0.2) * 0.06;
+    if (corona3GroupRef.current) {
+      // Outer ring: rotates around Y axis with X tilt
+      corona3GroupRef.current.rotation.y += delta * 0.18;
+      corona3GroupRef.current.rotation.x -= delta * 0.15;
     }
 
     // Animate flares
@@ -736,26 +705,32 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
         <sunSurfaceMaterial ref={sunMaterialRef} />
       </mesh>
 
-      {/* Inner corona shell - tight bright wisps */}
-      <mesh ref={coronaRef}>
-        <sphereGeometry args={[sunRadius * 1.08, 48, 48]} />
-        {/* @ts-ignore */}
-        <coronaMaterial ref={coronaMaterialRef} uIntensity={1.2} uFresnelPower={3.5} />
-      </mesh>
+      {/* Inner corona ring - gyroscope ring 1 (horizontal) */}
+      <group ref={coronaGroupRef}>
+        <mesh>
+          <torusGeometry args={[sunRadius * 1.3, 0.08, 16, 64]} />
+          {/* @ts-ignore */}
+          <coronaRingMaterial ref={coronaMaterialRef} uIntensity={1.0} />
+        </mesh>
+      </group>
 
-      {/* Middle corona shell - flowing medium layer */}
-      <mesh ref={corona2Ref}>
-        <sphereGeometry args={[sunRadius * 1.2, 40, 40]} />
-        {/* @ts-ignore */}
-        <coronaMaterial ref={corona2MaterialRef} uIntensity={0.9} uFresnelPower={2.5} />
-      </mesh>
+      {/* Middle corona ring - gyroscope ring 2 (tilted 60°) */}
+      <group ref={corona2GroupRef} rotation={[Math.PI / 3, 0, 0]}>
+        <mesh>
+          <torusGeometry args={[sunRadius * 1.5, 0.06, 16, 64]} />
+          {/* @ts-ignore */}
+          <coronaRingMaterial ref={corona2MaterialRef} uIntensity={0.8} />
+        </mesh>
+      </group>
 
-      {/* Outer corona shell - soft diffuse glow */}
-      <mesh ref={corona3Ref}>
-        <sphereGeometry args={[sunRadius * 1.4, 32, 32]} />
-        {/* @ts-ignore */}
-        <coronaMaterial ref={corona3MaterialRef} uIntensity={0.6} uFresnelPower={1.8} />
-      </mesh>
+      {/* Outer corona ring - gyroscope ring 3 (tilted 120°) */}
+      <group ref={corona3GroupRef} rotation={[0, 0, Math.PI / 3]}>
+        <mesh>
+          <torusGeometry args={[sunRadius * 1.7, 0.05, 16, 64]} />
+          {/* @ts-ignore */}
+          <coronaRingMaterial ref={corona3MaterialRef} uIntensity={0.6} />
+        </mesh>
+      </group>
 
       {/* Solar flares - elongated rays shooting out */}
       <group ref={flaresRef}>
