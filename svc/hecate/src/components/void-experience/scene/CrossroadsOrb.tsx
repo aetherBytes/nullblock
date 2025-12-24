@@ -792,6 +792,18 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
   const dendritesState = useRef<DendriteState[]>([]);
   const prevActiveNodes = useRef<Set<number>>(new Set());
 
+  // Ring alignment state - rings periodically align then return to normal rotation
+  const alignmentState = useRef({
+    isAligning: false,
+    alignProgress: 0, // 0 = normal rotation, 1 = fully aligned
+    holdTime: 0,
+    nextAlignTime: 8 + Math.random() * 12, // First alignment in 8-20 seconds
+    // Store the rotation offsets to blend back to
+    ring1BaseRot: { x: 0, z: 0 },
+    ring2BaseRot: { z: 0, y: 0 },
+    ring3BaseRot: { y: 0, x: 0 },
+  });
+
   // Initialize dendrite slots with well-staggered timing
   useMemo(() => {
     dendritesState.current = [];
@@ -1014,22 +1026,92 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       corona3MaterialRef.current.uniforms.uTime.value = time;
     }
 
-    // Animate corona shells - TRUE GYROSCOPE EFFECT
-    // Rotate the groups on different axes so the fresnel rings tilt in 3D
-    if (coronaGroupRef.current) {
-      // Inner ring: rotates around X axis (tilts forward/back)
-      coronaGroupRef.current.rotation.x += delta * 0.3;
-      coronaGroupRef.current.rotation.z += delta * 0.1;
+    // Animate corona shells - TRUE GYROSCOPE EFFECT with periodic alignment
+    const align = alignmentState.current;
+
+    // Update alignment timer
+    align.nextAlignTime -= delta;
+
+    if (!align.isAligning && align.nextAlignTime <= 0) {
+      // Start alignment sequence
+      align.isAligning = true;
+      align.alignProgress = 0;
+      align.holdTime = 0;
+      // Store current rotations as base to blend from
+      if (coronaGroupRef.current) {
+        align.ring1BaseRot.x = coronaGroupRef.current.rotation.x;
+        align.ring1BaseRot.z = coronaGroupRef.current.rotation.z;
+      }
+      if (corona2GroupRef.current) {
+        align.ring2BaseRot.z = corona2GroupRef.current.rotation.z;
+        align.ring2BaseRot.y = corona2GroupRef.current.rotation.y;
+      }
+      if (corona3GroupRef.current) {
+        align.ring3BaseRot.y = corona3GroupRef.current.rotation.y;
+        align.ring3BaseRot.x = corona3GroupRef.current.rotation.x;
+      }
     }
-    if (corona2GroupRef.current) {
-      // Middle ring: rotates around Z axis (tilts side to side)
-      corona2GroupRef.current.rotation.z -= delta * 0.25;
-      corona2GroupRef.current.rotation.y += delta * 0.12;
-    }
-    if (corona3GroupRef.current) {
-      // Outer ring: rotates around Y axis with X tilt
-      corona3GroupRef.current.rotation.y += delta * 0.18;
-      corona3GroupRef.current.rotation.x -= delta * 0.15;
+
+    if (align.isAligning) {
+      if (align.alignProgress < 1) {
+        // Ease into alignment
+        align.alignProgress = Math.min(1, align.alignProgress + delta * 0.8);
+        const ease = 1 - Math.pow(1 - align.alignProgress, 3); // Ease out cubic
+
+        // Target alignment: all rings flat (rotation 0 on their tilt axes)
+        // But keep spinning on Y axis together
+        const sharedSpin = time * 0.15;
+
+        if (coronaGroupRef.current) {
+          coronaGroupRef.current.rotation.x = align.ring1BaseRot.x * (1 - ease);
+          coronaGroupRef.current.rotation.z = align.ring1BaseRot.z * (1 - ease);
+          coronaGroupRef.current.rotation.y = sharedSpin;
+        }
+        if (corona2GroupRef.current) {
+          // Blend from tilted to flat
+          const baseTiltX = Math.PI / 3;
+          corona2GroupRef.current.rotation.x = baseTiltX * (1 - ease);
+          corona2GroupRef.current.rotation.z = align.ring2BaseRot.z * (1 - ease);
+          corona2GroupRef.current.rotation.y = sharedSpin;
+        }
+        if (corona3GroupRef.current) {
+          // Blend from tilted to flat
+          const baseTiltZ = Math.PI / 3;
+          corona3GroupRef.current.rotation.z = baseTiltZ * (1 - ease);
+          corona3GroupRef.current.rotation.x = align.ring3BaseRot.x * (1 - ease);
+          corona3GroupRef.current.rotation.y = sharedSpin;
+        }
+      } else {
+        // Hold alignment briefly (0.8-1.5 seconds)
+        align.holdTime += delta;
+        const sharedSpin = time * 0.15;
+
+        // Keep spinning together while aligned
+        if (coronaGroupRef.current) coronaGroupRef.current.rotation.y = sharedSpin;
+        if (corona2GroupRef.current) corona2GroupRef.current.rotation.y = sharedSpin;
+        if (corona3GroupRef.current) corona3GroupRef.current.rotation.y = sharedSpin;
+
+        if (align.holdTime > 0.8 + Math.random() * 0.7) {
+          // End alignment, schedule next one
+          align.isAligning = false;
+          align.alignProgress = 0;
+          align.nextAlignTime = 15 + Math.random() * 25; // Next alignment in 15-40 seconds
+        }
+      }
+    } else {
+      // Normal gyroscope rotation
+      if (coronaGroupRef.current) {
+        coronaGroupRef.current.rotation.x += delta * 0.3;
+        coronaGroupRef.current.rotation.z += delta * 0.1;
+      }
+      if (corona2GroupRef.current) {
+        corona2GroupRef.current.rotation.z -= delta * 0.25;
+        corona2GroupRef.current.rotation.y += delta * 0.12;
+      }
+      if (corona3GroupRef.current) {
+        corona3GroupRef.current.rotation.y += delta * 0.18;
+        corona3GroupRef.current.rotation.x -= delta * 0.15;
+      }
     }
 
     // Animate flares
