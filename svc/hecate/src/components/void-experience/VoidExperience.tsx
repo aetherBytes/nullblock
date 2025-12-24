@@ -180,8 +180,8 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
 
   // Keep distance limits wide during zoom to prevent OrbitControls from clamping the camera
   // PRE_LOGIN_CAMERA is at z=24, so maxDistance must stay >= 30 until zoom completes
-  const minDist = isFullyLoggedIn ? 5 : 1;
-  const maxDist = isFullyLoggedIn ? 20 : 35;
+  const minDist = isFullyLoggedIn ? 4 : 1;
+  const maxDist = isFullyLoggedIn ? 40 : 50;
 
   return (
     <div className={styles.voidContainer}>
@@ -192,7 +192,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
         style={{ touchAction: 'none' }}
       >
         <color attach="background" args={['#000000']} />
-        <fog attach="fog" args={['#000000', 10, 35]} />
+        <fog attach="fog" args={['#000000', 15, 55]} />
 
         <Suspense fallback={null}>
           <VoidScene
