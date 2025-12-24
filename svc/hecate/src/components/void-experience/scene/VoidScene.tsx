@@ -36,13 +36,13 @@ const VoidScene: React.FC<VoidSceneProps> = ({
 
   // Generate constellation nodes - shared between NeuralLines and CrossroadsOrb
   const constellationNodes = useMemo(() => {
-    const count = 30;
-    const radius = 10;
+    const count = 25;
+    const radius = 16;
     const nodes: ConstellationNode[] = [];
 
-    // Create nodes in 3D space
+    // Create nodes in 3D space - pushed further out with more spacing
     for (let i = 0; i < count; i++) {
-      const r = radius * 0.5 + Math.random() * radius * 0.5;
+      const r = radius * 0.6 + Math.random() * radius * 0.4;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
 
@@ -58,7 +58,7 @@ const VoidScene: React.FC<VoidSceneProps> = ({
 
     // Connect nearby nodes (max 3 connections per node)
     const maxConnections = 3;
-    const connectionDistance = radius * 0.6;
+    const connectionDistance = radius * 0.5;
 
     for (let i = 0; i < nodes.length; i++) {
       const distances: { index: number; dist: number }[] = [];
