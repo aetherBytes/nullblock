@@ -1,6 +1,7 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import type { ConstellationNode } from './VoidScene';
 
 /**
  * NeuralLines - Background constellation network representing Tools, Services, and Servers
@@ -14,70 +15,15 @@ import * as THREE from 'three';
  * Unlike Agent nodes (major nodes), these are decorative background elements.
  */
 interface NeuralLinesProps {
-  count?: number;
-  radius?: number;
+  nodes: ConstellationNode[];
 }
 
-interface ServiceNode {
-  position: THREE.Vector3;
-  connections: number[];
-}
-
-const NeuralLines: React.FC<NeuralLinesProps> = ({
-  count = 30,
-  radius = 10
-}) => {
+const NeuralLines: React.FC<NeuralLinesProps> = ({ nodes }) => {
   const groupRef = useRef<THREE.Group>(null);
   const linesRef = useRef<THREE.LineSegments>(null);
 
-  // Generate service network nodes and connections
-  const { nodes, linePositions, lineOpacities } = useMemo(() => {
-    const nodes: ServiceNode[] = [];
-
-    // Create nodes in 3D space
-    for (let i = 0; i < count; i++) {
-      const r = radius * 0.5 + Math.random() * radius * 0.5;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-
-      nodes.push({
-        position: new THREE.Vector3(
-          r * Math.sin(phi) * Math.cos(theta),
-          r * Math.sin(phi) * Math.sin(theta),
-          r * Math.cos(phi)
-        ),
-        connections: []
-      });
-    }
-
-    // Connect nearby nodes (max 3 connections per node)
-    const maxConnections = 3;
-    const connectionDistance = radius * 0.6;
-
-    for (let i = 0; i < nodes.length; i++) {
-      const distances: { index: number; dist: number }[] = [];
-
-      for (let j = i + 1; j < nodes.length; j++) {
-        const dist = nodes[i].position.distanceTo(nodes[j].position);
-        if (dist < connectionDistance) {
-          distances.push({ index: j, dist });
-        }
-      }
-
-      // Sort by distance and take closest
-      distances.sort((a, b) => a.dist - b.dist);
-      const connectTo = distances.slice(0, maxConnections);
-
-      for (const conn of connectTo) {
-        if (nodes[i].connections.length < maxConnections &&
-            nodes[conn.index].connections.length < maxConnections) {
-          nodes[i].connections.push(conn.index);
-          nodes[conn.index].connections.push(i);
-        }
-      }
-    }
-
-    // Build line geometry
+  // Build line geometry from nodes
+  const { linePositions, lineOpacities } = useMemo(() => {
     const linePositions: number[] = [];
     const lineOpacities: number[] = [];
     const processedPairs = new Set<string>();
@@ -100,11 +46,10 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
     }
 
     return {
-      nodes,
       linePositions: new Float32Array(linePositions),
       lineOpacities: new Float32Array(lineOpacities)
     };
-  }, [count, radius]);
+  }, [nodes]);
 
   // Create animated opacity attribute
   const opacityAttr = useMemo(() => {
@@ -112,13 +57,12 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
   }, [lineOpacities]);
 
   useFrame((state) => {
-    if (!linesRef.current || !groupRef.current) return;
+    if (!linesRef.current) return;
 
     const time = state.clock.elapsedTime;
 
-    // Slow rotation of the entire neural network
-    groupRef.current.rotation.y = time * 0.015;
-    groupRef.current.rotation.x = Math.sin(time * 0.03) * 0.1;
+    // Constellation nodes are now static - no rotation
+    // This allows tendrils from CrossroadsOrb to accurately target them
 
     // Animate line opacities - subtle pulsing
     const opacities = opacityAttr.array as Float32Array;
@@ -158,12 +102,12 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
 
       {/* Service nodes - small glowing points representing tools/services/servers */}
       {nodes.map((node, i) => (
-        <mesh key={i} position={node.position}>
-          <sphereGeometry args={[0.04, 8, 8]} />
+        <mesh key={i} position={[node.position.x, node.position.y, node.position.z]}>
+          <sphereGeometry args={[0.08, 8, 8]} />
           <meshBasicMaterial
             color="#00d4ff"
             transparent
-            opacity={0.35}
+            opacity={0.5}
           />
         </mesh>
       ))}
