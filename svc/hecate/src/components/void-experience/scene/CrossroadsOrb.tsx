@@ -149,16 +149,17 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
           float fresnel = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
           float center = 1.0 - fresnel; // 1 at center, 0 at edge
 
-          // === COSMIC VOID CORE ===
-          // Cold ethereal void - deep space colors
-          vec3 voidBlack = vec3(0.0, 0.0, 0.02);
-          vec3 deepBlack = vec3(0.005, 0.01, 0.025);
-          vec3 electricCyan = vec3(0.1, 0.6, 0.8);       // Bright electric cyan
-          vec3 electricBlue = vec3(0.15, 0.35, 0.7);     // Deep electric blue
-          vec3 darkTeal = vec3(0.01, 0.04, 0.06);        // Very dark teal tint
-          vec3 electricRed = electricCyan;               // Alias for compatibility
-          vec3 electricCrimson = electricBlue;           // Alias for compatibility
-          vec3 darkRed = darkTeal;                       // Alias for compatibility
+          // === PURE WHITE SINGULARITY ===
+          // Blinding white void - pure energy with pale blue core
+          vec3 voidBlack = vec3(0.01, 0.01, 0.01);
+          vec3 deepBlack = vec3(0.02, 0.02, 0.025);
+          vec3 electricWhite = vec3(1.0, 1.0, 1.0);      // Pure white
+          vec3 electricSilver = vec3(0.85, 0.88, 0.92);  // Silver shimmer
+          vec3 paleBlue = vec3(0.7, 0.85, 1.0);          // Faint pale blue for core
+          vec3 darkGray = vec3(0.04, 0.04, 0.05);        // Very dark gray tint
+          vec3 electricRed = electricWhite;              // Alias for compatibility
+          vec3 electricCrimson = electricSilver;         // Alias for compatibility
+          vec3 darkRed = darkGray;                       // Alias for compatibility
 
           // Core intensity zones - extremely tight
           float coreIntensity = pow(center, 6.0);
@@ -238,6 +239,10 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
           coreColor += electricCrimson * absoluteCore * 0.4;
           coreColor += darkRed * deepCore * 0.08;
 
+          // Faint pale blue tint at the very center
+          coreColor = mix(coreColor, paleBlue, absoluteCore * 0.3);
+          coreColor += paleBlue * pow(center, 18.0) * 0.15;
+
           // === ESCAPING LIGHT RIM (black hole edge) ===
           float innerRim = pow(fresnel, 4.0);
           float midRim = pow(fresnel, 2.0);
@@ -246,10 +251,10 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
           float rimNoise = 0.6 + noise1 * 0.3 + noise2 * 0.2;
           float flareNoise = smoothstep(0.3, 0.8, noise1 + noise3 * 0.5);
 
-          // Rim colors - cold ethereal light
-          vec3 brightWhite = vec3(0.9, 0.95, 1.0);
-          vec3 coldLight = vec3(0.6, 0.85, 1.0);
-          vec3 hotEdge = vec3(0.4, 0.7, 0.9);
+          // Rim colors - pure blinding white
+          vec3 brightWhite = vec3(1.0, 1.0, 1.0);
+          vec3 coldLight = vec3(0.95, 0.97, 1.0);
+          vec3 hotEdge = vec3(0.9, 0.92, 0.95);
 
           vec3 rimColor = vec3(0.0);
           rimColor += hotEdge * innerRim * rimNoise * 1.5;
@@ -960,11 +965,11 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
         />
       </points>
 
-      {/* Main cool white light */}
-      <pointLight color="#e0f0ff" intensity={8} distance={18} decay={2} />
+      {/* Main pure white light */}
+      <pointLight color="#ffffff" intensity={10} distance={18} decay={2} />
 
-      {/* Cold cyan accent light */}
-      <pointLight color="#80d0ff" intensity={3} distance={10} decay={2} />
+      {/* Silver accent light */}
+      <pointLight color="#e8eef5" intensity={4} distance={10} decay={2} />
     </group>
   );
 };
