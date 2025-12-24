@@ -2,7 +2,7 @@ import React, { useRef, useMemo, useCallback } from 'react';
 import { useFrame, useThree, extend } from '@react-three/fiber';
 import * as THREE from 'three';
 
-// Animated sun surface shader with visible noise distortion
+// Animated sun surface shader on SPHERE geometry - no edges!
 class SunSurfaceMaterial extends THREE.ShaderMaterial {
   constructor() {
     super({
@@ -11,8 +11,13 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
         uHover: { value: 0 },
       },
       vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vPosition;
         varying vec2 vUv;
+
         void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vPosition = position;
           vUv = uv;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
@@ -20,6 +25,8 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
       fragmentShader: `
         uniform float uTime;
         uniform float uHover;
+        varying vec3 vNormal;
+        varying vec3 vPosition;
         varying vec2 vUv;
 
         // Simplex-like noise
@@ -64,87 +71,60 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
         }
 
         void main() {
-          vec2 uv = vUv;
-          vec2 center = uv - 0.5;
-          float dist = length(center) * 2.0; // 0 at center, 1 at edge
-          float angle = atan(center.y, center.x);
-
-          // Hard cutoff - discard pixels beyond effect radius
-          if (dist > 0.35) {
-            discard;
-          }
-
-          // Polar coordinates for swirling effect
           float time = uTime * 0.15;
-          vec2 polarUV = vec2(angle / 6.28318 + 0.5, dist);
+
+          // Use spherical coordinates from the vertex position
+          float theta = atan(vPosition.z, vPosition.x); // longitude
+          float phi = acos(vPosition.y / length(vPosition)); // latitude
+
+          // Create UV from spherical coords for seamless wrapping
+          vec2 sphereUV = vec2(theta / 6.28318 + 0.5, phi / 3.14159);
 
           // Multiple noise layers at different scales and speeds
-          float noise1 = fbm(polarUV * 3.0 + vec2(time * 0.3, -time * 0.1));
-          float noise2 = fbm(polarUV * 6.0 + vec2(-time * 0.5, time * 0.2));
-          float noise3 = snoise(polarUV * 12.0 + vec2(time * 0.8, -time * 0.4));
-          float radialNoise = fbm(vec2(dist * 4.0, angle * 2.0 + time * 0.2));
+          float noise1 = fbm(sphereUV * 4.0 + vec2(time * 0.3, -time * 0.1));
+          float noise2 = fbm(sphereUV * 8.0 + vec2(-time * 0.5, time * 0.2));
+          float noise3 = snoise(sphereUV * 16.0 + vec2(time * 0.8, -time * 0.4));
+          float noise4 = fbm(sphereUV * 2.0 + vec2(time * 0.1, time * 0.15));
 
           // Combine noise layers
-          float combinedNoise = noise1 * 0.5 + noise2 * 0.3 + noise3 * 0.15 + radialNoise * 0.2;
+          float combinedNoise = noise1 * 0.4 + noise2 * 0.3 + noise3 * 0.2 + noise4 * 0.1;
           float surfaceDetail = combinedNoise * 0.5 + 0.5;
 
-          // === AGGRESSIVE FADE: reaches zero by dist = 0.32 ===
-          float masterFade = 1.0 - smoothstep(0.2, 0.32, dist);
-          masterFade = pow(masterFade, 2.5); // Very aggressive curve
+          // Fresnel effect - brighter at edges (rim lighting)
+          float fresnel = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
+          fresnel = pow(fresnel, 2.0);
 
-          // Large black core - takes up most of the center
-          float coreRadius = 0.14 + combinedNoise * 0.02;
-          float coreMask = 1.0 - smoothstep(coreRadius - 0.01, coreRadius + 0.03, dist);
+          // Dark turbulent surface
+          vec3 darkBase = vec3(0.02, 0.01, 0.01);
+          vec3 darkDetail = vec3(0.06, 0.03, 0.03) * surfaceDetail;
 
-          // Corona ring: thin bright ring around the black core
-          float coronaPeak = 0.18 + noise1 * 0.015;
-          float coronaWidth = 0.04 + noise2 * 0.01;
-          float corona = exp(-pow((dist - coronaPeak) / coronaWidth, 2.0));
-          corona *= (0.5 + noise1 * 0.3 + noise3 * 0.2); // Reduced intensity
+          // Brighter corona color for rim
+          vec3 coronaColor = vec3(0.8, 0.75, 0.7);
 
-          // Very subtle inner glow
-          float innerGlow = smoothstep(0.1, 0.15, dist) * (1.0 - smoothstep(0.15, 0.22, dist));
-          innerGlow *= (0.4 + surfaceDetail * 0.3);
+          // Build the color
+          vec3 color = darkBase + darkDetail * 0.5;
 
-          // Colors - reduced brightness
-          vec3 darkSurface = vec3(0.03, 0.015, 0.015) * surfaceDetail;
-          vec3 warmGray = vec3(0.3, 0.27, 0.24) * (0.5 + noise2 * 0.3);
-          vec3 corona_color = vec3(0.7, 0.68, 0.65); // Dimmer corona
+          // Add turbulent bright patches
+          float brightPatch = smoothstep(0.5, 0.8, noise1 + noise3 * 0.5);
+          color += vec3(0.15, 0.12, 0.1) * brightPatch * 0.4;
 
-          // Build color - start with black
-          vec3 color = vec3(0.0);
+          // Fresnel rim glow - bright edges like a black sun corona
+          color += coronaColor * fresnel * (0.6 + noise1 * 0.4);
 
-          // Only add brightness outside the core
-          float outsideCore = 1.0 - coreMask;
-
-          // Subtle surface detail at core edge
-          color += darkSurface * outsideCore * 0.3;
-
-          // Warm transition
-          color += warmGray * innerGlow * outsideCore * 0.4;
-
-          // Corona ring - the main visible bright element
-          color += corona_color * corona * outsideCore * 0.6;
-
-          // Subtle turbulence
-          float turbulence = (noise1 * 0.3 + noise3 * 0.2) * corona * outsideCore;
-          color += vec3(0.5, 0.48, 0.45) * turbulence * 0.2;
-
-          // Apply aggressive master fade
-          color *= masterFade;
+          // Extra bright rim with noise variation
+          float rimIntensity = pow(fresnel, 1.5) * (0.8 + noise2 * 0.4);
+          color += vec3(1.0, 0.95, 0.9) * rimIntensity * 0.5;
 
           // Gentle pulsing
-          float pulse = 1.0 + sin(uTime * 0.5) * 0.03;
+          float pulse = 1.0 + sin(uTime * 0.5) * 0.05;
           color *= pulse;
 
-          // Output - with additive blending, black = invisible
           gl_FragColor = vec4(color, 1.0);
         }
       `,
-      transparent: true,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending, // Black = adds nothing = invisible edges
+      transparent: false,
+      depthWrite: true,
+      side: THREE.FrontSide,
     });
   }
 }
@@ -366,15 +346,16 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
       sunMaterialRef.current.uniforms.uHover.value = hoverAmount.current;
     }
 
-    // Billboard the sun plane to face camera
+    // Sphere rotation and subtle pulsing
     if (sunPlaneRef.current) {
-      sunPlaneRef.current.lookAt(camera.position);
+      // Slow rotation for living surface feel
+      sunPlaneRef.current.rotation.y += delta * 0.05;
 
-      // Pulsing scale - large plane, effect only uses inner 50%
-      const pulse = 1 + Math.sin(time * 0.4) * 0.04 + Math.sin(time * 0.7) * 0.02;
-      const hoverScale = 1 + hoverAmount.current * 0.1;
-      const scale = sunRadius * 7.0 * pulse * hoverScale;
-      sunPlaneRef.current.scale.set(scale, scale, 1);
+      // Subtle pulsing scale
+      const pulse = 1 + Math.sin(time * 0.4) * 0.02 + Math.sin(time * 0.7) * 0.01;
+      const hoverScale = 1 + hoverAmount.current * 0.05;
+      const scale = pulse * hoverScale;
+      sunPlaneRef.current.scale.setScalar(scale);
     }
 
     // Glow pulsing
@@ -479,9 +460,9 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
         />
       </sprite>
 
-      {/* Main sun disc with animated noise shader */}
+      {/* Main sun sphere with animated noise shader */}
       <mesh ref={sunPlaneRef}>
-        <planeGeometry args={[1, 1, 1, 1]} />
+        <sphereGeometry args={[sunRadius, 64, 64]} />
         {/* @ts-ignore */}
         <sunSurfaceMaterial ref={sunMaterialRef} />
       </mesh>
