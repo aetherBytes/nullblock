@@ -1,6 +1,7 @@
 import React, { useRef, useMemo, useCallback } from 'react';
 import { useFrame, useThree, extend } from '@react-three/fiber';
 import * as THREE from 'three';
+import type { ConstellationNode } from './VoidScene';
 
 // Animated sun surface shader on SPHERE geometry - no edges!
 class SunSurfaceMaterial extends THREE.ShaderMaterial {
@@ -644,6 +645,7 @@ extend({ SunSurfaceMaterial, CoronaRingMaterial, SolarFlareMaterial, DendriteMat
 
 interface CrossroadsOrbProps {
   position?: [number, number, number];
+  constellationNodes?: ConstellationNode[];
 }
 
 // Outer glow texture - very smooth exponential falloff
@@ -710,7 +712,7 @@ interface SolarParticle {
   radius: number;
 }
 
-const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) => {
+const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], constellationNodes = [] }) => {
   const groupRef = useRef<THREE.Group>(null);
   const sunPlaneRef = useRef<THREE.Mesh>(null);
   const coronaGroupRef = useRef<THREE.Group>(null);
@@ -758,8 +760,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
 
   // Dynamic dendrite state - each tendril has a lifecycle
   interface DendriteState {
-    theta: number;
-    phi: number;
+    targetNodeIndex: number; // Index of constellation node this tendril connects to
     length: number;
     width: number;
     thickness: number;   // Random thickness multiplier for variety
@@ -774,6 +775,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
     elapsed: number;     // Time in current state
     growSpeed: number;   // How fast to grow
     growsOutward: boolean; // true = outward (sending), false = inward (receiving)
+    lingers: boolean;    // true = stays connected much longer
   }
 
   const dendritesState = useRef<DendriteState[]>([]);
@@ -783,8 +785,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
     dendritesState.current = [];
     for (let i = 0; i < dendriteCount; i++) {
       dendritesState.current.push({
-        theta: 0,
-        phi: 0,
+        targetNodeIndex: -1,
         length: 2.0,
         width: 0.1,
         thickness: 1.0,
@@ -799,45 +800,68 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
         elapsed: (i / dendriteCount) * 6 + Math.random() * 4,
         growSpeed: 0.5,
         growsOutward: true,
+        lingers: false,
       });
     }
   }, [dendriteCount]);
 
-  // Function to spawn a new tendril - can grow outward (sending) or inward (receiving)
+  // Function to spawn a new tendril targeting a constellation node
   const spawnDendrite = useCallback((d: DendriteState) => {
-    // Random position on sphere surface
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.PI * 0.2 + Math.random() * Math.PI * 0.6; // Avoid poles
+    // If no constellation nodes, fall back to random direction
+    if (constellationNodes.length === 0) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.PI * 0.2 + Math.random() * Math.PI * 0.6;
+      d.dir = new THREE.Vector3(
+        Math.sin(phi) * Math.cos(theta),
+        Math.cos(phi),
+        Math.sin(phi) * Math.sin(theta)
+      ).normalize();
+      d.length = 2.0 + Math.random() * 3.0;
+      d.targetNodeIndex = -1;
+    } else {
+      // Pick a random constellation node as target
+      d.targetNodeIndex = Math.floor(Math.random() * constellationNodes.length);
+      const targetNode = constellationNodes[d.targetNodeIndex];
 
-    d.theta = theta;
-    d.phi = phi;
-    d.length = 2.0 + Math.random() * 3.0;  // 2-5 units long
-    d.width = 0.12 + Math.random() * 0.15; // Base width 0.12-0.27
-    d.thickness = 0.5 + Math.random() * 0.48; // Thickness variation 0.5-0.98 (70% of previous max)
-    d.opacity = 0.4 + Math.random() * 0.6; // Random opacity 0.4-1.0
+      // Direction from orb center to constellation node
+      d.dir = targetNode.position.clone().normalize();
+
+      // Calculate exact length needed to reach the node from orb surface
+      // Tip position = sunRadius + length (along direction)
+      // We want tip to reach the node, so: sunRadius + length = distToNode
+      // Therefore: length = distToNode - sunRadius
+      const distToNode = targetNode.position.length();
+      d.length = Math.max(1.5, distToNode - sunRadius);
+    }
+
+    d.width = 0.15 + Math.random() * 0.1; // Base width 0.15-0.25 (slightly thicker)
+    d.thickness = 0.6 + Math.random() * 0.4; // Thickness variation 0.6-1.0
+    d.opacity = 0.6 + Math.random() * 0.4; // Random opacity 0.6-1.0 (more visible)
 
     // Random direction: outward (sending) or inward (receiving)
     d.growsOutward = Math.random() > 0.4; // 60% outward, 40% inward
 
-    // Direction pointing OUTWARD from sphere center
-    const dirX = Math.sin(phi) * Math.cos(theta);
-    const dirY = Math.cos(phi);
-    const dirZ = Math.sin(phi) * Math.sin(theta);
-    d.dir = new THREE.Vector3(dirX, dirY, dirZ).normalize();
+    // Some tendrils linger much longer (30% chance)
+    d.lingers = Math.random() < 0.3;
 
     // Calculate rotation to point the tendril outward
-    // Rotate from -Y to d.dir so that the plane's bottom (uv.y=0) points outward
-    // This makes uv.y=0 the TIP and uv.y=1 the BASE (at orb surface)
     d.quaternion = new THREE.Quaternion();
     d.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), d.dir);
 
     d.state = 'growing';
     d.growth = 0;
     d.fade = 1;
-    d.lifetime = 0.8 + Math.random() * 4.0; // Hold for 0.8-4.8 seconds (more variety)
+
+    // Lingering tendrils stay connected 3-8 seconds, normal ones 0.8-4.8 seconds
+    if (d.lingers) {
+      d.lifetime = 3.0 + Math.random() * 5.0;
+    } else {
+      d.lifetime = 0.8 + Math.random() * 4.0;
+    }
+
     d.elapsed = 0;
-    d.growSpeed = 0.3 + Math.random() * 0.9; // Growth speed 0.3-1.2 (more variety)
-  }, []);
+    d.growSpeed = 0.3 + Math.random() * 0.9; // Growth speed 0.3-1.2
+  }, [constellationNodes, sunRadius]);
 
   // Textures
   const glowTexture = useMemo(() => createGlowTexture(), []);
