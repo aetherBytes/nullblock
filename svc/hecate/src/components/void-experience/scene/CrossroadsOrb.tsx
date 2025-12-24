@@ -74,50 +74,73 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
           float time = uTime * 0.15;
 
           // Use spherical coordinates from the vertex position
-          float theta = atan(vPosition.z, vPosition.x); // longitude
-          float phi = acos(vPosition.y / length(vPosition)); // latitude
-
-          // Create UV from spherical coords for seamless wrapping
+          float theta = atan(vPosition.z, vPosition.x);
+          float phi = acos(vPosition.y / length(vPosition));
           vec2 sphereUV = vec2(theta / 6.28318 + 0.5, phi / 3.14159);
 
-          // Multiple noise layers at different scales and speeds
+          // Multiple noise layers
           float noise1 = fbm(sphereUV * 4.0 + vec2(time * 0.3, -time * 0.1));
           float noise2 = fbm(sphereUV * 8.0 + vec2(-time * 0.5, time * 0.2));
           float noise3 = snoise(sphereUV * 16.0 + vec2(time * 0.8, -time * 0.4));
           float noise4 = fbm(sphereUV * 2.0 + vec2(time * 0.1, time * 0.15));
 
-          // Combine noise layers
           float combinedNoise = noise1 * 0.4 + noise2 * 0.3 + noise3 * 0.2 + noise4 * 0.1;
-          float surfaceDetail = combinedNoise * 0.5 + 0.5;
 
-          // Fresnel effect - brighter at edges (rim lighting)
+          // === BLACK HOLE VOID EFFECT ===
+          // Fresnel for rim detection
           float fresnel = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
-          fresnel = pow(fresnel, 2.0);
 
-          // Dark turbulent surface
-          vec3 darkBase = vec3(0.02, 0.01, 0.01);
-          vec3 darkDetail = vec3(0.06, 0.03, 0.03) * surfaceDetail;
+          // DEEP VOID CENTER - almost pure black with subtle turbulence
+          // The center should feel like an abyss
+          float voidDepth = 1.0 - fresnel; // 1 at center, 0 at edge
+          voidDepth = pow(voidDepth, 0.8);
 
-          // Brighter corona color for rim
-          vec3 coronaColor = vec3(0.8, 0.75, 0.7);
+          // Very subtle dark turbulence in the void
+          vec3 voidColor = vec3(0.0); // Pure black base
+          float voidNoise = (noise1 * 0.5 + noise3 * 0.3) * 0.5 + 0.5;
+          voidColor += vec3(0.015, 0.008, 0.01) * voidNoise * voidDepth;
 
-          // Build the color
-          vec3 color = darkBase + darkDetail * 0.5;
+          // === ESCAPING LIGHT RIM ===
+          // Multiple rim layers for depth
+          float innerRim = pow(fresnel, 4.0); // Tight bright edge
+          float midRim = pow(fresnel, 2.0);   // Broader glow
+          float outerRim = pow(fresnel, 1.2); // Soft outer halo
 
-          // Add turbulent bright patches
-          float brightPatch = smoothstep(0.5, 0.8, noise1 + noise3 * 0.5);
-          color += vec3(0.15, 0.12, 0.1) * brightPatch * 0.4;
+          // Noise variation on the rim - like turbulent escaping light
+          float rimNoise = 0.6 + noise1 * 0.3 + noise2 * 0.2;
+          float flareNoise = smoothstep(0.3, 0.8, noise1 + noise3 * 0.5);
 
-          // Fresnel rim glow - bright edges like a black sun corona
-          color += coronaColor * fresnel * (0.6 + noise1 * 0.4);
+          // Colors - bright white/warm escaping light
+          vec3 brightWhite = vec3(1.0, 0.98, 0.95);
+          vec3 warmLight = vec3(1.0, 0.9, 0.75);
+          vec3 hotCore = vec3(1.0, 0.85, 0.7);
 
-          // Extra bright rim with noise variation
-          float rimIntensity = pow(fresnel, 1.5) * (0.8 + noise2 * 0.4);
-          color += vec3(1.0, 0.95, 0.9) * rimIntensity * 0.5;
+          // Build the rim glow
+          vec3 rimColor = vec3(0.0);
 
-          // Gentle pulsing
-          float pulse = 1.0 + sin(uTime * 0.5) * 0.05;
+          // Inner burning edge - very bright
+          rimColor += hotCore * innerRim * rimNoise * 2.0;
+
+          // Mid corona
+          rimColor += warmLight * midRim * rimNoise * 0.8;
+
+          // Outer soft glow
+          rimColor += brightWhite * outerRim * 0.3;
+
+          // Add flare bursts - brighter spots on the rim
+          rimColor += brightWhite * flareNoise * innerRim * 1.5;
+
+          // === COMBINE ===
+          // Void in center, escaping light at edges
+          vec3 color = voidColor + rimColor;
+
+          // Subtle pulsing
+          float pulse = 1.0 + sin(uTime * 0.5) * 0.08;
           color *= pulse;
+
+          // Occasional bright flash
+          float flash = pow(sin(uTime * 0.3 + noise1 * 3.0) * 0.5 + 0.5, 8.0);
+          color += brightWhite * flash * innerRim * 0.3;
 
           gl_FragColor = vec4(color, 1.0);
         }
@@ -129,7 +152,186 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
   }
 }
 
-extend({ SunSurfaceMaterial });
+// Corona shell shader - fluid flowing wisps with smooth blending
+class CoronaMaterial extends THREE.ShaderMaterial {
+  constructor() {
+    super({
+      uniforms: {
+        uTime: { value: 0 },
+        uIntensity: { value: 1.0 },
+        uFresnelPower: { value: 2.5 },
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        varying vec3 vViewDir;
+
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vPosition = position;
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vViewDir = normalize(cameraPosition - worldPos.xyz);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform float uIntensity;
+        uniform float uFresnelPower;
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        varying vec3 vViewDir;
+
+        // Noise functions
+        vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+
+        float snoise(vec2 v) {
+          const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+          vec2 i = floor(v + dot(v, C.yy));
+          vec2 x0 = v - i + dot(i, C.xx);
+          vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+          vec4 x12 = x0.xyxy + C.xxzz;
+          x12.xy -= i1;
+          i = mod289(i);
+          vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+          vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+          m = m*m; m = m*m;
+          vec3 x = 2.0 * fract(p * C.www) - 1.0;
+          vec3 h = abs(x) - 0.5;
+          vec3 ox = floor(x + 0.5);
+          vec3 a0 = x - ox;
+          m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+          vec3 g;
+          g.x = a0.x * x0.x + h.x * x0.y;
+          g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+          return 130.0 * dot(m, g);
+        }
+
+        // FBM for smoother, more fluid noise
+        float fbm(vec2 p) {
+          float value = 0.0;
+          float amplitude = 0.5;
+          float frequency = 1.0;
+          for (int i = 0; i < 5; i++) {
+            value += amplitude * snoise(p * frequency);
+            amplitude *= 0.5;
+            frequency *= 2.0;
+          }
+          return value;
+        }
+
+        void main() {
+          float time = uTime * 0.08;
+
+          // Smooth fresnel using view direction
+          float fresnel = 1.0 - abs(dot(vNormal, vViewDir));
+          fresnel = pow(fresnel, uFresnelPower);
+
+          // Spherical coords
+          float theta = atan(vPosition.z, vPosition.x);
+          float phi = acos(vPosition.y / length(vPosition));
+
+          // Flowing UV - theta flows over time for swirling effect
+          vec2 flowUV = vec2(theta / 6.28318 + time * 0.3, phi / 3.14159);
+          vec2 flowUV2 = vec2(theta / 6.28318 - time * 0.2, phi / 3.14159 + time * 0.1);
+
+          // Multi-layer fluid noise
+          float flow1 = fbm(flowUV * 3.0);
+          float flow2 = fbm(flowUV2 * 5.0 + flow1 * 0.3);
+          float flow3 = fbm(flowUV * 8.0 - flow2 * 0.2 + vec2(time * 0.5, 0.0));
+          float detail = snoise(flowUV * 12.0 + flow1 * 0.5);
+
+          // Combine for smooth, flowing wisps
+          float wisp = flow1 * 0.4 + flow2 * 0.35 + flow3 * 0.2 + detail * 0.1;
+          wisp = wisp * 0.5 + 0.5; // Normalize to 0-1
+          wisp = smoothstep(0.2, 0.8, wisp); // Smooth contrast
+
+          // Soft pulsing
+          float pulse = 0.85 + 0.15 * sin(uTime * 0.4 + flow1 * 2.0);
+
+          // Multiple fresnel layers for depth
+          float softFresnel = pow(fresnel, uFresnelPower * 0.7);
+          float hardFresnel = pow(fresnel, uFresnelPower * 1.5);
+
+          // Blend layers
+          float corona = mix(softFresnel, hardFresnel, wisp) * pulse;
+
+          // Color gradient - warmer at edges
+          vec3 innerColor = vec3(1.0, 0.98, 0.95);
+          vec3 outerColor = vec3(1.0, 0.92, 0.85);
+          vec3 color = mix(innerColor, outerColor, hardFresnel) * corona * uIntensity;
+
+          // Smooth alpha falloff
+          float alpha = corona * wisp * 0.7;
+          alpha = smoothstep(0.0, 0.3, alpha);
+
+          gl_FragColor = vec4(color, alpha);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.BackSide,
+      blending: THREE.AdditiveBlending,
+    });
+  }
+}
+
+// Solar flare shader - elongated rays
+class SolarFlareMaterial extends THREE.ShaderMaterial {
+  constructor() {
+    super({
+      uniforms: {
+        uTime: { value: 0 },
+        uFlarePhase: { value: 0 },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform float uFlarePhase;
+        varying vec2 vUv;
+
+        void main() {
+          // Flare shape - bright at base, fading toward tip
+          float distFromBase = vUv.y;
+          float distFromCenter = abs(vUv.x - 0.5) * 2.0;
+
+          // Taper toward tip
+          float taper = 1.0 - distFromBase;
+          float width = 0.3 * taper + 0.05;
+
+          // Core brightness
+          float core = smoothstep(width, 0.0, distFromCenter);
+          core *= (1.0 - distFromBase * 0.8);
+
+          // Animated intensity
+          float flicker = 0.7 + 0.3 * sin(uTime * 3.0 + uFlarePhase * 10.0);
+          float pulse = 0.8 + 0.2 * sin(uTime * 1.5 + uFlarePhase * 5.0);
+
+          float intensity = core * flicker * pulse;
+
+          // Color - bright white/yellow
+          vec3 color = vec3(1.0, 0.95, 0.85) * intensity;
+
+          gl_FragColor = vec4(color, intensity * 0.9);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+  }
+}
+
+extend({ SunSurfaceMaterial, CoronaMaterial, SolarFlareMaterial });
 
 interface CrossroadsOrbProps {
   position?: [number, number, number];
@@ -202,12 +404,20 @@ interface SolarParticle {
 const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) => {
   const groupRef = useRef<THREE.Group>(null);
   const sunPlaneRef = useRef<THREE.Mesh>(null);
+  const coronaRef = useRef<THREE.Mesh>(null);
+  const corona2Ref = useRef<THREE.Mesh>(null);
+  const corona3Ref = useRef<THREE.Mesh>(null);
   const glowRef = useRef<THREE.Sprite>(null);
   const glow2Ref = useRef<THREE.Sprite>(null);
   const brightParticlesRef = useRef<THREE.Points>(null);
   const streamParticlesRef = useRef<THREE.Points>(null);
+  const flaresRef = useRef<THREE.Group>(null);
 
   const sunMaterialRef = useRef<SunSurfaceMaterial>(null);
+  const coronaMaterialRef = useRef<CoronaMaterial>(null);
+  const corona2MaterialRef = useRef<CoronaMaterial>(null);
+  const corona3MaterialRef = useRef<CoronaMaterial>(null);
+  const flareMaterialsRef = useRef<SolarFlareMaterial[]>([]);
 
   const { camera, pointer, raycaster } = useThree();
   const mouseWorld = useRef(new THREE.Vector3());
@@ -217,6 +427,22 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
   const sunRadius = 1.6;
   const brightParticleCount = 250;
   const streamParticleCount = 200;
+  const flareCount = 8;
+
+  // Solar flare positions - distributed around the sphere
+  const flareData = useMemo(() => {
+    const flares = [];
+    for (let i = 0; i < flareCount; i++) {
+      const theta = (i / flareCount) * Math.PI * 2 + Math.random() * 0.3;
+      const phi = Math.PI / 2 + (Math.random() - 0.5) * 0.8; // Mostly around equator
+      const length = 0.8 + Math.random() * 1.2; // Flare length
+      const width = 0.15 + Math.random() * 0.15;
+      const phase = Math.random() * Math.PI * 2;
+
+      flares.push({ theta, phi, length, width, phase });
+    }
+    return flares;
+  }, [flareCount]);
 
   // Textures
   const glowTexture = useMemo(() => createGlowTexture(), []);
@@ -346,6 +572,48 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
       sunMaterialRef.current.uniforms.uHover.value = hoverAmount.current;
     }
 
+    // Update corona shaders
+    if (coronaMaterialRef.current) {
+      coronaMaterialRef.current.uniforms.uTime.value = time;
+    }
+    if (corona2MaterialRef.current) {
+      corona2MaterialRef.current.uniforms.uTime.value = time;
+    }
+    if (corona3MaterialRef.current) {
+      corona3MaterialRef.current.uniforms.uTime.value = time;
+    }
+
+    // Animate corona shells - different rotation speeds for fluid blending
+    if (coronaRef.current) {
+      coronaRef.current.rotation.y += delta * 0.04;
+      coronaRef.current.rotation.x = Math.sin(time * 0.25) * 0.08;
+      coronaRef.current.rotation.z = Math.cos(time * 0.18) * 0.05;
+    }
+    if (corona2Ref.current) {
+      corona2Ref.current.rotation.y -= delta * 0.025;
+      corona2Ref.current.rotation.x = Math.sin(time * 0.15 + 1.0) * 0.1;
+      corona2Ref.current.rotation.z = Math.sin(time * 0.12) * 0.07;
+    }
+    if (corona3Ref.current) {
+      corona3Ref.current.rotation.y += delta * 0.015;
+      corona3Ref.current.rotation.x = Math.cos(time * 0.1 + 2.0) * 0.12;
+      corona3Ref.current.rotation.z = Math.cos(time * 0.2) * 0.06;
+    }
+
+    // Animate flares
+    if (flaresRef.current) {
+      flaresRef.current.rotation.y += delta * 0.02;
+      flaresRef.current.children.forEach((flare, i) => {
+        const material = flareMaterialsRef.current[i];
+        if (material) {
+          material.uniforms.uTime.value = time;
+        }
+        // Subtle scale pulsing per flare
+        const pulseFactor = 0.9 + Math.sin(time * 2 + i * 1.5) * 0.15;
+        flare.scale.y = pulseFactor;
+      });
+    }
+
     // Sphere rotation and subtle pulsing
     if (sunPlaneRef.current) {
       // Slow rotation for living surface feel
@@ -358,17 +626,18 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
       sunPlaneRef.current.scale.setScalar(scale);
     }
 
-    // Glow pulsing
-    const basePulse = Math.sin(time * 0.5) * 0.3;
-    const breathePulse = Math.sin(time * 0.25) * 0.15;
-    const hoverBoost = hoverAmount.current * 0.5;
+    // Glow pulsing - dramatic breathing
+    const basePulse = Math.sin(time * 0.5) * 0.5;
+    const breathePulse = Math.sin(time * 0.25) * 0.3;
+    const quickPulse = Math.sin(time * 1.5) * 0.15;
+    const hoverBoost = hoverAmount.current * 1.0;
 
     if (glowRef.current) {
-      const scale = 9 + basePulse + breathePulse + hoverBoost;
+      const scale = 8 + basePulse + breathePulse + quickPulse + hoverBoost;
       glowRef.current.scale.set(scale, scale, 1);
     }
     if (glow2Ref.current) {
-      const scale = 14 + basePulse * 1.4 + breathePulse * 0.8 + hoverBoost;
+      const scale = 16 + basePulse * 1.5 + breathePulse + hoverBoost;
       glow2Ref.current.scale.set(scale, scale, 1);
     }
 
@@ -438,23 +707,23 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
 
   return (
     <group ref={groupRef} position={position}>
-      {/* Outer atmospheric glow - very subtle */}
-      <sprite ref={glow2Ref} scale={[10, 10, 1]}>
+      {/* Outer atmospheric glow - dramatic halo */}
+      <sprite ref={glow2Ref} scale={[16, 16, 1]}>
         <spriteMaterial
           map={glowTexture}
           transparent
-          opacity={0.25}
+          opacity={0.4}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
         />
       </sprite>
 
-      {/* Inner corona glow - subtle */}
-      <sprite ref={glowRef} scale={[6, 6, 1]}>
+      {/* Inner corona glow - bright ring */}
+      <sprite ref={glowRef} scale={[8, 8, 1]}>
         <spriteMaterial
           map={glowTexture}
           transparent
-          opacity={0.35}
+          opacity={0.6}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
         />
@@ -466,6 +735,68 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0] }) =
         {/* @ts-ignore */}
         <sunSurfaceMaterial ref={sunMaterialRef} />
       </mesh>
+
+      {/* Inner corona shell - tight bright wisps */}
+      <mesh ref={coronaRef}>
+        <sphereGeometry args={[sunRadius * 1.08, 48, 48]} />
+        {/* @ts-ignore */}
+        <coronaMaterial ref={coronaMaterialRef} uIntensity={1.2} uFresnelPower={3.5} />
+      </mesh>
+
+      {/* Middle corona shell - flowing medium layer */}
+      <mesh ref={corona2Ref}>
+        <sphereGeometry args={[sunRadius * 1.2, 40, 40]} />
+        {/* @ts-ignore */}
+        <coronaMaterial ref={corona2MaterialRef} uIntensity={0.9} uFresnelPower={2.5} />
+      </mesh>
+
+      {/* Outer corona shell - soft diffuse glow */}
+      <mesh ref={corona3Ref}>
+        <sphereGeometry args={[sunRadius * 1.4, 32, 32]} />
+        {/* @ts-ignore */}
+        <coronaMaterial ref={corona3MaterialRef} uIntensity={0.6} uFresnelPower={1.8} />
+      </mesh>
+
+      {/* Solar flares - elongated rays shooting out */}
+      <group ref={flaresRef}>
+        {flareData.map((flare, i) => {
+          // Direction on sphere surface
+          const dirX = Math.sin(flare.phi) * Math.cos(flare.theta);
+          const dirY = Math.cos(flare.phi);
+          const dirZ = Math.sin(flare.phi) * Math.sin(flare.theta);
+
+          // Position: start at surface, offset by half flare length outward
+          const offsetDist = sunRadius + flare.length * 0.5;
+          const x = dirX * offsetDist;
+          const y = dirY * offsetDist;
+          const z = dirZ * offsetDist;
+
+          // Direction pointing outward
+          const dir = new THREE.Vector3(dirX, dirY, dirZ);
+
+          // Create rotation to point flare outward
+          const quaternion = new THREE.Quaternion();
+          quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+          const euler = new THREE.Euler().setFromQuaternion(quaternion);
+
+          return (
+            <mesh
+              key={i}
+              position={[x, y, z]}
+              rotation={[euler.x, euler.y, euler.z]}
+            >
+              <planeGeometry args={[flare.width, flare.length]} />
+              {/* @ts-ignore */}
+              <solarFlareMaterial
+                ref={(el: SolarFlareMaterial | null) => {
+                  if (el) flareMaterialsRef.current[i] = el;
+                }}
+                uFlarePhase={flare.phase}
+              />
+            </mesh>
+          );
+        })}
+      </group>
 
       {/* Curl stream particles - living fluid effect */}
       <points ref={streamParticlesRef}>
