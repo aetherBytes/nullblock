@@ -131,16 +131,28 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
     setSelectedCluster(cluster);
     setHasArrivedAtCluster(false);
 
-    // Check if this is HECATE - offset to show object on left side of screen
+    // Check if this is HECATE - offset to center object in left portion of screen
     const isHecate = cluster.name.toLowerCase().includes('hecate');
 
     // Camera position: stay at current distance, just reframe
     // Position camera in front of the cluster at a comfortable viewing distance
     const cameraDistance = 7;
+
+    // For HECATE: Panel takes ~1/3 of screen on right, so we need to center
+    // the object in the remaining left 2/3. By looking at a point to the RIGHT
+    // of the object, it shifts LEFT in the frame.
+    const lookAtOffsetX = isHecate ? 3 : 0;
+
     const cameraPos = new THREE.Vector3(
-      position.x + (isHecate ? -5 : 0), // Shift camera left for HECATE so object appears on left
+      position.x + (isHecate ? -2 : 0), // Slight camera offset
       position.y + 1.5,
       position.z + cameraDistance
+    );
+
+    const lookAtPos = new THREE.Vector3(
+      position.x + lookAtOffsetX,
+      position.y,
+      position.z
     );
 
     // Store the focused position for spotlight
@@ -149,7 +161,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
     // Set camera target
     setCameraTarget({
       position: cameraPos,
-      lookAt: position.clone(),
+      lookAt: lookAtPos,
     });
 
     onClusterClick?.(cluster);
