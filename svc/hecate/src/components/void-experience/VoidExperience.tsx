@@ -6,6 +6,7 @@ import VoidScene from './scene/VoidScene';
 import CameraController from './scene/CameraController';
 import VoidChatHUD from './chat/VoidChatHUD';
 import ClusterPanel from '../hud/ClusterPanel';
+import HecatePanel from '../hud/HecatePanel';
 import styles from './VoidExperience.module.scss';
 
 export interface ClusterData {
@@ -56,6 +57,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   const [hasArrivedAtCluster, setHasArrivedAtCluster] = useState(false);
   const [hasZoomedToHecate, setHasZoomedToHecate] = useState(false);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
+  const [focusedPosition, setFocusedPosition] = useState<THREE.Vector3 | null>(null);
   const orbitControlsRef = useRef<any>(null);
   const wasLoggedIn = useRef(false);
 
@@ -129,9 +131,24 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
     setSelectedCluster(cluster);
     setHasArrivedAtCluster(false);
 
-    // Set camera target to fly to the cluster
+    // Check if this is HECATE - offset to show object on left side of screen
+    const isHecate = cluster.name.toLowerCase().includes('hecate');
+
+    // Camera position: stay at current distance, just reframe
+    // Position camera in front of the cluster at a comfortable viewing distance
+    const cameraDistance = 7;
+    const cameraPos = new THREE.Vector3(
+      position.x + (isHecate ? -5 : 0), // Shift camera left for HECATE so object appears on left
+      position.y + 1.5,
+      position.z + cameraDistance
+    );
+
+    // Store the focused position for spotlight
+    setFocusedPosition(position.clone());
+
+    // Set camera target
     setCameraTarget({
-      position: position.clone(),
+      position: cameraPos,
       lookAt: position.clone(),
     });
 
@@ -164,11 +181,19 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
     setSelectedCluster(null);
     setCameraTarget(null); // Return camera to home
     setHasArrivedAtCluster(false);
+    setFocusedPosition(null);
   }, []);
 
   const handleDiveToCrossroads = useCallback((_cluster: ClusterData) => {
     setSelectedCluster(null);
     onTabSelect?.('crossroads');
+  }, [onTabSelect]);
+
+  const handleNavigateToHecate = useCallback(() => {
+    setSelectedCluster(null);
+    setCameraTarget(null);
+    setHasArrivedAtCluster(false);
+    onTabSelect?.('hecate');
   }, [onTabSelect]);
 
   // Determine home position based on login state
@@ -203,6 +228,37 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
             isInteractive={isLoggedIn}
           />
         </Suspense>
+
+        {/* Spotlight for focused cluster - illuminates the object when panel is open */}
+        {hasArrivedAtCluster && focusedPosition && (
+          <>
+            {/* Key light - main illumination from front-right */}
+            <spotLight
+              position={[focusedPosition.x + 4, focusedPosition.y + 3, focusedPosition.z + 5]}
+              target-position={[focusedPosition.x, focusedPosition.y, focusedPosition.z]}
+              intensity={80}
+              angle={0.5}
+              penumbra={0.8}
+              color="#b8d4ff"
+              distance={20}
+              castShadow={false}
+            />
+            {/* Fill light - softer from left */}
+            <pointLight
+              position={[focusedPosition.x - 3, focusedPosition.y + 1, focusedPosition.z + 3]}
+              intensity={15}
+              color="#8ab4ff"
+              distance={12}
+            />
+            {/* Rim light - behind to create edge definition */}
+            <pointLight
+              position={[focusedPosition.x, focusedPosition.y + 2, focusedPosition.z - 4]}
+              intensity={20}
+              color="#a0c8ff"
+              distance={10}
+            />
+          </>
+        )}
 
         {/* Camera controller for smooth traversal */}
         <CameraController
@@ -243,11 +299,19 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
 
           {/* Cluster detail panel - shows after camera arrives */}
           {selectedCluster && hasArrivedAtCluster && (
-            <ClusterPanel
-              cluster={selectedCluster}
-              onClose={handleCloseClusterPanel}
-              onDiveToCrossroads={handleDiveToCrossroads}
-            />
+            selectedCluster.name.toLowerCase().includes('hecate') ? (
+              <HecatePanel
+                onClose={handleCloseClusterPanel}
+                onNavigateToHecate={handleNavigateToHecate}
+                status={selectedCluster.status}
+              />
+            ) : (
+              <ClusterPanel
+                cluster={selectedCluster}
+                onClose={handleCloseClusterPanel}
+                onDiveToCrossroads={handleDiveToCrossroads}
+              />
+            )
           )}
         </>
       )}
