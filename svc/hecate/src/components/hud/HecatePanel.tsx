@@ -44,11 +44,26 @@ const HecatePanel: React.FC<HecatePanelProps> = ({
               {getStatusLabel()}
             </div>
           </div>
-          <button className={styles.closeButton} onClick={onClose} aria-label="Close panel">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
+        </div>
+
+        {/* Primary Action - Enter HECATE Interface */}
+        <div className={styles.actionSection}>
+          <div className={styles.actionButtons}>
+            <button className={styles.enterButton} onClick={onNavigateToHecate}>
+              <span>Enter HECATE Interface</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+            <button className={styles.backButton} onClick={onClose} aria-label="Close panel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <p className={styles.actionHint}>
+            Access advanced features and direct communication
+          </p>
         </div>
 
         {/* Content */}
@@ -112,18 +127,6 @@ const HecatePanel: React.FC<HecatePanelProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className={styles.panelFooter}>
-          <p className={styles.footerHint}>
-            Access advanced features, customization, and direct communication with HECATE
-          </p>
-          <button className={styles.enterButton} onClick={onNavigateToHecate}>
-            <span>Enter HECATE Interface</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
       </div>
     </div>
   );

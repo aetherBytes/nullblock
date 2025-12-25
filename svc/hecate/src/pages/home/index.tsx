@@ -886,6 +886,12 @@ const Home: React.FC = () => {
         theme={currentTheme}
         loginAnimationPhase={currentAnimationPhase}
         isLoggedIn={!!publicKey && currentAnimationPhase === 'complete'}
+        onTabSelect={(tab) => {
+          if (tab === 'hecate' || tab === 'crossroads') {
+            setHudInitialTab(tab);
+            setShowHUD(true);
+          }
+        }}
       />
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`}>
         {/* System status panel moved to HUD component */}
