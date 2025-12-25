@@ -571,36 +571,95 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
         />
       )}
 
-      {/* Tooltip */}
+      {/* Tooltip - HECATE gets special ethereal styling */}
       {showTooltip && (
         <Html
-          position={[0, baseSize + 0.3, 0]}
+          position={[0, isHecate ? 0.5 : baseSize + 0.3, 0]}
           center
           style={{ pointerEvents: 'none' }}
         >
-          <div style={{
-            background: 'rgba(10, 10, 20, 0.9)',
-            backdropFilter: 'blur(10px)',
-            border: `1px solid ${cluster.color}40`,
-            borderRadius: '8px',
-            padding: '8px 12px',
-            color: '#e8e8e8',
-            fontSize: '12px',
-            whiteSpace: 'nowrap',
-            boxShadow: `0 0 20px ${cluster.color}30`,
-          }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-              {cluster.name}
-            </div>
+          {isHecate ? (
             <div style={{
-              color: cluster.status === 'healthy' ? '#00ff9d' :
-                     cluster.status === 'unhealthy' ? '#ff3333' : '#e8e8e8',
-              fontSize: '10px',
-              textTransform: 'uppercase'
+              background: 'linear-gradient(135deg, rgba(10, 12, 20, 0.95) 0%, rgba(15, 20, 35, 0.95) 100%)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(74, 158, 255, 0.4)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              color: '#e8e8e8',
+              fontSize: '12px',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 0 30px rgba(74, 158, 255, 0.25), inset 0 0 20px rgba(74, 158, 255, 0.05)',
+              minWidth: '140px',
+              textAlign: 'center',
             }}>
-              {cluster.status}
+              <div style={{
+                fontWeight: 700,
+                marginBottom: '6px',
+                fontSize: '14px',
+                letterSpacing: '2px',
+                color: '#fff',
+                textShadow: '0 0 15px rgba(74, 158, 255, 0.5)',
+              }}>
+                H.E.C.A.T.E
+              </div>
+              <div style={{
+                fontSize: '9px',
+                color: 'rgba(74, 158, 255, 0.8)',
+                marginBottom: '8px',
+                letterSpacing: '0.5px',
+              }}>
+                Vessel: MK1 | AI: HECATE
+              </div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '4px 10px',
+                background: 'rgba(74, 158, 255, 0.1)',
+                border: '1px solid rgba(74, 158, 255, 0.25)',
+                borderRadius: '12px',
+                fontSize: '10px',
+                fontWeight: 600,
+                color: '#4a9eff',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}>
+                <span style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: cluster.status === 'healthy' ? '#4a9eff' : '#ff3333',
+                  boxShadow: cluster.status === 'healthy' ? '0 0 8px #4a9eff' : '0 0 8px #ff3333',
+                }} />
+                {cluster.status === 'healthy' ? 'Online' : cluster.status === 'unhealthy' ? 'Degraded' : 'Unknown'}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div style={{
+              background: 'rgba(10, 10, 20, 0.9)',
+              backdropFilter: 'blur(10px)',
+              border: `1px solid ${cluster.color}40`,
+              borderRadius: '8px',
+              padding: '8px 12px',
+              color: '#e8e8e8',
+              fontSize: '12px',
+              whiteSpace: 'nowrap',
+              boxShadow: `0 0 20px ${cluster.color}30`,
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                {cluster.name}
+              </div>
+              <div style={{
+                color: cluster.status === 'healthy' ? '#00ff9d' :
+                       cluster.status === 'unhealthy' ? '#ff3333' : '#e8e8e8',
+                fontSize: '10px',
+                textTransform: 'uppercase'
+              }}>
+                {cluster.status}
+              </div>
+            </div>
+          )}
         </Html>
       )}
     </group>
