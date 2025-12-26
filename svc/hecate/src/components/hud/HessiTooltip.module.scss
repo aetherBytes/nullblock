@@ -1,0 +1,247 @@
+// HESSI Tooltip - Steel Blue Ethereal Theme (matches HECATE Panel)
+$hecate-blue: #4a9eff;
+$hecate-blue-dark: #2a7adf;
+$hecate-cyan: #00d4ff;
+$void-silver: #e8e8e8;
+$void-dark: #0a0a12;
+$void-darker: #050508;
+
+.tooltipContainer {
+  position: fixed;
+  // Position near bottom-left where HESSI hovers
+  bottom: 160px;
+  left: 24px;
+  z-index: 10015;
+  pointer-events: none;
+  animation: fadeInUp 0.25s ease-out;
+}
+
+.tooltip {
+  width: 280px;
+  background: linear-gradient(180deg, rgba($void-dark, 0.96) 0%, rgba($void-darker, 0.98) 100%);
+  border: 1px solid rgba($hecate-blue, 0.35);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba($hecate-blue, 0.12),
+    inset 0 1px 0 rgba($hecate-blue, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+// Header
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.iconBox {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba($hecate-blue, 0.2) 0%, rgba($hecate-cyan, 0.1) 100%);
+  border: 1px solid rgba($hecate-blue, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 15px rgba($hecate-blue, 0.2),
+    inset 0 0 10px rgba($hecate-blue, 0.1);
+
+  svg {
+    width: 20px;
+    height: 20px;
+    color: $hecate-blue;
+    filter: drop-shadow(0 0 3px rgba($hecate-blue, 0.5));
+  }
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 700;
+  color: $void-silver;
+  margin: 0;
+  letter-spacing: 2px;
+  text-shadow: 0 0 15px rgba($hecate-blue, 0.4);
+}
+
+.subtitle {
+  font-size: 9px;
+  color: rgba($hecate-blue, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+// Status Badge
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba($hecate-blue, 0.1);
+  border: 1px solid rgba($hecate-blue, 0.3);
+  border-radius: 12px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+
+  &.standby {
+    color: rgba($hecate-blue, 0.8);
+
+    .statusDot {
+      background: $hecate-blue;
+      box-shadow: 0 0 6px $hecate-blue;
+      animation: pulse 2s ease-in-out infinite;
+    }
+  }
+
+  &.charging {
+    color: $hecate-cyan;
+    border-color: rgba($hecate-cyan, 0.4);
+    background: rgba($hecate-cyan, 0.1);
+
+    .statusDot {
+      background: $hecate-cyan;
+      box-shadow: 0 0 8px $hecate-cyan;
+      animation: pulseFast 0.5s ease-in-out infinite;
+    }
+  }
+
+  &.processing {
+    color: #88ccff;
+    border-color: rgba(#88ccff, 0.4);
+    background: rgba(#88ccff, 0.1);
+
+    .statusDot {
+      background: #88ccff;
+      box-shadow: 0 0 8px #88ccff;
+      animation: pulse 1s ease-in-out infinite;
+    }
+  }
+
+  &.receiving {
+    color: #ffffff;
+    border-color: rgba(#ffffff, 0.5);
+    background: rgba(#ffffff, 0.15);
+
+    .statusDot {
+      background: #ffffff;
+      box-shadow: 0 0 12px #ffffff;
+      animation: pulseBright 0.3s ease-in-out infinite;
+    }
+  }
+}
+
+.statusDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.statusText {
+  line-height: 1;
+}
+
+// Description
+.description {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba($hecate-blue, 0.12);
+}
+
+.descText {
+  font-size: 11px;
+  color: rgba($void-silver, 0.75);
+  line-height: 1.6;
+  margin: 0;
+}
+
+// NASA Reference
+.reference {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba($hecate-blue, 0.05);
+  border: 1px solid rgba($hecate-blue, 0.1);
+  border-radius: 6px;
+}
+
+.refIcon {
+  font-size: 12px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.refText {
+  font-size: 9px;
+  color: rgba($hecate-blue, 0.7);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+// Animations
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes pulseFast {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes pulseBright {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 12px #ffffff;
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 20px #ffffff;
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .tooltipContainer {
+    left: 16px;
+    bottom: 140px;
+  }
+
+  .tooltip {
+    width: 260px;
+    padding: 14px;
+  }
+}

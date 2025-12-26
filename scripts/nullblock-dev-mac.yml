@@ -68,6 +68,8 @@ windows:
         - |
           echo "🎨 Starting Frontend (Hecate React App)..."
           cd svc/hecate
+          echo "🧹 Clearing Vite cache..."
+          rm -rf node_modules/.vite
           echo "Installing/updating npm dependencies..."
           npm install
           export VITE_PROTOCOLS_API_URL=http://localhost:8001

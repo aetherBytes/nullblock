@@ -9,6 +9,7 @@ import HessiRhessi from './scene/HessiRhessi';
 import VoidChatHUD from './chat/VoidChatHUD';
 import ClusterPanel from '../hud/ClusterPanel';
 import HecatePanel from '../hud/HecatePanel';
+import HessiTooltip from '../hud/HessiTooltip';
 import styles from './VoidExperience.module.scss';
 
 // Tendril animation state
@@ -82,6 +83,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   const [hessiCharging, setHessiCharging] = useState(false);
   const [hessiProcessing, setHessiProcessing] = useState(false);
   const [hessiReceiving, setHessiReceiving] = useState(false);
+  const [hessiHovered, setHessiHovered] = useState(false);
 
   // Detect if this is a page refresh with existing session (publicKey exists at mount)
   const isReturningUser = useRef(!!publicKey);
@@ -326,6 +328,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
         {isLoggedIn && (
           <HessiRhessi
             onPositionUpdate={handleHessiPositionUpdate}
+            onHoverChange={setHessiHovered}
             isActive={loginAnimationPhase === 'complete'}
             isCharging={hessiCharging}
             isProcessing={hessiProcessing}
@@ -404,6 +407,15 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
 
         <Preload all />
       </Canvas>
+
+      {/* HESSI tooltip - shown on hover */}
+      {isLoggedIn && hessiHovered && (
+        <HessiTooltip
+          isCharging={hessiCharging}
+          isProcessing={hessiProcessing}
+          isReceiving={hessiReceiving}
+        />
+      )}
 
       {/* Chat and cluster panel only shown when logged in */}
       {isLoggedIn && (
