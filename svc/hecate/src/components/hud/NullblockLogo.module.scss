@@ -13,12 +13,15 @@ $echo-orange: #ff7f00;
   transition: all 0.3s ease;
   border-radius: 50%;
   z-index: 100;
+  overflow: visible;
 
   .logoImage {
     width: 100%;
     height: 100%;
     object-fit: contain;
     transition: filter 0.3s ease, transform 0.3s ease;
+    position: relative;
+    z-index: 100;
   }
 
   &.small {
@@ -203,5 +206,20 @@ $echo-orange: #ff7f00;
   }
   50% {
     box-shadow: 0 0 55px rgba(#bb33ff, 1);
+  }
+}
+
+.crossroadsRings {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 98;
+
+  .outerRing {
+    opacity: 0.85;
   }
 }

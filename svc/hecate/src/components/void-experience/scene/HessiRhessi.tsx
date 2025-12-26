@@ -7,6 +7,7 @@ const HESSI_MODEL_PATH = '/models/HESSI-RHESSI.glb';
 
 interface HessiRhessiProps {
   onPositionUpdate?: (position: THREE.Vector3) => void;
+  onHoverChange?: (isHovered: boolean) => void;
   isActive?: boolean;
   isCharging?: boolean;
   isProcessing?: boolean;
@@ -43,6 +44,7 @@ const createHessiGlowTexture = () => {
 
 const HessiRhessi: React.FC<HessiRhessiProps> = ({
   onPositionUpdate,
+  onHoverChange,
   isActive = true,
   isCharging = false,
   isProcessing = false,
@@ -179,6 +181,15 @@ const HessiRhessi: React.FC<HessiRhessiProps> = ({
 
   return (
     <group ref={groupRef}>
+      {/* Invisible hit area for hover detection */}
+      <mesh
+        onPointerOver={() => onHoverChange?.(true)}
+        onPointerOut={() => onHoverChange?.(false)}
+      >
+        <sphereGeometry args={[0.04, 16, 16]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+
       {/* Outer atmospheric glow */}
       <sprite ref={outerGlowRef} scale={[0.073, 0.073, 1]} position={[0, 0, -0.001]}>
         <spriteMaterial
