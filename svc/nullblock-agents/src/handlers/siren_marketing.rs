@@ -290,7 +290,7 @@ pub async fn set_model(
     info!("🎯 Siren model selection request: {}", request.model_name);
 
     let mut marketing_agent = state.marketing_agent.write().await;
-    let api_keys = state.config.get_api_keys();
+    let api_keys = state.api_keys.clone();
 
     let success = marketing_agent.set_preferred_model(request.model_name.clone(), &api_keys).await;
 
