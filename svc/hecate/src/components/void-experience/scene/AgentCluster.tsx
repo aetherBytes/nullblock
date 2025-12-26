@@ -330,6 +330,7 @@ interface AgentClusterProps {
   orbitRadius: number;
   isInteractive?: boolean; // Controls whether cluster can be clicked/hovered
   fadeDelay?: number;
+  onPositionUpdate?: (position: THREE.Vector3) => void;
 }
 
 const AgentCluster: React.FC<AgentClusterProps> = ({
@@ -343,6 +344,7 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
   orbitRadius,
   isInteractive = true,
   fadeDelay = 0,
+  onPositionUpdate,
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
@@ -414,6 +416,13 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
         const y = basePosition[1] + Math.sin(time * ySpeed + orbitPhase) * yAmplitude;
 
         groupRef.current.position.set(x, y, z);
+      }
+
+      // Report position to parent (used for tendril animations)
+      if (onPositionUpdate) {
+        const worldPos = new THREE.Vector3();
+        groupRef.current.getWorldPosition(worldPos);
+        onPositionUpdate(worldPos);
       }
 
       // Calculate effective target scale with fade delay for initial appearance

@@ -10,6 +10,7 @@ interface AgentClustersProps {
   onClusterHover: (clusterId: string | null) => void;
   onClusterClick: (cluster: ClusterData, position: THREE.Vector3) => void;
   isInteractive?: boolean; // Controls whether clusters can be clicked/hovered
+  onHecatePositionUpdate?: (position: THREE.Vector3) => void;
 }
 
 const AgentClusters: React.FC<AgentClustersProps> = ({
@@ -18,6 +19,7 @@ const AgentClusters: React.FC<AgentClustersProps> = ({
   onClusterHover,
   onClusterClick,
   isInteractive = true,
+  onHecatePositionUpdate,
 }) => {
   const { clusters } = useAgentClusters();
 
@@ -52,21 +54,25 @@ const AgentClusters: React.FC<AgentClustersProps> = ({
 
   return (
     <group>
-      {clusterPositions.map(({ cluster, basePosition, orbitPhase, orbitRadius }, index) => (
-        <AgentCluster
-          key={cluster.id}
-          cluster={cluster}
-          basePosition={basePosition}
-          isHovered={isInteractive && hoveredCluster === cluster.id}
-          isSelected={selectedClusterId === cluster.id}
-          onHover={onClusterHover}
-          onClick={onClusterClick}
-          orbitPhase={orbitPhase}
-          orbitRadius={orbitRadius}
-          isInteractive={isInteractive}
-          fadeDelay={index * 0.15} // Stagger fade-in by 150ms per cluster
-        />
-      ))}
+      {clusterPositions.map(({ cluster, basePosition, orbitPhase, orbitRadius }, index) => {
+        const isHecate = cluster.name.toLowerCase().includes('hecate');
+        return (
+          <AgentCluster
+            key={cluster.id}
+            cluster={cluster}
+            basePosition={basePosition}
+            isHovered={isInteractive && hoveredCluster === cluster.id}
+            isSelected={selectedClusterId === cluster.id}
+            onHover={onClusterHover}
+            onClick={onClusterClick}
+            orbitPhase={orbitPhase}
+            orbitRadius={orbitRadius}
+            isInteractive={isInteractive}
+            fadeDelay={index * 0.15} // Stagger fade-in by 150ms per cluster
+            onPositionUpdate={isHecate ? onHecatePositionUpdate : undefined}
+          />
+        );
+      })}
     </group>
   );
 };
