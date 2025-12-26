@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import styles from './MemFeed.module.scss';
 
 interface MemFeedItem {
@@ -159,9 +160,9 @@ This is the seed.
         </div>
       </div>
 
-      {showPopup && selectedItem && (
-        <div className={styles.popupOverlay} onClick={() => setShowPopup(false)}>
-          <div className={styles.popupContent} onClick={(e) => e.stopPropagation()}>
+      {showPopup && selectedItem && ReactDOM.createPortal(
+        <div className={styles.popupOverlay}>
+          <div className={styles.popupContent}>
             <div className={styles.popupHeader}>
               <button className={styles.closeButton} onClick={() => setShowPopup(false)}>
                 ×
@@ -171,7 +172,8 @@ This is the seed.
               {selectedItem.content && renderMarkdown(selectedItem.content)}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

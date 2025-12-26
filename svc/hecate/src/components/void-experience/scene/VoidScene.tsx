@@ -18,6 +18,7 @@ interface VoidSceneProps {
   onClusterHover: (clusterId: string | null) => void;
   onClusterClick: (cluster: ClusterData, position: THREE.Vector3) => void;
   isInteractive?: boolean; // Controls whether clusters can be clicked/hovered
+  onHecatePositionUpdate?: (position: THREE.Vector3) => void;
 }
 
 const VoidScene: React.FC<VoidSceneProps> = ({
@@ -26,6 +27,7 @@ const VoidScene: React.FC<VoidSceneProps> = ({
   onClusterHover,
   onClusterClick,
   isInteractive = true,
+  onHecatePositionUpdate,
 }) => {
   // Track which constellation nodes have active tendrils
   const [activeNodes, setActiveNodes] = useState<Set<number>>(new Set());
@@ -109,6 +111,7 @@ const VoidScene: React.FC<VoidSceneProps> = ({
         onClusterHover={onClusterHover}
         onClusterClick={onClusterClick}
         isInteractive={isInteractive}
+        onHecatePositionUpdate={onHecatePositionUpdate}
       />
     </group>
   );
