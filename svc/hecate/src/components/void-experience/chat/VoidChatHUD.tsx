@@ -19,6 +19,9 @@ interface VoidChatHUDProps {
   tendrilHit?: boolean;
 }
 
+// Energy state for transmission animation
+type EnergyState = 'idle' | 'charging' | 'firing' | 'processing';
+
 const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   publicKey: _publicKey,
   isActive = true,
@@ -29,41 +32,22 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
 }) => {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [energyState, setEnergyState] = useState<EnergyState>('idle');
   const [messages, setMessages] = useState<VoidMessage[]>([]);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
+  const pendingMessageRef = useRef<{ message: string; msgId: string } | null>(null);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!input.trim() || isProcessing) return;
-
-    const userMessage = input.trim();
-    setInput('');
-    setIsProcessing(true);
-
-    // Add user message
-    const userMsg: VoidMessage = {
-      id: `user-${Date.now()}`,
-      text: userMessage,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMsg]);
-
-    // Trigger tendril immediately when message is sent (not waiting for fade)
-    onUserMessageSent?.(userMsg.id);
-
-    if (!hasInteracted) {
-      setHasInteracted(true);
-      onFirstMessage?.();
-    }
+  // Handle the actual API call after charging/firing animation
+  const executeTransmission = useCallback(async () => {
+    const pending = pendingMessageRef.current;
+    if (!pending) return;
 
     try {
-      const response = await agentService.chatWithAgent('hecate', userMessage);
+      const response = await agentService.chatWithAgent('hecate', pending.message);
 
       if (response.success && response.data) {
         const agentMsg: VoidMessage = {
@@ -97,8 +81,55 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
       setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsProcessing(false);
+      setEnergyState('idle');
+      pendingMessageRef.current = null;
     }
-  }, [input, isProcessing, hasInteracted, onFirstMessage, onUserMessageSent, onAgentResponseReceived]);
+  }, [onAgentResponseReceived]);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!input.trim() || isProcessing || energyState !== 'idle') return;
+
+    const userMessage = input.trim();
+    setInput('');
+
+    // Add user message immediately
+    const userMsg: VoidMessage = {
+      id: `user-${Date.now()}`,
+      text: userMessage,
+      sender: 'user',
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMsg]);
+
+    if (!hasInteracted) {
+      setHasInteracted(true);
+      onFirstMessage?.();
+    }
+
+    // Store pending message for after animation
+    pendingMessageRef.current = { message: userMessage, msgId: userMsg.id };
+
+    // Start charging animation sequence
+    setEnergyState('charging');
+
+    // After charging (0.8s), switch to firing
+    setTimeout(() => {
+      setEnergyState('firing');
+
+      // After firing flash (0.3s), launch tendril and start processing
+      setTimeout(() => {
+        // Fire the tendril
+        onUserMessageSent?.(userMsg.id);
+        setIsProcessing(true);
+        setEnergyState('processing');
+
+        // Execute the actual API call
+        executeTransmission();
+      }, 300);
+    }, 800);
+  }, [input, isProcessing, energyState, hasInteracted, onFirstMessage, onUserMessageSent, executeTransmission]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -177,7 +208,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
           </div>
         )}
         <form onSubmit={handleSubmit} className={styles.inputForm}>
-          <div className={`${styles.inputContainer} ${isProcessing ? styles.processing : ''} ${tendrilHit ? styles.tendrilHit : ''}`}>
+          <div className={`${styles.inputContainer} ${energyState === 'charging' ? styles.charging : ''} ${energyState === 'firing' ? styles.firing : ''} ${energyState === 'processing' ? styles.processing : ''} ${tendrilHit ? styles.tendrilHit : ''}`}>
             {/* History toggle button */}
             <button
               type="button"
@@ -204,15 +235,15 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Transmit to HECATE..."
+              placeholder={energyState === 'processing' ? 'Awaiting transmission response...' : 'Transmit to HECATE...'}
               className={styles.voidInput}
-              disabled={isProcessing}
+              disabled={energyState !== 'idle'}
               rows={1}
             />
             <button
               type="submit"
               className={styles.sendButton}
-              disabled={isProcessing || !input.trim()}
+              disabled={energyState !== 'idle' || !input.trim()}
               aria-label="Send message"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
