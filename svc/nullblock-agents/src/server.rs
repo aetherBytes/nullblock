@@ -13,6 +13,7 @@ use tracing::{info, warn, error};
 #[derive(Clone)]
 pub struct AppState {
     pub config: Config,
+    pub api_keys: ApiKeys,
     pub hecate_agent: Arc<RwLock<HecateAgent>>,
     pub marketing_agent: Arc<RwLock<MarketingAgent>>,
     pub database: Option<Arc<Database>>,
@@ -92,6 +93,7 @@ impl AppState {
 
         Ok(Self {
             config,
+            api_keys,
             hecate_agent: Arc::new(RwLock::new(hecate_agent)),
             marketing_agent: Arc::new(RwLock::new(marketing_agent)),
             database,

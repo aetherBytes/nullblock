@@ -194,7 +194,7 @@ pub async fn available_models(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let agent = state.hecate_agent.read().await;
-    let api_keys = state.config.get_api_keys();
+    let api_keys = state.api_keys.clone();
     
     // Try to fetch real models from OpenRouter
     let available_models = if let Some(openrouter_key) = &api_keys.openrouter {
@@ -649,7 +649,7 @@ pub async fn search_models(
     Query(params): Query<SearchModelsQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let _agent = state.hecate_agent.read().await;
-    let api_keys = state.config.get_api_keys();
+    let api_keys = state.api_keys.clone();
     
     // Get available models (same source as available_models endpoint)
     let available_models = if let Some(openrouter_key) = &api_keys.openrouter {
@@ -713,7 +713,7 @@ pub async fn set_model(
     State(state): State<AppState>,
     Json(request): Json<ModelSelectionRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let api_keys = state.config.get_api_keys();
+    let api_keys = state.api_keys.clone();
 
     // Check if user is free tier
     let mut is_free_tier = false;
@@ -833,7 +833,7 @@ pub async fn get_model_info(
     Query(params): Query<ModelInfoQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let agent = state.hecate_agent.read().await;
-    let api_keys = state.config.get_api_keys();
+    let api_keys = state.api_keys.clone();
     
     let model_name = params.model_name.unwrap_or_else(|| {
         agent.current_model.clone().unwrap_or_else(|| "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string())
