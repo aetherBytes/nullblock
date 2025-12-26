@@ -191,7 +191,6 @@ const ChatTendril: React.FC<ChatTendrilProps> = ({
   duration = 2.0,
 }) => {
   const meshRef = useRef<THREE.Mesh>(null);
-  const materialRef = useRef<TendrilMaterial>(null);
   const stateRef = useRef<{
     state: 'growing' | 'holding' | 'fading' | 'complete';
     growth: number;
@@ -208,8 +207,11 @@ const ChatTendril: React.FC<ChatTendrilProps> = ({
     if (color) return color;
     return direction === 'outgoing'
       ? new THREE.Color(0x4a9eff)  // Steel blue for user messages
-      : new THREE.Color(0xe8e8e8); // Silver for HECATE responses
+      : new THREE.Color(0xffffff); // Bright white for HECATE responses
   }, [color, direction]);
+
+  // Create material once
+  const material = useMemo(() => new TendrilMaterial(), []);
 
   // Create unit-length geometry once - we'll scale it each frame
   const geometry = useMemo(() => {
@@ -225,16 +227,14 @@ const ChatTendril: React.FC<ChatTendrilProps> = ({
 
   // Initialize material with direction and color
   useEffect(() => {
-    if (materialRef.current) {
-      // Both directions grow from startPos to endPos
-      // VoidExperience.tsx already swaps positions based on direction
-      materialRef.current.uniforms.uDirection.value = -1.0;
-      materialRef.current.uniforms.uColor.value = tendrilColor;
-    }
-  }, [direction, tendrilColor]);
+    // Both directions grow from startPos to endPos
+    // VoidExperience.tsx already swaps positions based on direction
+    material.uniforms.uDirection.value = -1.0;
+    material.uniforms.uColor.value = tendrilColor;
+  }, [material, direction, tendrilColor]);
 
   useFrame((_, delta) => {
-    if (!materialRef.current || !meshRef.current) return;
+    if (!meshRef.current) return;
 
     const state = stateRef.current;
     state.elapsed += delta;
@@ -261,7 +261,7 @@ const ChatTendril: React.FC<ChatTendrilProps> = ({
     }
 
     // Update time uniform for wave animation
-    materialRef.current.uniforms.uTime.value = state.elapsed;
+    material.uniforms.uTime.value = state.elapsed;
 
     const growSpeed = 1 / duration; // Complete in 'duration' seconds
     const fadeSpeed = 2.0; // Faster fade out
@@ -269,7 +269,7 @@ const ChatTendril: React.FC<ChatTendrilProps> = ({
     switch (state.state) {
       case 'growing':
         state.growth = Math.min(1.0, state.growth + delta * growSpeed);
-        materialRef.current.uniforms.uGrowth.value = state.growth;
+        material.uniforms.uGrowth.value = state.growth;
 
         if (state.growth >= 1.0) {
           state.state = 'holding';
@@ -287,7 +287,7 @@ const ChatTendril: React.FC<ChatTendrilProps> = ({
 
       case 'fading':
         state.fade = Math.max(0, state.fade - delta * fadeSpeed * 0.6);
-        materialRef.current.uniforms.uFade.value = state.fade;
+        material.uniforms.uFade.value = state.fade;
 
         if (state.fade <= 0) {
           state.state = 'complete';
@@ -306,9 +306,7 @@ const ChatTendril: React.FC<ChatTendrilProps> = ({
   }
 
   return (
-    <mesh ref={meshRef} geometry={geometry}>
-      <primitive object={new TendrilMaterial()} ref={materialRef} attach="material" />
-    </mesh>
+    <mesh ref={meshRef} geometry={geometry} material={material} />
   );
 };
 
