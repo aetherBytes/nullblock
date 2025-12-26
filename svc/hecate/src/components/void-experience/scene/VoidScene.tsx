@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import * as THREE from 'three';
 import CrossroadsOrb from './CrossroadsOrb';
 import ParticleField from './ParticleField';
@@ -10,6 +10,15 @@ import type { ClusterData } from '../VoidExperience';
 export interface ConstellationNode {
   position: THREE.Vector3;
   connections: number[];
+  clusterId: number; // Which connected group this node belongs to
+}
+
+// Orbital parameters for each connected cluster
+export interface ClusterOrbit {
+  speed: number;       // Radians per second
+  tiltX: number;       // Orbital plane tilt on X axis
+  tiltZ: number;       // Orbital plane tilt on Z axis
+  phase: number;       // Initial phase offset
 }
 
 interface VoidSceneProps {
@@ -36,8 +45,8 @@ const VoidScene: React.FC<VoidSceneProps> = ({
     setActiveNodes(nodes);
   }, []);
 
-  // Generate constellation nodes - shared between NeuralLines and CrossroadsOrb
-  const constellationNodes = useMemo(() => {
+  // Generate constellation nodes and identify connected clusters
+  const { constellationNodes, clusterOrbits } = useMemo(() => {
     const count = 25;
     const radius = 16;
     const nodes: ConstellationNode[] = [];
@@ -54,7 +63,8 @@ const VoidScene: React.FC<VoidSceneProps> = ({
           r * Math.sin(phi) * Math.sin(theta),
           r * Math.cos(phi)
         ),
-        connections: []
+        connections: [],
+        clusterId: -1 // Will be assigned after connections are made
       });
     }
 
@@ -84,8 +94,45 @@ const VoidScene: React.FC<VoidSceneProps> = ({
       }
     }
 
-    return nodes;
+    // Identify connected clusters using BFS
+    let currentCluster = 0;
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].clusterId === -1) {
+        // BFS to find all connected nodes
+        const queue = [i];
+        nodes[i].clusterId = currentCluster;
+
+        while (queue.length > 0) {
+          const nodeIdx = queue.shift()!;
+          for (const connIdx of nodes[nodeIdx].connections) {
+            if (nodes[connIdx].clusterId === -1) {
+              nodes[connIdx].clusterId = currentCluster;
+              queue.push(connIdx);
+            }
+          }
+        }
+        currentCluster++;
+      }
+    }
+
+    // Generate orbital parameters for each cluster
+    const orbits: ClusterOrbit[] = [];
+    for (let c = 0; c < currentCluster; c++) {
+      orbits.push({
+        speed: 0.02 + Math.random() * 0.04,  // 0.02-0.06 rad/sec (very slow)
+        tiltX: (Math.random() - 0.5) * 0.3,  // Small tilt variation
+        tiltZ: (Math.random() - 0.5) * 0.3,
+        phase: Math.random() * Math.PI * 2   // Random starting phase
+      });
+    }
+
+    return { constellationNodes: nodes, clusterOrbits: orbits };
   }, []);
+
+  // Ref to hold animated node positions (updated by NeuralLines, read by CrossroadsOrb)
+  const animatedPositionsRef = useRef<THREE.Vector3[]>(
+    constellationNodes.map(n => n.position.clone())
+  );
 
   return (
     <group>
@@ -95,12 +142,18 @@ const VoidScene: React.FC<VoidSceneProps> = ({
 
       {/* Background layers */}
       <ParticleField count={1500} />
-      <NeuralLines nodes={constellationNodes} activeNodes={activeNodes} />
+      <NeuralLines
+        nodes={constellationNodes}
+        activeNodes={activeNodes}
+        clusterOrbits={clusterOrbits}
+        animatedPositionsRef={animatedPositionsRef}
+      />
 
       {/* Central Crossroads Orb - The marketplace bazaar hub */}
       <CrossroadsOrb
         position={[0, 0, 0]}
         constellationNodes={constellationNodes}
+        animatedPositionsRef={animatedPositionsRef}
         onActiveNodesChange={handleActiveNodesChange}
       />
 
