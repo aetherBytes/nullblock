@@ -1,10 +1,11 @@
 import React, { Suspense, useState, useCallback, useRef, useEffect } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Preload } from '@react-three/drei';
 import * as THREE from 'three';
 import VoidScene from './scene/VoidScene';
 import CameraController from './scene/CameraController';
 import ChatTendril from './scene/ChatTendril';
+import HessiRhessi from './scene/HessiRhessi';
 import VoidChatHUD from './chat/VoidChatHUD';
 import ClusterPanel from '../hud/ClusterPanel';
 import HecatePanel from '../hud/HecatePanel';
@@ -18,33 +19,6 @@ interface TendrilAnimation {
   endRef: React.MutableRefObject<THREE.Vector3>;
 }
 
-// Helper component to calculate chat world position using camera
-const ChatPositionCalculator: React.FC<{
-  onPositionUpdate: (pos: THREE.Vector3) => void;
-}> = ({ onPositionUpdate }) => {
-  const { camera } = useThree();
-
-  useEffect(() => {
-    // Chat input bar is at the very bottom of screen
-    // Convert screen position to world position at a fixed distance from camera
-    const updatePosition = () => {
-      // NDC: -1 is bottom, +1 is top. Use -0.92 to target the input bar (not the floating messages)
-      const ndc = new THREE.Vector3(0, -0.92, 0.5);
-      ndc.unproject(camera);
-      const dir = ndc.sub(camera.position).normalize();
-      const worldPos = camera.position.clone().add(dir.multiplyScalar(5));
-      onPositionUpdate(worldPos);
-    };
-
-    updatePosition();
-
-    // Update when camera moves
-    const interval = setInterval(updatePosition, 100);
-    return () => clearInterval(interval);
-  }, [camera, onPositionUpdate]);
-
-  return null;
-};
 
 export interface ClusterData {
   id: string;
@@ -100,9 +74,13 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   const orbitControlsRef = useRef<any>(null);
   const wasLoggedIn = useRef(false);
 
-  // Track HECATE and chat positions for tendril animations
+  // Track HECATE and HESSI-RHESSI positions for tendril animations
   const hecatePositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 5));
-  const chatPositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, -2, 8));
+  const hessiPositionRef = useRef<THREE.Vector3>(new THREE.Vector3(-2, -1, 6));
+
+  // Track energy state for HESSI-RHESSI visual feedback
+  const [hessiCharging, setHessiCharging] = useState(false);
+  const [hessiProcessing, setHessiProcessing] = useState(false);
 
   // Detect if this is a page refresh with existing session (publicKey exists at mount)
   const isReturningUser = useRef(!!publicKey);
@@ -256,30 +234,40 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
     hecatePositionRef.current.copy(position);
   }, []);
 
-  const handleChatPositionUpdate = useCallback((position: THREE.Vector3) => {
-    chatPositionRef.current.copy(position);
+  const handleHessiPositionUpdate = useCallback((position: THREE.Vector3) => {
+    hessiPositionRef.current.copy(position);
   }, []);
 
   const handleUserMessageSent = useCallback((messageId: string) => {
-    // Create outgoing tendril: chat → HECATE (uses refs for live tracking)
+    // Trigger HESSI charging effect, then fire tendril
+    setHessiCharging(true);
+    setHessiProcessing(true);
+
+    // Create outgoing tendril: HESSI → HECATE (uses refs for live tracking)
     const tendril: TendrilAnimation = {
       id: `tendril-out-${messageId}`,
       direction: 'outgoing',
-      startRef: chatPositionRef,
+      startRef: hessiPositionRef,
       endRef: hecatePositionRef,
     };
     setTendrils(prev => [...prev, tendril]);
+
+    // End charging effect after a short delay
+    setTimeout(() => setHessiCharging(false), 500);
   }, []);
 
   const handleAgentResponseReceived = useCallback((messageId: string) => {
-    // Create incoming tendril: HECATE → chat (uses refs for live tracking)
+    // Create incoming tendril: HECATE → HESSI (uses refs for live tracking)
     const tendril: TendrilAnimation = {
       id: `tendril-in-${messageId}`,
       direction: 'incoming',
       startRef: hecatePositionRef,
-      endRef: chatPositionRef,
+      endRef: hessiPositionRef,
     };
     setTendrils(prev => [...prev, tendril]);
+
+    // End processing effect when response arrives
+    setHessiProcessing(false);
   }, []);
 
   const handleTendrilComplete = useCallback((tendrilId: string) => {
@@ -328,8 +316,15 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
           />
         </Suspense>
 
-        {/* Track chat input world position */}
-        <ChatPositionCalculator onPositionUpdate={handleChatPositionUpdate} />
+        {/* HESSI-RHESSI biometric interface module - tendril target */}
+        {isLoggedIn && (
+          <HessiRhessi
+            onPositionUpdate={handleHessiPositionUpdate}
+            isActive={loginAnimationPhase === 'complete'}
+            isCharging={hessiCharging}
+            isProcessing={hessiProcessing}
+          />
+        )}
 
         {/* Chat tendrils - animated connections between chat and HECATE */}
         {tendrils.map(tendril => (

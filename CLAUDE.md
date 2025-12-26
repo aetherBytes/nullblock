@@ -450,10 +450,13 @@ THE VOID
 ├── ParticleField (stars) - Ambient drifting particles
 ├── NeuralLines (constellations) - Minor nodes representing Tools/Services/Servers
 ├── CrossroadsOrb (center) - The Crossroads Bazaar marketplace hub
-└── AgentClusters (major nodes) - AI Agents orbiting the center
-    ├── HECATE (vessel AI) - Gold glow
-    ├── Siren (marketing) - Purple accent
-    └── Erebus (router) - Blue accent
+├── AgentClusters (major nodes) - AI Agents orbiting the center
+│   ├── HECATE (vessel AI) - Steel-blue glow, MK1 hull model
+│   ├── Siren (marketing) - Purple accent
+│   └── Erebus (router) - Blue accent
+├── HessiRhessi - Biometric-to-digital interface module (tendril target)
+├── ChatTendril - Animated energy connections between HESSI and HECATE
+└── VoidChatHUD - Chat input overlay with energy effects
 ```
 
 ### Node Types
@@ -463,12 +466,28 @@ THE VOID
 | **Center** | `CrossroadsOrb` | Crossroads Bazaar (marketplace) |
 | **Major** | `AgentCluster` | AI Agents (clickable, opens panel) |
 | **Minor** | `NeuralLines` nodes | Tools, Services, MCP Servers |
+| **Interface** | `HessiRhessi` | Biometric↔Digital frequency converter |
+| **Connection** | `ChatTendril` | Energy transmissions between user and AI |
 | **Background** | `ParticleField` | Ambient stars |
+
+### HESSI-RHESSI Module
+
+The **HESSI-RHESSI** is the biometric-to-digital frequency conversion device. It represents the gateway through which user communications are translated into AI-readable signals.
+
+**Position**: Floating to the left of the chat input box (in 3D space)
+**Visual**: GLB model with ethereal blue-white glow, gentle float animation
+**Purpose**: Acts as the tendril target for chat communications
+
+**Animation Flow**:
+1. **User types**: Chat input shows steam effect (energy building)
+2. **User sends**: HESSI charges → tendril fires from HESSI → travels to HECATE
+3. **HECATE responds**: Tendril fires from HECATE → travels to HESSI → chat shows response
+4. **HESSI glows**: Pulses when charging/processing, steady glow when idle
 
 ### Camera Behavior
 
-- **Pre-login**: Position `[4, 3, 12]` - Far back, offset view (all visible, non-interactive, slow auto-rotate)
-- **Post-login**: Position `[0, 0.5, 6]` - Centered on Crossroads (interactive, static camera, no wobble)
+- **Pre-login**: Position `[8, 6, 24]` - Very far back, dramatic reveal with slow auto-rotate
+- **Post-login**: Position `[4, 3, 12]` - Zoomed in, interactive view
 - **Logout**: Smooth zoom-out animation back to pre-login position
 - **Cluster Click**: Camera zooms to cluster, cluster freezes in place, panel opens
 
@@ -476,19 +495,31 @@ THE VOID
 
 ```
 svc/hecate/src/components/void-experience/
-├── VoidExperience.tsx       # Canvas wrapper, state management
+├── VoidExperience.tsx       # Canvas wrapper, state management, tendril orchestration
 ├── scene/
-│   ├── CrossroadsOrb.tsx    # Central bazaar node
-│   ├── AgentCluster.tsx     # Individual agent node
+│   ├── CrossroadsOrb.tsx    # Central bazaar node with gyroscope rings
+│   ├── AgentCluster.tsx     # Individual agent node (HECATE uses GLB model)
 │   ├── AgentClusters.tsx    # Agent collection manager
 │   ├── NeuralLines.tsx      # Service constellation network
 │   ├── ParticleField.tsx    # Ambient star particles
-│   └── CameraController.tsx # Smooth camera traversal
+│   ├── CameraController.tsx # Smooth camera traversal
+│   ├── ChatTendril.tsx      # GLSL shader-based tendril animation
+│   └── HessiRhessi.tsx      # Biometric interface module (tendril target)
 ├── hooks/
 │   └── useAgentClusters.ts  # Fetch from /api/discovery/agents
 └── chat/
-    └── VoidChatHUD.tsx      # Chat input overlay
+    ├── VoidChatHUD.tsx      # Chat input overlay with energy states
+    └── voidChat.module.scss # Steam/energy CSS effects
 ```
+
+### Chat Tendril System
+
+The tendril system creates animated energy beams between HESSI-RHESSI and HECATE:
+
+- **Outgoing (User→AI)**: Steel-blue tendrils grow from HESSI to HECATE
+- **Incoming (AI→User)**: White tendrils grow from HECATE to HESSI
+- **Shader**: Custom GLSL with noise-based flow, taper, and tip glow
+- **Animation States**: growing → holding → fading → complete
 
 ## 🎨 UI/UX Standards
 
