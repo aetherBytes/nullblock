@@ -1,7 +1,7 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame, extend } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { ConstellationNode } from './VoidScene';
+import type { ConstellationNode, ClusterOrbit } from './VoidScene';
 
 // Mini Crossroads-style shader for constellation nodes - blue themed
 class ConstellationCoreMaterial extends THREE.ShaderMaterial {
@@ -254,12 +254,20 @@ const createNodeGlowTexture = () => {
 interface NeuralLinesProps {
   nodes: ConstellationNode[];
   activeNodes?: Set<number>;
+  clusterOrbits: ClusterOrbit[];
+  animatedPositionsRef: React.MutableRefObject<THREE.Vector3[]>;
 }
 
-const NeuralLines: React.FC<NeuralLinesProps> = ({ nodes, activeNodes = new Set() }) => {
+const NeuralLines: React.FC<NeuralLinesProps> = ({
+  nodes,
+  activeNodes = new Set(),
+  clusterOrbits,
+  animatedPositionsRef
+}) => {
   const groupRef = useRef<THREE.Group>(null);
   const linesRef = useRef<THREE.LineSegments>(null);
   const nodeMaterialRefs = useRef<(THREE.ShaderMaterial | null)[]>([]);
+  const nodeGroupRefs = useRef<(THREE.Group | null)[]>([]);
 
   // Create glow texture once
   const glowTexture = useMemo(() => createNodeGlowTexture(), []);
@@ -333,13 +341,69 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({ nodes, activeNodes = new Set(
     return new THREE.BufferAttribute(lineOpacities.slice(), 1);
   }, [lineOpacities]);
 
+  // Store base positions for orbital calculations
+  const basePositions = useMemo(() => {
+    return nodes.map(n => n.position.clone());
+  }, [nodes]);
+
   useFrame((state) => {
     if (!linesRef.current) return;
 
     const time = state.clock.elapsedTime;
 
-    // Constellation nodes are now static - no rotation
-    // This allows tendrils from CrossroadsOrb to accurately target them
+    // Animate each node based on its cluster's orbital parameters
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      const orbit = clusterOrbits[node.clusterId];
+      if (!orbit) continue;
+
+      const basePos = basePositions[i];
+      const angle = orbit.phase + time * orbit.speed;
+
+      // Create rotation matrix for this cluster's orbit
+      const rotationMatrix = new THREE.Matrix4();
+      rotationMatrix.makeRotationFromEuler(
+        new THREE.Euler(orbit.tiltX, angle, orbit.tiltZ, 'XYZ')
+      );
+
+      // Apply rotation to base position
+      const animatedPos = basePos.clone().applyMatrix4(rotationMatrix);
+
+      // Update the shared animated positions ref
+      animatedPositionsRef.current[i].copy(animatedPos);
+
+      // Update the node group position
+      const nodeGroup = nodeGroupRefs.current[i];
+      if (nodeGroup) {
+        nodeGroup.position.copy(animatedPos);
+      }
+    }
+
+    // Update line geometry with new animated positions
+    const lineGeom = linesRef.current.geometry;
+    const positions = lineGeom.attributes.position.array as Float32Array;
+    let lineIdx = 0;
+    const processedPairs = new Set<string>();
+
+    for (let i = 0; i < nodes.length; i++) {
+      for (const j of nodes[i].connections) {
+        const pairKey = i < j ? `${i}-${j}` : `${j}-${i}`;
+        if (processedPairs.has(pairKey)) continue;
+        processedPairs.add(pairKey);
+
+        const posA = animatedPositionsRef.current[i];
+        const posB = animatedPositionsRef.current[j];
+
+        positions[lineIdx * 6 + 0] = posA.x;
+        positions[lineIdx * 6 + 1] = posA.y;
+        positions[lineIdx * 6 + 2] = posA.z;
+        positions[lineIdx * 6 + 3] = posB.x;
+        positions[lineIdx * 6 + 4] = posB.y;
+        positions[lineIdx * 6 + 5] = posB.z;
+        lineIdx++;
+      }
+    }
+    lineGeom.attributes.position.needsUpdate = true;
 
     // Animate line opacities - subtle pulsing
     const opacities = opacityAttr.array as Float32Array;
@@ -389,7 +453,11 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({ nodes, activeNodes = new Set(
         const isActive = activeNodes.has(i);
         const variation = nodeVariations[i] || { hue: 0.6, brightness: 0.5 };
         return (
-          <group key={i} position={[node.position.x, node.position.y, node.position.z]}>
+          <group
+            key={i}
+            ref={(el) => { nodeGroupRefs.current[i] = el; }}
+            position={[node.position.x, node.position.y, node.position.z]}
+          >
             {/* Ambient blue glow behind node (always visible) */}
             <sprite scale={[0.5, 0.5, 1]}>
               <spriteMaterial

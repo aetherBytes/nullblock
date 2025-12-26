@@ -656,6 +656,7 @@ extend({ SunSurfaceMaterial, CoronaRingMaterial, SolarFlareMaterial, DendriteMat
 interface CrossroadsOrbProps {
   position?: [number, number, number];
   constellationNodes?: ConstellationNode[];
+  animatedPositionsRef?: React.MutableRefObject<THREE.Vector3[]>;
   onActiveNodesChange?: (activeNodes: Set<number>) => void;
 }
 
@@ -723,7 +724,7 @@ interface SolarParticle {
   radius: number;
 }
 
-const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], constellationNodes = [], onActiveNodesChange }) => {
+const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], constellationNodes = [], animatedPositionsRef, onActiveNodesChange }) => {
   const groupRef = useRef<THREE.Group>(null);
   const sunPlaneRef = useRef<THREE.Mesh>(null);
   const coronaGroupRef = useRef<THREE.Group>(null);
@@ -829,6 +830,14 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
     }
   }, [dendriteCount]);
 
+  // Helper to get current position of a node (animated or static)
+  const getNodePosition = useCallback((index: number): THREE.Vector3 => {
+    if (animatedPositionsRef && animatedPositionsRef.current[index]) {
+      return animatedPositionsRef.current[index];
+    }
+    return constellationNodes[index]?.position || new THREE.Vector3();
+  }, [animatedPositionsRef, constellationNodes]);
+
   // Function to spawn a new tendril targeting a constellation node
   const spawnDendrite = useCallback((d: DendriteState) => {
     // If no constellation nodes, fall back to random direction
@@ -845,16 +854,16 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
     } else {
       // Pick a random constellation node as target
       d.targetNodeIndex = Math.floor(Math.random() * constellationNodes.length);
-      const targetNode = constellationNodes[d.targetNodeIndex];
+      const targetPos = getNodePosition(d.targetNodeIndex);
 
       // Direction from orb center to constellation node
-      d.dir = targetNode.position.clone().normalize();
+      d.dir = targetPos.clone().normalize();
 
       // Calculate exact length needed to reach the node from orb surface
       // Tip position = sunRadius + length (along direction)
       // We want tip to reach the node, so: sunRadius + length = distToNode
       // Therefore: length = distToNode - sunRadius
-      const distToNode = targetNode.position.length();
+      const distToNode = targetPos.length();
       d.length = Math.max(1.5, distToNode - sunRadius);
     }
 
@@ -885,7 +894,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
 
     d.elapsed = 0;
     d.growSpeed = 0.3 + Math.random() * 0.9; // Growth speed 0.3-1.2
-  }, [constellationNodes, sunRadius]);
+  }, [constellationNodes, sunRadius, getNodePosition]);
 
   // Textures
   const glowTexture = useMemo(() => createGlowTexture(), []);
@@ -1229,6 +1238,17 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
         mesh.visible = d.state !== 'waiting';
 
         if (d.state !== 'waiting') {
+          // For dendrites targeting constellation nodes, update direction/length each frame
+          // to track moving nodes in orbit
+          if (d.targetNodeIndex >= 0 && animatedPositionsRef) {
+            const targetPos = getNodePosition(d.targetNodeIndex);
+            d.dir = targetPos.clone().normalize();
+            const distToNode = targetPos.length();
+            d.length = Math.max(1.5, distToNode - sunRadius);
+            // Update quaternion for new direction
+            d.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), d.dir);
+          }
+
           // Position: CENTER of tendril mesh, with base at surface
           // Plane geometry: center at origin, extends -height/2 to +height/2 in local Y
           // After scaling by d.length/2.0, actual height = d.length
