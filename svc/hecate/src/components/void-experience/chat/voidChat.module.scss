@@ -146,44 +146,179 @@ $void-purple: #b967ff;
     border-color: rgba($void-blue, 0.4);
   }
 
+  // Charging up - radiating energy like steam/sun
+  &.charging {
+    animation: solarCharge 0.8s ease-out forwards;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -20px;
+      border-radius: 44px;
+      background: radial-gradient(
+        ellipse at center,
+        rgba($void-blue, 0.25) 0%,
+        rgba($void-blue, 0.15) 30%,
+        rgba($void-blue, 0.05) 60%,
+        transparent 80%
+      );
+      animation: steamRadiate 0.8s ease-out forwards;
+      pointer-events: none;
+      filter: blur(8px);
+    }
+  }
+
+  // Firing - bright flash then settle
+  &.firing {
+    animation: solarFlare 0.3s ease-out forwards;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -30px;
+      border-radius: 54px;
+      background: radial-gradient(
+        ellipse at center,
+        rgba($void-blue, 0.5) 0%,
+        rgba($void-blue, 0.2) 40%,
+        transparent 70%
+      );
+      animation: flareOut 0.3s ease-out forwards;
+      pointer-events: none;
+      filter: blur(12px);
+    }
+  }
+
+  // Incoming tendril hit - soft glow wrap
   &.tendrilHit {
-    animation: tendrilImpact 1.2s ease-out forwards;
+    animation: receiveGlow 1.2s ease-out forwards;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -25px;
+      border-radius: 50px;
+      background: radial-gradient(
+        ellipse at center,
+        rgba(255, 255, 255, 0.3) 0%,
+        rgba($void-blue, 0.2) 30%,
+        rgba($void-blue, 0.1) 50%,
+        transparent 70%
+      );
+      animation: receiveRadiate 1.2s ease-out forwards;
+      pointer-events: none;
+      filter: blur(10px);
+    }
   }
 }
 
-@keyframes tendrilImpact {
+// Solar charge - gentle glow buildup
+@keyframes solarCharge {
   0% {
-    border-color: rgba(255, 255, 255, 1);
+    border-color: rgba($void-blue, 0.2);
     box-shadow:
-      0 0 0 4px rgba(255, 255, 255, 0.5),
-      0 0 60px rgba(255, 255, 255, 0.9),
-      0 0 100px rgba($void-blue, 0.6),
-      inset 0 0 40px rgba(255, 255, 255, 0.4);
-    transform: scale(1.02);
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 0 20px rgba($void-blue, 0.1);
   }
-  30% {
-    border-color: rgba($void-blue, 1);
-    box-shadow:
-      0 0 0 5px rgba($void-blue, 0.4),
-      0 0 70px rgba($void-blue, 0.7),
-      0 0 120px rgba($void-blue, 0.4),
-      inset 0 0 30px rgba($void-blue, 0.25);
-    transform: scale(1.01);
-  }
-  70% {
+  50% {
     border-color: rgba($void-blue, 0.5);
     box-shadow:
-      0 0 0 2px rgba($void-blue, 0.2),
       0 0 30px rgba($void-blue, 0.3),
-      inset 0 0 15px rgba($void-blue, 0.1);
+      0 0 60px rgba($void-blue, 0.15);
+  }
+  100% {
+    border-color: rgba($void-blue, 0.7);
+    box-shadow:
+      0 0 40px rgba($void-blue, 0.4),
+      0 0 80px rgba($void-blue, 0.2);
+  }
+}
+
+// Steam radiating outward
+@keyframes steamRadiate {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  40% {
+    opacity: 0.8;
     transform: scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+// Solar flare - bright moment
+@keyframes solarFlare {
+  0% {
+    border-color: rgba($void-blue, 0.9);
+    box-shadow:
+      0 0 50px rgba($void-blue, 0.6),
+      0 0 100px rgba($void-blue, 0.3);
+  }
+  50% {
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow:
+      0 0 40px rgba(255, 255, 255, 0.4),
+      0 0 80px rgba($void-blue, 0.3);
+  }
+  100% {
+    border-color: rgba($void-blue, 0.4);
+    box-shadow:
+      0 0 25px rgba($void-blue, 0.25),
+      0 0 50px rgba($void-blue, 0.1);
+  }
+}
+
+// Flare dissipating
+@keyframes flareOut {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+// Receive glow - soft incoming energy
+@keyframes receiveGlow {
+  0% {
+    border-color: rgba(255, 255, 255, 0.8);
+    box-shadow:
+      0 0 40px rgba(255, 255, 255, 0.4),
+      0 0 80px rgba($void-blue, 0.3);
+  }
+  30% {
+    border-color: rgba($void-blue, 0.6);
+    box-shadow:
+      0 0 50px rgba($void-blue, 0.4),
+      0 0 100px rgba($void-blue, 0.2);
   }
   100% {
     border-color: rgba($void-blue, 0.2);
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.4),
-      inset 0 0 20px rgba($void-blue, 0.05);
+      0 0 20px rgba($void-blue, 0.05);
+  }
+}
+
+// Receive radiate - soft pulse outward
+@keyframes receiveRadiate {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  20% {
+    opacity: 1;
     transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
   }
 }
 

@@ -287,10 +287,9 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   }, []);
 
   const handleTendrilReachTarget = useCallback((direction: 'outgoing' | 'incoming') => {
-    // Trigger hit glow effect when incoming tendril reaches the chat box
+    // Trigger glow effect when incoming tendril reaches the chat box
     if (direction === 'incoming') {
       setTendrilHit(true);
-      // Reset after animation duration (1.2s)
       setTimeout(() => setTendrilHit(false), 1200);
     }
   }, []);
