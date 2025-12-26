@@ -81,6 +81,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   // Track energy state for HESSI-RHESSI visual feedback
   const [hessiCharging, setHessiCharging] = useState(false);
   const [hessiProcessing, setHessiProcessing] = useState(false);
+  const [hessiReceiving, setHessiReceiving] = useState(false);
 
   // Detect if this is a page refresh with existing session (publicKey exists at mount)
   const isReturningUser = useRef(!!publicKey);
@@ -275,8 +276,13 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   }, []);
 
   const handleTendrilReachTarget = useCallback((direction: 'outgoing' | 'incoming') => {
-    // Trigger glow effect when incoming tendril reaches the chat box
+    // Trigger glow effect when incoming tendril reaches HESSI and the chat box
     if (direction === 'incoming') {
+      // HESSI receives the transmission - bright glow
+      setHessiReceiving(true);
+      setTimeout(() => setHessiReceiving(false), 1500);
+
+      // Chat box also glows
       setTendrilHit(true);
       setTimeout(() => setTendrilHit(false), 1200);
     }
@@ -323,6 +329,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
             isActive={loginAnimationPhase === 'complete'}
             isCharging={hessiCharging}
             isProcessing={hessiProcessing}
+            isReceiving={hessiReceiving}
           />
         )}
 

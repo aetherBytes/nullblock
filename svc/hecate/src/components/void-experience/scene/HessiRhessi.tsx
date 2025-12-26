@@ -10,6 +10,7 @@ interface HessiRhessiProps {
   isActive?: boolean;
   isCharging?: boolean;
   isProcessing?: boolean;
+  isReceiving?: boolean;
 }
 
 // Create a soft blue-white glow texture for HESSI-RHESSI
@@ -45,6 +46,7 @@ const HessiRhessi: React.FC<HessiRhessiProps> = ({
   isActive = true,
   isCharging = false,
   isProcessing = false,
+  isReceiving = false,
 }) => {
   const { camera } = useThree();
   const { scene } = useGLTF(HESSI_MODEL_PATH);
@@ -127,7 +129,9 @@ const HessiRhessi: React.FC<HessiRhessiProps> = ({
     const basePulse = Math.sin(time * 1.5) * 0.15;
     const chargingIntensity = isCharging ? 1.5 + Math.sin(time * 8) * 0.5 : 1.0;
     const processingPulse = isProcessing ? 1.2 + Math.sin(time * 3) * 0.3 : 1.0;
-    const stateMultiplier = chargingIntensity * processingPulse;
+    // Receiving creates a bright flash that fades
+    const receivingIntensity = isReceiving ? 2.5 + Math.sin(time * 12) * 0.8 : 1.0;
+    const stateMultiplier = chargingIntensity * processingPulse * receivingIntensity;
 
     if (glowRef.current) {
       const scale = (0.045 + basePulse * 0.009) * stateMultiplier;
@@ -137,7 +141,9 @@ const HessiRhessi: React.FC<HessiRhessiProps> = ({
     }
 
     if (outerGlowRef.current) {
-      const outerScale = (0.073 + basePulse * 0.014) * stateMultiplier;
+      // When receiving, the outer glow expands significantly
+      const receivingScale = isReceiving ? 1.8 : 1.0;
+      const outerScale = (0.073 + basePulse * 0.014) * stateMultiplier * receivingScale;
       outerGlowRef.current.scale.set(outerScale, outerScale, 1);
       (outerGlowRef.current.material as THREE.SpriteMaterial).opacity =
         isActive ? (0.35 * stateMultiplier) : 0.15;
@@ -147,8 +153,11 @@ const HessiRhessi: React.FC<HessiRhessiProps> = ({
     if (lightRef.current) {
       const baseIntensity = 1.5 + Math.sin(time * 2) * 0.3;
       lightRef.current.intensity = baseIntensity * stateMultiplier;
-      // Color shift when charging
-      if (isCharging) {
+      // Color shift based on state
+      if (isReceiving) {
+        // Bright white-blue flash when receiving transmission
+        lightRef.current.color.setHex(0xffffff);
+      } else if (isCharging) {
         lightRef.current.color.setHex(0x6ab4ff);
       } else if (isProcessing) {
         lightRef.current.color.setHex(0x88ccff);
