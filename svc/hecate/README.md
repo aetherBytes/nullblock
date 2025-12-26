@@ -4,7 +4,7 @@
 
 ## Overview
 
-Hecate is the primary user interface for interacting with NullBlock agents, managing tasks, and exploring the Crossroads marketplace. Built with React, TypeScript, and Vite for a modern, responsive experience.
+Hecate is the primary user interface for interacting with NullBlock agents, managing tasks, and exploring the Crossroads marketplace. Built with React, TypeScript, Three.js, and Vite for an immersive, responsive experience.
 
 ## Quick Start
 
@@ -26,75 +26,93 @@ The application will be available at `http://localhost:5173`
 
 ## Environment Configuration
 
-Create a `.env` file in the `svc/hecate` directory with the following variables:
+Create a `.env` file in the `svc/hecate` directory:
 
 ```bash
 VITE_EREBUS_API_URL=http://localhost:3000
 VITE_PROTOCOLS_API_URL=http://localhost:8001
 VITE_HECATE_API_URL=http://localhost:9003
-VITE_API_GATEWAY=https://randomuser.me/api
-VITE_FAST_API_BACKEND_URL=http://localhost:8000
 ```
 
-**⚠️ IMPORTANT**: All API calls must route through Erebus (port 3000). The `VITE_EREBUS_API_URL` is the primary endpoint for:
-- Task management (`/api/agents/tasks`)
-- Agent chat (`/api/agents/chat`)
-- User registration (`/api/users/register`)
-- Wallet operations (`/api/wallets/*`)
+**IMPORTANT**: All API calls must route through Erebus (port 3000).
 
-**📋 TODO**: Audit and update all hardcoded API URLs in the codebase to use these environment variables consistently.
+## Core Features
 
-## **Why Snake Bytes?**
+### Void Experience (Home Screen)
 
-At Snake Bytes, we understand the challenges of keeping up with industry-standard software practices. That's why we've designed a monthly subscription service that brings the expertise of seasoned professionals directly to your virtual doorstep. With our task board-style workflow, inspired by popular tools like Trello and Asana, managing your software tasks has never been easier or more organized.
+The post-login home screen is an immersive 3D environment built with React Three Fiber:
 
-## **A Spectrum of Technologies at Your Fingertips**
+- **CrossroadsOrb**: Central marketplace hub with gyroscope rings and animated sun surface
+- **AgentClusters**: Orbiting AI agents (HECATE, Siren, Erebus) with click-to-focus interaction
+- **HESSI-RHESSI**: Biometric-to-digital interface module for chat communication
+- **ChatTendril**: GLSL shader-based energy beams connecting HESSI to HECATE
+- **NeuralLines**: Constellation network of tools and services
+- **ParticleField**: Ambient starfield background
 
-Dive into a pool of possibilities with our diverse technological specializations:
-- Python programming at its finest
-- Cutting-edge AWS services
-- Scalable Microservices and Serverless architectures
-- Robust Data pipelines, Web scraping, and ETL processes
-- Comprehensive Data analysis and Visualization
-- Advanced Machine Learning, Data Science, and Engineering
-- State-of-the-art Data Warehousing, Lakes, and Modeling
-- Innovative AI Agents, Chatbots, and RAG LLM Agents
+### Chat Interface
 
-## **Customizable Tiers for Every Need**
+The VoidChatHUD provides real-time communication with HECATE:
 
-Whether you're dabbling in data visualization, exploring machine learning, or building complex data engineering projects, Snake Bytes offers various service tiers to match your project's scope and budget. Our goal? To make top-tier software development practices accessible and affordable.
+- Steam/energy effects during message transmission
+- Tendril animations showing message flow
+- Markdown rendering for agent responses
+- History popup for conversation review
 
-## **Build with the Best**
+### Crossroads Marketplace
 
-Our platform harnesses the power of React, Next.Js, FastAPI, and more, ensuring that your projects are built with the best and most suitable technologies. Plus, our task board plugin makes project management a breeze, keeping you on track and in control from start to finish.
+Browse and discover AI services:
 
-## **Join the Revolution**
+- Agent listings with health status
+- Workflow templates
+- MCP server catalog
+- Tool integrations
 
-Step into the future of python software development with Snake Bytes. Our commitment to quality, innovation, and accessibility makes us the ideal partner for your next project. Let's build something extraordinary together.
-2. **Install dependencies:**
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── void-experience/     # 3D home screen
+│   │   ├── scene/           # Three.js components
+│   │   │   ├── CrossroadsOrb.tsx
+│   │   │   ├── AgentCluster.tsx
+│   │   │   ├── HessiRhessi.tsx
+│   │   │   ├── ChatTendril.tsx
+│   │   │   └── ...
+│   │   └── chat/
+│   │       └── VoidChatHUD.tsx
+│   ├── crossroads/          # Marketplace UI
+│   └── hud/                 # Panel overlays
+├── common/
+│   └── services/            # API clients
+├── pages/                   # Route pages
+└── types/                   # TypeScript types
+```
+
+## Key Technologies
+
+- **React** + **TypeScript**: Core framework
+- **React Three Fiber**: Three.js React renderer
+- **@react-three/drei**: 3D utilities and helpers
+- **GLSL**: Custom shaders for tendril effects
+- **SCSS Modules**: Scoped styling
+- **Vite**: Build tooling
+
+## 3D Assets
+
+Located in `public/models/`:
+
+- `hecate-orb.glb`: HECATE vessel (MK1 hull)
+- `HESSI-RHESSI.glb`: Biometric interface module
+
+## Scripts
+
 ```bash
-npm install
+npm run develop   # Start dev server
+npm run build     # Production build
+npm run preview   # Preview production build
 ```
 
-3. **Build the WASM module:**
-```bash
-wasm-pack build
-```
+## License
 
-4. **Run the development server:**
-```bash
-npm start
-```
-Navigate to `http://localhost:3000` to see the app in action!
-
-## 📚 Documentation
-Dive deeper into our application with our comprehensive documentation. Learn about the architecture, how to contribute, and more.
-
-## 💡 Contributing
-We welcome contributions! Whether it's submitting bugs, requesting new features, or contributing code, our community is open to all. Check out our contributing guidelines for more information.
-
-## 📞 Support
-Encountered a problem? Have a question? Our community is here to help. Reach out to us through our support channels or open an issue on GitHub.
-
-## 📃 License
-NullBlock is open-sourced under the MIT License. See the LICENSE file for more details.
+NullBlock is open-sourced under the MIT License.
