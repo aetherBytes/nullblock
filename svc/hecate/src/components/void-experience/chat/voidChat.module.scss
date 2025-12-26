@@ -488,23 +488,15 @@ $void-purple: #b967ff;
   }
 }
 
-// History panel - void ethereal design
+// History panel - floating void text, no container
 .historyPopup {
   position: fixed;
   top: 80px;
   right: 24px;
   bottom: 120px;
-  width: 420px;
+  width: 380px;
   max-width: calc(100vw - 48px);
-  background: radial-gradient(
-    ellipse at center,
-    rgba(5, 8, 15, 0.4) 0%,
-    rgba(5, 8, 15, 0.3) 50%,
-    rgba(0, 0, 0, 0.1) 100%
-  );
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  border: none;
+  background: transparent;
   display: flex;
   flex-direction: column;
   pointer-events: auto;
@@ -535,25 +527,26 @@ $void-purple: #b967ff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 8px 20px 8px;
+  padding: 0 0 20px 0;
   border-bottom: none;
 }
 
 .historyTitle {
-  font-size: 9px;
-  font-weight: 300;
-  color: rgba($void-silver, 0.15);
+  font-size: 10px;
+  font-weight: 400;
+  color: rgba($void-silver, 0.5);
   text-transform: uppercase;
-  letter-spacing: 4px;
+  letter-spacing: 3px;
+  text-shadow: 0 0 20px rgba($void-blue, 0.3);
 }
 
 .historyClose {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: rgba($void-silver, 0.15);
+  color: rgba($void-silver, 0.3);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -561,25 +554,25 @@ $void-purple: #b967ff;
   transition: all 0.3s ease;
 
   &:hover {
-    color: rgba($void-silver, 0.5);
+    color: rgba($void-silver, 0.7);
   }
 
   svg {
-    width: 8px;
-    height: 8px;
+    width: 12px;
+    height: 12px;
   }
 }
 
 .historyContent {
   flex: 1;
   overflow-y: auto;
-  padding: 0 8px 20px 8px;
+  padding: 0 0 20px 0;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
 
   &::-webkit-scrollbar {
-    width: 1px;
+    width: 2px;
   }
 
   &::-webkit-scrollbar-track {
@@ -587,7 +580,8 @@ $void-purple: #b967ff;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba($void-blue, 0.15);
+    background: rgba($void-blue, 0.2);
+    border-radius: 1px;
   }
 }
 
@@ -602,19 +596,20 @@ $void-purple: #b967ff;
 
 .historyMessage {
   padding: 0;
-  max-width: 100%;
+  max-width: 85%;
   animation: messageDrift 0.6s ease-out;
   position: relative;
 
   &.historyUser {
-    padding-left: 12px;
-    margin-left: 60px;
-    opacity: 0.7;
+    align-self: flex-end;
+    text-align: right;
+    opacity: 0.8;
   }
 
   &.historyAgent {
-    padding-left: 12px;
-    opacity: 0.85;
+    align-self: flex-start;
+    text-align: left;
+    opacity: 0.9;
   }
 }
 
@@ -636,42 +631,52 @@ $void-purple: #b967ff;
   align-items: center;
   gap: 10px;
   margin-bottom: 6px;
-}
-
-.historySender {
-  font-size: 8px;
-  font-weight: 300;
-  text-transform: uppercase;
-  letter-spacing: 3px;
 
   .historyUser & {
-    color: rgba($void-blue, 0.35);
+    justify-content: flex-end;
   }
 
   .historyAgent & {
-    color: rgba($void-silver, 0.3);
+    justify-content: flex-start;
+  }
+}
+
+.historySender {
+  font-size: 10px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+
+  .historyUser & {
+    color: rgba($void-blue, 0.7);
+    text-shadow: 0 0 12px rgba($void-blue, 0.3);
+  }
+
+  .historyAgent & {
+    color: rgba($void-silver, 0.65);
+    text-shadow: 0 0 12px rgba($void-silver, 0.2);
   }
 }
 
 .historyTime {
-  font-size: 7px;
-  color: rgba($void-silver, 0.12);
+  font-size: 9px;
+  color: rgba($void-silver, 0.4);
   letter-spacing: 1px;
 }
 
 .historyText {
-  font-size: 13px;
-  line-height: 1.8;
-  color: rgba($void-silver, 0.55);
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba($void-silver, 0.75);
   word-break: break-word;
   font-weight: 300;
 
   .historyUser & {
-    color: rgba($void-silver, 0.45);
+    color: rgba($void-silver, 0.65);
   }
 
   .historyAgent & {
-    color: rgba($void-silver, 0.6);
+    color: rgba($void-silver, 0.85);
   }
 
   // Override MarkdownRenderer styles for void view
@@ -688,7 +693,7 @@ $void-purple: #b967ff;
       ul, ol {
         margin: 0.5em 0;
         padding-left: 1.2em;
-        color: rgba($void-silver, 0.4);
+        color: rgba($void-silver, 0.7);
       }
 
       code {
@@ -696,36 +701,36 @@ $void-purple: #b967ff;
         padding: 0.1em 0.3em;
         border-radius: 0;
         background: transparent;
-        color: rgba($void-blue, 0.5);
-        border-bottom: 1px solid rgba($void-blue, 0.2);
+        color: rgba($void-blue, 0.8);
+        border-bottom: 1px solid rgba($void-blue, 0.35);
       }
 
       pre {
         margin: 0.8em 0;
-        font-size: 0.8em;
-        background: transparent;
-        border-radius: 0;
-        padding: 0.8em 0 0.8em 1em;
-        border-left: 1px solid rgba($void-silver, 0.1);
-        color: rgba($void-silver, 0.45);
+        font-size: 0.85em;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+        padding: 0.8em 1em;
+        border-left: 2px solid rgba($void-blue, 0.3);
+        color: rgba($void-silver, 0.75);
       }
 
       blockquote {
         margin: 0.6em 0;
         padding-left: 1em;
-        border-left: 1px solid rgba($void-silver, 0.08);
-        color: rgba($void-silver, 0.35);
+        border-left: 2px solid rgba($void-silver, 0.2);
+        color: rgba($void-silver, 0.6);
         font-style: italic;
       }
 
       a {
-        color: rgba($void-blue, 0.45);
+        color: rgba($void-blue, 0.75);
         text-decoration: none;
-        border-bottom: 1px solid rgba($void-blue, 0.15);
+        border-bottom: 1px solid rgba($void-blue, 0.3);
 
         &:hover {
-          color: rgba($void-blue, 0.7);
-          border-bottom-color: rgba($void-blue, 0.3);
+          color: $void-blue;
+          border-bottom-color: rgba($void-blue, 0.5);
         }
       }
     }
