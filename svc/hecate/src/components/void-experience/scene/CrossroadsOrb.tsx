@@ -1210,9 +1210,18 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
     if (onActiveNodesChange) {
       const activeNodes = new Set<number>();
       dendritesState.current.forEach((d) => {
-        // Node is active if tendril is growing, holding, or fading (still visible)
         if (d.targetNodeIndex >= 0 && d.state !== 'waiting') {
-          activeNodes.add(d.targetNodeIndex);
+          if (d.growsOutward) {
+            // Outward tendril (crossroads → node): node lights up when tendril TIP reaches it
+            // The tip reaches the node when growth is complete (or nearly complete)
+            if (d.state === 'holding' || d.state === 'fading' || (d.state === 'growing' && d.growth >= 0.95)) {
+              activeNodes.add(d.targetNodeIndex);
+            }
+          } else {
+            // Inward tendril (node → crossroads): node lights up immediately
+            // since the tendril originates from the node
+            activeNodes.add(d.targetNodeIndex);
+          }
         }
       });
 
