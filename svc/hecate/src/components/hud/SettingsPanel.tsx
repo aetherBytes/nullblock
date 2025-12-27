@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ApiKeyManagement from './ApiKeyManagement';
+import { UserProfile } from '../../types/user';
 import styles from './SettingsPanel.module.scss';
 
 interface SettingsPanelProps {
@@ -8,6 +9,8 @@ interface SettingsPanelProps {
   userId: string | null;
   publicKey: string | null;
   isLoadingUser: boolean;
+  userProfile?: UserProfile | null;
+  onDisconnect?: () => void;
 }
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -16,8 +19,64 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   userId,
   publicKey,
   isLoadingUser,
+  userProfile,
+  onDisconnect,
 }) => {
   const [isClosing, setIsClosing] = useState(false);
+
+  // Helper functions for profile display
+  const shortenAddress = (address: string): string => {
+    if (address.length <= 12) return address;
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const formatAccountAge = (createdAt: string): string => {
+    try {
+      const date = new Date(createdAt);
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      const year = date.getFullYear();
+      return `Member since ${month} ${year}`;
+    } catch (err) {
+      return 'New User';
+    }
+  };
+
+  const getUserTypeBadge = (userType: string): string => {
+    switch (userType.toLowerCase()) {
+      case 'external':
+        return 'External User';
+      case 'system':
+        return 'System Agent';
+      case 'agent':
+        return 'Agent';
+      case 'api':
+        return 'API User';
+      default:
+        return userType;
+    }
+  };
+
+  const isNewUser = (createdAt: string): boolean => {
+    try {
+      const createdDate = new Date(createdAt);
+      const daysSinceCreation = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+      return daysSinceCreation < 7;
+    } catch (err) {
+      return false;
+    }
+  };
+
+  const getBadgeText = (profile: UserProfile): string => {
+    if (isNewUser(profile.created_at)) {
+      return 'New User';
+    }
+    return getUserTypeBadge(profile.user_type);
+  };
+
+  const handleDisconnect = () => {
+    onClose();
+    onDisconnect?.();
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -74,6 +133,50 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </div>
 
         <div className={styles.settingsContent}>
+          {/* Profile Section */}
+          {publicKey && (
+            <div className={styles.settingsSection}>
+              <h3 className={styles.sectionTitle}>
+                <span className={styles.sectionIcon}>👤</span>
+                Profile
+              </h3>
+              <div className={styles.sectionDivider} />
+              <div className={styles.profileCard}>
+                {isLoadingUser ? (
+                  <div className={styles.profileLoading}>
+                    <div className={styles.spinner}>🔄</div>
+                    <span>Loading profile...</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className={styles.profileInfo}>
+                      <div className={styles.walletAddress}>
+                        <span className={styles.addressLabel}>Wallet</span>
+                        <span className={styles.addressValue}>{shortenAddress(publicKey)}</span>
+                      </div>
+                      {userProfile && (
+                        <>
+                          <div className={styles.accountAge}>{formatAccountAge(userProfile.created_at)}</div>
+                          <span className={styles.userBadge}>{getBadgeText(userProfile)}</span>
+                        </>
+                      )}
+                      {!userProfile && !isLoadingUser && (
+                        <span className={styles.userBadge}>Guest</span>
+                      )}
+                    </div>
+                    {onDisconnect && (
+                      <button className={styles.disconnectButton} onClick={handleDisconnect}>
+                        <span>🔌</span>
+                        <span>Disconnect Wallet</span>
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* API Keys Section */}
           <div className={styles.settingsSection}>
             <h3 className={styles.sectionTitle}>
               <span className={styles.sectionIcon}>🔑</span>

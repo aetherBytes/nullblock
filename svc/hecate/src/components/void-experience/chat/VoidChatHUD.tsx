@@ -4,11 +4,22 @@ import { hecateAgent } from '../../../common/services/hecate-agent';
 import MarkdownRenderer from '../../common/MarkdownRenderer';
 import styles from './voidChat.module.scss';
 
+interface ImageData {
+  url: string;
+  alt?: string;
+  caption?: string;
+}
+
 interface VoidMessage {
   id: string;
   text: string;
   sender: 'user' | 'agent';
   timestamp: Date;
+  isTaskResult?: boolean;
+  taskName?: string;
+  taskId?: string;
+  processingTime?: number;
+  model_used?: string;
 }
 
 interface VoidChatHUDProps {
@@ -19,6 +30,11 @@ interface VoidChatHUDProps {
   onAgentResponseReceived?: (messageId: string) => void;
   tendrilHit?: boolean;
   currentModel?: string | null;
+  activeAgent?: 'hecate' | 'siren';
+  setActiveAgent?: (agent: 'hecate' | 'siren') => void;
+  agentHealthStatus?: 'healthy' | 'unhealthy' | 'unknown';
+  getImagesForMessage?: (messageId: string) => ImageData[];
+  showHistory?: boolean;
 }
 
 // Energy state for transmission animation
@@ -32,6 +48,11 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   onAgentResponseReceived,
   tendrilHit = false,
   currentModel: externalModel = null,
+  activeAgent = 'hecate',
+  setActiveAgent,
+  agentHealthStatus = 'unknown',
+  getImagesForMessage,
+  showHistory: externalShowHistory,
 }) => {
   // Format model name for display (extract short name from full path)
   const formatModelName = (model: string | null): string => {
@@ -82,7 +103,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     if (!pending) return;
 
     try {
-      const response = await agentService.chatWithAgent('hecate', pending.message);
+      const response = await agentService.chatWithAgent(activeAgent, pending.message);
 
       if (response.success && response.data) {
         const agentMsg: VoidMessage = {
@@ -131,7 +152,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
       setEnergyState('idle');
       pendingMessageRef.current = null;
     }
-  }, [onAgentResponseReceived, hasAcknowledgedFirst]);
+  }, [onAgentResponseReceived, hasAcknowledgedFirst, activeAgent]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,6 +237,22 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     };
   }, []);
 
+  // Sync with external showHistory control (from Hecate panel toggle)
+  useEffect(() => {
+    if (externalShowHistory !== undefined) {
+      setShowHistory(externalShowHistory);
+      // When externally closing the panel, clear any notification states
+      if (externalShowHistory === false) {
+        setHasUnreadMessages(false);
+        setShowTooltip(false);
+        if (tooltipTimerRef.current) {
+          clearTimeout(tooltipTimerRef.current);
+          tooltipTimerRef.current = null;
+        }
+      }
+    }
+  }, [externalShowHistory]);
+
   if (!isActive) return null;
 
   return (
@@ -226,7 +263,23 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
         {showHistory && (
           <div className={styles.historyPopup}>
             <div className={styles.historyHeader}>
-              <span className={styles.historyTitle}>HECATE:{formatModelName(currentModel)}</span>
+              <div className={styles.historyTitleContainer}>
+                <span
+                  className={styles.historyAgentName}
+                  onClick={() => {
+                    if (setActiveAgent) {
+                      setActiveAgent(activeAgent === 'hecate' ? 'siren' : 'hecate');
+                    }
+                  }}
+                  title={`Click to switch to ${activeAgent === 'hecate' ? 'Siren' : 'Hecate'}`}
+                >
+                  {activeAgent.toUpperCase()}
+                </span>
+                <span className={styles.historyModelName}>:{formatModelName(currentModel)}</span>
+                {agentHealthStatus === 'unhealthy' && (
+                  <span className={styles.healthWarning} title="API keys required">⚠️</span>
+                )}
+              </div>
               <button
                 className={styles.historyClose}
                 onClick={() => setShowHistory(false)}
@@ -241,24 +294,39 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
               {messages.length === 0 ? (
                 <div className={styles.historyEmpty}>No transmissions yet...</div>
               ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`${styles.historyMessage} ${msg.sender === 'user' ? styles.historyUser : styles.historyAgent}`}
-                  >
-                    <div className={styles.historyMeta}>
-                      <span className={styles.historySender}>
-                        {msg.sender === 'user' ? 'You' : 'HECATE'}
-                      </span>
-                      <span className={styles.historyTime}>
-                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                messages.map((msg) => {
+                  const images = getImagesForMessage ? getImagesForMessage(msg.id) : [];
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`${styles.historyMessage} ${msg.sender === 'user' ? styles.historyUser : styles.historyAgent} ${msg.isTaskResult ? styles.historyTaskResult : ''}`}
+                    >
+                      <div className={styles.historyMeta}>
+                        <span className={styles.historySender}>
+                          {msg.sender === 'user' ? 'You' : activeAgent.toUpperCase()}
+                        </span>
+                        <span className={styles.historyTime}>
+                          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      {msg.isTaskResult && (
+                        <div className={styles.taskResultHeader}>
+                          <div className={styles.taskResultBadge}>
+                            <span className={styles.taskIcon}>✅</span>
+                            <span className={styles.taskLabel}>Task Result</span>
+                            {msg.taskName && <span className={styles.taskName}>"{msg.taskName}"</span>}
+                          </div>
+                          {msg.processingTime && (
+                            <span className={styles.processingTime}>⏱️ {msg.processingTime}ms</span>
+                          )}
+                        </div>
+                      )}
+                      <div className={styles.historyText}>
+                        <MarkdownRenderer content={msg.text} images={images} />
+                      </div>
                     </div>
-                    <div className={styles.historyText}>
-                      <MarkdownRenderer content={msg.text} />
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -268,9 +336,10 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
             {/* History toggle button */}
             <button
               type="button"
-              className={`${styles.historyToggle} ${showHistory ? styles.historyActive : ''} ${messages.length === 0 ? styles.historyDisabled : ''} ${hasUnreadMessages && !showHistory ? styles.historyNotification : ''}`}
+              className={`${styles.historyToggle} ${showHistory ? styles.historyActive : ''} ${messages.length === 0 || externalShowHistory === false ? styles.historyDisabled : ''} ${hasUnreadMessages && !showHistory && externalShowHistory !== false ? styles.historyNotification : ''}`}
               onClick={() => {
-                if (messages.length > 0) {
+                // Only allow toggling if there are messages AND external control allows it
+                if (messages.length > 0 && externalShowHistory !== false) {
                   const newShowHistory = !showHistory;
                   setShowHistory(newShowHistory);
                   if (newShowHistory) {
@@ -289,7 +358,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                 }
               }}
               aria-label="Toggle chat history"
-              disabled={messages.length === 0}
+              disabled={messages.length === 0 || externalShowHistory === false}
             >
               <svg
                 width="24"
@@ -317,15 +386,21 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={energyState === 'processing' ? 'Awaiting response...' : 'Transmit to Hecate...'}
+              placeholder={
+                agentHealthStatus === 'unhealthy'
+                  ? '⚠️ Configure API keys first...'
+                  : energyState === 'processing'
+                    ? `Awaiting ${activeAgent} response...`
+                    : `Transmit to ${activeAgent.charAt(0).toUpperCase() + activeAgent.slice(1)}...`
+              }
               className={styles.voidInput}
-              disabled={energyState !== 'idle'}
+              disabled={energyState !== 'idle' || agentHealthStatus === 'unhealthy'}
               rows={1}
             />
             <button
               type="submit"
               className={styles.sendButton}
-              disabled={energyState !== 'idle' || !input.trim()}
+              disabled={energyState !== 'idle' || !input.trim() || agentHealthStatus === 'unhealthy'}
               aria-label="Send message"
             >
               ➤

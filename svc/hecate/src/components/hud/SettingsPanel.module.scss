@@ -310,6 +310,100 @@ $bg-dark: rgba(10, 10, 10, 0.95);
   }
 }
 
+// Profile section styles
+.profileCard {
+  background: rgba(0, 168, 255, 0.05);
+  border: 1px solid rgba(0, 168, 255, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.profileLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  color: $text-secondary;
+
+  .spinner {
+    animation: spin 1s linear infinite;
+  }
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.walletAddress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .addressLabel {
+    font-size: 12px;
+    color: $text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .addressValue {
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    color: $echo-blue;
+    text-shadow: 0 0 10px rgba($echo-blue, 0.3);
+  }
+}
+
+.accountAge {
+  font-size: 13px;
+  color: $text-secondary;
+}
+
+.userBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba($echo-blue, 0.15);
+  border: 1px solid rgba($echo-blue, 0.3);
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: $echo-blue;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: fit-content;
+}
+
+.disconnectButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 20px;
+  background: rgba(255, 80, 80, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.3);
+  border-radius: 8px;
+  color: #ff5050;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 80, 80, 0.2);
+    border-color: rgba(255, 80, 80, 0.5);
+    box-shadow: 0 0 15px rgba(255, 80, 80, 0.3);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
 @media (max-width: 768px) {
   .settingsHeader {
     padding: 20px;
@@ -323,5 +417,9 @@ $bg-dark: rgba(10, 10, 10, 0.95);
 
   .settingsContent {
     padding: 20px;
+  }
+
+  .profileCard {
+    padding: 16px;
   }
 }

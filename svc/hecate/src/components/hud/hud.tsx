@@ -47,6 +47,8 @@ interface HUDProps {
   initialTab?: 'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null;
   onToggleMobileMenu?: () => void;
   loginAnimationPhase?: LoginAnimationPhase;
+  hecatePanelOpen?: boolean;
+  onHecatePanelChange?: (open: boolean) => void;
 }
 
 interface AscentLevel {
@@ -69,6 +71,8 @@ const HUD: React.FC<HUDProps> = ({
   initialTab = null,
   onToggleMobileMenu,
   loginAnimationPhase = 'idle',
+  hecatePanelOpen: externalHecatePanelOpen,
+  onHecatePanelChange,
 }) => {
   const [nullviewState, setNulleyeState] = useState<
     | 'base'
@@ -97,6 +101,18 @@ const HUD: React.FC<HUDProps> = ({
     }
     return false;
   });
+
+  // Hecate panel toggle state (controls VoidScopes + VoidChatHUD history together)
+  // Use external state if provided, otherwise local state
+  const [localHecatePanelOpen, setLocalHecatePanelOpen] = useState(false);
+  const hecatePanelOpen = externalHecatePanelOpen ?? localHecatePanelOpen;
+  const setHecatePanelOpen = (open: boolean) => {
+    if (onHecatePanelChange) {
+      onHecatePanelChange(open);
+    } else {
+      setLocalHecatePanelOpen(open);
+    }
+  };
 
   // Detect if we're in void mode (logged in but no tab selected)
   // Note: We check for void mode during ALL animation phases to prevent old HUD from flickering in
@@ -1228,6 +1244,8 @@ const HUD: React.FC<HUDProps> = ({
         userId={userProfile?.id || null}
         publicKey={publicKey}
         isLoadingUser={isLoadingUser}
+        userProfile={userProfile}
+        onDisconnect={onDisconnect}
       />
     </div>
   );
@@ -1245,9 +1263,12 @@ const HUD: React.FC<HUDProps> = ({
           onResetToVoid={() => {
             setShowSettingsPanel(false);
             setShowMobileMenu(false);
+            setHecatePanelOpen(false);
           }}
           showWelcome={!hasSeenVoidWelcome}
           onDismissWelcome={handleDismissVoidWelcome}
+          hecatePanelOpen={hecatePanelOpen}
+          onHecateToggle={setHecatePanelOpen}
         />
       )}
     </div>

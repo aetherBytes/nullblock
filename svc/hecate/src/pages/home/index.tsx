@@ -66,6 +66,9 @@ const Home: React.FC = () => {
   const [hudInitialTab, setHudInitialTab] = useState<'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null>(null);
   const [isMobileView, setIsMobileView] = useState<boolean>(false);
 
+  // Shared Hecate panel state - controls VoidScopes + VoidChatHUD in VoidExperience
+  const [hecatePanelOpen, setHecatePanelOpen] = useState<boolean>(false);
+
   // Login animation state - start in 'black' if user has existing session (triggers animation on refresh)
   const [loginAnimationPhase, setLoginAnimationPhase] = useState<LoginAnimationPhase>(
     initialSession.hasSession ? 'black' : 'idle'
@@ -892,6 +895,8 @@ const Home: React.FC = () => {
             setShowHUD(true);
           }
         }}
+        hecatePanelOpen={hecatePanelOpen}
+        onHecatePanelChange={setHecatePanelOpen}
       />
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`}>
         {/* System status panel moved to HUD component */}
@@ -915,6 +920,8 @@ const Home: React.FC = () => {
               localStorage.setItem('currentTheme', theme);
             }
           }}
+          hecatePanelOpen={hecatePanelOpen}
+          onHecatePanelChange={setHecatePanelOpen}
         />
       )}
 

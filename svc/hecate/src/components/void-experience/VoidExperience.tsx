@@ -6,7 +6,7 @@ import VoidScene from './scene/VoidScene';
 import CameraController from './scene/CameraController';
 import ChatTendril from './scene/ChatTendril';
 import HessiRhessi from './scene/HessiRhessi';
-import VoidChatHUD from './chat/VoidChatHUD';
+import VoidHUD from './VoidHUD';
 import ClusterPanel from '../hud/ClusterPanel';
 import HecatePanel from '../hud/HecatePanel';
 import HessiTooltip from '../hud/HessiTooltip';
@@ -42,6 +42,8 @@ interface VoidExperienceProps {
   onTabSelect?: (tab: 'crossroads' | 'hecate') => void;
   loginAnimationPhase?: string;
   isLoggedIn?: boolean; // Controls interactivity and camera position
+  hecatePanelOpen?: boolean;
+  onHecatePanelChange?: (open: boolean) => void;
 }
 
 // Camera target for traversal animation
@@ -61,6 +63,8 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   onTabSelect,
   loginAnimationPhase,
   isLoggedIn = false,
+  hecatePanelOpen = false,
+  onHecatePanelChange,
 }) => {
   const [hoveredCluster, setHoveredCluster] = useState<string | null>(null);
   const [selectedCluster, setSelectedCluster] = useState<ClusterData | null>(null);
@@ -417,15 +421,18 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
         />
       )}
 
-      {/* Chat and cluster panel only shown when logged in */}
+      {/* VoidHUD and cluster panel only shown when logged in */}
       {isLoggedIn && (
         <>
-          <VoidChatHUD
+          <VoidHUD
             publicKey={publicKey}
-            isActive={loginAnimationPhase === 'complete'}
+            isActive={true}
+            loginAnimationPhase={loginAnimationPhase}
             onUserMessageSent={handleUserMessageSent}
             onAgentResponseReceived={handleAgentResponseReceived}
             tendrilHit={tendrilHit}
+            hecatePanelOpen={hecatePanelOpen}
+            onHecatePanelChange={onHecatePanelChange}
           />
 
           {/* Cluster detail panel - shows after camera arrives */}
