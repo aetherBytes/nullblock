@@ -24,7 +24,6 @@ interface TaskManagement {
 
 interface ModelManagement {
   isLoadingModelInfo: boolean;
-  modelInfo: any;
   currentSelectedModel: string | null;
   availableModels: any[];
   showModelSelection: boolean;
@@ -46,6 +45,7 @@ interface VoidScopesProps {
   availableModels?: any[];
   activeAgent?: 'hecate' | 'siren';
   setActiveAgent?: (agent: 'hecate' | 'siren') => void;
+  hasApiKey?: boolean;
 }
 
 const SCOPE_OPTIONS: { id: ScopeType; label: string; icon: string }[] = [
@@ -110,7 +110,19 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
   availableModels = [],
   activeAgent,
   setActiveAgent,
+  hasApiKey = false,
 }) => {
+  // Helper to check if a model is locked (non-free models when user has no API key)
+  const isModelLocked = (model: any): boolean => {
+    if (hasApiKey) return false; // User has API key, nothing locked
+    // Check if model is free
+    const isFree = model.tier === 'economical' ||
+                   model.cost_per_1k_tokens === 0 ||
+                   model.pricing?.prompt === '0' ||
+                   model.id?.includes(':free') ||
+                   model.name?.includes(':free');
+    return !isFree;
+  };
   const [selectedScope, setSelectedScope] = useState<ScopeType>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -636,7 +648,10 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
       );
     }
 
-    const { modelInfo, isLoadingModelInfo, currentSelectedModel, availableModels: models } = modelManagement;
+    const { isLoadingModelInfo, currentSelectedModel, availableModels: models } = modelManagement;
+
+    // Find current model info from available models
+    const currentModelInfo = models.find(m => m.name === currentSelectedModel);
 
     if (isLoadingModelInfo) {
       return (
@@ -653,16 +668,24 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
 
     return (
       <div className={styles.modelScope}>
+        {/* API Key Warning */}
+        {!hasApiKey && (
+          <div className={styles.apiKeyWarning}>
+            <span className={styles.warningIcon}>🔒</span>
+            <span>Add an API key in Settings to unlock all models</span>
+          </div>
+        )}
+
         {/* Current Model */}
         <div className={styles.modelCurrent}>
           <div className={styles.modelCurrentHeader}>
-            <span className={styles.modelIcon}>{modelInfo?.icon || '🤖'}</span>
+            <span className={styles.modelIcon}>{currentModelInfo?.icon || '🤖'}</span>
             <div className={styles.modelCurrentInfo}>
               <span className={styles.modelCurrentName}>
-                {modelInfo?.display_name || currentSelectedModel?.split('/').pop() || 'No Model'}
+                {currentModelInfo?.display_name || currentSelectedModel?.split('/').pop() || 'No Model'}
               </span>
               <span className={styles.modelCurrentProvider}>
-                {modelInfo?.provider || 'Unknown'}
+                {currentModelInfo?.provider || 'Unknown'}
               </span>
             </div>
           </div>
@@ -692,7 +715,7 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
               </span>
             </button>
             <button
-              className={styles.modelCategoryButton}
+              className={`${styles.modelCategoryButton} ${!hasApiKey ? styles.categoryLocked : ''}`}
               onClick={() => {
                 setActiveModelCategory('fast');
                 setShowModelList(true);
@@ -703,9 +726,10 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
               <span className={styles.categoryCount}>
                 {modelManagement.getFastModels(models, 999).length}
               </span>
+              {!hasApiKey && <span className={styles.lockBadge}>🔒</span>}
             </button>
             <button
-              className={styles.modelCategoryButton}
+              className={`${styles.modelCategoryButton} ${!hasApiKey ? styles.categoryLocked : ''}`}
               onClick={() => {
                 setActiveModelCategory('thinkers');
                 setShowModelList(true);
@@ -716,9 +740,10 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
               <span className={styles.categoryCount}>
                 {modelManagement.getThinkerModels(models, 999).length}
               </span>
+              {!hasApiKey && <span className={styles.lockBadge}>🔒</span>}
             </button>
             <button
-              className={styles.modelCategoryButton}
+              className={`${styles.modelCategoryButton} ${!hasApiKey ? styles.categoryLocked : ''}`}
               onClick={() => {
                 setActiveModelCategory('image');
                 setShowModelList(true);
@@ -729,37 +754,38 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
               <span className={styles.categoryCount}>
                 {modelManagement.getImageModels(models, 999).length}
               </span>
+              {!hasApiKey && <span className={styles.lockBadge}>🔒</span>}
             </button>
           </div>
         </div>
 
         {/* Model Stats */}
-        {modelInfo && (
+        {currentModelInfo && (
           <div className={styles.modelSection}>
             <h5>Model Details</h5>
             <div className={styles.modelStats}>
-              {modelInfo.context_length && (
+              {currentModelInfo.context_length && (
                 <div className={styles.modelStat}>
                   <label>Context:</label>
-                  <span>{(modelInfo.context_length / 1000).toFixed(0)}K</span>
+                  <span>{(currentModelInfo.context_length / 1000).toFixed(0)}K</span>
                 </div>
               )}
-              {modelInfo.pricing && (
+              {currentModelInfo.pricing && (
                 <div className={styles.modelStat}>
                   <label>Pricing:</label>
                   <span>
-                    {modelInfo.pricing.prompt === '0' ? '🆓 Free' :
-                     `$${(parseFloat(modelInfo.pricing.prompt) * 1000000).toFixed(2)}/M`}
+                    {currentModelInfo.pricing.prompt === '0' ? '🆓 Free' :
+                     `$${(parseFloat(currentModelInfo.pricing.prompt) * 1000000).toFixed(2)}/M`}
                   </span>
                 </div>
               )}
-              {modelInfo.tier && (
+              {currentModelInfo.tier && (
                 <div className={styles.modelStat}>
                   <label>Tier:</label>
                   <span className={styles.tierBadge}>
-                    {modelInfo.tier === 'economical' ? '🆓 Free' :
-                     modelInfo.tier === 'fast' ? '⚡ Fast' :
-                     modelInfo.tier === 'premium' ? '💎 Premium' : '⭐ Standard'}
+                    {currentModelInfo.tier === 'economical' ? '🆓 Free' :
+                     currentModelInfo.tier === 'fast' ? '⚡ Fast' :
+                     currentModelInfo.tier === 'premium' ? '💎 Premium' : '⭐ Standard'}
                   </span>
                 </div>
               )}
@@ -819,33 +845,43 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
         </div>
 
         <div className={styles.modelList}>
-          {displayModels.map((model, index) => (
-            <button
-              key={`${model.name}-${index}`}
-              className={`${styles.modelItem} ${model.name === currentSelectedModel ? styles.selectedModel : ''}`}
-              onClick={() => {
-                modelManagement.handleModelSelection(model.name);
-                setShowModelList(false);
-                setActiveModelCategory(null);
-              }}
-            >
-              <div className={styles.modelItemInfo}>
-                <span className={styles.modelItemIcon}>{model.icon || '🤖'}</span>
-                <div>
-                  <span className={styles.modelItemName}>{model.display_name || model.name}</span>
-                  <span className={styles.modelItemProvider}>{model.provider}</span>
+          {displayModels.map((model, index) => {
+            const locked = isModelLocked(model);
+            return (
+              <button
+                key={`${model.name}-${index}`}
+                className={`${styles.modelItem} ${model.name === currentSelectedModel ? styles.selectedModel : ''} ${locked ? styles.modelLocked : ''}`}
+                onClick={() => {
+                  if (locked) return; // Don't allow selection of locked models
+                  modelManagement.handleModelSelection(model.name);
+                  setShowModelList(false);
+                  setActiveModelCategory(null);
+                }}
+                disabled={locked}
+                title={locked ? 'Add an API key in Settings or purchase credits to unlock' : undefined}
+              >
+                <div className={styles.modelItemInfo}>
+                  <span className={styles.modelItemIcon}>{model.icon || '🤖'}</span>
+                  <div>
+                    <span className={styles.modelItemName}>{model.display_name || model.name}</span>
+                    <span className={styles.modelItemProvider}>{model.provider}</span>
+                  </div>
                 </div>
-              </div>
-              <div className={styles.modelItemMeta}>
-                <span className={styles.modelTier}>
-                  {model.tier === 'economical' ? '🆓' :
-                   model.tier === 'fast' ? '⚡' :
-                   model.tier === 'premium' ? '💎' : '⭐'}
-                </span>
-                {model.name === currentSelectedModel && <span className={styles.selectedBadge}>✓</span>}
-              </div>
-            </button>
-          ))}
+                <div className={styles.modelItemMeta}>
+                  {locked ? (
+                    <span className={styles.lockedIcon} title="Add an API key in Settings or purchase credits to unlock">🔒</span>
+                  ) : (
+                    <span className={styles.modelTier}>
+                      {model.tier === 'economical' ? '🆓' :
+                       model.tier === 'fast' ? '⚡' :
+                       model.tier === 'premium' ? '💎' : '⭐'}
+                    </span>
+                  )}
+                  {model.name === currentSelectedModel && <span className={styles.selectedBadge}>✓</span>}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     );

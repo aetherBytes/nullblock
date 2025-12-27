@@ -1356,7 +1356,7 @@ $void-danger: #ef4444;
   cursor: pointer;
   transition: all 0.2s ease;
 
-  &:hover {
+  &:hover:not(.modelLocked) {
     background: rgba(0, 168, 255, 0.08);
     border-color: rgba(0, 168, 255, 0.25);
   }
@@ -1366,6 +1366,58 @@ $void-danger: #ef4444;
     border-color: rgba(0, 168, 255, 0.4);
     box-shadow: 0 0 12px rgba(0, 168, 255, 0.15);
   }
+
+  &.modelLocked {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    .modelItemName,
+    .modelItemProvider,
+    .modelItemIcon {
+      opacity: 0.7;
+    }
+  }
+}
+
+// Locked model icon
+.lockedIcon {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+// API Key warning banner
+.apiKeyWarning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  color: $void-warning;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+
+  .warningIcon {
+    font-size: 14px;
+  }
+}
+
+// Locked category button style
+.categoryLocked {
+  position: relative;
+  opacity: 0.7;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+// Lock badge for category buttons
+.lockBadge {
+  font-size: 10px;
+  margin-left: 2px;
 }
 
 .modelItemIcon {
