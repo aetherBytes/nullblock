@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { agentService } from '../../../common/services/agent-service';
+import { hecateAgent } from '../../../common/services/hecate-agent';
 import MarkdownRenderer from '../../common/MarkdownRenderer';
 import styles from './voidChat.module.scss';
 
@@ -17,6 +18,7 @@ interface VoidChatHUDProps {
   onUserMessageSent?: (messageId: string) => void;
   onAgentResponseReceived?: (messageId: string) => void;
   tendrilHit?: boolean;
+  currentModel?: string | null;
 }
 
 // Energy state for transmission animation
@@ -29,7 +31,37 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   onUserMessageSent,
   onAgentResponseReceived,
   tendrilHit = false,
+  currentModel: externalModel = null,
 }) => {
+  // Format model name for display (extract short name from full path)
+  const formatModelName = (model: string | null): string => {
+    if (!model) return 'READY';
+    return model.split('/').pop()?.split(':')[0]?.toUpperCase() || 'MODEL';
+  };
+
+  const [fetchedModel, setFetchedModel] = useState<string | null>(null);
+  const currentModel = externalModel || fetchedModel;
+
+  // Fetch current model from hecate agent on mount
+  useEffect(() => {
+    if (!externalModel) {
+      const fetchModel = async () => {
+        try {
+          const connected = await hecateAgent.connect();
+          if (connected) {
+            const status = await hecateAgent.getModelStatus();
+            if (status.current_model) {
+              setFetchedModel(status.current_model);
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to fetch model info:', err);
+        }
+      };
+      fetchModel();
+    }
+  }, [externalModel]);
+
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [energyState, setEnergyState] = useState<EnergyState>('idle');
@@ -194,7 +226,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
         {showHistory && (
           <div className={styles.historyPopup}>
             <div className={styles.historyHeader}>
-              <span className={styles.historyTitle}>Transmission Log</span>
+              <span className={styles.historyTitle}>HECATE:{formatModelName(currentModel)}</span>
               <button
                 className={styles.historyClose}
                 onClick={() => setShowHistory(false)}
