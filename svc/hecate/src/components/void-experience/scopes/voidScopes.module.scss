@@ -13,9 +13,11 @@ $void-danger: #ef4444;
 // Card stack container - left side, avoids chat area on right
 .voidScopesContainer {
   position: fixed;
-  top: 100px; // Clear the top logo/HUD
-  bottom: 20px;
+  // Top portion of screen - fills upper 50%
+  top: 120px; // Clear the top logo/HUD with extra breathing room
   left: 20px;
+  // Height fills to just above the viewport section (tight gap)
+  bottom: calc(50vh - 35px);
   // Leave 40vw + 40px for chat area on right
   right: calc(40vw + 40px);
   z-index: 100;
@@ -35,14 +37,20 @@ $void-danger: #ef4444;
 
 // Scrollable card stack
 .cardStack {
+  position: relative; // IMPORTANT: positioning context for absolutely positioned expanded cards
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 4px;
   pointer-events: auto;
+
+  // When there's an expanded card, don't allow scrolling (expanded card handles it)
+  &:has([data-expanded="true"]) {
+    overflow: hidden;
+  }
 
   // Ethereal scrollbar
   &::-webkit-scrollbar {
@@ -63,30 +71,132 @@ $void-danger: #ef4444;
   }
 }
 
-// Individual floating card
+// Individual floating card - accordion style
 .scopeCard {
-  flex-shrink: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba($void-blue, 0.2);
+  border: 1px solid rgba($void-blue, 0.15);
   border-radius: 12px;
   overflow: hidden;
-  // Ethereal glow
-  box-shadow:
-    0 4px 30px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba($void-blue, 0.06),
-    inset 0 0 40px rgba($void-blue, 0.02);
-  // Subtle breathing animation
-  animation: cardBreath 6s ease-in-out infinite;
   transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+
+  // Collapsed state (default, data-expanded="false")
+  &[data-expanded="false"] {
+    flex-shrink: 0;
+    flex-grow: 0;
+    // Very transparent when collapsed - see the void clearly
+    background: rgba(0, 0, 0, 0.12);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border-color: rgba($void-blue, 0.1);
+    box-shadow:
+      0 2px 10px rgba(0, 0, 0, 0.15),
+      0 0 8px rgba($void-blue, 0.02);
+
+    .cardHeader {
+      border-bottom: none;
+      background: transparent;
+    }
+
+    .cardIcon {
+      opacity: 0.6;
+    }
+
+    .cardTitle {
+      opacity: 0.7;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.25);
+      border-color: rgba($void-blue, 0.25);
+
+      .cardIcon,
+      .cardTitle {
+        opacity: 1;
+      }
+    }
+  }
+
+  // Expanded state (data-expanded="true")
+  &[data-expanded="true"] {
+    // Fill available space in the container
+    flex: 1 1 auto;
+    min-height: 0; // Allow shrinking if needed
+    // Ensure expanded card is above collapsed ones
+    position: relative;
+    z-index: 10;
+    // More opaque when expanded for readability
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-color: rgba($void-blue, 0.25);
+    // Ethereal glow
+    box-shadow:
+      0 4px 30px rgba(0, 0, 0, 0.5),
+      0 0 25px rgba($void-blue, 0.1),
+      inset 0 0 40px rgba($void-blue, 0.03);
+    // Subtle breathing animation only when expanded
+    animation: cardBreath 6s ease-in-out infinite;
+    // Allow internal scrolling
+    overflow: hidden;
+
+    .cardHeader {
+      flex-shrink: 0;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba($void-blue, 0.15);
+    }
+
+    .cardContent {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      display: block;
+    }
+
+    &:hover {
+      border-color: rgba($void-blue, 0.4);
+      box-shadow:
+        0 4px 30px rgba(0, 0, 0, 0.5),
+        0 0 30px rgba($void-blue, 0.15),
+        inset 0 0 40px rgba($void-blue, 0.04);
+    }
+  }
+}
+
+// Mock/disabled scopes
+.mockScope {
+  cursor: default;
+  opacity: 0.5;
+
+  .cardHeader {
+    cursor: default;
+
+    &:hover {
+      background: transparent;
+    }
+  }
+
+  .cardIcon {
+    opacity: 0.4;
+  }
+
+  .cardTitle {
+    opacity: 0.5;
+  }
+
+  .cardSummary {
+    font-style: italic;
+    opacity: 0.6;
+  }
 
   &:hover {
-    border-color: rgba($void-blue, 0.35);
-    box-shadow:
-      0 4px 30px rgba(0, 0, 0, 0.4),
-      0 0 25px rgba($void-blue, 0.12),
-      inset 0 0 40px rgba($void-blue, 0.03);
+    background: rgba(0, 0, 0, 0.12);
+    border-color: rgba($void-blue, 0.1);
+
+    .cardIcon,
+    .cardTitle {
+      opacity: 0.5;
+    }
   }
 }
 
@@ -105,37 +215,98 @@ $void-danger: #ef4444;
   }
 }
 
-// Card header
+// Card header - clickable accordion trigger
 .cardHeader {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  width: 100%;
   padding: 14px 16px;
-  background: rgba(0, 0, 0, 0.3);
+  background: transparent;
+  border: none;
   border-bottom: 1px solid rgba($void-blue, 0.12);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba($void-blue, 0.05);
+  }
+
+  &:focus {
+    outline: none;
+    background: rgba($void-blue, 0.08);
+  }
+}
+
+.cardHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cardHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .cardIcon {
-  font-size: 18px;
+  font-size: 16px;
   color: $void-blue;
   text-shadow: 0 0 10px rgba($void-blue, 0.5);
+  transition: all 0.2s ease;
 }
 
 .cardTitle {
   font-family: 'Courier New', monospace;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: $void-blue;
   text-shadow: 0 0 10px rgba($void-blue, 0.3);
 }
 
+.cardSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba($void-silver, 0.5);
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.summaryHighlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  background: rgba($void-blue, 0.15);
+  border-radius: 4px;
+  color: $void-blue;
+  font-size: 10px;
+}
+
+.cardChevron {
+  color: rgba($void-blue, 0.5);
+  font-size: 10px;
+  transition: transform 0.2s ease;
+}
+
 // Card content area
 .cardContent {
   padding: 16px;
-  max-height: 350px;
   overflow-y: auto;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
+
+  // Ensure all interactive elements inside are clickable
+  button, a, input, select, textarea {
+    pointer-events: auto;
+    position: relative;
+    z-index: 2;
+  }
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -541,6 +712,8 @@ $void-danger: #ef4444;
   background: rgba(0, 0, 0, 0.3);
   padding: 4px;
   border-radius: 6px;
+  position: relative;
+  z-index: 5;
 }
 
 .taskTab {
@@ -1760,5 +1933,135 @@ $void-danger: #ef4444;
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+// ============================================
+// VIEWPORT - Bottom section with TV screen effect
+// ============================================
+
+.viewport {
+  position: fixed;
+  // Bottom section - starts just below scopes with small gap
+  top: calc(50vh + 43px);
+  bottom: 20px;
+  left: 20px;
+  // Leave room for chat area on right
+  right: calc(40vw + 40px);
+  z-index: 100;
+  pointer-events: auto;
+
+  @media (max-width: 1024px) {
+    right: calc(50vw + 30px);
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.viewportScreen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  // Very light translucent background
+  background: rgba(0, 5, 15, 0.15);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 1px solid rgba($void-blue, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+  // CRT screen curve effect
+  box-shadow:
+    inset 0 0 80px rgba(0, 0, 0, 0.3),
+    inset 0 0 20px rgba($void-blue, 0.03),
+    0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+// Scanlines overlay
+.viewportScanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 2;
+  animation: scanlineFlicker 0.1s infinite;
+}
+
+@keyframes scanlineFlicker {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+// Content area
+.viewportContent {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 1;
+}
+
+.viewportLabel {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba($void-blue, 0.25);
+  text-shadow: 0 0 20px rgba($void-blue, 0.15);
+}
+
+.viewportStatus {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba($void-blue, 0.15);
+  animation: statusPulse 3s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+// CRT glow effect
+.viewportGlow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba($void-blue, 0.02) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+  animation: glowPulse 4s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
   }
 }

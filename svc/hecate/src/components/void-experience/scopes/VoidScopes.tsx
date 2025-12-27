@@ -125,8 +125,23 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
   };
   const [selectedScope, setSelectedScope] = useState<ScopeType>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [expandedCard, setExpandedCard] = useState<string | null>(null); // All collapsed by default
   const dropdownRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Toggle card expansion (accordion style - only one at a time)
+  const toggleCard = (cardId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    // If clicking the already expanded card, collapse it
+    // Otherwise, expand the clicked card (and collapse others)
+    setExpandedCard(expandedCard === cardId ? null : cardId);
+  };
+
+  // Stop propagation on content clicks to prevent collapsing
+  const handleContentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
 
   // Task-specific state
   const [activeTaskCategory, setActiveTaskCategory] = useState<TaskCategory>('todo');
@@ -912,46 +927,260 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
 
   if (!isActive) return null;
 
+  // Summary info for collapsed cards
+  const tasksSummary = `${tasks.length} task${tasks.length !== 1 ? 's' : ''}`;
+  const runningCount = runningTasks.length;
+  const agentsSummary = `${agents.length} agent${agents.length !== 1 ? 's' : ''}`;
+  const onlineCount = agents.filter(a => a.status === 'healthy').length;
+  const modelSummary = modelManagement?.currentSelectedModel?.split('/').pop()?.split(':')[0] || 'No model';
+
   return (
+    <>
     <div className={styles.voidScopesContainer} ref={containerRef}>
-      {/* Scrollable card stack */}
+      {/* Accordion card stack */}
       <div className={styles.cardStack}>
         {/* Tasks Card */}
-        <div className={styles.scopeCard}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardIcon}>◈</span>
-            <span className={styles.cardTitle}>Tasks</span>
-          </div>
-          <div className={styles.cardContent}>
-            {showTaskForm ? renderTaskForm() :
-             selectedTaskId ? renderTaskDetails() :
-             renderTaskList()}
-          </div>
+        <div
+          className={styles.scopeCard}
+          data-expanded={expandedCard === 'tasks'}
+          style={expandedCard === 'tasks' ? {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(0, 168, 255, 0.3)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+          } : {
+            position: 'relative',
+            flexShrink: 0,
+            flexGrow: 0,
+            background: 'rgba(0, 0, 0, 0.12)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <button
+            type="button"
+            className={styles.cardHeader}
+            onClick={(e) => toggleCard('tasks', e)}
+            aria-expanded={expandedCard === 'tasks'}
+          >
+            <div className={styles.cardHeaderLeft}>
+              <span className={styles.cardIcon}>◈</span>
+              <span className={styles.cardTitle}>Tasks</span>
+            </div>
+            <div className={styles.cardHeaderRight}>
+              {expandedCard !== 'tasks' && (
+                <span className={styles.cardSummary}>
+                  {tasksSummary}
+                  {runningCount > 0 && <span className={styles.summaryHighlight}>⚡{runningCount}</span>}
+                </span>
+              )}
+              <span className={styles.cardChevron}>
+                {expandedCard === 'tasks' ? '▼' : '▶'}
+              </span>
+            </div>
+          </button>
+          {expandedCard === 'tasks' && (
+            <div
+              className={styles.cardContent}
+              onClick={handleContentClick}
+              style={{
+                display: 'block',
+                flex: '1 1 auto',
+                minHeight: 0,
+                padding: '16px',
+                overflow: 'auto',
+                background: 'rgba(0,0,0,0.5)'
+              }}
+            >
+              {showTaskForm ? renderTaskForm() :
+               selectedTaskId ? renderTaskDetails() :
+               renderTaskList()}
+            </div>
+          )}
         </div>
 
         {/* Agents Card */}
-        <div className={styles.scopeCard}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardIcon}>◉</span>
-            <span className={styles.cardTitle}>Agents</span>
-          </div>
-          <div className={styles.cardContent}>
-            {selectedAgentId ? renderAgentDetails() : renderAgentList()}
-          </div>
+        <div
+          className={styles.scopeCard}
+          data-expanded={expandedCard === 'agents'}
+          style={expandedCard === 'agents' ? {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(0, 168, 255, 0.3)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+          } : {
+            position: 'relative',
+            flexShrink: 0,
+            flexGrow: 0,
+            background: 'rgba(0, 0, 0, 0.12)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <button
+            type="button"
+            className={styles.cardHeader}
+            onClick={(e) => toggleCard('agents', e)}
+            aria-expanded={expandedCard === 'agents'}
+          >
+            <div className={styles.cardHeaderLeft}>
+              <span className={styles.cardIcon}>◉</span>
+              <span className={styles.cardTitle}>Agents</span>
+            </div>
+            <div className={styles.cardHeaderRight}>
+              {expandedCard !== 'agents' && (
+                <span className={styles.cardSummary}>
+                  {agentsSummary}
+                  {onlineCount > 0 && <span className={styles.summaryHighlight}>✓{onlineCount}</span>}
+                </span>
+              )}
+              <span className={styles.cardChevron}>
+                {expandedCard === 'agents' ? '▼' : '▶'}
+              </span>
+            </div>
+          </button>
+          {expandedCard === 'agents' && (
+            <div
+              className={styles.cardContent}
+              onClick={handleContentClick}
+              style={{
+                display: 'block',
+                flex: '1 1 auto',
+                minHeight: 0,
+                padding: '16px',
+                overflow: 'auto',
+                background: 'rgba(0,0,0,0.5)'
+              }}
+            >
+              {selectedAgentId ? renderAgentDetails() : renderAgentList()}
+            </div>
+          )}
         </div>
 
         {/* Model Info Card */}
-        <div className={styles.scopeCard}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardIcon}>◎</span>
-            <span className={styles.cardTitle}>Model Info</span>
-          </div>
-          <div className={styles.cardContent}>
-            {renderModelInfo()}
-          </div>
+        <div
+          className={styles.scopeCard}
+          data-expanded={expandedCard === 'model-info'}
+          style={expandedCard === 'model-info' ? {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(0, 168, 255, 0.3)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+          } : {
+            position: 'relative',
+            flexShrink: 0,
+            flexGrow: 0,
+            background: 'rgba(0, 0, 0, 0.12)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <button
+            type="button"
+            className={styles.cardHeader}
+            onClick={(e) => toggleCard('model-info', e)}
+            aria-expanded={expandedCard === 'model-info'}
+          >
+            <div className={styles.cardHeaderLeft}>
+              <span className={styles.cardIcon}>◎</span>
+              <span className={styles.cardTitle}>Model</span>
+            </div>
+            <div className={styles.cardHeaderRight}>
+              {expandedCard !== 'model-info' && (
+                <span className={styles.cardSummary}>
+                  {modelSummary}
+                </span>
+              )}
+              <span className={styles.cardChevron}>
+                {expandedCard === 'model-info' ? '▼' : '▶'}
+              </span>
+            </div>
+          </button>
+          {expandedCard === 'model-info' && (
+            <div
+              className={styles.cardContent}
+              onClick={handleContentClick}
+              style={{
+                display: 'block',
+                flex: '1 1 auto',
+                minHeight: 0,
+                padding: '16px',
+                overflow: 'auto',
+                background: 'rgba(0,0,0,0.5)'
+              }}
+            >
+              {renderModelInfo()}
+            </div>
+          )}
         </div>
+
+        {/* Mock Scopes - Coming Soon */}
+        {[
+          { id: 'workflows', icon: '◇', title: 'Workflows' },
+          { id: 'memory', icon: '◆', title: 'Memory' },
+          { id: 'tools', icon: '⬡', title: 'Tools' },
+          { id: 'protocols', icon: '⬢', title: 'Protocols' },
+          { id: 'analytics', icon: '◐', title: 'Analytics' },
+          { id: 'settings', icon: '⚙', title: 'Settings' },
+          { id: 'logs', icon: '▤', title: 'Logs' },
+          { id: 'network', icon: '◎', title: 'Network' },
+          { id: 'vault', icon: '⬣', title: 'Vault' },
+        ].map((scope) => (
+          <div
+            key={scope.id}
+            className={`${styles.scopeCard} ${styles.mockScope}`}
+            data-expanded="false"
+          >
+            <div className={styles.cardHeader}>
+              <div className={styles.cardHeaderLeft}>
+                <span className={styles.cardIcon}>{scope.icon}</span>
+                <span className={styles.cardTitle}>{scope.title}</span>
+              </div>
+              <div className={styles.cardHeaderRight}>
+                <span className={styles.cardSummary}>coming soon</span>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
+
+    {/* Viewport - Bottom section with TV screen effect */}
+    <div className={styles.viewport}>
+      <div className={styles.viewportScreen}>
+        <div className={styles.viewportScanlines} />
+        <div className={styles.viewportContent}>
+          <span className={styles.viewportLabel}>VIEWPORT</span>
+          <span className={styles.viewportStatus}>STANDBY</span>
+        </div>
+        <div className={styles.viewportGlow} />
+      </div>
+    </div>
+    </>
   );
 };
 

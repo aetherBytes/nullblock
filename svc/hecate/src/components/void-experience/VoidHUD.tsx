@@ -31,6 +31,10 @@ const VoidHUD: React.FC<VoidHUDProps> = ({
   hecatePanelOpen = false,
   onHecatePanelChange,
 }) => {
+  // Debug: track hecatePanelOpen changes
+  React.useEffect(() => {
+    console.log('[VoidHUD] hecatePanelOpen changed to:', hecatePanelOpen);
+  }, [hecatePanelOpen]);
   // Panel state
   const [scopesOpen, setScopesOpen] = useState(false);
   const [chatHistoryOpen, setChatHistoryOpen] = useState(false);
