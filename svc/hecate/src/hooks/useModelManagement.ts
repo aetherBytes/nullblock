@@ -177,6 +177,44 @@ export const useModelManagement = (publicKey: string | null, activeAgent: 'hecat
     }
   };
 
+  // Model filtering helper functions
+  const getFreeModels = (models: any[], limit: number = 10) => {
+    return models
+      .filter(model => model.available && (model.tier === 'economical' || model.cost_per_1k_tokens === 0))
+      .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+      .slice(0, limit);
+  };
+
+  const getFastModels = (models: any[], limit: number = 10) => {
+    return models
+      .filter(model => model.available && model.tier === 'fast')
+      .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+      .slice(0, limit);
+  };
+
+  const getThinkerModels = (models: any[], limit: number = 10) => {
+    return models
+      .filter(model => {
+        if (!model.available) return false;
+        const name = (model.display_name || model.name).toLowerCase();
+        return (model.capabilities && (model.capabilities.includes('reasoning') || model.capabilities.includes('reasoning_tokens'))) ||
+               name.includes('reasoning') || name.includes('think') || name.includes('r1') || name.includes('o1');
+      })
+      .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+      .slice(0, limit);
+  };
+
+  const getImageModels = (models: any[], limit: number = 10) => {
+    return models
+      .filter(model => {
+        if (!model.available) return false;
+        return model.architecture?.output_modalities?.includes('image') ||
+               (model.capabilities && model.capabilities.includes('image_generation'));
+      })
+      .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
+      .slice(0, limit);
+  };
+
   // Effect to sync model state when active agent changes
   useEffect(() => {
     const syncAgentModel = async () => {
@@ -240,6 +278,11 @@ export const useModelManagement = (publicKey: string | null, activeAgent: 'hecat
     loadAvailableModels,
     handleModelSelection,
     isLoadingModelsRef,
-    defaultModelLoadingRef
+    defaultModelLoadingRef,
+    // Model filtering functions
+    getFreeModels,
+    getFastModels,
+    getThinkerModels,
+    getImageModels
   };
 };

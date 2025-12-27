@@ -5,6 +5,8 @@ import VoidChatHUD from './chat/VoidChatHUD';
 import { useTaskManagement } from '../../hooks/useTaskManagement';
 import { useModelManagement } from '../../hooks/useModelManagement';
 import { useChat } from '../../hooks/useChat';
+import { useUserProfile } from '../../hooks/useUserProfile';
+import { useApiKeyCheck } from '../../hooks/useApiKeyCheck';
 
 interface VoidHUDProps {
   publicKey: string | null;
@@ -41,15 +43,16 @@ const VoidHUD: React.FC<VoidHUDProps> = ({
     addTaskNotification,
   } = useChat(publicKey);
 
+  // Get user profile for API key check
+  const { userProfile } = useUserProfile(publicKey);
+  const { hasApiKeys } = useApiKeyCheck(userProfile?.id || null);
+
   // Use model management hook
   const {
     availableModels,
     currentSelectedModel,
     agentHealthStatus,
     isLoadingModels,
-    modelInfo,
-    showModelSelection,
-    setShowModelSelection,
     handleModelSelection,
     loadAvailableModels,
     getFreeModels,
@@ -57,6 +60,9 @@ const VoidHUD: React.FC<VoidHUDProps> = ({
     getThinkerModels,
     getImageModels,
   } = useModelManagement(publicKey, activeAgent);
+
+  // Local state for model selection UI
+  const [showModelSelection, setShowModelSelection] = useState(false);
 
   // Use task management hook
   const taskManagement = useTaskManagement(
@@ -83,7 +89,6 @@ const VoidHUD: React.FC<VoidHUDProps> = ({
   // Create model management interface for VoidScopes
   const modelManagementInterface = useMemo(() => ({
     isLoadingModelInfo: isLoadingModels,
-    modelInfo,
     currentSelectedModel,
     availableModels,
     showModelSelection,
@@ -96,11 +101,9 @@ const VoidHUD: React.FC<VoidHUDProps> = ({
     getImageModels,
   }), [
     isLoadingModels,
-    modelInfo,
     currentSelectedModel,
     availableModels,
     showModelSelection,
-    setShowModelSelection,
     handleModelSelection,
     loadAvailableModels,
     getFreeModels,
@@ -144,6 +147,7 @@ const VoidHUD: React.FC<VoidHUDProps> = ({
           availableModels={availableModels}
           activeAgent={activeAgent}
           setActiveAgent={setActiveAgent}
+          hasApiKey={hasApiKeys === true}
         />
       )}
 
