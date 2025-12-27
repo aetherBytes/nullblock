@@ -93,17 +93,17 @@ const HessiRhessi: React.FC<HessiRhessiProps> = ({
 
     if (groupRef.current) {
       // Calculate world position based on camera
-      // Position to the RIGHT of the screen, near the chat input
+      // Position to the LEFT of the chat input box (40vw wide on right side)
       // Responsive x position: adjust based on screen size
       const viewportWidth = state.size.width;
-      // On large screens (>1024px): x=0.52 (close to chat on right)
-      // On medium screens (768-1024px): x=0.62 (more padding)
-      // On small screens (<768px, iPad/tablet): x=0.72 (significant padding)
-      let ndcX = 0.52;
+      // On large screens (>1024px): x=-0.05 (well left of chat)
+      // On medium screens (768-1024px): x=0.05 (adjusted for 50vw chat)
+      // On small screens (<768px, iPad/tablet): x=0.15 (chat is full width)
+      let ndcX = -0.05;
       if (viewportWidth < 768) {
-        ndcX = 0.72;
+        ndcX = 0.15;
       } else if (viewportWidth < 1024) {
-        ndcX = 0.62;
+        ndcX = 0.05;
       }
       const ndc = new THREE.Vector3(ndcX, -0.75, 0.5);
       ndc.unproject(camera);
