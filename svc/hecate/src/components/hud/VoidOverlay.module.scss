@@ -220,6 +220,17 @@ $void-purple: #b967ff;
   }
 }
 
+.quickButtonActive {
+  background: rgba($void-blue, 0.15);
+  border-color: rgba($void-blue, 0.5);
+  color: $void-blue;
+  box-shadow: 0 0 20px rgba($void-blue, 0.25);
+
+  .buttonIcon {
+    text-shadow: 0 0 10px $void-blue;
+  }
+}
+
 .buttonIcon {
   font-size: 16px;
   line-height: 1;

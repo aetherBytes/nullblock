@@ -10,6 +10,8 @@ interface VoidOverlayProps {
   onResetToVoid?: () => void;
   showWelcome?: boolean;
   onDismissWelcome?: () => void;
+  hecatePanelOpen?: boolean;
+  onHecateToggle?: (open: boolean) => void;
 }
 
 const VoidOverlay: React.FC<VoidOverlayProps> = ({
@@ -19,6 +21,8 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   onResetToVoid,
   showWelcome = false,
   onDismissWelcome,
+  hecatePanelOpen = false,
+  onHecateToggle,
 }) => {
   const [welcomeVisible, setWelcomeVisible] = useState(showWelcome);
   const [welcomeFading, setWelcomeFading] = useState(false);
@@ -139,11 +143,17 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
           <span className={styles.buttonLabel}>Crossroads</span>
         </button>
         <button
-          className={styles.quickButton}
-          onClick={() => onTabSelect('hecate')}
-          title="Open Hecate"
+          className={`${styles.quickButton} ${hecatePanelOpen ? styles.quickButtonActive : ''}`}
+          onClick={() => {
+            if (onHecateToggle) {
+              onHecateToggle(!hecatePanelOpen);
+            } else {
+              onTabSelect('hecate');
+            }
+          }}
+          title={hecatePanelOpen ? "Close Hecate Panel" : "Open Hecate Panel"}
         >
-          <span className={styles.buttonIcon}>◉</span>
+          <span className={styles.buttonIcon}>{hecatePanelOpen ? '◉' : '○'}</span>
           <span className={styles.buttonLabel}>Hecate</span>
         </button>
       </div>

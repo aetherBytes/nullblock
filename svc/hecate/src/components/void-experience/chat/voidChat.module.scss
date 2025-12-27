@@ -620,6 +620,97 @@ $void-purple: #b967ff;
   text-shadow: 0 0 20px rgba($void-blue, 0.3);
 }
 
+.historyTitleContainer {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.historyAgentName {
+  font-size: 10px;
+  font-weight: 600;
+  color: $void-blue;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: lighten($void-blue, 15%);
+    text-shadow: 0 0 15px rgba($void-blue, 0.6);
+  }
+}
+
+.historyModelName {
+  font-size: 10px;
+  font-weight: 400;
+  color: rgba($void-silver, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.healthWarning {
+  margin-left: 8px;
+  font-size: 12px;
+  animation: warningPulse 2s ease-in-out infinite;
+}
+
+@keyframes warningPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+// Task Result Styles
+.historyTaskResult {
+  border-left: 2px solid $void-green;
+
+  .historySender {
+    color: $void-green;
+  }
+}
+
+.taskResultHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: rgba($void-green, 0.08);
+  border: 1px solid rgba($void-green, 0.2);
+  border-radius: 6px;
+}
+
+.taskResultBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.taskIcon {
+  font-size: 14px;
+}
+
+.taskLabel {
+  color: $void-green;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.taskName {
+  color: rgba($void-silver, 0.7);
+  font-size: 11px;
+  font-style: italic;
+}
+
+.processingTime {
+  color: rgba($void-silver, 0.5);
+  font-size: 10px;
+  font-family: 'Courier New', monospace;
+}
+
 .historyClose {
   width: 20px;
   height: 20px;
