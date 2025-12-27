@@ -238,10 +238,10 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   }, []);
 
   // Sync with external showHistory control (from Hecate panel toggle)
-  // Only open history when external control opens, but don't force close
+  // Open AND close history based on external control
   useEffect(() => {
-    if (externalShowHistory === true) {
-      setShowHistory(true);
+    if (externalShowHistory !== undefined) {
+      setShowHistory(externalShowHistory);
     }
   }, [externalShowHistory]);
 

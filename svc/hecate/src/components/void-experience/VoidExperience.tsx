@@ -55,6 +55,7 @@ interface CameraTarget {
 // Camera positions
 const PRE_LOGIN_CAMERA = new THREE.Vector3(8, 6, 24); // Very far back, dramatic reveal
 const POST_LOGIN_CAMERA = new THREE.Vector3(4, 3, 12); // Previous pre-login position, now the zoomed-in view
+const PANEL_OPEN_CAMERA = new THREE.Vector3(7, 5, 22); // Zoomed out when Hecate panel is open
 
 const VoidExperience: React.FC<VoidExperienceProps> = ({
   publicKey,
@@ -144,6 +145,29 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
       });
     }
   }, [isLoggedIn]);
+
+  // Zoom out when Hecate panel opens, zoom back in when it closes
+  useEffect(() => {
+    // Only trigger after initial login zoom is complete and user is fully logged in
+    if (!isCanvasReady || !isLoggedIn || !hasZoomedToHecate) return;
+
+    // Don't interfere with cluster navigation
+    if (selectedCluster) return;
+
+    if (hecatePanelOpen) {
+      // Zoom out to give room for the panel
+      setCameraTarget({
+        position: PANEL_OPEN_CAMERA.clone(),
+        lookAt: new THREE.Vector3(0, 0, 0),
+      });
+    } else {
+      // Zoom back in to the normal view
+      setCameraTarget({
+        position: POST_LOGIN_CAMERA.clone(),
+        lookAt: new THREE.Vector3(0, 0, 0),
+      });
+    }
+  }, [hecatePanelOpen, isCanvasReady, isLoggedIn, hasZoomedToHecate, selectedCluster]);
 
   const handleClusterHover = useCallback((clusterId: string | null) => {
     // Only allow hover interaction when logged in

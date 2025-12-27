@@ -914,52 +914,42 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
 
   return (
     <div className={styles.voidScopesContainer} ref={containerRef}>
-      <div className={styles.scopeBar}>
-        <div className={styles.scopeSelector}>
-          <button
-            type="button"
-            className={`${styles.scopeToggle} ${isDropdownOpen || selectedScope ? styles.active : ''}`}
-            onClick={handleToggleDropdown}
-            aria-label="Toggle scope selector"
-          >
-            <span className={styles.scopeLabel}>{getSelectedLabel()}</span>
-            <span className={styles.carrot} style={{ transform: isDropdownOpen || selectedScope ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-              ▲
-            </span>
-          </button>
-
-          {selectedScope && (
-            <button type="button" className={styles.closeButton} onClick={handleClose} aria-label="Close scope">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          )}
+      {/* Scrollable card stack */}
+      <div className={styles.cardStack}>
+        {/* Tasks Card */}
+        <div className={styles.scopeCard}>
+          <div className={styles.cardHeader}>
+            <span className={styles.cardIcon}>◈</span>
+            <span className={styles.cardTitle}>Tasks</span>
+          </div>
+          <div className={styles.cardContent}>
+            {showTaskForm ? renderTaskForm() :
+             selectedTaskId ? renderTaskDetails() :
+             renderTaskList()}
+          </div>
         </div>
 
-        {isDropdownOpen && (
-          <div className={styles.dropdownMenu} ref={dropdownRef}>
-            {SCOPE_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={`${styles.dropdownItem} ${selectedScope === option.id ? styles.dropdownItemActive : ''}`}
-                onClick={() => handleScopeSelect(option.id)}
-              >
-                <span className={styles.dropdownIcon}>{option.icon}</span>
-                <span className={styles.dropdownLabel}>{option.label}</span>
-              </button>
-            ))}
+        {/* Agents Card */}
+        <div className={styles.scopeCard}>
+          <div className={styles.cardHeader}>
+            <span className={styles.cardIcon}>◉</span>
+            <span className={styles.cardTitle}>Agents</span>
           </div>
-        )}
+          <div className={styles.cardContent}>
+            {selectedAgentId ? renderAgentDetails() : renderAgentList()}
+          </div>
+        </div>
 
-        {selectedScope && (
-          <div className={styles.scopePanel}>
-            <div className={styles.scopeContent}>
-              {renderScopeContent()}
-            </div>
+        {/* Model Info Card */}
+        <div className={styles.scopeCard}>
+          <div className={styles.cardHeader}>
+            <span className={styles.cardIcon}>◎</span>
+            <span className={styles.cardTitle}>Model Info</span>
           </div>
-        )}
+          <div className={styles.cardContent}>
+            {renderModelInfo()}
+          </div>
+        </div>
       </div>
     </div>
   );
