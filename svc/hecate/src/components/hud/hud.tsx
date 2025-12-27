@@ -6,7 +6,6 @@ import { useTaskManagement } from '../../hooks/useTaskManagement';
 import { useEventSystem } from '../../hooks/useEventSystem';
 import { useLogs } from '../../hooks/useLogs';
 import { useUserProfile } from '../../hooks/useUserProfile';
-import { useApiKeyCheck } from '../../hooks/useApiKeyCheck';
 import Crossroads from '../crossroads/Crossroads';
 import HecateChat from './HecateChat';
 import Scopes from './Scopes';
@@ -106,8 +105,6 @@ const HUD: React.FC<HUDProps> = ({
   // User profile state
   const { userProfile, isLoading: isLoadingUser } = useUserProfile(publicKey);
 
-  // API key check state
-  const { hasApiKeys, isLoading: isLoadingApiKeys } = useApiKeyCheck(userProfile?.id || null);
 
   // Tab functionality state
   const [autoScroll, setAutoScroll] = useState(true);
@@ -894,18 +891,6 @@ const HUD: React.FC<HUDProps> = ({
           </div>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'hecate' ? '' : styles.hidden}`}>
             <div className={`${styles.hecateContainer} ${isChatExpanded ? styles.chatExpanded : ''} ${isScopesExpanded ? styles.scopesExpanded : ''}`}>
-              {mainHudActiveTab === 'hecate' && !isLoadingApiKeys && !hasApiKeys && (
-                <div className={styles.blockedOverlay}>
-                  <div className={styles.warningCard}>
-                    <h3>🔑 API Keys Required</h3>
-                    <p>Without loaded API keys, you will have limited features.</p>
-                    <p><strong>For now, all Hecate features are locked.</strong></p>
-                    <button onClick={() => setShowSettingsPanel(true)}>
-                      Configure API Keys
-                    </button>
-                  </div>
-                </div>
-              )}
               <div className={styles.hecateContent}>
                 <div className={styles.hecateMain}>
                   <div className={styles.hecateInterface}>
@@ -1257,6 +1242,10 @@ const HUD: React.FC<HUDProps> = ({
           onOpenSynapse={handleOpenSynapse}
           onTabSelect={(tab) => setMainHudActiveTab(tab)}
           onDisconnect={onDisconnect}
+          onResetToVoid={() => {
+            setShowSettingsPanel(false);
+            setShowMobileMenu(false);
+          }}
           showWelcome={!hasSeenVoidWelcome}
           onDismissWelcome={handleDismissVoidWelcome}
         />

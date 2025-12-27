@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import MemFeed from './MemFeed';
+import NullblockLogo from './NullblockLogo';
 import styles from './VoidOverlay.module.scss';
 
 interface VoidOverlayProps {
   onOpenSynapse: () => void;
   onTabSelect: (tab: 'crossroads' | 'hecate') => void;
   onDisconnect: () => void;
+  onResetToVoid?: () => void;
   showWelcome?: boolean;
   onDismissWelcome?: () => void;
 }
@@ -14,6 +16,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   onOpenSynapse,
   onTabSelect,
   onDisconnect,
+  onResetToVoid,
   showWelcome = false,
   onDismissWelcome,
 }) => {
@@ -110,6 +113,23 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
 
       {/* Quick access buttons (top-left) */}
       <div className={styles.quickAccess}>
+        {/* NULLBLOCK Logo */}
+        <NullblockLogo
+          state="base"
+          theme="dark"
+          size="medium"
+          onClick={onResetToVoid}
+          title="Return to Void"
+        />
+        {/* NULLBLOCK Text */}
+        <div
+          className={styles.nullblockTextLogo}
+          onClick={onResetToVoid}
+          title="Return to Void"
+        >
+          NULLBLOCK
+        </div>
+
         <button
           className={styles.quickButton}
           onClick={() => onTabSelect('crossroads')}
