@@ -238,18 +238,10 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   }, []);
 
   // Sync with external showHistory control (from Hecate panel toggle)
+  // Only open history when external control opens, but don't force close
   useEffect(() => {
-    if (externalShowHistory !== undefined) {
-      setShowHistory(externalShowHistory);
-      // When externally closing the panel, clear any notification states
-      if (externalShowHistory === false) {
-        setHasUnreadMessages(false);
-        setShowTooltip(false);
-        if (tooltipTimerRef.current) {
-          clearTimeout(tooltipTimerRef.current);
-          tooltipTimerRef.current = null;
-        }
-      }
+    if (externalShowHistory === true) {
+      setShowHistory(true);
     }
   }, [externalShowHistory]);
 
@@ -336,10 +328,9 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
             {/* History toggle button */}
             <button
               type="button"
-              className={`${styles.historyToggle} ${showHistory ? styles.historyActive : ''} ${messages.length === 0 || externalShowHistory === false ? styles.historyDisabled : ''} ${hasUnreadMessages && !showHistory && externalShowHistory !== false ? styles.historyNotification : ''}`}
+              className={`${styles.historyToggle} ${showHistory ? styles.historyActive : ''} ${messages.length === 0 ? styles.historyDisabled : ''} ${hasUnreadMessages && !showHistory ? styles.historyNotification : ''}`}
               onClick={() => {
-                // Only allow toggling if there are messages AND external control allows it
-                if (messages.length > 0 && externalShowHistory !== false) {
+                if (messages.length > 0) {
                   const newShowHistory = !showHistory;
                   setShowHistory(newShowHistory);
                   if (newShowHistory) {
@@ -358,7 +349,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                 }
               }}
               aria-label="Toggle chat history"
-              disabled={messages.length === 0 || externalShowHistory === false}
+              disabled={messages.length === 0}
             >
               <svg
                 width="24"
