@@ -12,7 +12,8 @@ import Scopes from './Scopes';
 import NullblockLogo from './NullblockLogo';
 import MemoriesMenu from './MemoriesMenu';
 import SettingsPanel from './SettingsPanel';
-import MemFeed from './MemFeed';
+// MemFeed temporarily removed from navbar - component preserved for future use
+// import MemFeed from './MemFeed';
 import VoidOverlay from './VoidOverlay';
 import styles from './hud.module.scss';
 import { Task, TaskCreationRequest } from '../../types/tasks';
@@ -1062,7 +1063,6 @@ const HUD: React.FC<HUDProps> = ({
         >
           NULLBLOCK
         </div>
-        <MemFeed />
       </div>
 
       {/* Center - NULLBLOCK Text (visible on mobile) */}
