@@ -117,45 +117,55 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
 
       {/* Quick access buttons (top-left) */}
       <div className={styles.quickAccess}>
-        {/* NULLBLOCK Logo */}
-        <NullblockLogo
-          state="base"
-          theme="dark"
-          size="medium"
-          onClick={onResetToVoid}
-          title="Return to Void"
-        />
-        {/* NULLBLOCK Text */}
-        <div
-          className={styles.nullblockTextLogo}
-          onClick={onResetToVoid}
-          title="Return to Void"
-        >
-          NULLBLOCK
+        {/* Top row: Logo and buttons */}
+        <div className={styles.navRow}>
+          {/* NULLBLOCK Logo */}
+          <NullblockLogo
+            state="base"
+            theme="dark"
+            size="medium"
+            onClick={onResetToVoid}
+            title="Return to Void"
+          />
+          {/* NULLBLOCK Text */}
+          <div
+            className={styles.nullblockTextLogo}
+            onClick={onResetToVoid}
+            title="Return to Void"
+          >
+            NULLBLOCK
+          </div>
+
+          <button
+            className={styles.quickButton}
+            onClick={() => onTabSelect('crossroads')}
+            title="Enter Crossroads"
+          >
+            <span className={styles.buttonIcon}>⬡</span>
+            <span className={styles.buttonLabel}>Crossroads</span>
+          </button>
+          <button
+            className={`${styles.quickButton} ${hecatePanelOpen ? styles.quickButtonActive : ''}`}
+            onClick={() => {
+              if (onHecateToggle) {
+                onHecateToggle(!hecatePanelOpen);
+              } else {
+                onTabSelect('hecate');
+              }
+            }}
+            title={hecatePanelOpen ? "Close Studio" : "Open Studio"}
+          >
+            <span className={styles.buttonIcon}>{hecatePanelOpen ? '◉' : '○'}</span>
+            <span className={styles.buttonLabel}>Studio</span>
+          </button>
         </div>
 
-        <button
-          className={styles.quickButton}
-          onClick={() => onTabSelect('crossroads')}
-          title="Enter Crossroads"
-        >
-          <span className={styles.buttonIcon}>⬡</span>
-          <span className={styles.buttonLabel}>Crossroads</span>
-        </button>
-        <button
-          className={`${styles.quickButton} ${hecatePanelOpen ? styles.quickButtonActive : ''}`}
-          onClick={() => {
-            if (onHecateToggle) {
-              onHecateToggle(!hecatePanelOpen);
-            } else {
-              onTabSelect('hecate');
-            }
-          }}
-          title={hecatePanelOpen ? "Close Hecate Panel" : "Open Hecate Panel"}
-        >
-          <span className={styles.buttonIcon}>{hecatePanelOpen ? '◉' : '○'}</span>
-          <span className={styles.buttonLabel}>Hecate</span>
-        </button>
+        {/* Description text - shown when no panels are open */}
+        {!hecatePanelOpen && (
+          <div className={styles.navDescription}>
+            <p>Discover in Crossroads. Compose in Studio.</p>
+          </div>
+        )}
       </div>
 
       {/* First-time Welcome Overlay */}
