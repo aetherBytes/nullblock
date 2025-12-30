@@ -40,6 +40,42 @@ interface VoidChatHUDProps {
 // Energy state for transmission animation
 type EnergyState = 'idle' | 'charging' | 'firing' | 'processing';
 
+// Hecate welcome messages (slight variations)
+const HECATE_WELCOME_MESSAGES = [
+  `Welcome, visitor.
+
+I am Hecate, your companion at the edge.
+
+The Studio is a personal space to capture, reflect, and build upon interactions that occur within the Crossroads.
+
+Show me an agent, a tool, a workflow... and we will break it down, rebuild it, make it yours.`,
+
+  `Welcome to the Studio, visitor.
+
+I am Hecate — guide at the boundary between intention and action.
+
+This is your space to examine, deconstruct, and reimagine what you discover in the Crossroads.
+
+Bring me an agent, a protocol, a piece of the mesh... together, we'll make it your own.`,
+
+  `Visitor, you've arrived.
+
+I am Hecate, keeper of the Studio.
+
+Here we transform curiosity into creation. The Crossroads shows you what exists — the Studio helps you make it yours.
+
+An agent, a tool, a workflow — show me what caught your eye.`,
+];
+
+// Hecate topic switch responses (for mid-conversation returns)
+const HECATE_RETURN_MESSAGES = [
+  `You've returned. The Studio awaits your next inquiry.`,
+  `Back at the edge, visitor. What shall we examine?`,
+  `The Studio opens once more. Continue where we left off, or bring something new.`,
+  `Welcome back. The void remembers our work — shall we resume?`,
+  `You return to the Studio. What draws your attention now?`,
+];
+
 const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   publicKey: _publicKey,
   isActive = true,
@@ -96,6 +132,8 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const historyRef = useRef<HTMLDivElement>(null);
   const pendingMessageRef = useRef<{ message: string; msgId: string } | null>(null);
   const tooltipTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasShownWelcomeRef = useRef(false);
+  const lastPanelStateRef = useRef(false);
 
   // Handle the actual API call after charging/firing animation
   const executeTransmission = useCallback(async () => {
@@ -244,6 +282,41 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
       setShowHistory(externalShowHistory);
     }
   }, [externalShowHistory]);
+
+  // Show Hecate welcome/return message when Studio opens
+  useEffect(() => {
+    const panelJustOpened = externalShowHistory === true && lastPanelStateRef.current === false;
+    lastPanelStateRef.current = externalShowHistory || false;
+
+    if (panelJustOpened && activeAgent === 'hecate') {
+      // Use functional update to check messages without dependency
+      setMessages(prev => {
+        const hasUserMessages = prev.some(m => m.sender === 'user');
+
+        if (!hasUserMessages && !hasShownWelcomeRef.current) {
+          // First time opening with no conversation - show welcome
+          hasShownWelcomeRef.current = true;
+          const welcomeText = HECATE_WELCOME_MESSAGES[Math.floor(Math.random() * HECATE_WELCOME_MESSAGES.length)];
+          return [...prev, {
+            id: `hecate-welcome-${Date.now()}`,
+            text: welcomeText,
+            sender: 'agent' as const,
+            timestamp: new Date(),
+          }];
+        } else if (hasUserMessages) {
+          // Returning mid-conversation - show return message
+          const returnText = HECATE_RETURN_MESSAGES[Math.floor(Math.random() * HECATE_RETURN_MESSAGES.length)];
+          return [...prev, {
+            id: `hecate-return-${Date.now()}`,
+            text: returnText,
+            sender: 'agent' as const,
+            timestamp: new Date(),
+          }];
+        }
+        return prev;
+      });
+    }
+  }, [externalShowHistory, activeAgent]);
 
   if (!isActive) return null;
 
