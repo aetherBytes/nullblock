@@ -379,9 +379,9 @@ $void-purple: #b967ff;
 }
 
 .sendButton {
-  background: $void-blue;
-  color: white;
-  border: none;
+  background: transparent;
+  color: $void-silver;
+  border: 1px solid rgba($void-blue, 0.5);
   padding: 0.75rem 1rem;
   border-radius: 4px;
   cursor: pointer;
@@ -393,17 +393,21 @@ $void-purple: #b967ff;
   min-height: 44px;
 
   &:hover:not(:disabled) {
-    background: rgba($void-blue, 0.8);
-    transform: translateY(-1px);
+    background: rgba($void-blue, 0.15);
+    border-color: rgba($void-blue, 0.7);
+    box-shadow: 0 0 20px rgba($void-blue, 0.4);
+    transform: scale(1.05);
+    color: $void-blue;
   }
 
   &:active:not(:disabled) {
-    transform: translateY(0);
+    transform: scale(0.95);
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
+    border-color: rgba($void-silver, 0.2);
   }
 
   svg {
