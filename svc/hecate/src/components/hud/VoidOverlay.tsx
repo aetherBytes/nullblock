@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import MemFeed from './MemFeed';
+// MemFeed temporarily removed - component preserved for future use
+// import MemFeed from './MemFeed';
 import NullblockLogo from './NullblockLogo';
 import styles from './VoidOverlay.module.scss';
 
@@ -70,13 +71,8 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
 
   return (
     <>
-      {/* Top-right container: MEM FEED + Settings */}
+      {/* Top-right container: Settings */}
       <div className={styles.topRightContainer}>
-        {/* MEM FEED (left of settings) */}
-        <div className={styles.voidMemFeed}>
-          <MemFeed minimal scrollSpeed="slow" />
-        </div>
-
         {/* Settings Menu */}
         <div className={styles.settingsContainer} ref={settingsRef}>
           <button
@@ -158,14 +154,14 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             <span className={styles.buttonIcon}>{hecatePanelOpen ? '◉' : '○'}</span>
             <span className={styles.buttonLabel}>Studio</span>
           </button>
-        </div>
 
-        {/* Description text - shown when no panels are open */}
-        {!hecatePanelOpen && (
-          <div className={styles.navDescription}>
-            <p>Discover in Crossroads. Compose in Studio.</p>
-          </div>
-        )}
+          {/* Description text - inline after Studio button */}
+          {!hecatePanelOpen && (
+            <span className={styles.navDescriptionInline}>
+              Discover in Crossroads. Compose in Studio.
+            </span>
+          )}
+        </div>
       </div>
 
       {/* First-time Welcome Overlay */}

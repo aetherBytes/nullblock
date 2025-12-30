@@ -158,25 +158,18 @@ $void-purple: #b967ff;
   }
 }
 
-// Navigation description text - compact tagline under buttons
-.navDescription {
-  margin-left: 220px;
-
-  p {
-    margin: 0;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    color: $void-blue;
-    font-style: italic;
-    text-shadow: 0 0 8px rgba(0, 0, 0, 0.9);
-  }
+// Navigation description text - inline after Studio button
+.navDescriptionInline {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: $void-blue;
+  font-style: italic;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.9);
+  margin-left: 0.5rem;
+  white-space: nowrap;
 
   @media (max-width: 1024px) {
-    margin-left: 0;
-  }
-
-  @media (max-width: 768px) {
     display: none;
   }
 }

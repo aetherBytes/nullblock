@@ -455,7 +455,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                   ? '⚠️ Configure API keys first...'
                   : energyState === 'processing'
                     ? `Awaiting ${activeAgent} response...`
-                    : `Transmit to ${activeAgent.charAt(0).toUpperCase() + activeAgent.slice(1)}...`
+                    : 'Chat with interface...'
               }
               className={styles.voidInput}
               disabled={energyState !== 'idle' || agentHealthStatus === 'unhealthy'}
