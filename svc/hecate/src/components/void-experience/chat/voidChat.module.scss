@@ -180,8 +180,8 @@ $void-purple: #b967ff;
     }
   }
 
-  // Incoming - steam wrapping around, enveloping the chat
-  &.tendrilHit {
+  // Incoming - steam wrapping around, enveloping the chat (agent response received)
+  &.receiving {
     animation: steamWrap 1.2s ease-out forwards;
 
     &::before {

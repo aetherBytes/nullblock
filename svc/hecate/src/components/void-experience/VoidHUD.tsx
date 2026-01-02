@@ -12,10 +12,9 @@ interface VoidHUDProps {
   publicKey: string | null;
   isActive?: boolean;
   loginAnimationPhase?: string;
-  onUserMessageSent?: (messageId: string) => void;
   onAgentResponseReceived?: (messageId: string) => void;
   onFirstMessage?: () => void;
-  tendrilHit?: boolean;
+  glowActive?: boolean;
   hecatePanelOpen?: boolean;
   onHecatePanelChange?: (open: boolean) => void;
 }
@@ -24,10 +23,9 @@ const VoidHUD: React.FC<VoidHUDProps> = ({
   publicKey,
   isActive = true,
   loginAnimationPhase,
-  onUserMessageSent,
   onAgentResponseReceived,
   onFirstMessage,
-  tendrilHit = false,
+  glowActive = false,
   hecatePanelOpen = false,
   onHecatePanelChange,
 }) => {
@@ -160,9 +158,8 @@ const VoidHUD: React.FC<VoidHUDProps> = ({
         publicKey={publicKey}
         isActive={isActive}
         onFirstMessage={onFirstMessage}
-        onUserMessageSent={onUserMessageSent}
         onAgentResponseReceived={onAgentResponseReceived}
-        tendrilHit={tendrilHit}
+        glowActive={glowActive}
         currentModel={currentSelectedModel}
         activeAgent={activeAgent}
         setActiveAgent={setActiveAgent}

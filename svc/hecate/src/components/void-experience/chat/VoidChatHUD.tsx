@@ -26,9 +26,8 @@ interface VoidChatHUDProps {
   publicKey: string | null;
   isActive?: boolean;
   onFirstMessage?: () => void;
-  onUserMessageSent?: (messageId: string) => void;
   onAgentResponseReceived?: (messageId: string) => void;
-  tendrilHit?: boolean;
+  glowActive?: boolean;
   currentModel?: string | null;
   activeAgent?: 'hecate' | 'siren';
   setActiveAgent?: (agent: 'hecate' | 'siren') => void;
@@ -76,13 +75,15 @@ const HECATE_RETURN_MESSAGES = [
   `You return to the Studio. What draws your attention now?`,
 ];
 
+const CHAT_STORAGE_KEY = 'nullblock_void_chat_history';
+const MAX_PERSISTED_MESSAGES = 20;
+
 const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   publicKey: _publicKey,
   isActive = true,
   onFirstMessage,
-  onUserMessageSent,
   onAgentResponseReceived,
-  tendrilHit = false,
+  glowActive = false,
   currentModel: externalModel = null,
   activeAgent = 'hecate',
   setActiveAgent,
@@ -128,12 +129,39 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [hasAcknowledgedFirst, setHasAcknowledgedFirst] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
   const pendingMessageRef = useRef<{ message: string; msgId: string } | null>(null);
   const tooltipTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasShownWelcomeRef = useRef(false);
   const lastPanelStateRef = useRef(false);
+
+  // Load persisted messages from localStorage on client mount (SSR-safe)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const restoredMessages = parsed.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setMessages(restoredMessages);
+        // If we have user messages, mark as interacted
+        if (parsed.some((msg: any) => msg.sender === 'user')) {
+          setHasInteracted(true);
+        }
+        // If we have any messages, welcome was already shown
+        if (parsed.length > 0) {
+          hasShownWelcomeRef.current = true;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load chat history:', e);
+    }
+    setIsHydrated(true);
+  }, []);
 
   // Handle the actual API call after charging/firing animation
   const executeTransmission = useCallback(async () => {
@@ -209,33 +237,32 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     };
     setMessages(prev => [...prev, userMsg]);
 
+    // Auto-open chat history when message is sent
+    setShowHistory(true);
+    setHasUnreadMessages(false);
+
     if (!hasInteracted) {
       setHasInteracted(true);
       onFirstMessage?.();
     }
 
-    // Store pending message for after animation
+    // Store pending message for transmission
     pendingMessageRef.current = { message: userMessage, msgId: userMsg.id };
 
-    // Start charging animation sequence
+    // Brief charging glow, then immediately start processing
     setEnergyState('charging');
 
-    // After charging (0.8s), switch to firing
+    // Quick transition to firing then processing (reduced delay)
     setTimeout(() => {
       setEnergyState('firing');
 
-      // After firing flash (0.3s), launch tendril and start processing
       setTimeout(() => {
-        // Fire the tendril
-        onUserMessageSent?.(userMsg.id);
         setIsProcessing(true);
         setEnergyState('processing');
-
-        // Execute the actual API call
         executeTransmission();
-      }, 300);
-    }, 800);
-  }, [input, isProcessing, energyState, hasInteracted, onFirstMessage, onUserMessageSent, executeTransmission]);
+      }, 150); // Reduced from 300ms
+    }, 400); // Reduced from 800ms
+  }, [input, isProcessing, energyState, hasInteracted, onFirstMessage, executeTransmission]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -259,12 +286,12 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     }
   }, [showHistory, messages]);
 
-  // Trigger notification glow when tendril hits (if history is closed)
+  // Trigger notification glow when receiving agent response (if history is closed)
   useEffect(() => {
-    if (tendrilHit && !showHistory && messages.length > 0) {
+    if (glowActive && !showHistory && messages.length > 0) {
       setHasUnreadMessages(true);
     }
-  }, [tendrilHit, showHistory, messages.length]);
+  }, [glowActive, showHistory, messages.length]);
 
   // Cleanup tooltip timer on unmount
   useEffect(() => {
@@ -274,6 +301,36 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
       }
     };
   }, []);
+
+  // When history is opened, mark as acknowledged and clear tooltip
+  useEffect(() => {
+    if (showHistory) {
+      // User is viewing history, so they've acknowledged messages
+      if (!hasAcknowledgedFirst) {
+        setHasAcknowledgedFirst(true);
+      }
+      // Clear any pending tooltip timer
+      if (tooltipTimerRef.current) {
+        clearTimeout(tooltipTimerRef.current);
+        tooltipTimerRef.current = null;
+      }
+      setShowTooltip(false);
+    }
+  }, [showHistory, hasAcknowledgedFirst]);
+
+  // Persist messages to localStorage when they change (only after hydration)
+  useEffect(() => {
+    if (!isHydrated) return; // Don't persist until we've loaded from storage
+    if (messages.length > 0) {
+      try {
+        // Keep only the last N messages to avoid bloating localStorage
+        const toStore = messages.slice(-MAX_PERSISTED_MESSAGES);
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toStore));
+      } catch (e) {
+        console.warn('Failed to persist chat history:', e);
+      }
+    }
+  }, [messages, isHydrated]);
 
   // Sync with external showHistory control (from Hecate panel toggle)
   // Open AND close history based on external control
@@ -397,7 +454,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
           </div>
         )}
         <form onSubmit={handleSubmit} className={styles.inputForm}>
-          <div className={`${styles.inputContainer} ${energyState === 'charging' ? styles.charging : ''} ${energyState === 'firing' ? styles.firing : ''} ${energyState === 'processing' ? styles.processing : ''} ${tendrilHit ? styles.tendrilHit : ''}`}>
+          <div className={`${styles.inputContainer} ${energyState === 'charging' ? styles.charging : ''} ${energyState === 'firing' ? styles.firing : ''} ${energyState === 'processing' ? styles.processing : ''} ${glowActive ? styles.receiving : ''}`}>
             {/* History toggle button */}
             <button
               type="button"

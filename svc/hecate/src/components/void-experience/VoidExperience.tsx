@@ -4,21 +4,10 @@ import { OrbitControls, Preload } from '@react-three/drei';
 import * as THREE from 'three';
 import VoidScene from './scene/VoidScene';
 import CameraController from './scene/CameraController';
-import ChatTendril from './scene/ChatTendril';
-import HessiRhessi from './scene/HessiRhessi';
 import VoidHUD from './VoidHUD';
 import ClusterPanel from '../hud/ClusterPanel';
 import HecatePanel from '../hud/HecatePanel';
-import HessiTooltip from '../hud/HessiTooltip';
 import styles from './VoidExperience.module.scss';
-
-// Tendril animation state
-interface TendrilAnimation {
-  id: string;
-  direction: 'outgoing' | 'incoming';
-  startRef: React.MutableRefObject<THREE.Vector3>;
-  endRef: React.MutableRefObject<THREE.Vector3>;
-}
 
 
 export interface ClusterData {
@@ -75,20 +64,12 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   const [hasZoomedToHecate, setHasZoomedToHecate] = useState(false);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
   const [focusedPosition, setFocusedPosition] = useState<THREE.Vector3 | null>(null);
-  const [tendrils, setTendrils] = useState<TendrilAnimation[]>([]);
-  const [tendrilHit, setTendrilHit] = useState(false);
+  const [glowActive, setGlowActive] = useState(false);
   const orbitControlsRef = useRef<any>(null);
   const wasLoggedIn = useRef(false);
 
-  // Track HECATE and HESSI-RHESSI positions for tendril animations
+  // Track HECATE position (may be useful for future features)
   const hecatePositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 5));
-  const hessiPositionRef = useRef<THREE.Vector3>(new THREE.Vector3(-2, -1, 6));
-
-  // Track energy state for HESSI-RHESSI visual feedback
-  const [hessiCharging, setHessiCharging] = useState(false);
-  const [hessiProcessing, setHessiProcessing] = useState(false);
-  const [hessiReceiving, setHessiReceiving] = useState(false);
-  const [hessiHovered, setHessiHovered] = useState(false);
 
   // Detect if this is a page refresh with existing session (publicKey exists at mount)
   const isReturningUser = useRef(!!publicKey);
@@ -260,62 +241,16 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
     onTabSelect?.('hecate');
   }, [onTabSelect]);
 
-  // Tendril animation handlers
+  // HECATE position update handler (kept for potential future use)
   const handleHecatePositionUpdate = useCallback((position: THREE.Vector3) => {
     hecatePositionRef.current.copy(position);
   }, []);
 
-  const handleHessiPositionUpdate = useCallback((position: THREE.Vector3) => {
-    hessiPositionRef.current.copy(position);
-  }, []);
-
-  const handleUserMessageSent = useCallback((messageId: string) => {
-    // Trigger HESSI charging effect, then fire tendril
-    setHessiCharging(true);
-    setHessiProcessing(true);
-
-    // Create outgoing tendril: HESSI → HECATE (uses refs for live tracking)
-    const tendril: TendrilAnimation = {
-      id: `tendril-out-${messageId}`,
-      direction: 'outgoing',
-      startRef: hessiPositionRef,
-      endRef: hecatePositionRef,
-    };
-    setTendrils(prev => [...prev, tendril]);
-
-    // End charging effect after a short delay
-    setTimeout(() => setHessiCharging(false), 500);
-  }, []);
-
-  const handleAgentResponseReceived = useCallback((messageId: string) => {
-    // Create incoming tendril: HECATE → HESSI (uses refs for live tracking)
-    const tendril: TendrilAnimation = {
-      id: `tendril-in-${messageId}`,
-      direction: 'incoming',
-      startRef: hecatePositionRef,
-      endRef: hessiPositionRef,
-    };
-    setTendrils(prev => [...prev, tendril]);
-
-    // End processing effect when response arrives
-    setHessiProcessing(false);
-  }, []);
-
-  const handleTendrilComplete = useCallback((tendrilId: string) => {
-    setTendrils(prev => prev.filter(t => t.id !== tendrilId));
-  }, []);
-
-  const handleTendrilReachTarget = useCallback((direction: 'outgoing' | 'incoming') => {
-    // Trigger glow effect when incoming tendril reaches HESSI and the chat box
-    if (direction === 'incoming') {
-      // HESSI receives the transmission - bright glow
-      setHessiReceiving(true);
-      setTimeout(() => setHessiReceiving(false), 1500);
-
-      // Chat box also glows
-      setTendrilHit(true);
-      setTimeout(() => setTendrilHit(false), 1200);
-    }
+  // Chat glow effect - triggered when agent responds
+  const handleAgentResponseReceived = useCallback((_messageId: string) => {
+    // Trigger glow effect on chat box when response arrives
+    setGlowActive(true);
+    setTimeout(() => setGlowActive(false), 800);
   }, []);
 
   // Determine home position based on login state
@@ -351,30 +286,6 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
             onHecatePositionUpdate={handleHecatePositionUpdate}
           />
         </Suspense>
-
-        {/* HESSI-RHESSI biometric interface module - tendril target */}
-        {isLoggedIn && (
-          <HessiRhessi
-            onPositionUpdate={handleHessiPositionUpdate}
-            onHoverChange={setHessiHovered}
-            isActive={loginAnimationPhase === 'complete'}
-            isCharging={hessiCharging}
-            isProcessing={hessiProcessing}
-            isReceiving={hessiReceiving}
-          />
-        )}
-
-        {/* Chat tendrils - animated connections between chat and HECATE */}
-        {tendrils.map(tendril => (
-          <ChatTendril
-            key={tendril.id}
-            startPos={tendril.startRef}
-            endPos={tendril.endRef}
-            direction={tendril.direction}
-            onComplete={() => handleTendrilComplete(tendril.id)}
-            onReachTarget={() => handleTendrilReachTarget(tendril.direction)}
-          />
-        ))}
 
         {/* Spotlight for focused cluster - illuminates the object when panel is open */}
         {hasArrivedAtCluster && focusedPosition && (
@@ -436,15 +347,6 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
         <Preload all />
       </Canvas>
 
-      {/* HESSI tooltip - shown on hover */}
-      {isLoggedIn && hessiHovered && (
-        <HessiTooltip
-          isCharging={hessiCharging}
-          isProcessing={hessiProcessing}
-          isReceiving={hessiReceiving}
-        />
-      )}
-
       {/* VoidHUD and cluster panel only shown when logged in */}
       {isLoggedIn && (
         <>
@@ -452,9 +354,8 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
             publicKey={publicKey}
             isActive={true}
             loginAnimationPhase={loginAnimationPhase}
-            onUserMessageSent={handleUserMessageSent}
             onAgentResponseReceived={handleAgentResponseReceived}
-            tendrilHit={tendrilHit}
+            glowActive={glowActive}
             hecatePanelOpen={hecatePanelOpen}
             onHecatePanelChange={onHecatePanelChange}
           />
