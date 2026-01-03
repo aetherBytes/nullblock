@@ -67,16 +67,41 @@ windows:
       panes:
         - |
           echo "🎨 Starting Frontend (Hecate React App)..."
+          echo "=============================================="
           cd svc/hecate
-          echo "🧹 Clearing Vite cache..."
-          rm -rf node_modules/.vite
-          echo "Installing/updating npm dependencies..."
-          npm install
+          echo ""
+          echo "📋 Environment Info:"
+          echo "   Node: $(node --version)"
+          echo "   npm:  $(npm --version)"
+          echo ""
+          echo "🔗 API Endpoints:"
           export VITE_PROTOCOLS_API_URL=http://localhost:8001
           export VITE_A2A_API_URL=http://localhost:8001
           export VITE_EREBUS_API_URL=http://localhost:3000
           export VITE_HECATE_API_URL=http://localhost:9003
-          echo "🚀 Starting React development server..."
+          echo "   VITE_EREBUS_API_URL=$VITE_EREBUS_API_URL"
+          echo "   VITE_PROTOCOLS_API_URL=$VITE_PROTOCOLS_API_URL"
+          echo "   VITE_HECATE_API_URL=$VITE_HECATE_API_URL"
+          echo ""
+          echo "🔧 Chrome DevTools MCP:"
+          echo "   Debug port: 9222"
+          echo "   Profile: /tmp/chrome-nullblock-dev"
+          echo ""
+          echo "🧹 Clearing Vite cache..."
+          rm -rf node_modules/.vite
+          echo "📦 Installing/updating npm dependencies..."
+          npm install --silent
+          echo ""
+          echo "⏳ Waiting for backend services..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000/health > /dev/null 2>&1; then
+              echo "✅ Erebus ready"
+              break
+            fi
+            sleep 1
+          done
+          echo ""
+          echo "🚀 Starting Vite dev server..."
           npm run develop
 
 on_project_start: |
@@ -87,6 +112,16 @@ on_project_start: |
     echo "OPENROUTER_API_KEY=your-openrouter-key-here" >> .env.dev
     echo "Please edit .env.dev with your actual API keys"
   fi
+  echo "🌐 Starting Chrome with remote debugging (port 9222)..."
+  pkill -f "Chrome.*remote-debugging-port=9222" 2>/dev/null || true
+  sleep 1
+  /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+    --remote-debugging-port=9222 \
+    --user-data-dir=/tmp/chrome-nullblock-dev \
+    --no-first-run \
+    --no-default-browser-check \
+    "http://localhost:5173" &
+  echo "✅ Chrome DevTools MCP ready on port 9222"
   echo "📁 Creating log directory structure..."
   mkdir -p logs
   mkdir -p svc/nullblock-agents/logs
@@ -108,6 +143,7 @@ on_project_start: |
   echo "   🌐 Protocol Server (A2A/MCP): http://localhost:8001"
   echo "   🎯 Hecate Agent (Rust): http://localhost:9003"
   echo "   🎨 Frontend: http://localhost:5173"
+  echo "   🔧 Chrome DevTools (MCP): localhost:9222"
   echo ""
   echo "🦀 Rust Services:"
   echo "   ✅ Hecate Agent - High-performance conversational AI"
@@ -128,4 +164,6 @@ on_project_start: |
 on_project_stop: |
   echo "🛑 Stopping development services using 'just term'..."
   just term
+  echo "🌐 Stopping Chrome debug instance..."
+  pkill -f "Chrome.*remote-debugging-port=9222" 2>/dev/null || true
   echo "✅ All services stopped and cleaned up"
