@@ -3,8 +3,6 @@ import * as THREE from 'three';
 import CrossroadsOrb from './CrossroadsOrb';
 import ParticleField from './ParticleField';
 import NeuralLines from './NeuralLines';
-import AgentClusters from './AgentClusters';
-import type { ClusterData } from '../VoidExperience';
 
 // Shared constellation node type
 export interface ConstellationNode {
@@ -21,23 +19,7 @@ export interface ClusterOrbit {
   phase: number;       // Initial phase offset
 }
 
-interface VoidSceneProps {
-  hoveredCluster: string | null;
-  selectedClusterId: string | null;
-  onClusterHover: (clusterId: string | null) => void;
-  onClusterClick: (cluster: ClusterData, position: THREE.Vector3) => void;
-  isInteractive?: boolean; // Controls whether clusters can be clicked/hovered
-  onHecatePositionUpdate?: (position: THREE.Vector3) => void;
-}
-
-const VoidScene: React.FC<VoidSceneProps> = ({
-  hoveredCluster,
-  selectedClusterId,
-  onClusterHover,
-  onClusterClick,
-  isInteractive = true,
-  onHecatePositionUpdate,
-}) => {
+const VoidScene: React.FC = () => {
   // Track which constellation nodes have active tendrils
   const [activeNodes, setActiveNodes] = useState<Set<number>>(new Set());
 
@@ -155,16 +137,6 @@ const VoidScene: React.FC<VoidSceneProps> = ({
         constellationNodes={constellationNodes}
         animatedPositionsRef={animatedPositionsRef}
         onActiveNodesChange={handleActiveNodesChange}
-      />
-
-      {/* Floating agent clusters - always visible, interactivity controlled via prop */}
-      <AgentClusters
-        hoveredCluster={hoveredCluster}
-        selectedClusterId={selectedClusterId}
-        onClusterHover={onClusterHover}
-        onClusterClick={onClusterClick}
-        isInteractive={isInteractive}
-        onHecatePositionUpdate={onHecatePositionUpdate}
       />
     </group>
   );

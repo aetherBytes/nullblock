@@ -21,6 +21,16 @@ Together, we shape the future of autonomous commerce.
 **📦 SDK**: [nullblock-sdk](https://github.com/aetherBytes/nullblock-sdk)
 **🌍 Site**: NullBlock.io _(Coming Soon)_
 
+## 📚 Documentation
+
+Project documentation lives in the `agents/` directory:
+- **AGENTS.md** - Agent system documentation and specifications
+- **MANIFESTO.md** - NullBlock vision and philosophy
+- **SETUP.md** - SDK and repository setup guides
+- **NULLBLOCK_NAME_MEANING.md** - Brand naming etymology
+
+For updates and project instructions, edit files in `agents/`.
+
 ### 🚧 Current Development Focus
 
 **Priority Tasks:**
@@ -192,7 +202,7 @@ Supports: **Web3 Wallets**, **API Keys**, **Email Auth**, **OAuth**, **System Ag
 
 ## 🤖 Agent System
 
-**📖 For detailed agent documentation, see [AGENTS.md](./AGENTS.md)**
+**📖 For detailed agent documentation, see [AGENTS.md](./agents/AGENTS.md)**
 
 ### HECATE Agent
 
@@ -632,14 +642,6 @@ ln -s ../../.env.dev svc/erebus/.env.dev
 
 - 🔄 **Task State Naming Mismatch** - A2A protocol uses "working" state, but Hecate process endpoint expects "created" or "running" - need to align state transitions and validate task lifecycle
 - 🔄 **Hecate Auto-Processing** - Tasks created with auto_start=true transition to "working" state but don't automatically process with Hecate agent
-
-### Temporarily Removed Components 🔒
-
-Components temporarily removed from the UI but preserved for future use:
-
-| Component | Location | Reason | Files |
-|-----------|----------|--------|-------|
-| **MemFeed** | Navbar + VoidOverlay | Temporarily disabled pending redesign | `svc/hecate/src/components/hud/MemFeed.tsx`, `MemFeed.module.scss` |
 
 ### Next Up 📋
 
