@@ -54,9 +54,16 @@ export default defineConfig({
       const timestamp = new Date().toISOString();
       console.log(`🌐 [${timestamp}] ⚠️  Vite: ${msg}`);
     },
+    warnOnce: (msg) => {
+      const timestamp = new Date().toISOString();
+      console.log(`🌐 [${timestamp}] ⚠️  Vite: ${msg}`);
+    },
     error: (msg) => {
       const timestamp = new Date().toISOString();
       console.log(`🌐 [${timestamp}] ❌ Vite: ${msg}`);
     },
+    clearScreen: () => {},
+    hasWarned: false,
+    hasErrorLogged: () => false,
   },
 });
