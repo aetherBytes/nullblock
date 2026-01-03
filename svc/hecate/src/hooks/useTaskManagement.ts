@@ -173,7 +173,8 @@ export const useTaskManagement = (
 
   // Fallback polling for active tasks (until SSE is fully working)
   useEffect(() => {
-    console.log('🔍 Polling effect triggered. tasks:', tasks?.length, 'isConnected:', isConnectedRef.current);
+    // Skip if not connected
+    if (!isConnectedRef.current) return;
 
     const activeTasks = Array.isArray(tasks) ? tasks.filter(task =>
       task.status.state === 'submitted' ||
@@ -181,17 +182,10 @@ export const useTaskManagement = (
       task.status.state === 'input-required'
     ) : [];
 
-    console.log('🔍 Active tasks found:', activeTasks.length);
+    // Only poll when there are active tasks
     if (activeTasks.length > 0) {
-      console.log('🔍 Active task states:', activeTasks.map(t => ({ id: t.id, name: t.name, state: t.status.state })));
-    }
-
-    if (activeTasks.length > 0 && isConnectedRef.current) {
-      console.log(`🔄 STARTING POLLING for ${activeTasks.length} active tasks`);
-
       const pollInterval = setInterval(async () => {
         try {
-          console.log('🔄 Polling for task status updates...');
           await loadTasks();
         } catch (e) {
           console.warn('⚠️ Failed to poll for task updates:', e);
@@ -199,11 +193,8 @@ export const useTaskManagement = (
       }, 2000); // Poll every 2 seconds for smooth updates
 
       return () => {
-        console.log('⏹️ Stopping task polling');
         clearInterval(pollInterval);
       };
-    } else {
-      console.log('⏸️ Polling not started. activeTasks:', activeTasks.length, 'isConnected:', isConnectedRef.current);
     }
   }, [tasks, loadTasks]);
 
