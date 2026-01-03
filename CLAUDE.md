@@ -26,7 +26,7 @@ Together, we shape the future of autonomous commerce.
 Project documentation lives in the `agents/` directory:
 - **AGENTS.md** - Agent system documentation and specifications
 - **MANIFESTO.md** - NullBlock vision and philosophy
-- **SETUP.md** - SDK and repository setup guides
+- **SDK_SETUP.md** - SDK and repository setup guides
 - **NULLBLOCK_NAME_MEANING.md** - Brand naming etymology
 
 For updates and project instructions, edit files in `agents/`.
@@ -37,14 +37,12 @@ For updates and project instructions, edit files in `agents/`.
 
 1. **🔵 Get X Account Verified** - Obtain verified status for [@Nullblock_io](https://x.com/Nullblock_io) to establish credibility and official presence
 2. **💰 Marketing & Token Strategy** - Develop marketing strategy, purchase additional supply in dev wallet, implement token lock mechanisms
-3. **💬 Community Channels** - Set up Discord and Telegram channels - the people are demanding it!
-4. **🌐 WEB3 WILDS X Community** - Start planning the "WEB3 WILDS" X community initiative - branding, content strategy, launch timeline, and engagement mechanics
-5. **🤖 Agent Model Selection** - Make sure Siren / other agents do not get stuck on a default model. Should follow model selections of user.
-6. **🔄 Crossroads Login Reload** - Crossroads needs to reload content after success on login
-7. **✅ A2A Task Schema & Integration** - COMPLETED: Full A2A Protocol v0.3.0 compliance with task schema, repository methods, handler population of history/artifacts, and Protocols→Agents HTTP integration
-8. **✅ Docker & Replication Infrastructure** - COMPLETED: Fixed PostgreSQL logical replication with container-first architecture, system-agnostic design working on macOS and Linux
-9. **🔄 Task State Alignment** - A2A protocol uses "working" state but Hecate expects "created"/"running" - reconcile state transitions and implement auto-processing for auto_start=true tasks
-10. **📋 A2A Streaming (SSE)** - Implement Server-Sent Events for message/stream and tasks/resubscribe, bridge Kafka task.lifecycle events to SSE streams for real-time updates
+3. **💬 Community Channels** - Set up Discord and Telegram channels
+4. **🌐 WEB3 WILDS X Community** - Plan the "WEB3 WILDS" X community initiative - branding, content strategy, launch timeline
+5. **🤖 Agent Model Selection** - Siren/other agents should follow user's model selections, not get stuck on default
+6. **🔄 Crossroads Login Reload** - Crossroads needs to reload content after successful login
+7. **🔄 Task State Alignment** - Reconcile A2A "working" state with Hecate "created"/"running" states
+8. **📋 A2A Streaming (SSE)** - Implement Server-Sent Events for message/stream and tasks/resubscribe
 
 ## Architecture Overview
 
@@ -80,10 +78,9 @@ For updates and project instructions, edit files in `agents/`.
 - **Crossroads** (`/svc/erebus/src/resources/crossroads/`): Marketplace subsystem
 - **Hecate Frontend** (`/svc/hecate/`): React interface with real-time agent discovery
 
-### Legacy (Transitioning)
+### Legacy Services
 
-- **Helios** → Replaced by NullBlock.protocols
-- **NullBlock.orchestration** → Integrated into agents
+_Legacy services (Helios, NullBlock.orchestration) have been removed. All protocol handling is in NullBlock.protocols, and orchestration is integrated into NullBlock.agents._
 
 ## 🚀 Quick Start
 
@@ -404,7 +401,7 @@ PGPASSWORD="postgres_secure_pass" psql -h localhost -p 5441 -U postgres -d agent
 
 ### Design Documentation
 
-See `CROSSROADS_UI_DESIGN.md` and `CROSSROADS_BACKEND_PLAN.md` for complete architecture, component breakdown, and implementation roadmap.
+See `archive/crossroads/CROSSROADS_UI_DESIGN.md` and `archive/crossroads/CROSSROADS_BACKEND_PLAN.md` for complete architecture, component breakdown, and implementation roadmap.
 
 ## 📋 Common Commands
 
@@ -617,7 +614,7 @@ ln -s ../../.env.dev svc/erebus/.env.dev
 - ✅ Source-agnostic user system with SourceType enum
 - ✅ PostgreSQL logical replication for user sync (Erebus→Agents)
 
-**Docker & Container Architecture (October 2025):**
+**Docker & Container Architecture:**
 
 - ✅ **Container-First Architecture** - All infrastructure runs in Docker containers with bridge networking
 - ✅ **System-Agnostic Design** - Identical behavior on macOS and Linux using Docker networking features
@@ -628,7 +625,7 @@ ln -s ../../.env.dev svc/erebus/.env.dev
 - ✅ **Container Golden Rules** - Added comprehensive documentation to CLAUDE.md preventing future networking issues
 - ✅ **Migration Script Updates** - Subscription migration now uses internal container ports (5432) instead of external host ports
 
-**LLM & Error Handling (December 2025):**
+**LLM & Error Handling:**
 
 - ✅ **OpenRouter API Key Validation** - Startup validation detects missing/placeholder keys with clear error messages
 - ✅ **Anonymous Access Detection** - Runtime detection when API key not loaded properly (detects `user_*` anonymous IDs)

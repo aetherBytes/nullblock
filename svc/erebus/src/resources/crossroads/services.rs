@@ -48,13 +48,12 @@ impl NullblockServiceIntegrator {
                             "status": health_status,
                             "endpoint": "/api/agents/hecate",
                             "capabilities": ["chat", "reasoning", "model_switching", "task_execution"],
-                            "description": "Primary conversational interface and orchestration engine",
+                            "description": "Primary conversational interface and task execution engine",
                             "hecate_status": hecate_status,
                             "metrics": {
                                 "tasks_processed": hecate_status.get("tasks_processed").unwrap_or(&serde_json::json!(0)),
                                 "last_activity": hecate_status.get("last_activity").unwrap_or(&serde_json::json!("unknown")),
                                 "llm_factory": hecate_status.get("current_model").unwrap_or(&serde_json::json!("unknown")),
-                                "orchestration_enabled": true,
                                 "raw_status": raw_status
                             }
                         }));
@@ -67,7 +66,7 @@ impl NullblockServiceIntegrator {
                             "status": "unhealthy",
                             "endpoint": "/api/agents/hecate",
                             "capabilities": ["chat", "reasoning", "model_switching", "task_execution"],
-                            "description": "Primary conversational interface and orchestration engine",
+                            "description": "Primary conversational interface and task execution engine",
                             "note": "Agent found but response parsing failed"
                         }));
                     }
@@ -81,7 +80,7 @@ impl NullblockServiceIntegrator {
                     "status": "unhealthy",
                     "endpoint": "/api/agents/hecate",
                     "capabilities": ["chat", "reasoning", "model_switching", "task_execution"],
-                    "description": "Primary conversational interface and orchestration engine",
+                    "description": "Primary conversational interface and task execution engine",
                     "note": format!("Service responded with HTTP {}", response.status())
                 }));
             }
@@ -93,7 +92,7 @@ impl NullblockServiceIntegrator {
                     "status": "unhealthy",
                     "endpoint": "/api/agents/hecate",
                     "capabilities": ["chat", "reasoning", "model_switching", "task_execution"],
-                    "description": "Primary conversational interface and orchestration engine",
+                    "description": "Primary conversational interface and task execution engine",
                     "note": "Using fallback data due to service unavailability"
                 }));
             }
@@ -210,43 +209,21 @@ impl NullblockServiceIntegrator {
         }
     }
 
-    /// Discover workflows via shared ExternalService
+    /// Discover workflows - returns placeholder data
+    /// Note: Workflow orchestration has been integrated into the Agents service
     pub async fn discover_workflows_from_service(&self) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
-        info!("🔄 Discovering workflows via shared ExternalService");
-        
-        // Use the shared ExternalService to call orchestration directly
-        match self.external_service.call_orchestration("health").await {
-            Ok(orchestration_status) => {
-                info!("✅ Successfully discovered workflows via ExternalService");
-                let workflows = vec![
-                    serde_json::json!({
-                        "name": "agent-coordination-workflow",
-                        "description": "Coordinates multiple agents for complex tasks",
-                        "steps": ["initialize", "delegate", "aggregate", "finalize"],
-                        "estimated_duration": "5-10 minutes",
-                        "status": "available",
-                        "orchestration_status": orchestration_status,
-                        "note": "Available via shared ExternalService - no HTTP overhead"
-                    })
-                ];
-                Ok(workflows)
-            }
-            Err(e) => {
-                warn!("⚠️ Failed to discover workflows via ExternalService: {}", e);
-                // Return mock data as fallback
-                let workflows = vec![
-                    serde_json::json!({
-                        "name": "agent-coordination-workflow",
-                        "description": "Coordinates multiple agents for complex tasks",
-                        "steps": ["initialize", "delegate", "aggregate", "finalize"],
-                        "estimated_duration": "5-10 minutes",
-                        "status": "unavailable",
-                        "note": "Using fallback data due to service unavailability"
-                    })
-                ];
-                Ok(workflows)
-            }
-        }
+        info!("🔄 Discovering workflows (integrated into Agents service)");
+
+        // Workflows are now handled by the Agents service via task management
+        let workflows = vec![
+            serde_json::json!({
+                "name": "task-workflow",
+                "description": "Task-based workflow via Agents service",
+                "status": "integrated",
+                "note": "Workflows are now managed through the task system in nullblock-agents"
+            })
+        ];
+        Ok(workflows)
     }
 
     /// Check health of services using shared ExternalService
