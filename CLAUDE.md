@@ -28,6 +28,7 @@ Project documentation lives in the `agents/` directory:
 - **MANIFESTO.md** - NullBlock vision and philosophy
 - **SDK_SETUP.md** - SDK and repository setup guides
 - **NULLBLOCK_NAME_MEANING.md** - Brand naming etymology
+- **MCP_SERVERS.md** - MCP server integrations (Chrome DevTools, PixelLab)
 
 For updates and project instructions, edit files in `agents/`.
 
