@@ -1,3 +1,8 @@
+// Siren Marketing Agent - Content generation and social media
+// Contains scaffolding fields for future Twitter/content features
+
+#![allow(dead_code)]
+
 use crate::{
     config::ApiKeys,
     database::repositories::AgentRepository,

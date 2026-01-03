@@ -111,8 +111,6 @@ export const useTaskManagement = (
 
   // SSE integration for real-time task updates
   const handleTaskUpdate = useCallback((event: TaskLifecycleEvent) => {
-    console.log('📨 Real-time task update:', event);
-
     setTasks(prevTasks => {
       const taskIndex = prevTasks.findIndex(t => t.id === event.task_id);
       if (taskIndex >= 0) {
@@ -158,14 +156,7 @@ export const useTaskManagement = (
   const sseHook = useSSE({
     onTaskUpdate: handleTaskUpdate,
     onError: (error) => {
-      console.error('❌ SSE error:', error);
       setError(error.message);
-    },
-    onConnect: () => {
-      console.log('✅ SSE connected');
-    },
-    onDisconnect: () => {
-      console.log('⚠️ SSE disconnected');
     },
     autoReconnect: true,
     reconnectInterval: 5000,
@@ -188,7 +179,7 @@ export const useTaskManagement = (
         try {
           await loadTasks();
         } catch (e) {
-          console.warn('⚠️ Failed to poll for task updates:', e);
+          // Polling failure - will retry on next interval
         }
       }, 2000); // Poll every 2 seconds for smooth updates
 
@@ -203,8 +194,6 @@ export const useTaskManagement = (
     const initializeConnection = async () => {
       setIsLoading(true);
       try {
-        console.log('🔗 Attempting to connect to task service...');
-
         // Set wallet context for task service
         const walletType = localStorage.getItem('walletType');
         const chain = walletType === 'phantom' ? 'solana' : walletType === 'metamask' ? 'ethereum' : 'solana';
@@ -212,17 +201,13 @@ export const useTaskManagement = (
 
         const connected = await taskService.connect();
         isConnectedRef.current = connected;
-        console.log('🔗 Task service connection:', connected ? 'SUCCESS' : 'FAILED');
 
         if (connected) {
-          console.log('📋 Loading task data for wallet:', walletPublicKey, 'on chain:', chain);
           await loadTasks();
         } else {
-          console.log('⚠️ Task service unavailable - no tasks will be loaded');
           setError('Task service is unavailable. Please check your connection.');
         }
       } catch (err) {
-        console.error('❌ Task management initialization error:', err);
         setError((err as Error).message);
       } finally {
         setIsLoading(false);
@@ -244,7 +229,6 @@ export const useTaskManagement = (
 
   // Task operations
   const createTask = useCallback(async (request: TaskCreationRequest): Promise<boolean> => {
-    console.log('📋 Creating task:', request);
     setError(null);
 
     if (!isConnectedRef.current) {
@@ -255,39 +239,25 @@ export const useTaskManagement = (
     try {
       setIsLoading(true);
       const response = await taskService.createTask(request);
-      console.log('🔍 useTaskManagement received response:', response);
-      console.log('🔍 response.success:', response.success);
-      console.log('🔍 response.data:', response.data);
-      console.log('🔍 Check result:', response.success && response.data);
 
       if (response.success && response.data) {
         setTasks(prev => [response.data!, ...ensureArray(prev)]);
-        console.log('✅ Task created via backend:', response.data);
 
         // Refresh tasks immediately to show the new task
         setTimeout(async () => {
           try {
-            console.log('🔄 Refreshing tasks after creation');
             await loadTasks();
           } catch (e) {
-            console.warn('⚠️ Failed to refresh tasks after creation:', e);
+            // Failed to refresh - will sync on next poll
           }
         }, 500); // Quick refresh to show task in UI
 
-        // If auto_start is true, the backend handles processing automatically
-        if (request.auto_start) {
-          console.log('🔄 Auto-start task created, backend will handle processing automatically');
-          // Backend already processes auto_start tasks, polling will monitor completion
-        }
-
         return true;
       } else {
-        console.error('❌ Task creation check failed. success:', response.success, 'data:', !!response.data);
         setError(response.error || 'Failed to create task');
         return false;
       }
     } catch (error) {
-      console.error('❌ Task creation error:', error);
       setError((error as Error).message);
       return false;
     } finally {
@@ -296,8 +266,6 @@ export const useTaskManagement = (
   }, []);
 
   const updateTask = useCallback(async (request: TaskUpdateRequest): Promise<boolean> => {
-    console.log('📝 Updating task:', request);
-
     if (!isConnectedRef.current) {
       setError('Task service is not available');
       return false;
@@ -310,22 +278,18 @@ export const useTaskManagement = (
         if (activeTask?.id === request.id) {
           setActiveTask(response.data);
         }
-        console.log('✅ Task updated via backend');
         return true;
       } else {
         setError(response.error || 'Failed to update task');
         return false;
       }
     } catch (error) {
-      console.error('❌ Task update error:', error);
       setError((error as Error).message);
       return false;
     }
   }, [activeTask?.id]);
 
   const deleteTask = useCallback(async (id: string): Promise<boolean> => {
-    console.log('🗑️ Deleting task:', id);
-
     if (!isConnectedRef.current) {
       setError('Task service is not available');
       return false;
@@ -338,22 +302,18 @@ export const useTaskManagement = (
         if (activeTask?.id === id) {
           setActiveTask(null);
         }
-        console.log('✅ Task deleted via backend');
         return true;
       } else {
         setError(response.error || 'Failed to delete task');
         return false;
       }
     } catch (error) {
-      console.error('❌ Task deletion error:', error);
       setError((error as Error).message);
       return false;
     }
   }, [activeTask?.id]);
 
   const startTask = useCallback(async (id: string): Promise<boolean> => {
-    console.log('▶️ Starting task:', id);
-
     if (!isConnectedRef.current) {
       setError('Task service is not available');
       return false;
@@ -372,14 +332,12 @@ export const useTaskManagement = (
         return false;
       }
     } catch (error) {
-      console.error('❌ Task start error:', error);
       setError((error as Error).message);
       return false;
     }
   }, [activeTask?.id]);
 
   const pauseTask = useCallback(async (id: string): Promise<boolean> => {
-    console.log('⏸️ Pausing task:', id);
     try {
       const response = await taskService.pauseTask(id);
       if (response.success && response.data) {
@@ -393,14 +351,12 @@ export const useTaskManagement = (
         return false;
       }
     } catch (error) {
-      console.error('❌ Task pause error:', error);
       setError((error as Error).message);
       return false;
     }
   }, [activeTask?.id]);
 
   const resumeTask = useCallback(async (id: string): Promise<boolean> => {
-    console.log('▶️ Resuming task:', id);
     try {
       const response = await taskService.resumeTask(id);
       if (response.success && response.data) {
@@ -414,14 +370,12 @@ export const useTaskManagement = (
         return false;
       }
     } catch (error) {
-      console.error('❌ Task resume error:', error);
       setError((error as Error).message);
       return false;
     }
   }, [activeTask?.id]);
 
   const cancelTask = useCallback(async (id: string): Promise<boolean> => {
-    console.log('🚫 Cancelling task:', id);
     try {
       const response = await taskService.cancelTask(id);
       if (response.success && response.data) {
@@ -435,14 +389,12 @@ export const useTaskManagement = (
         return false;
       }
     } catch (error) {
-      console.error('❌ Task cancel error:', error);
       setError((error as Error).message);
       return false;
     }
   }, [activeTask?.id]);
 
   const retryTask = useCallback(async (id: string): Promise<boolean> => {
-    console.log('🔄 Retrying task:', id);
     try {
       const response = await taskService.retryTask(id);
       if (response.success && response.data) {
@@ -456,22 +408,18 @@ export const useTaskManagement = (
         return false;
       }
     } catch (error) {
-      console.error('❌ Task retry error:', error);
       setError((error as Error).message);
       return false;
     }
   }, [activeTask?.id]);
 
   const processTask = useCallback(async (id: string, isAutoProcessing: boolean = false): Promise<boolean> => {
-    console.log('⚡ Processing task:', id);
-
     // First try to get task from current tasks array
     let task = ensureArray(tasks).find(t => t.id === id);
     let taskName = task?.name;
 
     // If task not found in current array, try to fetch it first
     if (!task) {
-      console.log('🔍 Task not found in current array, fetching task details...');
       try {
         const taskResponse = await taskService.getTask(id);
         if (taskResponse.success && taskResponse.data) {
@@ -479,19 +427,15 @@ export const useTaskManagement = (
           taskName = task.name;
         }
       } catch (error) {
-        console.warn('⚠️ Failed to fetch task details:', error);
+        // Failed to fetch task details - continue with processing
       }
     }
 
     try {
-      console.log(`🔧 Making processTask API call for task: ${id}`);
       const response = await taskService.processTask(id);
-      console.log(`📤 ProcessTask API response:`, response);
       if (response.success && response.data) {
         // Use the task name from the response data if available, otherwise fall back to what we found
         const finalTaskName = response.data.name || taskName || 'Unknown Task';
-
-        console.log('✅ Task processed successfully:', finalTaskName);
 
         setTasks(prev => ensureArray(prev).map(t => t.id === id ? response.data! : t));
         if (activeTask?.id === id) {
@@ -522,12 +466,9 @@ export const useTaskManagement = (
       } else {
         const finalTaskName = taskName || 'Unknown Task';
 
-        console.log(`❌ ProcessTask failed for task ${id}:`, response);
         // Only set global error state if this is not auto-processing
         if (!isAutoProcessing) {
           setError(response.error || 'Failed to process task');
-        } else {
-          console.warn('⚠️ Auto-processing failed:', response.error || 'Failed to process task');
         }
 
         // Add chat notification for task failure
@@ -538,14 +479,11 @@ export const useTaskManagement = (
         return false;
       }
     } catch (error) {
-      console.error('❌ Task processing error:', error);
       const finalTaskName = taskName || 'Unknown Task';
 
       // Only set global error state if this is not auto-processing
       if (!isAutoProcessing) {
         setError((error as Error).message);
-      } else {
-        console.warn('⚠️ Auto-processing error:', (error as Error).message);
       }
 
       // Add chat notification for task error

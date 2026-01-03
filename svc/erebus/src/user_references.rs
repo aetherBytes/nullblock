@@ -1,3 +1,8 @@
+// User reference system for multi-source authentication
+// Contains scaffolding methods for future authentication providers
+
+#![allow(dead_code)]
+
 use crate::database::Database;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue, Map as JsonMap};

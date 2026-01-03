@@ -1,3 +1,8 @@
+// Crossroads marketplace service integration
+// Contains scaffolding for future marketplace features
+
+#![allow(dead_code)]
+
 use serde_json::Value;
 use tracing::{info, warn};
 use std::sync::Arc;

@@ -99,6 +99,7 @@ impl EncryptionService {
             .map_err(|e| EncryptionError::DecryptionFailed(format!("Invalid UTF-8: {}", e)))
     }
 
+    #[allow(dead_code)]
     pub fn mask_api_key(api_key: &str) -> String {
         if api_key.len() <= 10 {
             return format!("{}***", &api_key[..2.min(api_key.len())]);

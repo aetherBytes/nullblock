@@ -1,3 +1,8 @@
+// Wallet service for multi-chain wallet support
+// Contains utility methods for wallet validation and information
+
+#![allow(dead_code)]
+
 use crate::resources::types::{
     DetectedWallet, InstallPrompt, WalletDetectionResponse, WalletConnectionRequest,
     WalletConnectionResponse, WalletInfo, WalletStatusResponse, WalletProvider,

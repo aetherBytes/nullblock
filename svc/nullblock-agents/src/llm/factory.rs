@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{
     config::ApiKeys,
     error::{AppError, AppResult},

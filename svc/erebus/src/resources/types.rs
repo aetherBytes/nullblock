@@ -107,9 +107,9 @@ pub trait WalletProvider {
 }
 
 // Session management
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct WalletSession {
-    #[allow(dead_code)]
     pub session_token: String,
     pub wallet_address: String,
     pub wallet_type: String,

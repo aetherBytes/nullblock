@@ -156,24 +156,13 @@ class HecateAgentService {
     }
 
     try {
-      console.log('🔄 Requesting available models from backend via Erebus:', `${this.erebusUrl}/api/agents/hecate/available-models`);
       const response = await fetch(`${this.erebusUrl}/api/agents/hecate/available-models`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('✅ Received models from backend:', {
-        totalModels: data.models?.length || 0,
-        currentModel: data.current_model,
-        sampleModels: data.models?.slice(0, 3).map((m: any) => ({
-          id: m.id,
-          name: m.display_name || m.name,
-          created: m.created,
-          created_at: m.created_at
-        }))
-      });
       return data;
     } catch (error) {
       console.error('Failed to get available models:', error);
@@ -219,7 +208,6 @@ class HecateAgentService {
   async setPersonality(_personality: string): Promise<boolean> {
     // HECATE now uses a unified vessel AI personality
     // This method is kept for backwards compatibility but does nothing
-    console.info('HECATE maintains unified vessel AI personality');
     return true;
   }
 

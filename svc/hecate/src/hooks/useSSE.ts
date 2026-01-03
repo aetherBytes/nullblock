@@ -39,18 +39,15 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
 
   const createTaskSubscription = useCallback((taskId: string) => {
     if (taskSubscriptions.current.has(taskId)) {
-      console.log(`🔌 Already subscribed to task ${taskId}`);
       return;
     }
 
     const url = `${erebusUrl}/a2a/tasks/${taskId}/sse`;
-    console.log(`🔌 Subscribing to task SSE: ${url}`);
 
     try {
       const eventSource = new EventSource(url);
 
       eventSource.onopen = () => {
-        console.log(`✅ SSE connection opened for task ${taskId}`);
         isConnectedRef.current = true;
         if (onConnect) {
           onConnect();
@@ -61,22 +58,20 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
         try {
           if (event.data && event.data !== 'keep-alive') {
             const parsedEvent = JSON.parse(event.data) as TaskLifecycleEvent;
-            console.log(`📨 Task SSE event for ${taskId}:`, parsedEvent);
 
             if (onTaskUpdate) {
               onTaskUpdate(parsedEvent);
             }
           }
         } catch (error) {
-          console.error(`❌ Failed to parse SSE event for task ${taskId}:`, error);
+          console.error(`Failed to parse SSE event for task ${taskId}:`, error);
           if (onError) {
             onError(error as Error);
           }
         }
       };
 
-      eventSource.onerror = (error) => {
-        console.error(`❌ SSE error for task ${taskId}:`, error);
+      eventSource.onerror = () => {
         eventSource.close();
         taskSubscriptions.current.delete(taskId);
         isConnectedRef.current = taskSubscriptions.current.size > 0 || messageSubscription.current !== null;
@@ -91,7 +86,6 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
 
         if (autoReconnect) {
           const timeout = setTimeout(() => {
-            console.log(`🔄 Reconnecting to task ${taskId} SSE...`);
             createTaskSubscription(taskId);
           }, reconnectInterval);
           reconnectTimeouts.current.set(taskId, timeout);
@@ -100,7 +94,7 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
 
       taskSubscriptions.current.set(taskId, eventSource);
     } catch (error) {
-      console.error(`❌ Failed to create SSE connection for task ${taskId}:`, error);
+      console.error(`Failed to create SSE connection for task ${taskId}:`, error);
       if (onError) {
         onError(error as Error);
       }
@@ -110,7 +104,6 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
   const destroyTaskSubscription = useCallback((taskId: string) => {
     const eventSource = taskSubscriptions.current.get(taskId);
     if (eventSource) {
-      console.log(`🔌 Unsubscribing from task ${taskId}`);
       eventSource.close();
       taskSubscriptions.current.delete(taskId);
 
@@ -130,18 +123,15 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
 
   const createMessageSubscription = useCallback(() => {
     if (messageSubscription.current) {
-      console.log('🔌 Already subscribed to messages');
       return;
     }
 
     const url = `${erebusUrl}/a2a/messages/sse`;
-    console.log(`🔌 Subscribing to message SSE: ${url}`);
 
     try {
       const eventSource = new EventSource(url);
 
       eventSource.onopen = () => {
-        console.log('✅ Message SSE connection opened');
         isConnectedRef.current = true;
         if (onConnect) {
           onConnect();
@@ -152,22 +142,19 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
         try {
           if (event.data && event.data !== 'keep-alive') {
             const parsedEvent = JSON.parse(event.data);
-            console.log('📨 Message SSE event:', parsedEvent);
 
             if (onMessageUpdate) {
               onMessageUpdate(parsedEvent);
             }
           }
         } catch (error) {
-          console.error('❌ Failed to parse message SSE event:', error);
           if (onError) {
             onError(error as Error);
           }
         }
       };
 
-      eventSource.onerror = (error) => {
-        console.error('❌ Message SSE error:', error);
+      eventSource.onerror = () => {
         eventSource.close();
         messageSubscription.current = null;
         isConnectedRef.current = taskSubscriptions.current.size > 0;
@@ -182,7 +169,6 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
 
         if (autoReconnect) {
           setTimeout(() => {
-            console.log('🔄 Reconnecting to message SSE...');
             createMessageSubscription();
           }, reconnectInterval);
         }
@@ -190,7 +176,6 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
 
       messageSubscription.current = eventSource;
     } catch (error) {
-      console.error('❌ Failed to create message SSE connection:', error);
       if (onError) {
         onError(error as Error);
       }
@@ -199,7 +184,6 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
 
   const destroyMessageSubscription = useCallback(() => {
     if (messageSubscription.current) {
-      console.log('🔌 Unsubscribing from messages');
       messageSubscription.current.close();
       messageSubscription.current = null;
       isConnectedRef.current = taskSubscriptions.current.size > 0;
@@ -212,11 +196,8 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
 
   useEffect(() => {
     return () => {
-      console.log('🧹 Cleaning up all SSE connections');
-
-      taskSubscriptions.current.forEach((eventSource, taskId) => {
+      taskSubscriptions.current.forEach((eventSource) => {
         eventSource.close();
-        console.log(`🔌 Closed task subscription: ${taskId}`);
       });
       taskSubscriptions.current.clear();
 
@@ -227,7 +208,6 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
 
       if (messageSubscription.current) {
         messageSubscription.current.close();
-        console.log('🔌 Closed message subscription');
       }
     };
   }, []);

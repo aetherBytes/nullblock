@@ -1,3 +1,8 @@
+// Log sanitization utilities for secure log handling
+// Contains comprehensive sanitization methods for various data types
+
+#![allow(dead_code)]
+
 use regex::Regex;
 use serde_json::Value;
 use std::collections::HashMap;

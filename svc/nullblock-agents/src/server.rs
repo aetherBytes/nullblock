@@ -12,6 +12,7 @@ use tracing::{info, warn, error};
 
 #[derive(Clone)]
 pub struct AppState {
+    #[allow(dead_code)]
     pub config: Config,
     pub api_keys: ApiKeys,
     pub hecate_agent: Arc<RwLock<HecateAgent>>,

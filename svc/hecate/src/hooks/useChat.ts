@@ -130,17 +130,6 @@ export const useChat = (_publicKey: string | null) => {
     e.preventDefault();
 
     if (isModelChanging || isProcessingChat || nullviewState === 'thinking' || (!defaultModelReady && !currentSelectedModel)) {
-      console.log('🚫 Chat submission blocked:', {
-        isModelChanging,
-        isProcessingChat,
-        nullviewState,
-        defaultModelReady,
-        currentSelectedModel,
-        blockReason: isModelChanging ? 'Model changing' :
-                    isProcessingChat ? 'Chat processing' :
-                    nullviewState === 'thinking' ? 'NullEye thinking' :
-                    'No model ready'
-      });
       return;
     }
 
@@ -158,7 +147,6 @@ export const useChat = (_publicKey: string | null) => {
 
       setNulleyeState('thinking');
       setIsProcessingChat(true);
-      console.log('🧠 Thinking state set, starting async response...');
 
       setTimeout(() => {
         if (chatInputRef.current) {
@@ -179,35 +167,17 @@ export const useChat = (_publicKey: string | null) => {
         throw new Error(`Failed to connect to ${activeAgent} agent`);
       }
 
-      console.log(`🔄 Sending message to ${activeAgent} agent, thinking state should be active...`);
-      
       // Check if this is an image generation request
       const isImageRequest = isImageGenerationRequest(message);
-      if (isImageRequest) {
-        console.log(`🎨 Detected image generation request, using DALL-E 3 model`);
-        // TODO: Implement image generation model selection
-      }
-      
+
       const response = await agentService.chatWithAgent(activeAgent, message);
 
       if (!response.success || !response.data) {
         throw new Error(response.error || `Failed to get response from ${activeAgent} agent`);
       }
 
-      console.log(`✅ Received response from ${activeAgent}, changing from thinking state...`);
-
       // Parse content to detect images
       const { content, images } = parseContentForImages(response.data.content);
-
-      // Validate image generation responses
-      if (isImageRequest) {
-        if (images.length === 0 && !content.includes('data:image')) {
-          console.warn('⚠️ Image generation request but no image found in response');
-          console.warn('⚠️ Response may have been truncated. Content length:', content.length);
-        } else if (images.length > 0) {
-          console.log(`✅ Found ${images.length} image(s) in response`);
-        }
-      }
 
       const messageId = (Date.now() + 1).toString();
       const imageIds: string[] = [];
