@@ -889,12 +889,6 @@ const Home: React.FC = () => {
         theme={currentTheme}
         loginAnimationPhase={currentAnimationPhase}
         isLoggedIn={!!publicKey && currentAnimationPhase === 'complete'}
-        onTabSelect={(tab) => {
-          if (tab === 'hecate' || tab === 'crossroads') {
-            setHudInitialTab(tab);
-            setShowHUD(true);
-          }
-        }}
         hecatePanelOpen={hecatePanelOpen}
         onHecatePanelChange={setHecatePanelOpen}
       />

@@ -5,30 +5,12 @@ import * as THREE from 'three';
 import VoidScene from './scene/VoidScene';
 import CameraController from './scene/CameraController';
 import VoidHUD from './VoidHUD';
-import ClusterPanel from '../hud/ClusterPanel';
-import HecatePanel from '../hud/HecatePanel';
 import styles from './VoidExperience.module.scss';
 
-
-export interface ClusterData {
-  id: string;
-  name: string;
-  type: 'agent' | 'protocol' | 'service' | 'tool';
-  status: 'healthy' | 'unhealthy' | 'unknown';
-  description?: string;
-  color: string;
-  metrics?: {
-    tasksProcessed?: number;
-    uptime?: string;
-    lastActive?: string;
-  };
-}
 
 interface VoidExperienceProps {
   publicKey: string | null;
   theme?: 'null' | 'light' | 'dark';
-  onClusterClick?: (cluster: ClusterData) => void;
-  onTabSelect?: (tab: 'crossroads' | 'hecate') => void;
   loginAnimationPhase?: string;
   isLoggedIn?: boolean; // Controls interactivity and camera position
   hecatePanelOpen?: boolean;
@@ -49,27 +31,18 @@ const PANEL_OPEN_CAMERA = new THREE.Vector3(7, 5, 22); // Zoomed out when Hecate
 const VoidExperience: React.FC<VoidExperienceProps> = ({
   publicKey,
   theme: _theme = 'null',
-  onClusterClick,
-  onTabSelect,
   loginAnimationPhase,
   isLoggedIn = false,
   hecatePanelOpen = false,
   onHecatePanelChange,
 }) => {
-  const [hoveredCluster, setHoveredCluster] = useState<string | null>(null);
-  const [selectedCluster, setSelectedCluster] = useState<ClusterData | null>(null);
   const [isInteracting, setIsInteracting] = useState(false);
   const [cameraTarget, setCameraTarget] = useState<CameraTarget | null>(null);
-  const [hasArrivedAtCluster, setHasArrivedAtCluster] = useState(false);
-  const [hasZoomedToHecate, setHasZoomedToHecate] = useState(false);
+  const [hasZoomedIn, setHasZoomedIn] = useState(false);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
-  const [focusedPosition, setFocusedPosition] = useState<THREE.Vector3 | null>(null);
   const [glowActive, setGlowActive] = useState(false);
   const orbitControlsRef = useRef<any>(null);
   const wasLoggedIn = useRef(false);
-
-  // Track HECATE position (may be useful for future features)
-  const hecatePositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 5));
 
   // Detect if this is a page refresh with existing session (publicKey exists at mount)
   const isReturningUser = useRef(!!publicKey);
@@ -89,7 +62,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
     if (hasTriggeredInitialZoom.current) return;
 
     // Returning user (page refresh with session) - zoom when animation completes
-    if (isReturningUser.current && isLoggedIn && !hasZoomedToHecate) {
+    if (isReturningUser.current && isLoggedIn && !hasZoomedIn) {
       hasTriggeredInitialZoom.current = true;
       wasLoggedIn.current = true;
       setCameraTarget({
@@ -100,7 +73,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
     }
 
     // Fresh login (was not logged in, now is)
-    if (!isReturningUser.current && isLoggedIn && !wasLoggedIn.current && !hasZoomedToHecate) {
+    if (!isReturningUser.current && isLoggedIn && !wasLoggedIn.current && !hasZoomedIn) {
       hasTriggeredInitialZoom.current = true;
       wasLoggedIn.current = true;
       setCameraTarget({
@@ -109,13 +82,13 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
       });
       return;
     }
-  }, [isLoggedIn, hasZoomedToHecate, isCanvasReady]);
+  }, [isLoggedIn, hasZoomedIn, isCanvasReady]);
 
   // Reset state on logout and zoom back out
   useEffect(() => {
     if (!isLoggedIn && wasLoggedIn.current) {
       wasLoggedIn.current = false;
-      setHasZoomedToHecate(false);
+      setHasZoomedIn(false);
       hasTriggeredInitialZoom.current = false;
       isReturningUser.current = false;
 
@@ -130,10 +103,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   // Zoom out when Hecate panel opens, zoom back in when it closes
   useEffect(() => {
     // Only trigger after initial login zoom is complete and user is fully logged in
-    if (!isCanvasReady || !isLoggedIn || !hasZoomedToHecate) return;
-
-    // Don't interfere with cluster navigation
-    if (selectedCluster) return;
+    if (!isCanvasReady || !isLoggedIn || !hasZoomedIn) return;
 
     if (hecatePanelOpen) {
       // Zoom out to give room for the panel
@@ -148,71 +118,18 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
         lookAt: new THREE.Vector3(0, 0, 0),
       });
     }
-  }, [hecatePanelOpen, isCanvasReady, isLoggedIn, hasZoomedToHecate, selectedCluster]);
-
-  const handleClusterHover = useCallback((clusterId: string | null) => {
-    // Only allow hover interaction when logged in
-    if (!isLoggedIn) return;
-    setHoveredCluster(clusterId);
-    document.body.style.cursor = clusterId ? 'pointer' : 'auto';
-  }, [isLoggedIn]);
-
-  const handleClusterClick = useCallback((cluster: ClusterData, position: THREE.Vector3) => {
-    // Only allow click interaction when logged in
-    if (!isLoggedIn) return;
-
-    setSelectedCluster(cluster);
-    setHasArrivedAtCluster(false);
-
-    // Check if this is HECATE - offset to center object in left portion of screen
-    const isHecate = cluster.name.toLowerCase().includes('hecate');
-
-    // Camera position: stay at current distance, just reframe
-    // Position camera in front of the cluster at a comfortable viewing distance
-    const cameraDistance = 7;
-
-    // For HECATE: Panel takes ~1/3 of screen on right, so we need to center
-    // the object in the remaining left 2/3. By looking at a point to the RIGHT
-    // of the object, it shifts LEFT in the frame.
-    const lookAtOffsetX = isHecate ? 3 : 0;
-
-    const cameraPos = new THREE.Vector3(
-      position.x + (isHecate ? -2 : 0), // Slight camera offset
-      position.y + 1.5,
-      position.z + cameraDistance
-    );
-
-    const lookAtPos = new THREE.Vector3(
-      position.x + lookAtOffsetX,
-      position.y,
-      position.z
-    );
-
-    // Store the focused position for spotlight
-    setFocusedPosition(position.clone());
-
-    // Set camera target
-    setCameraTarget({
-      position: cameraPos,
-      lookAt: lookAtPos,
-    });
-
-    onClusterClick?.(cluster);
-  }, [onClusterClick, isLoggedIn]);
+  }, [hecatePanelOpen, isCanvasReady, isLoggedIn, hasZoomedIn]);
 
   const handleCameraArrival = useCallback(() => {
-    if (!hasZoomedToHecate && isLoggedIn) {
+    if (!hasZoomedIn && isLoggedIn) {
       // Just finished zooming to Crossroads on login
-      setHasZoomedToHecate(true);
+      setHasZoomedIn(true);
       setCameraTarget(null); // Clear target
     } else if (!isLoggedIn) {
       // Finished zooming out on logout
       setCameraTarget(null); // Clear target
-    } else {
-      // Arrived at a cluster
-      setHasArrivedAtCluster(true);
     }
-  }, [hasZoomedToHecate, isLoggedIn]);
+  }, [hasZoomedIn, isLoggedIn]);
 
   const handleInteractionStart = useCallback(() => {
     setIsInteracting(true);
@@ -220,30 +137,6 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
 
   const handleInteractionEnd = useCallback(() => {
     setIsInteracting(false);
-  }, []);
-
-  const handleCloseClusterPanel = useCallback(() => {
-    setSelectedCluster(null);
-    setCameraTarget(null); // Return camera to home
-    setHasArrivedAtCluster(false);
-    setFocusedPosition(null);
-  }, []);
-
-  const handleDiveToCrossroads = useCallback((_cluster: ClusterData) => {
-    setSelectedCluster(null);
-    onTabSelect?.('crossroads');
-  }, [onTabSelect]);
-
-  const handleNavigateToHecate = useCallback(() => {
-    setSelectedCluster(null);
-    setCameraTarget(null);
-    setHasArrivedAtCluster(false);
-    onTabSelect?.('hecate');
-  }, [onTabSelect]);
-
-  // HECATE position update handler (kept for potential future use)
-  const handleHecatePositionUpdate = useCallback((position: THREE.Vector3) => {
-    hecatePositionRef.current.copy(position);
   }, []);
 
   // Chat glow effect - triggered when agent responds
@@ -258,7 +151,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
 
   // Use stable orbit settings - only change after zoom completes to avoid jarring transitions
   const isZooming = cameraTarget !== null;
-  const isFullyLoggedIn = isLoggedIn && hasZoomedToHecate;
+  const isFullyLoggedIn = isLoggedIn && hasZoomedIn;
 
   // Keep distance limits wide during zoom to prevent OrbitControls from clamping the camera
   // PRE_LOGIN_CAMERA is at z=24, so maxDistance must stay >= 30 until zoom completes
@@ -277,46 +170,8 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
         <fog attach="fog" args={['#000000', 15, 55]} />
 
         <Suspense fallback={null}>
-          <VoidScene
-            hoveredCluster={hoveredCluster}
-            selectedClusterId={selectedCluster?.id || null}
-            onClusterHover={handleClusterHover}
-            onClusterClick={handleClusterClick}
-            isInteractive={isLoggedIn}
-            onHecatePositionUpdate={handleHecatePositionUpdate}
-          />
+          <VoidScene />
         </Suspense>
-
-        {/* Spotlight for focused cluster - illuminates the object when panel is open */}
-        {hasArrivedAtCluster && focusedPosition && (
-          <>
-            {/* Key light - main illumination from front-right */}
-            <spotLight
-              position={[focusedPosition.x + 4, focusedPosition.y + 3, focusedPosition.z + 5]}
-              target-position={[focusedPosition.x, focusedPosition.y, focusedPosition.z]}
-              intensity={80}
-              angle={0.5}
-              penumbra={0.8}
-              color="#b8d4ff"
-              distance={20}
-              castShadow={false}
-            />
-            {/* Fill light - softer from left */}
-            <pointLight
-              position={[focusedPosition.x - 3, focusedPosition.y + 1, focusedPosition.z + 3]}
-              intensity={15}
-              color="#8ab4ff"
-              distance={12}
-            />
-            {/* Rim light - behind to create edge definition */}
-            <pointLight
-              position={[focusedPosition.x, focusedPosition.y + 2, focusedPosition.z - 4]}
-              intensity={20}
-              color="#a0c8ff"
-              distance={10}
-            />
-          </>
-        )}
 
         {/* Camera controller for smooth traversal */}
         <CameraController
@@ -347,36 +202,17 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
         <Preload all />
       </Canvas>
 
-      {/* VoidHUD and cluster panel only shown when logged in */}
+      {/* VoidHUD only shown when logged in */}
       {isLoggedIn && (
-        <>
-          <VoidHUD
-            publicKey={publicKey}
-            isActive={true}
-            loginAnimationPhase={loginAnimationPhase}
-            onAgentResponseReceived={handleAgentResponseReceived}
-            glowActive={glowActive}
-            hecatePanelOpen={hecatePanelOpen}
-            onHecatePanelChange={onHecatePanelChange}
-          />
-
-          {/* Cluster detail panel - shows after camera arrives */}
-          {selectedCluster && hasArrivedAtCluster && (
-            selectedCluster.name.toLowerCase().includes('hecate') ? (
-              <HecatePanel
-                onClose={handleCloseClusterPanel}
-                onNavigateToHecate={handleNavigateToHecate}
-                status={selectedCluster.status}
-              />
-            ) : (
-              <ClusterPanel
-                cluster={selectedCluster}
-                onClose={handleCloseClusterPanel}
-                onDiveToCrossroads={handleDiveToCrossroads}
-              />
-            )
-          )}
-        </>
+        <VoidHUD
+          publicKey={publicKey}
+          isActive={true}
+          loginAnimationPhase={loginAnimationPhase}
+          onAgentResponseReceived={handleAgentResponseReceived}
+          glowActive={glowActive}
+          hecatePanelOpen={hecatePanelOpen}
+          onHecatePanelChange={onHecatePanelChange}
+        />
       )}
     </div>
   );
