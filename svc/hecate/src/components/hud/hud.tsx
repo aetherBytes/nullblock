@@ -167,16 +167,6 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [chat.chatMessages, eventSystem]);
 
-  // Debug: Log task management state
-  useEffect(() => {
-    console.log('🔍 Task Management State Update:', {
-      tasksCount: taskManagement.tasks.length,
-      filteredTasksCount: taskManagement.filteredTasks.length,
-      isLoading: taskManagement.isLoading,
-      error: taskManagement.error,
-      walletConnected: !!publicKey
-    });
-  }, [taskManagement.tasks, taskManagement.filteredTasks, taskManagement.isLoading, taskManagement.error, publicKey]);
 
   // Watch for initialTab prop changes and mobile menu toggle
   useEffect(() => {
@@ -395,24 +385,12 @@ const HUD: React.FC<HUDProps> = ({
 
   // Auto-load model info when current model changes
   useEffect(() => {
-    console.log('Model info effect triggered:', { currentSelectedModel: modelManagement.currentSelectedModel, activeScope });
     if (modelManagement.currentSelectedModel && activeScope === 'modelinfo') {
-      console.log('Loading model info automatically for:', modelManagement.currentSelectedModel);
       loadModelInfo(modelManagement.currentSelectedModel);
     }
   }, [modelManagement.currentSelectedModel, activeScope]);
 
   // Safety effect to ensure NullEye returns to base state when ready
-  useEffect(() => {
-    if (modelManagement.defaultModelReady && modelManagement.currentSelectedModel && publicKey && mainHudActiveTab === 'hecate') {
-      if (nullviewState === 'thinking' && !modelManagement.isModelChanging && !modelManagement.isLoadingModels && !chat.isProcessingChat) {
-        console.log('🔧 Forcing NullEye to base state - model ready but stuck in thinking');
-        setNulleyeState('base');
-      }
-    }
-  }, [modelManagement.defaultModelReady, modelManagement.currentSelectedModel, publicKey, mainHudActiveTab, nullviewState, modelManagement.isModelChanging, modelManagement.isLoadingModels, chat.isProcessingChat]);
-
-  // Additional safety check - if model is ready and nothing is loading, ensure base state
   useEffect(() => {
     if (
       publicKey &&
@@ -425,7 +403,7 @@ const HUD: React.FC<HUDProps> = ({
       !chat.isProcessingChat &&
       nullviewState === 'thinking'
     ) {
-      console.log('🚨 Emergency NullEye state reset - everything ready but stuck in thinking');
+      // Delay slightly to avoid race conditions
       const timer = setTimeout(() => {
         setNulleyeState('base');
       }, 500);
