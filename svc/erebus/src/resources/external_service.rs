@@ -1,3 +1,8 @@
+// External service integration layer
+// Contains methods for inter-service communication (many are scaffolding)
+
+#![allow(dead_code)]
+
 use reqwest::Client;
 use serde_json::Value;
 use std::sync::Arc;

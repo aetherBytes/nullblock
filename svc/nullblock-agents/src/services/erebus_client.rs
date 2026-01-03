@@ -1,7 +1,11 @@
+// Erebus client for API key and user management
+// Contains scaffolding for future API key decryption features
+
+#![allow(dead_code)]
+
 use crate::error::{AppError, AppResult};
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use tracing::{error, info, warn};
+use serde::Deserialize;
+use tracing::{info, warn};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct DecryptedAgentApiKeyResponse {

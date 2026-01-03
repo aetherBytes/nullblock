@@ -8,7 +8,6 @@ use crate::{
 use axum::{extract::{Query, State}, Json};
 use serde::Deserialize;
 use serde_json::json;
-use std::collections::HashMap;
 use tracing::{info, warn, error};
 
 // Free tier limits to prevent resource exhaustion
@@ -716,17 +715,16 @@ pub async fn set_model(
     let api_keys = state.api_keys.clone();
 
     // Check if user is free tier
-    let mut is_free_tier = false;
-    if let Some(ref user_id) = request.user_id {
+    let is_free_tier = if let Some(ref user_id) = request.user_id {
         let has_own_key = state.erebus_client
             .user_has_api_key(user_id, "openrouter")
             .await
             .unwrap_or(false);
-        is_free_tier = !has_own_key;
+        !has_own_key
     } else {
         // No user_id means treat as free tier (conservative approach)
-        is_free_tier = true;
-    }
+        true
+    };
 
     // For free-tier users, validate the requested model is free
     if is_free_tier {

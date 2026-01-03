@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use chrono::{DateTime, Utc};
 
 pub fn format_timestamp(timestamp: DateTime<Utc>) -> String {

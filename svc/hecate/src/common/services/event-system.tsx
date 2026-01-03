@@ -40,7 +40,6 @@ class EventSystem {
     };
 
     this.eventQueue.push(fullEvent);
-    console.log(`📢 Event published: ${fullEvent.type} from ${fullEvent.source}`);
 
     // Process the event asynchronously
     this.processEvents();
@@ -61,16 +60,11 @@ class EventSystem {
     };
 
     this.subscriptions.set(id, fullSubscription);
-    console.log(`🔔 New subscription: ${subscription.eventType} (${id})`);
     return id;
   }
 
   unsubscribe(subscriptionId: string): boolean {
-    const result = this.subscriptions.delete(subscriptionId);
-    if (result) {
-      console.log(`🔕 Unsubscribed: ${subscriptionId}`);
-    }
-    return result;
+    return this.subscriptions.delete(subscriptionId);
   }
 
   // Event Processing
@@ -97,9 +91,6 @@ class EventSystem {
   }
 
   private async processEvent(event: TaskEvent): Promise<void> {
-    console.log(`⚡ Processing event: ${event.type} - ${event.data?.message || 'No message'}`);
-
-    // Add event-specific processing logic here
     switch (event.type) {
       case 'price_change':
         await this.handlePriceChange(event);
@@ -119,8 +110,6 @@ class EventSystem {
       case 'threshold_breach':
         await this.handleThresholdBreach(event);
         break;
-      default:
-        console.log(`ℹ️ No specific handler for event type: ${event.type}`);
     }
   }
 
@@ -171,15 +160,10 @@ class EventSystem {
 
   addRule(rule: EventRule): void {
     this.rules.set(rule.id, rule);
-    console.log(`📋 Added automation rule: ${rule.name}`);
   }
 
   removeRule(ruleId: string): boolean {
-    const result = this.rules.delete(ruleId);
-    if (result) {
-      console.log(`🗑️ Removed automation rule: ${ruleId}`);
-    }
-    return result;
+    return this.rules.delete(ruleId);
   }
 
   private async checkAutomationRules(event: TaskEvent): Promise<void> {
@@ -199,13 +183,8 @@ class EventSystem {
       // Check condition
       try {
         if (rule.condition(event)) {
-          console.log(`🎯 Rule triggered: ${rule.name}`);
-
           const taskRequest = await rule.action(event);
           if (taskRequest) {
-            // This would integrate with the task service to create the task
-            console.log(`📋 Rule ${rule.name} would create task: ${taskRequest.name}`);
-
             // TODO: Integrate with actual task creation service
             // await taskService.createTask(taskRequest);
           }
@@ -213,7 +192,7 @@ class EventSystem {
           rule.lastTriggered = new Date();
         }
       } catch (error) {
-        console.error(`❌ Error processing rule ${rule.name}:`, error);
+        // Rule processing error - silently continue to next rule
       }
     }
   }

@@ -1,3 +1,8 @@
+// Authentication middleware and utilities
+// Contains scaffolding functions for various auth patterns
+
+#![allow(dead_code)]
+
 use axum::{
     extract::Request,
     http::{HeaderMap, StatusCode},

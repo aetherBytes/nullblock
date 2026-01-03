@@ -159,10 +159,8 @@ const HUD: React.FC<HUDProps> = ({
   useEffect(() => {
     const hasImages = chat.chatMessages.some(msg => msg.content?.imageIds && msg.content.imageIds.length > 0);
     if (hasImages && !eventSystem.isPerformanceMode) {
-      console.log('🖼️ Images detected in chat - enabling performance mode');
       eventSystem.setPerformanceMode(true);
     } else if (!hasImages && eventSystem.isPerformanceMode) {
-      console.log('✅ No images in chat - disabling performance mode');
       eventSystem.setPerformanceMode(false);
     }
   }, [chat.chatMessages, eventSystem]);
@@ -199,17 +197,7 @@ const HUD: React.FC<HUDProps> = ({
 
   // MCP initialization is now handled by useAuthentication hook
   useEffect(() => {
-    const loadWalletData = async () => {
-      if (publicKey) {
-        try {
-          console.log('Wallet connected:', publicKey);
-        } catch (error) {
-          console.error('Failed to fetch wallet data:', error);
-        }
-      }
-    };
-
-    loadWalletData();
+    // Wallet connection state synced via publicKey prop
   }, [publicKey]);
 
   // Initialize Hecate specific functionality
@@ -241,7 +229,6 @@ const HUD: React.FC<HUDProps> = ({
     modelManagement.loadDefaultModel();
 
     if (!modelManagement.modelsCached) {
-      console.log('Session started - loading full model catalog in background');
       setTimeout(() => {
         modelManagement.loadAvailableModels();
       }, 500);
@@ -294,13 +281,11 @@ const HUD: React.FC<HUDProps> = ({
       if (modelManagement.defaultModelReady && modelManagement.currentSelectedModel) {
         setNulleyeState('base');
       } else if (!modelManagement.defaultModelReady && !modelManagement.currentSelectedModel) {
-        console.log('Tab switch triggered default model loading');
         modelManagement.loadDefaultModel();
       }
     }
 
     if (mainHudActiveTab === 'hecate' && publicKey && modelManagement.availableModels.length === 0 && !modelManagement.isLoadingModels && !modelManagement.modelsCached) {
-      console.log('Tab switch triggered background model catalog loading');
       setTimeout(() => {
         modelManagement.loadAvailableModels();
       }, 500);
@@ -424,7 +409,6 @@ const HUD: React.FC<HUDProps> = ({
   // Auto-load Latest models when model selection opens
   useEffect(() => {
     if (showModelSelection && activeQuickAction === 'latest' && categoryModels.length === 0 && !isLoadingCategory) {
-      console.log('🔄 Auto-loading Latest models for model selection');
       loadCategoryModels('latest');
     }
   }, [showModelSelection, activeQuickAction, categoryModels.length, isLoadingCategory]);
@@ -508,16 +492,12 @@ const HUD: React.FC<HUDProps> = ({
 
       const connected = await hecateAgent.connect();
       if (!connected) {
-        console.warn('Failed to connect to Hecate agent for model info');
         return;
       }
 
       const currentModelName = modelName || modelManagement.currentSelectedModel;
 
       if (!currentModelName) {
-        console.warn('No model currently selected for model info');
-        console.log('currentSelectedModel:', modelManagement.currentSelectedModel);
-        console.log('modelName param:', modelName);
         setModelInfo({ error: 'No model currently selected' });
         return;
       }
@@ -525,7 +505,6 @@ const HUD: React.FC<HUDProps> = ({
       let currentModelInfo = modelManagement.availableModels?.find((model: any) => model.name === currentModelName);
 
       if (!currentModelInfo && modelManagement.availableModels.length === 0) {
-        console.log('Cache is empty, loading models for info');
         await modelManagement.loadAvailableModels();
         currentModelInfo = modelManagement.availableModels?.find((model: any) => model.name === currentModelName);
       }
@@ -533,16 +512,6 @@ const HUD: React.FC<HUDProps> = ({
       if (!currentModelInfo) {
         setModelInfo({ error: `Model ${currentModelName} not found in available models (${modelManagement.availableModels.length} cached)` });
         return;
-      }
-
-      console.log('Model info loaded:', currentModelInfo);
-
-      if (currentModelInfo.cost_per_1k_tokens === 0 && currentModelInfo.tier !== 'economical') {
-        console.warn(`⚠️ Model ${currentModelName} shows $0 cost but tier is ${currentModelInfo.tier} - pricing may be outdated`);
-      }
-
-      if (!currentModelInfo.pricing && currentModelInfo.cost_per_1k_tokens === 0) {
-        console.warn(`⚠️ Model ${currentModelName} missing pricing object and shows $0 cost`);
       }
 
       const enrichedModelInfo = {
@@ -590,10 +559,7 @@ const HUD: React.FC<HUDProps> = ({
   };
 
   const searchModels = async (query: string) => {
-    console.log('🔍 searchModels called with query:', query);
-
     if (!query.trim()) {
-      console.log('🔍 Empty query, clearing results');
       setSearchResults([]);
       return;
     }
@@ -602,13 +568,10 @@ const HUD: React.FC<HUDProps> = ({
       setIsSearchingModels(true);
 
       let searchableModels = modelManagement.availableModels;
-      console.log('🔍 Available models count:', searchableModels.length);
 
       if (searchableModels.length === 0) {
-        console.log('🔍 No cached models, loading from API...');
         await modelManagement.loadAvailableModels();
         searchableModels = modelManagement.availableModels;
-        console.log('🔍 Loaded models count:', searchableModels.length);
       }
 
       const results = searchableModels
@@ -636,12 +599,7 @@ const HUD: React.FC<HUDProps> = ({
         .slice(0, 20);
 
       setSearchResults(results);
-      console.log(`✅ Found ${results.length} models matching "${query}"`);
-      if (results.length > 0) {
-        console.log('🔍 Top 3 results:', results.slice(0, 3).map((m: any) => m.display_name || m.name));
-      }
     } catch (error) {
-      console.error('❌ Error searching models:', error);
       setSearchResults([]);
     } finally {
       setIsSearchingModels(false);
@@ -653,17 +611,13 @@ const HUD: React.FC<HUDProps> = ({
 
     try {
       setIsLoadingCategory(true);
-      console.log(`Filtering cached models for ${category} category`);
 
       let allModels = modelManagement.availableModels;
 
       if (allModels.length === 0) {
-        console.log('No cached models available, loading first...');
         await modelManagement.loadAvailableModels();
         allModels = modelManagement.availableModels;
       }
-
-      console.log(`Using ${allModels.length} cached models for ${category} filtering`);
 
       let filteredModels: any[] = [];
 
@@ -694,11 +648,6 @@ const HUD: React.FC<HUDProps> = ({
               return bCreated - aCreated;
             })
             .slice(0, 15);
-
-          console.log(`🔍 Latest models filtering result:`);
-          console.log(`  - Total models: ${allModels.length}`);
-          console.log(`  - Models with timestamps: ${allModels.filter(m => m && (m.created_at || m.created)).length}`);
-          console.log(`  - Final filtered models: ${filteredModels.length}`);
           break;
 
         case 'free':
@@ -749,11 +698,9 @@ const HUD: React.FC<HUDProps> = ({
           filteredModels = allModels.filter(model => model && model.available).slice(0, 15);
       }
 
-      console.log(`Filtered to ${filteredModels.length} ${category} models`);
       setCategoryModels(filteredModels);
 
     } catch (error) {
-      console.error(`Error filtering ${category} models:`, error);
       setCategoryModels([]);
     } finally {
       setIsLoadingCategory(false);

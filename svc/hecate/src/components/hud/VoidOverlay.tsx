@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-// MemFeed temporarily removed - component preserved for future use
-// import MemFeed from './MemFeed';
 import NullblockLogo from './NullblockLogo';
 import styles from './VoidOverlay.module.scss';
 

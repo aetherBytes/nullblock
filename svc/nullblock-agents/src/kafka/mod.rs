@@ -1,3 +1,8 @@
+// Kafka integration for event streaming
+// Contains consumer scaffolding for future event-driven features
+
+#![allow(dead_code)]
+
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::consumer::{StreamConsumer, Consumer};

@@ -41,20 +41,13 @@ class AgentService {
       };
 
       const url = `${this.erebusUrl}${endpoint}`;
-      console.log('🤖 Making agent request to:', url);
-      console.log('📋 Headers:', headers);
-      console.log('📋 Options:', options);
 
       const response = await fetch(url, {
         headers,
         ...options,
       });
 
-      console.log('📤 Response status:', response.status);
-      console.log('📤 Response headers:', Object.fromEntries(response.headers.entries()));
-
       const responseJson = await response.json();
-      console.log('📤 Response data:', responseJson);
 
       return {
         success: response.ok,
@@ -74,17 +67,14 @@ class AgentService {
 
   // Agent Discovery Operations
   async getAgents(): Promise<AgentServiceResponse<AgentDiscoveryResponse>> {
-    console.log('🤖 Fetching available agents...');
     return this.makeRequest<AgentDiscoveryResponse>('/api/discovery/agents');
   }
 
   async getAgentHealth(agentName: string): Promise<AgentServiceResponse<any>> {
-    console.log(`🏥 Checking health for agent: ${agentName}`);
     return this.makeRequest<any>(`/api/agents/${agentName}/status`);
   }
 
   async getAgentCapabilities(agentName: string): Promise<AgentServiceResponse<any>> {
-    console.log(`⚙️ Fetching capabilities for agent: ${agentName}`);
 
     // For specialized endpoints, route to specific agent capabilities
     if (agentName === 'siren') {
@@ -99,8 +89,6 @@ class AgentService {
 
   // Agent Interaction Operations
   async chatWithAgent(agentName: string, message: string): Promise<AgentServiceResponse<any>> {
-    console.log(`💬 Sending message to ${agentName}:`, message);
-
     return this.makeRequest<any>(`/api/agents/${agentName}/chat`, {
       method: 'POST',
       body: JSON.stringify({ message }),
@@ -108,8 +96,6 @@ class AgentService {
   }
 
   async setAgentModel(agentName: string, modelName: string): Promise<AgentServiceResponse<any>> {
-    console.log(`🎯 Setting model for ${agentName} to: ${modelName}`);
-
     return this.makeRequest<any>(`/api/agents/${agentName}/set-model`, {
       method: 'POST',
       body: JSON.stringify({ model_name: modelName }),
@@ -117,8 +103,6 @@ class AgentService {
   }
 
   async assignTaskToAgent(agentName: string, taskId: string): Promise<AgentServiceResponse<any>> {
-    console.log(`📋 Assigning task ${taskId} to agent ${agentName}`);
-
     return this.makeRequest<any>(`/api/agents/tasks/${taskId}`, {
       method: 'PUT',
       body: JSON.stringify({ assigned_agent: agentName }),

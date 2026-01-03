@@ -1,3 +1,8 @@
+// HECATE Agent - Von Neumann-class vessel AI
+// Contains scaffolding methods for future personality/stop features
+
+#![allow(dead_code)]
+
 use crate::{
     config::ApiKeys,
     database::repositories::AgentRepository,

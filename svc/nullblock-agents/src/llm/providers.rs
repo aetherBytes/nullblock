@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{
     error::{AppError, AppResult},
     models::{LLMRequest, LLMResponse, ModelConfig, ModelProvider},

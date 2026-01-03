@@ -1,9 +1,9 @@
 use super::models::{
     AgentApiKey, ApiKey, ApiKeyProvider, CreateAgentApiKeyRequest, CreateApiKeyRequest,
-    DecryptedApiKey, RateLimitStatus, UpdateApiKeyRequest, UserRateLimit,
+    DecryptedApiKey, RateLimitStatus, UserRateLimit,
 };
 use crate::crypto::{EncryptedData, EncryptionService};
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -254,6 +254,7 @@ impl ApiKeyService {
         Ok(decrypted_keys)
     }
 
+    #[allow(dead_code)]
     pub async fn increment_usage(&self, key_id: Uuid) -> Result<(), String> {
         sqlx::query(
             "UPDATE user_api_keys SET usage_count = usage_count + 1, last_used_at = NOW() WHERE id = $1"
