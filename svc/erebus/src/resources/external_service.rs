@@ -13,7 +13,6 @@ pub struct ExternalService {
     client: Client,
     hecate_base_url: String,
     mcp_base_url: String,
-    orchestration_base_url: String,
     // Cache for storing responses to avoid redundant calls
     response_cache: Arc<tokio::sync::RwLock<HashMap<String, (Value, Instant)>>>,
     // Configuration for retry logic and timeouts
@@ -30,8 +29,6 @@ impl ExternalService {
                 .unwrap_or_else(|_| "http://localhost:9003".to_string()),
             mcp_base_url: std::env::var("PROTOCOLS_SERVICE_URL")
                 .unwrap_or_else(|_| "http://localhost:8001".to_string()),
-            orchestration_base_url: std::env::var("ORCHESTRATION_SERVICE_URL")
-                .unwrap_or_else(|_| "http://localhost:8002".to_string()),
             response_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             max_retries: 3,
             retry_delay_ms: 1000,
@@ -43,7 +40,6 @@ impl ExternalService {
     pub fn with_config(
         hecate_url: impl Into<String>,
         mcp_url: impl Into<String>,
-        orchestration_url: impl Into<String>,
         max_retries: u32,
         retry_delay_ms: u64,
         cache_ttl_seconds: u64,
@@ -52,7 +48,6 @@ impl ExternalService {
             client: Client::new(),
             hecate_base_url: hecate_url.into(),
             mcp_base_url: mcp_url.into(),
-            orchestration_base_url: orchestration_url.into(),
             response_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             max_retries,
             retry_delay_ms,
@@ -110,36 +105,6 @@ impl ExternalService {
 
         let url = format!("{}/{}", self.mcp_base_url, endpoint);
         info!("🌐 Calling MCP service: {}", url);
-        
-        let result = self.call_with_retry(&url).await;
-        
-        if let Ok(ref data) = result {
-            if use_cache {
-                self.cache_response(&cache_key, data.clone()).await;
-            }
-        }
-        
-        result
-    }
-
-    /// Call external orchestration service directly with retry logic
-    pub async fn call_orchestration(&self, endpoint: &str) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
-        self.call_orchestration_with_cache(endpoint, false).await
-    }
-
-    /// Call external orchestration service with caching option
-    pub async fn call_orchestration_with_cache(&self, endpoint: &str, use_cache: bool) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
-        let cache_key = format!("orchestration:{}", endpoint);
-        
-        if use_cache {
-            if let Some(cached) = self.get_cached_response(&cache_key).await {
-                debug!("📋 Returning cached orchestration response for: {}", endpoint);
-                return Ok(cached);
-            }
-        }
-
-        let url = format!("{}/{}", self.orchestration_base_url, endpoint);
-        info!("🔄 Calling orchestration service: {}", url);
         
         let result = self.call_with_retry(&url).await;
         
@@ -404,28 +369,10 @@ impl ExternalService {
                 }));
             }
         }
-        
-        // Get orchestration workflow info
-        match self.call_orchestration("workflows").await {
-            Ok(workflows) => {
-                agents_info.insert("workflows".to_string(), serde_json::json!({
-                    "service": "orchestration",
-                    "status": "available",
-                    "workflows": workflows
-                }));
-            }
-            Err(e) => {
-                agents_info.insert("workflows".to_string(), serde_json::json!({
-                    "service": "orchestration",
-                    "status": "unavailable",
-                    "error": e.to_string()
-                }));
-            }
-        }
-        
+
         agents_info.insert("timestamp".to_string(), serde_json::json!(chrono::Utc::now().to_rfc3339()));
         agents_info.insert("total_services".to_string(), serde_json::json!(agents_info.len() - 2)); // Exclude timestamp and total_services
-        
+
         Ok(serde_json::Value::Object(agents_info))
     }
 
@@ -460,18 +407,6 @@ impl ExternalService {
                         Err(e) => {
                             failed_agents.push("mcp");
                             coordination_results.insert("mcp_error".to_string(), serde_json::json!(e.to_string()));
-                        }
-                    }
-                }
-                "orchestration" => {
-                    match self.call_orchestration("coordinate").await {
-                        Ok(result) => {
-                            successful_agents.push("orchestration");
-                            coordination_results.insert("orchestration_result".to_string(), result);
-                        }
-                        Err(e) => {
-                            failed_agents.push("orchestration");
-                            coordination_results.insert("orchestration_error".to_string(), serde_json::json!(e.to_string()));
                         }
                     }
                 }
@@ -544,31 +479,10 @@ impl ExternalService {
                 }));
             }
         }
-        
-        // Monitor orchestration health
-        let orch_start = Instant::now();
-        match self.call_orchestration("health").await {
-            Ok(health) => {
-                health_data.insert("orchestration".to_string(), serde_json::json!({
-                    "status": "healthy",
-                    "response_time_ms": orch_start.elapsed().as_millis(),
-                    "health": health,
-                    "last_check": chrono::Utc::now().to_rfc3339()
-                }));
-            }
-            Err(e) => {
-                health_data.insert("orchestration".to_string(), serde_json::json!({
-                    "status": "unhealthy",
-                    "error": e.to_string(),
-                    "response_time_ms": orch_start.elapsed().as_millis(),
-                    "last_check": chrono::Utc::now().to_rfc3339()
-                }));
-            }
-        }
-        
+
         health_data.insert("monitoring_duration_ms".to_string(), serde_json::json!(start_time.elapsed().as_millis()));
         health_data.insert("monitoring_timestamp".to_string(), serde_json::json!(chrono::Utc::now().to_rfc3339()));
-        
+
         Ok(serde_json::Value::Object(health_data))
     }
 
@@ -627,32 +541,9 @@ impl ExternalService {
                 }));
             }
         }
-        
-        // Get orchestration capabilities
-        match self.call_orchestration("capabilities").await {
-            Ok(orch_caps) => {
-                capabilities.insert("orchestration".to_string(), serde_json::json!({
-                    "agent_type": "workflow_orchestrator",
-                    "capabilities": [
-                        "workflow_management",
-                        "agent_coordination",
-                        "task_scheduling",
-                        "resource_allocation"
-                    ],
-                    "details": orch_caps
-                }));
-            }
-            Err(_) => {
-                capabilities.insert("orchestration".to_string(), serde_json::json!({
-                    "agent_type": "workflow_orchestrator",
-                    "capabilities": ["workflow_management", "agent_coordination"],
-                    "status": "capabilities_unavailable"
-                }));
-            }
-        }
-        
+
         capabilities.insert("timestamp".to_string(), serde_json::json!(chrono::Utc::now().to_rfc3339()));
-        
+
         Ok(serde_json::Value::Object(capabilities))
     }
 
@@ -734,25 +625,6 @@ impl ExternalService {
                     "status": "unhealthy",
                     "error": e.to_string(),
                     "response_time_ms": mcp_start.elapsed().as_millis()
-                }));
-            }
-        }
-
-        // Check orchestration service with detailed info
-        let orch_start = Instant::now();
-        match self.call_orchestration("health").await {
-            Ok(orch_health) => {
-                services_health.insert("orchestration".to_string(), serde_json::json!({
-                    "status": "healthy",
-                    "response_time_ms": orch_start.elapsed().as_millis(),
-                    "details": orch_health
-                }));
-            }
-            Err(e) => {
-                services_health.insert("orchestration".to_string(), serde_json::json!({
-                    "status": "unhealthy",
-                    "error": e.to_string(),
-                    "response_time_ms": orch_start.elapsed().as_millis()
                 }));
             }
         }
@@ -873,7 +745,7 @@ impl ExternalService {
     // ===== CONFIGURATION AND UTILITY METHODS =====
 
     /// Update service URLs dynamically
-    pub fn update_service_urls(&mut self, hecate: Option<String>, mcp: Option<String>, orchestration: Option<String>) {
+    pub fn update_service_urls(&mut self, hecate: Option<String>, mcp: Option<String>) {
         if let Some(url) = hecate {
             info!("🔄 Updating Hecate base URL to: {}", url);
             self.hecate_base_url = url;
@@ -882,10 +754,6 @@ impl ExternalService {
             info!("🔄 Updating MCP base URL to: {}", url);
             self.mcp_base_url = url;
         }
-        if let Some(url) = orchestration {
-            info!("🔄 Updating orchestration base URL to: {}", url);
-            self.orchestration_base_url = url;
-        }
     }
 
     /// Get current service configuration
@@ -893,7 +761,6 @@ impl ExternalService {
         serde_json::json!({
             "hecate_base_url": self.hecate_base_url,
             "mcp_base_url": self.mcp_base_url,
-            "orchestration_base_url": self.orchestration_base_url,
             "max_retries": self.max_retries,
             "retry_delay_ms": self.retry_delay_ms,
             "cache_ttl_seconds": self.cache_ttl_seconds
@@ -905,10 +772,9 @@ impl ExternalService {
         let endpoint = match service_name {
             "hecate" => &self.hecate_base_url,
             "mcp" => &self.mcp_base_url,
-            "orchestration" => &self.orchestration_base_url,
             _ => return false,
         };
-        
+
         match self.client.get(endpoint).timeout(Duration::from_secs(5)).send().await {
             Ok(_) => true,
             Err(_) => false,
@@ -927,7 +793,6 @@ impl Clone for ExternalService {
             client: self.client.clone(),
             hecate_base_url: self.hecate_base_url.clone(),
             mcp_base_url: self.mcp_base_url.clone(),
-            orchestration_base_url: self.orchestration_base_url.clone(),
             response_cache: self.response_cache.clone(),
             max_retries: self.max_retries,
             retry_delay_ms: self.retry_delay_ms,
