@@ -151,12 +151,12 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   gap: 2px;
   max-height: calc(98vh - 10px);
   overflow: visible;
+  // Allow canvas interaction by default - interactive elements set pointer-events: auto
+  pointer-events: none;
 
-  // Void mode - disable pointer events on container to allow canvas interaction
+  // Void mode - keep pointer events disabled, hide main content
   // VoidOverlay has its own pointer-events handling for interactive elements
   &.voidMode {
-    pointer-events: none;
-
     // Hide mainContent in void mode as it's not needed
     .mainContent {
       display: none;
@@ -3079,6 +3079,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     rgba(139, 92, 246, 0.5) 50%,
     rgba(236, 72, 153, 0.5) 80%,
     transparent 100%) 1;
+  pointer-events: auto;
   box-shadow:
     0 0 60px rgba(99, 102, 241, 0.15),
     0 8px 32px rgba(0, 0, 0, 0.4),
@@ -3584,6 +3585,17 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   position: relative;
   width: 100%;
   max-width: 100%;
+  pointer-events: auto;
+
+  // When logged out, allow canvas interaction through content
+  .loggedOut & {
+    pointer-events: none;
+
+    // But keep interactive elements clickable
+    button, a, input, select, textarea, [role="button"] {
+      pointer-events: auto;
+    }
+  }
 }
 
 // Default Tab Content

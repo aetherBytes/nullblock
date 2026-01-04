@@ -129,8 +129,8 @@ $void-purple: #b967ff;
   align-items: center;
   gap: 0.5rem;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.8);
-  border-top: 1px solid rgba($void-blue, 0.4);
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba($void-blue, 0.25);
   transition: all 0.3s ease;
   min-height: 60px;
 
@@ -332,8 +332,8 @@ $void-purple: #b967ff;
 
 .voidInput {
   flex: 1;
-  background: rgba(10, 10, 20, 0.7);
-  border: 1px solid rgba($void-blue, 0.3);
+  background: rgba(10, 10, 20, 0.3);
+  border: 1px solid rgba($void-blue, 0.2);
   color: $void-silver;
   font-size: 16px;
   font-family: 'Courier New', monospace;
@@ -379,40 +379,64 @@ $void-purple: #b967ff;
 }
 
 .sendButton {
-  background: transparent;
-  color: $void-silver;
-  border: 1px solid rgba($void-blue, 0.5);
+  background: rgba(99, 102, 241, 0.01) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(99, 102, 241, 0.15) !important;
   padding: 0.75rem 1rem;
-  border-radius: 4px;
+  border-radius: 0;
   cursor: pointer;
-  font-family: 'Courier New', monospace;
+  font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 44px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: none;
+  position: relative;
+  overflow: hidden;
 
-  &:hover:not(:disabled) {
-    background: rgba($void-blue, 0.15);
-    border-color: rgba($void-blue, 0.7);
-    box-shadow: 0 0 20px rgba($void-blue, 0.4);
-    transform: scale(1.05);
-    color: $void-blue;
-  }
-
-  &:active:not(:disabled) {
-    transform: scale(0.95);
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    border-color: rgba($void-silver, 0.2);
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.3s ease;
   }
 
   svg {
     width: 18px;
     height: 18px;
+    position: relative;
+    z-index: 1;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba(99, 102, 241, 0.1) !important;
+    color: rgba(255, 255, 255, 1) !important;
+    border-color: rgba(99, 102, 241, 0.4) !important;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: rgba(99, 102, 241, 0.1) !important;
+    box-shadow: none;
   }
 }
 

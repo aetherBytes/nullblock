@@ -149,7 +149,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             }}
             title={hecatePanelOpen ? "Close Studio" : "Open Studio"}
           >
-            <span className={styles.buttonIcon}>{hecatePanelOpen ? '◉' : '○'}</span>
+            <span className={styles.buttonIcon}>{hecatePanelOpen ? '⬢' : '⬡'}</span>
             <span className={styles.buttonLabel}>Studio</span>
           </button>
 
