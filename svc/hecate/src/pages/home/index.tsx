@@ -76,6 +76,7 @@ const Home: React.FC = () => {
   const previousPublicKey = React.useRef<string | null>(initialSession.publicKey);
   const animationTriggered = React.useRef<boolean>(false);
   const preLoginAnimationTriggered = React.useRef<boolean>(false);
+  const hasEverConnected = React.useRef<boolean>(false);
 
   const [systemStatus, setSystemStatus] = useState({
     hud: false,
@@ -188,8 +189,14 @@ const Home: React.FC = () => {
       }, 1500);
     }
 
-    // Reset animation when logging out
-    if (connectedAddress === null && loginAnimationPhase !== 'idle') {
+    // Track when wallet actually connects (not just session restoration)
+    if (connectedAddress !== null) {
+      hasEverConnected.current = true;
+    }
+
+    // Reset animation when logging out (only if we've actually connected during this session)
+    const isActualLogout = connectedAddress === null && loginAnimationPhase !== 'idle' && hasEverConnected.current;
+    if (isActualLogout) {
       setLoginAnimationPhase('idle');
       animationTriggered.current = false;
 
@@ -467,7 +474,7 @@ const Home: React.FC = () => {
 
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`} />
 
-      {showHUD && isInitialized && (
+      {showHUD && isInitialized && currentAnimationPhase === 'complete' && (
         <HUD
           publicKey={connectedAddress || initialSession.publicKey}
           onDisconnect={handleDisconnect}
