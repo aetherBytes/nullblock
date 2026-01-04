@@ -3068,10 +3068,7 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 3rem;
-  background: linear-gradient(180deg,
-    rgba(0, 0, 0, 0.98) 0%,
-    rgba(10, 10, 20, 0.95) 50%,
-    rgba(0, 0, 0, 0.98) 100%);
+  background: rgba(0, 0, 0, 0.15);
   border-bottom: 1px solid transparent;
   border-image: linear-gradient(90deg,
     transparent 0%,
@@ -3080,11 +3077,8 @@ $light-shadow: rgba(0, 0, 0, 0.1);
     rgba(236, 72, 153, 0.5) 80%,
     transparent 100%) 1;
   pointer-events: auto;
-  box-shadow:
-    0 0 60px rgba(99, 102, 241, 0.15),
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(40px) saturate(200%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(4px);
   position: relative;
   width: 100%;
   margin: 0;
