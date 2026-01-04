@@ -387,7 +387,9 @@ const Home: React.FC = () => {
   };
 
   // Get current animation phase
-  const currentAnimationPhase = connectedAddress ? loginAnimationPhase : preLoginAnimationPhase;
+  // Use initialSession.hasSession for returning users before connectedAddress is restored by hook
+  const isReturningUser = initialSession.hasSession || !!connectedAddress;
+  const currentAnimationPhase = isReturningUser ? loginAnimationPhase : preLoginAnimationPhase;
 
   const getAnimationClass = () => {
     switch (currentAnimationPhase) {
@@ -455,10 +457,10 @@ const Home: React.FC = () => {
 
       {/* Void Experience */}
       <VoidExperience
-        publicKey={connectedAddress}
+        publicKey={connectedAddress || initialSession.publicKey}
         theme={currentTheme}
         loginAnimationPhase={currentAnimationPhase}
-        isLoggedIn={!!connectedAddress && currentAnimationPhase === 'complete'}
+        isLoggedIn={isReturningUser && currentAnimationPhase === 'complete'}
         hecatePanelOpen={hecatePanelOpen}
         onHecatePanelChange={setHecatePanelOpen}
       />
@@ -467,7 +469,7 @@ const Home: React.FC = () => {
 
       {showHUD && isInitialized && (
         <HUD
-          publicKey={connectedAddress}
+          publicKey={connectedAddress || initialSession.publicKey}
           onDisconnect={handleDisconnect}
           onConnectWallet={(walletType?: 'phantom' | 'metamask') => {
             // Map legacy wallet type names to adapter IDs
