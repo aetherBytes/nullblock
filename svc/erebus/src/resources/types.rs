@@ -12,6 +12,8 @@ pub struct WalletInfo {
 pub struct WalletChallengeRequest {
     pub wallet_address: String,
     pub wallet_type: String,
+    #[serde(default)]
+    pub chain: Option<String>, // Optional chain type (evm, solana) - auto-detected if not provided
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,6 +37,8 @@ pub struct WalletVerifyResponse {
     pub message: String,
     pub user_id: Option<String>,  // User UUID from registration
     pub registration_error: Option<String>,  // Error if registration failed
+    #[serde(default)]
+    pub network: Option<String>,  // Network identifier (ethereum, solana, etc.)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

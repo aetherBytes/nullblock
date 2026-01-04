@@ -1,6 +1,4 @@
 import React from 'react';
-import { Identity, Avatar, Name, Badge } from '@coinbase/onchainkit/identity';
-import { base } from 'viem/chains';
 import styles from '../crossroads.module.scss';
 import CategoryBadge from '../shared/CategoryBadge';
 import StatusBadge from '../shared/StatusBadge';
@@ -19,6 +17,12 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
     return num.toString();
   };
 
+  const formatAddress = (address: string): string => {
+    if (!address) return 'Unknown';
+    if (address.length <= 12) return address;
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
   const handleClick = () => {
     if (!service.is_coming_soon) {
       onClick?.();
@@ -26,8 +30,8 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
   };
 
   return (
-    <div 
-      className={`${styles.serviceCard} ${service.is_coming_soon ? styles.comingSoon : ''}`} 
+    <div
+      className={`${styles.serviceCard} ${service.is_coming_soon ? styles.comingSoon : ''}`}
       onClick={handleClick}
       style={{ cursor: service.is_coming_soon ? 'not-allowed' : 'pointer' }}
     >
@@ -63,21 +67,20 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
           <span className={styles.comingSoonBadge}>Coming Soon</span>
         </div>
       )}
-      
+
       <div className={styles.cardBody}>
         <h3 className={styles.title}>{service.title}</h3>
         <p className={styles.description}>{service.short_description}</p>
 
         <div className={styles.ownerInfo}>
-          <Identity
-            address={service.owner_address as `0x${string}`}
-            chain={base}
-            className={styles.ownerIdentity}
-          >
-            <Avatar className={styles.ownerAvatar} />
-            <Name className={styles.ownerName} />
-            <Badge />
-          </Identity>
+          <div className={styles.ownerIdentity}>
+            <div className={styles.ownerAvatar}>
+              <span style={{ fontSize: '0.75rem' }}>👤</span>
+            </div>
+            <span className={styles.ownerName}>
+              {formatAddress(service.owner_address)}
+            </span>
+          </div>
         </div>
 
         <div className={styles.metrics}>
@@ -123,4 +126,3 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
 };
 
 export default ServiceCard;
-

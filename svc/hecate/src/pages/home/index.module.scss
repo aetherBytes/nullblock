@@ -1016,6 +1016,23 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+.notInstalled {
+  background: rgba($echo-gray, 0.05);
+  border-color: rgba($echo-gray, 0.2);
+  opacity: 0.7;
+
+  &:hover:not(:disabled) {
+    background: rgba($echo-gray, 0.1);
+    border-color: rgba($echo-gray, 0.4);
+    box-shadow: 0 0 10px rgba($echo-gray, 0.2);
+  }
+
+  .walletDescription {
+    color: rgba($echo-gray, 0.7);
+    font-style: italic;
+  }
+}
+
 .walletIcon {
   font-size: 2.5rem;
   margin-right: 1rem;

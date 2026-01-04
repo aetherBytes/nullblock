@@ -563,20 +563,35 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 
 **⚠️ TODO**: Update all local API URL references to use environment variables consistently. Currently some services may have hardcoded URLs that need to be migrated to use the VITE_* environment variables above.
 
-### LLM APIs
+### LLM APIs - Agent Base Keys (IMPORTANT)
 
+**🚨 NEVER put LLM API keys in `.env.dev`** - Agent API keys are stored in the **Erebus database** (`agent_api_keys` table) and fetched at service startup.
+
+**How it works:**
+1. Agent base keys are stored encrypted in Erebus (`agent_api_keys` table)
+2. At startup, `nullblock-agents` fetches keys via: `GET /internal/agents/:agent/api-keys/:provider/decrypted`
+3. Free LLMs are used by default - no user API keys required
+4. The system automatically falls back through available free models
+
+**Database schema (Erebus):**
+```sql
+-- agent_api_keys table stores encrypted keys for each agent/provider
+SELECT agent_name, provider, key_prefix, key_suffix, is_active FROM agent_api_keys;
+-- Example: hecate | openrouter | sk-or-v1-8 | e098 | t
+```
+
+**Seeding keys:** Use the seed script to add/update agent keys:
 ```bash
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
-GROQ_API_KEY=
-OPENROUTER_API_KEY=          # REQUIRED - Get from https://openrouter.ai/
+cd svc/erebus && cargo run --bin seed_agent_keys
+```
+
+**Runtime config (optional):**
+```bash
 DEFAULT_LLM_MODEL=cognitivecomputations/dolphin3.0-mistral-24b:free
 LLM_REQUEST_TIMEOUT_MS=300000  # 5 minutes for thinking models
 ```
 
-**CRITICAL**: `OPENROUTER_API_KEY` is REQUIRED for reliable LLM access. Without it, you'll hit severe rate limits on free models.
-
-**Environment File Location**: Create `.env.dev` in project root. Services running in subdirectories need symlinks:
+**Environment File Location**: Create `.env.dev` in project root for non-secret config. Services need symlinks:
 ```bash
 ln -s ../../.env.dev svc/nullblock-agents/.env.dev
 ln -s ../../.env.dev svc/erebus/.env.dev
@@ -720,11 +735,12 @@ _NullBlock implements a cyberpunk aesthetic with neon styling and maintains imme
 - Error was: `"Failed to deserialize the JSON body into the target type: source_type: missing field 'network'"`
 - Solution: Added `"network": wallet_chain` to default_source_type JSON
 
-**LLM API Key Management** (`svc/nullblock-agents/src/llm/factory.rs` & `providers.rs`):
-- Added startup validation to detect invalid/placeholder API keys
-- Implemented anonymous access detection via OpenRouter `user_id` field
-- Enhanced error messages with actionable configuration steps
-- Log partial API keys for verification (e.g., `sk-or-v1-49a74f...7c7a`)
+**LLM API Key Management** (Agent Base Keys in Erebus):
+- Agent API keys stored in `agent_api_keys` table in Erebus database (encrypted)
+- At startup, `nullblock-agents` fetches keys via `/internal/agents/:agent/api-keys/:provider/decrypted`
+- **NEVER use .env.dev for LLM API keys** - always use Erebus database
+- Seed keys with: `cd svc/erebus && cargo run --bin seed_agent_keys`
+- Automatic fallback to available free models if default model unavailable
 
 **Empty Response Handling** (`svc/nullblock-agents/src/llm/factory.rs:161-164`):
 - Added validation to detect models returning 0 completion tokens

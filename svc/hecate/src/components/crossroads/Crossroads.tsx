@@ -1,9 +1,4 @@
 import React, { useState } from 'react';
-import { OnchainKitProvider } from '@coinbase/onchainkit';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WagmiProvider, createConfig, http } from 'wagmi';
-import { base } from 'viem/chains';
-import { coinbaseWallet } from 'wagmi/connectors';
 import styles from './crossroads.module.scss';
 import CrossroadsLanding from './landing/CrossroadsLanding';
 import MarketplaceBrowser from './marketplace/MarketplaceBrowser';
@@ -19,21 +14,6 @@ interface CrossroadsProps {
   resetToLanding?: boolean;
   animationPhase?: AnimationPhase;
 }
-
-const config = createConfig({
-  chains: [base],
-  connectors: [
-    coinbaseWallet({
-      appName: 'NullBlock Crossroads',
-      preference: 'smartWalletOnly',
-    }),
-  ],
-  transports: {
-    [base.id]: http(),
-  },
-});
-
-const queryClient = new QueryClient();
 
 type View = 'landing' | 'marketplace' | 'service-detail' | 'my-services';
 
@@ -188,17 +168,10 @@ const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet, sho
   };
 
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <OnchainKitProvider chain={base} apiKey={import.meta.env.VITE_ONCHAINKIT_API_KEY}>
-          <div className={styles.crossroadsContainer}>
-            {renderView()}
-          </div>
-        </OnchainKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <div className={styles.crossroadsContainer}>
+      {renderView()}
+    </div>
   );
 };
 
 export default Crossroads;
-

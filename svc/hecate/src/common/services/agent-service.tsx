@@ -109,6 +109,12 @@ class AgentService {
     });
   }
 
+  async clearConversation(agentName: string): Promise<AgentServiceResponse<boolean>> {
+    return this.makeRequest<boolean>(`/api/agents/${agentName}/clear`, {
+      method: 'POST',
+    });
+  }
+
   // Utility methods
   getAgentStatusColor(status: string): string {
     switch (status) {
