@@ -4,10 +4,10 @@
 #![allow(dead_code)]
 
 use crate::resources::types::{
-    DetectedWallet, InstallPrompt, WalletDetectionResponse, WalletConnectionRequest,
-    WalletConnectionResponse, WalletInfo, WalletStatusResponse, WalletProvider,
+    DetectedWallet, InstallPrompt, WalletConnectionRequest, WalletConnectionResponse,
+    WalletDetectionResponse, WalletInfo, WalletStatusResponse,
 };
-use super::{MetaMaskWallet, PhantomWallet};
+use super::registry::WALLET_REGISTRY;
 
 pub struct WalletService;
 
@@ -17,56 +17,31 @@ impl WalletService {
         let mut detected_wallets = Vec::new();
         let mut install_prompts = Vec::new();
 
-        // Check for Phantom
-        let phantom_available = available_wallets.contains(&"phantom".to_string());
-        let phantom_wallet = DetectedWallet {
-            id: "phantom".to_string(),
-            name: "Phantom".to_string(),
-            description: "Solana Wallet - Fast, secure, and user-friendly".to_string(),
-            icon: "👻".to_string(),
-            is_available: phantom_available,
-            install_url: Some("https://phantom.app/".to_string()),
-        };
-        detected_wallets.push(phantom_wallet.clone());
+        // Get all wallets from registry
+        for wallet_info in WALLET_REGISTRY.list_all() {
+            let is_available = available_wallets.contains(&wallet_info.id);
 
-        if !phantom_available {
-            install_prompts.push(InstallPrompt {
-                wallet_id: "phantom".to_string(),
-                wallet_name: "Phantom".to_string(),
-                install_url: "https://phantom.app/".to_string(),
-                description: "Install Phantom for Solana blockchain access".to_string(),
+            detected_wallets.push(DetectedWallet {
+                id: wallet_info.id.clone(),
+                name: wallet_info.name.clone(),
+                description: wallet_info.description.clone(),
+                icon: wallet_info.icon.clone(),
+                is_available,
+                install_url: Some(wallet_info.install_url.clone()),
             });
+
+            if !is_available {
+                install_prompts.push(InstallPrompt {
+                    wallet_id: wallet_info.id.clone(),
+                    wallet_name: wallet_info.name.clone(),
+                    install_url: wallet_info.install_url.clone(),
+                    description: format!("Install {} for blockchain access", wallet_info.name),
+                });
+            }
         }
 
-        // Check for MetaMask
-        let metamask_available = available_wallets.contains(&"metamask".to_string());
-        let metamask_wallet = DetectedWallet {
-            id: "metamask".to_string(),
-            name: "MetaMask".to_string(),
-            description: "Ethereum Wallet - Industry standard for Ethereum dApps".to_string(),
-            icon: "🦊".to_string(),
-            is_available: metamask_available,
-            install_url: Some("https://metamask.io/".to_string()),
-        };
-        detected_wallets.push(metamask_wallet.clone());
-
-        if !metamask_available {
-            install_prompts.push(InstallPrompt {
-                wallet_id: "metamask".to_string(),
-                wallet_name: "MetaMask".to_string(),
-                install_url: "https://metamask.io/".to_string(),
-                description: "Install MetaMask for Ethereum blockchain access".to_string(),
-            });
-        }
-
-        // Determine recommended wallet
-        let recommended_wallet = if phantom_available {
-            Some("phantom".to_string())
-        } else if metamask_available {
-            Some("metamask".to_string())
-        } else {
-            None
-        };
+        // Determine recommended wallet (prefer first available)
+        let recommended_wallet = available_wallets.first().cloned();
 
         WalletDetectionResponse {
             available_wallets: detected_wallets,
@@ -77,35 +52,55 @@ impl WalletService {
 
     /// Initiate wallet connection process
     pub fn initiate_connection(request: WalletConnectionRequest) -> WalletConnectionResponse {
-        // Validate wallet type
-        let wallet_info = match request.wallet_type.as_str() {
-            "phantom" => Some(PhantomWallet::get_wallet_info()),
-            "metamask" => Some(MetaMaskWallet::get_wallet_info()),
-            _ => None,
+        // Get adapter from registry
+        let adapter = match WALLET_REGISTRY.get(&request.wallet_type) {
+            Some(a) => a,
+            None => {
+                return WalletConnectionResponse {
+                    success: false,
+                    session_token: None,
+                    wallet_info: None,
+                    message: format!("Unsupported wallet type: {}", request.wallet_type),
+                    next_step: None,
+                };
+            }
         };
 
-        if wallet_info.is_none() {
-            return WalletConnectionResponse {
-                success: false,
-                session_token: None,
-                wallet_info: None,
-                message: format!("Unsupported wallet type: {}", request.wallet_type),
-                next_step: None,
-            };
-        }
+        let info = adapter.info();
+
+        // Detect chain from address
+        let chain = match adapter.detect_chain_from_address(&request.wallet_address) {
+            Some(c) => c,
+            None => {
+                return WalletConnectionResponse {
+                    success: false,
+                    session_token: None,
+                    wallet_info: Some(WalletInfo {
+                        id: info.id,
+                        name: info.name,
+                        description: info.description,
+                        icon: info.icon,
+                    }),
+                    message: format!(
+                        "Unable to detect chain from address: {}",
+                        request.wallet_address
+                    ),
+                    next_step: None,
+                };
+            }
+        };
 
         // Validate wallet address format
-        let is_valid_address = match request.wallet_type.as_str() {
-            "phantom" => PhantomWallet::validate_solana_address(&request.wallet_address),
-            "metamask" => MetaMaskWallet::validate_ethereum_address(&request.wallet_address),
-            _ => false,
-        };
-
-        if !is_valid_address {
+        if !adapter.validate_address(&request.wallet_address, &chain) {
             return WalletConnectionResponse {
                 success: false,
                 session_token: None,
-                wallet_info: wallet_info.clone(),
+                wallet_info: Some(WalletInfo {
+                    id: info.id,
+                    name: info.name,
+                    description: info.description,
+                    icon: info.icon,
+                }),
                 message: format!("Invalid {} address format", request.wallet_type),
                 next_step: None,
             };
@@ -115,8 +110,14 @@ impl WalletService {
         WalletConnectionResponse {
             success: true,
             session_token: None,
-            wallet_info,
-            message: "Wallet connection initiated. Proceed to create authentication challenge.".to_string(),
+            wallet_info: Some(WalletInfo {
+                id: info.id,
+                name: info.name,
+                description: info.description,
+                icon: info.icon,
+            }),
+            message: "Wallet connection initiated. Proceed to create authentication challenge."
+                .to_string(),
             next_step: Some("create_challenge".to_string()),
         }
     }
@@ -149,37 +150,112 @@ impl WalletService {
 
     /// Get comprehensive wallet information for frontend
     pub fn get_wallet_information() -> Vec<WalletInfo> {
-        vec![
-            PhantomWallet::get_wallet_info(),
-            MetaMaskWallet::get_wallet_info(),
-        ]
+        WALLET_REGISTRY
+            .list_all()
+            .into_iter()
+            .map(|w| WalletInfo {
+                id: w.id,
+                name: w.name,
+                description: w.description,
+                icon: w.icon,
+            })
+            .collect()
     }
 
     /// Validate wallet address format
     pub fn validate_wallet_address(wallet_type: &str, address: &str) -> bool {
-        match wallet_type {
-            "phantom" => PhantomWallet::validate_solana_address(address),
-            "metamask" => MetaMaskWallet::validate_ethereum_address(address),
-            _ => false,
+        let adapter = match WALLET_REGISTRY.get(wallet_type) {
+            Some(a) => a,
+            None => return false,
+        };
+
+        // Try to detect chain and validate
+        if let Some(chain) = adapter.detect_chain_from_address(address) {
+            adapter.validate_address(address, &chain)
+        } else {
+            false
         }
     }
 
     /// Get wallet-specific connection instructions
     pub fn get_connection_instructions(wallet_type: &str) -> Option<String> {
-        match wallet_type {
-            "phantom" => Some(
-                "1. Click 'Connect Phantom' in your browser extension\n\
-                 2. Approve the connection request\n\
-                 3. Sign the authentication message when prompted"
-                    .to_string(),
-            ),
-            "metamask" => Some(
-                "1. Click 'Connect MetaMask' in your browser extension\n\
-                 2. Approve the connection request\n\
-                 3. Sign the authentication message when prompted"
-                    .to_string(),
-            ),
-            _ => None,
-        }
+        let adapter = WALLET_REGISTRY.get(wallet_type)?;
+        let info = adapter.info();
+
+        Some(format!(
+            "1. Click 'Connect {}' in your browser extension\n\
+             2. Approve the connection request\n\
+             3. Sign the authentication message when prompted",
+            info.name
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detect_wallets() {
+        let available = vec!["metamask".to_string()];
+        let response = WalletService::detect_wallets(available);
+
+        assert!(response.available_wallets.len() >= 3);
+        assert!(response
+            .available_wallets
+            .iter()
+            .any(|w| w.id == "metamask" && w.is_available));
+        assert!(response
+            .available_wallets
+            .iter()
+            .any(|w| w.id == "phantom" && !w.is_available));
+    }
+
+    #[test]
+    fn test_get_wallet_information() {
+        let wallets = WalletService::get_wallet_information();
+        assert!(wallets.len() >= 3);
+        assert!(wallets.iter().any(|w| w.id == "bitget"));
+    }
+
+    #[test]
+    fn test_validate_wallet_address() {
+        // Valid EVM address
+        assert!(WalletService::validate_wallet_address(
+            "metamask",
+            "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+        ));
+
+        // Valid Solana address
+        assert!(WalletService::validate_wallet_address(
+            "phantom",
+            "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM6"
+        ));
+
+        // Bitget with EVM address
+        assert!(WalletService::validate_wallet_address(
+            "bitget",
+            "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+        ));
+
+        // Bitget with Solana address
+        assert!(WalletService::validate_wallet_address(
+            "bitget",
+            "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM6"
+        ));
+
+        // Invalid
+        assert!(!WalletService::validate_wallet_address("unknown", "test"));
+    }
+
+    #[test]
+    fn test_connection_instructions() {
+        let metamask_instructions = WalletService::get_connection_instructions("metamask");
+        assert!(metamask_instructions.is_some());
+        assert!(metamask_instructions.unwrap().contains("MetaMask"));
+
+        let bitget_instructions = WalletService::get_connection_instructions("bitget");
+        assert!(bitget_instructions.is_some());
+        assert!(bitget_instructions.unwrap().contains("Bitget"));
     }
 }

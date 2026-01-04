@@ -17,7 +17,6 @@
     "ts:check": "tsc --project ./tsconfig.json --skipLibCheck --noemit"
   },
   "dependencies": {
-    "@coinbase/onchainkit": "^1.1.1",
     "@lomray/consistent-suspense": "^2.0.2",
     "@lomray/event-manager": "^2.0.2",
     "@lomray/react-head-manager": "^2.0.2",
@@ -57,9 +56,7 @@
     "react-syntax-highlighter": "^15.6.6",
     "rehype-highlight": "^7.0.2",
     "tailwindcss": "^3.4.1",
-    "three": "^0.163.0",
-    "viem": "^2.37.12",
-    "wagmi": "^2.17.5"
+    "three": "^0.163.0"
   },
   "devDependencies": {
     "@actions/core": "^1.10.1",

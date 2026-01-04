@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface ChatMessage {
   id: string;
@@ -93,6 +93,23 @@ export const useChat = (_publicKey: string | null) => {
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const imageStorageRef = useRef<Map<string, ImageData>>(new Map());
+  const previousPublicKeyRef = useRef<string | null>(null);
+
+  // Clear chat when wallet changes (different user logged in)
+  useEffect(() => {
+    const currentKey = _publicKey;
+    const previousKey = previousPublicKeyRef.current;
+
+    // Only clear if publicKey actually changed (not on initial mount)
+    if (previousKey !== null && currentKey !== previousKey) {
+      setChatMessages([]);
+      imageStorageRef.current.clear();
+      setChatInput('');
+      setIsProcessingChat(false);
+    }
+
+    previousPublicKeyRef.current = currentKey;
+  }, [_publicKey]);
 
   // Function to add task notifications to chat
   const addTaskNotification = (taskId: string, taskName: string, message: string, processingTime?: number) => {
@@ -337,6 +354,14 @@ export const useChat = (_publicKey: string | null) => {
       .filter((img): img is ImageData => img !== undefined);
   };
 
+  // Clear all chat messages and stored images (for logout/user switch)
+  const clearMessages = () => {
+    setChatMessages([]);
+    imageStorageRef.current.clear();
+    setChatInput('');
+    setIsProcessingChat(false);
+  };
+
   return {
     chatMessages,
     setChatMessages,
@@ -359,6 +384,7 @@ export const useChat = (_publicKey: string | null) => {
     handleChatScroll,
     scrollToBottom,
     addTaskNotification,
-    getImagesForMessage
+    getImagesForMessage,
+    clearMessages
   };
 };

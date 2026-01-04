@@ -9,7 +9,7 @@ use reqwest::Client;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::time::Instant;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
 #[async_trait]
 pub trait Provider: Send + Sync {
@@ -601,18 +601,30 @@ impl Provider for OpenRouterProvider {
 
             // Try to parse error as JSON to extract structured error details
             if let Ok(error_json) = serde_json::from_str::<Value>(&error_text) {
-                // Check if response indicates anonymous usage (no API key being used)
-                if let Some(user_id) = error_json.get("user_id").and_then(|u| u.as_str()) {
-                    if user_id.starts_with("user_") && status == reqwest::StatusCode::TOO_MANY_REQUESTS {
-                        error!("🔑 CRITICAL: OpenRouter is using anonymous/free tier access!");
-                        error!("   Your API key is NOT being sent or loaded properly.");
-                        error!("   Please add your OpenRouter API key via Settings → API Keys in the UI");
-                        error!("   Anonymous user detected: {}", user_id);
-                        return Err(AppError::LLMRequestFailed(format!(
-                            "OpenRouter API key not configured properly. Using anonymous access (user: {}) which has strict rate limits. Please add your API key via Settings → API Keys in the UI.",
-                            user_id
-                        )));
+                // Check for rate limit errors (429)
+                if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                    // Check if this is an upstream rate limit (from the model provider)
+                    if let Some(error_obj) = error_json.get("error") {
+                        if let Some(metadata_raw) = error_obj.get("metadata")
+                            .and_then(|m| m.get("raw"))
+                            .and_then(|r| r.as_str())
+                        {
+                            if metadata_raw.contains("rate-limited upstream") {
+                                warn!("⚠️ Model {} is temporarily rate-limited at the provider level", config.name);
+                                return Err(AppError::ModelNotAvailable(format!(
+                                    "Model '{}' is temporarily rate-limited at the provider level. Please try a different model or wait a moment.",
+                                    config.name
+                                )));
+                            }
+                        }
                     }
+
+                    // Generic rate limit - could be OpenRouter or provider level
+                    warn!("⚠️ Rate limit hit for model {}", config.name);
+                    return Err(AppError::LLMRequestFailed(format!(
+                        "Rate limit exceeded for model '{}'. Please wait a moment before retrying.",
+                        config.name
+                    )));
                 }
 
                 // Check for model not found errors
