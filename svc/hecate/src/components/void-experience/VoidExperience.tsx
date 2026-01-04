@@ -16,8 +16,8 @@ interface VoidExperienceProps {
   onHecatePanelChange?: (open: boolean) => void;
 }
 
-// Single fixed camera position
-const CAMERA_POSITION = new THREE.Vector3(8, 6, 24);
+// Single fixed camera position - zoomed in close
+const CAMERA_POSITION = new THREE.Vector3(2.5, 1.75, 6);
 
 const VoidExperience: React.FC<VoidExperienceProps> = ({
   publicKey,
