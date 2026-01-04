@@ -23,6 +23,30 @@ This document contains rules, patterns, and notes for the NullBlock agent system
 - Max tokens: 16384 (required for base64 image responses)
 - Fallback chain: Automatically tries alternative free models if default fails
 
+### Chat State Management
+
+**CRITICAL**: Chat is ephemeral - no persistence across sessions.
+
+**Current Behavior**:
+- Chat messages are in-memory only (React state)
+- No localStorage or sessionStorage persistence
+- Chat clears on page refresh
+- Chat clears on wallet disconnect/logout
+- Backend conversation history cleared on every new frontend session
+- Different users NEVER see each other's chat history
+
+**Implementation Details**:
+- Frontend: `VoidChatHUD.tsx` uses React `useState` for messages (no localStorage)
+- Backend: `HecateAgent.conversation_history` cleared on frontend mount
+- Logout: `handleDisconnect()` calls `agentService.clearConversation('hecate')`
+- Mount: Component mount calls `agentService.clearConversation('hecate')` for paranoid cleanup
+
+**Future Plans**:
+- User-specific persistent context (linked to wallet address)
+- Session-based conversation memory
+- Cross-session knowledge retention (engram storage)
+- These are NOT yet implemented - all state is ephemeral
+
 ### Specialized Agents
 
 **Siren Marketing Agent** (`/svc/nullblock-agents/src/agents/siren_marketing.rs`)
@@ -98,47 +122,41 @@ if r.content.trim().is_empty() {
 
 ## API Key Management
 
-### Environment Configuration
+### Agent Base Keys (Erebus Database)
 
-**CRITICAL**: All services require `.env.dev` file access for API keys.
+**CRITICAL**: LLM API keys are stored in the Erebus database, NOT in `.env.dev`.
 
-**Required Keys**:
-- `OPENROUTER_API_KEY`: Primary LLM provider (REQUIRED for reliable access)
-- `OPENAI_API_KEY`: Optional for direct OpenAI access
-- `ANTHROPIC_API_KEY`: Optional for direct Anthropic access
-- `GROQ_API_KEY`: Optional for Groq models
+**How it works**:
+1. Agent API keys stored encrypted in Erebus (`agent_api_keys` table)
+2. At startup, `nullblock-agents` fetches keys via: `GET /internal/agents/:agent/api-keys/:provider/decrypted`
+3. Free LLMs are used by default - no user API keys required
+4. Automatic fallback through available free models
 
-### Symlink Approach
-
-Services running in subdirectories (e.g., `/svc/nullblock-agents/`) need local `.env.dev` access:
-
-```bash
-# Create symlinks from service directories to project root
-ln -s ../../.env.dev /svc/nullblock-agents/.env.dev
-ln -s ../../.env.dev /svc/erebus/.env.dev
+**Database Schema (Erebus)**:
+```sql
+-- agent_api_keys table stores encrypted keys for each agent/provider
+SELECT agent_name, provider, key_prefix, key_suffix, is_active FROM agent_api_keys;
+-- Example: hecate | openrouter | sk-or-v1-8 | e098 | t
 ```
 
-**Why**: Services use `dotenv::from_filename(".env.dev")` which searches in current working directory.
+**Seeding keys**:
+```bash
+cd svc/erebus && cargo run --bin seed_agent_keys
+```
+
+**Key Resolution Flow** (`svc/nullblock-agents/src/server.rs:106-136`):
+1. Try to fetch from Erebus: `erebus_client.get_agent_api_key("hecate", "openrouter")`
+2. Fall back to environment variables only if Erebus fails
+3. Log partial key for verification: `sk-or-v1-8efef7...e098`
 
 ### API Key Validation
 
 **Location**: `/svc/nullblock-agents/src/llm/factory.rs:85-105`
 
 The factory validates API keys at startup:
-
-```rust
-// Detect invalid/placeholder keys
-if api_key.is_empty() || api_key == "your-openrouter-key-here" {
-    error!("🔑 CRITICAL: OpenRouter API key is invalid or placeholder!");
-    error!("   Set OPENROUTER_API_KEY in .env.dev to a valid key from https://openrouter.ai/");
-    error!("   Without a valid OpenRouter key, you'll hit severe rate limits on free models.");
-}
-```
-
-**What it checks**:
-- Empty keys
-- Placeholder values
-- Key format (logs partial key for verification: `sk-or-v1-49a74f...7c7a`)
+- Detects empty keys or placeholders
+- Logs partial key for verification
+- Falls back to free models if key issues detected
 
 ### Anonymous Access Detection
 

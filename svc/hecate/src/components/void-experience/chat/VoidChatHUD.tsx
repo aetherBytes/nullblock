@@ -75,9 +75,6 @@ const HECATE_RETURN_MESSAGES = [
   `You return to the Studio. What draws your attention now?`,
 ];
 
-const CHAT_STORAGE_KEY = 'nullblock_void_chat_history';
-const MAX_PERSISTED_MESSAGES = 20;
-
 const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   publicKey: _publicKey,
   isActive = true,
@@ -137,30 +134,12 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const hasShownWelcomeRef = useRef(false);
   const lastPanelStateRef = useRef(false);
 
-  // Load persisted messages from localStorage on client mount (SSR-safe)
+  // Mark as hydrated on client mount (SSR-safe)
+  // Chat is ephemeral - no persistence across page refresh
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(CHAT_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const restoredMessages = parsed.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        }));
-        setMessages(restoredMessages);
-        // If we have user messages, mark as interacted
-        if (parsed.some((msg: any) => msg.sender === 'user')) {
-          setHasInteracted(true);
-        }
-        // If we have any messages, welcome was already shown
-        if (parsed.length > 0) {
-          hasShownWelcomeRef.current = true;
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to load chat history:', e);
-    }
     setIsHydrated(true);
+    // Clear backend conversation on fresh session (paranoid cleanup)
+    agentService.clearConversation('hecate').catch(() => {});
   }, []);
 
   // Handle the actual API call after charging/firing animation
@@ -317,20 +296,6 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
       setShowTooltip(false);
     }
   }, [showHistory, hasAcknowledgedFirst]);
-
-  // Persist messages to localStorage when they change (only after hydration)
-  useEffect(() => {
-    if (!isHydrated) return; // Don't persist until we've loaded from storage
-    if (messages.length > 0) {
-      try {
-        // Keep only the last N messages to avoid bloating localStorage
-        const toStore = messages.slice(-MAX_PERSISTED_MESSAGES);
-        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toStore));
-      } catch (e) {
-        console.warn('Failed to persist chat history:', e);
-      }
-    }
-  }, [messages, isHydrated]);
 
   // Sync with external showHistory control (from Hecate panel toggle)
   // Open AND close history based on external control
