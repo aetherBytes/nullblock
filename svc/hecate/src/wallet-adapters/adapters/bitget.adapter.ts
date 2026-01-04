@@ -20,8 +20,9 @@ export class BitgetAdapter extends BaseWalletAdapter {
     installUrl: 'https://web3.bitget.com/',
   };
 
-  // Track which chain we're connected to
+  // Track which chain we're connected to and the address
   private connectedChain: ChainType | null = null;
+  private connectedAddress: string | null = null;
 
   isInstalled(): boolean {
     if (typeof window === 'undefined') return false;
@@ -88,6 +89,7 @@ export class BitgetAdapter extends BaseWalletAdapter {
       }
 
       this.connectedChain = ChainType.EVM;
+      this.connectedAddress = accounts[0];
 
       return {
         success: true,
@@ -116,6 +118,7 @@ export class BitgetAdapter extends BaseWalletAdapter {
       const address = response.publicKey.toString();
 
       this.connectedChain = ChainType.SOLANA;
+      this.connectedAddress = address;
 
       return {
         success: true,
@@ -150,26 +153,30 @@ export class BitgetAdapter extends BaseWalletAdapter {
     }
 
     this.connectedChain = null;
+    this.connectedAddress = null;
   }
 
   async signMessage(message: string): Promise<SignatureResult> {
-    // Determine which provider to use based on connection or detect from context
+    // Determine which provider to use based on connected chain
     const evmProvider = this.getProvider(ChainType.EVM) as EthereumProvider | null;
     const solanaProvider = this.getProvider(ChainType.SOLANA) as SolanaProvider | null;
 
     try {
-      // Try EVM first if we have an active address
-      if (evmProvider?.selectedAddress) {
+      // Use stored address from connection (more reliable than provider.selectedAddress)
+      const address = this.connectedAddress || evmProvider?.selectedAddress;
+
+      // Try EVM if we connected via EVM or have an EVM address
+      if (this.connectedChain === ChainType.EVM && evmProvider && address) {
         const signature = (await evmProvider.request({
           method: 'personal_sign',
-          params: [message, evmProvider.selectedAddress],
+          params: [message, address],
         })) as string;
 
         return { success: true, signature };
       }
 
-      // Try Solana if connected
-      if (solanaProvider?.isConnected) {
+      // Try Solana if we connected via Solana
+      if (this.connectedChain === ChainType.SOLANA && solanaProvider?.isConnected) {
         const encodedMessage = this.encodeMessage(message);
         const { signature } = await solanaProvider.signMessage(encodedMessage);
         const signatureStr = this.bytesToString(signature);
@@ -189,8 +196,14 @@ export class BitgetAdapter extends BaseWalletAdapter {
     }
   }
 
-  // Override to check both providers
+  // Override to check connection state
   async isConnected(): Promise<boolean> {
+    // Use stored state as primary source (more reliable)
+    if (this.connectedAddress && this.connectedChain) {
+      return true;
+    }
+
+    // Fallback to provider checks
     const evmProvider = this.getProvider(ChainType.EVM) as EthereumProvider | null;
     const solanaProvider = this.getProvider(ChainType.SOLANA) as SolanaProvider | null;
 
