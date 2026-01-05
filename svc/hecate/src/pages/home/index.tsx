@@ -153,22 +153,22 @@ const Home: React.FC = () => {
       setTimeout(() => {
         console.log('🌟 [Pre-login] Stars fading in...');
         setPreLoginAnimationPhase('stars');
-      }, 400);
+      }, 200);
 
       setTimeout(() => {
         console.log('🌌 [Pre-login] Background + Mission text fading in...');
         setPreLoginAnimationPhase('background');
-      }, 2000);
+      }, 800);
 
       setTimeout(() => {
         console.log('⚡ [Pre-login] Navbar + CTA flickering in...');
         setPreLoginAnimationPhase('navbar');
-      }, 4500);
+      }, 1500);
 
       setTimeout(() => {
         console.log('✅ [Pre-login] Animation complete');
         setPreLoginAnimationPhase('complete');
-      }, 6000);
+      }, 2200);
     }
   }, []);
 

@@ -17,7 +17,7 @@ interface VoidExperienceProps {
 }
 
 // Single fixed camera position - zoomed in close
-const CAMERA_POSITION = new THREE.Vector3(2.2, 1.5, 5);
+const CAMERA_POSITION = new THREE.Vector3(3.5, 2.5, 9);
 
 const VoidExperience: React.FC<VoidExperienceProps> = ({
   publicKey,
