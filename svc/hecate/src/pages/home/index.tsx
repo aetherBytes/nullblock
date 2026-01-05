@@ -475,8 +475,8 @@ const Home: React.FC = () => {
       {/* Pre-login Hero Text */}
       {!connectedAddress && !initialSession.hasSession && currentAnimationPhase !== 'black' && (
         <div className={`${styles.heroOverlay} ${currentAnimationPhase === 'complete' ? styles.heroComplete : ''}`}>
-          <h1 className={styles.heroTitle}>Enter the Agent Mesh</h1>
-          <p className={styles.heroSubtitle}>Build, deploy, and profit from intelligent agent workflows</p>
+          <h1 className={styles.heroTitle}>The Living Directory</h1>
+          <p className={styles.heroSubtitle}>Discover agents, tools, and workflows — turn exploration into treasure</p>
         </div>
       )}
 

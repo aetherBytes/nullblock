@@ -5462,27 +5462,14 @@ $light-shadow: rgba(0, 0, 0, 0.1);
 }
 
 .walletMenuButton {
-  // Pulsing glow animation for connect CTA
-  animation: walletPulse 2.5s ease-in-out infinite;
-
-  @keyframes walletPulse {
-    0%, 100% {
-      box-shadow:
-        0 4px 16px rgba(0, 0, 0, 0.3),
-        0 0 0 1px rgba(255, 255, 255, 0.05) inset,
-        0 0 20px rgba(99, 102, 241, 0.3);
-    }
-    50% {
-      box-shadow:
-        0 4px 16px rgba(0, 0, 0, 0.3),
-        0 0 0 1px rgba(255, 255, 255, 0.05) inset,
-        0 0 40px rgba(99, 102, 241, 0.5),
-        0 0 60px rgba(139, 92, 246, 0.3);
-    }
-  }
+  // Subtle static shadow box for connect CTA (matches connected wallet style)
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 0 20px rgba(99, 102, 241, 0.35),
+    0 0 40px rgba(139, 92, 246, 0.15);
 
   &.connected {
-    animation: none; // Disable pulse when connected
     background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
     border-color: rgba(16, 185, 129, 0.5);
     color: rgba(167, 243, 208, 1);
