@@ -472,6 +472,14 @@ const Home: React.FC = () => {
         onHecatePanelChange={setHecatePanelOpen}
       />
 
+      {/* Pre-login Hero Text */}
+      {!connectedAddress && !initialSession.hasSession && currentAnimationPhase !== 'black' && (
+        <div className={`${styles.heroOverlay} ${currentAnimationPhase === 'complete' ? styles.heroComplete : ''}`}>
+          <h1 className={styles.heroTitle}>Enter the Agent Mesh</h1>
+          <p className={styles.heroSubtitle}>Build, deploy, and profit from intelligent agent workflows</p>
+        </div>
+      )}
+
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`} />
 
       {showHUD && isInitialized && currentAnimationPhase === 'complete' && (
