@@ -1,324 +1,530 @@
 import React, { useRef, useMemo } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
-import { Points, PointMaterial } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 interface ParticleFieldProps {
   count?: number;
-  radius?: number;
 }
 
 const ParticleField: React.FC<ParticleFieldProps> = ({
-  count = 3000,
-  radius = 20
+  count = 5000
 }) => {
   const coreRef = useRef<THREE.Points>(null);
-  const coronaRef = useRef<THREE.Points>(null);
-  const flareRef = useRef<THREE.Points>(null);
-  const mouseRef = useRef(new THREE.Vector3(0, 0, 0));
-  const { viewport, camera } = useThree();
+  const hazeRef = useRef<THREE.Points>(null);
+  const sparksRef = useRef<THREE.Points>(null);
+  const ambientRef = useRef<THREE.Points>(null);
 
-  // Track mouse position in 3D space with better depth mapping
-  React.useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      const x = (event.clientX / window.innerWidth) * 2 - 1;
-      const y = -(event.clientY / window.innerHeight) * 2 + 1;
-      // Better 3D mapping using camera distance
-      const depth = camera.position.z * 0.6;
-      mouseRef.current.set(x * viewport.width * 0.4, y * viewport.height * 0.4, depth * 0.2);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [viewport, camera]);
-
-  // Core particles - dense bright center
-  const coreParticles = useMemo(() => {
-    const coreCount = Math.floor(count * 0.25);
-    const pos = new Float32Array(coreCount * 3);
-    const data = new Float32Array(coreCount * 2); // [phase, speed]
+  // CORE - Dense dark star center with intense edge glow
+  const coreData = useMemo(() => {
+    const coreCount = Math.floor(count * 0.4);
+    const positions = new Float32Array(coreCount * 3);
+    const colors = new Float32Array(coreCount * 3);
+    const sizes = new Float32Array(coreCount);
 
     for (let i = 0; i < coreCount; i++) {
       const i3 = i * 3;
-      const r = Math.random() * radius * 0.15;
+
+      // Tighter core with dense edge corona
+      const r = Math.pow(Math.random(), 0.7) * 2.5;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
 
-      pos[i3] = r * Math.sin(phi) * Math.cos(theta);
-      pos[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      pos[i3 + 2] = r * Math.cos(phi);
+      positions[i3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i3 + 2] = r * Math.cos(phi);
 
-      data[i * 2] = Math.random() * Math.PI * 2;
-      data[i * 2 + 1] = 0.3 + Math.random() * 0.5;
+      // Dark star colors - mostly dark with occasional bright edge flares
+      const distFromCenter = r / 2.5;
+      const colorRoll = Math.random();
+
+      if (distFromCenter > 0.7 && colorRoll < 0.3) {
+        // Edge corona - bright white/blue flares
+        colors[i3] = 0.9; colors[i3 + 1] = 0.95; colors[i3 + 2] = 1.0;
+      } else if (distFromCenter > 0.5 && colorRoll < 0.15) {
+        // Purple edge glow
+        colors[i3] = 0.6; colors[i3 + 1] = 0.3; colors[i3 + 2] = 0.8;
+      } else {
+        // Dark core - very dim
+        const darkness = 0.05 + Math.random() * 0.15;
+        colors[i3] = darkness;
+        colors[i3 + 1] = darkness;
+        colors[i3 + 2] = darkness * 1.2;
+      }
+
+      // Varied sizes
+      const sizeRoll = Math.random();
+      if (sizeRoll < 0.4) {
+        sizes[i] = 0.02 + Math.random() * 0.03;
+      } else if (sizeRoll < 0.8) {
+        sizes[i] = 0.05 + Math.random() * 0.06;
+      } else {
+        sizes[i] = 0.1 + Math.random() * 0.08;
+      }
     }
-    return { positions: pos, data, count: coreCount };
-  }, [count, radius]);
 
-  // Corona particles - medium distance, flowing outward
-  const coronaParticles = useMemo(() => {
-    const coronaCount = Math.floor(count * 0.45);
-    const pos = new Float32Array(coronaCount * 3);
-    const data = new Float32Array(coronaCount * 2);
+    return { positions, colors, sizes, count: coreCount };
+  }, [count]);
 
-    for (let i = 0; i < coronaCount; i++) {
+  // HAZE - Dark nebula wisps around the black star
+  const hazeData = useMemo(() => {
+    const hazeCount = Math.floor(count * 0.2); // Sparser for emptier void
+    const positions = new Float32Array(hazeCount * 3);
+    const colors = new Float32Array(hazeCount * 3);
+    const sizes = new Float32Array(hazeCount);
+    const phases = new Float32Array(hazeCount);
+    const basePositions = new Float32Array(hazeCount * 3);
+
+    for (let i = 0; i < hazeCount; i++) {
       const i3 = i * 3;
-      const r = radius * 0.15 + Math.random() * radius * 0.5;
+
+      // Wider distribution - dark wisps
+      const r = 3 + Math.pow(Math.random(), 0.5) * 15;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
 
-      pos[i3] = r * Math.sin(phi) * Math.cos(theta);
-      pos[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      pos[i3 + 2] = r * Math.cos(phi);
+      const x = r * Math.sin(phi) * Math.cos(theta);
+      const y = r * Math.sin(phi) * Math.sin(theta);
+      const z = r * Math.cos(phi);
 
-      data[i * 2] = Math.random() * Math.PI * 2;
-      data[i * 2 + 1] = 0.5 + Math.random() * 1.0;
+      positions[i3] = x;
+      positions[i3 + 1] = y;
+      positions[i3 + 2] = z;
+      basePositions[i3] = x;
+      basePositions[i3 + 1] = y;
+      basePositions[i3 + 2] = z;
+
+      // Mostly dark with rare dim color hints
+      const colorRoll = Math.random();
+
+      if (colorRoll < 0.05) {
+        // Rare dim purple wisp
+        colors[i3] = 0.25; colors[i3 + 1] = 0.15; colors[i3 + 2] = 0.35;
+      } else if (colorRoll < 0.1) {
+        // Rare dim blue wisp
+        colors[i3] = 0.15; colors[i3 + 1] = 0.2; colors[i3 + 2] = 0.35;
+      } else {
+        // Dark grey wisps
+        const darkness = 0.08 + Math.random() * 0.12;
+        colors[i3] = darkness;
+        colors[i3 + 1] = darkness;
+        colors[i3 + 2] = darkness * 1.1;
+      }
+
+      // Larger, softer wisps
+      const sizeRoll = Math.random();
+      if (sizeRoll < 0.3) {
+        sizes[i] = 0.08 + Math.random() * 0.1;
+      } else if (sizeRoll < 0.7) {
+        sizes[i] = 0.15 + Math.random() * 0.15;
+      } else {
+        sizes[i] = 0.25 + Math.random() * 0.2;
+      }
+      phases[i] = Math.random() * Math.PI * 2;
     }
-    return { positions: pos, data, count: coronaCount };
-  }, [count, radius]);
 
-  // Flare/streamer particles - long streams emanating outward
-  const flareParticles = useMemo(() => {
-    const flareCount = Math.floor(count * 0.3);
-    const pos = new Float32Array(flareCount * 3);
-    const data = new Float32Array(flareCount * 3); // [phase, speed, streamAngle]
+    return { positions, colors, sizes, phases, basePositions, count: hazeCount };
+  }, [count]);
 
-    for (let i = 0; i < flareCount; i++) {
+  // SPARKS - Distant stars drifting outward into the void
+  const sparksData = useMemo(() => {
+    const sparkCount = Math.floor(count * 0.25); // Fewer for lonelier void
+    const positions = new Float32Array(sparkCount * 3);
+    const colors = new Float32Array(sparkCount * 3);
+    const sizes = new Float32Array(sparkCount);
+    const life = new Float32Array(sparkCount * 2);
+    const velocities = new Float32Array(sparkCount * 3);
+    const phaseOffsets = new Float32Array(sparkCount);
+    const speedMultipliers = new Float32Array(sparkCount);
+
+    for (let i = 0; i < sparkCount; i++) {
       const i3 = i * 3;
-      // Create 6-8 distinct streams
-      const streamAngle = Math.floor(Math.random() * 6) * (Math.PI / 3);
-      const streamSpread = (Math.random() - 0.5) * 0.4;
-      const r = Math.random() * radius;
-      const theta = streamAngle + streamSpread;
+
+      const r = Math.random() * 1.5;
+      const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
 
-      pos[i3] = r * Math.sin(phi) * Math.cos(theta);
-      pos[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      pos[i3 + 2] = r * Math.cos(phi);
+      positions[i3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i3 + 2] = r * Math.cos(phi);
 
-      data[i * 3] = Math.random() * Math.PI * 2;
-      data[i * 3 + 1] = 1.0 + Math.random() * 1.5;
-      data[i * 3 + 2] = streamAngle;
+      // Mostly dim with occasional bright distant stars
+      const colorRoll = Math.random();
+      if (colorRoll < 0.03) {
+        // Rare bright white star
+        colors[i3] = 0.9; colors[i3 + 1] = 0.92; colors[i3 + 2] = 1.0;
+      } else if (colorRoll < 0.06) {
+        // Rare dim purple
+        colors[i3] = 0.4; colors[i3 + 1] = 0.25; colors[i3 + 2] = 0.6;
+      } else if (colorRoll < 0.09) {
+        // Rare dim blue
+        colors[i3] = 0.25; colors[i3 + 1] = 0.35; colors[i3 + 2] = 0.6;
+      } else {
+        // Dim grey/silver - distant stars
+        const dim = 0.15 + Math.random() * 0.25;
+        colors[i3] = dim;
+        colors[i3 + 1] = dim;
+        colors[i3 + 2] = dim * 1.1;
+      }
+
+      // Mix of sizes - mostly small distant points
+      const sizeRoll = Math.random();
+      if (sizeRoll < 0.5) {
+        sizes[i] = 0.03 + Math.random() * 0.05; // Small distant
+      } else if (sizeRoll < 0.8) {
+        sizes[i] = 0.08 + Math.random() * 0.1; // Medium
+      } else if (sizeRoll < 0.95) {
+        sizes[i] = 0.15 + Math.random() * 0.15; // Larger
+      } else {
+        sizes[i] = 0.3 + Math.random() * 0.2; // Rare bright stars
+      }
+
+      life[i * 2] = Math.random() * 30;
+      life[i * 2 + 1] = 30 + Math.random() * 40;
+
+      // Velocity direction
+      const vTheta = Math.random() * Math.PI * 2;
+      const vPhi = Math.acos(2 * Math.random() - 1);
+      velocities[i3] = Math.sin(vPhi) * Math.cos(vTheta);
+      velocities[i3 + 1] = Math.sin(vPhi) * Math.sin(vTheta);
+      velocities[i3 + 2] = Math.cos(vPhi);
+
+      phaseOffsets[i] = Math.random() * 8;
+      speedMultipliers[i] = 0.2 + Math.random() * 1.2; // Slower, more varied
     }
-    return { positions: pos, data, count: flareCount };
-  }, [count, radius]);
+
+    return { positions, colors, sizes, life, velocities, phaseOffsets, speedMultipliers, count: sparkCount };
+  }, [count]);
+
+  // AMBIENT - Very distant, sparse twinkling stars in the void
+  const ambientData = useMemo(() => {
+    const ambientCount = Math.floor(count * 0.1); // Sparse for empty void feeling
+    const positions = new Float32Array(ambientCount * 3);
+    const colors = new Float32Array(ambientCount * 3);
+    const sizes = new Float32Array(ambientCount);
+    const twinkle = new Float32Array(ambientCount * 2);
+
+    for (let i = 0; i < ambientCount; i++) {
+      const i3 = i * 3;
+
+      // Very far out in the void
+      const r = 25 + Math.random() * 50;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+
+      positions[i3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i3 + 2] = r * Math.cos(phi);
+
+      // Mostly dim with rare brighter stars
+      const colorRoll = Math.random();
+      if (colorRoll < 0.02) {
+        // Rare bright distant star
+        colors[i3] = 0.7; colors[i3 + 1] = 0.75; colors[i3 + 2] = 0.9;
+      } else if (colorRoll < 0.05) {
+        // Dim blue
+        colors[i3] = 0.15; colors[i3 + 1] = 0.2; colors[i3 + 2] = 0.35;
+      } else {
+        // Very dim pinpoints
+        const dim = 0.08 + Math.random() * 0.15;
+        colors[i3] = dim; colors[i3 + 1] = dim; colors[i3 + 2] = dim * 1.1;
+      }
+
+      // Tiny distant pinpoints
+      const sizeRoll = Math.random();
+      if (sizeRoll < 0.7) {
+        sizes[i] = 0.01 + Math.random() * 0.02;
+      } else if (sizeRoll < 0.95) {
+        sizes[i] = 0.03 + Math.random() * 0.04;
+      } else {
+        sizes[i] = 0.06 + Math.random() * 0.05;
+      }
+      twinkle[i * 2] = Math.random() * Math.PI * 2;
+      twinkle[i * 2 + 1] = 0.3 + Math.random() * 1.5; // Slower twinkle
+    }
+
+    return { positions, colors, sizes, twinkle, count: ambientCount };
+  }, [count]);
+
+  // Geometries & Materials
+  const coreGeo = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(coreData.positions.slice(), 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(coreData.colors, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(coreData.sizes, 1));
+    return geo;
+  }, [coreData]);
+
+  const coreMat = useMemo(() => new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 } },
+    vertexShader: `
+      attribute float size;
+      attribute vec3 color;
+      varying vec3 vColor;
+      varying float vAlpha;
+      uniform float time;
+      void main() {
+        vColor = color;
+        vAlpha = 0.85 + sin(time * 2.5 + position.x * 8.0) * 0.15;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (420.0 / -mv.z);
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      varying float vAlpha;
+      void main() {
+        float d = length(gl_PointCoord - 0.5);
+        if (d > 0.5) discard;
+        float alpha = (1.0 - d * 2.0) * vAlpha;
+        gl_FragColor = vec4(vColor, alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  }), []);
+
+  const hazeGeo = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(hazeData.positions.slice(), 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(hazeData.colors, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(hazeData.sizes, 1));
+    return geo;
+  }, [hazeData]);
+
+  const hazeMat = useMemo(() => new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 } },
+    vertexShader: `
+      attribute float size;
+      attribute vec3 color;
+      varying vec3 vColor;
+      varying float vDist;
+      void main() {
+        vColor = color;
+        vDist = length(position);
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (380.0 / -mv.z);
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      varying float vDist;
+      void main() {
+        float d = length(gl_PointCoord - 0.5);
+        if (d > 0.5) discard;
+        float fade = smoothstep(15.0, 2.0, vDist);
+        float alpha = (1.0 - d * 2.0) * 0.5 * fade;
+        gl_FragColor = vec4(vColor, alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  }), []);
+
+  const sparksGeo = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(sparksData.positions.slice(), 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(sparksData.colors, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(sparksData.sizes, 1));
+    return geo;
+  }, [sparksData]);
+
+  const sparksMat = useMemo(() => new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 } },
+    vertexShader: `
+      attribute float size;
+      attribute vec3 color;
+      varying vec3 vColor;
+      varying float vDist;
+      void main() {
+        vColor = color;
+        vDist = length(position);
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (600.0 / -mv.z);
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      varying float vDist;
+      void main() {
+        float d = length(gl_PointCoord - 0.5);
+        if (d > 0.5) discard;
+        float glow = 1.0 - smoothstep(0.0, 0.5, d);
+        float alpha = glow * 0.8;
+        gl_FragColor = vec4(vColor, alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  }), []);
+
+  const ambientGeo = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(ambientData.positions.slice(), 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(ambientData.colors.slice(), 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(ambientData.sizes.slice(), 1));
+    return geo;
+  }, [ambientData]);
+
+  const ambientMat = useMemo(() => new THREE.ShaderMaterial({
+    uniforms: { time: { value: 0 } },
+    vertexShader: `
+      attribute float size;
+      attribute vec3 color;
+      varying vec3 vColor;
+      uniform float time;
+      void main() {
+        vColor = color;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (300.0 / -mv.z);
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      void main() {
+        float d = length(gl_PointCoord - 0.5);
+        if (d > 0.5) discard;
+        float alpha = (1.0 - d * 2.0) * 0.6;
+        gl_FragColor = vec4(vColor, alpha);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  }), []);
 
   useFrame((state) => {
     const time = state.clock.elapsedTime;
-    const mouse = mouseRef.current;
+    const delta = state.clock.getDelta() || 0.016;
 
-    // Animate core particles - gentle pulsing
+    // Animate CORE - just gentle rotation, no breathing/pulsing
     if (coreRef.current) {
-      const posAttr = coreRef.current.geometry.attributes.position;
-      const posArray = posAttr.array as Float32Array;
+      const pos = coreRef.current.geometry.attributes.position;
+      const arr = pos.array as Float32Array;
 
-      for (let i = 0; i < coreParticles.count; i++) {
+      for (let i = 0; i < coreData.count; i++) {
         const i3 = i * 3;
-        const phase = coreParticles.data[i * 2];
-        const speed = coreParticles.data[i * 2 + 1];
-
-        let x = posArray[i3];
-        let y = posArray[i3 + 1];
-        let z = posArray[i3 + 2];
+        let x = arr[i3], y = arr[i3 + 1], z = arr[i3 + 2];
         const dist = Math.sqrt(x * x + y * y + z * z);
 
-        // Gentle breathing motion
-        const pulse = 1 + Math.sin(time * 0.8 + phase) * 0.15;
-        const scale = pulse * speed * 0.002;
-        const nx = x / (dist || 1);
-        const ny = y / (dist || 1);
-        const nz = z / (dist || 1);
+        // Gentle orbital rotation only
+        const orbitSpeed = 0.008 / (dist + 0.5);
+        const cos = Math.cos(orbitSpeed);
+        const sin = Math.sin(orbitSpeed);
+        const nx = x * cos - z * sin;
+        const nz = x * sin + z * cos;
+        x = nx; z = nz;
 
-        x += nx * scale + Math.sin(time + phase) * 0.003;
-        y += ny * scale + Math.cos(time * 0.9 + phase) * 0.003;
-        z += nz * scale;
-
-        // Mouse interaction - strong attraction to cursor
-        const dx = mouse.x - x;
-        const dy = mouse.y - y;
-        const dz = mouse.z - z;
-        const mouseDist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-        if (mouseDist < 6) {
-          const attractStrength = (6 - mouseDist) * 0.008;
-          x += dx * attractStrength * 0.1;
-          y += dy * attractStrength * 0.1;
-          z += dz * attractStrength * 0.05;
-        }
-
-        // Keep near center
-        if (dist > radius * 0.2) {
-          x *= 0.98;
-          y *= 0.98;
-          z *= 0.98;
-        }
-
-        posArray[i3] = x;
-        posArray[i3 + 1] = y;
-        posArray[i3 + 2] = z;
+        arr[i3] = x; arr[i3 + 1] = y; arr[i3 + 2] = z;
       }
-      posAttr.needsUpdate = true;
-      coreRef.current.rotation.y = time * 0.02;
+      pos.needsUpdate = true;
+      (coreMat.uniforms.time as any).value = time;
     }
 
-    // Animate corona particles - flowing outward
-    if (coronaRef.current) {
-      const posAttr = coronaRef.current.geometry.attributes.position;
-      const posArray = posAttr.array as Float32Array;
+    // Animate HAZE - very slow rotation only
+    if (hazeRef.current) {
+      const pos = hazeRef.current.geometry.attributes.position;
+      const arr = pos.array as Float32Array;
 
-      for (let i = 0; i < coronaParticles.count; i++) {
+      for (let i = 0; i < hazeData.count; i++) {
         const i3 = i * 3;
-        const phase = coronaParticles.data[i * 2];
-        const speed = coronaParticles.data[i * 2 + 1];
+        let x = arr[i3], y = arr[i3 + 1], z = arr[i3 + 2];
 
-        let x = posArray[i3];
-        let y = posArray[i3 + 1];
-        let z = posArray[i3 + 2];
-        const dist = Math.sqrt(x * x + y * y + z * z);
+        // Very slow rotation only - no oscillation
+        const orbitSpeed = 0.001;
+        const cos = Math.cos(orbitSpeed);
+        const sin = Math.sin(orbitSpeed);
+        const nx = x * cos - z * sin;
+        const nz = x * sin + z * cos;
+        x = nx; z = nz;
 
-        // Outward flow
-        const nx = x / (dist || 1);
-        const ny = y / (dist || 1);
-        const nz = z / (dist || 1);
-        const flowSpeed = 0.012 * speed * (1 + Math.sin(time * 0.5 + phase) * 0.3);
-
-        x += nx * flowSpeed;
-        y += ny * flowSpeed;
-        z += nz * flowSpeed;
-
-        // Swirl motion
-        x += Math.sin(time * 0.4 + phase) * 0.004;
-        y += Math.cos(time * 0.35 + phase) * 0.004;
-
-        // Mouse interaction - repel from cursor
-        const dx = x - mouse.x;
-        const dy = y - mouse.y;
-        const dz = z - mouse.z;
-        const mouseDist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-        if (mouseDist < 5) {
-          const repelStrength = (5 - mouseDist) * 0.015;
-          x += (dx / mouseDist) * repelStrength;
-          y += (dy / mouseDist) * repelStrength;
-          z += (dz / mouseDist) * repelStrength * 0.5;
-        }
-
-        // Reset if too far
-        if (dist > radius * 0.8) {
-          const newR = radius * 0.15 + Math.random() * radius * 0.1;
-          const newTheta = Math.random() * Math.PI * 2;
-          const newPhi = Math.acos(2 * Math.random() - 1);
-          x = newR * Math.sin(newPhi) * Math.cos(newTheta);
-          y = newR * Math.sin(newPhi) * Math.sin(newTheta);
-          z = newR * Math.cos(newPhi);
-        }
-
-        posArray[i3] = x;
-        posArray[i3 + 1] = y;
-        posArray[i3 + 2] = z;
+        arr[i3] = x; arr[i3 + 1] = y; arr[i3 + 2] = z;
       }
-      posAttr.needsUpdate = true;
-      coronaRef.current.rotation.y = time * 0.015;
+      pos.needsUpdate = true;
     }
 
-    // Animate flare particles - fast outward streams
-    if (flareRef.current) {
-      const posAttr = flareRef.current.geometry.attributes.position;
-      const posArray = posAttr.array as Float32Array;
+    // Animate SPARKS - slowly drift outward, then gentle oscillation in the void
+    if (sparksRef.current) {
+      const pos = sparksRef.current.geometry.attributes.position;
+      const arr = pos.array as Float32Array;
 
-      for (let i = 0; i < flareParticles.count; i++) {
+      const maxDistance = 45; // How far stars drift out
+
+      for (let i = 0; i < sparksData.count; i++) {
         const i3 = i * 3;
-        const phase = flareParticles.data[i * 3];
-        const speed = flareParticles.data[i * 3 + 1];
-
-        let x = posArray[i3];
-        let y = posArray[i3 + 1];
-        let z = posArray[i3 + 2];
+        let x = arr[i3], y = arr[i3 + 1], z = arr[i3 + 2];
         const dist = Math.sqrt(x * x + y * y + z * z);
 
-        // Fast outward flow
-        const nx = x / (dist || 1);
-        const ny = y / (dist || 1);
-        const nz = z / (dist || 1);
-        const flowSpeed = 0.025 * speed * (1 + Math.sin(time * 0.3 + phase) * 0.5);
+        const speedMult = sparksData.speedMultipliers[i];
+        const phase = sparksData.phaseOffsets[i];
 
-        x += nx * flowSpeed;
-        y += ny * flowSpeed;
-        z += nz * flowSpeed;
-
-        // Mouse interaction - dramatic scatter
-        const dx = x - mouse.x;
-        const dy = y - mouse.y;
-        const dz = z - mouse.z;
-        const mouseDist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-        if (mouseDist < 4) {
-          const scatterStrength = (4 - mouseDist) * 0.025;
-          x += (dx / mouseDist) * scatterStrength;
-          y += (dy / mouseDist) * scatterStrength;
-          z += (dz / mouseDist) * scatterStrength * 0.5;
+        if (dist < maxDistance) {
+          // Slow, peaceful drift outward
+          const speed = 0.08 * speedMult;
+          x += sparksData.velocities[i3] * speed;
+          y += sparksData.velocities[i3 + 1] * speed;
+          z += sparksData.velocities[i3 + 2] * speed;
+        } else {
+          // Very gentle breathing oscillation
+          const oscillate = Math.sin(time * 0.2 + phase) * 0.008;
+          x += sparksData.velocities[i3] * oscillate;
+          y += sparksData.velocities[i3 + 1] * oscillate;
+          z += sparksData.velocities[i3 + 2] * oscillate;
         }
 
-        // Reset if too far
-        if (dist > radius) {
-          const streamAngle = flareParticles.data[i * 3 + 2];
-          const streamSpread = (Math.random() - 0.5) * 0.4;
-          const newR = Math.random() * radius * 0.2;
-          const newTheta = streamAngle + streamSpread;
-          const newPhi = Math.acos(2 * Math.random() - 1);
-          x = newR * Math.sin(newPhi) * Math.cos(newTheta);
-          y = newR * Math.sin(newPhi) * Math.sin(newTheta);
-          z = newR * Math.cos(newPhi);
-        }
+        // Very slow rotation for all particles
+        const rotSpeed = 0.0008 * speedMult;
+        const cos = Math.cos(rotSpeed);
+        const sin = Math.sin(rotSpeed);
+        const nx = x * cos - z * sin;
+        const nz = x * sin + z * cos;
 
-        posArray[i3] = x;
-        posArray[i3 + 1] = y;
-        posArray[i3 + 2] = z;
+        arr[i3] = nx; arr[i3 + 1] = y; arr[i3 + 2] = nz;
       }
-      posAttr.needsUpdate = true;
-      flareRef.current.rotation.y = time * 0.008;
+      pos.needsUpdate = true;
+    }
+
+    // Animate AMBIENT - slow twinkle in the distant void
+    if (ambientRef.current) {
+      const colors = ambientRef.current.geometry.attributes.color;
+      const colorArr = colors.array as Float32Array;
+      const sizes = ambientRef.current.geometry.attributes.size;
+      const sizeArr = sizes.array as Float32Array;
+
+      for (let i = 0; i < ambientData.count; i++) {
+        const phase = ambientData.twinkle[i * 2];
+        const speed = ambientData.twinkle[i * 2 + 1];
+
+        // Subtle twinkle
+        const twinkle = 0.7 + Math.sin(time * speed + phase) * 0.3;
+
+        const i3 = i * 3;
+        colorArr[i3] = ambientData.colors[i3] * twinkle;
+        colorArr[i3 + 1] = ambientData.colors[i3 + 1] * twinkle;
+        colorArr[i3 + 2] = ambientData.colors[i3 + 2] * twinkle;
+
+        sizeArr[i] = ambientData.sizes[i] * (0.9 + twinkle * 0.2);
+      }
+      colors.needsUpdate = true;
+      sizes.needsUpdate = true;
+
+      // Very slow rotation - lonely void feeling
+      ambientRef.current.rotation.y = time * 0.001;
     }
   });
 
   return (
     <group>
-      {/* Core - bright white center */}
-      <Points ref={coreRef} positions={coreParticles.positions} stride={3} frustumCulled={false}>
-        <PointMaterial
-          transparent
-          color="#ffffff"
-          size={0.06}
-          sizeAttenuation
-          depthWrite={false}
-          opacity={0.95}
-          blending={THREE.AdditiveBlending}
-        />
-      </Points>
-
-      {/* Corona - silver/grey flowing particles */}
-      <Points ref={coronaRef} positions={coronaParticles.positions} stride={3} frustumCulled={false}>
-        <PointMaterial
-          transparent
-          color="#c0c0c8"
-          size={0.04}
-          sizeAttenuation
-          depthWrite={false}
-          opacity={0.75}
-          blending={THREE.AdditiveBlending}
-        />
-      </Points>
-
-      {/* Flares - dim grey streamers */}
-      <Points ref={flareRef} positions={flareParticles.positions} stride={3} frustumCulled={false}>
-        <PointMaterial
-          transparent
-          color="#888890"
-          size={0.03}
-          sizeAttenuation
-          depthWrite={false}
-          opacity={0.5}
-          blending={THREE.AdditiveBlending}
-        />
-      </Points>
+      <points ref={ambientRef} geometry={ambientGeo} material={ambientMat} />
+      <points ref={hazeRef} geometry={hazeGeo} material={hazeMat} />
+      <points ref={sparksRef} geometry={sparksGeo} material={sparksMat} />
+      <points ref={coreRef} geometry={coreGeo} material={coreMat} />
     </group>
   );
 };
