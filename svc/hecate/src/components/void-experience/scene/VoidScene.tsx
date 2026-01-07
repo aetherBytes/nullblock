@@ -312,7 +312,7 @@ const VoidScene: React.FC = () => {
       <pointLight position={[0, 0, 0]} intensity={0.5} color="#e6c200" distance={10} />
 
       {/* Background layers */}
-      <ParticleField count={1500} />
+      <ParticleField count={800} />
 
       {/* Inner constellations */}
       <NeuralLines

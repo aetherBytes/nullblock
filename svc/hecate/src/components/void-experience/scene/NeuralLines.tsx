@@ -97,12 +97,12 @@ class ConstellationCoreMaterial extends THREE.ShaderMaterial {
           return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
         }
 
-        // FBM
+        // FBM - 4 octaves (reduced from 5 for GPU optimization)
         float fbm3D(vec3 p) {
           float value = 0.0;
           float amplitude = 0.5;
           float frequency = 1.0;
-          for (int i = 0; i < 5; i++) {
+          for (int i = 0; i < 4; i++) {
             value += amplitude * snoise3D(p * frequency);
             amplitude *= 0.5;
             frequency *= 2.0;
@@ -269,6 +269,12 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
   const nodeMaterialRefs = useRef<(THREE.ShaderMaterial | null)[]>([]);
   const nodeGroupRefs = useRef<(THREE.Group | null)[]>([]);
 
+  // Pre-allocated objects to avoid GC pressure in useFrame
+  const tempMatrix = useRef(new THREE.Matrix4());
+  const tempEuler = useRef(new THREE.Euler());
+  const tempVec = useRef(new THREE.Vector3());
+  const processedPairsSet = useRef(new Set<string>());
+
   // Create glow texture once
   const glowTexture = useMemo(() => createNodeGlowTexture(), []);
 
@@ -352,6 +358,7 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
     const time = state.clock.elapsedTime;
 
     // Animate each node based on its cluster's orbital parameters
+    // Reuse pre-allocated objects to avoid GC pressure
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
       const orbit = clusterOrbits[node.clusterId];
@@ -360,22 +367,20 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
       const basePos = basePositions[i];
       const angle = orbit.phase + time * orbit.speed;
 
-      // Create rotation matrix for this cluster's orbit
-      const rotationMatrix = new THREE.Matrix4();
-      rotationMatrix.makeRotationFromEuler(
-        new THREE.Euler(orbit.tiltX, angle, orbit.tiltZ, 'XYZ')
-      );
+      // Reuse pre-allocated euler and matrix
+      tempEuler.current.set(orbit.tiltX, angle, orbit.tiltZ, 'XYZ');
+      tempMatrix.current.makeRotationFromEuler(tempEuler.current);
 
-      // Apply rotation to base position
-      const animatedPos = basePos.clone().applyMatrix4(rotationMatrix);
+      // Apply rotation to base position (reuse tempVec instead of clone)
+      tempVec.current.copy(basePos).applyMatrix4(tempMatrix.current);
 
       // Update the shared animated positions ref
-      animatedPositionsRef.current[i].copy(animatedPos);
+      animatedPositionsRef.current[i].copy(tempVec.current);
 
       // Update the node group position
       const nodeGroup = nodeGroupRefs.current[i];
       if (nodeGroup) {
-        nodeGroup.position.copy(animatedPos);
+        nodeGroup.position.copy(tempVec.current);
       }
     }
 
@@ -383,13 +388,14 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
     const lineGeom = linesRef.current.geometry;
     const positions = lineGeom.attributes.position.array as Float32Array;
     let lineIdx = 0;
-    const processedPairs = new Set<string>();
+    // Reuse pre-allocated Set, clear instead of creating new
+    processedPairsSet.current.clear();
 
     for (let i = 0; i < nodes.length; i++) {
       for (const j of nodes[i].connections) {
         const pairKey = i < j ? `${i}-${j}` : `${j}-${i}`;
-        if (processedPairs.has(pairKey)) continue;
-        processedPairs.add(pairKey);
+        if (processedPairsSet.current.has(pairKey)) continue;
+        processedPairsSet.current.add(pairKey);
 
         const posA = animatedPositionsRef.current[i];
         const posB = animatedPositionsRef.current[j];
