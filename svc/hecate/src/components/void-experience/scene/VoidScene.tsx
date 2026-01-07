@@ -111,9 +111,198 @@ const VoidScene: React.FC = () => {
     return { constellationNodes: nodes, clusterOrbits: orbits };
   }, []);
 
+  // Generate outer constellations - smaller networks at the edge of the void
+  const { outerNodes, outerClusterOrbits } = useMemo(() => {
+    const nodes: ConstellationNode[] = [];
+
+    // Create 10-14 small clusters scattered at varied distances
+    const numClusters = 10 + Math.floor(Math.random() * 5);
+    const minRadius = 20; // Minimum distance from center
+    const maxRadius = 42;
+
+    for (let cluster = 0; cluster < numClusters; cluster++) {
+      // Each outer cluster has 3-6 nodes
+      const clusterSize = 3 + Math.floor(Math.random() * 4);
+
+      // Vary the distance - some closer, some further
+      // Use a distribution that spreads them out more evenly
+      const distanceBand = Math.random();
+      let clusterRadius;
+      if (distanceBand < 0.35) {
+        // Closer band (20-28)
+        clusterRadius = minRadius + Math.random() * 8;
+      } else if (distanceBand < 0.7) {
+        // Middle band (26-35)
+        clusterRadius = 26 + Math.random() * 9;
+      } else {
+        // Outer band (33-42)
+        clusterRadius = 33 + Math.random() * (maxRadius - 33);
+      }
+      const clusterTheta = Math.random() * Math.PI * 2;
+      const clusterPhi = Math.acos(2 * Math.random() - 1);
+
+      const clusterCenter = new THREE.Vector3(
+        clusterRadius * Math.sin(clusterPhi) * Math.cos(clusterTheta),
+        clusterRadius * Math.sin(clusterPhi) * Math.sin(clusterTheta),
+        clusterRadius * Math.cos(clusterPhi)
+      );
+
+      const clusterStartIdx = nodes.length;
+
+      // Vary cluster shape: chain, arc, scattered, hub-spoke
+      const shapeType = Math.random();
+
+      if (shapeType < 0.25) {
+        // CHAIN - nodes in a line/curve
+        const direction = new THREE.Vector3(
+          Math.random() - 0.5,
+          Math.random() - 0.5,
+          Math.random() - 0.5
+        ).normalize();
+        const perpendicular = new THREE.Vector3(
+          Math.random() - 0.5,
+          Math.random() - 0.5,
+          Math.random() - 0.5
+        ).cross(direction).normalize();
+
+        for (let i = 0; i < clusterSize; i++) {
+          const t = (i / (clusterSize - 1)) - 0.5; // -0.5 to 0.5
+          const curve = Math.sin(t * Math.PI) * 1.5; // Slight curve
+          const offset = direction.clone().multiplyScalar(t * 8)
+            .add(perpendicular.clone().multiplyScalar(curve))
+            .add(new THREE.Vector3(
+              (Math.random() - 0.5) * 1,
+              (Math.random() - 0.5) * 1,
+              (Math.random() - 0.5) * 1
+            ));
+
+          nodes.push({
+            position: clusterCenter.clone().add(offset),
+            connections: [],
+            clusterId: cluster
+          });
+        }
+      } else if (shapeType < 0.5) {
+        // ARC - nodes in a curved arc
+        const arcAngle = Math.PI * (0.4 + Math.random() * 0.5); // 70-160 degree arc
+        const arcRadius = 2 + Math.random() * 3;
+        const startAngle = Math.random() * Math.PI * 2;
+        const tiltAxis = new THREE.Vector3(
+          Math.random() - 0.5,
+          Math.random() - 0.5,
+          Math.random() - 0.5
+        ).normalize();
+
+        for (let i = 0; i < clusterSize; i++) {
+          const angle = startAngle + (i / (clusterSize - 1)) * arcAngle;
+          const offset = new THREE.Vector3(
+            Math.cos(angle) * arcRadius,
+            Math.sin(angle) * arcRadius * 0.5,
+            Math.sin(angle) * arcRadius
+          ).applyAxisAngle(tiltAxis, Math.random() * Math.PI)
+            .add(new THREE.Vector3(
+              (Math.random() - 0.5) * 0.8,
+              (Math.random() - 0.5) * 0.8,
+              (Math.random() - 0.5) * 0.8
+            ));
+
+          nodes.push({
+            position: clusterCenter.clone().add(offset),
+            connections: [],
+            clusterId: cluster
+          });
+        }
+      } else if (shapeType < 0.75) {
+        // HUB-SPOKE - central node with others radiating out
+        // Central hub node
+        nodes.push({
+          position: clusterCenter.clone(),
+          connections: [],
+          clusterId: cluster
+        });
+
+        // Spoke nodes around it
+        for (let i = 1; i < clusterSize; i++) {
+          const angle = (i / (clusterSize - 1)) * Math.PI * 2;
+          const spokeLen = 2.5 + Math.random() * 2.5;
+          const offset = new THREE.Vector3(
+            Math.cos(angle) * spokeLen,
+            (Math.random() - 0.5) * 2,
+            Math.sin(angle) * spokeLen
+          );
+
+          nodes.push({
+            position: clusterCenter.clone().add(offset),
+            connections: [],
+            clusterId: cluster
+          });
+        }
+      } else {
+        // SCATTERED - random positions (original behavior)
+        for (let i = 0; i < clusterSize; i++) {
+          const offset = new THREE.Vector3(
+            (Math.random() - 0.5) * 7,
+            (Math.random() - 0.5) * 5,
+            (Math.random() - 0.5) * 7
+          );
+
+          nodes.push({
+            position: clusterCenter.clone().add(offset),
+            connections: [],
+            clusterId: cluster
+          });
+        }
+      }
+
+      // Connect nodes within this cluster
+      const clusterNodes = nodes.slice(clusterStartIdx);
+      const maxConn = shapeType < 0.5 ? 2 : 3; // Chains/arcs get 2, others get 3
+
+      for (let i = 0; i < clusterNodes.length; i++) {
+        const nodeIdx = clusterStartIdx + i;
+        const distances: { index: number; dist: number }[] = [];
+
+        for (let j = i + 1; j < clusterNodes.length; j++) {
+          const otherIdx = clusterStartIdx + j;
+          const dist = nodes[nodeIdx].position.distanceTo(nodes[otherIdx].position);
+          distances.push({ index: otherIdx, dist });
+        }
+
+        distances.sort((a, b) => a.dist - b.dist);
+        const connectTo = distances.slice(0, maxConn);
+
+        for (const conn of connectTo) {
+          if (nodes[nodeIdx].connections.length < maxConn &&
+              nodes[conn.index].connections.length < maxConn) {
+            nodes[nodeIdx].connections.push(conn.index);
+            nodes[conn.index].connections.push(nodeIdx);
+          }
+        }
+      }
+    }
+
+    // Generate orbital parameters for outer clusters (slower, gentler movement)
+    const orbits: ClusterOrbit[] = [];
+    for (let c = 0; c < numClusters; c++) {
+      orbits.push({
+        speed: 0.008 + Math.random() * 0.015,  // Very slow
+        tiltX: (Math.random() - 0.5) * 0.2,
+        tiltZ: (Math.random() - 0.5) * 0.2,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    return { outerNodes: nodes, outerClusterOrbits: orbits };
+  }, []);
+
   // Ref to hold animated node positions (updated by NeuralLines, read by CrossroadsOrb)
   const animatedPositionsRef = useRef<THREE.Vector3[]>(
     constellationNodes.map(n => n.position.clone())
+  );
+
+  // Ref for outer constellation positions
+  const outerAnimatedPositionsRef = useRef<THREE.Vector3[]>(
+    outerNodes.map(n => n.position.clone())
   );
 
   return (
@@ -124,6 +313,8 @@ const VoidScene: React.FC = () => {
 
       {/* Background layers */}
       <ParticleField count={1500} />
+
+      {/* Inner constellations */}
       <NeuralLines
         nodes={constellationNodes}
         activeNodes={activeNodes}
@@ -131,11 +322,20 @@ const VoidScene: React.FC = () => {
         animatedPositionsRef={animatedPositionsRef}
       />
 
+      {/* Outer constellations - visible when zoomed out */}
+      <NeuralLines
+        nodes={outerNodes}
+        clusterOrbits={outerClusterOrbits}
+        animatedPositionsRef={outerAnimatedPositionsRef}
+      />
+
       {/* Central Crossroads Orb - The marketplace bazaar hub */}
       <CrossroadsOrb
         position={[0, 0, 0]}
         constellationNodes={constellationNodes}
         animatedPositionsRef={animatedPositionsRef}
+        outerNodes={outerNodes}
+        outerAnimatedPositionsRef={outerAnimatedPositionsRef}
         onActiveNodesChange={handleActiveNodesChange}
       />
     </group>
