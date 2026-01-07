@@ -227,9 +227,9 @@ html, body {
   text-transform: uppercase;
   color: #e8e8e8;
   text-shadow:
-    0 0 40px rgba(99, 102, 241, 0.6),
-    0 0 80px rgba(139, 92, 246, 0.4),
-    0 0 120px rgba(99, 102, 241, 0.2);
+    0 0 30px rgba(99, 102, 241, 0.45),
+    0 0 60px rgba(139, 92, 246, 0.3),
+    0 0 90px rgba(99, 102, 241, 0.15);
   margin: 0 0 1rem 0;
   animation: heroGlow 3s ease-in-out infinite;
 
@@ -276,15 +276,15 @@ html, body {
 @keyframes heroGlow {
   0%, 100% {
     text-shadow:
-      0 0 40px rgba(99, 102, 241, 0.6),
-      0 0 80px rgba(139, 92, 246, 0.4),
-      0 0 120px rgba(99, 102, 241, 0.2);
+      0 0 30px rgba(99, 102, 241, 0.45),
+      0 0 60px rgba(139, 92, 246, 0.3),
+      0 0 90px rgba(99, 102, 241, 0.15);
   }
   50% {
     text-shadow:
-      0 0 60px rgba(99, 102, 241, 0.8),
-      0 0 100px rgba(139, 92, 246, 0.6),
-      0 0 140px rgba(99, 102, 241, 0.3);
+      0 0 45px rgba(99, 102, 241, 0.6),
+      0 0 75px rgba(139, 92, 246, 0.4),
+      0 0 105px rgba(99, 102, 241, 0.22);
   }
 }
 
