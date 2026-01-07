@@ -106,22 +106,38 @@ impl AppState {
     async fn resolve_api_keys(erebus_client: &ErebusClient, config: &Config) -> ApiKeys {
         info!("🔑 Resolving API keys from Erebus...");
 
-        // Try to fetch agent keys from Erebus (OpenRouter only for now)
-        let openrouter_key = match erebus_client.get_agent_api_key("hecate", "openrouter").await {
-            Ok(Some(key)) => {
-                info!("✅ Retrieved HECATE's OpenRouter API key from Erebus");
-                Some(key)
+        const MAX_RETRIES: u32 = 5;
+        const INITIAL_DELAY_MS: u64 = 1000;
+
+        let mut openrouter_key = None;
+
+        // Try to fetch agent keys from Erebus with retry logic
+        for attempt in 1..=MAX_RETRIES {
+            match erebus_client.get_agent_api_key("hecate", "openrouter").await {
+                Ok(Some(key)) => {
+                    info!("✅ Retrieved HECATE's OpenRouter API key from Erebus (attempt {})", attempt);
+                    openrouter_key = Some(key);
+                    break;
+                }
+                Ok(None) => {
+                    warn!("⚠️ No OpenRouter key found for HECATE in Erebus");
+                    break; // Key doesn't exist, no point retrying
+                }
+                Err(e) => {
+                    if attempt < MAX_RETRIES {
+                        let delay = INITIAL_DELAY_MS * 2_u64.pow(attempt - 1);
+                        warn!(
+                            "⚠️ Failed to fetch API key (attempt {}/{}): {}. Retrying in {}ms...",
+                            attempt, MAX_RETRIES, e, delay
+                        );
+                        tokio::time::sleep(tokio::time::Duration::from_millis(delay)).await;
+                    } else {
+                        error!("❌ Failed to fetch API key after {} attempts: {}", MAX_RETRIES, e);
+                        warn!("⚠️ Falling back to environment variables for API keys");
+                    }
+                }
             }
-            Ok(None) => {
-                warn!("⚠️ No OpenRouter key found for HECATE in Erebus, checking env vars");
-                None
-            }
-            Err(e) => {
-                error!("❌ Failed to fetch API key from Erebus: {}", e);
-                warn!("⚠️ Falling back to environment variables for API keys");
-                None
-            }
-        };
+        }
 
         // Fall back to env vars if Erebus didn't have the key
         let env_keys = config.get_api_keys();

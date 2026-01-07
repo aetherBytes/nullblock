@@ -48,5 +48,25 @@ done
 echo "✅ Kafka connection ready"
 echo ""
 
+echo "🌐 Waiting for Erebus to be ready..."
+echo "⏳ Erebus is needed for API key resolution..."
+max_attempts=30
+attempt=0
+while [ $attempt -lt $max_attempts ]; do
+  if curl -s http://localhost:3000/health > /dev/null 2>&1; then
+    echo "✅ Erebus is ready"
+    break
+  fi
+  attempt=$((attempt + 1))
+  echo "⏳ Waiting for Erebus... (attempt $attempt/$max_attempts)"
+  sleep 2
+done
+
+if [ $attempt -eq $max_attempts ]; then
+  echo "⚠️  Warning: Erebus not responding after 60s. API key resolution may fail."
+  echo "   Continuing startup - will fall back to environment variables."
+fi
+echo ""
+
 echo "🚀 Starting Rust agents service..."
 cargo run --release 2>&1 | tee logs/hecate-rust.log
