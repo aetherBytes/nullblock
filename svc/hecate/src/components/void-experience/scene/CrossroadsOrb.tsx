@@ -1141,18 +1141,18 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
         }
       }
     } else {
-      // Normal gyroscope rotation
+      // Normal gyroscope rotation (slowed ~40% for smoother appearance)
       if (coronaGroupRef.current) {
-        coronaGroupRef.current.rotation.x += delta * 0.3;
-        coronaGroupRef.current.rotation.z += delta * 0.1;
+        coronaGroupRef.current.rotation.x += delta * 0.18;
+        coronaGroupRef.current.rotation.z += delta * 0.06;
       }
       if (corona2GroupRef.current) {
-        corona2GroupRef.current.rotation.z -= delta * 0.25;
-        corona2GroupRef.current.rotation.y += delta * 0.12;
+        corona2GroupRef.current.rotation.z -= delta * 0.15;
+        corona2GroupRef.current.rotation.y += delta * 0.07;
       }
       if (corona3GroupRef.current) {
-        corona3GroupRef.current.rotation.y += delta * 0.18;
-        corona3GroupRef.current.rotation.x -= delta * 0.15;
+        corona3GroupRef.current.rotation.y += delta * 0.11;
+        corona3GroupRef.current.rotation.x -= delta * 0.09;
       }
     }
 
