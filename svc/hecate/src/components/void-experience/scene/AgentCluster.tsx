@@ -356,6 +356,9 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
   // Store frozen position when selected
   const frozenPosition = useRef<THREE.Vector3 | null>(null);
 
+  // Pre-allocated object to avoid GC pressure in useFrame
+  const tempWorldPos = useRef(new THREE.Vector3());
+
   // Check if this is HECATE for special rendering
   const isHecate = cluster.name.toLowerCase().includes('hecate');
 
@@ -420,9 +423,8 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
 
       // Report position to parent (used for tendril animations)
       if (onPositionUpdate) {
-        const worldPos = new THREE.Vector3();
-        groupRef.current.getWorldPosition(worldPos);
-        onPositionUpdate(worldPos);
+        groupRef.current.getWorldPosition(tempWorldPos.current);
+        onPositionUpdate(tempWorldPos.current);
       }
 
       // Calculate effective target scale with fade delay for initial appearance
@@ -493,11 +495,10 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
           }}
           onClick={(e) => {
             e.stopPropagation();
-            const worldPos = new THREE.Vector3();
             if (groupRef.current) {
-              groupRef.current.getWorldPosition(worldPos);
+              groupRef.current.getWorldPosition(tempWorldPos.current);
             }
-            onClick(cluster, worldPos);
+            onClick(cluster, tempWorldPos.current.clone());
           }}
         />
       ) : (
@@ -516,11 +517,10 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
           } : undefined}
           onClick={isInteractive ? (e) => {
             e.stopPropagation();
-            const worldPos = new THREE.Vector3();
             if (groupRef.current) {
-              groupRef.current.getWorldPosition(worldPos);
+              groupRef.current.getWorldPosition(tempWorldPos.current);
             }
-            onClick(cluster, worldPos);
+            onClick(cluster, tempWorldPos.current.clone());
           } : undefined}
         >
           <sphereGeometry args={[baseSize, 32, 32]} />

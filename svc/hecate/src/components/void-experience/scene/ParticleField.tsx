@@ -14,6 +14,12 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
   const sparksRef = useRef<THREE.Points>(null);
   const ambientRef = useRef<THREE.Points>(null);
 
+  // Shared time refs for shader uniforms
+  const coreTimeRef = useRef({ value: 0 });
+  const hazeTimeRef = useRef({ value: 0 });
+  const sparksTimeRef = useRef({ value: 0 });
+  const ambientTimeRef = useRef({ value: 0 });
+
   // CORE - Dense dark star center with intense edge glow
   const coreData = useMemo(() => {
     const coreCount = Math.floor(count * 0.4);
@@ -270,17 +276,17 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
     return { positions, colors, sizes, twinkle, count: ambientCount };
   }, [count]);
 
-  // Geometries & Materials
+  // Geometries & Materials (removed .slice() - buffers updated each frame anyway)
   const coreGeo = useMemo(() => {
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(coreData.positions.slice(), 3));
+    geo.setAttribute('position', new THREE.BufferAttribute(coreData.positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(coreData.colors, 3));
     geo.setAttribute('size', new THREE.BufferAttribute(coreData.sizes, 1));
     return geo;
   }, [coreData]);
 
   const coreMat = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { time: { value: 0 } },
+    uniforms: { time: coreTimeRef.current },
     vertexShader: `
       attribute float size;
       attribute vec3 color;
@@ -289,8 +295,21 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
       uniform float time;
       void main() {
         vColor = color;
-        vAlpha = 0.85 + sin(time * 2.5 + position.x * 8.0) * 0.15;
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+
+        // GPU orbital rotation
+        float dist = length(position);
+        float orbitSpeed = 0.008 / (dist + 0.5);
+        float angle = time * orbitSpeed;
+        float cosA = cos(angle);
+        float sinA = sin(angle);
+        vec3 rotatedPos = vec3(
+          position.x * cosA - position.z * sinA,
+          position.y,
+          position.x * sinA + position.z * cosA
+        );
+
+        vAlpha = 0.85 + sin(time * 2.5 + rotatedPos.x * 8.0) * 0.15;
+        vec4 mv = modelViewMatrix * vec4(rotatedPos, 1.0);
         gl_PointSize = size * (420.0 / -mv.z);
         gl_Position = projectionMatrix * mv;
       }
@@ -312,23 +331,49 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
 
   const hazeGeo = useMemo(() => {
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(hazeData.positions.slice(), 3));
+    geo.setAttribute('position', new THREE.BufferAttribute(hazeData.basePositions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(hazeData.colors, 3));
     geo.setAttribute('size', new THREE.BufferAttribute(hazeData.sizes, 1));
+    geo.setAttribute('waveOffset', new THREE.BufferAttribute(hazeData.waveOffsets, 1));
     return geo;
   }, [hazeData]);
 
   const hazeMat = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { time: { value: 0 } },
+    uniforms: { time: hazeTimeRef.current },
     vertexShader: `
       attribute float size;
       attribute vec3 color;
+      attribute float waveOffset;
       varying vec3 vColor;
       varying float vDist;
+      uniform float time;
       void main() {
         vColor = color;
-        vDist = length(position);
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+
+        // GPU wave animation
+        float dist = length(position);
+        float wave = sin(time * 0.3 - dist * 0.15 + waveOffset) * 0.8;
+        float breathe = sin(time * 0.15 + waveOffset) * 0.3;
+
+        // Direction from center
+        vec3 dir = position / (dist + 0.1);
+
+        // Apply wave displacement
+        vec3 animPos = position + dir * wave + dir * breathe;
+        animPos.y = position.y + dir.y * wave * 0.3 + dir.y * breathe * 0.3;
+
+        // Slow rotation
+        float rotSpeed = 0.002 * time;
+        float cosR = cos(rotSpeed);
+        float sinR = sin(rotSpeed);
+        vec3 rotatedPos = vec3(
+          animPos.x * cosR - animPos.z * sinR,
+          animPos.y,
+          animPos.x * sinR + animPos.z * cosR
+        );
+
+        vDist = length(rotatedPos);
+        vec4 mv = modelViewMatrix * vec4(rotatedPos, 1.0);
         gl_PointSize = size * (600.0 / -mv.z);
         gl_Position = projectionMatrix * mv;
       }
@@ -352,23 +397,61 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
 
   const sparksGeo = useMemo(() => {
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(sparksData.positions.slice(), 3));
+    geo.setAttribute('position', new THREE.BufferAttribute(sparksData.positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(sparksData.colors, 3));
     geo.setAttribute('size', new THREE.BufferAttribute(sparksData.sizes, 1));
+    geo.setAttribute('velocity', new THREE.BufferAttribute(sparksData.velocities, 3));
+    geo.setAttribute('phaseOffset', new THREE.BufferAttribute(sparksData.phaseOffsets, 1));
+    geo.setAttribute('speedMult', new THREE.BufferAttribute(sparksData.speedMultipliers, 1));
+    geo.setAttribute('targetRadius', new THREE.BufferAttribute(sparksData.targetRadius, 1));
     return geo;
   }, [sparksData]);
 
   const sparksMat = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { time: { value: 0 } },
+    uniforms: { time: sparksTimeRef.current },
     vertexShader: `
       attribute float size;
       attribute vec3 color;
+      attribute vec3 velocity;
+      attribute float phaseOffset;
+      attribute float speedMult;
+      attribute float targetRadius;
       varying vec3 vColor;
       varying float vDist;
+      uniform float time;
       void main() {
         vColor = color;
-        vDist = length(position);
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+
+        // GPU expansion + orbit animation
+        // Calculate how far particle should have expanded
+        float expandTime = time * 0.06 * speedMult;
+        vec3 expandedPos = position + velocity * expandTime;
+        float dist = length(expandedPos);
+
+        // Clamp to target radius (particle stops expanding when it reaches target)
+        if (dist > targetRadius) {
+          expandedPos = normalize(expandedPos) * targetRadius;
+          dist = targetRadius;
+
+          // At target - gentle wave motion
+          float wave = sin(time * 0.25 - dist * 0.1 + phaseOffset) * 0.15;
+          vec3 dir = expandedPos / (dist + 0.1);
+          expandedPos += dir * wave;
+          expandedPos.y += dir.y * wave * 0.5;
+        }
+
+        // Slow orbital rotation
+        float rotSpeed = 0.0015 * speedMult * time;
+        float cosR = cos(rotSpeed);
+        float sinR = sin(rotSpeed);
+        vec3 rotatedPos = vec3(
+          expandedPos.x * cosR - expandedPos.z * sinR,
+          expandedPos.y,
+          expandedPos.x * sinR + expandedPos.z * cosR
+        );
+
+        vDist = length(rotatedPos);
+        vec4 mv = modelViewMatrix * vec4(rotatedPos, 1.0);
         gl_PointSize = size * (550.0 / -mv.z);
         gl_Position = projectionMatrix * mv;
       }
@@ -392,27 +475,47 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
 
   const ambientGeo = useMemo(() => {
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(ambientData.positions.slice(), 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(ambientData.colors.slice(), 3));
-    geo.setAttribute('size', new THREE.BufferAttribute(ambientData.sizes.slice(), 1));
+    geo.setAttribute('position', new THREE.BufferAttribute(ambientData.positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(ambientData.colors, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(ambientData.sizes, 1));
+    geo.setAttribute('twinkle', new THREE.BufferAttribute(ambientData.twinkle, 2));
     return geo;
   }, [ambientData]);
 
   const ambientMat = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { time: { value: 0 } },
+    uniforms: { time: ambientTimeRef.current },
     vertexShader: `
       attribute float size;
       attribute vec3 color;
+      attribute vec2 twinkle; // x = phase, y = speed
       varying vec3 vColor;
+      varying float vTwinkle;
+      uniform float time;
       void main() {
-        vColor = color;
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = size * (400.0 / -mv.z);
+        // GPU twinkling
+        float twinkleVal = 0.75 + sin(time * twinkle.y + twinkle.x) * 0.25;
+        vColor = color * twinkleVal;
+        vTwinkle = twinkleVal;
+
+        // Slow rotation around origin
+        float rotAngle = time * 0.002;
+        float cosR = cos(rotAngle);
+        float sinR = sin(rotAngle);
+        vec3 rotatedPos = vec3(
+          position.x * cosR - position.z * sinR,
+          position.y,
+          position.x * sinR + position.z * cosR
+        );
+
+        float animSize = size * (0.85 + twinkleVal * 0.3);
+        vec4 mv = modelViewMatrix * vec4(rotatedPos, 1.0);
+        gl_PointSize = animSize * (400.0 / -mv.z);
         gl_Position = projectionMatrix * mv;
       }
     `,
     fragmentShader: `
       varying vec3 vColor;
+      varying float vTwinkle;
       void main() {
         float d = length(gl_PointCoord - 0.5);
         if (d > 0.5) discard;
@@ -428,145 +531,13 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
     depthWrite: false,
   }), []);
 
+  // GPU-based animation: just update time uniforms, all calculations happen in shaders
   useFrame((state) => {
     const time = state.clock.elapsedTime;
-    const delta = state.clock.getDelta() || 0.016;
-
-    // Animate CORE - just gentle rotation, no breathing/pulsing
-    if (coreRef.current) {
-      const pos = coreRef.current.geometry.attributes.position;
-      const arr = pos.array as Float32Array;
-
-      for (let i = 0; i < coreData.count; i++) {
-        const i3 = i * 3;
-        let x = arr[i3], y = arr[i3 + 1], z = arr[i3 + 2];
-        const dist = Math.sqrt(x * x + y * y + z * z);
-
-        // Gentle orbital rotation only
-        const orbitSpeed = 0.008 / (dist + 0.5);
-        const cos = Math.cos(orbitSpeed);
-        const sin = Math.sin(orbitSpeed);
-        const nx = x * cos - z * sin;
-        const nz = x * sin + z * cos;
-        x = nx; z = nz;
-
-        arr[i3] = x; arr[i3 + 1] = y; arr[i3 + 2] = z;
-      }
-      pos.needsUpdate = true;
-      (coreMat.uniforms.time as any).value = time;
-    }
-
-    // Animate HAZE - cosmic wave motion emanating from center
-    if (hazeRef.current) {
-      const pos = hazeRef.current.geometry.attributes.position;
-      const arr = pos.array as Float32Array;
-
-      for (let i = 0; i < hazeData.count; i++) {
-        const i3 = i * 3;
-        const baseX = hazeData.basePositions[i3];
-        const baseY = hazeData.basePositions[i3 + 1];
-        const baseZ = hazeData.basePositions[i3 + 2];
-
-        const dist = Math.sqrt(baseX * baseX + baseY * baseY + baseZ * baseZ);
-        const phase = hazeData.waveOffsets[i];
-
-        // Cosmic wave - pulses outward from center
-        const wave = Math.sin(time * 0.3 - dist * 0.15 + phase) * 0.8;
-        const breathe = Math.sin(time * 0.15 + phase) * 0.3;
-
-        // Direction from center (normalized)
-        const dirX = baseX / (dist + 0.1);
-        const dirY = baseY / (dist + 0.1);
-        const dirZ = baseZ / (dist + 0.1);
-
-        // Apply wave displacement
-        let x = baseX + dirX * wave + dirX * breathe;
-        let y = baseY + dirY * wave * 0.3 + dirY * breathe * 0.3; // Less vertical
-        let z = baseZ + dirZ * wave + dirZ * breathe;
-
-        // Slow rotation
-        const orbitSpeed = 0.002;
-        const cos = Math.cos(orbitSpeed);
-        const sin = Math.sin(orbitSpeed);
-        const nx = x * cos - z * sin;
-        const nz = x * sin + z * cos;
-
-        arr[i3] = nx; arr[i3 + 1] = y; arr[i3 + 2] = nz;
-      }
-      pos.needsUpdate = true;
-    }
-
-    // Animate SPARKS - expand to target radius then orbit with wave motion
-    if (sparksRef.current) {
-      const pos = sparksRef.current.geometry.attributes.position;
-      const arr = pos.array as Float32Array;
-
-      for (let i = 0; i < sparksData.count; i++) {
-        const i3 = i * 3;
-        let x = arr[i3], y = arr[i3 + 1], z = arr[i3 + 2];
-        const dist = Math.sqrt(x * x + y * y + z * z);
-
-        const speedMult = sparksData.speedMultipliers[i];
-        const phase = sparksData.phaseOffsets[i];
-        const target = sparksData.targetRadius[i];
-
-        if (dist < target) {
-          // Drift outward until reaching target radius
-          const speed = 0.06 * speedMult;
-          x += sparksData.velocities[i3] * speed;
-          y += sparksData.velocities[i3 + 1] * speed;
-          z += sparksData.velocities[i3 + 2] * speed;
-        } else {
-          // At target - gentle wave motion (cosmic energy pulse)
-          const wave = Math.sin(time * 0.25 - dist * 0.1 + phase) * 0.15;
-          const dirX = x / (dist + 0.1);
-          const dirY = y / (dist + 0.1);
-          const dirZ = z / (dist + 0.1);
-
-          x += dirX * wave;
-          y += dirY * wave * 0.5;
-          z += dirZ * wave;
-        }
-
-        // Slow orbital rotation for all
-        const rotSpeed = 0.0015 * speedMult;
-        const cos = Math.cos(rotSpeed);
-        const sin = Math.sin(rotSpeed);
-        const nx = x * cos - z * sin;
-        const nz = x * sin + z * cos;
-
-        arr[i3] = nx; arr[i3 + 1] = y; arr[i3 + 2] = nz;
-      }
-      pos.needsUpdate = true;
-    }
-
-    // Animate AMBIENT - twinkling starfield backdrop
-    if (ambientRef.current) {
-      const colors = ambientRef.current.geometry.attributes.color;
-      const colorArr = colors.array as Float32Array;
-      const sizes = ambientRef.current.geometry.attributes.size;
-      const sizeArr = sizes.array as Float32Array;
-
-      for (let i = 0; i < ambientData.count; i++) {
-        const phase = ambientData.twinkle[i * 2];
-        const speed = ambientData.twinkle[i * 2 + 1];
-
-        // Gentle twinkle
-        const twinkle = 0.75 + Math.sin(time * speed + phase) * 0.25;
-
-        const i3 = i * 3;
-        colorArr[i3] = ambientData.colors[i3] * twinkle;
-        colorArr[i3 + 1] = ambientData.colors[i3 + 1] * twinkle;
-        colorArr[i3 + 2] = ambientData.colors[i3 + 2] * twinkle;
-
-        sizeArr[i] = ambientData.sizes[i] * (0.85 + twinkle * 0.3);
-      }
-      colors.needsUpdate = true;
-      sizes.needsUpdate = true;
-
-      // Very slow rotation
-      ambientRef.current.rotation.y = time * 0.002;
-    }
+    coreTimeRef.current.value = time;
+    hazeTimeRef.current.value = time;
+    sparksTimeRef.current.value = time;
+    ambientTimeRef.current.value = time;
   });
 
   return (

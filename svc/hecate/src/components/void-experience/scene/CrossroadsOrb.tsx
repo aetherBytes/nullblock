@@ -98,12 +98,12 @@ class SunSurfaceMaterial extends THREE.ShaderMaterial {
           return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
         }
 
-        // FBM using 3D noise - more octaves for smoothness
+        // FBM using 3D noise - 4 octaves (reduced from 7 for ~40% GPU speedup)
         float fbm3D(vec3 p) {
           float value = 0.0;
           float amplitude = 0.5;
           float frequency = 1.0;
-          for (int i = 0; i < 7; i++) {
+          for (int i = 0; i < 4; i++) {
             value += amplitude * snoise3D(p * frequency);
             amplitude *= 0.48;
             frequency *= 2.1;
@@ -751,6 +751,10 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
   const isHovered = useRef(false);
   const hoverAmount = useRef(0);
 
+  // Pre-allocated objects to avoid GC pressure in useFrame
+  const tempPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0));
+  const tempGroupPos = useRef(new THREE.Vector3());
+
   const sunRadius = 1.6;
   const brightParticleCount = 250;
   const streamParticleCount = 200;
@@ -927,18 +931,22 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
   const glowTexture = useMemo(() => createGlowTexture(), []);
   const brightTexture = useMemo(() => createParticleTexture([255, 255, 255]), []);
 
-  // Curl noise for fluid particle motion
+  // Optimized curl noise - cached values updated every 3 frames
+  const curlCache = useRef<THREE.Vector3[]>([]);
+  const curlFrameCount = useRef(0);
+  const tempCurlResult = useRef(new THREE.Vector3());
+
   const curl3D = useCallback((x: number, y: number, z: number, time: number): THREE.Vector3 => {
     const eps = 0.01;
     const eps2 = 2 * eps;
 
+    // Simplified noise - fewer octaves (2 instead of 3)
     const noise2D = (px: number, py: number): number => {
-      return Math.sin(px * 1.5 + time) * Math.sin(py * 1.5) * 0.5 +
-             Math.sin(px * 3.7 - time * 0.7) * Math.sin(py * 2.3) * 0.25 +
-             Math.sin(px * 7.1 + time * 0.3) * Math.sin(py * 5.9) * 0.125;
+      return Math.sin(px * 1.5 + time) * Math.sin(py * 1.5) * 0.6 +
+             Math.sin(px * 3.7 - time * 0.7) * Math.sin(py * 2.3) * 0.4;
     };
 
-    const curl = new THREE.Vector3();
+    const curl = tempCurlResult.current;
 
     let n1 = noise2D(x, y + eps);
     let n2 = noise2D(x, y - eps);
@@ -1026,16 +1034,14 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
   useFrame((state, delta) => {
     const time = state.clock.elapsedTime;
 
-    // Update mouse position
+    // Update mouse position (reuse pre-allocated plane)
     raycaster.setFromCamera(pointer, camera);
-    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-    raycaster.ray.intersectPlane(plane, mouseWorld.current);
+    raycaster.ray.intersectPlane(tempPlane.current, mouseWorld.current);
 
-    // Check hover
+    // Check hover (reuse pre-allocated vector)
     if (groupRef.current) {
-      const groupPos = new THREE.Vector3();
-      groupRef.current.getWorldPosition(groupPos);
-      isHovered.current = mouseWorld.current.distanceTo(groupPos) < sunRadius + 2;
+      groupRef.current.getWorldPosition(tempGroupPos.current);
+      isHovered.current = mouseWorld.current.distanceTo(tempGroupPos.current) < sunRadius + 2;
 
       const targetHover = isHovered.current ? 1.0 : 0.0;
       hoverAmount.current += (targetHover - hoverAmount.current) * 0.08;
@@ -1367,13 +1373,27 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       brightPositions[i * 3 + 2] = p.position.z;
     }
 
-    // Animate stream particles with curl
+    // Animate stream particles with curl - cached, updated every 3 frames
+    curlFrameCount.current++;
+    const shouldRecalculateCurl = curlFrameCount.current % 3 === 0;
+
+    // Initialize cache if needed
+    if (curlCache.current.length !== streamParticles.length) {
+      curlCache.current = streamParticles.map(() => new THREE.Vector3());
+    }
+
     for (let i = 0; i < streamParticles.length; i++) {
       const p = streamParticles[i];
 
-      const curl = curl3D(p.position.x * 0.2, p.position.y * 0.2, p.position.z * 0.2, time * 0.5);
+      // Only recalculate curl every 3 frames, otherwise use cached value
+      if (shouldRecalculateCurl) {
+        const curl = curl3D(p.position.x * 0.2, p.position.y * 0.2, p.position.z * 0.2, time * 0.5);
+        curlCache.current[i].copy(curl);
+      }
+
+      const cachedCurl = curlCache.current[i];
       const radial = p.position.clone().normalize();
-      const blended = radial.lerp(curl.normalize(), 0.6);
+      const blended = radial.lerp(cachedCurl.clone().normalize(), 0.6);
 
       p.position.add(blended.multiplyScalar(delta * p.speed));
 
