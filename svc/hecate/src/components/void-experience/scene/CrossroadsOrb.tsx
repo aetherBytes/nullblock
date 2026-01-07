@@ -657,6 +657,8 @@ interface CrossroadsOrbProps {
   position?: [number, number, number];
   constellationNodes?: ConstellationNode[];
   animatedPositionsRef?: React.MutableRefObject<THREE.Vector3[]>;
+  outerNodes?: ConstellationNode[];
+  outerAnimatedPositionsRef?: React.MutableRefObject<THREE.Vector3[]>;
   onActiveNodesChange?: (activeNodes: Set<number>) => void;
 }
 
@@ -724,7 +726,7 @@ interface SolarParticle {
   radius: number;
 }
 
-const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], constellationNodes = [], animatedPositionsRef, onActiveNodesChange }) => {
+const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], constellationNodes = [], animatedPositionsRef, outerNodes = [], outerAnimatedPositionsRef, onActiveNodesChange }) => {
   const groupRef = useRef<THREE.Group>(null);
   const sunPlaneRef = useRef<THREE.Mesh>(null);
   const coronaGroupRef = useRef<THREE.Group>(null);
@@ -773,6 +775,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
   // Dynamic dendrite state - each tendril has a lifecycle
   interface DendriteState {
     targetNodeIndex: number; // Index of constellation node this tendril connects to
+    targetIsOuter: boolean;  // true if targeting outer constellation, false for inner
     length: number;
     width: number;
     thickness: number;   // Random thickness multiplier for variety
@@ -811,6 +814,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
     for (let i = 0; i < dendriteCount; i++) {
       dendritesState.current.push({
         targetNodeIndex: -1,
+        targetIsOuter: false,
         length: 2.0,
         width: 0.1,
         thickness: 1.0,
@@ -831,17 +835,28 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
   }, [dendriteCount]);
 
   // Helper to get current position of a node (animated or static)
-  const getNodePosition = useCallback((index: number): THREE.Vector3 => {
-    if (animatedPositionsRef && animatedPositionsRef.current[index]) {
-      return animatedPositionsRef.current[index];
+  const getNodePosition = useCallback((index: number, isOuter: boolean): THREE.Vector3 => {
+    if (isOuter) {
+      if (outerAnimatedPositionsRef && outerAnimatedPositionsRef.current[index]) {
+        return outerAnimatedPositionsRef.current[index];
+      }
+      return outerNodes[index]?.position || new THREE.Vector3();
+    } else {
+      if (animatedPositionsRef && animatedPositionsRef.current[index]) {
+        return animatedPositionsRef.current[index];
+      }
+      return constellationNodes[index]?.position || new THREE.Vector3();
     }
-    return constellationNodes[index]?.position || new THREE.Vector3();
-  }, [animatedPositionsRef, constellationNodes]);
+  }, [animatedPositionsRef, constellationNodes, outerAnimatedPositionsRef, outerNodes]);
 
   // Function to spawn a new tendril targeting a constellation node
   const spawnDendrite = useCallback((d: DendriteState) => {
-    // If no constellation nodes, fall back to random direction
-    if (constellationNodes.length === 0) {
+    const totalInnerNodes = constellationNodes.length;
+    const totalOuterNodes = outerNodes.length;
+    const totalNodes = totalInnerNodes + totalOuterNodes;
+
+    // If no constellation nodes at all, fall back to random direction
+    if (totalNodes === 0) {
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.PI * 0.2 + Math.random() * Math.PI * 0.6;
       d.dir = new THREE.Vector3(
@@ -851,10 +866,22 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       ).normalize();
       d.length = 2.0 + Math.random() * 3.0;
       d.targetNodeIndex = -1;
+      d.targetIsOuter = false;
     } else {
-      // Pick a random constellation node as target
-      d.targetNodeIndex = Math.floor(Math.random() * constellationNodes.length);
-      const targetPos = getNodePosition(d.targetNodeIndex);
+      // Pick a random node from combined pool (inner + outer)
+      // Weight slightly toward inner nodes since they're closer and more visible
+      const innerWeight = totalInnerNodes > 0 ? 0.7 : 0;
+      const pickOuter = totalOuterNodes > 0 && (totalInnerNodes === 0 || Math.random() > innerWeight);
+
+      if (pickOuter) {
+        d.targetIsOuter = true;
+        d.targetNodeIndex = Math.floor(Math.random() * totalOuterNodes);
+      } else {
+        d.targetIsOuter = false;
+        d.targetNodeIndex = Math.floor(Math.random() * totalInnerNodes);
+      }
+
+      const targetPos = getNodePosition(d.targetNodeIndex, d.targetIsOuter);
 
       // Direction from orb center to constellation node
       d.dir = targetPos.clone().normalize();
@@ -894,7 +921,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
 
     d.elapsed = 0;
     d.growSpeed = 0.3 + Math.random() * 0.9; // Growth speed 0.3-1.2
-  }, [constellationNodes, sunRadius, getNodePosition]);
+  }, [constellationNodes, outerNodes, sunRadius, getNodePosition]);
 
   // Textures
   const glowTexture = useMemo(() => createGlowTexture(), []);
@@ -1249,8 +1276,9 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
         if (d.state !== 'waiting') {
           // For dendrites targeting constellation nodes, update direction/length each frame
           // to track moving nodes in orbit
-          if (d.targetNodeIndex >= 0 && animatedPositionsRef) {
-            const targetPos = getNodePosition(d.targetNodeIndex);
+          const hasAnimRef = d.targetIsOuter ? outerAnimatedPositionsRef : animatedPositionsRef;
+          if (d.targetNodeIndex >= 0 && hasAnimRef) {
+            const targetPos = getNodePosition(d.targetNodeIndex, d.targetIsOuter);
             d.dir = targetPos.clone().normalize();
             const distToNode = targetPos.length();
             d.length = Math.max(1.5, distToNode - sunRadius);
