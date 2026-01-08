@@ -133,6 +133,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const tooltipTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasShownWelcomeRef = useRef(false);
   const lastPanelStateRef = useRef(false);
+  const showHistoryRef = useRef(false);
 
   // Mark as hydrated on client mount (SSR-safe)
   // Chat is ephemeral - no persistence across page refresh
@@ -163,15 +164,20 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
 
         setMessages(prev => [...prev, agentMsg]);
 
-        // Start tooltip timer if user hasn't acknowledged first message yet
-        if (!hasAcknowledgedFirst) {
+        // Start tooltip timer only if:
+        // 1. User hasn't acknowledged the first message feature yet
+        // 2. History panel is currently closed (user didn't see the message)
+        if (!hasAcknowledgedFirst && !showHistoryRef.current) {
           // Clear any existing timer
           if (tooltipTimerRef.current) {
             clearTimeout(tooltipTimerRef.current);
           }
-          // Show tooltip after 10 seconds if history still closed
+          // Show tooltip after 10 seconds if history is still closed
           tooltipTimerRef.current = setTimeout(() => {
-            setShowTooltip(true);
+            // Double-check history is still closed when timer fires
+            if (!showHistoryRef.current) {
+              setShowTooltip(true);
+            }
           }, 10000);
         }
       } else {
@@ -304,6 +310,11 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
       setShowHistory(externalShowHistory);
     }
   }, [externalShowHistory]);
+
+  // Keep showHistoryRef in sync for use in callbacks/timers
+  useEffect(() => {
+    showHistoryRef.current = showHistory;
+  }, [showHistory]);
 
   // Show Hecate welcome/return message when Studio opens
   useEffect(() => {
