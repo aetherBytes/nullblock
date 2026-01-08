@@ -1,5 +1,5 @@
-import React, { Suspense, useState, useCallback, useRef } from 'react';
-import { Canvas } from '@react-three/fiber';
+import React, { Suspense, useState, useCallback, useRef, useEffect } from 'react';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Preload } from '@react-three/drei';
 import * as THREE from 'three';
 import VoidScene from './scene/VoidScene';
@@ -16,8 +16,76 @@ interface VoidExperienceProps {
   onHecatePanelChange?: (open: boolean) => void;
 }
 
-// Single fixed camera position - zoomed in close
-const CAMERA_POSITION = new THREE.Vector3(3.5, 2.5, 9);
+// Camera positions for different states
+const PRE_LOGIN_POSITION = new THREE.Vector3(3.5, 2.5, 9);
+const POST_LOGIN_POSITION = new THREE.Vector3(6, 4.5, 18);
+const LOOK_AT_TARGET = new THREE.Vector3(0, 0, 0);
+
+interface CameraAnimatorProps {
+  isLoggedIn: boolean;
+  orbitControlsRef: React.RefObject<any>;
+}
+
+const CameraAnimator: React.FC<CameraAnimatorProps> = ({ isLoggedIn, orbitControlsRef }) => {
+  const { camera } = useThree();
+  const isAnimating = useRef(false);
+  const animationProgress = useRef(0);
+  const startPosition = useRef(new THREE.Vector3());
+  const targetPosition = useRef(new THREE.Vector3());
+  const prevLoggedIn = useRef(isLoggedIn);
+  const duration = 2.0;
+
+  useEffect(() => {
+    if (prevLoggedIn.current !== isLoggedIn) {
+      prevLoggedIn.current = isLoggedIn;
+
+      startPosition.current.copy(camera.position);
+      targetPosition.current.copy(isLoggedIn ? POST_LOGIN_POSITION : PRE_LOGIN_POSITION);
+
+      animationProgress.current = 0;
+      isAnimating.current = true;
+
+      if (orbitControlsRef.current) {
+        orbitControlsRef.current.enabled = false;
+      }
+    }
+  }, [isLoggedIn, camera, orbitControlsRef]);
+
+  const easeInOutQuint = (t: number): number => {
+    return t < 0.5
+      ? 16 * t * t * t * t * t
+      : 1 - Math.pow(-2 * t + 2, 5) / 2;
+  };
+
+  useFrame((_, delta) => {
+    if (!isAnimating.current) return;
+
+    animationProgress.current += delta / duration;
+
+    if (animationProgress.current >= 1) {
+      animationProgress.current = 1;
+      isAnimating.current = false;
+
+      camera.position.copy(targetPosition.current);
+      if (orbitControlsRef.current) {
+        orbitControlsRef.current.target.copy(LOOK_AT_TARGET);
+        orbitControlsRef.current.enabled = true;
+        orbitControlsRef.current.update();
+      }
+      return;
+    }
+
+    const easedProgress = easeInOutQuint(animationProgress.current);
+    camera.position.lerpVectors(startPosition.current, targetPosition.current, easedProgress);
+
+    if (orbitControlsRef.current) {
+      orbitControlsRef.current.target.copy(LOOK_AT_TARGET);
+      orbitControlsRef.current.update();
+    }
+  });
+
+  return null;
+};
 
 const VoidExperience: React.FC<VoidExperienceProps> = ({
   publicKey,
@@ -48,7 +116,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   return (
     <div className={styles.voidContainer}>
       <Canvas
-        camera={{ position: [CAMERA_POSITION.x, CAMERA_POSITION.y, CAMERA_POSITION.z], fov: 60 }}
+        camera={{ position: [PRE_LOGIN_POSITION.x, PRE_LOGIN_POSITION.y, PRE_LOGIN_POSITION.z], fov: 60 }}
         gl={{ antialias: true, alpha: false }}
         dpr={[1, 2]}
         style={{ touchAction: 'none' }}
@@ -59,6 +127,8 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
         <Suspense fallback={null}>
           <VoidScene />
         </Suspense>
+
+        <CameraAnimator isLoggedIn={isLoggedIn} orbitControlsRef={orbitControlsRef} />
 
         <OrbitControls
           ref={orbitControlsRef}
