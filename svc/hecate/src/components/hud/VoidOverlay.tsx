@@ -4,7 +4,7 @@ import styles from './VoidOverlay.module.scss';
 
 interface VoidOverlayProps {
   onOpenSynapse: () => void;
-  onTabSelect: (tab: 'crossroads' | 'hecate') => void;
+  onTabSelect: (tab: 'crossroads') => void;
   onDisconnect: () => void;
   onResetToVoid?: () => void;
   showWelcome?: boolean;
@@ -140,13 +140,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
           </button>
           <button
             className={`${styles.quickButton} ${hecatePanelOpen ? styles.quickButtonActive : ''}`}
-            onClick={() => {
-              if (onHecateToggle) {
-                onHecateToggle(!hecatePanelOpen);
-              } else {
-                onTabSelect('hecate');
-              }
-            }}
+            onClick={() => onHecateToggle?.(!hecatePanelOpen)}
             title={hecatePanelOpen ? "Close Studio" : "Open Studio"}
           >
             <span className={styles.buttonIcon}>{hecatePanelOpen ? '⬢' : '⬡'}</span>

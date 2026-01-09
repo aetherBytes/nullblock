@@ -7,10 +7,7 @@ import { useEventSystem } from '../../hooks/useEventSystem';
 import { useLogs } from '../../hooks/useLogs';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import Crossroads from '../crossroads/Crossroads';
-import HecateChat from './HecateChat';
-import Scopes from './Scopes';
 import NullblockLogo from './NullblockLogo';
-import MemoriesMenu from './MemoriesMenu';
 import SettingsPanel from './SettingsPanel';
 import VoidOverlay from './VoidOverlay';
 import styles from './hud.module.scss';
@@ -43,7 +40,7 @@ interface HUDProps {
   onClose: () => void;
   onThemeChange: (theme: 'null' | 'light' | 'dark') => void;
   systemStatus: SystemStatus;
-  initialTab?: 'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null;
+  initialTab?: 'crossroads' | 'tasks' | 'agents' | 'logs' | 'canvas' | null;
   onToggleMobileMenu?: () => void;
   loginAnimationPhase?: LoginAnimationPhase;
   hecatePanelOpen?: boolean;
@@ -86,7 +83,7 @@ const HUD: React.FC<HUDProps> = ({
     | 'idle'
   >('base');
   const [mainHudActiveTab, setMainHudActiveTab] = useState<
-    'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null
+    'crossroads' | 'tasks' | 'agents' | 'logs' | 'canvas' | null
   >(initialTab);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showCrossroadsMarketplace, setShowCrossroadsMarketplace] = useState(false);
@@ -130,7 +127,6 @@ const HUD: React.FC<HUDProps> = ({
   // Model info and UI state
   const [categoryModels, setCategoryModels] = useState<any[]>([]);
   const [isLoadingCategory, setIsLoadingCategory] = useState(false);
-  const [activeScope, setActiveLens] = useState<string | null>(null);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [modelSearchQuery, setModelSearchQuery] = useState('');
   const [isSearchingModels, setIsSearchingModels] = useState(false);
@@ -144,10 +140,6 @@ const HUD: React.FC<HUDProps> = ({
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showModelSelection, setShowModelSelection] = useState(false);
   const [activeQuickAction, setActiveQuickAction] = useState<string | null>(null);
-  const [isChatExpanded, setIsChatExpanded] = useState(false);
-  const [isScopesExpanded, setIsScopesExpanded] = useState(false);
-  const [showScopeDropdown, setShowScopeDropdown] = useState(false);
-  const scopeDropdownRef = useRef<HTMLDivElement>(null);
 
   // Use custom hooks
   const chat = useChat(publicKey);
@@ -211,8 +203,6 @@ const HUD: React.FC<HUDProps> = ({
       modelManagement.setIsLoadingModels(false);
       modelManagement.setLastStatusMessageModel(null);
       modelManagement.isLoadingModelsRef.current = false;
-      setIsChatExpanded(false);
-      setIsScopesExpanded(false);
       modelManagement.setModelsCached(false);
       setNulleyeState('base');
       return;
@@ -248,15 +238,6 @@ const HUD: React.FC<HUDProps> = ({
     };
   }, [publicKey, modelManagement.modelsCached]);
 
-  // Reset expanded states when switching away from Hecate tab
-  useEffect(() => {
-    if (mainHudActiveTab !== 'hecate') {
-      setIsChatExpanded(false);
-      setIsScopesExpanded(false);
-      setActiveLens(null);
-    }
-  }, [mainHudActiveTab]);
-
   // Auto-close settings panel when navigating away or disconnecting
   useEffect(() => {
     if (showSettingsPanel) {
@@ -270,34 +251,6 @@ const HUD: React.FC<HUDProps> = ({
       setShowMobileMenu(false);
     }
   }, [showSettingsPanel]);
-
-  // Load models when Hecate tab becomes active (use cached data)
-  useEffect(() => {
-    if (mainHudActiveTab === 'hecate' && publicKey) {
-      if (!activeScope) {
-        setActiveLens('tasks');
-      }
-
-      if (modelManagement.defaultModelReady && modelManagement.currentSelectedModel) {
-        setNulleyeState('base');
-      } else if (!modelManagement.defaultModelReady && !modelManagement.currentSelectedModel) {
-        modelManagement.loadDefaultModel();
-      }
-    }
-
-    if (mainHudActiveTab === 'hecate' && publicKey && modelManagement.availableModels.length === 0 && !modelManagement.isLoadingModels && !modelManagement.modelsCached) {
-      setTimeout(() => {
-        modelManagement.loadAvailableModels();
-      }, 500);
-    }
-  }, [mainHudActiveTab, publicKey, modelManagement.modelsCached, modelManagement.defaultModelReady, modelManagement.currentSelectedModel, activeScope]);
-
-  // Set tasks as default scope when wallet is initially connected and Hecate tab is default
-  useEffect(() => {
-    if (publicKey && mainHudActiveTab === 'hecate' && !activeScope) {
-      setActiveLens('tasks');
-    }
-  }, [publicKey, mainHudActiveTab, activeScope]);
 
   // Click outside handler for model dropdown
   useEffect(() => {
@@ -317,23 +270,6 @@ const HUD: React.FC<HUDProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showModelDropdown]);
-
-  // Click outside handler for scope dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (scopeDropdownRef.current && !scopeDropdownRef.current.contains(event.target as Node)) {
-        setShowScopeDropdown(false);
-      }
-    };
-
-    if (showScopeDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showScopeDropdown]);
 
   // Debounced search effect for autocomplete
   useEffect(() => {
@@ -368,18 +304,10 @@ const HUD: React.FC<HUDProps> = ({
     };
   }, [showSearchDropdown]);
 
-  // Auto-load model info when current model changes
-  useEffect(() => {
-    if (modelManagement.currentSelectedModel && activeScope === 'modelinfo') {
-      loadModelInfo(modelManagement.currentSelectedModel);
-    }
-  }, [modelManagement.currentSelectedModel, activeScope]);
-
   // Safety effect to ensure NullEye returns to base state when ready
   useEffect(() => {
     if (
       publicKey &&
-      mainHudActiveTab === 'hecate' &&
       modelManagement.defaultModelReady &&
       modelManagement.currentSelectedModel &&
       !modelManagement.isModelChanging &&
@@ -397,7 +325,6 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [
     publicKey,
-    mainHudActiveTab,
     modelManagement.defaultModelReady,
     modelManagement.currentSelectedModel,
     modelManagement.isModelChanging,
@@ -412,32 +339,6 @@ const HUD: React.FC<HUDProps> = ({
       loadCategoryModels('latest');
     }
   }, [showModelSelection, activeQuickAction, categoryModels.length, isLoadingCategory]);
-
-  // Auto-focus input when Hecate tab becomes active and model is ready
-  useEffect(() => {
-    if (mainHudActiveTab === 'hecate' && publicKey && modelManagement.defaultModelReady && modelManagement.currentSelectedModel && !chat.isProcessingChat) {
-      const timer = setTimeout(() => {
-        if (chat.chatInputRef.current) {
-          chat.chatInputRef.current.focus();
-        }
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-  }, [mainHudActiveTab, publicKey, modelManagement.defaultModelReady, modelManagement.currentSelectedModel, chat.isProcessingChat]);
-
-  // Auto-focus input when chat is expanded
-  useEffect(() => {
-    if (isChatExpanded && !chat.isProcessingChat) {
-      const timer = setTimeout(() => {
-        if (chat.chatInputRef.current) {
-          chat.chatInputRef.current.focus();
-        }
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isChatExpanded, chat.isProcessingChat]);
 
   // Transform logs from useLogs hook to match existing log structure
   const transformedLogs = logsHook.logs.map((log) => ({
@@ -829,108 +730,7 @@ const HUD: React.FC<HUDProps> = ({
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' ? '' : styles.hidden}`}>
             <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} showMarketplace={showCrossroadsMarketplace} resetToLanding={resetCrossroadsToLanding} animationPhase={loginAnimationPhase} />
           </div>
-          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'hecate' ? '' : styles.hidden}`}>
-            <div className={`${styles.hecateContainer} ${isChatExpanded ? styles.chatExpanded : ''} ${isScopesExpanded ? styles.scopesExpanded : ''}`}>
-              <div className={styles.hecateContent}>
-                <div className={styles.hecateMain}>
-                  <div className={styles.hecateInterface}>
-                    <>
-                      <HecateChat
-                        chatMessages={chat.chatMessages}
-                        chatInput={chat.chatInput}
-                        setChatInput={chat.setChatInput}
-                        chatInputRef={chat.chatInputRef}
-                        chatMessagesRef={chat.chatMessagesRef}
-                        chatEndRef={chat.chatEndRef}
-                        nullviewState={nullviewState}
-                        isModelChanging={modelManagement.isModelChanging}
-                        isProcessingChat={chat.isProcessingChat}
-                        defaultModelReady={modelManagement.defaultModelReady}
-                        currentSelectedModel={modelManagement.currentSelectedModel}
-                        agentHealthStatus={modelManagement.agentHealthStatus}
-                        isChatExpanded={isChatExpanded}
-                        setIsChatExpanded={setIsChatExpanded}
-                        isScopesExpanded={isScopesExpanded}
-                        setIsScopesExpanded={setIsScopesExpanded}
-                        activeScope={activeScope}
-                        setActiveLens={setActiveLens}
-                        onChatSubmit={(e) => chat.handleChatSubmit(e, modelManagement.isModelChanging, nullviewState, modelManagement.defaultModelReady, modelManagement.currentSelectedModel, (state: string) => setNulleyeState(state as any))}
-                        onChatInputChange={chat.handleChatInputChange}
-                        onChatScroll={chat.handleChatScroll}
-                        scrollToBottom={chat.scrollToBottom}
-                        isUserScrolling={chat.isUserScrolling}
-                        chatAutoScroll={chat.chatAutoScroll}
-                        activeAgent={chat.activeAgent}
-                        setActiveAgent={chat.setActiveAgent}
-                        getImagesForMessage={chat.getImagesForMessage}
-                      />
-
-                      <Scopes
-                          activeScope={activeScope}
-                          setActiveLens={setActiveLens}
-                          isScopesExpanded={isScopesExpanded}
-                          setIsScopesExpanded={setIsScopesExpanded}
-                          isChatExpanded={isChatExpanded}
-                          setIsChatExpanded={setIsChatExpanded}
-                          showScopeDropdown={showScopeDropdown}
-                          setShowScopeDropdown={setShowScopeDropdown}
-                          scopeDropdownRef={scopeDropdownRef}
-                          nullviewState={nullviewState}
-                          tasks={taskManagement.filteredTasks}
-                          taskManagement={taskManagement}
-                          logs={transformedLogs}
-                          searchTerm={searchTerm}
-                          setSearchTerm={setSearchTerm}
-                          logFilter={logFilter}
-                          setLogFilter={(filter: string) => setLogFilter(filter as any)}
-                          autoScroll={autoScroll}
-                          setAutoScroll={setAutoScroll}
-                          logsEndRef={logsEndRef}
-                          theme={theme}
-                          onThemeChange={onThemeChange}
-                          isLoadingModelInfo={isLoadingModelInfo}
-                          modelInfo={modelInfo}
-                          currentSelectedModel={modelManagement.currentSelectedModel}
-                          availableModels={modelManagement.availableModels}
-                          defaultModelLoaded={modelManagement.defaultModelLoaded}
-                          showModelSelection={showModelSelection}
-                          setShowModelSelection={setShowModelSelection}
-                          setActiveQuickAction={setActiveQuickAction}
-                          setModelsCached={modelManagement.setModelsCached}
-                          loadAvailableModels={modelManagement.loadAvailableModels}
-                          showFullDescription={showFullDescription}
-                          setShowFullDescription={setShowFullDescription}
-                          modelSearchQuery={modelSearchQuery}
-                          setModelSearchQuery={setModelSearchQuery}
-                          isSearchingModels={isSearchingModels}
-                          searchResults={searchResults}
-                          searchSubmitted={searchSubmitted}
-                          setSearchSubmitted={setSearchSubmitted}
-                          showSearchDropdown={showSearchDropdown}
-                          setShowSearchDropdown={setShowSearchDropdown}
-                          searchDropdownRef={searchDropdownRef}
-                          activeQuickAction={activeQuickAction}
-                          categoryModels={categoryModels}
-                          isLoadingCategory={isLoadingCategory}
-                          setCategoryModels={setCategoryModels}
-                          loadCategoryModels={loadCategoryModels}
-                          handleModelSelection={modelManagement.handleModelSelection}
-                          getFreeModels={getFreeModels}
-                          getFastModels={getFastModels}
-                          getThinkerModels={getThinkerModels}
-                          getInstructModels={getInstructModels}
-                          getImageModels={getImageModels}
-                          getLatestModels={getLatestModels}
-                          activeAgent={chat.activeAgent}
-                          setActiveAgent={chat.setActiveAgent}
-                        />
-                    </>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {mainHudActiveTab !== 'canvas' && mainHudActiveTab !== 'crossroads' && mainHudActiveTab !== 'hecate' && !inVoidMode && (
+          {mainHudActiveTab !== 'canvas' && mainHudActiveTab !== 'crossroads' && !inVoidMode && (
             <div className={styles.defaultTab}>
               <p>Select a tab to view content</p>
             </div>
@@ -1026,30 +826,14 @@ const HUD: React.FC<HUDProps> = ({
             </button>
           )}
 
-          {publicKey && (
-            <button
-              className={`${styles.menuButton} ${styles.fadeIn} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
-              onClick={() => {
-                if (mainHudActiveTab === 'hecate') {
-                  setMainHudActiveTab(null);
-                } else {
-                  setMainHudActiveTab('hecate');
-                }
-              }}
-              title="Hecate Agent Interface"
-            >
-              <span>HECATE</span>
-            </button>
-          )}
-
           {publicKey ? (
-            <MemoriesMenu
-              publicKey={publicKey}
-              userProfile={userProfile}
-              isLoadingUser={isLoadingUser}
-              onDisconnect={onDisconnect}
-              onOpenSettings={() => setShowSettingsPanel(true)}
-            />
+            <button
+              className={styles.menuButton}
+              onClick={onDisconnect}
+              title="Disconnect Wallet"
+            >
+              <span>DISCONNECT</span>
+            </button>
           ) : (
             <button
               className={styles.walletMenuButton}
@@ -1096,38 +880,17 @@ const HUD: React.FC<HUDProps> = ({
             </button>
           )}
 
-          {publicKey && (
-            <button
-              className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'hecate' ? styles.active : ''}`}
-              onClick={() => {
-                if (mainHudActiveTab === 'hecate') {
-                  setMainHudActiveTab(null);
-                } else {
-                  setMainHudActiveTab('hecate');
-                }
-                setShowMobileMenu(false);
-              }}
-            >
-              <span>🤖</span>
-              <span>HECATE</span>
-            </button>
-          )}
-
           {publicKey ? (
-            <MemoriesMenu
-              publicKey={publicKey}
-              userProfile={userProfile}
-              isLoadingUser={isLoadingUser}
-              onDisconnect={() => {
+            <button
+              className={styles.mobileMenuItem}
+              onClick={() => {
                 onDisconnect();
                 setShowMobileMenu(false);
               }}
-              onOpenSettings={() => {
-                setShowSettingsPanel(true);
-                setShowMobileMenu(false);
-              }}
-              isMobile={true}
-            />
+            >
+              <span>🔌</span>
+              <span>DISCONNECT</span>
+            </button>
           ) : (
             <button
               className={styles.mobileMenuItem}
