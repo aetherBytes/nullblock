@@ -18,7 +18,7 @@ export interface ServiceListing {
   icon_url?: string;
   is_free: boolean;
   price_usd?: number;
-  price_eth?: number;
+  price_mon?: number;
   pricing_model?: 'Free' | 'Subscription' | 'OneTime' | 'PayPerUse' | 'TokenStaking';
   status: 'pending' | 'active' | 'inactive' | 'rejected';
   is_featured: boolean;
