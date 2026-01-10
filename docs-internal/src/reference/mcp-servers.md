@@ -6,6 +6,75 @@ Model Context Protocol servers integrated with NullBlock development.
 
 MCP servers extend Claude Code's capabilities. Automatically available when running Claude Code in the NullBlock project.
 
+## NullBlock MCP Server
+
+**Purpose**: NullBlock's own MCP server exposing agent tools, engrams, and resources.
+
+**Protocol Version**: 2025-11-25
+
+**Endpoint**: `http://localhost:3000/mcp/jsonrpc` (via Erebus proxy)
+
+### Available Tools (9)
+
+| Tool | Description |
+|------|-------------|
+| `send_agent_message` | Send message to a NullBlock agent |
+| `create_task` | Create a new task |
+| `get_task_status` | Get task status by ID |
+| `list_engrams` | List engrams for a wallet |
+| `get_engram` | Get engram by ID |
+| `create_engram` | Create a new engram |
+| `update_engram` | Update an existing engram |
+| `delete_engram` | Delete an engram |
+| `search_engrams` | Search engrams by query |
+
+### Available Resources (2)
+
+| URI | Description |
+|-----|-------------|
+| `agent://hecate` | HECATE vessel AI agent |
+| `agent://siren` | Siren marketing agent |
+
+### Available Prompts (2)
+
+| Prompt | Arguments | Description |
+|--------|-----------|-------------|
+| `agent_chat` | `agent` (req), `context` (opt) | Chat with a NullBlock agent |
+| `task_template` | `type` (req) | Create task from template |
+
+### Example: Initialize Session
+
+```bash
+curl -X POST http://localhost:3000/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": { "name": "my-client", "version": "1.0.0" }
+    }
+  }'
+```
+
+### Example: Call Tool
+
+```bash
+curl -X POST http://localhost:3000/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "list_engrams",
+      "arguments": { "wallet_address": "0x..." }
+    }
+  }'
+```
+
 ## Chrome DevTools MCP
 
 **Purpose**: Browser automation, debugging, testing for Hecate frontend.

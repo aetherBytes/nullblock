@@ -2,13 +2,13 @@
 
 ## Overview
 
-Successfully implemented the Model Context Protocol (MCP) 2025-06-18 specification in the nullblock-protocols service. The implementation follows the official MCP specification and provides a JSON-RPC 2.0 interface for AI applications to interact with NullBlock agents and services.
+Successfully implemented the Model Context Protocol (MCP) 2025-11-25 specification in the nullblock-protocols service. The implementation follows the official MCP specification and provides a JSON-RPC 2.0 interface for AI applications to interact with NullBlock agents and services.
 
 ## Specification Reference
 
-- **MCP Specification**: [https://modelcontextprotocol.io/specification/2025-06-18/basic](https://modelcontextprotocol.io/specification/2025-06-18/basic)
+- **MCP Specification**: [https://modelcontextprotocol.io/specification/2025-11-25/basic](https://modelcontextprotocol.io/specification/2025-11-25/basic)
 - **Official Rust SDK**: [https://github.com/modelcontextprotocol/rust-sdk](https://github.com/modelcontextprotocol/rust-sdk) (`rmcp` crate v0.8.0)
-- **Protocol Version**: 2025-06-18
+- **Protocol Version**: 2025-11-25
 - **Transport**: JSON-RPC 2.0 over HTTP
 
 ### SDK Integration
@@ -99,7 +99,7 @@ nullblock-protocols/
 
 - **Server Features**:
   - **Resources**: Dynamic agent discovery and reading
-  - **Tools**: 3 tools for agent interaction and task management
+  - **Tools**: 9 tools for agent interaction, task management, and engrams
   - **Prompts**: 2 prompt templates for common workflows
 
 ## Supported Methods
@@ -199,7 +199,7 @@ curl -X POST http://localhost:8001/mcp/jsonrpc \
     "id": 1,
     "method": "initialize",
     "params": {
-      "protocolVersion": "2025-06-18",
+      "protocolVersion": "2025-11-25",
       "capabilities": {},
       "clientInfo": {
         "name": "my-client",
@@ -262,7 +262,7 @@ The server advertises the following capabilities during initialization:
 ## Compliance
 
 This implementation:
-- ✅ Follows MCP Specification 2025-06-18
+- ✅ Follows MCP Specification 2025-11-25
 - ✅ Implements JSON-RPC 2.0 correctly
 - ✅ Includes required Base Protocol
 - ✅ Includes required Lifecycle Management

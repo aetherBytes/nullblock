@@ -162,7 +162,7 @@ async fn send_message(
 - **SDK Repository**: https://github.com/modelcontextprotocol/rust-sdk
 - **Crate Documentation**: https://docs.rs/rmcp/latest/rmcp/
 - **Examples**: https://github.com/modelcontextprotocol/rust-sdk/tree/main/examples
-- **MCP Specification**: https://modelcontextprotocol.io/specification/2025-06-18/basic
+- **MCP Specification**: https://modelcontextprotocol.io/specification/2025-11-25/basic
 
 ## Decision Log
 

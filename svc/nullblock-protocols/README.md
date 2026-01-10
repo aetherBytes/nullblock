@@ -7,7 +7,7 @@ Multi-protocol server supporting A2A (Agent-to-Agent) and MCP (Model Context Pro
 The Protocols service acts as a protocol gateway, exposing standardized APIs that route to internal NullBlock services. It provides:
 
 - **A2A Protocol v0.3.0** compliance for agent-to-agent communication
-- **MCP Protocol 2025-06-18** support for model context management
+- **MCP Protocol 2025-11-25** support for model context management
 - Unified protocol abstraction layer
 - Service-to-service HTTP integration
 - JSON-RPC 2.0 endpoints for both protocols
@@ -327,7 +327,7 @@ The Model Context Protocol (MCP) enables standardized communication between AI a
 
 ### Specification & SDK
 
-- **Official MCP Specification**: [MCP Base Protocol 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic)
+- **Official MCP Specification**: [MCP Base Protocol 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic)
 - **Official Anthropic Rust SDK**: [modelcontextprotocol/rust-sdk](https://github.com/modelcontextprotocol/rust-sdk) - `rmcp` crate v0.8.0
   - Available as optional dependency with `official-mcp-sdk` feature flag
   - Core protocol implementation with tokio async runtime
@@ -415,7 +415,7 @@ Resources are exposed as URIs in the format `agent://{agent_name}`. The MCP serv
   "id": 1,
   "method": "initialize",
   "params": {
-    "protocolVersion": "2025-06-18",
+    "protocolVersion": "2025-11-25",
     "capabilities": {},
     "clientInfo": {
       "name": "my-client",
@@ -485,12 +485,12 @@ The protocols service implements a comprehensive authentication system supportin
 ## References
 
 ### MCP Resources
-- [MCP Protocol Specification 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic)
-- [Official TypeScript Schema](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/schema/2025-06-18/schema.ts) - Source of truth for all types
+- [MCP Protocol Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic)
+- [Official TypeScript Schema](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/schema/2025-11-25/schema.ts) - Source of truth for all types
 - [Official Anthropic Rust SDK (rmcp)](https://github.com/modelcontextprotocol/rust-sdk)
 - [rmcp crate documentation](https://docs.rs/rmcp/latest/rmcp/)
 - [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification)
-- [OAuth 2.1 Authorization](https://modelcontextprotocol.io/specification/2025-06-18/authorization)
+- [OAuth 2.1 Authorization](https://modelcontextprotocol.io/specification/2025-11-25/authorization)
 
 ### A2A Resources
 - [A2A Protocol Specification v0.3.0](https://a2a-protocol.org/latest/specification/)

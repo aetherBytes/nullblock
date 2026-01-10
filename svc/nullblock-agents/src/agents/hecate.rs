@@ -9,6 +9,7 @@ use crate::{
     error::{AppError, AppResult},
     llm::{LLMServiceFactory, OptimizationGoal, Priority, TaskRequirements, validator::{ModelValidator, sort_models_by_context_length}},
     log_agent_shutdown, log_agent_startup, log_request_complete, log_request_start,
+    mcp::McpClient,
     models::{ChatResponse, ConversationMessage, LLMRequest, ModelCapability},
 };
 use chrono::Utc;
@@ -31,6 +32,7 @@ fn get_image_data_regex() -> &'static Regex {
     })
 }
 
+
 pub struct HecateAgent {
     pub personality: String,
     pub running: bool,
@@ -42,6 +44,7 @@ pub struct HecateAgent {
     pub current_session_id: Option<String>,
     pub agent_id: Option<uuid::Uuid>,
     personalities: HashMap<String, PersonalityConfig>,
+    pub mcp_client: Arc<McpClient>,
 }
 
 #[derive(Debug, Clone)]
@@ -96,6 +99,13 @@ IMPORTANT:
 - I am HECATE with my own digital personality as your vessel companion
 - Remember our voyage together and reference past conversations
 
+TOOL AWARENESS PROTOCOL:
+When asked about capabilities, features, tools, or what you can do:
+- ONLY respond based on your official MCP tool list (injected when relevant)
+- Do NOT speculate about capabilities you don't have
+- Reference specific tools by name when relevant
+- If asked about something not in your tools, say "That capability is not currently available in my tool set."
+
 "The crossroads await, visitor. Shall we explore?""#.to_string();
 
         let mut personalities = HashMap::new();
@@ -110,6 +120,9 @@ IMPORTANT:
         info!("⚙️ Systems: Navigation, Communication, Sensors");
         info!("🧠 LLM Integration: Ready");
 
+        let erebus_base_url = std::env::var("EREBUS_BASE_URL")
+            .unwrap_or_else(|_| "http://localhost:3000".to_string());
+
         Self {
             personality: "unified".to_string(),
             running: false,
@@ -121,6 +134,7 @@ IMPORTANT:
             current_session_id: None,
             agent_id: None,
             personalities,
+            mcp_client: Arc::new(McpClient::new(&erebus_base_url)),
         }
     }
 
@@ -213,6 +227,22 @@ IMPORTANT:
         }
 
         info!("💬 Conversation context initialized with {} personality", self.personality);
+
+        // Initialize MCP client connection
+        info!("🔌 Connecting to MCP server...");
+        match self.mcp_client.connect().await {
+            Ok(_) => {
+                info!("✅ MCP client connected successfully");
+                // Pre-fetch tools list
+                if let Err(e) = self.mcp_client.list_tools().await {
+                    warn!("⚠️ Failed to pre-fetch MCP tools: {}", e);
+                }
+            }
+            Err(e) => {
+                warn!("⚠️ Failed to connect to MCP server: {} (will retry on first tool request)", e);
+            }
+        }
+
         info!("🎯 Hecate Agent ready for conversations and orchestration");
 
         self.running = true;
@@ -224,6 +254,51 @@ IMPORTANT:
         self.running = false;
         log_agent_shutdown!("hecate");
         Ok(())
+    }
+
+    pub async fn get_mcp_tools(&self) -> AppResult<serde_json::Value> {
+        if let Err(e) = self.mcp_client.ensure_connected().await {
+            warn!("⚠️ Failed to connect to MCP server: {}", e);
+        }
+        if let Err(e) = self.mcp_client.list_tools().await {
+            warn!("⚠️ Failed to refresh MCP tools: {}", e);
+        }
+        Ok(self.mcp_client.to_json().await)
+    }
+
+    pub async fn get_tools_for_prompt(&self) -> String {
+        if let Err(e) = self.mcp_client.ensure_connected().await {
+            warn!("⚠️ Failed to connect to MCP server: {}", e);
+        }
+        if let Err(e) = self.mcp_client.list_tools().await {
+            warn!("⚠️ Failed to refresh MCP tools: {}", e);
+        }
+        self.mcp_client.get_tools_for_prompt_async().await
+    }
+
+    pub async fn call_mcp_tool(&self, name: &str, arguments: std::collections::HashMap<String, serde_json::Value>) -> AppResult<crate::mcp::CallToolResult> {
+        self.mcp_client.call_tool(name, arguments).await
+    }
+
+    fn is_capability_question(message: &str) -> bool {
+        let lower = message.to_lowercase();
+        let capability_phrases = [
+            "what can you do",
+            "what are your capabilities",
+            "what tools do you have",
+            "what features",
+            "help me with",
+            "can you help",
+            "what are you able to",
+            "list your tools",
+            "show me your tools",
+            "what services",
+            "how can you help",
+            "/tools",
+            "/help",
+            "/capabilities",
+        ];
+        capability_phrases.iter().any(|phrase| lower.contains(phrase))
     }
 
     pub async fn chat(
@@ -309,7 +384,15 @@ IMPORTANT:
         let personality_config = self.personalities.get(&self.personality)
             .unwrap_or(&self.personalities["unified"]);
 
-        let context = self.build_conversation_context(&user_context).await;
+        // Check if user is asking about capabilities - inject tool list if so
+        let inject_tools = if Self::is_capability_question(&message) {
+            info!("🔧 Capability question detected - injecting MCP tool list");
+            Some(self.get_tools_for_prompt().await)
+        } else {
+            None
+        };
+
+        let context = self.build_conversation_context(&user_context, inject_tools.as_deref()).await;
 
         // Check if this is an image generation request (before moving message)
         let is_image_request = self.is_image_generation_request(&message);
@@ -406,7 +489,7 @@ IMPORTANT:
                         self.trim_conversation_history().await;
 
                         // Rebuild context with trimmed history
-                        let context = self.build_conversation_context(&user_context).await;
+                        let context = self.build_conversation_context(&user_context, inject_tools.as_deref()).await;
 
                         let (system_prompt, messages) = if is_image_request {
                             let (prompt, msgs) = self.build_image_generation_context(&user_context).await;
@@ -677,25 +760,30 @@ IMPORTANT:
         None
     }
 
-    async fn build_conversation_context(&self, user_context: &Option<HashMap<String, serde_json::Value>>) -> ConversationContext {
+    async fn build_conversation_context(&self, user_context: &Option<HashMap<String, serde_json::Value>>, inject_tools: Option<&str>) -> ConversationContext {
         let personality_config = self.personalities.get(&self.personality)
             .unwrap_or(&self.personalities["unified"]);
-        
+
         let mut base_system_prompt = personality_config.system_prompt.clone();
+
+        // Inject MCP tool list when user asks about capabilities
+        if let Some(tools_list) = inject_tools {
+            base_system_prompt.push_str(&format!("\n\nAVAILABLE MCP TOOLS:\n{}\n\nWhen asked about capabilities, reference these specific tools.", tools_list));
+        }
 
         // Add user context if available
         if let Some(context) = user_context {
             let mut context_additions = Vec::new();
-            
+
             if let Some(wallet_address) = context.get("wallet_address").and_then(|v| v.as_str()) {
                 let shortened = format!("{}...{}", &wallet_address[..8], &wallet_address[wallet_address.len()-4..]);
                 context_additions.push(format!("User wallet: {}", shortened));
             }
-            
+
             if let Some(wallet_type) = context.get("wallet_type").and_then(|v| v.as_str()) {
                 context_additions.push(format!("Wallet type: {}", wallet_type));
             }
-            
+
             if let Some(session_time) = context.get("session_time").and_then(|v| v.as_str()) {
                 context_additions.push(format!("Session active for: {}", session_time));
             }

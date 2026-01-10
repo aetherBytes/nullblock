@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub const JSONRPC_VERSION: &str = "2.0";
-pub const PROTOCOL_VERSION: &str = "2025-06-18";
+pub const PROTOCOL_VERSION: &str = "2025-11-25";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcRequest {
