@@ -187,8 +187,8 @@ const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({ onServiceClick 
           break;
         case 'price':
           filtered.sort((a, b) => {
-            const priceA = a.is_free ? 0 : a.price_usd || a.price_eth || 0;
-            const priceB = b.is_free ? 0 : b.price_usd || b.price_eth || 0;
+            const priceA = a.is_free ? 0 : a.price_usd || a.price_mon || 0;
+            const priceB = b.is_free ? 0 : b.price_usd || b.price_mon || 0;
             return priceA - priceB;
           });
           break;

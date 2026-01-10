@@ -104,7 +104,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
             'Free'
           ) : (
             <>
-              {service.price_usd ? `$${service.price_usd}` : `${service.price_eth} ETH`}
+              {service.price_usd ? `$${service.price_usd}` : `${service.price_mon} MON`}
               {service.pricing_model === 'Subscription' && '/mo'}
             </>
           )}
