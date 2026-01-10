@@ -1,0 +1,33 @@
+[book]
+title = "NullBlock Internal Docs"
+authors = ["NullBlock Team"]
+description = "Internal development documentation for NullBlock - the agent mesh platform"
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = true
+
+[output.html]
+default-theme = "coal"
+preferred-dark-theme = "coal"
+git-repository-url = "https://github.com/aetherBytes/nullblock"
+edit-url-template = "https://github.com/aetherBytes/nullblock/edit/main/{path}"
+site-url = "/nullblock-docs/"
+cname = ""
+additional-css = ["custom.css"]
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.search]
+enable = true
+limit-results = 30
+teaser-word-count = 30
+boost-title = 2
+boost-hierarchy = 1
+boost-paragraph = 1
+expand = true
+heading-split-level = 3

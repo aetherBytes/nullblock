@@ -53,6 +53,17 @@ while true; do
     echo -e "${YELLOW}   → Start: cd ~/nullblock/svc/nullblock-protocols && cargo run${NC}"
   fi
 
+  # Engram Service
+  if curl -s --max-time 2 "http://localhost:9004/health" > /dev/null 2>&1; then
+    engrams_health=$(curl -s --max-time 2 "http://localhost:9004/health")
+    version=$(echo "$engrams_health" | jq -r '.version // "unknown"' 2>/dev/null)
+    echo -e "${GREEN}✅${NC} Engram Service (port 9004) - ${GREEN}HEALTHY${NC} [v$version]"
+  else
+    echo -e "${RED}❌${NC} Engram Service (port 9004) - ${RED}NOT RESPONDING${NC}"
+    echo -e "${YELLOW}   → Check: tail -f ~/nullblock/svc/nullblock-engrams/logs/*.log${NC}"
+    echo -e "${YELLOW}   → Start: cd ~/nullblock/svc/nullblock-engrams && cargo run${NC}"
+  fi
+
   # Frontend
   if lsof -ti:5173 > /dev/null 2>&1; then
     echo -e "${GREEN}✅${NC} Frontend (port 5173) - ${GREEN}RUNNING${NC}"

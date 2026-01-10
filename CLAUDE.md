@@ -11,9 +11,11 @@
 **🎯 Mission**:
 In a rapidly expanding onchain automated world, we are building the picks and axes
 for this digital gold rush.
-NullBlock empowers builders with the essential tools to create, deploy,and
+NullBlock empowers builders with the essential tools to create, deploy, and
 profit from intelligent agent workflows.
 Together, we shape the future of autonomous commerce.
+
+**⛓️ Chain**: [Monad](https://monad.xyz) (exclusive) - High-performance EVM for agent transactions, NFT minting, and payments.
 
 ## 🌐 Connect & Follow
 
@@ -23,18 +25,41 @@ Together, we shape the future of autonomous commerce.
 
 ## 📚 Documentation
 
-Project documentation lives in the `agents/` directory:
-- **AGENTS.md** - Agent system documentation and specifications
-- **MANIFESTO.md** - NullBlock vision and philosophy
-- **SDK_SETUP.md** - SDK and repository setup guides
-- **NULLBLOCK_NAME_MEANING.md** - Brand naming etymology
-- **MCP_SERVERS.md** - MCP server integrations (Chrome DevTools, PixelLab)
+**Internal Documentation Book**: `docs-internal/` (mdBook)
 
-For updates and project instructions, edit files in `agents/`.
+```bash
+# Serve docs locally with live reload
+just docs        # Opens http://localhost:3001
+
+# Build docs only
+just docs-build
+```
+
+**Quick Links:**
+- [Architecture Overview](docs-internal/src/architecture.md)
+- [Quick Start](docs-internal/src/quickstart.md)
+- [Engrams Service](docs-internal/src/services/engrams.md)
+- [Echo Factory Plan](docs-internal/src/echo-factory/plan.md)
+- [API Reference](docs-internal/src/reference/api.md)
+- [Environment Variables](docs-internal/src/reference/env-vars.md)
+
+For updates and project instructions, edit files in `docs-internal/src/`.
 
 ### 🚧 Current Development Focus
 
-**Priority Tasks:**
+**🌟 Active Project: Echo Factory (First COW)**
+
+Building NullBlock's first Constellation of Work - an autonomous X/Twitter content creation suite. See [Echo Factory Plan](docs-internal/src/echo-factory/plan.md) for implementation details.
+
+| Phase | Status | Focus |
+|-------|--------|-------|
+| 1. Engram Service | ✅ Complete | Universal memory layer for all NullBlock workflows |
+| 2. Crossroads COW Model | 🔄 Next Up | COWs as first-class marketplace listings |
+| 3. Echo Factory Core | ⏳ Pending | Persona Creator, Content Generator, Scheduler, X Publisher |
+| 4. X API Integration | ⏳ Pending | OAuth 1.0a + real posting |
+| 5. Frontend | ⏳ Pending | Hecate UI components |
+
+**Other Priority Tasks:**
 
 1. **🔵 Get X Account Verified** - Obtain verified status for [@Nullblock_io](https://x.com/Nullblock_io) to establish credibility and official presence
 2. **💰 Marketing & Token Strategy** - Develop marketing strategy, purchase additional supply in dev wallet, implement token lock mechanisms
@@ -54,11 +79,13 @@ For updates and project instructions, edit files in `agents/`.
 │   Port 5173 │    │   Port 3000  │    │   Various Ports │
 └─────────────┘    └──────────────┘    └─────────────────┘
                            │
-                   ┌───────┴────────┐
-                   │   Crossroads   │
-                   │  Marketplace   │
-                   │   (Internal)   │
-                   └────────────────┘
+           ┌───────────────┼───────────────┐
+           │               │               │
+    ┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐
+    │  Crossroads │ │   Engrams   │ │    COWs     │
+    │ Marketplace │ │   Memory    │ │  (Echo etc) │
+    │  (Internal) │ │  Port 9004  │ │  Port 9005+ │
+    └─────────────┘ └─────────────┘ └─────────────┘
 ```
 
 ### 🚀 Key Features
@@ -66,6 +93,8 @@ For updates and project instructions, edit files in `agents/`.
 - **🤖 Agent Orchestration**: Multi-model LLM coordination via Hecate
 - **🛣️ Unified Router**: Single entry point through Erebus (Port 3000)
 - **💰 Marketplace**: Crossroads AI service discovery and monetization
+- **🧠 Engrams**: Universal memory layer for persistent context across all workflows
+- **🌌 COWs**: Constellations of Work - curated tool suites (Echo Factory, etc.)
 - **🔗 Protocol Agnostic**: A2A (Agent-to-Agent), MCP (Model Context Protocol), custom protocols
 - **⚡ Real-time**: WebSocket chat, live task management, instant feedback
 
@@ -78,6 +107,11 @@ For updates and project instructions, edit files in `agents/`.
 - **Erebus** (`/svc/erebus/`): Unified routing server
 - **Crossroads** (`/svc/erebus/src/resources/crossroads/`): Marketplace subsystem
 - **Hecate Frontend** (`/svc/hecate/`): React interface with real-time agent discovery
+- **NullBlock.engrams** (`/svc/nullblock-engrams/`): Universal memory/context persistence layer (Port 9004)
+
+### In Development 🔄
+
+- **Echo Factory** (`/svc/echo-factory/`): First COW - X/Twitter automation suite (Port 9005)
 
 ### Legacy Services
 
@@ -91,6 +125,8 @@ _Legacy services (Helios, NullBlock.orchestration) have been removed. All protoc
 # Individual services:
 # cd svc/nullblock-protocols && cargo run  # Port 8001
 # cd svc/nullblock-agents && cargo run     # Port 9003
+# cd svc/nullblock-engrams && cargo run    # Port 9004
+# cd svc/echo-factory && cargo run         # Port 9005
 # cd svc/erebus && cargo run               # Port 3000
 # cd svc/hecate && npm run develop         # Port 5173
 ```
@@ -101,6 +137,8 @@ _Legacy services (Helios, NullBlock.orchestration) have been removed. All protoc
 - **5173**: Hecate frontend
 - **8001**: Protocol server (A2A/MCP)
 - **9003**: Hecate agent API
+- **9004**: Engram service (memory/context)
+- **9005**: Echo Factory (first COW)
 
 ## 🐳 Docker & Container Golden Rules
 
@@ -173,6 +211,7 @@ Frontend → Erebus → {
 - **👛 Wallets**: `/api/wallets/*` - Authentication, sessions
 - **🤖 Agents**: `/api/agents/*` - Chat, status, orchestration
 - **📋 Tasks**: `/api/agents/tasks/*` - Task management, lifecycle
+- **🧠 Engrams**: `/api/engrams/*` - Memory/context persistence (wallet-centric)
 - **🔗 Protocols**: `/api/protocols/*` - A2A/MCP operations
 - **🛣️ Marketplace**: `/api/marketplace/*` - Listings, search
 - **🔍 Discovery**: `/api/discovery/*` - Service discovery, health
@@ -233,6 +272,84 @@ Supports: **Web3 Wallets**, **API Keys**, **Email Auth**, **OAuth**, **System Ag
 ### Specialized Agents
 
 - **Siren Marketing**: Content generation, Twitter posts, project analysis
+
+## 🧠 Engram Service
+
+**Engrams** are the universal, persistent memory layer for NullBlock — the "long-term scars" of the mesh that any agent, workflow, or service can draw from and contribute to.
+
+### Core Principles
+
+| Principle | Description |
+|-----------|-------------|
+| **Wallet-Centric** | All engrams scoped to wallet address (primary key) |
+| **Agent-Agnostic** | Any agent can query/create via simple API |
+| **Type System** | Categories: `persona`, `preference`, `strategy`, `knowledge`, `compliance` |
+| **Versioned & Lineaged** | Every update creates new version with parent reference |
+| **Onchain Option** | Important engrams can be minted as NFTs on Monad |
+
+### Use Cases
+
+- **Cross-service context** — Echo Factory, Arb Suite, Governance Oracle all share the same engram pool
+- **Personal + shared memory** — Private engrams (wallet-scoped) + publishable public engrams
+- **Fork/replicate** — When forking a COW, inherit creator's relevant engrams (with permission/royalty)
+- **Monetization** — Tradable "Deep Engrams" as asset class in Crossroads
+
+### API Endpoints (via Erebus)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/engrams` | Create engram |
+| GET | `/api/engrams/wallet/:wallet` | Get all engrams for wallet |
+| GET | `/api/engrams/wallet/:wallet/:key` | Get by wallet+key |
+| PUT | `/api/engrams/:id` | Update (creates new version) |
+| POST | `/api/engrams/search` | Search by tags/type |
+| POST | `/api/engrams/:id/fork` | Fork engram to new wallet |
+
+### Generation Triggers
+
+- **Conversation trim**: Auto-summarize dropped context into engram
+- **Explicit command**: `/engram create "My DeFi style" "Prefers simple explanations..."`
+- **HECATE proactive**: "I forged a new engram from this. Shall I save it?"
+- **Post-deployment**: After successful agent run, summarize performance → new engram
+
+## 🌌 COWs (Constellations of Work)
+
+**COWs** are curated suites of tools that form autonomous, replicable workflows. They are the "super-agents" of NullBlock — composable, forkable, and tradable in Crossroads.
+
+### What is a COW?
+
+Like stars forming a constellation, each piece (agent, tool, engram) connects via dendrites to create something greater than the sum of its parts — a living, evolving system capable of independent action, replication, and resonance across the mesh.
+
+### COW Structure
+
+```
+COW (e.g., Echo Factory)
+├── Tool 1: Persona Creator (standalone: yes)
+├── Tool 2: Content Generator (standalone: yes)
+├── Tool 3: Scheduler (standalone: yes)
+└── Tool 4: X Publisher (standalone: no, COW-only)
+```
+
+### Crossroads Listing Type
+
+COWs are a first-class listing type in Crossroads:
+- **Nested tools**: Tools within a COW can optionally be listed separately
+- **Fork/replicate**: Users can fork entire COWs with engram inheritance
+- **Pricing**: Per-COW or per-tool pricing models
+
+### Dogfooding Principle
+
+All NullBlock-branded COWs (Echo Factory, etc.) use the **exact same APIs** as external developers:
+- REST API via Erebus
+- MCP tools via NullBlock MCP Server
+- SDK via `nullblock-sdk`
+- No privileged internal access
+
+### Current COWs
+
+| COW | Status | Description |
+|-----|--------|-------------|
+| **Echo Factory** | 🔄 In Development | X/Twitter automation: persona creation, content generation, scheduling, posting |
 
 ## 🌐 A2A Protocol
 
@@ -310,6 +427,96 @@ PGPASSWORD="REDACTED_DB_PASS" psql -h localhost -p 5440 -U postgres -d erebus -c
 PGPASSWORD="REDACTED_DB_PASS" psql -h localhost -p 5441 -U postgres -d agents -c \
   "SELECT COUNT(*) as agents_users FROM user_references;"
 ```
+
+## 🧠 Engram Service
+
+**Universal Memory Layer** - Persistent context storage for all NullBlock agents, workflows, and COWs.
+
+### What Are Engrams?
+
+Engrams are the **"long-term scars" of the mesh** — shared, forkable, evolvable knowledge that any agent, workflow, or service can draw from and contribute to.
+
+| Principle | Description |
+|-----------|-------------|
+| **Wallet-Centric** | All engrams scoped to wallet address (primary scope) |
+| **Agent-Agnostic** | Any agent can query/create via simple API |
+| **Type System** | Categories: `persona`, `preference`, `strategy`, `knowledge`, `compliance` |
+| **Versioned** | Every update creates new version with parent reference |
+| **Lineaged** | Track fork history back to original ancestor |
+| **Monad-Native** | Pricing in MON, NFT minting on Monad chain |
+
+### Architecture
+
+- **Service**: `svc/nullblock-engrams/` (Rust/Axum)
+- **Port**: 9004
+- **Database**: PostgreSQL (agents DB, port 5441)
+- **Tables**: `engrams`, `engram_history`
+
+### Key Field (Namespaced Identifier)
+
+The `key` field is a **namespaced lookup path** for engrams within a wallet. It's NOT globally unique - uniqueness is scoped to `(wallet_address, key, version)`.
+
+**Convention:** Dot-notation namespacing
+```
+{domain}.{name}           → twitter.main_persona
+{domain}.{sub}.{name}     → trading.strategies.momentum
+{app}.{feature}.{id}      → echo.personas.crypto_sage
+```
+
+**Why keys instead of just UUIDs?**
+- Human-readable semantic names ("get my twitter persona")
+- Supports versioning: same key can have v1, v2, v3...
+- Cross-agent lookup: any agent can fetch `wallet/0x.../twitter.persona`
+
+**Versioning Example:**
+```
+wallet: 0x742d35Cc...
+key: twitter.crypto_sage
+  version: 1  ← original
+  version: 2  ← updated voice
+  version: 3  ← added hashtags (current)
+```
+
+**Lookup Patterns:**
+```bash
+# Get all versions of a key
+GET /api/engrams/wallet/{wallet}/{key}
+
+# Search by partial key (future)
+POST /api/engrams/search {"key_prefix": "twitter."}
+```
+
+### API Endpoints (via Erebus :3000)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/engrams` | Create engram |
+| GET | `/api/engrams` | List all engrams |
+| GET | `/api/engrams/:id` | Get by ID |
+| PUT | `/api/engrams/:id` | Update (creates new version) |
+| DELETE | `/api/engrams/:id` | Delete |
+| GET | `/api/engrams/wallet/:wallet` | Get all for wallet |
+| GET | `/api/engrams/wallet/:wallet/:key` | Get by wallet+key |
+| POST | `/api/engrams/search` | Search by tags/type |
+| POST | `/api/engrams/:id/fork` | Fork to new wallet |
+| POST | `/api/engrams/:id/publish` | Make public |
+| GET | `/api/engrams/health` | Health check |
+
+### Engram Types
+
+- **persona** - Character/voice definitions (e.g., Twitter persona for Echo Factory)
+- **preference** - User preferences and settings
+- **strategy** - Trading strategies, decision frameworks
+- **knowledge** - Domain knowledge, learned information
+- **compliance** - Regulatory/policy constraints
+
+### Use Cases
+
+- **Echo Factory**: Store Twitter personas, content style preferences
+- **Cross-Agent Memory**: HECATE saves conversation summaries as engrams
+- **Monetization**: Public engrams can be listed on Crossroads marketplace (priced in MON)
+- **Fork & Iterate**: Clone someone's persona engram as starting point
+- **NFT Minting**: Important engrams can be minted as NFTs on Monad
 
 ## 🛣️ Crossroads Marketplace
 

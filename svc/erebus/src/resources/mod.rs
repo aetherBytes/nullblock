@@ -1,4 +1,4 @@
-// Resource modules for wallet interactions, MCP, agents, crossroads marketplace, and other services
+// Resource modules for wallet interactions, MCP, agents, crossroads marketplace, engrams, and other services
 
 pub mod types;
 pub mod wallets;
@@ -9,6 +9,7 @@ pub mod crossroads;
 pub mod logs;
 pub mod external_service;
 pub mod api_keys;
+pub mod engrams;
 
 // Re-export commonly used types and traits
 pub use types::{
@@ -17,4 +18,5 @@ pub use types::{
 };
 pub use wallets::WalletManager;
 pub use crossroads::routes::create_crossroads_routes;
+pub use engrams::create_engram_routes;
 pub use external_service::ExternalService;

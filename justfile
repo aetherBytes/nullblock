@@ -504,3 +504,19 @@ help:
     @echo "  Erebus API: http://localhost:3000"
     @echo ""
     @echo "  IPFS Gateway: http://localhost:8080"
+    @echo "  Internal Docs: http://localhost:3001"
+    @echo ""
+    @echo "📚 Documentation Commands:"
+    @echo "  just docs       - Serve internal documentation (port 3001)"
+    @echo "  just docs-build - Build documentation only"
+
+# Serve internal documentation with live reload
+docs:
+    @echo "📚 Starting internal documentation server..."
+    ./scripts/start-docs.sh
+
+# Build internal documentation
+docs-build:
+    @echo "📖 Building internal documentation..."
+    cd docs-internal && mdbook build
+    @echo "✅ Documentation built to docs-internal/book/"
