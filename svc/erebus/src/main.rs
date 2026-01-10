@@ -49,7 +49,7 @@ use resources::agents::routes::{
 };
 use resources::users::routes::{create_user_endpoint, lookup_user_endpoint, get_user_endpoint};
 use resources::wallets::routes::create_wallet_routes;
-use resources::{WalletManager, create_crossroads_routes, ExternalService};
+use resources::{WalletManager, create_crossroads_routes, create_engram_routes, ExternalService};
 
 #[derive(Serialize)]
 struct StatusResponse {
@@ -474,6 +474,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(create_wallet_routes())
         // Merge crossroads routes
         .merge(create_crossroads_routes(&app_state.external_service))
+        // Merge engram routes
+        .merge(create_engram_routes())
         // Merge API key routes
         .merge(resources::api_keys::create_api_key_routes(api_key_service.clone()))
         .with_state(app_state.clone())
@@ -518,7 +520,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🏥 Crossroads health: {}/api/crossroads/health", erebus_base_url);
     info!("🔐 API key management: {}/api/users/:user_id/api-keys", erebus_base_url);
     info!("🔒 Internal API keys: {}/internal/users/:user_id/api-keys/decrypted", erebus_base_url);
-    info!("💡 Ready for agentic workflows, marketplace operations, and service discovery");
+    info!("🧠 Engram service: {}/api/engrams", erebus_base_url);
+    info!("🏥 Engram health: {}/api/engrams/health", erebus_base_url);
+    info!("💡 Ready for agentic workflows, marketplace operations, engrams, and service discovery");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let listener = tokio::net::TcpListener::bind(addr).await

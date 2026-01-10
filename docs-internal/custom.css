@@ -1,0 +1,135 @@
+/* NullBlock Internal Docs Custom Styles */
+
+/* Dark void theme enhancements */
+:root {
+    --bg: #1a1a2e;
+    --fg: #e8e8e8;
+    --sidebar-bg: #16213e;
+    --sidebar-fg: #a8a8a8;
+    --sidebar-active: #e6c200;
+    --links: #4fc3f7;
+    --inline-code-color: #e6c200;
+    --quote-bg: rgba(230, 194, 0, 0.1);
+    --quote-border: #e6c200;
+}
+
+/* Header styling */
+.content h1 {
+    color: #e6c200;
+    border-bottom: 2px solid #e6c200;
+    padding-bottom: 0.5rem;
+}
+
+.content h2 {
+    color: #4fc3f7;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.3rem;
+}
+
+/* Table styling */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+}
+
+th {
+    background: rgba(230, 194, 0, 0.2);
+    color: #e6c200;
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 2px solid #e6c200;
+}
+
+td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #333;
+}
+
+tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Code blocks */
+pre {
+    border-radius: 8px;
+    border: 1px solid #333;
+}
+
+code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Inline code */
+:not(pre) > code {
+    background: rgba(230, 194, 0, 0.15);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+}
+
+/* Blockquotes */
+blockquote {
+    border-left: 4px solid #e6c200;
+    background: rgba(230, 194, 0, 0.1);
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 0 8px 8px 0;
+}
+
+/* Links */
+a {
+    color: #4fc3f7;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+a:hover {
+    color: #e6c200;
+    text-decoration: underline;
+}
+
+/* Sidebar enhancements */
+.sidebar .sidebar-scrollbox {
+    padding: 1rem;
+}
+
+.sidebar a.active {
+    color: #e6c200;
+    font-weight: bold;
+}
+
+/* Status indicators in tables */
+td:contains("✅"),
+td:contains("🔄"),
+td:contains("⏳") {
+    font-weight: bold;
+}
+
+/* Search box */
+#searchbar {
+    background: #16213e;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #e8e8e8;
+}
+
+#searchbar:focus {
+    border-color: #e6c200;
+    outline: none;
+}
+
+/* Nav buttons */
+.nav-chapters {
+    color: #4fc3f7;
+}
+
+.nav-chapters:hover {
+    color: #e6c200;
+}
+
+/* Footer */
+.nav-wrapper {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #333;
+}

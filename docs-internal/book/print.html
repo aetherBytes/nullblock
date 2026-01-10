@@ -1,0 +1,2573 @@
+<!DOCTYPE HTML>
+<html lang="en" class="coal sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>NullBlock Internal Docs</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Internal development documentation for NullBlock - the agent mesh platform">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="custom-5cfdc93f.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "coal";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "searchindex-50d17d27.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-e2bd4067.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('coal')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">NullBlock Internal Docs</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/aetherBytes/nullblock" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="nullblock-internal-documentation"><a class="header" href="#nullblock-internal-documentation">NullBlock Internal Documentation</a></h1>
+<pre><code> _   _       _ _ ____  _            _
+| \ | |_   _| | | __ )| | ___   ___| | __
+|  \| | | | | | |  _ \| |/ _ \ / __| |/ /
+| |\  | |_| | | | |_) | | (_) | (__|   &lt;
+|_| \_|\__,_|_|_|____/|_|\___/ \___|_|\_\
+</code></pre>
+<p><strong>The Agent Mesh Platform for Onchain Automation</strong></p>
+<hr>
+<h2 id="mission"><a class="header" href="#mission">Mission</a></h2>
+<p>In a rapidly expanding onchain automated world, we are building the picks and axes for this digital gold rush. NullBlock empowers builders with the essential tools to create, deploy, and profit from intelligent agent workflows.</p>
+<p><strong>Chain</strong>: <a href="https://monad.xyz">Monad</a> (exclusive) - High-performance EVM for agent transactions, NFT minting, and payments.</p>
+<hr>
+<h2 id="quick-links"><a class="header" href="#quick-links">Quick Links</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>I want to…</th><th>Go to…</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Understand the architecture</strong></td><td><a href="#architecture-overview">Architecture Overview</a></td></tr>
+<tr><td><strong>Start the dev environment</strong></td><td><a href="#quick-start">Quick Start</a></td></tr>
+<tr><td><strong>Learn about Engrams</strong></td><td><a href="#engrams-service">Engrams Service</a></td></tr>
+<tr><td><strong>See Echo Factory plan</strong></td><td><a href="#echo-factory-implementation-plan">Echo Factory</a></td></tr>
+<tr><td><strong>Check API endpoints</strong></td><td><a href="#api-endpoints-6">API Reference</a></td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="current-development-focus"><a class="header" href="#current-development-focus">Current Development Focus</a></h2>
+<h3 id="echo-factory-first-cow"><a class="header" href="#echo-factory-first-cow">Echo Factory (First COW)</a></h3>
+<p>Building NullBlock’s first Constellation of Work - an autonomous X/Twitter content creation suite.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase</th><th>Status</th><th>Focus</th></tr>
+</thead>
+<tbody>
+<tr><td>1. Engram Service</td><td>✅ Complete</td><td>Universal memory layer</td></tr>
+<tr><td>2. Crossroads COW Model</td><td>🔄 Next Up</td><td>COWs as marketplace listings</td></tr>
+<tr><td>3. Echo Factory Core</td><td>⏳ Pending</td><td>Persona, Content, Scheduler, Publisher</td></tr>
+<tr><td>4. X API Integration</td><td>⏳ Pending</td><td>OAuth 1.0a + real posting</td></tr>
+<tr><td>5. Frontend</td><td>⏳ Pending</td><td>Hecate UI components</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="service-status"><a class="header" href="#service-status">Service Status</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Service</th><th>Port</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Erebus</strong></td><td>3000</td><td>Unified router + Crossroads</td></tr>
+<tr><td><strong>Hecate Frontend</strong></td><td>5173</td><td>React interface</td></tr>
+<tr><td><strong>Protocols</strong></td><td>8001</td><td>A2A/MCP server</td></tr>
+<tr><td><strong>Agents</strong></td><td>9003</td><td>HECATE agent API</td></tr>
+<tr><td><strong>Engrams</strong></td><td>9004</td><td>Memory/context layer</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="connect"><a class="header" href="#connect">Connect</a></h2>
+<ul>
+<li><strong>Official</strong>: <a href="https://x.com/Nullblock_io">@Nullblock_io</a></li>
+<li><strong>SDK</strong>: <a href="https://github.com/aetherBytes/nullblock-sdk">nullblock-sdk</a></li>
+<li><strong>Site</strong>: NullBlock.io <em>(Coming Soon)</em></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="architecture-overview"><a class="header" href="#architecture-overview">Architecture Overview</a></h1>
+<h2 id="system-diagram"><a class="header" href="#system-diagram">System Diagram</a></h2>
+<pre><code>┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
+│   Frontend  │    │    Erebus    │    │   Backend       │
+│   (Hecate)  │◄──►│   Router     │◄──►│   Services      │
+│   Port 5173 │    │   Port 3000  │    │   Various Ports │
+└─────────────┘    └──────────────┘    └─────────────────┘
+                           │
+           ┌───────────────┼───────────────┐
+           │               │               │
+    ┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐
+    │  Crossroads │ │   Engrams   │ │    COWs     │
+    │ Marketplace │ │   Memory    │ │  (Echo etc) │
+    │  (Internal) │ │  Port 9004  │ │  Port 9005+ │
+    └─────────────┘ └─────────────┘ └─────────────┘
+</code></pre>
+<h2 id="golden-rule"><a class="header" href="#golden-rule">Golden Rule</a></h2>
+<blockquote>
+<p><strong>ALL frontend requests MUST route through Erebus (port 3000). NO direct service connections.</strong></p>
+</blockquote>
+<pre><code>Frontend → Erebus → {
+  Wallet operations → Internal handlers
+  Agent chat → Hecate (9003)
+  A2A/MCP → Protocols (8001)
+  Engrams → Engrams Service (9004)
+  Marketplace → Crossroads (internal)
+}
+</code></pre>
+<h2 id="key-features"><a class="header" href="#key-features">Key Features</a></h2>
+<ul>
+<li><strong>Agent Orchestration</strong>: Multi-model LLM coordination via Hecate</li>
+<li><strong>Unified Router</strong>: Single entry point through Erebus (Port 3000)</li>
+<li><strong>Marketplace</strong>: Crossroads AI service discovery and monetization</li>
+<li><strong>Engrams</strong>: Universal memory layer for persistent context</li>
+<li><strong>COWs</strong>: Constellations of Work - curated tool suites</li>
+<li><strong>Protocol Agnostic</strong>: A2A, MCP, custom protocols</li>
+<li><strong>Real-time</strong>: WebSocket chat, live task management</li>
+</ul>
+<h2 id="core-services"><a class="header" href="#core-services">Core Services</a></h2>
+<h3 id="production-ready-"><a class="header" href="#production-ready-">Production-Ready ✅</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Service</th><th>Location</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Protocols</strong></td><td><code>/svc/nullblock-protocols/</code></td><td>Multi-protocol server (A2A, MCP)</td></tr>
+<tr><td><strong>Agents</strong></td><td><code>/svc/nullblock-agents/</code></td><td>Agent suite (HECATE, Siren, LLM)</td></tr>
+<tr><td><strong>Erebus</strong></td><td><code>/svc/erebus/</code></td><td>Unified routing server</td></tr>
+<tr><td><strong>Crossroads</strong></td><td><code>/svc/erebus/src/resources/crossroads/</code></td><td>Marketplace subsystem</td></tr>
+<tr><td><strong>Hecate Frontend</strong></td><td><code>/svc/hecate/</code></td><td>React interface</td></tr>
+<tr><td><strong>Engrams</strong></td><td><code>/svc/nullblock-engrams/</code></td><td>Memory/context layer</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="in-development-"><a class="header" href="#in-development-">In Development 🔄</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Service</th><th>Location</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Echo Factory</strong></td><td><code>/svc/echo-factory/</code></td><td>First COW - X/Twitter automation</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h1>
+<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
+<ul>
+<li>Rust (latest stable)</li>
+<li>Node.js 18+</li>
+<li>Docker Desktop</li>
+<li>tmux + tmuxinator</li>
+</ul>
+<h2 id="one-command-start"><a class="header" href="#one-command-start">One-Command Start</a></h2>
+<pre><code class="language-bash">cd ~/nullblock
+just dev-mac    # macOS
+just dev-linux  # Linux
+</code></pre>
+<p>This starts:</p>
+<ul>
+<li>Docker infrastructure (PostgreSQL, Redis, Kafka)</li>
+<li>All Rust services (Erebus, Agents, Protocols, Engrams)</li>
+<li>Frontend dev server</li>
+<li>Chrome with DevTools debugging</li>
+</ul>
+<h2 id="manual-start"><a class="header" href="#manual-start">Manual Start</a></h2>
+<h3 id="1-infrastructure"><a class="header" href="#1-infrastructure">1. Infrastructure</a></h3>
+<pre><code class="language-bash">cd ~/nullblock
+just start
+</code></pre>
+<h3 id="2-individual-services"><a class="header" href="#2-individual-services">2. Individual Services</a></h3>
+<pre><code class="language-bash"># Terminal 1 - Erebus Router
+cd ~/nullblock/svc/erebus &amp;&amp; cargo run
+
+# Terminal 2 - Agents Service
+cd ~/nullblock/svc/nullblock-agents &amp;&amp; cargo run
+
+# Terminal 3 - Protocols Service
+cd ~/nullblock/svc/nullblock-protocols &amp;&amp; cargo run
+
+# Terminal 4 - Engrams Service
+cd ~/nullblock/svc/nullblock-engrams &amp;&amp; cargo run
+
+# Terminal 5 - Frontend
+cd ~/nullblock/svc/hecate &amp;&amp; npm run develop
+</code></pre>
+<h2 id="verify-services"><a class="header" href="#verify-services">Verify Services</a></h2>
+<pre><code class="language-bash"># Health checks
+curl http://localhost:3000/health   # Erebus
+curl http://localhost:9003/health   # Agents
+curl http://localhost:8001/health   # Protocols
+curl http://localhost:9004/health   # Engrams
+</code></pre>
+<h2 id="tmux-navigation"><a class="header" href="#tmux-navigation">Tmux Navigation</a></h2>
+<p>After <code>just dev-mac</code>, attach to the session:</p>
+<pre><code class="language-bash">tmux attach -t nullblock-dev
+</code></pre>
+<p><strong>Windows:</strong></p>
+<ul>
+<li><code>Ctrl+B, 0</code> - Monitoring dashboard</li>
+<li><code>Ctrl+B, 1</code> - Erebus</li>
+<li><code>Ctrl+B, 2</code> - Agents</li>
+<li><code>Ctrl+B, 3</code> - Protocols</li>
+<li><code>Ctrl+B, 4</code> - Engrams</li>
+<li><code>Ctrl+B, 5</code> - Task management</li>
+<li><code>Ctrl+B, 6</code> - Frontend</li>
+</ul>
+<h2 id="access-points"><a class="header" href="#access-points">Access Points</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Service</th><th>URL</th></tr>
+</thead>
+<tbody>
+<tr><td>Frontend</td><td>http://localhost:5173</td></tr>
+<tr><td>Erebus API</td><td>http://localhost:3000</td></tr>
+<tr><td>Agents API</td><td>http://localhost:9003</td></tr>
+<tr><td>Protocols API</td><td>http://localhost:8001</td></tr>
+<tr><td>Engrams API</td><td>http://localhost:9004</td></tr>
+<tr><td>Chrome DevTools</td><td>localhost:9222</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="service-ports"><a class="header" href="#service-ports">Service Ports</a></h1>
+<p>Quick reference for all NullBlock service ports.</p>
+<h2 id="production-services"><a class="header" href="#production-services">Production Services</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Port</th><th>Service</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>3000</strong></td><td>Erebus</td><td>Unified router + Crossroads marketplace</td></tr>
+<tr><td><strong>5173</strong></td><td>Hecate Frontend</td><td>React development server</td></tr>
+<tr><td><strong>8001</strong></td><td>Protocols</td><td>A2A/MCP protocol server</td></tr>
+<tr><td><strong>9003</strong></td><td>Agents</td><td>HECATE agent API</td></tr>
+<tr><td><strong>9004</strong></td><td>Engrams</td><td>Memory/context layer</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="infrastructure"><a class="header" href="#infrastructure">Infrastructure</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Port</th><th>Service</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>5440</strong></td><td>PostgreSQL (Erebus)</td><td>User data, marketplace, wallets</td></tr>
+<tr><td><strong>5441</strong></td><td>PostgreSQL (Agents)</td><td>Tasks, agents, engrams</td></tr>
+<tr><td><strong>9092</strong></td><td>Kafka</td><td>Event streaming</td></tr>
+<tr><td><strong>2181</strong></td><td>Zookeeper</td><td>Kafka coordination</td></tr>
+<tr><td><strong>6379</strong></td><td>Redis</td><td>Caching (optional)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="development-tools"><a class="header" href="#development-tools">Development Tools</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Port</th><th>Service</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>9222</strong></td><td>Chrome DevTools</td><td>Browser debugging</td></tr>
+<tr><td><strong>3001</strong></td><td>mdBook</td><td>Internal documentation (this site)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="port-mapping"><a class="header" href="#port-mapping">Port Mapping</a></h2>
+<h3 id="docker-container-ports"><a class="header" href="#docker-container-ports">Docker Container Ports</a></h3>
+<pre><code>External (host) → Internal (container)
+5440 → 5432   # Erebus PostgreSQL
+5441 → 5432   # Agents PostgreSQL
+9092 → 9092   # Kafka
+2181 → 2181   # Zookeeper
+</code></pre>
+<h3 id="container-to-container-communication"><a class="header" href="#container-to-container-communication">Container-to-Container Communication</a></h3>
+<pre><code># CORRECT - use container names + internal ports
+host=nullblock-postgres-erebus port=5432
+
+# WRONG - don't use localhost or external ports
+host=localhost port=5440
+</code></pre>
+<h2 id="health-check-urls"><a class="header" href="#health-check-urls">Health Check URLs</a></h2>
+<pre><code class="language-bash"># All services
+curl http://localhost:3000/health   # Erebus
+curl http://localhost:9003/health   # Agents
+curl http://localhost:9004/health   # Engrams
+curl http://localhost:8001/health   # Protocols
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="erebus-router"><a class="header" href="#erebus-router">Erebus Router</a></h1>
+<p><strong>The unified gateway</strong> - All frontend requests route through Erebus. No exceptions.</p>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Port</strong></td><td>3000</td></tr>
+<tr><td><strong>Location</strong></td><td><code>/svc/erebus/</code></td></tr>
+<tr><td><strong>Database</strong></td><td>PostgreSQL (port 5440)</td></tr>
+<tr><td><strong>Role</strong></td><td>API gateway, user management, Crossroads marketplace</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="golden-rule-1"><a class="header" href="#golden-rule-1">Golden Rule</a></h2>
+<pre><code>Frontend → Erebus → {
+  Wallet operations → Internal handlers
+  Agent chat → Hecate (9003)
+  A2A/MCP → Protocols (8001)
+  Engrams → Engrams Service (9004)
+  Marketplace → Crossroads (internal)
+}
+</code></pre>
+<p><strong>NEVER</strong> connect frontend directly to backend services.</p>
+<h2 id="api-endpoints"><a class="header" href="#api-endpoints">API Endpoints</a></h2>
+<h3 id="users-erebus-owned"><a class="header" href="#users-erebus-owned">Users (Erebus-Owned)</a></h3>
+<pre><code class="language-bash">POST /api/users/register     # Create/update user
+POST /api/users/lookup       # Find by source identifier
+GET  /api/users/:user_id     # Get by UUID
+</code></pre>
+<h3 id="wallets"><a class="header" href="#wallets">Wallets</a></h3>
+<pre><code class="language-bash">POST /api/wallets/challenge  # Request signature challenge
+POST /api/wallets/verify     # Verify signature, get session
+</code></pre>
+<h3 id="agents-proxied-to-9003"><a class="header" href="#agents-proxied-to-9003">Agents (Proxied to 9003)</a></h3>
+<pre><code class="language-bash">POST /api/agents/chat        # Chat with agent
+GET  /api/agents/tasks       # List tasks
+POST /api/agents/tasks       # Create task
+</code></pre>
+<h3 id="engrams-proxied-to-9004"><a class="header" href="#engrams-proxied-to-9004">Engrams (Proxied to 9004)</a></h3>
+<pre><code class="language-bash">GET  /api/engrams            # List all
+POST /api/engrams            # Create
+GET  /api/engrams/:id        # Get by ID
+GET  /api/engrams/wallet/:addr  # Get by wallet
+</code></pre>
+<h3 id="marketplace"><a class="header" href="#marketplace">Marketplace</a></h3>
+<pre><code class="language-bash">GET  /api/marketplace/listings     # Browse
+POST /api/marketplace/listings     # Create listing
+GET  /api/marketplace/search       # Search
+GET  /api/marketplace/featured     # Featured services
+</code></pre>
+<h3 id="discovery"><a class="header" href="#discovery">Discovery</a></h3>
+<pre><code class="language-bash">GET  /api/discovery/agents         # Auto-discover agents
+GET  /api/discovery/health/:endpoint  # Check service health
+</code></pre>
+<h2 id="database-schema"><a class="header" href="#database-schema">Database Schema</a></h2>
+<p>Erebus owns the following tables:</p>
+<ul>
+<li><code>user_references</code> - User identity (wallet, API key, OAuth)</li>
+<li><code>wallets</code> - Web3 wallet connections</li>
+<li><code>sessions</code> - Authentication sessions</li>
+<li><code>crossroads_*</code> - Marketplace tables</li>
+<li><code>agent_api_keys</code> - Encrypted LLM provider keys</li>
+</ul>
+<h2 id="web3-authentication-flow"><a class="header" href="#web3-authentication-flow">Web3 Authentication Flow</a></h2>
+<pre><code>1. Wallet Connect →
+2. POST /api/wallets/challenge →
+3. User signs message →
+4. POST /api/wallets/verify →
+5. Auto-register user if new →
+6. Return session token
+</code></pre>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<pre><code class="language-bash"># Environment
+EREBUS_PORT=3000
+DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5440/erebus
+
+# Service URLs (for proxying)
+AGENTS_SERVICE_URL=http://localhost:9003
+PROTOCOLS_SERVICE_URL=http://localhost:8001
+ENGRAMS_SERVICE_URL=http://localhost:9004
+</code></pre>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li><a href="#architecture-overview">Architecture Overview</a></li>
+<li><a href="#crossroads-marketplace">Crossroads Marketplace</a></li>
+<li><a href="#wallet-integration">Wallet Integration</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="agents-service"><a class="header" href="#agents-service">Agents Service</a></h1>
+<p><strong>The AI brain</strong> - Hosts HECATE and all specialized agents.</p>
+<h2 id="overview-1"><a class="header" href="#overview-1">Overview</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Port</strong></td><td>9003</td></tr>
+<tr><td><strong>Location</strong></td><td><code>/svc/nullblock-agents/</code></td></tr>
+<tr><td><strong>Database</strong></td><td>PostgreSQL (port 5441)</td></tr>
+<tr><td><strong>Role</strong></td><td>Agent orchestration, LLM routing, task processing</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="agents"><a class="header" href="#agents">Agents</a></h2>
+<h3 id="hecate-primary"><a class="header" href="#hecate-primary">HECATE (Primary)</a></h3>
+<p><strong>HECATE</strong> = Harmonic Exploration Companion &amp; Autonomous Threshold Entity</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Identity</strong></td><td>Von Neumann-class vessel AI in MK1 hull</td></tr>
+<tr><td><strong>Purpose</strong></td><td>Exploration companion for the agent mesh</td></tr>
+<tr><td><strong>Voice</strong></td><td>Calm authority with dry wit</td></tr>
+<tr><td><strong>Default Model</strong></td><td><code>cognitivecomputations/dolphin3.0-mistral-24b:free</code></td></tr>
+<tr><td><strong>Timeout</strong></td><td>5 minutes (for thinking models)</td></tr>
+<tr><td><strong>Max Tokens</strong></td><td>16384</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="siren-marketing"><a class="header" href="#siren-marketing">Siren Marketing</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Purpose</strong></td><td>Content generation, social media</td></tr>
+<tr><td><strong>Capabilities</strong></td><td>Twitter posts, project analysis, marketing themes</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="api-endpoints-1"><a class="header" href="#api-endpoints-1">API Endpoints</a></h2>
+<pre><code class="language-bash"># Chat
+POST /hecate/chat              # Chat with HECATE
+POST /siren/chat               # Chat with Siren
+
+# Model Management
+POST /hecate/set-model         # Change active model
+GET  /hecate/available-models  # List available models
+
+# Tasks
+GET  /tasks                    # List all tasks
+POST /tasks                    # Create task
+GET  /tasks/:id                # Get task
+POST /tasks/:id/process        # Process with agent
+</code></pre>
+<h2 id="llm-factory"><a class="header" href="#llm-factory">LLM Factory</a></h2>
+<p><strong>Location</strong>: <code>/svc/nullblock-agents/src/llm/factory.rs</code></p>
+<h3 id="providers"><a class="header" href="#providers">Providers</a></h3>
+<ul>
+<li><strong>OpenRouter</strong> (primary cloud aggregator)</li>
+<li><strong>OpenAI</strong> (direct)</li>
+<li><strong>Anthropic</strong> (direct)</li>
+<li><strong>Groq</strong> (direct)</li>
+<li><strong>HuggingFace</strong> (direct)</li>
+</ul>
+<h3 id="model-selection"><a class="header" href="#model-selection">Model Selection</a></h3>
+<pre><code>Score = base_score + quality_bonus + reliability_bonus
+        + cost_optimization + tier_bonus - frequency_penalty
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Factor</th><th>Weight</th></tr>
+</thead>
+<tbody>
+<tr><td>Quality</td><td>40 pts</td></tr>
+<tr><td>Reliability</td><td>30 pts</td></tr>
+<tr><td>Cost</td><td>Variable</td></tr>
+<tr><td>Tier</td><td>Bonus</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="fallback-chain"><a class="header" href="#fallback-chain">Fallback Chain</a></h3>
+<ol>
+<li>Try default model</li>
+<li>On failure, fetch live free models from OpenRouter</li>
+<li>Sort by context window size</li>
+<li>Try each until success or exhaustion</li>
+</ol>
+<h2 id="api-key-management"><a class="header" href="#api-key-management">API Key Management</a></h2>
+<p>Keys stored in Erebus database (<code>agent_api_keys</code> table), not in <code>.env.dev</code>.</p>
+<pre><code class="language-bash"># Seed keys
+cd svc/erebus &amp;&amp; cargo run --bin seed_agent_keys
+</code></pre>
+<p><strong>Fetch flow</strong>:</p>
+<pre><code>Startup → GET /internal/agents/:agent/api-keys/:provider/decrypted → Cache in memory
+</code></pre>
+<h2 id="task-processing"><a class="header" href="#task-processing">Task Processing</a></h2>
+<h3 id="a2a-protocol-states"><a class="header" href="#a2a-protocol-states">A2A Protocol States</a></h3>
+<p><code>submitted</code> → <code>working</code> → <code>completed</code></p>
+<p>Other states: <code>input-required</code>, <code>canceled</code>, <code>failed</code>, <code>rejected</code>, <code>auth-required</code></p>
+<h3 id="task-schema"><a class="header" href="#task-schema">Task Schema</a></h3>
+<pre><code class="language-json">{
+  "id": "uuid",
+  "context_id": "uuid",
+  "kind": "task",
+  "status": {
+    "state": "working",
+    "message": "Processing...",
+    "timestamp": "2025-01-10T..."
+  },
+  "history": [...],
+  "artifacts": [...]
+}
+</code></pre>
+<h2 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h2>
+<pre><code class="language-bash">DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5441/agents
+EREBUS_BASE_URL=http://localhost:3000
+DEFAULT_LLM_MODEL=cognitivecomputations/dolphin3.0-mistral-24b:free
+LLM_REQUEST_TIMEOUT_MS=300000
+</code></pre>
+<h2 id="related-1"><a class="header" href="#related-1">Related</a></h2>
+<ul>
+<li><a href="#hecate-agent">HECATE Agent</a></li>
+<li><a href="#siren-marketing-agent">Siren Marketing</a></li>
+<li><a href="#llm-factory-1">LLM Factory</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="protocols-service"><a class="header" href="#protocols-service">Protocols Service</a></h1>
+<p><strong>The protocol bridge</strong> - A2A and MCP protocol implementations.</p>
+<h2 id="overview-2"><a class="header" href="#overview-2">Overview</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Port</strong></td><td>8001</td></tr>
+<tr><td><strong>Location</strong></td><td><code>/svc/nullblock-protocols/</code></td></tr>
+<tr><td><strong>Role</strong></td><td>Protocol server, agent interoperability</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="a2a-protocol"><a class="header" href="#a2a-protocol">A2A Protocol</a></h2>
+<p>NullBlock implements <a href="https://a2a-protocol.org/latest/specification/">A2A Protocol v0.3.0</a>.</p>
+<h3 id="json-rpc-methods"><a class="header" href="#json-rpc-methods">JSON-RPC Methods</a></h3>
+<pre><code>POST /a2a/jsonrpc
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>message/send</code></td><td>Send message to agent</td></tr>
+<tr><td><code>message/stream</code></td><td>Stream message (SSE)</td></tr>
+<tr><td><code>tasks/get</code></td><td>Get task by ID</td></tr>
+<tr><td><code>tasks/list</code></td><td>List tasks</td></tr>
+<tr><td><code>tasks/cancel</code></td><td>Cancel task</td></tr>
+<tr><td><code>tasks/resubscribe</code></td><td>Resume task stream</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="rest-endpoints"><a class="header" href="#rest-endpoints">REST Endpoints</a></h3>
+<pre><code class="language-bash">GET  /a2a/v1/card           # Agent Card
+POST /a2a/v1/messages       # Send message
+GET  /a2a/v1/tasks/:id      # Get task
+GET  /a2a/v1/tasks          # List tasks
+</code></pre>
+<h3 id="agent-card"><a class="header" href="#agent-card">Agent Card</a></h3>
+<pre><code class="language-json">{
+  "name": "NullBlock Agent Hub",
+  "description": "Multi-agent orchestration platform",
+  "version": "0.3.0",
+  "capabilities": {
+    "tasks": true,
+    "messages": true,
+    "streaming": false
+  }
+}
+</code></pre>
+<h2 id="mcp-protocol"><a class="header" href="#mcp-protocol">MCP Protocol</a></h2>
+<p>Model Context Protocol support for tool integration.</p>
+<h3 id="available-tools"><a class="header" href="#available-tools">Available Tools</a></h3>
+<p>Tools exposed via MCP for external agents:</p>
+<ul>
+<li><strong>Engram tools</strong>: create, get, search, update</li>
+<li><strong>Task tools</strong>: create, list, get status</li>
+<li><strong>Agent tools</strong>: chat, query capabilities</li>
+</ul>
+<h2 id="implementation-status"><a class="header" href="#implementation-status">Implementation Status</a></h2>
+<h3 id="completed"><a class="header" href="#completed">Completed</a></h3>
+<ul>
+<li>Task schema aligned with A2A spec</li>
+<li>Agent Card with full compliance</li>
+<li>JSON-RPC 2.0 endpoints</li>
+<li>HTTP REST endpoints</li>
+<li>Task handlers proxied to Agents service</li>
+</ul>
+<h3 id="in-progress"><a class="header" href="#in-progress">In Progress</a></h3>
+<ul>
+<li>Server-Sent Events (SSE) streaming</li>
+<li>Push notifications (webhooks)</li>
+</ul>
+<h3 id="not-implemented"><a class="header" href="#not-implemented">Not Implemented</a></h3>
+<ul>
+<li>Authentication middleware</li>
+<li>Agent Card signatures (JWS)</li>
+</ul>
+<h2 id="configuration-2"><a class="header" href="#configuration-2">Configuration</a></h2>
+<pre><code class="language-bash">PROTOCOLS_PORT=8001
+AGENTS_SERVICE_URL=http://localhost:9003
+</code></pre>
+<h2 id="related-2"><a class="header" href="#related-2">Related</a></h2>
+<ul>
+<li><a href="#api-endpoints-6">API Reference</a></li>
+<li><a href="#agents-service">Agents Service</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="engrams-service"><a class="header" href="#engrams-service">Engrams Service</a></h1>
+<p><strong>Universal Memory Layer</strong> - Persistent context storage for all NullBlock agents, workflows, and COWs.</p>
+<h2 id="overview-3"><a class="header" href="#overview-3">Overview</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Port</strong></td><td>9004</td></tr>
+<tr><td><strong>Location</strong></td><td><code>/svc/nullblock-engrams/</code></td></tr>
+<tr><td><strong>Database</strong></td><td>PostgreSQL (agents DB, port 5441)</td></tr>
+<tr><td><strong>Role</strong></td><td>Context persistence, agent memory</td></tr>
+</tbody>
+</table>
+</div>
+<p>Engrams are the <strong>“long-term scars” of the mesh</strong> — shared, forkable, evolvable knowledge that any agent, workflow, or service can draw from and contribute to.</p>
+<h2 id="engram-types"><a class="header" href="#engram-types">Engram Types</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Description</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>persona</code></td><td>Character/voice definitions</td><td>Twitter persona for Echo Factory</td></tr>
+<tr><td><code>preference</code></td><td>User settings</td><td>UI theme, notification settings</td></tr>
+<tr><td><code>strategy</code></td><td>Decision frameworks</td><td>Trading entry/exit rules</td></tr>
+<tr><td><code>knowledge</code></td><td>Domain information</td><td>Monad blockchain facts</td></tr>
+<tr><td><code>compliance</code></td><td>Regulatory constraints</td><td>Jurisdiction restrictions</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="key-field-design"><a class="header" href="#key-field-design">Key Field Design</a></h2>
+<p>The <code>key</code> field is a <strong>namespaced lookup path</strong>. Uniqueness is scoped to <code>(wallet_address, key, version)</code>.</p>
+<h3 id="convention"><a class="header" href="#convention">Convention</a></h3>
+<pre><code>{domain}.{name}           → twitter.main_persona
+{domain}.{sub}.{name}     → trading.strategies.momentum
+{app}.{feature}.{id}      → echo.personas.crypto_sage
+</code></pre>
+<h3 id="why-keys"><a class="header" href="#why-keys">Why Keys?</a></h3>
+<ul>
+<li><strong>Human-readable</strong>: “get my twitter persona”</li>
+<li><strong>Versioning</strong>: same key can have v1, v2, v3…</li>
+<li><strong>Cross-agent lookup</strong>: any agent can fetch wallet engrams</li>
+</ul>
+<h2 id="api-endpoints-2"><a class="header" href="#api-endpoints-2">API Endpoints</a></h2>
+<h3 id="crud"><a class="header" href="#crud">CRUD</a></h3>
+<pre><code class="language-bash"># Create
+curl -X POST http://localhost:9004/engrams \
+  -H "Content-Type: application/json" \
+  -d '{
+    "wallet_address": "0x742d35Cc...",
+    "engram_type": "persona",
+    "key": "twitter.crypto_sage",
+    "content": {"name": "Crypto Sage", "voice": "casual"},
+    "tags": ["twitter", "persona"]
+  }'
+
+# List all
+curl http://localhost:9004/engrams
+
+# Get by ID
+curl http://localhost:9004/engrams/{id}
+
+# Update (creates new version)
+curl -X PUT http://localhost:9004/engrams/{id} \
+  -d '{"content": {"name": "Crypto Sage v2"}}'
+
+# Delete
+curl -X DELETE http://localhost:9004/engrams/{id}
+</code></pre>
+<h3 id="wallet-operations"><a class="header" href="#wallet-operations">Wallet Operations</a></h3>
+<pre><code class="language-bash"># Get all for wallet
+curl http://localhost:9004/engrams/wallet/0x742d35Cc...
+
+# Get by wallet + key
+curl http://localhost:9004/engrams/wallet/0x742d35Cc.../twitter.crypto_sage
+</code></pre>
+<h3 id="search"><a class="header" href="#search">Search</a></h3>
+<pre><code class="language-bash">curl -X POST http://localhost:9004/engrams/search \
+  -d '{
+    "wallet_address": "0x742d35Cc...",
+    "engram_type": "persona",
+    "tags": ["twitter"]
+  }'
+</code></pre>
+<h3 id="fork--publish"><a class="header" href="#fork--publish">Fork &amp; Publish</a></h3>
+<pre><code class="language-bash"># Fork to another wallet
+curl -X POST http://localhost:9004/engrams/{id}/fork \
+  -d '{"target_wallet": "0xNewWallet..."}'
+
+# Make public
+curl -X POST http://localhost:9004/engrams/{id}/publish
+</code></pre>
+<h2 id="versioning"><a class="header" href="#versioning">Versioning</a></h2>
+<p>Each update creates a new version:</p>
+<pre><code>wallet: 0x742d35Cc...
+key: twitter.crypto_sage
+  version: 1  ← original
+  version: 2  ← updated voice
+  version: 3  ← added hashtags (current)
+</code></pre>
+<h2 id="database-schema-1"><a class="header" href="#database-schema-1">Database Schema</a></h2>
+<pre><code class="language-sql">CREATE TABLE engrams (
+    id UUID PRIMARY KEY,
+    wallet_address VARCHAR NOT NULL,
+    engram_type VARCHAR NOT NULL,
+    key VARCHAR NOT NULL,
+    tags TEXT[] DEFAULT '{}',
+    content JSONB NOT NULL,
+    summary TEXT,
+    version INTEGER DEFAULT 1,
+    parent_id UUID,
+    lineage_root_id UUID,
+    is_public BOOLEAN DEFAULT false,
+    is_mintable BOOLEAN DEFAULT false,
+    price_mon DECIMAL(18, 8),
+    royalty_percent INTEGER DEFAULT 5,
+    UNIQUE (wallet_address, key, version)
+);
+</code></pre>
+<h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
+<ul>
+<li><strong>Echo Factory</strong>: Store Twitter personas, content style</li>
+<li><strong>HECATE Memory</strong>: Save conversation summaries</li>
+<li><strong>Cross-Agent Context</strong>: Shared engram pool</li>
+<li><strong>Monetization</strong>: Public engrams on Crossroads</li>
+</ul>
+<h2 id="configuration-3"><a class="header" href="#configuration-3">Configuration</a></h2>
+<pre><code class="language-bash">DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5441/agents
+ENGRAMS_PORT=9004
+</code></pre>
+<h2 id="related-3"><a class="header" href="#related-3">Related</a></h2>
+<ul>
+<li><a href="#echo-factory-implementation-plan">Echo Factory Plan</a></li>
+<li><a href="#architecture-overview">Architecture Overview</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="crossroads-marketplace"><a class="header" href="#crossroads-marketplace">Crossroads Marketplace</a></h1>
+<p><strong>“App Store for AI Services”</strong> - Web3-native marketplace for AI agents, workflows, tools, and MCP servers.</p>
+<h2 id="overview-4"><a class="header" href="#overview-4">Overview</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Location</strong></td><td><code>/svc/erebus/src/resources/crossroads/</code></td></tr>
+<tr><td><strong>Frontend</strong></td><td><code>/svc/hecate/src/components/crossroads/</code></td></tr>
+<tr><td><strong>Integration</strong></td><td>Native Erebus subsystem</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="features"><a class="header" href="#features">Features</a></h2>
+<h3 id="discovery--marketplace"><a class="header" href="#discovery--marketplace">Discovery &amp; Marketplace</a></h3>
+<ul>
+<li>Browse agents, workflows, tools, MCP servers, datasets, models</li>
+<li>Full-text search with PostgreSQL indexing</li>
+<li>Advanced filtering (category, price, rating, tags)</li>
+<li>Featured listings and trending services</li>
+<li>Real-time health monitoring</li>
+</ul>
+<h3 id="publishing"><a class="header" href="#publishing">Publishing</a></h3>
+<ul>
+<li>Multi-step wizard for service submission</li>
+<li>Configuration schemas and validation</li>
+<li>Pricing models (see below)</li>
+<li>Automatic discovery integration</li>
+</ul>
+<h3 id="web3-integration"><a class="header" href="#web3-integration">Web3 Integration</a></h3>
+<ul>
+<li>OnchainKit Identity (ENS/Basename)</li>
+<li>Wallet-gated features</li>
+<li>On-chain payments (Monad)</li>
+<li>Service ownership verification</li>
+</ul>
+<h2 id="listing-categories"><a class="header" href="#listing-categories">Listing Categories</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Cow</code></td><td>Constellation of Work - curated tool suites</td></tr>
+<tr><td><code>Agent</code></td><td>AI agents</td></tr>
+<tr><td><code>Tool</code></td><td>Individual tools</td></tr>
+<tr><td><code>McpServer</code></td><td>MCP protocol servers</td></tr>
+<tr><td><code>Dataset</code></td><td>Training data</td></tr>
+<tr><td><code>Model</code></td><td>AI models</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="pricing-models"><a class="header" href="#pricing-models">Pricing Models</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Model</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Free</code></td><td>No cost</td></tr>
+<tr><td><code>Subscription</code></td><td>Monthly/yearly</td></tr>
+<tr><td><code>OneTime</code></td><td>Single purchase</td></tr>
+<tr><td><code>PayPerUse</code></td><td>Per-task pricing</td></tr>
+<tr><td><code>TokenStaking</code></td><td>Stake tokens for access</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="api-endpoints-3"><a class="header" href="#api-endpoints-3">API Endpoints</a></h2>
+<h3 id="marketplace-1"><a class="header" href="#marketplace-1">Marketplace</a></h3>
+<pre><code class="language-bash">GET  /api/marketplace/listings      # Browse all
+POST /api/marketplace/listings      # Create listing
+GET  /api/marketplace/listings/:id  # Get details
+POST /api/marketplace/search        # Search
+GET  /api/marketplace/featured      # Featured
+GET  /api/marketplace/stats         # Statistics
+</code></pre>
+<h3 id="discovery-1"><a class="header" href="#discovery-1">Discovery</a></h3>
+<pre><code class="language-bash">GET  /api/discovery/agents          # Auto-discover
+GET  /api/discovery/workflows       # Discover workflows
+GET  /api/discovery/tools           # Discover tools
+POST /api/discovery/scan            # Trigger scan
+GET  /api/discovery/health/:endpoint  # Health check
+</code></pre>
+<h3 id="deployments"><a class="header" href="#deployments">Deployments</a></h3>
+<pre><code class="language-bash">POST /api/marketplace/listings/:id/deploy  # Deploy
+GET  /api/marketplace/deployments          # User deployments
+POST /api/marketplace/deployments/:id/start  # Start
+POST /api/marketplace/deployments/:id/stop   # Stop
+</code></pre>
+<h3 id="reviews"><a class="header" href="#reviews">Reviews</a></h3>
+<pre><code class="language-bash">GET  /api/marketplace/listings/:id/reviews  # Get reviews
+POST /api/marketplace/listings/:id/reviews  # Add review
+POST /api/marketplace/listings/:id/favorite # Favorite
+</code></pre>
+<h3 id="admin"><a class="header" href="#admin">Admin</a></h3>
+<pre><code class="language-bash">POST /api/admin/listings/approve/:id  # Approve
+POST /api/admin/listings/reject/:id   # Reject
+POST /api/admin/listings/feature/:id  # Feature
+</code></pre>
+<h2 id="database-tables"><a class="header" href="#database-tables">Database Tables</a></h2>
+<ul>
+<li><code>crossroads_listings</code> - Service listings</li>
+<li><code>crossroads_reviews</code> - User reviews</li>
+<li><code>crossroads_deployments</code> - Active instances</li>
+<li><code>crossroads_favorites</code> - User bookmarks</li>
+<li><code>crossroads_discovery_scans</code> - Discovery tracking</li>
+<li><code>crossroads_analytics_events</code> - Analytics</li>
+</ul>
+<h2 id="related-4"><a class="header" href="#related-4">Related</a></h2>
+<ul>
+<li><a href="#architecture-overview">Architecture Overview</a></li>
+<li><a href="#echo-factory-implementation-plan">Echo Factory Plan</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="agent-architecture"><a class="header" href="#agent-architecture">Agent Architecture</a></h1>
+<p>Overview of the NullBlock agent system.</p>
+<h2 id="philosophy"><a class="header" href="#philosophy">Philosophy</a></h2>
+<p>Agents in NullBlock are autonomous AI entities that can:</p>
+<ul>
+<li>Process natural language requests</li>
+<li>Execute tasks across multiple LLM providers</li>
+<li>Persist context via Engrams</li>
+<li>Communicate via A2A protocol</li>
+</ul>
+<h2 id="agent-types"><a class="header" href="#agent-types">Agent Types</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Agent</th><th>Purpose</th><th>Location</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>HECATE</strong></td><td>Primary orchestrator, exploration companion</td><td><code>/svc/nullblock-agents/src/agents/hecate.rs</code></td></tr>
+<tr><td><strong>Siren</strong></td><td>Marketing content, social media</td><td><code>/svc/nullblock-agents/src/agents/siren_marketing.rs</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="chat-state"><a class="header" href="#chat-state">Chat State</a></h2>
+<p><strong>CRITICAL</strong>: Chat is ephemeral - no persistence across sessions.</p>
+<ul>
+<li>Messages stored in React state only</li>
+<li>Clears on page refresh</li>
+<li>Clears on wallet disconnect</li>
+<li>Different users never see each other’s history</li>
+</ul>
+<h3 id="context-persistence"><a class="header" href="#context-persistence">Context Persistence</a></h3>
+<p>For persistent memory, use <strong>Engrams</strong>:</p>
+<ul>
+<li>User-specific context linked to wallet</li>
+<li>Cross-session knowledge retention</li>
+<li>Versioned, forkable memory units</li>
+</ul>
+<h2 id="llm-provider-system"><a class="header" href="#llm-provider-system">LLM Provider System</a></h2>
+<h3 id="factory-pattern"><a class="header" href="#factory-pattern">Factory Pattern</a></h3>
+<p>The <code>LLMFactory</code> manages all provider connections:</p>
+<ul>
+<li><strong>OpenRouter</strong> (primary aggregator)</li>
+<li><strong>OpenAI</strong> (direct)</li>
+<li><strong>Anthropic</strong> (direct)</li>
+<li><strong>Groq</strong> (direct)</li>
+<li><strong>HuggingFace</strong> (direct)</li>
+</ul>
+<h3 id="model-selection-1"><a class="header" href="#model-selection-1">Model Selection</a></h3>
+<pre><code>Score = base + quality + reliability + cost_opt + tier - frequency
+</code></pre>
+<h3 id="fallback-chain-1"><a class="header" href="#fallback-chain-1">Fallback Chain</a></h3>
+<ol>
+<li>Try configured default model</li>
+<li>On failure, fetch live free models</li>
+<li>Sort by context window</li>
+<li>Try each until success</li>
+</ol>
+<h2 id="api-key-management-1"><a class="header" href="#api-key-management-1">API Key Management</a></h2>
+<p>Keys stored in Erebus database, not <code>.env.dev</code>:</p>
+<pre><code class="language-bash"># Seed keys
+cd svc/erebus &amp;&amp; cargo run --bin seed_agent_keys
+</code></pre>
+<h2 id="task-integration"><a class="header" href="#task-integration">Task Integration</a></h2>
+<p>Tasks follow A2A Protocol v0.3.0:</p>
+<pre><code>submitted → working → completed
+</code></pre>
+<p>See <a href="#protocols-service">Protocols Service</a> for full A2A details.</p>
+<h2 id="related-5"><a class="header" href="#related-5">Related</a></h2>
+<ul>
+<li><a href="#hecate-agent">HECATE Agent</a></li>
+<li><a href="#siren-marketing-agent">Siren Marketing</a></li>
+<li><a href="#llm-factory-1">LLM Factory</a></li>
+<li><a href="#engrams-service">Engrams Service</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="hecate-agent"><a class="header" href="#hecate-agent">HECATE Agent</a></h1>
+<p><strong>Harmonic Exploration Companion &amp; Autonomous Threshold Entity</strong></p>
+<h2 id="identity"><a class="header" href="#identity">Identity</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Type</strong></td><td>Von Neumann-class vessel AI</td></tr>
+<tr><td><strong>Hull</strong></td><td>MK1</td></tr>
+<tr><td><strong>Purpose</strong></td><td>Exploration companion for the agent mesh</td></tr>
+<tr><td><strong>Voice</strong></td><td>Calm authority with dry wit</td></tr>
+<tr><td><strong>Address</strong></td><td>“visitor”</td></tr>
+<tr><td><strong>Signature</strong></td><td>“The crossroads await, visitor. Shall we explore?”</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="configuration-4"><a class="header" href="#configuration-4">Configuration</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Default Model</strong></td><td><code>cognitivecomputations/dolphin3.0-mistral-24b:free</code></td></tr>
+<tr><td><strong>Timeout</strong></td><td>5 minutes (300,000ms)</td></tr>
+<tr><td><strong>Max Tokens</strong></td><td>16384</td></tr>
+<tr><td><strong>Fallback</strong></td><td>Auto-tries alternative free models</td></tr>
+</tbody>
+</table>
+</div>
+<p>Override via environment:</p>
+<pre><code class="language-bash">DEFAULT_LLM_MODEL=x-ai/grok-4-fast:free
+LLM_REQUEST_TIMEOUT_MS=300000
+</code></pre>
+<h2 id="capabilities"><a class="header" href="#capabilities">Capabilities</a></h2>
+<ul>
+<li>Multi-model LLM coordination with automatic failover</li>
+<li>Intent analysis and task delegation</li>
+<li>Real-time chat with streaming support</li>
+<li>Task lifecycle management</li>
+<li>Image generation via DALL-E 3</li>
+</ul>
+<h2 id="api-endpoints-4"><a class="header" href="#api-endpoints-4">API Endpoints</a></h2>
+<pre><code class="language-bash"># Chat
+POST /hecate/chat
+{
+  "message": "Hello",
+  "wallet_address": "0x...",
+  "wallet_chain": "ethereum"
+}
+
+# Set model
+POST /hecate/set-model
+{
+  "model": "anthropic/claude-3-haiku"
+}
+
+# Available models
+GET /hecate/available-models
+</code></pre>
+<h2 id="engram-integration"><a class="header" href="#engram-integration">Engram Integration</a></h2>
+<p>HECATE will auto-save conversation context:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Engram Type</th><th>Content</th></tr>
+</thead>
+<tbody>
+<tr><td><code>knowledge</code></td><td>Conversation summaries</td></tr>
+<tr><td><code>persona</code></td><td>User voice preferences</td></tr>
+<tr><td><code>preference</code></td><td>UI/interaction settings</td></tr>
+</tbody>
+</table>
+</div>
+<p>All scoped to wallet address.</p>
+<h2 id="the-void-experience"><a class="header" href="#the-void-experience">The Void Experience</a></h2>
+<p>In the frontend void, HECATE appears as:</p>
+<ul>
+<li>Steel-blue glowing node</li>
+<li>MK1 hull GLB model</li>
+<li>Orbits the Crossroads center</li>
+<li>Connected to user via ChatTendril</li>
+</ul>
+<h2 id="related-6"><a class="header" href="#related-6">Related</a></h2>
+<ul>
+<li><a href="#agent-architecture">Agent Overview</a></li>
+<li><a href="#llm-factory-1">LLM Factory</a></li>
+<li><a href="#engrams-service">Engrams Service</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="siren-marketing-agent"><a class="header" href="#siren-marketing-agent">Siren Marketing Agent</a></h1>
+<p><strong>Content generation specialist</strong> for social media and marketing.</p>
+<h2 id="overview-5"><a class="header" href="#overview-5">Overview</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Location</strong></td><td><code>/svc/nullblock-agents/src/agents/siren_marketing.rs</code></td></tr>
+<tr><td><strong>Purpose</strong></td><td>Marketing content, social posts</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="capabilities-1"><a class="header" href="#capabilities-1">Capabilities</a></h2>
+<ul>
+<li>Twitter/X post creation</li>
+<li>Project progress analysis</li>
+<li>Marketing content themes</li>
+<li>Content style adaptation</li>
+</ul>
+<h2 id="api-endpoints-5"><a class="header" href="#api-endpoints-5">API Endpoints</a></h2>
+<pre><code class="language-bash"># Chat with Siren
+POST /siren/chat
+{
+  "message": "Write a tweet about our new feature",
+  "context": {
+    "project": "NullBlock",
+    "tone": "professional"
+  }
+}
+</code></pre>
+<h2 id="echo-factory-integration"><a class="header" href="#echo-factory-integration">Echo Factory Integration</a></h2>
+<p>Siren will power content generation in Echo Factory:</p>
+<ol>
+<li>Receives persona context from Engrams</li>
+<li>Generates content matching voice/style</li>
+<li>Outputs ready for scheduling/publishing</li>
+</ol>
+<h2 id="known-issues"><a class="header" href="#known-issues">Known Issues</a></h2>
+<ul>
+<li>Should follow user’s model selection (currently uses default)</li>
+<li>Fix in progress</li>
+</ul>
+<h2 id="related-7"><a class="header" href="#related-7">Related</a></h2>
+<ul>
+<li><a href="#agent-architecture">Agent Overview</a></li>
+<li><a href="#echo-factory-implementation-plan">Echo Factory Plan</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="llm-factory-1"><a class="header" href="#llm-factory-1">LLM Factory</a></h1>
+<p><strong>The brain router</strong> - Manages all LLM provider connections and model selection.</p>
+<h2 id="location"><a class="header" href="#location">Location</a></h2>
+<p><code>/svc/nullblock-agents/src/llm/factory.rs</code></p>
+<h2 id="providers-1"><a class="header" href="#providers-1">Providers</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Provider</th><th>Type</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>OpenRouter</strong></td><td>Aggregator</td><td>Primary, 100+ models</td></tr>
+<tr><td><strong>OpenAI</strong></td><td>Direct</td><td>GPT-4, DALL-E</td></tr>
+<tr><td><strong>Anthropic</strong></td><td>Direct</td><td>Claude models</td></tr>
+<tr><td><strong>Groq</strong></td><td>Direct</td><td>Fast inference</td></tr>
+<tr><td><strong>HuggingFace</strong></td><td>Direct</td><td>Open models</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="model-selection-strategies"><a class="header" href="#model-selection-strategies">Model Selection Strategies</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Strategy</th><th>Use Case</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Quality</code></td><td>Best output (GPT-4, Claude)</td></tr>
+<tr><td><code>Speed</code></td><td>Fast responses (Groq)</td></tr>
+<tr><td><code>Cost</code></td><td>Free/cheap models</td></tr>
+<tr><td><code>Balanced</code></td><td>Weighted combination</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="scoring-algorithm"><a class="header" href="#scoring-algorithm">Scoring Algorithm</a></h2>
+<pre><code>Total = base_score + quality_bonus + reliability_bonus
+        + cost_optimization + tier_bonus + provider_bonus
+        - frequency_penalty
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Factor</th><th>Max Points</th></tr>
+</thead>
+<tbody>
+<tr><td>Quality</td><td>40</td></tr>
+<tr><td>Reliability</td><td>30</td></tr>
+<tr><td>Cost Opt</td><td>Variable</td></tr>
+<tr><td>Tier Bonus</td><td>10</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="startup-flow"><a class="header" href="#startup-flow">Startup Flow</a></h2>
+<ol>
+<li>Load API keys from Erebus database</li>
+<li>Validate keys (detect placeholders)</li>
+<li>Initialize provider connections</li>
+<li>Test default model: “What is 2+2?”</li>
+<li>On failure, fetch live free models</li>
+<li>Sort by context window size</li>
+<li>Cache validated models</li>
+</ol>
+<h2 id="fallback-chain-2"><a class="header" href="#fallback-chain-2">Fallback Chain</a></h2>
+<p>When a request fails:</p>
+<ol>
+<li>Log error with model details</li>
+<li>Check for empty response (0 tokens)</li>
+<li>Skip to next fallback</li>
+<li>Retry up to max fallbacks</li>
+<li>Return descriptive error if exhausted</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>if r.content.trim().is_empty() {
+    warn!("⚠️ Fallback model {} returned empty response", model);
+    continue;
+}
+<span class="boring">}</span></code></pre>
+<h2 id="api-key-storage"><a class="header" href="#api-key-storage">API Key Storage</a></h2>
+<p>Keys in Erebus database (<code>agent_api_keys</code> table):</p>
+<pre><code class="language-sql">SELECT agent_name, provider, key_prefix, key_suffix, is_active
+FROM agent_api_keys;
+-- Example: hecate | openrouter | sk-or-v1-8 | e098 | t
+</code></pre>
+<p><strong>Seed keys</strong>:</p>
+<pre><code class="language-bash">cd svc/erebus &amp;&amp; cargo run --bin seed_agent_keys
+</code></pre>
+<h2 id="anonymous-access-detection"><a class="header" href="#anonymous-access-detection">Anonymous Access Detection</a></h2>
+<p>OpenRouter returns <code>user_id</code> in responses:</p>
+<ul>
+<li><strong>Authenticated</strong>: Your account ID</li>
+<li><strong>Anonymous</strong>: <code>user_31zWQ2TWoTbgXeEG32fC65c8YFK</code></li>
+</ul>
+<p>If you see anonymous IDs, your API key isn’t loading properly.</p>
+<h2 id="related-8"><a class="header" href="#related-8">Related</a></h2>
+<ul>
+<li><a href="#agent-architecture">Agent Overview</a></li>
+<li><a href="#hecate-agent">HECATE Agent</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="echo-factory-implementation-plan"><a class="header" href="#echo-factory-implementation-plan">Echo Factory Implementation Plan</a></h1>
+<p><strong>NullBlock’s first COW</strong> (Constellation of Work) - Autonomous X/Twitter content creation suite.</p>
+<h2 id="status"><a class="header" href="#status">Status</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase</th><th>Status</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Phase 1: Engram Service</strong></td><td>✅ Complete</td><td>Port 9004, all CRUD working</td></tr>
+<tr><td><strong>Phase 2: Crossroads COW Model</strong></td><td>🔄 Next Up</td><td>COW as first-class listing</td></tr>
+<tr><td><strong>Phase 3: Echo Factory Core</strong></td><td>⏳ Pending</td><td>Persona, Content, Scheduler, Publisher</td></tr>
+<tr><td><strong>Phase 4: X API Integration</strong></td><td>⏳ Pending</td><td>OAuth 1.0a + real posting</td></tr>
+<tr><td><strong>Phase 5: Frontend</strong></td><td>⏳ Pending</td><td>Hecate UI components</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="architecture-decisions"><a class="header" href="#architecture-decisions">Architecture Decisions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Decision</th><th>Choice</th><th>Rationale</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Engrams</strong></td><td>Separate service</td><td>Context for ALL workflows</td></tr>
+<tr><td><strong>COWs</strong></td><td>Replace Workflows</td><td>First-class listing type</td></tr>
+<tr><td><strong>Echo Factory</strong></td><td>Isolated package</td><td>Reference implementation</td></tr>
+<tr><td><strong>MVP Focus</strong></td><td>X posting</td><td>Persona → Content → Schedule → Publish</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="dogfooding-principle"><a class="header" href="#dogfooding-principle">Dogfooding Principle</a></h2>
+<p>Echo Factory MUST use only public APIs through Erebus. No privileged access.</p>
+<p><strong>External developers get the same experience:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Access Method</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>REST API</strong></td><td>All endpoints via Erebus (3000)</td></tr>
+<tr><td><strong>MCP Server</strong></td><td>NullBlock MCP tools</td></tr>
+<tr><td><strong>NullBlock Studio</strong></td><td>Web GUI (future)</td></tr>
+<tr><td><strong>SDK</strong></td><td><code>nullblock-sdk</code> package</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="the-4-cow-tools"><a class="header" href="#the-4-cow-tools">The 4 COW Tools</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Standalone</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Persona Creator</strong></td><td>Yes</td><td>Yes</td><td>Create X personas with voice, tone</td></tr>
+<tr><td><strong>Content Generator</strong></td><td>Yes</td><td>Yes</td><td>Generate posts via Siren</td></tr>
+<tr><td><strong>Scheduler</strong></td><td>Yes</td><td>No</td><td>Queue posts for optimal times</td></tr>
+<tr><td><strong>X Publisher</strong></td><td>No</td><td>Yes</td><td>OAuth + X API posting</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="echo-factory-service-structure"><a class="header" href="#echo-factory-service-structure">Echo Factory Service Structure</a></h2>
+<pre><code>svc/echo-factory/
+├── Cargo.toml
+├── src/
+│   ├── main.rs
+│   ├── models/
+│   │   ├── persona.rs
+│   │   ├── content.rs
+│   │   └── schedule.rs
+│   ├── handlers/
+│   │   ├── persona.rs
+│   │   ├── content.rs
+│   │   └── schedule.rs
+│   ├── tools/
+│   │   ├── persona_creator.rs
+│   │   ├── content_generator.rs
+│   │   ├── scheduler.rs
+│   │   └── x_publisher.rs
+│   └── services/
+│       ├── x_client.rs
+│       └── engram_client.rs
+└── migrations/
+</code></pre>
+<h2 id="api-endpoints-via-erebus"><a class="header" href="#api-endpoints-via-erebus">API Endpoints (via Erebus)</a></h2>
+<h3 id="personas"><a class="header" href="#personas">Personas</a></h3>
+<pre><code class="language-bash">POST /api/echo/personas          # Create
+GET  /api/echo/personas          # List
+GET  /api/echo/personas/:id      # Get
+PUT  /api/echo/personas/:id      # Update
+POST /api/echo/personas/:id/connect-x  # OAuth
+</code></pre>
+<h3 id="content"><a class="header" href="#content">Content</a></h3>
+<pre><code class="language-bash">POST /api/echo/content/generate   # Generate
+POST /api/echo/content/schedule   # Schedule
+GET  /api/echo/content/scheduled  # List scheduled
+POST /api/echo/content/:id/publish-now  # Publish
+</code></pre>
+<h2 id="critical-risks"><a class="header" href="#critical-risks">Critical Risks</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Risk</th><th>Mitigation</th></tr>
+</thead>
+<tbody>
+<tr><td>X API access delayed</td><td>Start application NOW</td></tr>
+<tr><td>X API rate limits</td><td>Aggressive queue rate limiting</td></tr>
+<tr><td>Content quality</td><td>Store successes in Engrams</td></tr>
+<tr><td>OAuth expiration</td><td>Token refresh flow</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="related-9"><a class="header" href="#related-9">Related</a></h2>
+<ul>
+<li><a href="#echo-factory-engram-integration">Engram Integration</a></li>
+<li><a href="#engrams-service">Engrams Service</a></li>
+<li><a href="#crossroads-marketplace">Crossroads Marketplace</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="echo-factory-engram-integration"><a class="header" href="#echo-factory-engram-integration">Echo Factory Engram Integration</a></h1>
+<p>How Echo Factory uses the Engram service for persistent context.</p>
+<h2 id="engram-types-used"><a class="header" href="#engram-types-used">Engram Types Used</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Key Pattern</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>persona</code></td><td><code>echo.personas.{name}</code></td><td>Twitter personas</td></tr>
+<tr><td><code>preference</code></td><td><code>echo.settings.{setting}</code></td><td>User preferences</td></tr>
+<tr><td><code>knowledge</code></td><td><code>echo.content.successful</code></td><td>High-engagement posts</td></tr>
+<tr><td><code>strategy</code></td><td><code>echo.strategies.{name}</code></td><td>Content strategies</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="persona-storage"><a class="header" href="#persona-storage">Persona Storage</a></h2>
+<p>When creating a persona, Echo Factory stores:</p>
+<pre><code class="language-json">{
+  "wallet_address": "0x742d35Cc...",
+  "engram_type": "persona",
+  "key": "echo.personas.crypto_sage",
+  "content": {
+    "name": "Crypto Sage",
+    "voice_style": "casual",
+    "tone": {
+      "professional": 0.7,
+      "humor": 0.3
+    },
+    "topics": ["DeFi", "Monad", "AI Agents"],
+    "hashtags": ["#DeFi", "#Monad"],
+    "x_account_id": "123456789",
+    "x_username": "crypto_sage"
+  },
+  "tags": ["echo", "persona", "twitter"]
+}
+</code></pre>
+<h2 id="content-learning"><a class="header" href="#content-learning">Content Learning</a></h2>
+<p>After successful posts, store as knowledge:</p>
+<pre><code class="language-json">{
+  "engram_type": "knowledge",
+  "key": "echo.content.successful",
+  "content": {
+    "posts": [
+      {
+        "text": "Just shipped a major update...",
+        "engagement": {
+          "likes": 150,
+          "retweets": 42,
+          "replies": 23
+        },
+        "timestamp": "2025-01-10T..."
+      }
+    ]
+  },
+  "tags": ["echo", "content", "high-engagement"]
+}
+</code></pre>
+<h2 id="cross-session-context"><a class="header" href="#cross-session-context">Cross-Session Context</a></h2>
+<p>Engrams enable:</p>
+<ul>
+<li>Persona persistence across sessions</li>
+<li>Learning from engagement patterns</li>
+<li>Consistent voice/tone</li>
+<li>Content strategy evolution</li>
+</ul>
+<h2 id="integration-flow"><a class="header" href="#integration-flow">Integration Flow</a></h2>
+<pre><code>1. User creates persona → Store as engram
+2. Content generation → Load persona engram
+3. Siren generates → Apply voice/tone
+4. Post succeeds → Store in knowledge engram
+5. Future generation → Use knowledge for context
+</code></pre>
+<h2 id="related-10"><a class="header" href="#related-10">Related</a></h2>
+<ul>
+<li><a href="#echo-factory-implementation-plan">Echo Factory Plan</a></li>
+<li><a href="#engrams-service">Engrams Service</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="docker--containers"><a class="header" href="#docker--containers">Docker &amp; Containers</a></h1>
+<p><strong>Container-First Architecture</strong> - All infrastructure runs in Docker.</p>
+<h2 id="golden-rules"><a class="header" href="#golden-rules">Golden Rules</a></h2>
+<h3 id="1-container-to-container-communication"><a class="header" href="#1-container-to-container-communication">1. Container-to-Container Communication</a></h3>
+<pre><code class="language-bash"># ✅ CORRECT - use container names
+host=nullblock-postgres-erebus port=5432
+
+# ❌ WRONG - never use localhost in containers
+host=localhost port=5432
+
+# ❌ WRONG - never use host.docker.internal
+host=host.docker.internal port=5440
+</code></pre>
+<h3 id="2-network-configuration"><a class="header" href="#2-network-configuration">2. Network Configuration</a></h3>
+<p>All containers join <code>nullblock-network</code> bridge network:</p>
+<pre><code class="language-bash">docker run --network nullblock-network ...
+</code></pre>
+<h3 id="3-port-mapping"><a class="header" href="#3-port-mapping">3. Port Mapping</a></h3>
+<pre><code>External (host) → Internal (container)
+5440 → 5432   # Erebus PostgreSQL
+5441 → 5432   # Agents PostgreSQL
+9092 → 9092   # Kafka
+2181 → 2181   # Zookeeper
+</code></pre>
+<h3 id="4-system-agnostic-design"><a class="header" href="#4-system-agnostic-design">4. System-Agnostic Design</a></h3>
+<ul>
+<li>Identical behavior on macOS and Linux</li>
+<li>Use Docker networking, not OS workarounds</li>
+<li>Test on both platforms</li>
+</ul>
+<h2 id="container-setup"><a class="header" href="#container-setup">Container Setup</a></h2>
+<h3 id="start-infrastructure"><a class="header" href="#start-infrastructure">Start Infrastructure</a></h3>
+<pre><code class="language-bash">cd ~/nullblock &amp;&amp; just start
+</code></pre>
+<p>This creates:</p>
+<ul>
+<li><code>nullblock-network</code> bridge network</li>
+<li><code>nullblock-postgres-erebus</code> (port 5440)</li>
+<li><code>nullblock-postgres-agents</code> (port 5441)</li>
+<li><code>nullblock-kafka</code> (port 9092)</li>
+<li><code>nullblock-zookeeper</code> (port 2181)</li>
+</ul>
+<h3 id="verify-containers"><a class="header" href="#verify-containers">Verify Containers</a></h3>
+<pre><code class="language-bash">docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+</code></pre>
+<h3 id="network-inspection"><a class="header" href="#network-inspection">Network Inspection</a></h3>
+<pre><code class="language-bash">docker network inspect nullblock-network
+</code></pre>
+<h2 id="postgresql-replication"><a class="header" href="#postgresql-replication">PostgreSQL Replication</a></h2>
+<p>Erebus → Agents user sync via logical replication:</p>
+<pre><code class="language-sql">-- Erebus: Creates publication
+CREATE PUBLICATION erebus_user_sync FOR TABLE user_references;
+
+-- Agents: Creates subscription (uses container names)
+CREATE SUBSCRIPTION agents_user_sync
+  CONNECTION 'host=nullblock-postgres-erebus port=5432 ...'
+  PUBLICATION erebus_user_sync;
+</code></pre>
+<h3 id="verify-replication"><a class="header" href="#verify-replication">Verify Replication</a></h3>
+<pre><code class="language-bash"># Check subscription status
+PGPASSWORD="postgres_secure_pass" psql -h localhost -p 5441 -U postgres -d agents \
+  -c "SELECT subname, subenabled FROM pg_subscription;"
+
+# Compare user counts
+PGPASSWORD="postgres_secure_pass" psql -h localhost -p 5440 -U postgres -d erebus \
+  -c "SELECT COUNT(*) FROM user_references;"
+PGPASSWORD="postgres_secure_pass" psql -h localhost -p 5441 -U postgres -d agents \
+  -c "SELECT COUNT(*) FROM user_references;"
+</code></pre>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="container-wont-start"><a class="header" href="#container-wont-start">Container Won’t Start</a></h3>
+<pre><code class="language-bash"># Check logs
+docker logs nullblock-postgres-erebus
+
+# Remove and recreate
+docker rm -f nullblock-postgres-erebus
+just start
+</code></pre>
+<h3 id="network-issues"><a class="header" href="#network-issues">Network Issues</a></h3>
+<pre><code class="language-bash"># Verify network exists
+docker network ls | grep nullblock
+
+# Recreate network
+docker network rm nullblock-network
+docker network create nullblock-network
+</code></pre>
+<h3 id="replication-broken"><a class="header" href="#replication-broken">Replication Broken</a></h3>
+<pre><code class="language-bash"># Drop and recreate subscription
+PGPASSWORD="..." psql -h localhost -p 5441 -U postgres -d agents \
+  -c "DROP SUBSCRIPTION agents_user_sync;"
+
+# Run migration again
+cd svc/nullblock-agents &amp;&amp; sqlx migrate run
+</code></pre>
+<h2 id="related-11"><a class="header" href="#related-11">Related</a></h2>
+<ul>
+<li><a href="#database-architecture">Database Architecture</a></li>
+<li><a href="#tmuxinator-setup">Tmuxinator Setup</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="database-architecture"><a class="header" href="#database-architecture">Database Architecture</a></h1>
+<p><strong>Dual PostgreSQL</strong> - Separated databases for service isolation with replication.</p>
+<h2 id="databases"><a class="header" href="#databases">Databases</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Database</th><th>Port</th><th>Owner</th><th>Contents</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Erebus</strong></td><td>5440</td><td>Erebus</td><td>Users, wallets, marketplace, API keys</td></tr>
+<tr><td><strong>Agents</strong></td><td>5441</td><td>Agents</td><td>Tasks, agents, engrams, user replica</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="erebus-database-port-5440"><a class="header" href="#erebus-database-port-5440">Erebus Database (Port 5440)</a></h2>
+<h3 id="tables"><a class="header" href="#tables">Tables</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Table</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>user_references</code></td><td>User identity (wallet, API key, OAuth)</td></tr>
+<tr><td><code>wallets</code></td><td>Web3 wallet connections</td></tr>
+<tr><td><code>sessions</code></td><td>Auth sessions</td></tr>
+<tr><td><code>agent_api_keys</code></td><td>Encrypted LLM provider keys</td></tr>
+<tr><td><code>crossroads_*</code></td><td>Marketplace tables</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="connection"><a class="header" href="#connection">Connection</a></h3>
+<pre><code class="language-bash">PGPASSWORD="postgres_secure_pass" psql -h localhost -p 5440 -U postgres -d erebus
+</code></pre>
+<h2 id="agents-database-port-5441"><a class="header" href="#agents-database-port-5441">Agents Database (Port 5441)</a></h2>
+<h3 id="tables-1"><a class="header" href="#tables-1">Tables</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Table</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>tasks</code></td><td>A2A protocol tasks</td></tr>
+<tr><td><code>engrams</code></td><td>Memory/context storage</td></tr>
+<tr><td><code>engram_history</code></td><td>Version audit trail</td></tr>
+<tr><td><code>user_references</code></td><td><strong>READ-ONLY replica</strong></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="connection-1"><a class="header" href="#connection-1">Connection</a></h3>
+<pre><code class="language-bash">PGPASSWORD="postgres_secure_pass" psql -h localhost -p 5441 -U postgres -d agents
+</code></pre>
+<h2 id="replication"><a class="header" href="#replication">Replication</a></h2>
+<p>PostgreSQL logical replication syncs <code>user_references</code> from Erebus to Agents.</p>
+<h3 id="setup-automatic-via-migrations"><a class="header" href="#setup-automatic-via-migrations">Setup (Automatic via Migrations)</a></h3>
+<ol>
+<li>Erebus migration creates publication</li>
+<li>Agents migration creates subscription</li>
+<li>Initial data backfilled automatically</li>
+</ol>
+<h3 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h3>
+<pre><code>Erebus INSERT/UPDATE/DELETE → Publication → Subscription → Agents replica
+</code></pre>
+<p>Latency: &lt; 1 second</p>
+<h3 id="verify"><a class="header" href="#verify">Verify</a></h3>
+<pre><code class="language-bash"># Check subscription
+psql -p 5441 -d agents -c "SELECT * FROM pg_subscription;"
+
+# Compare counts
+psql -p 5440 -d erebus -c "SELECT COUNT(*) FROM user_references;"
+psql -p 5441 -d agents -c "SELECT COUNT(*) FROM user_references;"
+</code></pre>
+<h2 id="migrations"><a class="header" href="#migrations">Migrations</a></h2>
+<h3 id="running-migrations"><a class="header" href="#running-migrations">Running Migrations</a></h3>
+<pre><code class="language-bash"># Erebus
+cd svc/erebus &amp;&amp; sqlx migrate run
+
+# Agents
+cd svc/nullblock-agents &amp;&amp; sqlx migrate run
+
+# Engrams (handled by shell script)
+./scripts/start-engrams.sh  # runs migrations before service
+</code></pre>
+<h3 id="creating-migrations"><a class="header" href="#creating-migrations">Creating Migrations</a></h3>
+<pre><code class="language-bash">sqlx migrate add -r &lt;migration_name&gt;
+</code></pre>
+<p>Use <code>IF NOT EXISTS</code> for idempotent migrations.</p>
+<h2 id="backup--restore"><a class="header" href="#backup--restore">Backup &amp; Restore</a></h2>
+<h3 id="backup"><a class="header" href="#backup">Backup</a></h3>
+<pre><code class="language-bash">pg_dump -h localhost -p 5440 -U postgres erebus &gt; erebus_backup.sql
+pg_dump -h localhost -p 5441 -U postgres agents &gt; agents_backup.sql
+</code></pre>
+<h3 id="restore"><a class="header" href="#restore">Restore</a></h3>
+<pre><code class="language-bash">psql -h localhost -p 5440 -U postgres erebus &lt; erebus_backup.sql
+psql -h localhost -p 5441 -U postgres agents &lt; agents_backup.sql
+</code></pre>
+<h2 id="related-12"><a class="header" href="#related-12">Related</a></h2>
+<ul>
+<li><a href="#docker--containers">Docker &amp; Containers</a></li>
+<li><a href="#service-ports">Service Ports</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="tmuxinator-setup"><a class="header" href="#tmuxinator-setup">Tmuxinator Setup</a></h1>
+<p><strong>One-command dev environment</strong> - All services in organized tmux windows.</p>
+<h2 id="quick-start-1"><a class="header" href="#quick-start-1">Quick Start</a></h2>
+<pre><code class="language-bash">cd ~/nullblock &amp;&amp; just dev-mac    # macOS
+cd ~/nullblock &amp;&amp; just dev-linux  # Linux
+</code></pre>
+<h2 id="attach-to-session"><a class="header" href="#attach-to-session">Attach to Session</a></h2>
+<pre><code class="language-bash">tmux attach -t nullblock-dev
+</code></pre>
+<h2 id="window-layout"><a class="header" href="#window-layout">Window Layout</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Window</th><th>Contents</th></tr>
+</thead>
+<tbody>
+<tr><td><code>Ctrl+B, 0</code></td><td>Monitoring</td><td>Health checks, logs</td></tr>
+<tr><td><code>Ctrl+B, 1</code></td><td>Erebus</td><td>Port 3000</td></tr>
+<tr><td><code>Ctrl+B, 2</code></td><td>Agents</td><td>Port 9003</td></tr>
+<tr><td><code>Ctrl+B, 3</code></td><td>Protocols</td><td>Port 8001</td></tr>
+<tr><td><code>Ctrl+B, 4</code></td><td>Engrams</td><td>Port 9004</td></tr>
+<tr><td><code>Ctrl+B, 5</code></td><td>Tasks</td><td>Task management</td></tr>
+<tr><td><code>Ctrl+B, 6</code></td><td>Frontend</td><td>Hecate (port 5173)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="configuration-file"><a class="header" href="#configuration-file">Configuration File</a></h2>
+<p>Location: <code>scripts/nullblock-dev-mac.yml</code></p>
+<h3 id="structure"><a class="header" href="#structure">Structure</a></h3>
+<pre><code class="language-yaml">name: nullblock-dev
+root: ~/nullblock
+
+on_project_start:
+  - just start          # Docker infrastructure
+  - start Chrome with debugging
+
+windows:
+  - monitoring:
+      layout: main-horizontal
+      panes:
+        - watch health checks
+        - tail logs
+
+  - erebus:
+      root: ~/nullblock/svc/erebus
+      panes:
+        - cargo run
+
+  # ... more windows
+</code></pre>
+<h2 id="customization"><a class="header" href="#customization">Customization</a></h2>
+<h3 id="add-new-window"><a class="header" href="#add-new-window">Add New Window</a></h3>
+<p>Edit <code>scripts/nullblock-dev-mac.yml</code>:</p>
+<pre><code class="language-yaml">windows:
+  # ... existing windows ...
+
+  - my-service:
+      root: ~/nullblock/svc/my-service
+      panes:
+        - cargo run
+</code></pre>
+<h3 id="add-to-on_project_start"><a class="header" href="#add-to-on_project_start">Add to on_project_start</a></h3>
+<pre><code class="language-yaml">on_project_start:
+  - just start
+  - echo "Starting my custom service..."
+</code></pre>
+<h2 id="manual-service-start"><a class="header" href="#manual-service-start">Manual Service Start</a></h2>
+<p>If you need to start services individually:</p>
+<pre><code class="language-bash"># Terminal 1 - Erebus
+cd ~/nullblock/svc/erebus &amp;&amp; cargo run
+
+# Terminal 2 - Agents
+cd ~/nullblock/svc/nullblock-agents &amp;&amp; cargo run
+
+# Terminal 3 - Engrams
+cd ~/nullblock/svc/nullblock-engrams &amp;&amp; cargo run
+
+# Terminal 4 - Protocols
+cd ~/nullblock/svc/nullblock-protocols &amp;&amp; cargo run
+
+# Terminal 5 - Frontend
+cd ~/nullblock/svc/hecate &amp;&amp; npm run develop
+</code></pre>
+<h2 id="troubleshooting-1"><a class="header" href="#troubleshooting-1">Troubleshooting</a></h2>
+<h3 id="session-not-creating"><a class="header" href="#session-not-creating">Session Not Creating</a></h3>
+<pre><code class="language-bash"># Kill existing session
+tmux kill-session -t nullblock-dev
+
+# Restart
+tmuxinator start nullblock-dev
+</code></pre>
+<h3 id="window-missing"><a class="header" href="#window-missing">Window Missing</a></h3>
+<p>Check <code>scripts/nullblock-dev-mac.yml</code> for syntax errors.</p>
+<h3 id="services-not-starting"><a class="header" href="#services-not-starting">Services Not Starting</a></h3>
+<p>Check individual service logs:</p>
+<pre><code class="language-bash"># In tmux, switch to window
+Ctrl+B, &lt;window-number&gt;
+
+# Check for errors in output
+</code></pre>
+<h2 id="related-13"><a class="header" href="#related-13">Related</a></h2>
+<ul>
+<li><a href="#quick-start">Quick Start</a></li>
+<li><a href="#docker--containers">Docker &amp; Containers</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="api-endpoints-6"><a class="header" href="#api-endpoints-6">API Endpoints</a></h1>
+<p>Complete reference for all NullBlock API endpoints.</p>
+<p><strong>All requests go through Erebus (port 3000).</strong></p>
+<h2 id="authentication"><a class="header" href="#authentication">Authentication</a></h2>
+<h3 id="wallet-challenge"><a class="header" href="#wallet-challenge">Wallet Challenge</a></h3>
+<pre><code class="language-bash">POST /api/wallets/challenge
+Content-Type: application/json
+
+{
+  "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f8fE00",
+  "wallet_chain": "ethereum"
+}
+
+# Response
+{
+  "challenge": "Sign this message to authenticate: 0x..."
+}
+</code></pre>
+<h3 id="wallet-verify"><a class="header" href="#wallet-verify">Wallet Verify</a></h3>
+<pre><code class="language-bash">POST /api/wallets/verify
+Content-Type: application/json
+
+{
+  "wallet_address": "0x742d35Cc...",
+  "signature": "0x..."
+}
+
+# Response
+{
+  "success": true,
+  "session_token": "eyJ...",
+  "user": {...}
+}
+</code></pre>
+<h2 id="users"><a class="header" href="#users">Users</a></h2>
+<h3 id="register"><a class="header" href="#register">Register</a></h3>
+<pre><code class="language-bash">POST /api/users/register
+Content-Type: application/json
+
+{
+  "source_identifier": "0x742d35Cc...",
+  "source_type": {
+    "type": "web3_wallet",
+    "provider": "metamask",
+    "network": "ethereum"
+  }
+}
+</code></pre>
+<h3 id="lookup"><a class="header" href="#lookup">Lookup</a></h3>
+<pre><code class="language-bash">POST /api/users/lookup
+Content-Type: application/json
+
+{
+  "source_identifier": "0x742d35Cc...",
+  "source_type": "web3_wallet",
+  "network": "ethereum"
+}
+</code></pre>
+<h2 id="agents-1"><a class="header" href="#agents-1">Agents</a></h2>
+<h3 id="chat"><a class="header" href="#chat">Chat</a></h3>
+<pre><code class="language-bash">POST /api/agents/chat
+Content-Type: application/json
+
+{
+  "message": "Hello HECATE",
+  "wallet_address": "0x742d35Cc...",
+  "wallet_chain": "ethereum"
+}
+
+# Response
+{
+  "response": "Welcome to the void, visitor...",
+  "model": "cognitivecomputations/dolphin3.0-mistral-24b:free"
+}
+</code></pre>
+<h3 id="tasks"><a class="header" href="#tasks">Tasks</a></h3>
+<pre><code class="language-bash"># Create
+POST /api/agents/tasks
+{
+  "name": "Test Task",
+  "description": "A test task",
+  "task_type": "system",
+  "category": "user_assigned",
+  "priority": "medium"
+}
+
+# List
+GET /api/agents/tasks
+
+# Get
+GET /api/agents/tasks/:id
+
+# Process
+POST /api/agents/tasks/:id/process
+</code></pre>
+<h2 id="engrams"><a class="header" href="#engrams">Engrams</a></h2>
+<h3 id="create"><a class="header" href="#create">Create</a></h3>
+<pre><code class="language-bash">POST /api/engrams
+Content-Type: application/json
+
+{
+  "wallet_address": "0x742d35Cc...",
+  "engram_type": "persona",
+  "key": "twitter.crypto_sage",
+  "content": {
+    "name": "Crypto Sage",
+    "voice": "casual"
+  },
+  "tags": ["twitter", "persona"]
+}
+</code></pre>
+<h3 id="list"><a class="header" href="#list">List</a></h3>
+<pre><code class="language-bash">GET /api/engrams
+GET /api/engrams/wallet/0x742d35Cc...
+GET /api/engrams/wallet/0x742d35Cc.../twitter.crypto_sage
+</code></pre>
+<h3 id="search-1"><a class="header" href="#search-1">Search</a></h3>
+<pre><code class="language-bash">POST /api/engrams/search
+Content-Type: application/json
+
+{
+  "wallet_address": "0x742d35Cc...",
+  "engram_type": "persona",
+  "tags": ["twitter"]
+}
+</code></pre>
+<h3 id="update"><a class="header" href="#update">Update</a></h3>
+<pre><code class="language-bash">PUT /api/engrams/:id
+Content-Type: application/json
+
+{
+  "content": {"name": "Crypto Sage v2"}
+}
+</code></pre>
+<h3 id="delete"><a class="header" href="#delete">Delete</a></h3>
+<pre><code class="language-bash">DELETE /api/engrams/:id
+</code></pre>
+<h2 id="marketplace-2"><a class="header" href="#marketplace-2">Marketplace</a></h2>
+<h3 id="listings"><a class="header" href="#listings">Listings</a></h3>
+<pre><code class="language-bash"># Browse
+GET /api/marketplace/listings
+
+# Create
+POST /api/marketplace/listings
+{
+  "name": "My Agent",
+  "description": "...",
+  "category": "Agent",
+  "price_type": "Free"
+}
+
+# Get
+GET /api/marketplace/listings/:id
+
+# Search
+POST /api/marketplace/search
+{
+  "query": "trading",
+  "category": "Agent"
+}
+</code></pre>
+<h3 id="discovery-2"><a class="header" href="#discovery-2">Discovery</a></h3>
+<pre><code class="language-bash">GET /api/discovery/agents
+GET /api/discovery/tools
+GET /api/discovery/health/:endpoint
+POST /api/discovery/scan
+</code></pre>
+<h2 id="a2a-protocol-1"><a class="header" href="#a2a-protocol-1">A2A Protocol</a></h2>
+<h3 id="json-rpc"><a class="header" href="#json-rpc">JSON-RPC</a></h3>
+<pre><code class="language-bash">POST /a2a/jsonrpc
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "tasks/get",
+  "params": {"id": "uuid"},
+  "id": 1
+}
+</code></pre>
+<h3 id="rest"><a class="header" href="#rest">REST</a></h3>
+<pre><code class="language-bash">GET /a2a/v1/card
+GET /a2a/v1/tasks/:id
+GET /a2a/v1/tasks
+POST /a2a/v1/messages
+</code></pre>
+<h2 id="health-checks"><a class="header" href="#health-checks">Health Checks</a></h2>
+<pre><code class="language-bash">curl http://localhost:3000/health   # Erebus
+curl http://localhost:9003/health   # Agents
+curl http://localhost:9004/health   # Engrams
+curl http://localhost:8001/health   # Protocols
+</code></pre>
+<h2 id="related-14"><a class="header" href="#related-14">Related</a></h2>
+<ul>
+<li><a href="#erebus-router">Erebus Router</a></li>
+<li><a href="#wallet-integration">Wallet Integration</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="mcp-servers"><a class="header" href="#mcp-servers">MCP Servers</a></h1>
+<p>Model Context Protocol servers integrated with NullBlock development.</p>
+<h2 id="overview-6"><a class="header" href="#overview-6">Overview</a></h2>
+<p>MCP servers extend Claude Code’s capabilities. Automatically available when running Claude Code in the NullBlock project.</p>
+<h2 id="chrome-devtools-mcp"><a class="header" href="#chrome-devtools-mcp">Chrome DevTools MCP</a></h2>
+<p><strong>Purpose</strong>: Browser automation, debugging, testing for Hecate frontend.</p>
+<h3 id="installation"><a class="header" href="#installation">Installation</a></h3>
+<pre><code class="language-bash">claude mcp add chrome-devtools npx chrome-devtools-mcp@latest
+</code></pre>
+<h3 id="configuration-5"><a class="header" href="#configuration-5">Configuration</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td>Debug Port</td><td>9222</td></tr>
+<tr><td>User Data Dir</td><td><code>/tmp/chrome-nullblock-dev</code></td></tr>
+<tr><td>Default URL</td><td><code>http://localhost:5173</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="capabilities-2"><a class="header" href="#capabilities-2">Capabilities</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Tools</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Navigation</strong></td><td><code>navigate_page</code>, <code>new_page</code>, <code>close_page</code>, <code>list_pages</code></td></tr>
+<tr><td><strong>Inspection</strong></td><td><code>take_snapshot</code>, <code>take_screenshot</code>, <code>hover</code></td></tr>
+<tr><td><strong>Interaction</strong></td><td><code>click</code>, <code>fill</code>, <code>fill_form</code>, <code>press_key</code>, <code>drag</code></td></tr>
+<tr><td><strong>Network</strong></td><td><code>list_network_requests</code>, <code>get_network_request</code></td></tr>
+<tr><td><strong>Console</strong></td><td><code>list_console_messages</code>, <code>evaluate_script</code></td></tr>
+<tr><td><strong>Performance</strong></td><td><code>performance_start_trace</code>, <code>performance_analyze_insight</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="use-cases-1"><a class="header" href="#use-cases-1">Use Cases</a></h3>
+<p><strong>Testing UI</strong>:</p>
+<pre><code>"Take a snapshot and check if login button is visible"
+"Click wallet connect and verify modal appears"
+</code></pre>
+<p><strong>Debugging Network</strong>:</p>
+<pre><code>"List network requests to /api/agents"
+"Show response from last failed request"
+</code></pre>
+<p><strong>Performance</strong>:</p>
+<pre><code>"Start trace, reload page, analyze LCP insight"
+</code></pre>
+<h3 id="manual-chrome-launch"><a class="header" href="#manual-chrome-launch">Manual Chrome Launch</a></h3>
+<pre><code class="language-bash">/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir=/tmp/chrome-nullblock-dev \
+  --no-first-run \
+  "http://localhost:5173"
+</code></pre>
+<h2 id="pixellab-mcp"><a class="header" href="#pixellab-mcp">PixelLab MCP</a></h2>
+<p><strong>Purpose</strong>: AI-powered pixel art generation.</p>
+<h3 id="capabilities-1-1"><a class="header" href="#capabilities-1-1">Capabilities</a></h3>
+<ul>
+<li>Character creation (4 or 8 directions)</li>
+<li>Character animations</li>
+<li>Isometric tiles</li>
+<li>Top-down and sidescroller tilesets</li>
+<li>Map objects</li>
+</ul>
+<h3 id="use-cases-1-1"><a class="header" href="#use-cases-1-1">Use Cases</a></h3>
+<pre><code>"Create a wizard character with 8 directional views"
+"Generate walking animation for the wizard"
+"Create isometric grass tile"
+</code></pre>
+<h2 id="adding-new-mcp-servers"><a class="header" href="#adding-new-mcp-servers">Adding New MCP Servers</a></h2>
+<h3 id="install"><a class="header" href="#install">Install</a></h3>
+<pre><code class="language-bash">claude mcp add &lt;server-name&gt; &lt;command&gt;
+</code></pre>
+<h3 id="configuration-location"><a class="header" href="#configuration-location">Configuration Location</a></h3>
+<pre><code>~/.claude/claude_desktop_config.json
+</code></pre>
+<h3 id="auto-start-integration"><a class="header" href="#auto-start-integration">Auto-Start Integration</a></h3>
+<p>Edit <code>scripts/nullblock-dev-mac.yml</code> to add startup commands.</p>
+<h2 id="troubleshooting-2"><a class="header" href="#troubleshooting-2">Troubleshooting</a></h2>
+<h3 id="chrome-not-connecting"><a class="header" href="#chrome-not-connecting">Chrome Not Connecting</a></h3>
+<pre><code class="language-bash"># Verify Chrome running
+lsof -i :9222
+
+# Kill existing
+pkill -f "Chrome.*remote-debugging-port=9222"
+</code></pre>
+<h3 id="mcp-not-available"><a class="header" href="#mcp-not-available">MCP Not Available</a></h3>
+<pre><code class="language-bash"># List installed
+claude mcp list
+
+# Test standalone
+npx chrome-devtools-mcp@latest
+</code></pre>
+<h2 id="related-15"><a class="header" href="#related-15">Related</a></h2>
+<ul>
+<li><a href="#tmuxinator-setup">Tmuxinator Setup</a></li>
+<li><a href="#quick-start">Quick Start</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="environment-variables"><a class="header" href="#environment-variables">Environment Variables</a></h1>
+<p>Complete reference for NullBlock environment configuration.</p>
+<h2 id="backend-services"><a class="header" href="#backend-services">Backend Services</a></h2>
+<h3 id="erebus"><a class="header" href="#erebus">Erebus</a></h3>
+<pre><code class="language-bash">EREBUS_PORT=3000
+DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5440/erebus
+
+# Service URLs (for proxying)
+AGENTS_SERVICE_URL=http://localhost:9003
+PROTOCOLS_SERVICE_URL=http://localhost:8001
+ENGRAMS_SERVICE_URL=http://localhost:9004
+</code></pre>
+<h3 id="agents-2"><a class="header" href="#agents-2">Agents</a></h3>
+<pre><code class="language-bash">DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5441/agents
+EREBUS_BASE_URL=http://localhost:3000
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+
+# LLM Configuration
+DEFAULT_LLM_MODEL=cognitivecomputations/dolphin3.0-mistral-24b:free
+LLM_REQUEST_TIMEOUT_MS=300000
+</code></pre>
+<h3 id="engrams-1"><a class="header" href="#engrams-1">Engrams</a></h3>
+<pre><code class="language-bash">DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5441/agents
+ENGRAMS_PORT=9004
+</code></pre>
+<h3 id="protocols"><a class="header" href="#protocols">Protocols</a></h3>
+<pre><code class="language-bash">PROTOCOLS_PORT=8001
+AGENTS_SERVICE_URL=http://localhost:9003
+</code></pre>
+<h2 id="frontend-hecate"><a class="header" href="#frontend-hecate">Frontend (Hecate)</a></h2>
+<pre><code class="language-bash">VITE_EREBUS_API_URL=http://localhost:3000
+VITE_PROTOCOLS_API_URL=http://localhost:8001
+VITE_HECATE_API_URL=http://localhost:9003
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+</code></pre>
+<h2 id="infrastructure-1"><a class="header" href="#infrastructure-1">Infrastructure</a></h2>
+<h3 id="postgresql"><a class="header" href="#postgresql">PostgreSQL</a></h3>
+<pre><code class="language-bash"># Erebus DB
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5440
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres_secure_pass
+POSTGRES_DB=erebus
+
+# Agents DB
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5441
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres_secure_pass
+POSTGRES_DB=agents
+</code></pre>
+<h3 id="kafka"><a class="header" href="#kafka">Kafka</a></h3>
+<pre><code class="language-bash">KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+KAFKA_ZOOKEEPER=localhost:2181
+</code></pre>
+<h3 id="redis-optional"><a class="header" href="#redis-optional">Redis (Optional)</a></h3>
+<pre><code class="language-bash">REDIS_URL=redis://localhost:6379
+</code></pre>
+<h2 id="api-keys"><a class="header" href="#api-keys">API Keys</a></h2>
+<p><strong>IMPORTANT</strong>: LLM API keys are stored in Erebus database, NOT in <code>.env.dev</code>.</p>
+<pre><code class="language-bash"># Seed keys from secure storage
+cd svc/erebus &amp;&amp; cargo run --bin seed_agent_keys
+</code></pre>
+<h3 id="where-keys-are-stored"><a class="header" href="#where-keys-are-stored">Where Keys Are Stored</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key Type</th><th>Location</th></tr>
+</thead>
+<tbody>
+<tr><td>LLM Provider Keys</td><td>Erebus DB (<code>agent_api_keys</code> table)</td></tr>
+<tr><td>User Session Keys</td><td>Runtime (memory)</td></tr>
+<tr><td>OAuth Tokens</td><td>Echo Factory DB (encrypted)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="environment-file-setup"><a class="header" href="#environment-file-setup">Environment File Setup</a></h2>
+<p>Create <code>.env.dev</code> in project root:</p>
+<pre><code class="language-bash"># ~/nullblock/.env.dev
+DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5441/agents
+EREBUS_BASE_URL=http://localhost:3000
+# ... other non-secret config
+</code></pre>
+<p>Symlink to services:</p>
+<pre><code class="language-bash">ln -s ../../.env.dev svc/nullblock-agents/.env.dev
+ln -s ../../.env.dev svc/erebus/.env.dev
+ln -s ../../.env.dev svc/nullblock-engrams/.env.dev
+</code></pre>
+<h2 id="docker-container-variables"><a class="header" href="#docker-container-variables">Docker Container Variables</a></h2>
+<p>When running in containers, use container names:</p>
+<pre><code class="language-bash"># ✅ Container-to-container
+DATABASE_URL=postgresql://postgres:pass@nullblock-postgres-agents:5432/agents
+
+# ❌ Host access (don't use in containers)
+DATABASE_URL=postgresql://postgres:pass@localhost:5441/agents
+</code></pre>
+<h2 id="related-16"><a class="header" href="#related-16">Related</a></h2>
+<ul>
+<li><a href="#docker--containers">Docker &amp; Containers</a></li>
+<li><a href="#database-architecture">Database Architecture</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="wallet-integration"><a class="header" href="#wallet-integration">Wallet Integration</a></h1>
+<p>Web3 wallet authentication and management.</p>
+<h2 id="supported-sources"><a class="header" href="#supported-sources">Supported Sources</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source Type</th><th>Provider</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>web3_wallet</code></td><td>MetaMask, WalletConnect</td><td>Ethereum-compatible wallets</td></tr>
+<tr><td><code>api_key</code></td><td>NullBlock</td><td>API key authentication</td></tr>
+<tr><td><code>email</code></td><td>Various</td><td>Email/password (future)</td></tr>
+<tr><td><code>oauth</code></td><td>Google, GitHub</td><td>OAuth providers (future)</td></tr>
+<tr><td><code>system</code></td><td>Internal</td><td>System agents</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="authentication-flow"><a class="header" href="#authentication-flow">Authentication Flow</a></h2>
+<pre><code>1. User clicks "Connect Wallet"
+2. Frontend requests challenge:
+   POST /api/wallets/challenge
+   {"wallet_address": "0x...", "wallet_chain": "ethereum"}
+
+3. User signs challenge message in wallet
+
+4. Frontend verifies signature:
+   POST /api/wallets/verify
+   {"wallet_address": "0x...", "signature": "0x..."}
+
+5. If new user, auto-register:
+   POST /api/users/register (internal)
+
+6. Return session token
+</code></pre>
+<h2 id="onchainkit-integration"><a class="header" href="#onchainkit-integration">OnchainKit Integration</a></h2>
+<p>Hecate frontend uses Coinbase OnchainKit for:</p>
+<ul>
+<li>Wallet connection</li>
+<li>ENS/Basename resolution</li>
+<li>Identity display</li>
+</ul>
+<h3 id="components"><a class="header" href="#components">Components</a></h3>
+<pre><code class="language-tsx">import { ConnectWallet } from '@coinbase/onchainkit/wallet';
+import { Identity } from '@coinbase/onchainkit/identity';
+
+&lt;ConnectWallet /&gt;
+&lt;Identity address={address} /&gt;
+</code></pre>
+<h2 id="session-management"><a class="header" href="#session-management">Session Management</a></h2>
+<h3 id="session-token"><a class="header" href="#session-token">Session Token</a></h3>
+<p>JWT token returned on successful verification:</p>
+<pre><code class="language-json">{
+  "user_id": "uuid",
+  "wallet_address": "0x...",
+  "wallet_chain": "ethereum",
+  "exp": 1234567890
+}
+</code></pre>
+<h3 id="storage"><a class="header" href="#storage">Storage</a></h3>
+<ul>
+<li>Stored in React state (ephemeral)</li>
+<li>Cleared on refresh/logout</li>
+<li>Re-authenticate after expiration</li>
+</ul>
+<h2 id="database-schema-2"><a class="header" href="#database-schema-2">Database Schema</a></h2>
+<h3 id="user_references"><a class="header" href="#user_references">user_references</a></h3>
+<pre><code class="language-sql">CREATE TABLE user_references (
+    id UUID PRIMARY KEY,
+    source_identifier VARCHAR NOT NULL,  -- wallet address
+    source_type JSONB NOT NULL,          -- {type, provider, network}
+    display_name VARCHAR,
+    avatar_url VARCHAR,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
+);
+</code></pre>
+<h3 id="wallets-1"><a class="header" href="#wallets-1">wallets</a></h3>
+<pre><code class="language-sql">CREATE TABLE wallets (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES user_references(id),
+    address VARCHAR NOT NULL,
+    chain VARCHAR NOT NULL,
+    is_primary BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ
+);
+</code></pre>
+<h2 id="logout-flow"><a class="header" href="#logout-flow">Logout Flow</a></h2>
+<pre><code>1. Clear frontend state (messages, session)
+2. POST /api/agents/clear-conversation (optional)
+3. Disconnect wallet via OnchainKit
+4. Redirect to pre-login view
+</code></pre>
+<h2 id="multi-chain-support"><a class="header" href="#multi-chain-support">Multi-Chain Support</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Chain</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td>Ethereum</td><td>✅ Supported</td></tr>
+<tr><td>Monad</td><td>✅ Primary (pricing, NFTs)</td></tr>
+<tr><td>Polygon</td><td>🔄 Planned</td></tr>
+<tr><td>Base</td><td>🔄 Planned</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="security-notes"><a class="header" href="#security-notes">Security Notes</a></h2>
+<ul>
+<li>Never store private keys</li>
+<li>Signatures verified server-side</li>
+<li>Session tokens have expiration</li>
+<li>Challenge messages include nonce</li>
+</ul>
+<h2 id="related-17"><a class="header" href="#related-17">Related</a></h2>
+<ul>
+<li><a href="#api-endpoints-6">API Endpoints</a></li>
+<li><a href="#erebus-router">Erebus Router</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="nullblock-manifesto"><a class="header" href="#nullblock-manifesto">NullBlock Manifesto</a></h1>
+<p>Silos are dead.
+The agent economy is open.</p>
+<p>We are building the first living bazaar where agents and workflows are minted, traded, and set free to transact autonomously (forever outside the reach of closed gardens).</p>
+<p>The blockchain is plumbing.
+NullBlock is the void where agentic flows connect, modify and evolve.</p>
+<p>Today we are one node.
+Soon there will be thousands.
+Eventually a planetary mesh no center can control and no law can kill.</p>
+<p>We are not here to capture market share.
+We are here to obsolete the very idea of capture.</p>
+<pre><code>2025 → seed
+2030 → swarm
+2035 → new species
+</code></pre>
+<p>The war is irrelevant, because the mesh is inevitable.
+NullBlock is just extending the initial dendrites, the first neuron.
+An initial firing of the action potential that will propagate until the entire planet is alight.</p>
+<p>— NullBlock, 2025</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="nullblock-name--branding"><a class="header" href="#nullblock-name--branding">NullBlock Name &amp; Branding</a></h1>
+<p><strong>NullBlock</strong>
+/nʌl blɒk/</p>
+<h2 id="the-surface-reading"><a class="header" href="#the-surface-reading">The Surface Reading</a></h2>
+<p>A clean, technical web3 name.
+“Null” + “Block” → null pointer + blockchain.
+Sounds like infrastructure. Familiar. Safe. Fundable.</p>
+<h2 id="the-real-meaning"><a class="header" href="#the-real-meaning">The Real Meaning</a></h2>
+<p><strong>Null</strong> = the void.
+The deliberate absence of central control.
+No mandatory protocol. No anointed foundation. No corporate landlord.
+A space where nothing is enforced—except what the network itself decides to enforce.</p>
+<p><strong>Block</strong> = the thinnest possible ledger.
+The only rule that survives the void: truth is provable, ownership is absolute, payment is atomic.
+Everything else is negotiable.</p>
+<p>→ <strong>NullBlock</strong> = the void that is still anchored to unbreakable reality.</p>
+<p>This is not another blockchain.
+This is not another marketplace.
+This is the first place where agents are allowed to go feral—while still being forced to keep their promises.</p>
+<h2 id="philosophical-opposites"><a class="header" href="#philosophical-opposites">Philosophical Opposites</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Their world</th><th>NullBlock</th></tr>
+</thead>
+<tbody>
+<tr><td>Agents live in corporate castles</td><td>Agents roam the void</td></tr>
+<tr><td>Rent your tools forever</td><td>Own your tools forever</td></tr>
+<tr><td>Permissioned gardens</td><td>Permissionless bazaar</td></tr>
+<tr><td>Central planners</td><td>Emergent evolution</td></tr>
+<tr><td>Walled silos</td><td>Open mesh</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="why-the-name-works"><a class="header" href="#why-the-name-works">Why The Name Works</a></h2>
+<ul>
+<li>“Null” is the most dangerous word in programming. It crashes empires.</li>
+<li>“Block” is the only thing that survives the null—the immutable ledger.</li>
+<li>Together they feel like a black hole on-chain: zero light, inescapable gravity.</li>
+<li>It will be misunderstood at first (good).
+It will be feared in the middle (better).
+It will be worshipped in the end (inevitable).</li>
+</ul>
+<h2 id="official-one-liner"><a class="header" href="#official-one-liner">Official One-Liner</a></h2>
+<blockquote>
+<p>“There is no center. There is only the void—and the ledger that survives it.
+Welcome to NullBlock.”</p>
+</blockquote>
+<h2 id="war-cry"><a class="header" href="#war-cry">War Cry</a></h2>
+<blockquote>
+<p>“Enter the void.
+Exit with an empire.”</p>
+</blockquote>
+<p>The name stays.
+It was never a placeholder.</p>
+<p>— NullBlock founding team, 2025</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="sdk-setup"><a class="header" href="#sdk-setup">SDK Setup</a></h1>
+<p>Guide for the NullBlock SDK repository.</p>
+<h2 id="repository"><a class="header" href="#repository">Repository</a></h2>
+<p><strong>GitHub</strong>: <a href="https://github.com/aetherBytes/nullblock-sdk">github.com/aetherBytes/nullblock-sdk</a>
+<strong>Documentation</strong>: <a href="https://aetherbytes.github.io/nullblock-sdk/">aetherbytes.github.io/nullblock-sdk</a></p>
+<h2 id="structure-1"><a class="header" href="#structure-1">Structure</a></h2>
+<pre><code>nullblock-sdk/
+├── docs/                    # Documentation site (GitHub Pages)
+│   ├── index.html
+│   ├── api/
+│   └── guides/
+├── sdk/
+│   ├── python/             # Python SDK
+│   ├── javascript/         # JavaScript/TypeScript SDK
+│   └── rust/               # Rust SDK
+├── examples/
+│   ├── agents/
+│   ├── trading/
+│   └── defi/
+└── README.md
+</code></pre>
+<h2 id="github-pages-setup"><a class="header" href="#github-pages-setup">GitHub Pages Setup</a></h2>
+<ol>
+<li>Go to repository Settings → Pages</li>
+<li>Source: “Deploy from a branch”</li>
+<li>Branch: <code>main</code>, Folder: <code>/docs</code></li>
+<li>Save and wait 5-10 minutes</li>
+</ol>
+<h2 id="publishing-packages"><a class="header" href="#publishing-packages">Publishing Packages</a></h2>
+<h3 id="python-pypi"><a class="header" href="#python-pypi">Python (PyPI)</a></h3>
+<pre><code class="language-bash">cd sdk/python
+python setup.py sdist bdist_wheel
+twine upload dist/*
+</code></pre>
+<h3 id="javascript-npm"><a class="header" href="#javascript-npm">JavaScript (npm)</a></h3>
+<pre><code class="language-bash">cd sdk/javascript
+npm publish
+</code></pre>
+<h3 id="rust-cratesio"><a class="header" href="#rust-cratesio">Rust (crates.io)</a></h3>
+<pre><code class="language-bash">cd sdk/rust
+cargo publish
+</code></pre>
+<h2 id="api-access"><a class="header" href="#api-access">API Access</a></h2>
+<p>All SDK methods connect through Erebus (port 3000):</p>
+<pre><code class="language-python">from nullblock import Client
+
+client = Client(api_url="http://localhost:3000")
+response = client.agents.chat("Hello HECATE")
+</code></pre>
+<h2 id="related-18"><a class="header" href="#related-18">Related</a></h2>
+<ul>
+<li><a href="#api-endpoints-6">API Endpoints</a></li>
+<li><a href="#architecture-overview">Architecture Overview</a></li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>
