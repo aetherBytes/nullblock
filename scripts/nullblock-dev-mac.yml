@@ -93,6 +93,16 @@ on_project_start: |
     echo "OPENROUTER_API_KEY=your-openrouter-key-here" >> .env.dev
     echo "Please edit .env.dev with your actual API keys"
   fi
+  echo "🧹 Cleaning up orphaned service processes..."
+  for port in 3000 3001 8001 9003 9004; do
+    pid=$(lsof -ti :$port 2>/dev/null)
+    if [ -n "$pid" ]; then
+      echo "   Killing process on port $port (PID: $pid)"
+      kill $pid 2>/dev/null || true
+    fi
+  done
+  sleep 1
+  echo "✅ Ports cleared"
   echo "🌐 Starting Chrome with remote debugging (port 9222)..."
   pkill -f "Chrome.*remote-debugging-port=9222" 2>/dev/null || true
   sleep 1
