@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-50d17d27.js";
+            window.path_to_searchindex_js = "../searchindex-e50a6604.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-e2bd4067.js"></script>
@@ -185,6 +185,80 @@
 <p>Model Context Protocol servers integrated with NullBlock development.</p>
 <h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
 <p>MCP servers extend Claude Code’s capabilities. Automatically available when running Claude Code in the NullBlock project.</p>
+<h2 id="nullblock-mcp-server"><a class="header" href="#nullblock-mcp-server">NullBlock MCP Server</a></h2>
+<p><strong>Purpose</strong>: NullBlock’s own MCP server exposing agent tools, engrams, and resources.</p>
+<p><strong>Protocol Version</strong>: 2025-11-25</p>
+<p><strong>Endpoint</strong>: <code>http://localhost:3000/mcp/jsonrpc</code> (via Erebus proxy)</p>
+<h3 id="available-tools-9"><a class="header" href="#available-tools-9">Available Tools (9)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>send_agent_message</code></td><td>Send message to a NullBlock agent</td></tr>
+<tr><td><code>create_task</code></td><td>Create a new task</td></tr>
+<tr><td><code>get_task_status</code></td><td>Get task status by ID</td></tr>
+<tr><td><code>list_engrams</code></td><td>List engrams for a wallet</td></tr>
+<tr><td><code>get_engram</code></td><td>Get engram by ID</td></tr>
+<tr><td><code>create_engram</code></td><td>Create a new engram</td></tr>
+<tr><td><code>update_engram</code></td><td>Update an existing engram</td></tr>
+<tr><td><code>delete_engram</code></td><td>Delete an engram</td></tr>
+<tr><td><code>search_engrams</code></td><td>Search engrams by query</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="available-resources-2"><a class="header" href="#available-resources-2">Available Resources (2)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>URI</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>agent://hecate</code></td><td>HECATE vessel AI agent</td></tr>
+<tr><td><code>agent://siren</code></td><td>Siren marketing agent</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="available-prompts-2"><a class="header" href="#available-prompts-2">Available Prompts (2)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Prompt</th><th>Arguments</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>agent_chat</code></td><td><code>agent</code> (req), <code>context</code> (opt)</td><td>Chat with a NullBlock agent</td></tr>
+<tr><td><code>task_template</code></td><td><code>type</code> (req)</td><td>Create task from template</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-initialize-session"><a class="header" href="#example-initialize-session">Example: Initialize Session</a></h3>
+<pre><code class="language-bash">curl -X POST http://localhost:3000/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2025-11-25",
+      "capabilities": {},
+      "clientInfo": { "name": "my-client", "version": "1.0.0" }
+    }
+  }'
+</code></pre>
+<h3 id="example-call-tool"><a class="header" href="#example-call-tool">Example: Call Tool</a></h3>
+<pre><code class="language-bash">curl -X POST http://localhost:3000/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "list_engrams",
+      "arguments": { "wallet_address": "0x..." }
+    }
+  }'
+</code></pre>
 <h2 id="chrome-devtools-mcp"><a class="header" href="#chrome-devtools-mcp">Chrome DevTools MCP</a></h2>
 <p><strong>Purpose</strong>: Browser automation, debugging, testing for Hecate frontend.</p>
 <h3 id="installation"><a class="header" href="#installation">Installation</a></h3>
