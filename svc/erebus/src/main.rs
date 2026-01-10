@@ -36,7 +36,7 @@ mod utils;
 mod crypto;
 use resources::agents::routes::{
     agent_health, hecate_chat, siren_chat, siren_set_model, hecate_status, agent_chat, agent_status,
-    hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model, hecate_model_info, hecate_search_models,
+    hecate_personality, hecate_clear, hecate_history, hecate_available_models, hecate_set_model, hecate_model_info, hecate_search_models, hecate_tools,
     // Task management routes
     create_task, get_tasks, get_task, update_task, delete_task,
     start_task, pause_task, resume_task, cancel_task, retry_task,
@@ -49,7 +49,7 @@ use resources::agents::routes::{
 };
 use resources::users::routes::{create_user_endpoint, lookup_user_endpoint, get_user_endpoint};
 use resources::wallets::routes::create_wallet_routes;
-use resources::{WalletManager, create_crossroads_routes, create_engram_routes, ExternalService};
+use resources::{WalletManager, create_crossroads_routes, create_engram_routes, create_mcp_routes, ExternalService};
 
 #[derive(Serialize)]
 struct StatusResponse {
@@ -431,6 +431,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/agents/hecate/set-model", post(hecate_set_model))
         .route("/api/agents/hecate/model-info", get(hecate_model_info))
         .route("/api/agents/hecate/search-models", get(hecate_search_models))
+        .route("/api/agents/hecate/tools", get(hecate_tools))
         .route("/api/agents/:agent_name/chat", post(agent_chat))
         .route("/api/agents/:agent_name/status", get(agent_status))
         // Task management endpoints
@@ -476,6 +477,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(create_crossroads_routes(&app_state.external_service))
         // Merge engram routes
         .merge(create_engram_routes())
+        // Merge MCP proxy routes
+        .merge(create_mcp_routes())
         // Merge API key routes
         .merge(resources::api_keys::create_api_key_routes(api_key_service.clone()))
         .with_state(app_state.clone())
@@ -522,7 +525,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🔒 Internal API keys: {}/internal/users/:user_id/api-keys/decrypted", erebus_base_url);
     info!("🧠 Engram service: {}/api/engrams", erebus_base_url);
     info!("🏥 Engram health: {}/api/engrams/health", erebus_base_url);
-    info!("💡 Ready for agentic workflows, marketplace operations, engrams, and service discovery");
+    info!("🔌 MCP JSON-RPC: {}/mcp/jsonrpc", erebus_base_url);
+    info!("🛠️ MCP tools: {}/mcp/tools", erebus_base_url);
+    info!("📚 MCP resources: {}/mcp/resources", erebus_base_url);
+    info!("💬 MCP prompts: {}/mcp/prompts", erebus_base_url);
+    info!("🏥 MCP health: {}/mcp/health", erebus_base_url);
+    info!("💡 Ready for agentic workflows, marketplace operations, engrams, MCP, and service discovery");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let listener = tokio::net::TcpListener::bind(addr).await

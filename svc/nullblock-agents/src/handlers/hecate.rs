@@ -826,6 +826,19 @@ pub async fn get_history(
     Ok(Json(response_history))
 }
 
+pub async fn get_tools(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let agent = state.hecate_agent.read().await;
+    let tools = agent.get_mcp_tools().await?;
+
+    Ok(Json(json!({
+        "status": "success",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "data": tools
+    })))
+}
+
 pub async fn get_model_info(
     State(state): State<AppState>,
     Query(params): Query<ModelInfoQuery>,
