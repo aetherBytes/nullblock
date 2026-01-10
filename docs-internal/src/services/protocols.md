@@ -55,15 +55,78 @@ GET  /a2a/v1/tasks          # List tasks
 
 ## MCP Protocol
 
-Model Context Protocol support for tool integration.
+Model Context Protocol (MCP) 2025-11-25 implementation for AI tool integration.
 
-### Available Tools
+**Specification**: [MCP 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25)
 
-Tools exposed via MCP for external agents:
+### Endpoint
 
-- **Engram tools**: create, get, search, update
-- **Task tools**: create, list, get status
-- **Agent tools**: chat, query capabilities
+```bash
+POST /mcp/jsonrpc   # Main JSON-RPC 2.0 endpoint
+GET  /mcp/tools     # Convenience endpoint for tools/list
+GET  /mcp/resources # Convenience endpoint for resources/list
+GET  /mcp/prompts   # Convenience endpoint for prompts/list
+```
+
+### Supported Methods
+
+| Method | Description |
+|--------|-------------|
+| `initialize` | Initialize MCP session with capabilities |
+| `initialized` | Client notification after init complete |
+| `tools/list` | List available tools (9 tools) |
+| `tools/call` | Execute a tool |
+| `resources/list` | List available resources (2 resources) |
+| `resources/read` | Read resource by URI |
+| `prompts/list` | List available prompts (2 prompts) |
+| `prompts/get` | Get prompt with arguments |
+| `ping` | Health check |
+
+### Available Tools (9)
+
+| Tool | Description |
+|------|-------------|
+| `send_agent_message` | Send message to a NullBlock agent |
+| `create_task` | Create a new task |
+| `get_task_status` | Get task status by ID |
+| `list_engrams` | List engrams for a wallet |
+| `get_engram` | Get engram by ID |
+| `create_engram` | Create a new engram |
+| `update_engram` | Update an existing engram |
+| `delete_engram` | Delete an engram |
+| `search_engrams` | Search engrams by query |
+
+### Available Resources (2)
+
+| URI | Description |
+|-----|-------------|
+| `agent://hecate` | HECATE vessel AI agent |
+| `agent://siren` | Siren marketing agent |
+
+### Available Prompts (2)
+
+| Prompt | Description |
+|--------|-------------|
+| `agent_chat` | Chat with a NullBlock agent |
+| `task_template` | Create task from template |
+
+### Server Capabilities
+
+```json
+{
+  "tools": { "listChanged": false },
+  "resources": { "subscribe": false, "listChanged": false },
+  "prompts": { "listChanged": false }
+}
+```
+
+### MCP Client (Hecate)
+
+Hecate implements proper MCP client protocol:
+- Sends `initialize` with protocol version and client info
+- Sends `initialized` notification after handshake
+- Caches tools with 5-minute TTL
+- Can execute tools via `tools/call`
 
 ## Implementation Status
 

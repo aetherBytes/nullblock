@@ -16,6 +16,7 @@ mod handlers;
 mod kafka;
 mod llm;
 mod logging;
+mod mcp;
 mod models;
 mod server;
 mod services;
@@ -93,6 +94,7 @@ fn create_router(state: server::AppState) -> Router {
         .route("/hecate/clear", post(hecate::clear_conversation))
         .route("/hecate/history", get(hecate::get_history))
         .route("/hecate/model-info", get(hecate::get_model_info))
+        .route("/hecate/tools", get(hecate::get_tools))
         // Task management endpoints
         .route("/tasks", post(tasks::create_task_handler))
         .route("/tasks", get(tasks::get_tasks_handler))

@@ -13,6 +13,7 @@ use crate::protocols::mcp::routes::create_mcp_routes;
 pub struct AppState {
     pub http_client: reqwest::Client,
     pub agents_service_url: String,
+    pub erebus_base_url: String,
     pub kafka_bridge: Option<Arc<KafkaSSEBridge>>,
 }
 
@@ -24,8 +25,11 @@ impl Server {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let agents_service_url = std::env::var("AGENTS_SERVICE_URL")
             .unwrap_or_else(|_| "http://localhost:9003".to_string());
+        let erebus_base_url = std::env::var("EREBUS_BASE_URL")
+            .unwrap_or_else(|_| "http://localhost:3000".to_string());
 
         info!("🔗 Agents Service URL: {}", agents_service_url);
+        info!("🔗 Erebus Base URL: {}", erebus_base_url);
 
         let kafka_bridge = if let Ok(bootstrap_servers) = std::env::var("KAFKA_BOOTSTRAP_SERVERS") {
             match KafkaSSEBridge::new(&bootstrap_servers) {
@@ -47,6 +51,7 @@ impl Server {
         let state = AppState {
             http_client: reqwest::Client::new(),
             agents_service_url,
+            erebus_base_url,
             kafka_bridge,
         };
 
@@ -82,7 +87,7 @@ impl Server {
         info!("📨 Messages: POST {}/v1/messages, {}/v1/messages/stream", protocols_base_url, protocols_base_url);
         info!("📋 Tasks: GET {}/v1/tasks, {}/v1/tasks/:id, POST {}/v1/tasks/:id/cancel", protocols_base_url, protocols_base_url, protocols_base_url);
         info!("🔌 MCP JSON-RPC endpoint: {}/mcp/jsonrpc", protocols_base_url);
-        info!("🧠 MCP Protocol Version: 2025-06-18", );
+        info!("🧠 MCP Protocol Version: 2025-11-25", );
 
         let listener = tokio::net::TcpListener::bind(addr).await?;
         axum::serve(listener, self.app).await?;

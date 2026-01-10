@@ -7,7 +7,7 @@ The NullBlock Protocols service implements a flexible authentication system that
 
 ## MCP Authorization Specification Compliance
 
-According to the [MCP Authorization Specification 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/authorization):
+According to the [MCP Authorization Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/authorization):
 
 - **HTTP-based transports SHOULD** conform to OAuth 2.1
 - **STDIO transports SHOULD NOT** use this spec (credentials from environment)
@@ -455,7 +455,7 @@ The current implementation provides Bearer token support compatible with OAuth 2
 
 ## References
 
-- [MCP Authorization Specification](https://modelcontextprotocol.io/specification/2025-06-18/authorization)
+- [MCP Authorization Specification](https://modelcontextprotocol.io/specification/2025-11-25/authorization)
 - [OAuth 2.1 Specification](https://oauth.net/2.1/)
 - [Bearer Token RFC 6750](https://tools.ietf.org/html/rfc6750)
 - [API Key Best Practices](https://cloud.google.com/endpoints/docs/openapi/when-why-api-key)
