@@ -81,6 +81,10 @@ windows:
       panes:
         - ~/nullblock/scripts/start-frontend.sh
 
+  - docs:
+      panes:
+        - cd ~/nullblock/docs-internal && mdbook serve --port 3001
+
 on_project_start: |
   if [ ! -f .env.dev ]; then
     echo "Creating .env.dev file..."
@@ -97,7 +101,8 @@ on_project_start: |
     --user-data-dir=/tmp/chrome-nullblock-dev \
     --no-first-run \
     --no-default-browser-check \
-    "http://localhost:5173" &
+    "http://localhost:5173" \
+    "http://localhost:3001" &
   echo "✅ Chrome DevTools MCP ready on port 9222"
   echo "📁 Creating log directory structure..."
   mkdir -p logs
@@ -122,6 +127,7 @@ on_project_start: |
   echo "   🎯 Hecate Agent (Rust): http://localhost:9003"
   echo "   🧠 Engram Service: http://localhost:9004"
   echo "   🎨 Frontend: http://localhost:5173"
+  echo "   📚 Internal Docs: http://localhost:3001"
   echo "   🔧 Chrome DevTools (MCP): localhost:9222"
   echo ""
   echo "🦀 Rust Services:"
@@ -129,6 +135,7 @@ on_project_start: |
   echo "   ✅ Erebus Router - Unified request routing & logging"
   echo "   ✅ Protocol Server - A2A and MCP protocol communication"
   echo "   ✅ Engram Service - Universal memory/context persistence"
+  echo "   📚 mdBook Docs - Internal documentation with live reload"
   echo ""
   echo "🌐 A2A Protocol Integration:"
   echo "   📋 Specification: https://a2a-protocol.org/latest/specification/"
