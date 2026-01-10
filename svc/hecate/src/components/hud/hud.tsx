@@ -7,6 +7,7 @@ import { useEventSystem } from '../../hooks/useEventSystem';
 import { useLogs } from '../../hooks/useLogs';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import Crossroads from '../crossroads/Crossroads';
+import { MemCache } from '../memcache';
 import NullblockLogo from './NullblockLogo';
 import SettingsPanel from './SettingsPanel';
 import VoidOverlay from './VoidOverlay';
@@ -40,7 +41,7 @@ interface HUDProps {
   onClose: () => void;
   onThemeChange: (theme: 'null' | 'light' | 'dark') => void;
   systemStatus: SystemStatus;
-  initialTab?: 'crossroads' | 'tasks' | 'agents' | 'logs' | 'canvas' | null;
+  initialTab?: 'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null;
   onToggleMobileMenu?: () => void;
   loginAnimationPhase?: LoginAnimationPhase;
   hecatePanelOpen?: boolean;
@@ -83,7 +84,7 @@ const HUD: React.FC<HUDProps> = ({
     | 'idle'
   >('base');
   const [mainHudActiveTab, setMainHudActiveTab] = useState<
-    'crossroads' | 'tasks' | 'agents' | 'logs' | 'canvas' | null
+    'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null
   >(initialTab);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showCrossroadsMarketplace, setShowCrossroadsMarketplace] = useState(false);
@@ -730,7 +731,10 @@ const HUD: React.FC<HUDProps> = ({
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' ? '' : styles.hidden}`}>
             <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} showMarketplace={showCrossroadsMarketplace} resetToLanding={resetCrossroadsToLanding} animationPhase={loginAnimationPhase} />
           </div>
-          {mainHudActiveTab !== 'canvas' && mainHudActiveTab !== 'crossroads' && !inVoidMode && (
+          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'memcache' ? '' : styles.hidden}`}>
+            <MemCache publicKey={publicKey} />
+          </div>
+          {mainHudActiveTab !== 'canvas' && mainHudActiveTab !== 'crossroads' && mainHudActiveTab !== 'memcache' && !inVoidMode && (
             <div className={styles.defaultTab}>
               <p>Select a tab to view content</p>
             </div>
@@ -826,6 +830,22 @@ const HUD: React.FC<HUDProps> = ({
             </button>
           )}
 
+          {publicKey && (
+            <button
+              className={`${styles.menuButton} ${mainHudActiveTab === 'memcache' ? styles.active : ''}`}
+              onClick={() => {
+                if (mainHudActiveTab === 'memcache') {
+                  setMainHudActiveTab(null);
+                } else {
+                  setMainHudActiveTab('memcache');
+                }
+              }}
+              title="The Mem Cache - Your Engrams"
+            >
+              <span>MEM CACHE</span>
+            </button>
+          )}
+
           {publicKey ? (
             <button
               className={styles.menuButton}
@@ -877,6 +897,23 @@ const HUD: React.FC<HUDProps> = ({
             >
               <span>🛣️</span>
               <span>CROSSROADS</span>
+            </button>
+          )}
+
+          {publicKey && (
+            <button
+              className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'memcache' ? styles.active : ''}`}
+              onClick={() => {
+                if (mainHudActiveTab === 'memcache') {
+                  setMainHudActiveTab(null);
+                } else {
+                  setMainHudActiveTab('memcache');
+                }
+                setShowMobileMenu(false);
+              }}
+            >
+              <span>🧠</span>
+              <span>MEM CACHE</span>
             </button>
           )}
 
