@@ -37,7 +37,8 @@ Building NullBlock's first Constellation of Work - autonomous X/Twitter content 
 | Phase | Status |
 |-------|--------|
 | 1. Engram Service | ✅ Complete |
-| 2. Crossroads COW Model | 🔄 Next |
+| 1.5. MCP + Mem Cache | 🔄 In Progress |
+| 2. Crossroads COW Model | ⏳ Next |
 | 3. Echo Factory Core | ⏳ Pending |
 | 4. X API Integration | ⏳ Pending |
 | 5. Frontend | ⏳ Pending |
@@ -119,6 +120,7 @@ Von Neumann-class vessel AI. Default model: `cognitivecomputations/dolphin3.0-mi
 | `/api/engrams/*` | Memory/context |
 | `/api/marketplace/*` | Crossroads listings |
 | `/api/discovery/*` | Service discovery |
+| `/mcp/*` | MCP Protocol (2025-11-25) |
 | `/a2a/*` | A2A Protocol |
 
 ## Common Commands

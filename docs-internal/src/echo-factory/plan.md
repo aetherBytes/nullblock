@@ -7,10 +7,22 @@
 | Phase | Status | Notes |
 |-------|--------|-------|
 | **Phase 1: Engram Service** | ✅ Complete | Port 9004, all CRUD working |
-| **Phase 2: Crossroads COW Model** | 🔄 Next Up | COW as first-class listing |
+| **Phase 1.5: MCP + Mem Cache** | 🔄 In Progress | MCP 2025-11-25 compliant, Mem Cache UI |
+| **Phase 2: Crossroads COW Model** | ⏳ Next Up | COW as first-class listing |
 | **Phase 3: Echo Factory Core** | ⏳ Pending | Persona, Content, Scheduler, Publisher |
 | **Phase 4: X API Integration** | ⏳ Pending | OAuth 1.0a + real posting |
 | **Phase 5: Frontend** | ⏳ Pending | Hecate UI components |
+
+### Phase 1.5 Progress
+
+| Component | Status |
+|-----------|--------|
+| MCP Protocol Version 2025-11-25 | ✅ Complete |
+| MCP Client (Hecate) | ✅ Complete |
+| MCP Proxy (Erebus) | ✅ Complete |
+| Engram MCP Tools (9 total) | ✅ Complete |
+| Mem Cache Tab | 🔄 In Progress |
+| Crossroads MCP Display | ⏳ Pending |
 
 ## Architecture Decisions
 

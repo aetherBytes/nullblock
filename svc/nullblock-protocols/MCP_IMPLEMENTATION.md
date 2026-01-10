@@ -118,14 +118,16 @@ nullblock-protocols/
 
 ## Available Tools
 
-### 1. send_agent_message
+### Agent & Task Tools
+
+#### 1. send_agent_message
 Send a message to a NullBlock agent (Hecate, Siren, etc.)
 
 **Parameters:**
 - `agent_name` (string, required): Agent name
 - `message` (string, required): Message content
 
-### 2. create_task
+#### 2. create_task
 Create a new task in the NullBlock task system
 
 **Parameters:**
@@ -133,11 +135,55 @@ Create a new task in the NullBlock task system
 - `description` (string, required): Task description
 - `priority` (string, optional): low/medium/high/critical
 
-### 3. get_task_status
+#### 3. get_task_status
 Get the status of a task by ID
 
 **Parameters:**
 - `task_id` (string, required): Task UUID
+
+### Engram Tools
+
+#### 4. list_engrams
+List all engrams for a wallet address
+
+**Parameters:**
+- `wallet_address` (string, required): Wallet address
+
+#### 5. get_engram
+Get a specific engram by ID
+
+**Parameters:**
+- `engram_id` (string, required): Engram UUID
+
+#### 6. create_engram
+Create a new engram
+
+**Parameters:**
+- `wallet_address` (string, required): Wallet address
+- `engram_type` (string, required): Type (persona, preference, strategy, knowledge, compliance)
+- `key` (string, required): Unique key for the engram
+- `content` (object, required): Engram content data
+
+#### 7. update_engram
+Update an existing engram
+
+**Parameters:**
+- `engram_id` (string, required): Engram UUID
+- `content` (object, optional): New content
+- `key` (string, optional): New key
+
+#### 8. delete_engram
+Delete an engram
+
+**Parameters:**
+- `engram_id` (string, required): Engram UUID
+
+#### 9. search_engrams
+Search engrams by query
+
+**Parameters:**
+- `wallet_address` (string, required): Wallet address
+- `query` (string, required): Search query
 
 ## Available Prompts
 
