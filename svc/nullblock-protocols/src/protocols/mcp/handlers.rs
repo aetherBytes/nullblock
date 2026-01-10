@@ -228,6 +228,175 @@ pub async fn list_tools(
             annotations: None,
             meta: None,
         },
+        // Engrams Tools - Context Keeping Protocol
+        Tool {
+            name: "list_engrams".to_string(),
+            title: Some("List Engrams".to_string()),
+            description: Some("List all engrams for a wallet address. Engrams are persistent context memories (personas, preferences, strategies, knowledge, compliance).".to_string()),
+            input_schema: InputSchema {
+                schema_type: "object".to_string(),
+                properties: Some({
+                    let mut props = HashMap::new();
+                    props.insert("wallet_address".to_string(), json!({
+                        "type": "string",
+                        "description": "Wallet address to list engrams for"
+                    }));
+                    props.insert("engram_type".to_string(), json!({
+                        "type": "string",
+                        "enum": ["persona", "preference", "strategy", "knowledge", "compliance"],
+                        "description": "Filter by engram type (optional)"
+                    }));
+                    props.insert("limit".to_string(), json!({
+                        "type": "integer",
+                        "description": "Maximum number of engrams to return (default: 50)"
+                    }));
+                    props
+                }),
+                required: Some(vec!["wallet_address".to_string()]),
+            },
+            output_schema: None,
+            annotations: None,
+            meta: None,
+        },
+        Tool {
+            name: "get_engram".to_string(),
+            title: Some("Get Engram".to_string()),
+            description: Some("Get a specific engram by ID".to_string()),
+            input_schema: InputSchema {
+                schema_type: "object".to_string(),
+                properties: Some({
+                    let mut props = HashMap::new();
+                    props.insert("engram_id".to_string(), json!({
+                        "type": "string",
+                        "description": "UUID of the engram"
+                    }));
+                    props
+                }),
+                required: Some(vec!["engram_id".to_string()]),
+            },
+            output_schema: None,
+            annotations: None,
+            meta: None,
+        },
+        Tool {
+            name: "create_engram".to_string(),
+            title: Some("Create Engram".to_string()),
+            description: Some("Create a new engram (persistent context memory) for a wallet".to_string()),
+            input_schema: InputSchema {
+                schema_type: "object".to_string(),
+                properties: Some({
+                    let mut props = HashMap::new();
+                    props.insert("wallet_address".to_string(), json!({
+                        "type": "string",
+                        "description": "Wallet address that owns the engram"
+                    }));
+                    props.insert("engram_type".to_string(), json!({
+                        "type": "string",
+                        "enum": ["persona", "preference", "strategy", "knowledge", "compliance"],
+                        "description": "Type of engram"
+                    }));
+                    props.insert("key".to_string(), json!({
+                        "type": "string",
+                        "description": "Unique key for this engram within the wallet"
+                    }));
+                    props.insert("content".to_string(), json!({
+                        "type": "string",
+                        "description": "Content/value of the engram"
+                    }));
+                    props.insert("metadata".to_string(), json!({
+                        "type": "object",
+                        "description": "Optional metadata for the engram"
+                    }));
+                    props
+                }),
+                required: Some(vec![
+                    "wallet_address".to_string(),
+                    "engram_type".to_string(),
+                    "key".to_string(),
+                    "content".to_string()
+                ]),
+            },
+            output_schema: None,
+            annotations: None,
+            meta: None,
+        },
+        Tool {
+            name: "update_engram".to_string(),
+            title: Some("Update Engram".to_string()),
+            description: Some("Update an existing engram's content or metadata".to_string()),
+            input_schema: InputSchema {
+                schema_type: "object".to_string(),
+                properties: Some({
+                    let mut props = HashMap::new();
+                    props.insert("engram_id".to_string(), json!({
+                        "type": "string",
+                        "description": "UUID of the engram to update"
+                    }));
+                    props.insert("content".to_string(), json!({
+                        "type": "string",
+                        "description": "New content for the engram (optional)"
+                    }));
+                    props.insert("metadata".to_string(), json!({
+                        "type": "object",
+                        "description": "New metadata for the engram (optional)"
+                    }));
+                    props
+                }),
+                required: Some(vec!["engram_id".to_string()]),
+            },
+            output_schema: None,
+            annotations: None,
+            meta: None,
+        },
+        Tool {
+            name: "delete_engram".to_string(),
+            title: Some("Delete Engram".to_string()),
+            description: Some("Delete an engram by ID".to_string()),
+            input_schema: InputSchema {
+                schema_type: "object".to_string(),
+                properties: Some({
+                    let mut props = HashMap::new();
+                    props.insert("engram_id".to_string(), json!({
+                        "type": "string",
+                        "description": "UUID of the engram to delete"
+                    }));
+                    props
+                }),
+                required: Some(vec!["engram_id".to_string()]),
+            },
+            output_schema: None,
+            annotations: None,
+            meta: None,
+        },
+        Tool {
+            name: "search_engrams".to_string(),
+            title: Some("Search Engrams".to_string()),
+            description: Some("Search engrams by query string within a wallet".to_string()),
+            input_schema: InputSchema {
+                schema_type: "object".to_string(),
+                properties: Some({
+                    let mut props = HashMap::new();
+                    props.insert("wallet_address".to_string(), json!({
+                        "type": "string",
+                        "description": "Wallet address to search within"
+                    }));
+                    props.insert("query".to_string(), json!({
+                        "type": "string",
+                        "description": "Search query"
+                    }));
+                    props.insert("engram_type".to_string(), json!({
+                        "type": "string",
+                        "enum": ["persona", "preference", "strategy", "knowledge", "compliance"],
+                        "description": "Filter by engram type (optional)"
+                    }));
+                    props
+                }),
+                required: Some(vec!["wallet_address".to_string(), "query".to_string()]),
+            },
+            output_schema: None,
+            annotations: None,
+            meta: None,
+        },
     ];
 
     info!("✅ Returning {} tools", tools.len());
@@ -387,10 +556,10 @@ pub async fn call_tool(
                         match response.text().await {
                             Ok(text) => {
                                 Ok(Json(CallToolResult {
-                                    content: vec![ContentBlock::Text { 
-                                        text, 
-                                        annotations: None, 
-                                        meta: None 
+                                    content: vec![ContentBlock::Text {
+                                        text,
+                                        annotations: None,
+                                        meta: None
                                     }],
                                     structured_content: None,
                                     is_error: Some(false),
@@ -398,10 +567,10 @@ pub async fn call_tool(
                             }
                             Err(e) => {
                                 Ok(Json(CallToolResult {
-                                    content: vec![ContentBlock::Text { 
+                                    content: vec![ContentBlock::Text {
                                         text: format!("Failed to read response: {}", e),
-                                        annotations: None, 
-                                        meta: None 
+                                        annotations: None,
+                                        meta: None
                                     }],
                                     structured_content: None,
                                     is_error: Some(true),
@@ -410,10 +579,10 @@ pub async fn call_tool(
                         }
                     } else {
                         Ok(Json(CallToolResult {
-                            content: vec![ContentBlock::Text { 
+                            content: vec![ContentBlock::Text {
                                 text: format!("Task not found or service error: {}", response.status()),
-                                annotations: None, 
-                                meta: None 
+                                annotations: None,
+                                meta: None
                             }],
                             structured_content: None,
                             is_error: Some(true),
@@ -422,15 +591,347 @@ pub async fn call_tool(
                 }
                 Err(e) => {
                     Ok(Json(CallToolResult {
-                        content: vec![ContentBlock::Text { 
+                        content: vec![ContentBlock::Text {
                             text: format!("Failed to fetch task: {}", e),
-                            annotations: None, 
-                            meta: None 
+                            annotations: None,
+                            meta: None
                         }],
                         structured_content: None,
                         is_error: Some(true),
                     }))
                 }
+            }
+        }
+        // Engrams Tools - All calls go through Erebus (dogfooding)
+        "list_engrams" => {
+            let args = request.arguments.unwrap_or_default();
+            let wallet_address = args.get("wallet_address")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+            let engram_type = args.get("engram_type").and_then(|v| v.as_str());
+            let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(50);
+
+            let mut url = format!("{}/api/engrams/wallet/{}", state.erebus_base_url, wallet_address);
+            if let Some(etype) = engram_type {
+                url = format!("{}?type={}&limit={}", url, etype, limit);
+            } else {
+                url = format!("{}?limit={}", url, limit);
+            }
+
+            info!("🧠 Listing engrams from Erebus: {}", url);
+
+            match state.http_client.get(&url).send().await {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        match response.text().await {
+                            Ok(text) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text { text, annotations: None, meta: None }],
+                                structured_content: None,
+                                is_error: Some(false),
+                            })),
+                            Err(e) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text {
+                                    text: format!("Failed to read response: {}", e),
+                                    annotations: None, meta: None
+                                }],
+                                structured_content: None,
+                                is_error: Some(true),
+                            }))
+                        }
+                    } else {
+                        Ok(Json(CallToolResult {
+                            content: vec![ContentBlock::Text {
+                                text: format!("Engrams service error: {}", response.status()),
+                                annotations: None, meta: None
+                            }],
+                            structured_content: None,
+                            is_error: Some(true),
+                        }))
+                    }
+                }
+                Err(e) => Ok(Json(CallToolResult {
+                    content: vec![ContentBlock::Text {
+                        text: format!("Failed to connect to Erebus: {}", e),
+                        annotations: None, meta: None
+                    }],
+                    structured_content: None,
+                    is_error: Some(true),
+                }))
+            }
+        }
+        "get_engram" => {
+            let args = request.arguments.unwrap_or_default();
+            let engram_id = args.get("engram_id")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+
+            let url = format!("{}/api/engrams/{}", state.erebus_base_url, engram_id);
+            info!("🧠 Getting engram from Erebus: {}", url);
+
+            match state.http_client.get(&url).send().await {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        match response.text().await {
+                            Ok(text) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text { text, annotations: None, meta: None }],
+                                structured_content: None,
+                                is_error: Some(false),
+                            })),
+                            Err(e) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text {
+                                    text: format!("Failed to read response: {}", e),
+                                    annotations: None, meta: None
+                                }],
+                                structured_content: None,
+                                is_error: Some(true),
+                            }))
+                        }
+                    } else {
+                        Ok(Json(CallToolResult {
+                            content: vec![ContentBlock::Text {
+                                text: format!("Engram not found or service error: {}", response.status()),
+                                annotations: None, meta: None
+                            }],
+                            structured_content: None,
+                            is_error: Some(true),
+                        }))
+                    }
+                }
+                Err(e) => Ok(Json(CallToolResult {
+                    content: vec![ContentBlock::Text {
+                        text: format!("Failed to connect to Erebus: {}", e),
+                        annotations: None, meta: None
+                    }],
+                    structured_content: None,
+                    is_error: Some(true),
+                }))
+            }
+        }
+        "create_engram" => {
+            let args = request.arguments.unwrap_or_default();
+            let wallet_address = args.get("wallet_address")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+            let engram_type = args.get("engram_type")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+            let key = args.get("key")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+            let content = args.get("content")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+            let metadata = args.get("metadata").cloned();
+
+            let url = format!("{}/api/engrams", state.erebus_base_url);
+            let mut body = json!({
+                "wallet_address": wallet_address,
+                "engram_type": engram_type,
+                "key": key,
+                "content": content
+            });
+            if let Some(meta) = metadata {
+                body.as_object_mut().unwrap().insert("metadata".to_string(), meta);
+            }
+
+            info!("🧠 Creating engram via Erebus: {}", url);
+
+            match state.http_client.post(&url).json(&body).send().await {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        match response.text().await {
+                            Ok(text) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text { text, annotations: None, meta: None }],
+                                structured_content: None,
+                                is_error: Some(false),
+                            })),
+                            Err(e) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text {
+                                    text: format!("Failed to read response: {}", e),
+                                    annotations: None, meta: None
+                                }],
+                                structured_content: None,
+                                is_error: Some(true),
+                            }))
+                        }
+                    } else {
+                        Ok(Json(CallToolResult {
+                            content: vec![ContentBlock::Text {
+                                text: format!("Failed to create engram: {}", response.status()),
+                                annotations: None, meta: None
+                            }],
+                            structured_content: None,
+                            is_error: Some(true),
+                        }))
+                    }
+                }
+                Err(e) => Ok(Json(CallToolResult {
+                    content: vec![ContentBlock::Text {
+                        text: format!("Failed to connect to Erebus: {}", e),
+                        annotations: None, meta: None
+                    }],
+                    structured_content: None,
+                    is_error: Some(true),
+                }))
+            }
+        }
+        "update_engram" => {
+            let args = request.arguments.unwrap_or_default();
+            let engram_id = args.get("engram_id")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+            let content = args.get("content").and_then(|v| v.as_str());
+            let metadata = args.get("metadata").cloned();
+
+            let url = format!("{}/api/engrams/{}", state.erebus_base_url, engram_id);
+            let mut body = json!({});
+            if let Some(c) = content {
+                body.as_object_mut().unwrap().insert("content".to_string(), json!(c));
+            }
+            if let Some(meta) = metadata {
+                body.as_object_mut().unwrap().insert("metadata".to_string(), meta);
+            }
+
+            info!("🧠 Updating engram via Erebus: {}", url);
+
+            match state.http_client.put(&url).json(&body).send().await {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        match response.text().await {
+                            Ok(text) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text { text, annotations: None, meta: None }],
+                                structured_content: None,
+                                is_error: Some(false),
+                            })),
+                            Err(e) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text {
+                                    text: format!("Failed to read response: {}", e),
+                                    annotations: None, meta: None
+                                }],
+                                structured_content: None,
+                                is_error: Some(true),
+                            }))
+                        }
+                    } else {
+                        Ok(Json(CallToolResult {
+                            content: vec![ContentBlock::Text {
+                                text: format!("Failed to update engram: {}", response.status()),
+                                annotations: None, meta: None
+                            }],
+                            structured_content: None,
+                            is_error: Some(true),
+                        }))
+                    }
+                }
+                Err(e) => Ok(Json(CallToolResult {
+                    content: vec![ContentBlock::Text {
+                        text: format!("Failed to connect to Erebus: {}", e),
+                        annotations: None, meta: None
+                    }],
+                    structured_content: None,
+                    is_error: Some(true),
+                }))
+            }
+        }
+        "delete_engram" => {
+            let args = request.arguments.unwrap_or_default();
+            let engram_id = args.get("engram_id")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+
+            let url = format!("{}/api/engrams/{}", state.erebus_base_url, engram_id);
+            info!("🧠 Deleting engram via Erebus: {}", url);
+
+            match state.http_client.delete(&url).send().await {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        Ok(Json(CallToolResult {
+                            content: vec![ContentBlock::Text {
+                                text: format!("Engram {} deleted successfully", engram_id),
+                                annotations: None, meta: None
+                            }],
+                            structured_content: None,
+                            is_error: Some(false),
+                        }))
+                    } else {
+                        Ok(Json(CallToolResult {
+                            content: vec![ContentBlock::Text {
+                                text: format!("Failed to delete engram: {}", response.status()),
+                                annotations: None, meta: None
+                            }],
+                            structured_content: None,
+                            is_error: Some(true),
+                        }))
+                    }
+                }
+                Err(e) => Ok(Json(CallToolResult {
+                    content: vec![ContentBlock::Text {
+                        text: format!("Failed to connect to Erebus: {}", e),
+                        annotations: None, meta: None
+                    }],
+                    structured_content: None,
+                    is_error: Some(true),
+                }))
+            }
+        }
+        "search_engrams" => {
+            let args = request.arguments.unwrap_or_default();
+            let wallet_address = args.get("wallet_address")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+            let query = args.get("query")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+            let engram_type = args.get("engram_type").and_then(|v| v.as_str());
+
+            let url = format!("{}/api/engrams/search", state.erebus_base_url);
+            let mut body = json!({
+                "wallet_address": wallet_address,
+                "query": query
+            });
+            if let Some(etype) = engram_type {
+                body.as_object_mut().unwrap().insert("engram_type".to_string(), json!(etype));
+            }
+
+            info!("🧠 Searching engrams via Erebus: {}", url);
+
+            match state.http_client.post(&url).json(&body).send().await {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        match response.text().await {
+                            Ok(text) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text { text, annotations: None, meta: None }],
+                                structured_content: None,
+                                is_error: Some(false),
+                            })),
+                            Err(e) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text {
+                                    text: format!("Failed to read response: {}", e),
+                                    annotations: None, meta: None
+                                }],
+                                structured_content: None,
+                                is_error: Some(true),
+                            }))
+                        }
+                    } else {
+                        Ok(Json(CallToolResult {
+                            content: vec![ContentBlock::Text {
+                                text: format!("Search failed: {}", response.status()),
+                                annotations: None, meta: None
+                            }],
+                            structured_content: None,
+                            is_error: Some(true),
+                        }))
+                    }
+                }
+                Err(e) => Ok(Json(CallToolResult {
+                    content: vec![ContentBlock::Text {
+                        text: format!("Failed to connect to Erebus: {}", e),
+                        annotations: None, meta: None
+                    }],
+                    structured_content: None,
+                    is_error: Some(true),
+                }))
             }
         }
         _ => {

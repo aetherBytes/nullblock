@@ -607,6 +607,34 @@ pub async fn hecate_model_info() -> Result<ResponseJson<Value>, (StatusCode, Res
     }
 }
 
+/// Get MCP tools available to Hecate agent
+pub async fn hecate_tools() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
+    info!("🔧 Hecate tools request received");
+
+    let proxy = get_hecate_proxy();
+
+    match proxy.proxy_request("tools", "GET", None, None).await {
+        Ok(response) => {
+            info!("✅ Hecate tools retrieved successfully");
+            info!("📤 Response payload: {}", serde_json::to_string_pretty(&response).unwrap_or_default());
+            Ok(ResponseJson(response))
+        }
+        Err(error) => {
+            error!("❌ Hecate tools request failed");
+            error!("📤 Error response: {}", serde_json::to_string_pretty(&error).unwrap_or_default());
+
+            let status_code = match error.code.as_str() {
+                "AGENT_UNAVAILABLE" => StatusCode::SERVICE_UNAVAILABLE,
+                "AGENT_HTTP_ERROR" => StatusCode::BAD_GATEWAY,
+                "AGENT_PARSE_ERROR" => StatusCode::BAD_GATEWAY,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+
+            Err((status_code, ResponseJson(error)))
+        }
+    }
+}
+
 /// Search models via Hecate agent
 pub async fn hecate_search_models(Query(params): Query<HashMap<String, String>>) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<AgentErrorResponse>)> {
     info!("🔍 Hecate search models request received");

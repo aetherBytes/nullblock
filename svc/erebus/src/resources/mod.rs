@@ -19,4 +19,5 @@ pub use types::{
 pub use wallets::WalletManager;
 pub use crossroads::routes::create_crossroads_routes;
 pub use engrams::create_engram_routes;
+pub use mcp::routes::create_mcp_routes;
 pub use external_service::ExternalService;
