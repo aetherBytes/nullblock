@@ -17,6 +17,7 @@ interface VoidHUDProps {
   glowActive?: boolean;
   hecatePanelOpen?: boolean;
   onHecatePanelChange?: (open: boolean) => void;
+  hasOverlappingPanels?: boolean;
 }
 
 const VoidHUD: React.FC<VoidHUDProps> = ({
@@ -28,6 +29,7 @@ const VoidHUD: React.FC<VoidHUDProps> = ({
   glowActive = false,
   hecatePanelOpen = false,
   onHecatePanelChange,
+  hasOverlappingPanels = false,
 }) => {
   // Panel state
   const [scopesOpen, setScopesOpen] = useState(false);
@@ -162,6 +164,7 @@ const VoidHUD: React.FC<VoidHUDProps> = ({
         agentHealthStatus={agentHealthStatus}
         getImagesForMessage={getImagesForMessage}
         showHistory={hecatePanelOpen}
+        hasOverlappingPanels={hasOverlappingPanels}
       />
     </>
   );

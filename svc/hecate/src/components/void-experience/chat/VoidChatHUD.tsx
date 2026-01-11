@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { agentService } from '../../../common/services/agent-service';
 import { hecateAgent } from '../../../common/services/hecate-agent';
 import MarkdownRenderer from '../../common/MarkdownRenderer';
@@ -34,6 +35,7 @@ interface VoidChatHUDProps {
   agentHealthStatus?: 'healthy' | 'unhealthy' | 'unknown';
   getImagesForMessage?: (messageId: string) => ImageData[];
   showHistory?: boolean;
+  hasOverlappingPanels?: boolean;
 }
 
 // Energy state for transmission animation
@@ -87,6 +89,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   agentHealthStatus = 'unknown',
   getImagesForMessage,
   showHistory: externalShowHistory,
+  hasOverlappingPanels = false,
 }) => {
   // Format model name for display (extract short name from full path)
   const formatModelName = (model: string | null): string => {
@@ -353,13 +356,14 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
 
   if (!isActive) return null;
 
-  return (
+  // Use portal to render at body level, escaping VoidExperience's stacking context
+  const chatContent = (
     <div className={styles.voidChatContainer}>
       {/* Input bar */}
       <div className={styles.voidInputBar}>
         {/* Chat History Popup */}
         {showHistory && (
-          <div className={styles.historyPopup}>
+          <div className={`${styles.historyPopup} ${hasOverlappingPanels ? styles.elevated : ''}`}>
             <div className={styles.historyHeader}>
               <div className={styles.historyTitleContainer}>
                 <span
@@ -488,7 +492,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                   ? '⚠️ Configure API keys first...'
                   : energyState === 'processing'
                     ? `Awaiting ${activeAgent} response...`
-                    : 'Chat with interface...'
+                    : 'Chat with Hecate...'
               }
               className={styles.voidInput}
               disabled={energyState !== 'idle' || agentHealthStatus === 'unhealthy'}
@@ -507,6 +511,13 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
       </div>
     </div>
   );
+
+  // Render via portal to escape VoidExperience's stacking context (z-index: 1)
+  // This allows the chat to appear above HUD content (z-index: 1002)
+  if (typeof document !== 'undefined') {
+    return createPortal(chatContent, document.body);
+  }
+  return chatContent;
 };
 
 export default VoidChatHUD;

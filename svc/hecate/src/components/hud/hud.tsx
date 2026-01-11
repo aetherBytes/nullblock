@@ -45,6 +45,7 @@ interface HUDProps {
   loginAnimationPhase?: LoginAnimationPhase;
   hecatePanelOpen?: boolean;
   onHecatePanelChange?: (open: boolean) => void;
+  onActiveTabChange?: (tab: 'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null) => void;
 }
 
 interface AscentLevel {
@@ -69,6 +70,7 @@ const HUD: React.FC<HUDProps> = ({
   loginAnimationPhase = 'idle',
   hecatePanelOpen: externalHecatePanelOpen,
   onHecatePanelChange,
+  onActiveTabChange,
 }) => {
   const [nullviewState, setNulleyeState] = useState<
     | 'base'
@@ -186,6 +188,11 @@ const HUD: React.FC<HUDProps> = ({
       setResetCrossroadsToLanding(false);
     }
   }, [resetCrossroadsToLanding]);
+
+  // Notify parent of active tab changes
+  useEffect(() => {
+    onActiveTabChange?.(mainHudActiveTab);
+  }, [mainHudActiveTab, onActiveTabChange]);
 
   // MCP initialization is now handled by useAuthentication hook
   useEffect(() => {

@@ -14,6 +14,7 @@ interface VoidExperienceProps {
   isLoggedIn?: boolean;
   hecatePanelOpen?: boolean;
   onHecatePanelChange?: (open: boolean) => void;
+  hasOverlappingPanels?: boolean;
 }
 
 // Camera positions for different states
@@ -94,6 +95,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   isLoggedIn = false,
   hecatePanelOpen = false,
   onHecatePanelChange,
+  hasOverlappingPanels = false,
 }) => {
   const [isInteracting, setIsInteracting] = useState(false);
   const [glowActive, setGlowActive] = useState(false);
@@ -159,6 +161,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
           glowActive={glowActive}
           hecatePanelOpen={hecatePanelOpen}
           onHecatePanelChange={onHecatePanelChange}
+          hasOverlappingPanels={hasOverlappingPanels}
         />
       )}
     </div>
