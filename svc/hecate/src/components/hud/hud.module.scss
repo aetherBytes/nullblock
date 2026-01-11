@@ -12542,6 +12542,87 @@ $light-shadow: rgba(0, 0, 0, 0.1);
   }
 }
 
+// More Dropdown Container
+.moreDropdownContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdownTrigger {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.dropdownArrow {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  transition: transform 0.2s ease;
+}
+
+.moreDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  min-width: 160px;
+  background: rgba(10, 10, 10, 0.95);
+  border: 1px solid rgba($lightning-blue, 0.3);
+  border-radius: 6px;
+  padding: 0.5rem 0;
+  z-index: 200;
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba($lightning-blue, 0.1);
+  animation: dropdownFadeIn 0.2s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  color: $lightning-silver;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+
+  &:hover {
+    background: rgba($lightning-blue, 0.15);
+    color: #ffffff;
+  }
+
+  &.active {
+    background: rgba($lightning-blue, 0.2);
+    color: $lightning-blue;
+  }
+}
+
+.dropdownIcon {
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
 // Hamburger Menu Button - Hidden on Desktop
 .hamburgerButton {
   display: none;
