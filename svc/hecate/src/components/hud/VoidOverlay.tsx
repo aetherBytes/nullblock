@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import NullblockLogo from './NullblockLogo';
+import { MemCacheSection } from '../memcache';
 import styles from './VoidOverlay.module.scss';
+
+const MEMCACHE_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
+  { id: 'engrams', icon: '◈', label: 'Engrams' },
+  { id: 'workflows', icon: '⬡', label: 'Workflows' },
+  { id: 'tasks', icon: '▣', label: 'Active Tasks' },
+  { id: 'listings', icon: '◇', label: 'Listings' },
+  { id: 'earnings', icon: '◆', label: 'Earnings' },
+  { id: 'connections', icon: '○', label: 'Connections' },
+  { id: 'bookmarks', icon: '☆', label: 'Bookmarks' },
+];
 
 interface VoidOverlayProps {
   onOpenSynapse: () => void;
@@ -14,6 +25,8 @@ interface VoidOverlayProps {
   onHecateToggle?: (open: boolean) => void;
   publicKey?: string | null;
   activeTab?: 'crossroads' | 'memcache' | null;
+  memcacheSection?: MemCacheSection;
+  onMemcacheSectionChange?: (section: MemCacheSection) => void;
 }
 
 const VoidOverlay: React.FC<VoidOverlayProps> = ({
@@ -28,11 +41,14 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   onHecateToggle,
   publicKey,
   activeTab,
+  memcacheSection = 'engrams',
+  onMemcacheSectionChange,
 }) => {
   const [welcomeVisible, setWelcomeVisible] = useState(showWelcome);
   const [welcomeFading, setWelcomeFading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const memcacheRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setWelcomeVisible(showWelcome);
@@ -99,7 +115,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
       <div className={styles.topRightContainer}>
         {/* Navigation menu - only show when logged in */}
         {publicKey && (
-          <nav className={styles.voidNav}>
+          <nav className={styles.voidNav} ref={memcacheRef}>
             <button
               className={`${styles.navItem} ${activeTab === 'memcache' ? styles.navItemActive : ''}`}
               onClick={() => onTabSelect('memcache')}
@@ -120,6 +136,24 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             >
               Studio
             </button>
+
+            {/* Submenu row - positioned below navbar, first 3 align with nav buttons */}
+            {activeTab === 'memcache' && (
+              <div className={styles.memcacheSubmenu}>
+                {MEMCACHE_ITEMS.slice(0, 3).map((item, index) => (
+                  <React.Fragment key={item.id}>
+                    <button
+                      className={`${styles.submenuItem} ${memcacheSection === item.id ? styles.submenuItemActive : ''}`}
+                      onClick={() => onMemcacheSectionChange?.(item.id)}
+                      style={{ animationDelay: `${index * 0.03}s` }}
+                    >
+                      {item.label}
+                    </button>
+                    {index < 2 && <span className={styles.navDivider} />}
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
           </nav>
         )}
 
