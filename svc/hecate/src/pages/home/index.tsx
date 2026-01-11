@@ -60,7 +60,9 @@ const Home: React.FC = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'error' | 'info'>('error');
   const lastConnectionAttempt = React.useRef<number>(0);
-  const [hudInitialTab, setHudInitialTab] = useState<'crossroads' | 'tasks' | 'agents' | 'logs' | 'hecate' | 'canvas' | null>(null);
+  const [hudInitialTab, setHudInitialTab] = useState<'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null>(
+    initialSession.hasSession ? 'memcache' : null
+  );
   const [isMobileView, setIsMobileView] = useState<boolean>(false);
 
   // Shared Hecate panel state
@@ -77,6 +79,7 @@ const Home: React.FC = () => {
   const animationTriggered = React.useRef<boolean>(false);
   const preLoginAnimationTriggered = React.useRef<boolean>(false);
   const hasEverConnected = React.useRef<boolean>(false);
+  const [hasLoggedOut, setHasLoggedOut] = useState<boolean>(false);
 
   const [systemStatus, setSystemStatus] = useState({
     hud: false,
@@ -199,6 +202,7 @@ const Home: React.FC = () => {
     if (isActualLogout) {
       setLoginAnimationPhase('idle');
       animationTriggered.current = false;
+      setHasLoggedOut(true);
 
       preLoginAnimationTriggered.current = false;
       console.log('🎬 Starting pre-login animation after logout...');
@@ -311,6 +315,7 @@ const Home: React.FC = () => {
       if (result.success) {
         console.log('✅ Wallet connected successfully:', result.address);
         setShowWalletModal(false);
+        setHudInitialTab('memcache');
 
         // Register user with task service
         try {
@@ -388,6 +393,7 @@ const Home: React.FC = () => {
       }
 
       await disconnect();
+      setHudInitialTab(null);
     } catch (error) {
       console.error('Disconnect error:', error);
     }
@@ -395,7 +401,8 @@ const Home: React.FC = () => {
 
   // Get current animation phase
   // Use initialSession.hasSession for returning users before connectedAddress is restored by hook
-  const isReturningUser = initialSession.hasSession || !!connectedAddress;
+  // After logout, use pre-login animation even if initialSession.hasSession was true
+  const isReturningUser = !hasLoggedOut && (initialSession.hasSession || !!connectedAddress);
   const currentAnimationPhase = isReturningUser ? loginAnimationPhase : preLoginAnimationPhase;
 
   const getAnimationClass = () => {
@@ -473,7 +480,7 @@ const Home: React.FC = () => {
       />
 
       {/* Pre-login Hero Text */}
-      {!connectedAddress && !initialSession.hasSession && currentAnimationPhase !== 'black' && (
+      {!connectedAddress && (!initialSession.hasSession || hasLoggedOut) && currentAnimationPhase !== 'black' && (
         <div className={`${styles.heroOverlay} ${currentAnimationPhase === 'complete' ? styles.heroComplete : ''}`}>
           <h1 className={styles.heroTitle}>The Living Directory</h1>
           <p className={styles.heroSubtitle}>Discover agents, tools, and workflows — turn exploration into treasure</p>
@@ -482,7 +489,7 @@ const Home: React.FC = () => {
 
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`} />
 
-      {showHUD && isInitialized && currentAnimationPhase === 'complete' && (
+      {showHUD && isInitialized && (currentAnimationPhase === 'navbar' || currentAnimationPhase === 'complete') && (
         <HUD
           publicKey={connectedAddress || initialSession.publicKey}
           onDisconnect={handleDisconnect}

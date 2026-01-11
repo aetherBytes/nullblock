@@ -794,8 +794,8 @@ const HUD: React.FC<HUDProps> = ({
 
   return (
     <div className={`${styles.echoContainer} ${publicKey ? styles[theme] : styles.loggedOut} ${inVoidMode ? styles.voidMode : ''}`}>
-      {/* VoidOverlay navbar - always visible after animation */}
-      {loginAnimationPhase === 'complete' && (
+      {/* VoidOverlay navbar - visible during navbar phase and after */}
+      {(loginAnimationPhase === 'navbar' || loginAnimationPhase === 'complete') && (
         <VoidOverlay
           onOpenSynapse={handleOpenSynapse}
           onTabSelect={handleTabSelect}
