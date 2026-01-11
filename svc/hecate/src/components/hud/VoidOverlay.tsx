@@ -68,8 +68,33 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
 
   return (
     <>
-      {/* Top-right container: Settings */}
+      {/* Top-right container: Nav + Settings */}
       <div className={styles.topRightContainer}>
+        {/* Navigation menu */}
+        <nav className={styles.voidNav}>
+          <button
+            className={styles.navItem}
+            onClick={() => onTabSelect('memcache')}
+          >
+            Mem Cache
+          </button>
+          <span className={styles.navDivider} />
+          <button
+            className={styles.navItem}
+            onClick={() => onTabSelect('crossroads')}
+          >
+            Crossroads
+          </button>
+          <span className={styles.navDivider} />
+          <button
+            className={`${styles.navItem} ${hecatePanelOpen ? styles.navItemActive : ''}`}
+            onClick={() => onHecateToggle?.(!hecatePanelOpen)}
+          >
+            Studio
+          </button>
+        </nav>
+
+        {/* Settings Menu */}
         <div className={styles.settingsContainer} ref={settingsRef}>
           <button
             className={styles.settingsButton}
@@ -122,38 +147,6 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
           title="Return to Void"
         >
           NULLBLOCK
-        </div>
-      </div>
-
-      {/* Pip-Boy style navigation - positioned below logo */}
-      <div className={styles.pipboyNav}>
-        <div className={styles.pipboyFrame}>
-          <div className={styles.pipboyMenu}>
-            <button
-              className={styles.pipboyItem}
-              onClick={() => onTabSelect('memcache')}
-            >
-              <span className={styles.pipboyIndex}>[1]</span>
-              <span className={styles.pipboyLabel}>MEM_CACHE</span>
-            </button>
-
-            <button
-              className={styles.pipboyItem}
-              onClick={() => onTabSelect('crossroads')}
-            >
-              <span className={styles.pipboyIndex}>[2]</span>
-              <span className={styles.pipboyLabel}>CROSSROADS</span>
-            </button>
-
-            <button
-              className={`${styles.pipboyItem} ${hecatePanelOpen ? styles.pipboyItemActive : ''}`}
-              onClick={() => onHecateToggle?.(!hecatePanelOpen)}
-            >
-              <span className={styles.pipboyIndex}>[3]</span>
-              <span className={styles.pipboyLabel}>STUDIO</span>
-              {hecatePanelOpen && <span className={styles.pipboyActive}>●</span>}
-            </button>
-          </div>
         </div>
       </div>
 

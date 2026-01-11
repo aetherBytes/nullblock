@@ -160,7 +160,7 @@ $void-purple: #b967ff;
   z-index: 10005;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 2.5rem;
   pointer-events: auto;
 
   @media (max-width: 768px) {
@@ -201,134 +201,81 @@ $void-purple: #b967ff;
   }
 }
 
-// Pip-Boy Navigation
-$pip-green: #00ff9d;
-$pip-green-dim: rgba(0, 255, 157, 0.6);
-$pip-green-glow: rgba(0, 255, 157, 0.3);
-$pip-bg: rgba(0, 8, 4, 0.95);
-
-.pipboyNav {
-  position: fixed;
-  top: 90px;
-  left: 3rem;
-  z-index: 10005;
-  pointer-events: auto;
-
-  @media (max-width: 768px) {
-    top: 70px;
-    left: 1rem;
-  }
-}
-
-.pipboyFrame {
-  background: $pip-bg;
-  border: 1px solid $pip-green-dim;
-  padding: 8px 12px;
-  min-width: 180px;
-  position: relative;
-  box-shadow:
-    0 0 20px $pip-green-glow,
-    inset 0 0 30px rgba(0, 0, 0, 0.8);
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 255, 157, 0.03) 2px,
-      rgba(0, 255, 157, 0.03) 4px
-    );
-    pointer-events: none;
-    animation: scanlines 8s linear infinite;
-  }
-
-  @media (max-width: 768px) {
-    min-width: 150px;
-    padding: 6px 10px;
-  }
-}
-
-@keyframes scanlines {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 100px; }
-}
-
-.pipboyMenu {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.pipboyItem {
+// Sleek void navigation (top-right, next to settings)
+.voidNav {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 10px;
+  gap: 0;
+  height: 48px;
+  background: rgba(99, 102, 241, 0.08);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  padding: 0 4px;
+
+  @media (max-width: 768px) {
+    height: 44px;
+    padding: 0 2px;
+  }
+}
+
+.navItem {
   background: transparent;
-  border: 1px solid transparent;
-  color: $pip-green-dim;
-  font-family: 'Courier New', monospace;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
   font-size: 13px;
-  letter-spacing: 1px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  padding: 0 16px;
+  height: 100%;
   cursor: pointer;
-  transition: all 0.15s ease;
-  text-align: left;
+  transition: all 0.2s ease;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+    transition: width 0.2s ease;
+  }
 
   &:hover {
-    background: rgba($pip-green, 0.1);
-    border-color: rgba($pip-green, 0.3);
-    color: $pip-green;
-    text-shadow: 0 0 8px $pip-green-glow;
+    color: rgba(255, 255, 255, 1);
+    background: rgba(99, 102, 241, 0.1);
 
-    .pipboyIndex {
-      color: $pip-green;
+    &::after {
+      width: 80%;
     }
   }
 
   &:active {
-    background: rgba($pip-green, 0.2);
+    background: rgba(99, 102, 241, 0.15);
   }
 
   @media (max-width: 768px) {
-    padding: 6px 8px;
     font-size: 12px;
+    padding: 0 10px;
   }
 }
 
-.pipboyItemActive {
-  background: rgba($pip-green, 0.15);
-  border-color: rgba($pip-green, 0.4);
-  color: $pip-green;
-  text-shadow: 0 0 8px $pip-green-glow;
+.navItemActive {
+  color: rgba(255, 255, 255, 1);
 
-  .pipboyIndex {
-    color: $pip-green;
+  &::after {
+    width: 80%;
   }
 }
 
-.pipboyIndex {
-  color: rgba($pip-green, 0.5);
-  font-size: 11px;
-  min-width: 24px;
-}
-
-.pipboyLabel {
-  flex: 1;
-}
-
-.pipboyActive {
-  color: $pip-green;
-  font-size: 8px;
-  animation: activeBlink 1s ease-in-out infinite;
-}
-
-@keyframes activeBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+.navDivider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 // MEM FEED (top-right, left of settings)
