@@ -8,7 +8,6 @@ import { useLogs } from '../../hooks/useLogs';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import Crossroads from '../crossroads/Crossroads';
 import { MemCache } from '../memcache';
-import NullblockLogo from './NullblockLogo';
 import SettingsPanel from './SettingsPanel';
 import VoidOverlay from './VoidOverlay';
 import styles from './hud.module.scss';
@@ -90,8 +89,6 @@ const HUD: React.FC<HUDProps> = ({
   const [showCrossroadsMarketplace, setShowCrossroadsMarketplace] = useState(false);
   const [resetCrossroadsToLanding, setResetCrossroadsToLanding] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
-  const [showMoreDropdown, setShowMoreDropdown] = useState(false);
-  const moreDropdownRef = useRef<HTMLDivElement>(null);
 
   // Void mode state
   const [hasSeenVoidWelcome, setHasSeenVoidWelcome] = useState(() => {
@@ -307,22 +304,6 @@ const HUD: React.FC<HUDProps> = ({
     };
   }, [showSearchDropdown]);
 
-  // Click outside handler for more dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
-        setShowMoreDropdown(false);
-      }
-    };
-
-    if (showMoreDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showMoreDropdown]);
 
   // Safety effect to ensure NullEye returns to base state when ready
   useEffect(() => {
@@ -763,244 +744,25 @@ const HUD: React.FC<HUDProps> = ({
     }
   };
 
-  // Get navbar animation class based on login animation phase
-  const getNavbarAnimationClass = () => {
-    if (loginAnimationPhase === 'navbar') {
-      return styles.neonFlickerIn;
+  const handleTabSelect = (tab: 'crossroads' | 'memcache') => {
+    if (mainHudActiveTab === tab) {
+      setMainHudActiveTab(null);
+      if (tab === 'crossroads') {
+        setShowCrossroadsMarketplace(false);
+      }
+    } else {
+      setMainHudActiveTab(tab);
+      if (tab === 'crossroads') {
+        setShowCrossroadsMarketplace(true);
+      }
     }
-    if (loginAnimationPhase === 'black' || loginAnimationPhase === 'stars' || loginAnimationPhase === 'background') {
-      return styles.navbarHidden;
-    }
-    return '';
   };
 
-  const renderUnifiedNavigation = () => {
-    // Hide navigation in void mode
-    if (inVoidMode) {
-      return null;
-    }
-
-    return (
-    <div className={`${styles.unifiedNavbar} ${getNavbarAnimationClass()}`}>
-      {/* Left side - Logo, NULLBLOCK Text, and MEM FEED */}
-      <div className={styles.navbarLeft}>
-        <NullblockLogo
-          state={nullviewState}
-          theme={theme}
-          size="medium"
-          onClick={() => {
-            setMainHudActiveTab(null);
-            setShowCrossroadsMarketplace(false);
-            setResetCrossroadsToLanding(true);
-            setShowMobileMenu(false);
-          }}
-          title="Return to Landing Page"
-        />
-        <div
-          className={styles.nullblockTextLogo}
-          onClick={() => {
-            setMainHudActiveTab(null);
-            setShowCrossroadsMarketplace(false);
-            setResetCrossroadsToLanding(true);
-            setShowMobileMenu(false);
-          }}
-          style={{ cursor: 'pointer' }}
-          title="Return to Landing Page"
-        >
-          NULLBLOCK
-        </div>
-      </div>
-
-      {/* Center - NULLBLOCK Text (visible on mobile) */}
-      <div className={styles.navbarCenter}>
-        <div
-          className={styles.nullblockTextLogo}
-          onClick={() => {
-            setMainHudActiveTab(null);
-            setShowCrossroadsMarketplace(false);
-            setResetCrossroadsToLanding(true);
-            setShowMobileMenu(false);
-          }}
-          title="Return to Landing Page"
-        >
-          NULLBLOCK
-        </div>
-      </div>
-
-      {/* Right side - All Buttons (Desktop) + Hamburger (Mobile) */}
-      <div className={styles.navbarRight}>
-        {/* Desktop Menu Buttons */}
-        <div className={styles.desktopMenu}>
-          {publicKey && (
-            <button
-              className={`${styles.menuButton} ${mainHudActiveTab === 'memcache' ? styles.active : ''}`}
-              onClick={() => {
-                if (mainHudActiveTab === 'memcache') {
-                  setMainHudActiveTab(null);
-                } else {
-                  setMainHudActiveTab('memcache');
-                }
-              }}
-              title="The Mem Cache - Your Engrams"
-            >
-              <span>MEM CACHE</span>
-            </button>
-          )}
-
-          {publicKey && (
-            <div className={styles.moreDropdownContainer} ref={moreDropdownRef}>
-              <button
-                className={`${styles.menuButton} ${styles.dropdownTrigger} ${showMoreDropdown ? styles.active : ''} ${(mainHudActiveTab === 'crossroads' || mainHudActiveTab === 'canvas') ? styles.active : ''}`}
-                onClick={() => setShowMoreDropdown(!showMoreDropdown)}
-                title="More options"
-              >
-                <span>MORE</span>
-                <span className={styles.dropdownArrow}>{showMoreDropdown ? '▴' : '▾'}</span>
-              </button>
-              {showMoreDropdown && (
-                <div className={styles.moreDropdown}>
-                  <button
-                    className={`${styles.dropdownItem} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
-                    onClick={() => {
-                      if (mainHudActiveTab === 'crossroads') {
-                        setMainHudActiveTab(null);
-                        setShowCrossroadsMarketplace(false);
-                      } else {
-                        setMainHudActiveTab('crossroads');
-                        setShowCrossroadsMarketplace(true);
-                      }
-                      setShowMoreDropdown(false);
-                    }}
-                  >
-                    <span className={styles.dropdownIcon}>⬡</span>
-                    <span>CROSSROADS</span>
-                  </button>
-                  <button
-                    className={styles.dropdownItem}
-                    onClick={() => {
-                      setHecatePanelOpen(!hecatePanelOpen);
-                      setShowMoreDropdown(false);
-                    }}
-                  >
-                    <span className={styles.dropdownIcon}>{hecatePanelOpen ? '⬢' : '⬡'}</span>
-                    <span>STUDIO</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {publicKey ? (
-            <button
-              className={styles.menuButton}
-              onClick={onDisconnect}
-              title="Disconnect Wallet"
-            >
-              <span>DISCONNECT</span>
-            </button>
-          ) : (
-            <button
-              className={styles.walletMenuButton}
-              onClick={() => onConnectWallet()}
-              title="Connect Wallet"
-            >
-              <span className={styles.walletMenuText}>Connect</span>
-            </button>
-          )}
-        </div>
-
-        {/* Mobile Hamburger Menu */}
-        <button
-          className={`${styles.hamburgerButton} ${showMobileMenu ? styles.active : ''}`}
-          onClick={() => setShowMobileMenu(!showMobileMenu)}
-          title="Menu"
-          aria-label="Toggle navigation menu"
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-      </div>
-
-      {/* Mobile Dropdown Menu */}
-      {showMobileMenu && (
-        <div className={styles.mobileMenuDropdown}>
-          {publicKey && (
-            <button
-              className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'memcache' ? styles.active : ''}`}
-              onClick={() => {
-                if (mainHudActiveTab === 'memcache') {
-                  setMainHudActiveTab(null);
-                } else {
-                  setMainHudActiveTab('memcache');
-                }
-                setShowMobileMenu(false);
-              }}
-            >
-              <span>🧠</span>
-              <span>MEM CACHE</span>
-            </button>
-          )}
-
-          {publicKey && (
-            <button
-              className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
-              onClick={() => {
-                if (mainHudActiveTab === 'crossroads') {
-                  setMainHudActiveTab(null);
-                  setShowCrossroadsMarketplace(false);
-                } else {
-                  setMainHudActiveTab('crossroads');
-                  setShowCrossroadsMarketplace(true);
-                }
-                setShowMobileMenu(false);
-              }}
-            >
-              <span>🛣️</span>
-              <span>CROSSROADS</span>
-            </button>
-          )}
-
-          {publicKey && (
-            <button
-              className={styles.mobileMenuItem}
-              onClick={() => {
-                setHecatePanelOpen(!hecatePanelOpen);
-                setShowMobileMenu(false);
-              }}
-            >
-              <span>{hecatePanelOpen ? '⬢' : '⬡'}</span>
-              <span>STUDIO</span>
-            </button>
-          )}
-
-          {publicKey ? (
-            <button
-              className={styles.mobileMenuItem}
-              onClick={() => {
-                onDisconnect();
-                setShowMobileMenu(false);
-              }}
-            >
-              <span>🔌</span>
-              <span>DISCONNECT</span>
-            </button>
-          ) : (
-            <button
-              className={styles.mobileMenuItem}
-              onClick={() => {
-                onConnectWallet();
-                setShowMobileMenu(false);
-              }}
-            >
-              <span>🔗</span>
-              <span>CONNECT WALLET</span>
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-    );
+  const handleResetToVoid = () => {
+    setMainHudActiveTab(null);
+    setShowCrossroadsMarketplace(false);
+    setResetCrossroadsToLanding(true);
+    setShowMobileMenu(false);
   };
 
   // Handle void overlay actions
@@ -1032,25 +794,23 @@ const HUD: React.FC<HUDProps> = ({
 
   return (
     <div className={`${styles.echoContainer} ${publicKey ? styles[theme] : styles.loggedOut} ${inVoidMode ? styles.voidMode : ''}`}>
-      {renderUnifiedNavigation()}
-      {renderMainContent()}
-      {/* VoidOverlay only shows after login animation is complete */}
-      {inVoidMode && loginAnimationPhase === 'complete' && (
+      {/* VoidOverlay navbar - always visible after animation */}
+      {loginAnimationPhase === 'complete' && (
         <VoidOverlay
           onOpenSynapse={handleOpenSynapse}
-          onTabSelect={(tab) => setMainHudActiveTab(tab)}
+          onTabSelect={handleTabSelect}
           onDisconnect={onDisconnect}
-          onResetToVoid={() => {
-            setShowSettingsPanel(false);
-            setShowMobileMenu(false);
-            setHecatePanelOpen(false);
-          }}
-          showWelcome={!hasSeenVoidWelcome}
+          onConnectWallet={() => onConnectWallet()}
+          onResetToVoid={handleResetToVoid}
+          showWelcome={inVoidMode && !hasSeenVoidWelcome}
           onDismissWelcome={handleDismissVoidWelcome}
           hecatePanelOpen={hecatePanelOpen}
           onHecateToggle={setHecatePanelOpen}
+          publicKey={publicKey}
+          activeTab={mainHudActiveTab === 'crossroads' || mainHudActiveTab === 'memcache' ? mainHudActiveTab : null}
         />
       )}
+      {renderMainContent()}
     </div>
   );
 };

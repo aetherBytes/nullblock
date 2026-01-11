@@ -5,7 +5,78 @@ $void-silver: #e8e8e8;
 $void-gold: #e6c200;
 $void-purple: #b967ff;
 
-// Top-right container (MEM FEED + Settings)
+// Full-width navbar border
+.navbarBorder {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  z-index: 10004;
+  pointer-events: none;
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg,
+    transparent 0%,
+    rgba(99, 102, 241, 0.4) 20%,
+    rgba(139, 92, 246, 0.4) 50%,
+    rgba(236, 72, 153, 0.4) 80%,
+    transparent 100%) 1;
+
+  @media (max-width: 768px) {
+    height: 60px;
+  }
+}
+
+// Logo container (top-left)
+.logoContainer {
+  position: fixed;
+  top: 24px;
+  left: 3rem;
+  z-index: 10005;
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+  pointer-events: auto;
+
+  @media (max-width: 768px) {
+    top: 16px;
+    left: 1rem;
+    gap: 0.5rem;
+  }
+}
+
+.nullblockTextLogo {
+  font-family: 'Courier New', monospace;
+  font-size: 1.2rem;
+  font-weight: bold;
+  letter-spacing: 3px;
+  color: $void-silver;
+  text-shadow:
+    0 0 10px rgba($void-blue, 0.6),
+    0 0 20px rgba($void-blue, 0.3);
+  animation: textLogoGlow 3s ease-in-out infinite;
+  cursor: pointer;
+  user-select: none;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+@keyframes textLogoGlow {
+  0%, 100% {
+    text-shadow:
+      0 0 10px rgba($void-blue, 0.6),
+      0 0 20px rgba($void-blue, 0.3);
+  }
+  50% {
+    text-shadow:
+      0 0 15px rgba($void-blue, 0.8),
+      0 0 30px rgba($void-blue, 0.5);
+  }
+}
+
+// Top-right container (Nav + Settings)
 .topRightContainer {
   position: fixed;
   top: 24px;
@@ -23,7 +94,114 @@ $void-purple: #b967ff;
   }
 }
 
-// Settings container (within top-right)
+// Sleek void navigation
+.voidNav {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 48px;
+  background: rgba(99, 102, 241, 0.08);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-bottom: none;
+  padding: 0 4px;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      rgba(236, 72, 153, 0.5) 0%,
+      rgba(139, 92, 246, 0.5) 50%,
+      rgba(99, 102, 241, 0.5) 100%);
+  }
+
+  @media (max-width: 768px) {
+    height: 44px;
+    padding: 0 2px;
+  }
+}
+
+.navItem {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  padding: 0 16px;
+  height: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background: #8b5cf6;
+    transition: width 0.2s ease;
+  }
+
+  &:hover {
+    color: rgba(255, 255, 255, 1);
+    background: rgba(99, 102, 241, 0.1);
+
+    &::after {
+      width: 80%;
+    }
+  }
+
+  &:active {
+    background: rgba(99, 102, 241, 0.15);
+  }
+
+  // Mem Cache (1st button) - pink
+  &:nth-of-type(1)::after {
+    background: #ec4899;
+  }
+
+  // Crossroads (3rd element, after 1st divider) - purple
+  &:nth-of-type(2)::after {
+    background: #8b5cf6;
+  }
+
+  // Studio (5th element, after 2nd divider) - blue
+  &:nth-of-type(3)::after {
+    background: #6366f1;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 12px;
+    padding: 0 10px;
+  }
+}
+
+.navItemActive {
+  color: rgba(255, 255, 255, 1);
+
+  &::after {
+    width: 80%;
+  }
+}
+
+.navDivider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+// Settings container
 .settingsContainer {
   position: relative;
 }
@@ -34,6 +212,7 @@ $void-purple: #b967ff;
   border-radius: 0;
   background: rgba(99, 102, 241, 0.08) !important;
   border: 1px solid rgba(99, 102, 241, 0.25) !important;
+  border-bottom: none !important;
   color: rgba(255, 255, 255, 0.8) !important;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -47,32 +226,43 @@ $void-purple: #b967ff;
   position: relative;
   overflow: hidden;
 
+  // Bottom border - dark blue
   &::after {
     content: '';
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
+    height: 1px;
+    background: rgba(59, 130, 246, 0.5);
+  }
+
+  // Hover underline
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
     height: 2px;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
-    transform: scaleX(0);
-    transform-origin: center;
-    transition: transform 0.3s ease;
+    background: #3b82f6;
+    transition: width 0.2s ease;
+    z-index: 1;
   }
 
   svg {
     position: relative;
-    z-index: 1;
+    z-index: 2;
   }
 
   &:hover {
     background: rgba(99, 102, 241, 0.1) !important;
     color: rgba(255, 255, 255, 1) !important;
-    border-color: rgba(99, 102, 241, 0.4) !important;
-    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
 
-    &::after {
-      transform: scaleX(1);
+    &::before {
+      width: 80%;
     }
   }
 
@@ -81,7 +271,7 @@ $void-purple: #b967ff;
   }
 
   &:focus-visible {
-    outline: 2px solid rgba(99, 102, 241, 0.6);
+    outline: 2px solid rgba(59, 130, 246, 0.6);
     outline-offset: 2px;
   }
 
@@ -152,88 +342,38 @@ $void-purple: #b967ff;
   }
 }
 
-// Logo container (top-left)
-.logoContainer {
-  position: fixed;
-  top: 24px;
-  left: 3rem;
-  z-index: 10005;
-  display: flex;
-  align-items: center;
-  gap: 2.5rem;
-  pointer-events: auto;
-
-  @media (max-width: 768px) {
-    top: 16px;
-    left: 1rem;
-    gap: 0.5rem;
-  }
-}
-
-.nullblockTextLogo {
-  font-family: 'Courier New', monospace;
-  font-size: 1.2rem;
-  font-weight: bold;
-  letter-spacing: 3px;
-  color: $void-silver;
-  text-shadow:
-    0 0 10px rgba($void-blue, 0.6),
-    0 0 20px rgba($void-blue, 0.3);
-  animation: textLogoGlow 3s ease-in-out infinite;
-  cursor: pointer;
-  user-select: none;
-
-  @media (max-width: 768px) {
-    display: none;
-  }
-}
-
-@keyframes textLogoGlow {
-  0%, 100% {
-    text-shadow:
-      0 0 10px rgba($void-blue, 0.6),
-      0 0 20px rgba($void-blue, 0.3);
-  }
-  50% {
-    text-shadow:
-      0 0 15px rgba($void-blue, 0.8),
-      0 0 30px rgba($void-blue, 0.5);
-  }
-}
-
-// Sleek void navigation (top-right, next to settings)
-.voidNav {
-  display: flex;
-  align-items: center;
-  gap: 0;
+// Connect button (shown when not logged in)
+.connectButton {
   height: 48px;
+  padding: 0 24px;
   background: rgba(99, 102, 241, 0.08);
-  backdrop-filter: blur(32px);
-  -webkit-backdrop-filter: blur(32px);
   border: 1px solid rgba(99, 102, 241, 0.25);
-  padding: 0 4px;
-
-  @media (max-width: 768px) {
-    height: 44px;
-    padding: 0 2px;
-  }
-}
-
-.navItem {
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.8);
+  border-bottom: none;
+  color: rgba(255, 255, 255, 0.9);
   font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.5px;
-  padding: 0 16px;
-  height: 100%;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
   position: relative;
+  overflow: hidden;
 
+  // Bottom border - dark blue
   &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(59, 130, 246, 0.5);
+  }
+
+  // Hover underline
+  &::before {
     content: '';
     position: absolute;
     bottom: 0;
@@ -241,41 +381,29 @@ $void-purple: #b967ff;
     transform: translateX(-50%);
     width: 0;
     height: 2px;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+    background: #3b82f6;
     transition: width 0.2s ease;
+    z-index: 1;
   }
 
   &:hover {
+    background: rgba(99, 102, 241, 0.15);
     color: rgba(255, 255, 255, 1);
-    background: rgba(99, 102, 241, 0.1);
 
-    &::after {
+    &::before {
       width: 80%;
     }
   }
 
   &:active {
-    background: rgba(99, 102, 241, 0.15);
+    transform: scale(0.98);
   }
 
   @media (max-width: 768px) {
-    font-size: 12px;
-    padding: 0 10px;
+    height: 44px;
+    padding: 0 16px;
+    font-size: 13px;
   }
-}
-
-.navItemActive {
-  color: rgba(255, 255, 255, 1);
-
-  &::after {
-    width: 80%;
-  }
-}
-
-.navDivider {
-  width: 1px;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.1);
 }
 
 // Welcome overlay
@@ -290,7 +418,7 @@ $void-purple: #b967ff;
   cursor: pointer;
   animation: fadeIn 1.5s ease-out;
   transition: opacity 0.5s ease-out;
-  pointer-events: auto; // Enable interaction in void mode
+  pointer-events: auto;
 
   &.fading {
     opacity: 0;

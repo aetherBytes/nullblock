@@ -6,22 +6,28 @@ interface VoidOverlayProps {
   onOpenSynapse: () => void;
   onTabSelect: (tab: 'crossroads' | 'memcache') => void;
   onDisconnect: () => void;
+  onConnectWallet?: () => void;
   onResetToVoid?: () => void;
   showWelcome?: boolean;
   onDismissWelcome?: () => void;
   hecatePanelOpen?: boolean;
   onHecateToggle?: (open: boolean) => void;
+  publicKey?: string | null;
+  activeTab?: 'crossroads' | 'memcache' | null;
 }
 
 const VoidOverlay: React.FC<VoidOverlayProps> = ({
   onOpenSynapse,
   onTabSelect,
   onDisconnect,
+  onConnectWallet,
   onResetToVoid,
   showWelcome = false,
   onDismissWelcome,
   hecatePanelOpen = false,
   onHecateToggle,
+  publicKey,
+  activeTab,
 }) => {
   const [welcomeVisible, setWelcomeVisible] = useState(showWelcome);
   const [welcomeFading, setWelcomeFading] = useState(false);
@@ -68,69 +74,8 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
 
   return (
     <>
-      {/* Top-right container: Nav + Settings */}
-      <div className={styles.topRightContainer}>
-        {/* Navigation menu */}
-        <nav className={styles.voidNav}>
-          <button
-            className={styles.navItem}
-            onClick={() => onTabSelect('memcache')}
-          >
-            Mem Cache
-          </button>
-          <span className={styles.navDivider} />
-          <button
-            className={styles.navItem}
-            onClick={() => onTabSelect('crossroads')}
-          >
-            Crossroads
-          </button>
-          <span className={styles.navDivider} />
-          <button
-            className={`${styles.navItem} ${hecatePanelOpen ? styles.navItemActive : ''}`}
-            onClick={() => onHecateToggle?.(!hecatePanelOpen)}
-          >
-            Studio
-          </button>
-        </nav>
-
-        {/* Settings Menu */}
-        <div className={styles.settingsContainer} ref={settingsRef}>
-          <button
-            className={styles.settingsButton}
-            onClick={() => setSettingsOpen(!settingsOpen)}
-            title="Settings"
-            aria-label="Open settings menu"
-          >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <circle cx="12" cy="12" r="3" />
-              <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-              <path d="M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-            </svg>
-          </button>
-
-          {settingsOpen && (
-            <div className={styles.settingsDropdown}>
-              <button className={styles.settingsItem} onClick={handleSettingsClick}>
-                <span className={styles.settingsIcon}>⚙️</span>
-                <span>Settings</span>
-              </button>
-              <div className={styles.settingsDivider} />
-              <button className={styles.settingsItem} onClick={handleDisconnectClick}>
-                <span className={styles.settingsIcon}>🔌</span>
-                <span>Disconnect</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Full-width navbar border */}
+      <div className={styles.navbarBorder} />
 
       {/* Top-left: Logo and branding */}
       <div className={styles.logoContainer}>
@@ -148,6 +93,82 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
         >
           NULLBLOCK
         </div>
+      </div>
+
+      {/* Top-right container: Nav + Settings */}
+      <div className={styles.topRightContainer}>
+        {/* Navigation menu - only show when logged in */}
+        {publicKey && (
+          <nav className={styles.voidNav}>
+            <button
+              className={`${styles.navItem} ${activeTab === 'memcache' ? styles.navItemActive : ''}`}
+              onClick={() => onTabSelect('memcache')}
+            >
+              Mem Cache
+            </button>
+            <span className={styles.navDivider} />
+            <button
+              className={`${styles.navItem} ${activeTab === 'crossroads' ? styles.navItemActive : ''}`}
+              onClick={() => onTabSelect('crossroads')}
+            >
+              Crossroads
+            </button>
+            <span className={styles.navDivider} />
+            <button
+              className={`${styles.navItem} ${hecatePanelOpen ? styles.navItemActive : ''}`}
+              onClick={() => onHecateToggle?.(!hecatePanelOpen)}
+            >
+              Studio
+            </button>
+          </nav>
+        )}
+
+        {/* Settings Menu or Connect Button */}
+        {publicKey ? (
+          <div className={styles.settingsContainer} ref={settingsRef}>
+            <button
+              className={styles.settingsButton}
+              onClick={() => setSettingsOpen(!settingsOpen)}
+              title="Settings"
+              aria-label="Open settings menu"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+                <path d="M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+              </svg>
+            </button>
+
+            {settingsOpen && (
+              <div className={styles.settingsDropdown}>
+                <button className={styles.settingsItem} onClick={handleSettingsClick}>
+                  <span className={styles.settingsIcon}>⚙️</span>
+                  <span>Settings</span>
+                </button>
+                <div className={styles.settingsDivider} />
+                <button className={styles.settingsItem} onClick={handleDisconnectClick}>
+                  <span className={styles.settingsIcon}>🔌</span>
+                  <span>Disconnect</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            className={styles.connectButton}
+            onClick={onConnectWallet}
+            title="Connect Wallet"
+          >
+            Connect
+          </button>
+        )}
       </div>
 
       {/* First-time Welcome Overlay */}
