@@ -68,6 +68,11 @@ const Home: React.FC = () => {
   // Shared Hecate panel state
   const [hecatePanelOpen, setHecatePanelOpen] = useState<boolean>(false);
 
+  // Track active HUD tab for overlapping panel detection
+  const [activeHudTab, setActiveHudTab] = useState<'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null>(
+    initialSession.hasSession ? 'memcache' : null
+  );
+
   // Login animation state
   const [loginAnimationPhase, setLoginAnimationPhase] = useState<LoginAnimationPhase>(
     initialSession.hasSession ? 'black' : 'idle'
@@ -477,6 +482,7 @@ const Home: React.FC = () => {
         isLoggedIn={isReturningUser && currentAnimationPhase === 'complete'}
         hecatePanelOpen={hecatePanelOpen}
         onHecatePanelChange={setHecatePanelOpen}
+        hasOverlappingPanels={activeHudTab === 'memcache' || activeHudTab === 'crossroads'}
       />
 
       {/* Pre-login Hero Text */}
@@ -511,6 +517,7 @@ const Home: React.FC = () => {
           }}
           hecatePanelOpen={hecatePanelOpen}
           onHecatePanelChange={setHecatePanelOpen}
+          onActiveTabChange={setActiveHudTab}
         />
       )}
 

@@ -576,3 +576,200 @@
     cursor: not-allowed;
   }
 }
+
+// Sidebar styles - matches top nav bar
+.memcacheSidebar {
+  position: fixed;
+  top: 90px;
+  left: 24px;
+  width: 200px;
+  background: rgba(99, 102, 241, 0.08);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  padding: 8px 0;
+  z-index: 10004;
+  transform: translateX(0);
+  transition: transform 0.3s ease;
+
+  @media (max-width: 768px) {
+    transform: translateX(-100%);
+    top: 70px;
+    left: 16px;
+    width: 220px;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+
+    &.sidebarOpen {
+      transform: translateX(0);
+    }
+  }
+}
+
+.sidebarOverlay {
+  display: none;
+
+  @media (max-width: 768px) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10003;
+  }
+}
+
+.sidebarNav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebarItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  text-align: left;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 60%;
+    background: linear-gradient(180deg, #6366f1, #8b5cf6, #ec4899);
+    transition: width 0.2s ease;
+  }
+
+  &:hover {
+    color: rgba(255, 255, 255, 1);
+    background: rgba(99, 102, 241, 0.1);
+
+    &::after {
+      width: 3px;
+    }
+  }
+}
+
+.sidebarItemActive {
+  color: rgba(255, 255, 255, 1);
+  background: rgba(99, 102, 241, 0.1);
+
+  &::after {
+    width: 3px;
+  }
+}
+
+.sidebarIcon {
+  font-size: 14px;
+  opacity: 0.8;
+  min-width: 18px;
+  text-align: center;
+}
+
+.sidebarLabel {
+  flex: 1;
+}
+
+// Mobile sidebar toggle button
+.sidebarToggle {
+  display: none;
+  position: fixed;
+  top: 90px;
+  left: 24px;
+  width: 44px;
+  height: 44px;
+  background: rgba(99, 102, 241, 0.08);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 10002;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(99, 102, 241, 0.15);
+    color: rgba(255, 255, 255, 1);
+  }
+
+  @media (max-width: 768px) {
+    display: flex;
+    top: 70px;
+    left: 16px;
+  }
+}
+
+// Layout with sidebar
+.memcacheLayout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.memcacheMain {
+  flex: 1;
+  margin-left: 240px;
+  padding: 24px;
+  padding-top: 100px;
+  padding-bottom: 140px;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    padding: 16px;
+    padding-top: 130px;
+    padding-bottom: 140px;
+  }
+}
+
+// Content wrapper for scroll behavior
+.memcacheContentWrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+// Placeholder section for unimplemented features
+.placeholderSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+
+  .placeholderIcon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.5;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+    margin: 0 0 0.75rem 0;
+    background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  p {
+    color: #64748b;
+    font-size: 1rem;
+    margin: 0;
+  }
+}

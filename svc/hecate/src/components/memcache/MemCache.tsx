@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from './memcache.module.scss';
 import EngramsShelf from './EngramsShelf';
+import MemCacheSidebar, { MemCacheSection } from './MemCacheSidebar';
 import { Engram, EngramType } from '../../types/engrams';
 
 interface MemCacheProps {
@@ -15,6 +16,8 @@ const MemCache: React.FC<MemCacheProps> = ({ publicKey }) => {
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<EngramType | 'all'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [activeSection, setActiveSection] = useState<MemCacheSection>('engrams');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fetchEngrams = useCallback(async () => {
     if (!publicKey) return;
@@ -96,6 +99,115 @@ const MemCache: React.FC<MemCacheProps> = ({ publicKey }) => {
     ? engrams
     : engrams.filter(e => e.engram_type === selectedType);
 
+  const renderSectionContent = () => {
+    switch (activeSection) {
+      case 'engrams':
+        return (
+          <>
+            <div className={styles.memcacheHeader}>
+              <div className={styles.headerLeft}>
+                <h1 className={styles.title}>Engrams</h1>
+                <p className={styles.tagline}>Your memories persist. The void remembers.</p>
+              </div>
+              <div className={styles.headerRight}>
+                <button
+                  className={styles.createButton}
+                  onClick={() => setShowCreateModal(true)}
+                >
+                  + New Engram
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.filterBar}>
+              <button
+                className={`${styles.filterChip} ${selectedType === 'all' ? styles.active : ''}`}
+                onClick={() => setSelectedType('all')}
+              >
+                All ({engrams.length})
+              </button>
+              {(['persona', 'preference', 'strategy', 'knowledge', 'compliance'] as EngramType[]).map(type => {
+                const count = engrams.filter(e => e.engram_type === type).length;
+                return (
+                  <button
+                    key={type}
+                    className={`${styles.filterChip} ${styles[type]} ${selectedType === type ? styles.active : ''}`}
+                    onClick={() => setSelectedType(type)}
+                  >
+                    {type.charAt(0).toUpperCase() + type.slice(1)} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
+            {error && (
+              <div className={styles.errorBanner}>
+                <span>{error}</span>
+                <button onClick={() => setError(null)}>Dismiss</button>
+              </div>
+            )}
+
+            <EngramsShelf
+              engrams={filteredEngrams}
+              isLoading={isLoading}
+              onDelete={handleDeleteEngram}
+              onRefresh={fetchEngrams}
+            />
+          </>
+        );
+      case 'workflows':
+        return (
+          <div className={styles.placeholderSection}>
+            <div className={styles.placeholderIcon}>⬡</div>
+            <h2>Workflows</h2>
+            <p>Your COWs (Constellations of Work) will appear here.</p>
+          </div>
+        );
+      case 'tasks':
+        return (
+          <div className={styles.placeholderSection}>
+            <div className={styles.placeholderIcon}>▣</div>
+            <h2>Active Tasks</h2>
+            <p>Tasks currently in progress will appear here.</p>
+          </div>
+        );
+      case 'listings':
+        return (
+          <div className={styles.placeholderSection}>
+            <div className={styles.placeholderIcon}>◇</div>
+            <h2>Listings</h2>
+            <p>COWs and tools you're selling on Crossroads.</p>
+          </div>
+        );
+      case 'earnings':
+        return (
+          <div className={styles.placeholderSection}>
+            <div className={styles.placeholderIcon}>◆</div>
+            <h2>Earnings</h2>
+            <p>Your profits and royalties from NullBlock.</p>
+          </div>
+        );
+      case 'connections':
+        return (
+          <div className={styles.placeholderSection}>
+            <div className={styles.placeholderIcon}>○</div>
+            <h2>Connections</h2>
+            <p>Frequent collaborators and creators you work with.</p>
+          </div>
+        );
+      case 'bookmarks':
+        return (
+          <div className={styles.placeholderSection}>
+            <div className={styles.placeholderIcon}>☆</div>
+            <h2>Bookmarks</h2>
+            <p>Saved items from Crossroads.</p>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   if (!publicKey) {
     return (
       <div className={styles.memcacheContainer}>
@@ -110,65 +222,27 @@ const MemCache: React.FC<MemCacheProps> = ({ publicKey }) => {
   }
 
   return (
-    <div className={styles.memcacheContainer}>
-      <div className={styles.memcacheHeader}>
-        <div className={styles.headerLeft}>
-          <h1 className={styles.title}>The Mem Cache</h1>
-          <p className={styles.tagline}>Your memories persist. The void remembers.</p>
-        </div>
-        <div className={styles.headerRight}>
-          <button
-            className={styles.createButton}
-            onClick={() => setShowCreateModal(true)}
-          >
-            + New Engram
-          </button>
-        </div>
-      </div>
-
-      <div className={styles.hecateOpener}>
-        <span className={styles.hecateIcon}>◐</span>
-        <div className={styles.hecateMessage}>
-          <p>"Welcome to The Mem Cache, Neuron.</p>
-          <p>Your engrams are safe here.</p>
-          <p>What shall we retrieve?"</p>
-        </div>
-      </div>
-
-      <div className={styles.filterBar}>
-        <button
-          className={`${styles.filterChip} ${selectedType === 'all' ? styles.active : ''}`}
-          onClick={() => setSelectedType('all')}
-        >
-          All ({engrams.length})
-        </button>
-        {(['persona', 'preference', 'strategy', 'knowledge', 'compliance'] as EngramType[]).map(type => {
-          const count = engrams.filter(e => e.engram_type === type).length;
-          return (
-            <button
-              key={type}
-              className={`${styles.filterChip} ${styles[type]} ${selectedType === type ? styles.active : ''}`}
-              onClick={() => setSelectedType(type)}
-            >
-              {type.charAt(0).toUpperCase() + type.slice(1)} ({count})
-            </button>
-          );
-        })}
-      </div>
-
-      {error && (
-        <div className={styles.errorBanner}>
-          <span>{error}</span>
-          <button onClick={() => setError(null)}>Dismiss</button>
-        </div>
-      )}
-
-      <EngramsShelf
-        engrams={filteredEngrams}
-        isLoading={isLoading}
-        onDelete={handleDeleteEngram}
-        onRefresh={fetchEngrams}
+    <div className={styles.memcacheLayout}>
+      <button
+        className={styles.sidebarToggle}
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+      >
+        ☰
+      </button>
+      <MemCacheSidebar
+        activeSection={activeSection}
+        onSectionChange={(section) => {
+          setActiveSection(section);
+          setSidebarOpen(false);
+        }}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
+      <main className={styles.memcacheMain}>
+        <div className={styles.memcacheContentWrapper}>
+          {renderSectionContent()}
+        </div>
+      </main>
 
       {showCreateModal && (
         <CreateEngramModal
