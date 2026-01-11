@@ -1,23 +1,30 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from './memcache.module.scss';
 import EngramsShelf from './EngramsShelf';
-import MemCacheSidebar, { MemCacheSection } from './MemCacheSidebar';
 import { Engram, EngramType } from '../../types/engrams';
+
+export type MemCacheSection =
+  | 'engrams'
+  | 'workflows'
+  | 'tasks'
+  | 'listings'
+  | 'earnings'
+  | 'connections'
+  | 'bookmarks';
 
 interface MemCacheProps {
   publicKey: string | null;
+  activeSection?: MemCacheSection;
 }
 
 const EREBUS_BASE_URL = import.meta.env.VITE_EREBUS_URL || 'http://localhost:3000';
 
-const MemCache: React.FC<MemCacheProps> = ({ publicKey }) => {
+const MemCache: React.FC<MemCacheProps> = ({ publicKey, activeSection = 'engrams' }) => {
   const [engrams, setEngrams] = useState<Engram[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<EngramType | 'all'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [activeSection, setActiveSection] = useState<MemCacheSection>('engrams');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fetchEngrams = useCallback(async () => {
     if (!publicKey) return;
@@ -109,15 +116,14 @@ const MemCache: React.FC<MemCacheProps> = ({ publicKey }) => {
                 <h1 className={styles.title}>Engrams</h1>
                 <p className={styles.tagline}>Your memories persist. The void remembers.</p>
               </div>
-              <div className={styles.headerRight}>
-                <button
-                  className={styles.createButton}
-                  onClick={() => setShowCreateModal(true)}
-                >
-                  + New Engram
-                </button>
-              </div>
             </div>
+
+            <button
+              className={styles.createButtonFixed}
+              onClick={() => setShowCreateModal(true)}
+            >
+              + New Engram
+            </button>
 
             <div className={styles.filterBar}>
               <button
@@ -223,21 +229,6 @@ const MemCache: React.FC<MemCacheProps> = ({ publicKey }) => {
 
   return (
     <div className={styles.memcacheLayout}>
-      <button
-        className={styles.sidebarToggle}
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        ☰
-      </button>
-      <MemCacheSidebar
-        activeSection={activeSection}
-        onSectionChange={(section) => {
-          setActiveSection(section);
-          setSidebarOpen(false);
-        }}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
       <main className={styles.memcacheMain}>
         <div className={styles.memcacheContentWrapper}>
           {renderSectionContent()}

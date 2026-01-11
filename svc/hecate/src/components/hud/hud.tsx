@@ -7,7 +7,7 @@ import { useEventSystem } from '../../hooks/useEventSystem';
 import { useLogs } from '../../hooks/useLogs';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import Crossroads from '../crossroads/Crossroads';
-import { MemCache } from '../memcache';
+import { MemCache, MemCacheSection } from '../memcache';
 import SettingsPanel from './SettingsPanel';
 import VoidOverlay from './VoidOverlay';
 import styles from './hud.module.scss';
@@ -91,6 +91,7 @@ const HUD: React.FC<HUDProps> = ({
   const [showCrossroadsMarketplace, setShowCrossroadsMarketplace] = useState(false);
   const [resetCrossroadsToLanding, setResetCrossroadsToLanding] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const [memcacheSection, setMemcacheSection] = useState<MemCacheSection>('engrams');
 
   // Void mode state
   const [hasSeenVoidWelcome, setHasSeenVoidWelcome] = useState(() => {
@@ -739,7 +740,7 @@ const HUD: React.FC<HUDProps> = ({
             <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} showMarketplace={showCrossroadsMarketplace} resetToLanding={resetCrossroadsToLanding} animationPhase={loginAnimationPhase} />
           </div>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'memcache' ? '' : styles.hidden}`}>
-            <MemCache publicKey={publicKey} />
+            <MemCache publicKey={publicKey} activeSection={memcacheSection} />
           </div>
           {mainHudActiveTab !== 'canvas' && mainHudActiveTab !== 'crossroads' && mainHudActiveTab !== 'memcache' && !inVoidMode && (
             <div className={styles.defaultTab}>
@@ -752,6 +753,11 @@ const HUD: React.FC<HUDProps> = ({
   };
 
   const handleTabSelect = (tab: 'crossroads' | 'memcache') => {
+    // Close Hecate panel when selecting a tab
+    if (hecatePanelOpen) {
+      setHecatePanelOpen(false);
+    }
+
     if (mainHudActiveTab === tab) {
       setMainHudActiveTab(null);
       if (tab === 'crossroads') {
@@ -763,6 +769,15 @@ const HUD: React.FC<HUDProps> = ({
         setShowCrossroadsMarketplace(true);
       }
     }
+  };
+
+  const handleHecateToggle = (open: boolean) => {
+    // Close other panels when opening Hecate/Studio
+    if (open && mainHudActiveTab !== null) {
+      setMainHudActiveTab(null);
+      setShowCrossroadsMarketplace(false);
+    }
+    setHecatePanelOpen(open);
   };
 
   const handleResetToVoid = () => {
@@ -812,9 +827,11 @@ const HUD: React.FC<HUDProps> = ({
           showWelcome={inVoidMode && !hasSeenVoidWelcome}
           onDismissWelcome={handleDismissVoidWelcome}
           hecatePanelOpen={hecatePanelOpen}
-          onHecateToggle={setHecatePanelOpen}
+          onHecateToggle={handleHecateToggle}
           publicKey={publicKey}
           activeTab={mainHudActiveTab === 'crossroads' || mainHudActiveTab === 'memcache' ? mainHudActiveTab : null}
+          memcacheSection={memcacheSection}
+          onMemcacheSectionChange={setMemcacheSection}
         />
       )}
       {renderMainContent()}
