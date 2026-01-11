@@ -26,15 +26,12 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   const [welcomeVisible, setWelcomeVisible] = useState(showWelcome);
   const [welcomeFading, setWelcomeFading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
-  const moreDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setWelcomeVisible(showWelcome);
   }, [showWelcome]);
 
-  // Close settings dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
@@ -49,22 +46,6 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
       };
     }
   }, [settingsOpen]);
-
-  // Close more dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
-        setMoreDropdownOpen(false);
-      }
-    };
-
-    if (moreDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [moreDropdownOpen]);
 
   const handleDismissWelcome = () => {
     setWelcomeFading(true);
@@ -89,7 +70,6 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
     <>
       {/* Top-right container: Settings */}
       <div className={styles.topRightContainer}>
-        {/* Settings Menu */}
         <div className={styles.settingsContainer} ref={settingsRef}>
           <button
             className={styles.settingsButton}
@@ -127,80 +107,51 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
         </div>
       </div>
 
-      {/* Quick access buttons (top-left) */}
-      <div className={styles.quickAccess}>
-        {/* Top row: Logo and buttons */}
-        <div className={styles.navRow}>
-          {/* NULLBLOCK Logo */}
-          <NullblockLogo
-            state="base"
-            theme="dark"
-            size="medium"
-            onClick={onResetToVoid}
-            title="Return to Void"
-          />
-          {/* NULLBLOCK Text */}
-          <div
-            className={styles.nullblockTextLogo}
-            onClick={onResetToVoid}
-            title="Return to Void"
-          >
-            NULLBLOCK
+      {/* Pip-Boy style navigation */}
+      <div className={styles.pipboyNav}>
+        <div className={styles.pipboyFrame}>
+          <div className={styles.pipboyHeader}>
+            <NullblockLogo
+              state="base"
+              theme="dark"
+              size="small"
+              onClick={onResetToVoid}
+              title="Return to Void"
+            />
+            <span className={styles.pipboyTitle} onClick={onResetToVoid}>
+              NULLBLOCK
+            </span>
+            <span className={styles.pipboyVersion}>v2.0</span>
           </div>
 
-          {/* MEM CACHE - Standalone first button */}
-          <button
-            className={styles.quickButton}
-            onClick={() => onTabSelect('memcache')}
-            title="The Mem Cache - Your Engrams"
-          >
-            <span className={styles.buttonIcon}>◈</span>
-            <span className={styles.buttonLabel}>Mem Cache</span>
-          </button>
+          <div className={styles.pipboyScanline} />
 
-          {/* MORE - Dropdown with Crossroads and Studio */}
-          <div className={styles.moreDropdownContainer} ref={moreDropdownRef}>
+          <div className={styles.pipboyMenu}>
             <button
-              className={`${styles.quickButton} ${styles.dropdownTrigger} ${moreDropdownOpen ? styles.quickButtonActive : ''}`}
-              onClick={() => setMoreDropdownOpen(!moreDropdownOpen)}
-              title="More options"
+              className={styles.pipboyItem}
+              onClick={() => onTabSelect('memcache')}
             >
-              <span className={styles.buttonLabel}>More</span>
-              <span className={styles.dropdownArrow}>{moreDropdownOpen ? '▴' : '▾'}</span>
+              <span className={styles.pipboyIndex}>[1]</span>
+              <span className={styles.pipboyLabel}>MEM_CACHE</span>
             </button>
 
-            {moreDropdownOpen && (
-              <div className={styles.moreDropdown}>
-                <button
-                  className={styles.dropdownItem}
-                  onClick={() => {
-                    onTabSelect('crossroads');
-                    setMoreDropdownOpen(false);
-                  }}
-                >
-                  <span className={styles.dropdownIcon}>⬡</span>
-                  <span>Crossroads</span>
-                </button>
-                <button
-                  className={`${styles.dropdownItem} ${hecatePanelOpen ? styles.active : ''}`}
-                  onClick={() => {
-                    onHecateToggle?.(!hecatePanelOpen);
-                    setMoreDropdownOpen(false);
-                  }}
-                >
-                  <span className={styles.dropdownIcon}>{hecatePanelOpen ? '⬢' : '⬡'}</span>
-                  <span>Studio</span>
-                </button>
-              </div>
-            )}
-          </div>
+            <button
+              className={styles.pipboyItem}
+              onClick={() => onTabSelect('crossroads')}
+            >
+              <span className={styles.pipboyIndex}>[2]</span>
+              <span className={styles.pipboyLabel}>CROSSROADS</span>
+            </button>
 
-          {/* Description text - inline after buttons */}
-          {!hecatePanelOpen && (
-            <span className={styles.navDescriptionInline}>
-              Remember in Mem Cache. Discover in Crossroads. Compose in Studio.
-            </span>
-          )}
+            <button
+              className={`${styles.pipboyItem} ${hecatePanelOpen ? styles.pipboyItemActive : ''}`}
+              onClick={() => onHecateToggle?.(!hecatePanelOpen)}
+            >
+              <span className={styles.pipboyIndex}>[3]</span>
+              <span className={styles.pipboyLabel}>STUDIO</span>
+              {hecatePanelOpen && <span className={styles.pipboyActive}>●</span>}
+            </button>
+          </div>
         </div>
       </div>
 
