@@ -107,25 +107,27 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
         </div>
       </div>
 
-      {/* Pip-Boy style navigation */}
+      {/* Top-left: Logo and branding */}
+      <div className={styles.logoContainer}>
+        <NullblockLogo
+          state="base"
+          theme="dark"
+          size="medium"
+          onClick={onResetToVoid}
+          title="Return to Void"
+        />
+        <div
+          className={styles.nullblockTextLogo}
+          onClick={onResetToVoid}
+          title="Return to Void"
+        >
+          NULLBLOCK
+        </div>
+      </div>
+
+      {/* Pip-Boy style navigation - positioned below logo */}
       <div className={styles.pipboyNav}>
         <div className={styles.pipboyFrame}>
-          <div className={styles.pipboyHeader}>
-            <NullblockLogo
-              state="base"
-              theme="dark"
-              size="small"
-              onClick={onResetToVoid}
-              title="Return to Void"
-            />
-            <span className={styles.pipboyTitle} onClick={onResetToVoid}>
-              NULLBLOCK
-            </span>
-            <span className={styles.pipboyVersion}>v2.0</span>
-          </div>
-
-          <div className={styles.pipboyScanline} />
-
           <div className={styles.pipboyMenu}>
             <button
               className={styles.pipboyItem}
