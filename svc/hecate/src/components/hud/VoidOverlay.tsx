@@ -4,7 +4,7 @@ import styles from './VoidOverlay.module.scss';
 
 interface VoidOverlayProps {
   onOpenSynapse: () => void;
-  onTabSelect: (tab: 'crossroads') => void;
+  onTabSelect: (tab: 'crossroads' | 'memcache') => void;
   onDisconnect: () => void;
   onResetToVoid?: () => void;
   showWelcome?: boolean;
@@ -146,11 +146,19 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             <span className={styles.buttonIcon}>{hecatePanelOpen ? '⬢' : '⬡'}</span>
             <span className={styles.buttonLabel}>Studio</span>
           </button>
+          <button
+            className={styles.quickButton}
+            onClick={() => onTabSelect('memcache')}
+            title="The Mem Cache - Your Engrams"
+          >
+            <span className={styles.buttonIcon}>◈</span>
+            <span className={styles.buttonLabel}>Mem Cache</span>
+          </button>
 
-          {/* Description text - inline after Studio button */}
+          {/* Description text - inline after buttons */}
           {!hecatePanelOpen && (
             <span className={styles.navDescriptionInline}>
-              Discover in Crossroads. Compose in Studio.
+              Discover in Crossroads. Compose in Studio. Remember in Mem Cache.
             </span>
           )}
         </div>
