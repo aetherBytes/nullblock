@@ -90,6 +90,8 @@ const HUD: React.FC<HUDProps> = ({
   const [showCrossroadsMarketplace, setShowCrossroadsMarketplace] = useState(false);
   const [resetCrossroadsToLanding, setResetCrossroadsToLanding] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const [showMoreDropdown, setShowMoreDropdown] = useState(false);
+  const moreDropdownRef = useRef<HTMLDivElement>(null);
 
   // Void mode state
   const [hasSeenVoidWelcome, setHasSeenVoidWelcome] = useState(() => {
@@ -304,6 +306,23 @@ const HUD: React.FC<HUDProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showSearchDropdown]);
+
+  // Click outside handler for more dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
+        setShowMoreDropdown(false);
+      }
+    };
+
+    if (showMoreDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMoreDropdown]);
 
   // Safety effect to ensure NullEye returns to base state when ready
   useEffect(() => {
@@ -814,24 +833,6 @@ const HUD: React.FC<HUDProps> = ({
         <div className={styles.desktopMenu}>
           {publicKey && (
             <button
-              className={`${styles.menuButton} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
-              onClick={() => {
-                if (mainHudActiveTab === 'crossroads') {
-                  setMainHudActiveTab(null);
-                  setShowCrossroadsMarketplace(false);
-                } else {
-                  setMainHudActiveTab('crossroads');
-                  setShowCrossroadsMarketplace(true);
-                }
-              }}
-              title="Crossroads Marketplace"
-            >
-              <span>CROSSROADS</span>
-            </button>
-          )}
-
-          {publicKey && (
-            <button
               className={`${styles.menuButton} ${mainHudActiveTab === 'memcache' ? styles.active : ''}`}
               onClick={() => {
                 if (mainHudActiveTab === 'memcache') {
@@ -844,6 +845,49 @@ const HUD: React.FC<HUDProps> = ({
             >
               <span>MEM CACHE</span>
             </button>
+          )}
+
+          {publicKey && (
+            <div className={styles.moreDropdownContainer} ref={moreDropdownRef}>
+              <button
+                className={`${styles.menuButton} ${styles.dropdownTrigger} ${showMoreDropdown ? styles.active : ''} ${(mainHudActiveTab === 'crossroads' || mainHudActiveTab === 'canvas') ? styles.active : ''}`}
+                onClick={() => setShowMoreDropdown(!showMoreDropdown)}
+                title="More options"
+              >
+                <span>MORE</span>
+                <span className={styles.dropdownArrow}>{showMoreDropdown ? '▴' : '▾'}</span>
+              </button>
+              {showMoreDropdown && (
+                <div className={styles.moreDropdown}>
+                  <button
+                    className={`${styles.dropdownItem} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
+                    onClick={() => {
+                      if (mainHudActiveTab === 'crossroads') {
+                        setMainHudActiveTab(null);
+                        setShowCrossroadsMarketplace(false);
+                      } else {
+                        setMainHudActiveTab('crossroads');
+                        setShowCrossroadsMarketplace(true);
+                      }
+                      setShowMoreDropdown(false);
+                    }}
+                  >
+                    <span className={styles.dropdownIcon}>⬡</span>
+                    <span>CROSSROADS</span>
+                  </button>
+                  <button
+                    className={styles.dropdownItem}
+                    onClick={() => {
+                      setHecatePanelOpen(!hecatePanelOpen);
+                      setShowMoreDropdown(false);
+                    }}
+                  >
+                    <span className={styles.dropdownIcon}>{hecatePanelOpen ? '⬢' : '⬡'}</span>
+                    <span>STUDIO</span>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {publicKey ? (
@@ -883,6 +927,23 @@ const HUD: React.FC<HUDProps> = ({
         <div className={styles.mobileMenuDropdown}>
           {publicKey && (
             <button
+              className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'memcache' ? styles.active : ''}`}
+              onClick={() => {
+                if (mainHudActiveTab === 'memcache') {
+                  setMainHudActiveTab(null);
+                } else {
+                  setMainHudActiveTab('memcache');
+                }
+                setShowMobileMenu(false);
+              }}
+            >
+              <span>🧠</span>
+              <span>MEM CACHE</span>
+            </button>
+          )}
+
+          {publicKey && (
+            <button
               className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'crossroads' ? styles.active : ''}`}
               onClick={() => {
                 if (mainHudActiveTab === 'crossroads') {
@@ -902,18 +963,14 @@ const HUD: React.FC<HUDProps> = ({
 
           {publicKey && (
             <button
-              className={`${styles.mobileMenuItem} ${mainHudActiveTab === 'memcache' ? styles.active : ''}`}
+              className={styles.mobileMenuItem}
               onClick={() => {
-                if (mainHudActiveTab === 'memcache') {
-                  setMainHudActiveTab(null);
-                } else {
-                  setMainHudActiveTab('memcache');
-                }
+                setHecatePanelOpen(!hecatePanelOpen);
                 setShowMobileMenu(false);
               }}
             >
-              <span>🧠</span>
-              <span>MEM CACHE</span>
+              <span>{hecatePanelOpen ? '⬢' : '⬡'}</span>
+              <span>STUDIO</span>
             </button>
           )}
 
