@@ -212,6 +212,76 @@ GET /api/discovery/health/:endpoint
 POST /api/discovery/scan
 ```
 
+## MCP Protocol
+
+Model Context Protocol (2025-11-25) for AI tool integration.
+
+### JSON-RPC
+
+```bash
+POST /mcp/jsonrpc
+Content-Type: application/json
+
+# Initialize session
+{
+  "jsonrpc": "2.0",
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2025-11-25",
+    "capabilities": {},
+    "clientInfo": {"name": "my-client", "version": "1.0.0"}
+  },
+  "id": 1
+}
+
+# List tools
+{
+  "jsonrpc": "2.0",
+  "method": "tools/list",
+  "id": 2
+}
+
+# Call tool
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "list_engrams",
+    "arguments": {"wallet_address": "0x742d35Cc..."}
+  },
+  "id": 3
+}
+```
+
+### Convenience Endpoints
+
+```bash
+GET /mcp/tools       # List available tools (9 total)
+GET /mcp/resources   # List available resources
+GET /mcp/prompts     # List available prompts
+GET /api/tools       # Alias for /mcp/tools
+```
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `send_agent_message` | Send message to agent |
+| `create_task` | Create new task |
+| `get_task_status` | Get task by ID |
+| `list_engrams` | List engrams for wallet |
+| `get_engram` | Get engram by ID |
+| `create_engram` | Create new engram |
+| `update_engram` | Update engram |
+| `delete_engram` | Delete engram |
+| `search_engrams` | Search engrams |
+
+### Hecate Tools Endpoint
+
+```bash
+GET /hecate/tools    # Returns MCP tools via Hecate agent
+```
+
 ## A2A Protocol
 
 ### JSON-RPC
