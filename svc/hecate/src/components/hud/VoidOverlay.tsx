@@ -26,7 +26,9 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   const [welcomeVisible, setWelcomeVisible] = useState(showWelcome);
   const [welcomeFading, setWelcomeFading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const moreDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setWelcomeVisible(showWelcome);
@@ -47,6 +49,22 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
       };
     }
   }, [settingsOpen]);
+
+  // Close more dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
+        setMoreDropdownOpen(false);
+      }
+    };
+
+    if (moreDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [moreDropdownOpen]);
 
   const handleDismissWelcome = () => {
     setWelcomeFading(true);
@@ -130,22 +148,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             NULLBLOCK
           </div>
 
-          <button
-            className={styles.quickButton}
-            onClick={() => onTabSelect('crossroads')}
-            title="Enter Crossroads"
-          >
-            <span className={styles.buttonIcon}>⬡</span>
-            <span className={styles.buttonLabel}>Crossroads</span>
-          </button>
-          <button
-            className={`${styles.quickButton} ${hecatePanelOpen ? styles.quickButtonActive : ''}`}
-            onClick={() => onHecateToggle?.(!hecatePanelOpen)}
-            title={hecatePanelOpen ? "Close Studio" : "Open Studio"}
-          >
-            <span className={styles.buttonIcon}>{hecatePanelOpen ? '⬢' : '⬡'}</span>
-            <span className={styles.buttonLabel}>Studio</span>
-          </button>
+          {/* MEM CACHE - Standalone first button */}
           <button
             className={styles.quickButton}
             onClick={() => onTabSelect('memcache')}
@@ -155,10 +158,47 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             <span className={styles.buttonLabel}>Mem Cache</span>
           </button>
 
+          {/* MORE - Dropdown with Crossroads and Studio */}
+          <div className={styles.moreDropdownContainer} ref={moreDropdownRef}>
+            <button
+              className={`${styles.quickButton} ${styles.dropdownTrigger} ${moreDropdownOpen ? styles.quickButtonActive : ''}`}
+              onClick={() => setMoreDropdownOpen(!moreDropdownOpen)}
+              title="More options"
+            >
+              <span className={styles.buttonLabel}>More</span>
+              <span className={styles.dropdownArrow}>{moreDropdownOpen ? '▴' : '▾'}</span>
+            </button>
+
+            {moreDropdownOpen && (
+              <div className={styles.moreDropdown}>
+                <button
+                  className={styles.dropdownItem}
+                  onClick={() => {
+                    onTabSelect('crossroads');
+                    setMoreDropdownOpen(false);
+                  }}
+                >
+                  <span className={styles.dropdownIcon}>⬡</span>
+                  <span>Crossroads</span>
+                </button>
+                <button
+                  className={`${styles.dropdownItem} ${hecatePanelOpen ? styles.active : ''}`}
+                  onClick={() => {
+                    onHecateToggle?.(!hecatePanelOpen);
+                    setMoreDropdownOpen(false);
+                  }}
+                >
+                  <span className={styles.dropdownIcon}>{hecatePanelOpen ? '⬢' : '⬡'}</span>
+                  <span>Studio</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Description text - inline after buttons */}
           {!hecatePanelOpen && (
             <span className={styles.navDescriptionInline}>
-              Discover in Crossroads. Compose in Studio. Remember in Mem Cache.
+              Remember in Mem Cache. Discover in Crossroads. Compose in Studio.
             </span>
           )}
         </div>
