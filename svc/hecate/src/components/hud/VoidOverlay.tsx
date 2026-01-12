@@ -6,7 +6,7 @@ import styles from './VoidOverlay.module.scss';
 const MEMCACHE_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
   { id: 'engrams', icon: '◈', label: 'Engrams' },
   { id: 'workflows', icon: '⬡', label: 'Workflows' },
-  { id: 'tasks', icon: '▣', label: 'Active Tasks' },
+  { id: 'tasks', icon: '▣', label: 'Tasks' },
   { id: 'listings', icon: '◇', label: 'Listings' },
   { id: 'earnings', icon: '◆', label: 'Earnings' },
   { id: 'connections', icon: '○', label: 'Connections' },
@@ -115,46 +115,69 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
       <div className={styles.topRightContainer}>
         {/* Navigation menu - only show when logged in */}
         {publicKey && (
-          <nav className={styles.voidNav} ref={memcacheRef}>
-            <button
-              className={`${styles.navItem} ${activeTab === 'memcache' ? styles.navItemActive : ''}`}
-              onClick={() => onTabSelect('memcache')}
-            >
-              Mem Cache
-            </button>
-            <span className={styles.navDivider} />
-            <button
-              className={`${styles.navItem} ${activeTab === 'crossroads' ? styles.navItemActive : ''}`}
-              onClick={() => onTabSelect('crossroads')}
-            >
-              Crossroads
-            </button>
-            <span className={styles.navDivider} />
-            <button
-              className={`${styles.navItem} ${hecatePanelOpen ? styles.navItemActive : ''}`}
-              onClick={() => onHecateToggle?.(!hecatePanelOpen)}
-            >
-              Studio
-            </button>
-
-            {/* Submenu row - positioned below navbar, first 3 align with nav buttons */}
+          <div className={styles.navWrapper} ref={memcacheRef}>
+            {/* Extra submenu items - only visible when memcache active */}
             {activeTab === 'memcache' && (
-              <div className={styles.memcacheSubmenu}>
-                {MEMCACHE_ITEMS.slice(0, 3).map((item, index) => (
+              <div className={styles.submenuExtra}>
+                {MEMCACHE_ITEMS.slice(3).reverse().map((item, index) => (
                   <React.Fragment key={item.id}>
                     <button
-                      className={`${styles.submenuItem} ${memcacheSection === item.id ? styles.submenuItemActive : ''}`}
+                      className={`${styles.submenuItemExtra} ${memcacheSection === item.id ? styles.submenuItemActive : ''}`}
                       onClick={() => onMemcacheSectionChange?.(item.id)}
-                      style={{ animationDelay: `${index * 0.03}s` }}
+                      style={{ animationDelay: `${(MEMCACHE_ITEMS.length - 3 - index) * 0.03}s` }}
                     >
                       {item.label}
                     </button>
-                    {index < 2 && <span className={styles.navDivider} />}
+                    {index < MEMCACHE_ITEMS.length - 4 && <span className={styles.navDivider} />}
                   </React.Fragment>
                 ))}
+                <span className={styles.navDivider} />
               </div>
             )}
-          </nav>
+
+            {/* Main nav grid - shared by navbar and submenu */}
+            <nav className={styles.voidNav}>
+              {/* Row 1: Main nav buttons */}
+              <button
+                className={`${styles.navItem} ${activeTab === 'memcache' ? styles.navItemActive : ''}`}
+                onClick={() => onTabSelect('memcache')}
+              >
+                Mem Cache
+              </button>
+              <span className={styles.navDivider} />
+              <button
+                className={`${styles.navItem} ${activeTab === 'crossroads' ? styles.navItemActive : ''}`}
+                onClick={() => onTabSelect('crossroads')}
+              >
+                Crossroads
+              </button>
+              <span className={styles.navDivider} />
+              <button
+                className={`${styles.navItem} ${hecatePanelOpen ? styles.navItemActive : ''}`}
+                onClick={() => onHecateToggle?.(!hecatePanelOpen)}
+              >
+                Studio
+              </button>
+
+              {/* Row 2: Submenu buttons (same grid columns) */}
+              {activeTab === 'memcache' && (
+                <>
+                  {MEMCACHE_ITEMS.slice(0, 3).map((item, index) => (
+                    <React.Fragment key={item.id}>
+                      <button
+                        className={`${styles.submenuItem} ${memcacheSection === item.id ? styles.submenuItemActive : ''}`}
+                        onClick={() => onMemcacheSectionChange?.(item.id)}
+                        style={{ animationDelay: `${index * 0.03}s` }}
+                      >
+                        {item.label}
+                      </button>
+                      {index < 2 && <span className={styles.submenuDivider} />}
+                    </React.Fragment>
+                  ))}
+                </>
+              )}
+            </nav>
+          </div>
         )}
 
         {/* Settings Menu or Connect Button */}
