@@ -1,5 +1,7 @@
 # Echo Factory Implementation Plan
 
+> **STATUS: PAUSED** - Initiative paused in favor of [Poly Mev](../../poly-mev/plan.md). May resume after Polymarket swarm is operational.
+
 **NullBlock's first COW** (Constellation of Work) - Autonomous X/Twitter content creation suite.
 
 ## Status
@@ -114,5 +116,5 @@ POST /api/echo/content/:id/publish-now  # Publish
 ## Related
 
 - [Engram Integration](./engrams.md)
-- [Engrams Service](../services/engrams.md)
-- [Crossroads Marketplace](../services/crossroads.md)
+- [Engrams Service](../../services/engrams.md)
+- [Crossroads Marketplace](../../services/crossroads.md)

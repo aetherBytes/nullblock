@@ -30,20 +30,19 @@
 | API Reference | [docs-internal/src/reference/api.md](docs-internal/src/reference/api.md) |
 | Environment Vars | [docs-internal/src/reference/env-vars.md](docs-internal/src/reference/env-vars.md) |
 
-## Current Focus: Echo Factory (First COW)
+## Current Focus: Poly Mev (Polymarket Trading Agent)
 
-Building NullBlock's first Constellation of Work - autonomous X/Twitter content creation. See [Echo Factory Plan](docs-internal/src/echo-factory/plan.md).
+Building tools to facilitate Polymarket trading - a new agent service for prediction market intelligence. See [Poly Mev Plan](docs-internal/src/poly-mev/plan.md).
 
 | Phase | Status |
 |-------|--------|
-| 1. Engram Service | ✅ Complete |
-| 1.5. MCP + Mem Cache | 🔄 In Progress |
-| 2. Crossroads COW Model | ⏳ Next |
-| 3. Echo Factory Core | ⏳ Pending |
-| 4. X API Integration | ⏳ Pending |
+| 1. Service Scaffold | ⏳ Next |
+| 2. Polymarket API Integration | ⏳ Pending |
+| 3. Market Analysis Tools | ⏳ Pending |
+| 4. Trading Strategies | ⏳ Pending |
 | 5. Frontend | ⏳ Pending |
 
-**Other Priorities**: X verification, marketing strategy, Discord/Telegram, WEB3 WILDS community, agent model selection fix, Crossroads login reload, task state alignment, A2A streaming (SSE)
+**Paused**: Echo Factory (X/Twitter COW) - [archived plan](docs-internal/src/archive/echo-factory/plan.md)
 
 ## Architecture
 
