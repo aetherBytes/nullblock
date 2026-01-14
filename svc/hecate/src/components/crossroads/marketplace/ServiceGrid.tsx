@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from '../crossroads.module.scss';
-import ServiceCard from './ServiceCard';
 import type { ServiceListing } from '../types';
+import ServiceCard from './ServiceCard';
 
 interface ServiceGridProps {
   services: ServiceListing[];
@@ -27,7 +27,12 @@ const SkeletonCard: React.FC = () => (
   </div>
 );
 
-const ServiceGrid: React.FC<ServiceGridProps> = ({ services, loading, viewMode = 'grid', onServiceClick }) => {
+const ServiceGrid: React.FC<ServiceGridProps> = ({
+  services,
+  loading,
+  viewMode = 'grid',
+  onServiceClick,
+}) => {
   if (loading) {
     return (
       <div className={styles.loadingGrid}>
@@ -52,15 +57,10 @@ const ServiceGrid: React.FC<ServiceGridProps> = ({ services, loading, viewMode =
   return (
     <div className={styles.serviceGrid}>
       {services.map((service) => (
-        <ServiceCard
-          key={service.id}
-          service={service}
-          onClick={() => onServiceClick?.(service)}
-        />
+        <ServiceCard key={service.id} service={service} onClick={() => onServiceClick?.(service)} />
       ))}
     </div>
   );
 };
 
 export default ServiceGrid;
-

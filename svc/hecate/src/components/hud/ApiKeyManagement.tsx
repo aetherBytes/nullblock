@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ApiKeyProvider, ApiKeyResponse } from '../../types/user';
 import { apiKeysService } from '../../common/services/api-keys-service';
+import type { ApiKeyProvider, ApiKeyResponse } from '../../types/user';
 import styles from './ApiKeyManagement.module.scss';
 
 interface ApiKeyManagementProps {
@@ -8,7 +8,12 @@ interface ApiKeyManagementProps {
 }
 
 const PROVIDERS: { value: ApiKeyProvider; label: string; supported: boolean; note?: string }[] = [
-  { value: 'openrouter', label: 'OpenRouter', supported: true, note: 'Get your key at openrouter.ai' },
+  {
+    value: 'openrouter',
+    label: 'OpenRouter',
+    supported: true,
+    note: 'Get your key at openrouter.ai',
+  },
   { value: 'openai', label: 'OpenAI', supported: false, note: 'Coming soon' },
   { value: 'anthropic', label: 'Anthropic', supported: false, note: 'Coming soon' },
   { value: 'groq', label: 'Groq', supported: false, note: 'Coming soon' },
@@ -33,6 +38,7 @@ const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({ userId }) => {
     setError(null);
     try {
       const response = await apiKeysService.listKeys(userId);
+
       if (response.success && response.data) {
         setKeys(response.data);
       } else {
@@ -53,6 +59,7 @@ const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({ userId }) => {
   const handleAddKey = async () => {
     if (!apiKeyInput.trim()) {
       setError('API key cannot be empty');
+
       return;
     }
 
@@ -105,7 +112,9 @@ const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({ userId }) => {
   };
 
   const formatLastUsed = (lastUsed?: string): string => {
-    if (!lastUsed) return 'Never used';
+    if (!lastUsed) {
+      return 'Never used';
+    }
 
     try {
       const date = new Date(lastUsed);
@@ -115,10 +124,21 @@ const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({ userId }) => {
       const diffHours = Math.floor(diffMs / 3600000);
       const diffDays = Math.floor(diffMs / 86400000);
 
-      if (diffMins < 1) return 'Just now';
-      if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
-      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-      if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      if (diffMins < 1) {
+        return 'Just now';
+      }
+
+      if (diffMins < 60) {
+        return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+      }
+
+      if (diffHours < 24) {
+        return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      }
+
+      if (diffDays < 7) {
+        return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      }
 
       return date.toLocaleDateString();
     } catch (err) {
@@ -173,14 +193,17 @@ const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({ userId }) => {
               onChange={(e) => setSelectedProvider(e.target.value as ApiKeyProvider)}
               disabled={isSubmitting}
             >
-              {PROVIDERS.filter(p => p.supported).map((provider) => (
+              {PROVIDERS.filter((p) => p.supported).map((provider) => (
                 <option key={provider.value} value={provider.value}>
                   {provider.label}
                 </option>
               ))}
             </select>
             <span className={styles.providerHint}>
-              🌐 Get your free API key at <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer">openrouter.ai</a>
+              🌐 Get your free API key at{' '}
+              <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer">
+                openrouter.ai
+              </a>
             </span>
           </div>
 
@@ -265,9 +288,13 @@ const ApiKeyManagement: React.FC<ApiKeyManagementProps> = ({ userId }) => {
               <div className={styles.keyHeader}>
                 <div className={styles.keyTitle}>
                   <span className={styles.providerIcon}>{getProviderIcon(key.provider)}</span>
-                  <h5>{key.key_name || key.provider.charAt(0).toUpperCase() + key.provider.slice(1)}</h5>
+                  <h5>
+                    {key.key_name || key.provider.charAt(0).toUpperCase() + key.provider.slice(1)}
+                  </h5>
                 </div>
-                <span className={`${styles.statusBadge} ${key.is_active ? styles.active : styles.inactive}`}>
+                <span
+                  className={`${styles.statusBadge} ${key.is_active ? styles.active : styles.inactive}`}
+                >
                   {key.is_active ? 'Active' : 'Inactive'}
                 </span>
               </div>

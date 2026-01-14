@@ -1,7 +1,7 @@
-import { WalletAdapter, WalletInfo, ChainType } from './types';
+import { BitgetAdapter } from './adapters/bitget.adapter';
 import { MetaMaskAdapter } from './adapters/metamask.adapter';
 import { PhantomAdapter } from './adapters/phantom.adapter';
-import { BitgetAdapter } from './adapters/bitget.adapter';
+import type { WalletAdapter, WalletInfo, ChainType } from './types';
 
 class WalletAdapterRegistry {
   private adapters: Map<string, WalletAdapter> = new Map();
@@ -48,6 +48,7 @@ class WalletAdapterRegistry {
         return adapter;
       }
     }
+
     return null;
   }
 
@@ -55,8 +56,12 @@ class WalletAdapterRegistry {
     const adapters = this.getAll();
     for (const adapter of adapters) {
       const chain = adapter.detectChain(address);
-      if (chain) return chain;
+
+      if (chain) {
+        return chain;
+      }
     }
+
     return null;
   }
 }

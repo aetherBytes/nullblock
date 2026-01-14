@@ -1,6 +1,6 @@
-import React, { useRef, useState, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
 import { Html, useGLTF } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
+import React, { useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import type { ClusterData } from '../VoidExperience';
 
@@ -17,14 +17,13 @@ interface HecateModelProps {
 const createHecateGlowTexture = () => {
   const size = 256;
   const canvas = document.createElement('canvas');
+
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
 
-  const gradient = ctx.createRadialGradient(
-    size / 2, size / 2, 0,
-    size / 2, size / 2, size / 2
-  );
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+
   // Brighter steel-blue glow for visibility
   gradient.addColorStop(0, 'rgba(180, 210, 255, 1.0)');
   gradient.addColorStop(0.1, 'rgba(150, 190, 240, 0.8)');
@@ -38,7 +37,9 @@ const createHecateGlowTexture = () => {
   ctx.fillRect(0, 0, size, size);
 
   const texture = new THREE.CanvasTexture(canvas);
+
   texture.needsUpdate = true;
+
   return texture;
 };
 
@@ -46,6 +47,7 @@ const createHecateGlowTexture = () => {
 const createPingTexture = () => {
   const size = 256;
   const canvas = document.createElement('canvas');
+
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
@@ -57,9 +59,14 @@ const createPingTexture = () => {
   const ringWidth = size * 0.08;
 
   const gradient = ctx.createRadialGradient(
-    centerX, centerY, ringRadius - ringWidth,
-    centerX, centerY, ringRadius + ringWidth
+    centerX,
+    centerY,
+    ringRadius - ringWidth,
+    centerX,
+    centerY,
+    ringRadius + ringWidth,
   );
+
   gradient.addColorStop(0, 'rgba(150, 200, 255, 0)');
   gradient.addColorStop(0.3, 'rgba(180, 220, 255, 0.8)');
   gradient.addColorStop(0.5, 'rgba(200, 230, 255, 1.0)');
@@ -70,7 +77,9 @@ const createPingTexture = () => {
   ctx.fillRect(0, 0, size, size);
 
   const texture = new THREE.CanvasTexture(canvas);
+
   texture.needsUpdate = true;
+
   return texture;
 };
 
@@ -102,13 +111,17 @@ const HecateModel: React.FC<HecateModelProps> = ({
 
   const clonedScene = useMemo(() => {
     const clone = scene.clone();
+
     clone.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
+
         mesh.castShadow = true;
+
         // Enhance material for better reflections from Crossroads light
         if (mesh.material) {
           const mat = mesh.material as THREE.MeshStandardMaterial;
+
           if (mat.isMeshStandardMaterial) {
             mat.envMapIntensity = 2.0;
             mat.metalness = Math.min(mat.metalness + 0.3, 1.0);
@@ -118,6 +131,7 @@ const HecateModel: React.FC<HecateModelProps> = ({
         }
       }
     });
+
     return clone;
   }, [scene]);
 
@@ -132,6 +146,7 @@ const HecateModel: React.FC<HecateModelProps> = ({
         yOffset: (Math.random() - 0.5) * 0.15,
       });
     }
+
     return particles;
   }, []);
 
@@ -145,17 +160,20 @@ const HecateModel: React.FC<HecateModelProps> = ({
     // Inner glow pulse
     if (glowRef.current) {
       const pulse = 2.2 + Math.sin(time * 1.5) * 0.2;
+
       glowRef.current.scale.set(pulse, pulse, 1);
     }
 
     // Outer atmospheric glow - slower, larger pulse
     if (outerGlowRef.current) {
       const outerPulse = 4.0 + Math.sin(time * 0.8) * 0.4;
+
       outerGlowRef.current.scale.set(outerPulse, outerPulse, 1);
     }
 
     // Ping beacon animation - triggers every 8-15 seconds
     const ps = pingState.current;
+
     ps.nextPingTime -= delta;
 
     // Start a new ping sequence
@@ -184,6 +202,7 @@ const HecateModel: React.FC<HecateModelProps> = ({
       if (ps.ping1Phase >= 0 && ps.ping1Phase <= 1.2) {
         const scale = 0.5 + ps.ping1Phase * 3.5;
         const opacity = Math.max(0, 1 - ps.ping1Phase * 0.9);
+
         ping1Ref.current.scale.set(scale, scale, 1);
         (ping1Ref.current.material as THREE.SpriteMaterial).opacity = opacity * 0.8;
         ping1Ref.current.visible = true;
@@ -197,6 +216,7 @@ const HecateModel: React.FC<HecateModelProps> = ({
       if (ps.ping2Phase >= 0 && ps.ping2Phase <= 1.2) {
         const scale = 0.5 + ps.ping2Phase * 3.5;
         const opacity = Math.max(0, 1 - ps.ping2Phase * 0.9);
+
         ping2Ref.current.scale.set(scale, scale, 1);
         (ping2Ref.current.material as THREE.SpriteMaterial).opacity = opacity * 0.6;
         ping2Ref.current.visible = true;
@@ -210,6 +230,7 @@ const HecateModel: React.FC<HecateModelProps> = ({
       orbitalRef.current.children.forEach((child, i) => {
         const p = orbitalParticles[i];
         const angle = p.angle + time * p.speed;
+
         child.position.x = Math.cos(angle) * p.radius;
         child.position.z = Math.sin(angle) * p.radius;
         child.position.y = p.yOffset + Math.sin(time * 2 + i) * 0.05;
@@ -273,11 +294,7 @@ const HecateModel: React.FC<HecateModelProps> = ({
         {orbitalParticles.map((_, i) => (
           <mesh key={i}>
             <sphereGeometry args={[0.025, 8, 8]} />
-            <meshBasicMaterial
-              color="#a0d0ff"
-              transparent
-              opacity={0.8}
-            />
+            <meshBasicMaterial color="#a0d0ff" transparent opacity={0.8} />
           </mesh>
         ))}
       </group>
@@ -294,13 +311,7 @@ const HecateModel: React.FC<HecateModelProps> = ({
       />
 
       {/* Point light for visibility and reflections */}
-      <pointLight
-        ref={lightRef}
-        color="#88bbff"
-        intensity={1.5}
-        distance={8}
-        decay={2}
-      />
+      <pointLight ref={lightRef} color="#88bbff" intensity={1.5} distance={8} decay={2} />
     </group>
   );
 };
@@ -377,10 +388,12 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
       const r = Math.random() * 0.3;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
+
       positions[i3] = r * Math.sin(phi) * Math.cos(theta);
       positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
       positions[i3 + 2] = r * Math.cos(phi);
     }
+
     return positions;
   }, []);
 
@@ -400,6 +413,7 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
           // Capture current position when first selected
           frozenPosition.current = groupRef.current.position.clone();
         }
+
         // Stay at frozen position
         groupRef.current.position.copy(frozenPosition.current);
       } else {
@@ -430,6 +444,7 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
       // Calculate effective target scale with fade delay for initial appearance
       let effectiveTargetScale = targetScale;
       const timeSinceMount = time - fadeStartTime.current;
+
       if (timeSinceMount < fadeDelay) {
         effectiveTargetScale = 0; // Still waiting for delay
       } else if (!isVisible) {
@@ -438,8 +453,10 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
 
       // Depth-based scaling for HECATE - smaller when on far side of Crossroads
       let depthScale = 1.0;
+
       if (isHecate && !isSelected) {
-        const z = groupRef.current.position.z;
+        const { z } = groupRef.current.position;
+
         // z > 0 = behind Crossroads (far), z < 0 = in front (near)
         // Scale from 0.6 (far) to 1.2 (near) for dramatic perspective
         depthScale = THREE.MathUtils.mapLinear(z, orbitRadius, -orbitRadius, 0.55, 1.15);
@@ -455,6 +472,7 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
       // Set minimum scale after fade delay to ensure visibility
       const minScale = timeSinceMount >= fadeDelay ? 0.4 : 0;
       const finalScale = Math.max(newScale, minScale);
+
       groupRef.current.scale.setScalar(finalScale);
     }
 
@@ -471,14 +489,11 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
   });
 
   // Status-based glow intensity
-  const glowIntensity = cluster.status === 'healthy' ? 0.8 :
-                        cluster.status === 'unhealthy' ? 0.4 : 0.5;
+  const glowIntensity =
+    cluster.status === 'healthy' ? 0.8 : cluster.status === 'unhealthy' ? 0.4 : 0.5;
 
   return (
-    <group
-      ref={groupRef}
-      position={basePosition}
-    >
+    <group ref={groupRef} position={basePosition}>
       {/* Core orb - HECATE uses custom GLB model, others use sphere */}
       {isHecate ? (
         <HecateModel
@@ -495,9 +510,11 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
           }}
           onClick={(e) => {
             e.stopPropagation();
+
             if (groupRef.current) {
               groupRef.current.getWorldPosition(tempWorldPos.current);
             }
+
             onClick(cluster, tempWorldPos.current.clone());
           }}
         />
@@ -505,23 +522,37 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
         <mesh
           ref={meshRef}
           castShadow
-          onPointerOver={isInteractive ? (e) => {
-            e.stopPropagation();
-            onHover(cluster.id);
-            setShowTooltip(true);
-          } : undefined}
-          onPointerOut={isInteractive ? (e) => {
-            e.stopPropagation();
-            onHover(null);
-            setShowTooltip(false);
-          } : undefined}
-          onClick={isInteractive ? (e) => {
-            e.stopPropagation();
-            if (groupRef.current) {
-              groupRef.current.getWorldPosition(tempWorldPos.current);
-            }
-            onClick(cluster, tempWorldPos.current.clone());
-          } : undefined}
+          onPointerOver={
+            isInteractive
+              ? (e) => {
+                  e.stopPropagation();
+                  onHover(cluster.id);
+                  setShowTooltip(true);
+                }
+              : undefined
+          }
+          onPointerOut={
+            isInteractive
+              ? (e) => {
+                  e.stopPropagation();
+                  onHover(null);
+                  setShowTooltip(false);
+                }
+              : undefined
+          }
+          onClick={
+            isInteractive
+              ? (e) => {
+                  e.stopPropagation();
+
+                  if (groupRef.current) {
+                    groupRef.current.getWorldPosition(tempWorldPos.current);
+                  }
+
+                  onClick(cluster, tempWorldPos.current.clone());
+                }
+              : undefined
+          }
         >
           <sphereGeometry args={[baseSize, 32, 32]} />
           <meshStandardMaterial
@@ -571,14 +602,7 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
       )}
 
       {/* Point light - not for HECATE */}
-      {!isHecate && (
-        <pointLight
-          color={cluster.color}
-          intensity={0.8}
-          distance={3}
-          decay={2}
-        />
-      )}
+      {!isHecate && <pointLight color={cluster.color} intensity={0.8} distance={3} decay={2} />}
 
       {/* Tooltip - HECATE gets special ethereal styling */}
       {showTooltip && (
@@ -588,83 +612,105 @@ const AgentCluster: React.FC<AgentClusterProps> = ({
           style={{ pointerEvents: 'none' }}
         >
           {isHecate ? (
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(10, 12, 20, 0.95) 0%, rgba(15, 20, 35, 0.95) 100%)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(74, 158, 255, 0.4)',
-              borderRadius: '12px',
-              padding: '12px 16px',
-              color: '#e8e8e8',
-              fontSize: '12px',
-              whiteSpace: 'nowrap',
-              boxShadow: '0 0 30px rgba(74, 158, 255, 0.25), inset 0 0 20px rgba(74, 158, 255, 0.05)',
-              minWidth: '140px',
-              textAlign: 'center',
-            }}>
-              <div style={{
-                fontWeight: 700,
-                marginBottom: '6px',
-                fontSize: '14px',
-                letterSpacing: '2px',
-                color: '#fff',
-                textShadow: '0 0 15px rgba(74, 158, 255, 0.5)',
-              }}>
+            <div
+              style={{
+                background:
+                  'linear-gradient(135deg, rgba(10, 12, 20, 0.95) 0%, rgba(15, 20, 35, 0.95) 100%)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(74, 158, 255, 0.4)',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                color: '#e8e8e8',
+                fontSize: '12px',
+                whiteSpace: 'nowrap',
+                boxShadow:
+                  '0 0 30px rgba(74, 158, 255, 0.25), inset 0 0 20px rgba(74, 158, 255, 0.05)',
+                minWidth: '140px',
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontWeight: 700,
+                  marginBottom: '6px',
+                  fontSize: '14px',
+                  letterSpacing: '2px',
+                  color: '#fff',
+                  textShadow: '0 0 15px rgba(74, 158, 255, 0.5)',
+                }}
+              >
                 H.E.C.A.T.E
               </div>
-              <div style={{
-                fontSize: '9px',
-                color: 'rgba(74, 158, 255, 0.8)',
-                marginBottom: '8px',
-                letterSpacing: '0.5px',
-              }}>
+              <div
+                style={{
+                  fontSize: '9px',
+                  color: 'rgba(74, 158, 255, 0.8)',
+                  marginBottom: '8px',
+                  letterSpacing: '0.5px',
+                }}
+              >
                 Vessel: MK1 | AI: HECATE
               </div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '4px 10px',
-                background: 'rgba(74, 158, 255, 0.1)',
-                border: '1px solid rgba(74, 158, 255, 0.25)',
-                borderRadius: '12px',
-                fontSize: '10px',
-                fontWeight: 600,
-                color: '#4a9eff',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}>
-                <span style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: cluster.status === 'healthy' ? '#4a9eff' : '#ff3333',
-                  boxShadow: cluster.status === 'healthy' ? '0 0 8px #4a9eff' : '0 0 8px #ff3333',
-                }} />
-                {cluster.status === 'healthy' ? 'Online' : cluster.status === 'unhealthy' ? 'Degraded' : 'Unknown'}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  background: 'rgba(74, 158, 255, 0.1)',
+                  border: '1px solid rgba(74, 158, 255, 0.25)',
+                  borderRadius: '12px',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  color: '#4a9eff',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: cluster.status === 'healthy' ? '#4a9eff' : '#ff3333',
+                    boxShadow: cluster.status === 'healthy' ? '0 0 8px #4a9eff' : '0 0 8px #ff3333',
+                  }}
+                />
+                {cluster.status === 'healthy'
+                  ? 'Online'
+                  : cluster.status === 'unhealthy'
+                    ? 'Degraded'
+                    : 'Unknown'}
               </div>
             </div>
           ) : (
-            <div style={{
-              background: 'rgba(10, 10, 20, 0.9)',
-              backdropFilter: 'blur(10px)',
-              border: `1px solid ${cluster.color}40`,
-              borderRadius: '8px',
-              padding: '8px 12px',
-              color: '#e8e8e8',
-              fontSize: '12px',
-              whiteSpace: 'nowrap',
-              boxShadow: `0 0 20px ${cluster.color}30`,
-            }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-                {cluster.name}
-              </div>
-              <div style={{
-                color: cluster.status === 'healthy' ? '#00ff9d' :
-                       cluster.status === 'unhealthy' ? '#ff3333' : '#e8e8e8',
-                fontSize: '10px',
-                textTransform: 'uppercase'
-              }}>
+            <div
+              style={{
+                background: 'rgba(10, 10, 20, 0.9)',
+                backdropFilter: 'blur(10px)',
+                border: `1px solid ${cluster.color}40`,
+                borderRadius: '8px',
+                padding: '8px 12px',
+                color: '#e8e8e8',
+                fontSize: '12px',
+                whiteSpace: 'nowrap',
+                boxShadow: `0 0 20px ${cluster.color}30`,
+              }}
+            >
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{cluster.name}</div>
+              <div
+                style={{
+                  color:
+                    cluster.status === 'healthy'
+                      ? '#00ff9d'
+                      : cluster.status === 'unhealthy'
+                        ? '#ff3333'
+                        : '#e8e8e8',
+                  fontSize: '10px',
+                  textTransform: 'uppercase',
+                }}
+              >
                 {cluster.status}
               </div>
             </div>

@@ -30,19 +30,27 @@
 | API Reference | [docs-internal/src/reference/api.md](docs-internal/src/reference/api.md) |
 | Environment Vars | [docs-internal/src/reference/env-vars.md](docs-internal/src/reference/env-vars.md) |
 
-## Current Focus: Poly Mev (Polymarket Trading Agent)
+## Current Focus: ArbFarm (Solana MEV Agent Swarm)
 
-Building tools to facilitate Polymarket trading - a new agent service for prediction market intelligence. See [Poly Mev Plan](docs-internal/src/poly-mev/plan.md).
+Building ArbFarm - autonomous multi-agent system for capturing MEV opportunities on Solana. See [ArbFarm Plan](docs-internal/src/arb-farm/plan.md).
 
 | Phase | Status |
 |-------|--------|
-| 1. Service Scaffold | ⏳ Next |
-| 2. Polymarket API Integration | ⏳ Pending |
-| 3. Market Analysis Tools | ⏳ Pending |
-| 4. Trading Strategies | ⏳ Pending |
-| 5. Frontend | ⏳ Pending |
+| 1. Service Scaffold + Core Models | ✅ Complete |
+| 2. Venue Scanner + Strategy Engine | ✅ Complete |
+| 3. Execution Engine + Risk Management | ⏳ Next |
+| 4. Bonding Curve Integration | ✅ Complete (in Phase 2) |
+| 5. MEV Detection | ⏳ Pending |
+| 6. Research/DD Agent | ⏳ Pending |
+| 7. KOL Tracking + Copy Trading | ⏳ Pending |
+| 8. Threat Detection | ⏳ Pending |
+| 9. Engram Integration | ⏳ Pending |
+| 10. Swarm Orchestration | ⏳ Pending |
+| 11. Frontend Dashboard | ⏳ Pending |
 
-**Paused**: Echo Factory (X/Twitter COW) - [archived plan](docs-internal/src/archive/echo-factory/plan.md)
+**Also Planned**: Poly Mev (Polymarket) - [plan](docs-internal/src/poly-mev/plan.md)
+
+**Paused**: Echo Factory (X/Twitter COW) - [archived](docs-internal/src/archive/echo-factory/plan.md)
 
 ## Architecture
 
@@ -65,6 +73,7 @@ Frontend (5173) → Erebus (3000) → Backend Services
 | 8001 | Protocols | A2A/MCP server |
 | 9003 | Agents | HECATE agent API |
 | 9004 | Engrams | Memory/context layer |
+| 9007 | ArbFarm | Solana MEV agent swarm |
 | 5440 | PostgreSQL | Erebus DB |
 | 5441 | PostgreSQL | Agents DB |
 
@@ -119,6 +128,7 @@ Von Neumann-class vessel AI. Default model: `cognitivecomputations/dolphin3.0-mi
 | `/api/engrams/*` | Memory/context |
 | `/api/marketplace/*` | Crossroads listings |
 | `/api/discovery/*` | Service discovery |
+| `/api/arb/*` | ArbFarm MEV swarm |
 | `/mcp/*` | MCP Protocol (2025-11-25) |
 | `/a2a/*` | A2A Protocol |
 

@@ -93,7 +93,10 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
 }) => {
   // Format model name for display (extract short name from full path)
   const formatModelName = (model: string | null): string => {
-    if (!model) return 'READY';
+    if (!model) {
+      return 'READY';
+    }
+
     return model.split('/').pop()?.split(':')[0]?.toUpperCase() || 'MODEL';
   };
 
@@ -106,8 +109,10 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
       const fetchModel = async () => {
         try {
           const connected = await hecateAgent.connect();
+
           if (connected) {
             const status = await hecateAgent.getModelStatus();
+
             if (status.current_model) {
               setFetchedModel(status.current_model);
             }
@@ -116,6 +121,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
           console.warn('Failed to fetch model info:', err);
         }
       };
+
       fetchModel();
     }
   }, [externalModel]);
@@ -149,7 +155,10 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   // Handle the actual API call after charging/firing animation
   const executeTransmission = useCallback(async () => {
     const pending = pendingMessageRef.current;
-    if (!pending) return;
+
+    if (!pending) {
+      return;
+    }
 
     try {
       const response = await agentService.chatWithAgent(activeAgent, pending.message);
@@ -165,7 +174,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
         // Trigger incoming tendril before showing message
         onAgentResponseReceived?.(agentMsg.id);
 
-        setMessages(prev => [...prev, agentMsg]);
+        setMessages((prev) => [...prev, agentMsg]);
 
         // Start tooltip timer only if:
         // 1. User hasn't acknowledged the first message feature yet
@@ -175,6 +184,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
           if (tooltipTimerRef.current) {
             clearTimeout(tooltipTimerRef.current);
           }
+
           // Show tooltip after 10 seconds if history is still closed
           tooltipTimerRef.current = setTimeout(() => {
             // Double-check history is still closed when timer fires
@@ -190,7 +200,8 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
           sender: 'agent',
           timestamp: new Date(),
         };
-        setMessages(prev => [...prev, errorMsg]);
+
+        setMessages((prev) => [...prev, errorMsg]);
       }
     } catch (error) {
       console.error('Void chat error:', error);
@@ -200,7 +211,8 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
         sender: 'agent',
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, errorMsg]);
+
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsProcessing(false);
       setEnergyState('idle');
@@ -208,49 +220,56 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     }
   }, [onAgentResponseReceived, hasAcknowledgedFirst, activeAgent]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
 
-    if (!input.trim() || isProcessing || energyState !== 'idle') return;
+      if (!input.trim() || isProcessing || energyState !== 'idle') {
+        return;
+      }
 
-    const userMessage = input.trim();
-    setInput('');
+      const userMessage = input.trim();
 
-    // Add user message immediately
-    const userMsg: VoidMessage = {
-      id: `user-${Date.now()}`,
-      text: userMessage,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMsg]);
+      setInput('');
 
-    // Auto-open chat history when message is sent
-    setShowHistory(true);
-    setHasUnreadMessages(false);
+      // Add user message immediately
+      const userMsg: VoidMessage = {
+        id: `user-${Date.now()}`,
+        text: userMessage,
+        sender: 'user',
+        timestamp: new Date(),
+      };
 
-    if (!hasInteracted) {
-      setHasInteracted(true);
-      onFirstMessage?.();
-    }
+      setMessages((prev) => [...prev, userMsg]);
 
-    // Store pending message for transmission
-    pendingMessageRef.current = { message: userMessage, msgId: userMsg.id };
+      // Auto-open chat history when message is sent
+      setShowHistory(true);
+      setHasUnreadMessages(false);
 
-    // Brief charging glow, then immediately start processing
-    setEnergyState('charging');
+      if (!hasInteracted) {
+        setHasInteracted(true);
+        onFirstMessage?.();
+      }
 
-    // Quick transition to firing then processing (reduced delay)
-    setTimeout(() => {
-      setEnergyState('firing');
+      // Store pending message for transmission
+      pendingMessageRef.current = { message: userMessage, msgId: userMsg.id };
 
+      // Brief charging glow, then immediately start processing
+      setEnergyState('charging');
+
+      // Quick transition to firing then processing (reduced delay)
       setTimeout(() => {
-        setIsProcessing(true);
-        setEnergyState('processing');
-        executeTransmission();
-      }, 150); // Reduced from 300ms
-    }, 400); // Reduced from 800ms
-  }, [input, isProcessing, energyState, hasInteracted, onFirstMessage, executeTransmission]);
+        setEnergyState('firing');
+
+        setTimeout(() => {
+          setIsProcessing(true);
+          setEnergyState('processing');
+          executeTransmission();
+        }, 150); // Reduced from 300ms
+      }, 400); // Reduced from 800ms
+    },
+    [input, isProcessing, energyState, hasInteracted, onFirstMessage, executeTransmission],
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -263,7 +282,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.style.height = 'auto';
-      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 120) + 'px';
+      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 120)}px`;
     }
   }, [input]);
 
@@ -282,13 +301,14 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   }, [glowActive, showHistory, messages.length]);
 
   // Cleanup tooltip timer on unmount
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       if (tooltipTimerRef.current) {
         clearTimeout(tooltipTimerRef.current);
       }
-    };
-  }, []);
+    },
+    [],
+  );
 
   // When history is opened, mark as acknowledged and clear tooltip
   useEffect(() => {
@@ -297,11 +317,13 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
       if (!hasAcknowledgedFirst) {
         setHasAcknowledgedFirst(true);
       }
+
       // Clear any pending tooltip timer
       if (tooltipTimerRef.current) {
         clearTimeout(tooltipTimerRef.current);
         tooltipTimerRef.current = null;
       }
+
       setShowTooltip(false);
     }
   }, [showHistory, hasAcknowledgedFirst]);
@@ -322,39 +344,53 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   // Show Hecate welcome/return message when Studio opens
   useEffect(() => {
     const panelJustOpened = externalShowHistory === true && lastPanelStateRef.current === false;
+
     lastPanelStateRef.current = externalShowHistory || false;
 
     if (panelJustOpened && activeAgent === 'hecate') {
       // Use functional update to check messages without dependency
-      setMessages(prev => {
-        const hasUserMessages = prev.some(m => m.sender === 'user');
+      setMessages((prev) => {
+        const hasUserMessages = prev.some((m) => m.sender === 'user');
 
         if (!hasUserMessages && !hasShownWelcomeRef.current) {
           // First time opening with no conversation - show welcome
           hasShownWelcomeRef.current = true;
-          const welcomeText = HECATE_WELCOME_MESSAGES[Math.floor(Math.random() * HECATE_WELCOME_MESSAGES.length)];
-          return [...prev, {
-            id: `hecate-welcome-${Date.now()}`,
-            text: welcomeText,
-            sender: 'agent' as const,
-            timestamp: new Date(),
-          }];
+          const welcomeText =
+            HECATE_WELCOME_MESSAGES[Math.floor(Math.random() * HECATE_WELCOME_MESSAGES.length)];
+
+          return [
+            ...prev,
+            {
+              id: `hecate-welcome-${Date.now()}`,
+              text: welcomeText,
+              sender: 'agent' as const,
+              timestamp: new Date(),
+            },
+          ];
         } else if (hasUserMessages) {
           // Returning mid-conversation - show return message
-          const returnText = HECATE_RETURN_MESSAGES[Math.floor(Math.random() * HECATE_RETURN_MESSAGES.length)];
-          return [...prev, {
-            id: `hecate-return-${Date.now()}`,
-            text: returnText,
-            sender: 'agent' as const,
-            timestamp: new Date(),
-          }];
+          const returnText =
+            HECATE_RETURN_MESSAGES[Math.floor(Math.random() * HECATE_RETURN_MESSAGES.length)];
+
+          return [
+            ...prev,
+            {
+              id: `hecate-return-${Date.now()}`,
+              text: returnText,
+              sender: 'agent' as const,
+              timestamp: new Date(),
+            },
+          ];
         }
+
         return prev;
       });
     }
   }, [externalShowHistory, activeAgent]);
 
-  if (!isActive) return null;
+  if (!isActive) {
+    return null;
+  }
 
   // Use portal to render at body level, escaping VoidExperience's stacking context
   const chatContent = (
@@ -379,7 +415,9 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                 </span>
                 <span className={styles.historyModelName}>:{formatModelName(currentModel)}</span>
                 {agentHealthStatus === 'unhealthy' && (
-                  <span className={styles.healthWarning} title="API keys required">⚠️</span>
+                  <span className={styles.healthWarning} title="API keys required">
+                    ⚠️
+                  </span>
                 )}
               </div>
               <button
@@ -387,7 +425,14 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                 onClick={() => setShowHistory(false)}
                 aria-label="Close history"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
               </button>
@@ -398,6 +443,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
               ) : (
                 messages.map((msg) => {
                   const images = getImagesForMessage ? getImagesForMessage(msg.id) : [];
+
                   return (
                     <div
                       key={msg.id}
@@ -408,7 +454,10 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                           {msg.sender === 'user' ? 'You' : activeAgent.toUpperCase()}
                         </span>
                         <span className={styles.historyTime}>
-                          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {msg.timestamp.toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </span>
                       </div>
                       {msg.isTaskResult && (
@@ -416,7 +465,9 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                           <div className={styles.taskResultBadge}>
                             <span className={styles.taskIcon}>✅</span>
                             <span className={styles.taskLabel}>Task Result</span>
-                            {msg.taskName && <span className={styles.taskName}>"{msg.taskName}"</span>}
+                            {msg.taskName && (
+                              <span className={styles.taskName}>"{msg.taskName}"</span>
+                            )}
                           </div>
                           {msg.processingTime && (
                             <span className={styles.processingTime}>⏱️ {msg.processingTime}ms</span>
@@ -434,7 +485,9 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
           </div>
         )}
         <form onSubmit={handleSubmit} className={styles.inputForm}>
-          <div className={`${styles.inputContainer} ${energyState === 'charging' ? styles.charging : ''} ${energyState === 'firing' ? styles.firing : ''} ${energyState === 'processing' ? styles.processing : ''} ${glowActive ? styles.receiving : ''}`}>
+          <div
+            className={`${styles.inputContainer} ${energyState === 'charging' ? styles.charging : ''} ${energyState === 'firing' ? styles.firing : ''} ${energyState === 'processing' ? styles.processing : ''} ${glowActive ? styles.receiving : ''}`}
+          >
             {/* History toggle button */}
             <button
               type="button"
@@ -442,15 +495,20 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
               onClick={() => {
                 if (messages.length > 0) {
                   const newShowHistory = !showHistory;
+
                   setShowHistory(newShowHistory);
+
                   if (newShowHistory) {
                     setHasUnreadMessages(false);
+
                     // Clear tooltip timer and hide tooltip
                     if (tooltipTimerRef.current) {
                       clearTimeout(tooltipTimerRef.current);
                       tooltipTimerRef.current = null;
                     }
+
                     setShowTooltip(false);
+
                     // Mark that user has acknowledged first message
                     if (!hasAcknowledgedFirst) {
                       setHasAcknowledgedFirst(true);
@@ -470,7 +528,10 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                style={{ transform: showHistory ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.3s ease' }}
+                style={{
+                  transform: showHistory ? 'rotate(0deg)' : 'rotate(180deg)',
+                  transition: 'transform 0.3s ease',
+                }}
               >
                 <polyline points="6 9 12 15 18 9" />
               </svg>
@@ -501,7 +562,9 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
             <button
               type="submit"
               className={styles.sendButton}
-              disabled={energyState !== 'idle' || !input.trim() || agentHealthStatus === 'unhealthy'}
+              disabled={
+                energyState !== 'idle' || !input.trim() || agentHealthStatus === 'unhealthy'
+              }
               aria-label="Send message"
             >
               ➤
@@ -517,6 +580,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   if (typeof document !== 'undefined') {
     return createPortal(chatContent, document.body);
   }
+
   return chatContent;
 };
 

@@ -1,5 +1,6 @@
 // Types
 export { ChainType } from './types';
+
 export type {
   WalletAdapter,
   WalletInfo,

@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Task } from '../types/tasks';
+import type { Task } from '../types/tasks';
 
 export const exportTaskToPDF = (task: Task): void => {
   const doc = new jsPDF();
@@ -27,6 +27,7 @@ export const exportTaskToPDF = (task: Task): void => {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   const splitDescription = doc.splitTextToSize(task.description, pageWidth - 30);
+
   doc.text(splitDescription, 15, yPos);
   yPos += splitDescription.length * 5 + 10;
 
@@ -44,7 +45,9 @@ export const exportTaskToPDF = (task: Task): void => {
       ...(task.started_at ? [['Started', new Date(task.started_at).toLocaleString()]] : []),
       ...(task.completed_at ? [['Completed', new Date(task.completed_at).toLocaleString()]] : []),
       ...(task.assigned_agent ? [['Assigned Agent', task.assigned_agent]] : []),
-      ...(task.action_duration ? [['Duration', `${(task.action_duration / 1000).toFixed(2)}s`]] : []),
+      ...(task.action_duration
+        ? [['Duration', `${(task.action_duration / 1000).toFixed(2)}s`]]
+        : []),
       ...(task.source_identifier ? [['Source', task.source_identifier]] : []),
     ],
     theme: 'grid',
@@ -65,9 +68,13 @@ export const exportTaskToPDF = (task: Task): void => {
       head: [['Parameter', 'Value']],
       body: [
         ['Preferred Model', task.parameters.preferred_model],
-        ...(task.parameters.temperature !== undefined ? [['Temperature', String(task.parameters.temperature)]] : []),
+        ...(task.parameters.temperature !== undefined
+          ? [['Temperature', String(task.parameters.temperature)]]
+          : []),
         ...(task.parameters.max_tokens ? [['Max Tokens', String(task.parameters.max_tokens)]] : []),
-        ...(task.parameters.timeout_ms ? [['Timeout', `${(task.parameters.timeout_ms / 1000).toFixed(0)}s`]] : []),
+        ...(task.parameters.timeout_ms
+          ? [['Timeout', `${(task.parameters.timeout_ms / 1000).toFixed(0)}s`]]
+          : []),
       ],
       theme: 'grid',
       headStyles: { fillColor: [230, 194, 0] },
@@ -87,7 +94,7 @@ export const exportTaskToPDF = (task: Task): void => {
       String(idx + 1),
       st.name || `Sub-task ${idx + 1}`,
       st.description || 'No description',
-      st.assigned_agent_id || 'Auto'
+      st.assigned_agent_id || 'Auto',
     ]);
 
     autoTable(doc, {
@@ -101,8 +108,8 @@ export const exportTaskToPDF = (task: Task): void => {
         0: { cellWidth: 10 },
         1: { cellWidth: 40 },
         2: { cellWidth: 100 },
-        3: { cellWidth: 30 }
-      }
+        3: { cellWidth: 30 },
+      },
     });
 
     yPos = (doc as any).lastAutoTable.finalY + 10;
@@ -122,12 +129,15 @@ export const exportTaskToPDF = (task: Task): void => {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     const resultLines = task.action_result.split('\n');
+
     resultLines.forEach((line: string) => {
       if (yPos > 280) {
         doc.addPage();
         yPos = 20;
       }
+
       const splitLine = doc.splitTextToSize(line || ' ', pageWidth - 30);
+
       doc.text(splitLine, 15, yPos);
       yPos += splitLine.length * 4;
     });
@@ -158,11 +168,13 @@ export const exportTaskToPDF = (task: Task): void => {
       doc.setFont('helvetica', 'normal');
       const textContent = msg.parts?.[0]?.text || JSON.stringify(msg.parts);
       const splitContent = doc.splitTextToSize(textContent, pageWidth - 30);
+
       doc.text(splitContent, 15, yPos);
       yPos += splitContent.length * 4 + 5;
     });
   }
 
   const fileName = `task-${task.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-${Date.now()}.pdf`;
+
   doc.save(fileName);
 };

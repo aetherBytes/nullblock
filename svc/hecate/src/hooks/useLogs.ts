@@ -28,9 +28,18 @@ export const useLogs = (options: UseLogsOptions = {}) => {
 
     try {
       const params = new URLSearchParams();
-      if (filters?.limit) params.append('limit', filters.limit.toString());
-      if (filters?.category) params.append('category', filters.category);
-      if (filters?.level) params.append('level', filters.level);
+
+      if (filters?.limit) {
+        params.append('limit', filters.limit.toString());
+      }
+
+      if (filters?.category) {
+        params.append('category', filters.category);
+      }
+
+      if (filters?.level) {
+        params.append('level', filters.level);
+      }
 
       const url = `${EREBUS_API_URL}/api/logs/recent?${params.toString()}`;
       const response = await fetch(url);
@@ -48,6 +57,7 @@ export const useLogs = (options: UseLogsOptions = {}) => {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch logs';
+
       setError(errorMessage);
       console.error('❌ Error fetching logs:', err);
     } finally {
@@ -58,6 +68,7 @@ export const useLogs = (options: UseLogsOptions = {}) => {
   const connectToStream = useCallback(() => {
     if (eventSourceRef.current) {
       console.warn('⚠️ Already connected to log stream');
+
       return;
     }
 
@@ -104,15 +115,19 @@ export const useLogs = (options: UseLogsOptions = {}) => {
 
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+
           reconnectAttemptsRef.current += 1;
 
-          console.log(`🔄 Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})...`);
+          console.log(
+            `🔄 Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})...`,
+          );
 
           reconnectTimeoutRef.current = setTimeout(() => {
             if (eventSourceRef.current) {
               eventSourceRef.current.close();
               eventSourceRef.current = null;
             }
+
             connectToStream();
           }, delay);
         } else {
@@ -144,37 +159,32 @@ export const useLogs = (options: UseLogsOptions = {}) => {
   }, []);
 
   const filterLogs = useCallback(
-    (predicate: (log: LogEntry) => boolean): LogEntry[] => {
-      return logs.filter(predicate);
-    },
-    [logs]
+    (predicate: (log: LogEntry) => boolean): LogEntry[] => logs.filter(predicate),
+    [logs],
   );
 
   const getLogsByLevel = useCallback(
-    (level: LogLevel): LogEntry[] => {
-      return filterLogs((log) => log.level === level);
-    },
-    [filterLogs]
+    (level: LogLevel): LogEntry[] => filterLogs((log) => log.level === level),
+    [filterLogs],
   );
 
   const getLogsByCategory = useCallback(
-    (category: LogCategory): LogEntry[] => {
-      return filterLogs((log) => log.category === category);
-    },
-    [filterLogs]
+    (category: LogCategory): LogEntry[] => filterLogs((log) => log.category === category),
+    [filterLogs],
   );
 
   const searchLogs = useCallback(
     (searchTerm: string): LogEntry[] => {
       const term = searchTerm.toLowerCase();
+
       return filterLogs(
         (log) =>
           log.message.toLowerCase().includes(term) ||
           log.source.toLowerCase().includes(term) ||
-          log.category.toLowerCase().includes(term)
+          log.category.toLowerCase().includes(term),
       );
     },
-    [filterLogs]
+    [filterLogs],
   );
 
   useEffect(() => {

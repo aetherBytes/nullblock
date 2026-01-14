@@ -1,8 +1,8 @@
+import type { IUser } from '@interfaces/user';
 import SuspenseQuery from '@lomray/react-mobx-manager/suspense-query';
 import axios from 'axios';
 import { makeObservable, observable, runInAction } from 'mobx';
 import { API_GATEWAY } from '@constants/index';
-import type { IUser } from '@interfaces/user';
 
 /**
  * User detail store

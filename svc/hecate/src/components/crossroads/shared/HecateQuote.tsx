@@ -20,7 +20,8 @@ const HecateQuote: React.FC<HecateQuoteProps> = ({ refreshTrigger = 0, compact =
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            message: 'Give me a single brief transmission as HECATE, the MK1 vessel AI, about navigating the void or discovering new crossroads. Speak as a ship AI with calm authority and dry wit. Address the user as "visitor". One sentence only, under 20 words.',
+            message:
+              'Give me a single brief transmission as HECATE, the MK1 vessel AI, about navigating the void or discovering new crossroads. Speak as a ship AI with calm authority and dry wit. Address the user as "visitor". One sentence only, under 20 words.',
             session_id: 'crossroads-quote',
           }),
         });
@@ -30,6 +31,7 @@ const HecateQuote: React.FC<HecateQuoteProps> = ({ refreshTrigger = 0, compact =
           const content = data.response || data.message || '';
           // Clean up the response - remove quotes if present
           const cleanedQuote = content.replace(/^["']|["']$/g, '').trim();
+
           setQuote(cleanedQuote);
         } else {
           // Fallback quote if API fails
@@ -54,7 +56,9 @@ const HecateQuote: React.FC<HecateQuoteProps> = ({ refreshTrigger = 0, compact =
       <div className={quoteClass}>
         <div className={styles.quoteText}>
           <div className={styles.loadingDots}>
-            <span>.</span><span>.</span><span>.</span>
+            <span>.</span>
+            <span>.</span>
+            <span>.</span>
           </div>
         </div>
       </div>
@@ -64,11 +68,12 @@ const HecateQuote: React.FC<HecateQuoteProps> = ({ refreshTrigger = 0, compact =
   return (
     <div className={quoteClass}>
       <div className={styles.quoteText}>
-        <p>"{quote}" <span className={styles.attribution}>- HECATE</span></p>
+        <p>
+          "{quote}" <span className={styles.attribution}>- HECATE</span>
+        </p>
       </div>
     </div>
   );
 };
 
 export default HecateQuote;
-

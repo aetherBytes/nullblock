@@ -1,14 +1,12 @@
-import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
+import React, { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 
 interface ParticleFieldProps {
   count?: number;
 }
 
-const ParticleField: React.FC<ParticleFieldProps> = ({
-  count = 5000
-}) => {
+const ParticleField: React.FC<ParticleFieldProps> = ({ count = 5000 }) => {
   const coreRef = useRef<THREE.Points>(null);
   const hazeRef = useRef<THREE.Points>(null);
   const sparksRef = useRef<THREE.Points>(null);
@@ -45,13 +43,18 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
 
       if (distFromCenter > 0.7 && colorRoll < 0.3) {
         // Edge corona - bright white/blue flares
-        colors[i3] = 0.9; colors[i3 + 1] = 0.95; colors[i3 + 2] = 1.0;
+        colors[i3] = 0.9;
+        colors[i3 + 1] = 0.95;
+        colors[i3 + 2] = 1.0;
       } else if (distFromCenter > 0.5 && colorRoll < 0.15) {
         // Purple edge glow
-        colors[i3] = 0.6; colors[i3 + 1] = 0.3; colors[i3 + 2] = 0.8;
+        colors[i3] = 0.6;
+        colors[i3 + 1] = 0.3;
+        colors[i3 + 2] = 0.8;
       } else {
         // Dark core - very dim
         const darkness = 0.05 + Math.random() * 0.15;
+
         colors[i3] = darkness;
         colors[i3 + 1] = darkness;
         colors[i3 + 2] = darkness * 1.2;
@@ -59,6 +62,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
 
       // Varied sizes
       const sizeRoll = Math.random();
+
       if (sizeRoll < 0.4) {
         sizes[i] = 0.02 + Math.random() * 0.03;
       } else if (sizeRoll < 0.8) {
@@ -126,6 +130,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
       } else {
         // Dark cosmic dust
         const darkness = 0.1 + Math.random() * 0.15 + distFactor * 0.1;
+
         colors[i3] = darkness;
         colors[i3 + 1] = darkness * 0.9;
         colors[i3 + 2] = darkness * 1.3;
@@ -133,6 +138,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
 
       // Smaller sizes with more density
       const sizeRoll = Math.random();
+
       if (sizeRoll < 0.4) {
         sizes[i] = 0.04 + Math.random() * 0.05;
       } else if (sizeRoll < 0.8) {
@@ -140,6 +146,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
       } else {
         sizes[i] = 0.14 + Math.random() * 0.1;
       }
+
       phases[i] = Math.random() * Math.PI * 2;
       waveOffsets[i] = Math.random() * Math.PI * 2;
     }
@@ -171,21 +178,31 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
 
       // Cosmic energy colors
       const colorRoll = Math.random();
+
       if (colorRoll < 0.15) {
         // Bright cosmic white
-        colors[i3] = 0.85; colors[i3 + 1] = 0.9; colors[i3 + 2] = 1.0;
+        colors[i3] = 0.85;
+        colors[i3 + 1] = 0.9;
+        colors[i3 + 2] = 1.0;
       } else if (colorRoll < 0.35) {
         // Purple energy
-        colors[i3] = 0.5; colors[i3 + 1] = 0.3; colors[i3 + 2] = 0.8;
+        colors[i3] = 0.5;
+        colors[i3 + 1] = 0.3;
+        colors[i3 + 2] = 0.8;
       } else if (colorRoll < 0.5) {
         // Blue energy
-        colors[i3] = 0.3; colors[i3 + 1] = 0.5; colors[i3 + 2] = 0.9;
+        colors[i3] = 0.3;
+        colors[i3 + 1] = 0.5;
+        colors[i3 + 2] = 0.9;
       } else if (colorRoll < 0.6) {
         // Pink energy
-        colors[i3] = 0.7; colors[i3 + 1] = 0.35; colors[i3 + 2] = 0.6;
+        colors[i3] = 0.7;
+        colors[i3 + 1] = 0.35;
+        colors[i3 + 2] = 0.6;
       } else {
         // Silver cosmic dust
         const dim = 0.25 + Math.random() * 0.35;
+
         colors[i3] = dim;
         colors[i3 + 1] = dim;
         colors[i3 + 2] = dim * 1.15;
@@ -193,6 +210,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
 
       // Smaller sizes for less polka-dot look
       const sizeRoll = Math.random();
+
       if (sizeRoll < 0.5) {
         sizes[i] = 0.018 + Math.random() * 0.025;
       } else if (sizeRoll < 0.8) {
@@ -206,17 +224,27 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
       // Velocity direction
       const vTheta = Math.random() * Math.PI * 2;
       const vPhi = Math.acos(2 * Math.random() - 1);
+
       velocities[i3] = Math.sin(vPhi) * Math.cos(vTheta);
       velocities[i3 + 1] = Math.sin(vPhi) * Math.sin(vTheta);
       velocities[i3 + 2] = Math.cos(vPhi);
 
       phaseOffsets[i] = Math.random() * Math.PI * 2;
-      speedMultipliers[i] = 0.3 + Math.random() * 1.0;
+      speedMultipliers[i] = 0.3 + Number(Math.random());
       // Each particle has a target radius it settles at (stays on canvas)
       targetRadius[i] = 8 + Math.random() * 14; // 8-22 range
     }
 
-    return { positions, colors, sizes, velocities, phaseOffsets, speedMultipliers, targetRadius, count: sparkCount };
+    return {
+      positions,
+      colors,
+      sizes,
+      velocities,
+      phaseOffsets,
+      speedMultipliers,
+      targetRadius,
+      count: sparkCount,
+    };
   }, [count]);
 
   // AMBIENT - Background starfield that stays visible
@@ -241,18 +269,26 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
 
       // More visible colors
       const colorRoll = Math.random();
+
       if (colorRoll < 0.1) {
         // Bright white stars
-        colors[i3] = 0.8; colors[i3 + 1] = 0.85; colors[i3 + 2] = 1.0;
+        colors[i3] = 0.8;
+        colors[i3 + 1] = 0.85;
+        colors[i3 + 2] = 1.0;
       } else if (colorRoll < 0.25) {
         // Blue-white stars
-        colors[i3] = 0.5; colors[i3 + 1] = 0.6; colors[i3 + 2] = 0.9;
+        colors[i3] = 0.5;
+        colors[i3 + 1] = 0.6;
+        colors[i3 + 2] = 0.9;
       } else if (colorRoll < 0.35) {
         // Purple tinted
-        colors[i3] = 0.55; colors[i3 + 1] = 0.4; colors[i3 + 2] = 0.75;
+        colors[i3] = 0.55;
+        colors[i3 + 1] = 0.4;
+        colors[i3 + 2] = 0.75;
       } else {
         // Silver/white - varied brightness
         const brightness = 0.3 + Math.random() * 0.4;
+
         colors[i3] = brightness;
         colors[i3 + 1] = brightness;
         colors[i3 + 2] = brightness * 1.1;
@@ -260,6 +296,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
 
       // Smaller star sizes with more density
       const sizeRoll = Math.random();
+
       if (sizeRoll < 0.5) {
         sizes[i] = 0.01 + Math.random() * 0.018;
       } else if (sizeRoll < 0.8) {
@@ -269,6 +306,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
       } else {
         sizes[i] = 0.07 + Math.random() * 0.04; // Brighter stars
       }
+
       twinkle[i * 2] = Math.random() * Math.PI * 2;
       twinkle[i * 2 + 1] = 0.4 + Math.random() * 1.2;
     }
@@ -279,15 +317,19 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
   // Geometries & Materials (removed .slice() - buffers updated each frame anyway)
   const coreGeo = useMemo(() => {
     const geo = new THREE.BufferGeometry();
+
     geo.setAttribute('position', new THREE.BufferAttribute(coreData.positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(coreData.colors, 3));
     geo.setAttribute('size', new THREE.BufferAttribute(coreData.sizes, 1));
+
     return geo;
   }, [coreData]);
 
-  const coreMat = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { time: coreTimeRef.current },
-    vertexShader: `
+  const coreMat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: { time: coreTimeRef.current },
+        vertexShader: `
       attribute float size;
       attribute vec3 color;
       varying vec3 vColor;
@@ -314,7 +356,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
         gl_Position = projectionMatrix * mv;
       }
     `,
-    fragmentShader: `
+        fragmentShader: `
       varying vec3 vColor;
       varying float vAlpha;
       void main() {
@@ -324,23 +366,29 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
         gl_FragColor = vec4(vColor, alpha);
       }
     `,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  }), []);
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    [],
+  );
 
   const hazeGeo = useMemo(() => {
     const geo = new THREE.BufferGeometry();
+
     geo.setAttribute('position', new THREE.BufferAttribute(hazeData.basePositions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(hazeData.colors, 3));
     geo.setAttribute('size', new THREE.BufferAttribute(hazeData.sizes, 1));
     geo.setAttribute('waveOffset', new THREE.BufferAttribute(hazeData.waveOffsets, 1));
+
     return geo;
   }, [hazeData]);
 
-  const hazeMat = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { time: hazeTimeRef.current },
-    vertexShader: `
+  const hazeMat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: { time: hazeTimeRef.current },
+        vertexShader: `
       attribute float size;
       attribute vec3 color;
       attribute float waveOffset;
@@ -378,7 +426,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
         gl_Position = projectionMatrix * mv;
       }
     `,
-    fragmentShader: `
+        fragmentShader: `
       varying vec3 vColor;
       varying float vDist;
       void main() {
@@ -390,13 +438,16 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
         gl_FragColor = vec4(vColor * 1.1, alpha);
       }
     `,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  }), []);
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    [],
+  );
 
   const sparksGeo = useMemo(() => {
     const geo = new THREE.BufferGeometry();
+
     geo.setAttribute('position', new THREE.BufferAttribute(sparksData.positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(sparksData.colors, 3));
     geo.setAttribute('size', new THREE.BufferAttribute(sparksData.sizes, 1));
@@ -404,12 +455,15 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
     geo.setAttribute('phaseOffset', new THREE.BufferAttribute(sparksData.phaseOffsets, 1));
     geo.setAttribute('speedMult', new THREE.BufferAttribute(sparksData.speedMultipliers, 1));
     geo.setAttribute('targetRadius', new THREE.BufferAttribute(sparksData.targetRadius, 1));
+
     return geo;
   }, [sparksData]);
 
-  const sparksMat = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { time: sparksTimeRef.current },
-    vertexShader: `
+  const sparksMat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: { time: sparksTimeRef.current },
+        vertexShader: `
       attribute float size;
       attribute vec3 color;
       attribute vec3 velocity;
@@ -456,7 +510,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
         gl_Position = projectionMatrix * mv;
       }
     `,
-    fragmentShader: `
+        fragmentShader: `
       varying vec3 vColor;
       varying float vDist;
       void main() {
@@ -468,23 +522,29 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
         gl_FragColor = vec4(vColor, alpha);
       }
     `,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  }), []);
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    [],
+  );
 
   const ambientGeo = useMemo(() => {
     const geo = new THREE.BufferGeometry();
+
     geo.setAttribute('position', new THREE.BufferAttribute(ambientData.positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(ambientData.colors, 3));
     geo.setAttribute('size', new THREE.BufferAttribute(ambientData.sizes, 1));
     geo.setAttribute('twinkle', new THREE.BufferAttribute(ambientData.twinkle, 2));
+
     return geo;
   }, [ambientData]);
 
-  const ambientMat = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { time: ambientTimeRef.current },
-    vertexShader: `
+  const ambientMat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: { time: ambientTimeRef.current },
+        vertexShader: `
       attribute float size;
       attribute vec3 color;
       attribute vec2 twinkle; // x = phase, y = speed
@@ -513,7 +573,7 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
         gl_Position = projectionMatrix * mv;
       }
     `,
-    fragmentShader: `
+        fragmentShader: `
       varying vec3 vColor;
       varying float vTwinkle;
       void main() {
@@ -526,14 +586,17 @@ const ParticleField: React.FC<ParticleFieldProps> = ({
         gl_FragColor = vec4(vColor * (1.0 + core * 0.5), alpha * 0.7);
       }
     `,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  }), []);
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    [],
+  );
 
   // GPU-based animation: just update time uniforms, all calculations happen in shaders
   useFrame((state) => {
     const time = state.clock.elapsedTime;
+
     coreTimeRef.current.value = time;
     hazeTimeRef.current.value = time;
     sparksTimeRef.current.value = time;

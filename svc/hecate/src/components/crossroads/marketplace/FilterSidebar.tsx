@@ -7,7 +7,14 @@ interface FilterSidebarProps {
   onFilterChange: (filters: FilterState) => void;
 }
 
-const categories: ServiceCategory[] = ['Agent', 'Workflow', 'Tool', 'McpServer', 'Dataset', 'Model'];
+const categories: ServiceCategory[] = [
+  'Agent',
+  'Workflow',
+  'Tool',
+  'McpServer',
+  'Dataset',
+  'Model',
+];
 
 const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFilterChange }) => {
   const handleCategoryChange = (category: ServiceCategory) => {
@@ -35,7 +42,9 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFilterChange }
     onFilterChange({});
   };
 
-  const hasFilters = !!(filters.category || filters.is_free !== undefined || filters.min_rating);
+  const hasFilters = Boolean(
+    filters.category || filters.is_free !== undefined || filters.min_rating,
+  );
 
   return (
     <div className={styles.filterSidebar}>
@@ -100,9 +109,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFilterChange }
               checked={filters.min_rating === rating}
               onChange={() => handleRatingChange(rating)}
             />
-            <label htmlFor={`rating-${rating}`}>
-              {'⭐'.repeat(rating)} & up
-            </label>
+            <label htmlFor={`rating-${rating}`}>{'⭐'.repeat(rating)} & up</label>
           </div>
         ))}
       </div>
@@ -117,4 +124,3 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFilterChange }
 };
 
 export default FilterSidebar;
-

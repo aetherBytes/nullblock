@@ -1,9 +1,9 @@
+import type { IUser as IUserEntity } from '@interfaces/user';
 import { Suspense } from '@lomray/consistent-suspense';
 import { withStores } from '@lomray/react-mobx-manager';
 import type { FC } from 'react';
 import { useMemo } from 'react';
 import Fallback from '@components/fallback';
-import type { IUser as IUserEntity } from '@interfaces/user';
 import type { StoreProps } from './index.stores';
 import stores from './index.stores';
 

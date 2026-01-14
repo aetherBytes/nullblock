@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import styles from './memcache.module.scss';
-import EngramsShelf from './EngramsShelf';
-import TaskCreationForm from '../hud/TaskCreationForm';
-import MarkdownRenderer from '../common/MarkdownRenderer';
-import { Engram, EngramType } from '../../types/engrams';
-import { Task, TaskState } from '../../types/tasks';
-import { Agent } from '../../types/agents';
 import { agentService } from '../../common/services/agent-service';
+import type { Agent } from '../../types/agents';
+import type { Engram, EngramType } from '../../types/engrams';
+import type { Task, TaskState } from '../../types/tasks';
+import MarkdownRenderer from '../common/MarkdownRenderer';
+import TaskCreationForm from '../hud/TaskCreationForm';
+import EngramsShelf from './EngramsShelf';
+import { ArbFarmDashboard } from './arbfarm';
+import type { ArbFarmView } from './arbfarm';
+import styles from './memcache.module.scss';
 
 export type MemCacheSection =
   | 'engrams'
@@ -17,7 +19,8 @@ export type MemCacheSection =
   | 'connections'
   | 'bookmarks'
   | 'agents'
-  | 'model';
+  | 'model'
+  | 'arbfarm';
 
 type TaskCategory = 'todo' | 'running' | 'completed';
 
@@ -62,47 +65,78 @@ interface MemCacheProps {
 // Task helpers
 const getStatusIcon = (status: TaskState): string => {
   switch (status) {
-    case 'working': return '⚡';
-    case 'input-required': return '⏸️';
-    case 'completed': return '✅';
-    case 'failed': return '❌';
-    case 'rejected': return '🚫';
-    case 'canceled': return '🚫';
-    case 'submitted': return '⏳';
-    case 'auth-required': return '🔐';
-    case 'unknown': return '❓';
-    default: return '❓';
+    case 'working':
+      return '⚡';
+    case 'input-required':
+      return '⏸️';
+    case 'completed':
+      return '✅';
+    case 'failed':
+      return '❌';
+    case 'rejected':
+      return '🚫';
+    case 'canceled':
+      return '🚫';
+    case 'submitted':
+      return '⏳';
+    case 'auth-required':
+      return '🔐';
+    case 'unknown':
+      return '❓';
+    default:
+      return '❓';
   }
 };
 
 const getStatusClass = (status: TaskState): string => {
   switch (status) {
-    case 'working': return styles.statusWorking;
-    case 'input-required': return styles.statusPaused;
-    case 'completed': return styles.statusCompleted;
-    case 'failed': return styles.statusFailed;
-    case 'rejected': return styles.statusFailed;
-    case 'canceled': return styles.statusCanceled;
-    case 'submitted': return styles.statusSubmitted;
-    case 'auth-required': return styles.statusPaused;
-    case 'unknown': return styles.statusSubmitted;
-    default: return styles.statusSubmitted;
+    case 'working':
+      return styles.statusWorking;
+    case 'input-required':
+      return styles.statusPaused;
+    case 'completed':
+      return styles.statusCompleted;
+    case 'failed':
+      return styles.statusFailed;
+    case 'rejected':
+      return styles.statusFailed;
+    case 'canceled':
+      return styles.statusCanceled;
+    case 'submitted':
+      return styles.statusSubmitted;
+    case 'auth-required':
+      return styles.statusPaused;
+    case 'unknown':
+      return styles.statusSubmitted;
+    default:
+      return styles.statusSubmitted;
   }
 };
 
 const getCategoryIcon = (category: string): string => {
   switch (category) {
-    case 'user': return '👤 User';
-    case 'agent': return '🤖 Agent';
-    case 'api': return '🔗 API';
-    case 'system': return '⚙️ System';
-    case 'scheduled': return '⏰ Scheduled';
-    case 'automated': return '🤖 Automated';
-    case 'manual': return '👤 Manual';
-    case 'webhook': return '🔗 Webhook';
-    case 'cron': return '⏰ Cron';
-    case 'user_assigned': return '👤 User';
-    default: return `📋 ${category}`;
+    case 'user':
+      return '👤 User';
+    case 'agent':
+      return '🤖 Agent';
+    case 'api':
+      return '🔗 API';
+    case 'system':
+      return '⚙️ System';
+    case 'scheduled':
+      return '⏰ Scheduled';
+    case 'automated':
+      return '🤖 Automated';
+    case 'manual':
+      return '👤 Manual';
+    case 'webhook':
+      return '🔗 Webhook';
+    case 'cron':
+      return '⏰ Cron';
+    case 'user_assigned':
+      return '👤 User';
+    default:
+      return `📋 ${category}`;
   }
 };
 
@@ -140,14 +174,22 @@ const MemCache: React.FC<MemCacheProps> = ({
   const [showModelList, setShowModelList] = useState(false);
   const [activeModelCategory, setActiveModelCategory] = useState<string | null>(null);
 
+  // ArbFarm state
+  const [arbFarmView, setArbFarmView] = useState<ArbFarmView>('dashboard');
+
   // Helper to check if a model is locked
   const isModelLocked = (model: any): boolean => {
-    if (hasApiKey) return false;
-    const isFree = model.tier === 'economical' ||
-                   model.cost_per_1k_tokens === 0 ||
-                   model.pricing?.prompt === '0' ||
-                   model.id?.includes(':free') ||
-                   model.name?.includes(':free');
+    if (hasApiKey) {
+      return false;
+    }
+
+    const isFree =
+      model.tier === 'economical' ||
+      model.cost_per_1k_tokens === 0 ||
+      model.pricing?.prompt === '0' ||
+      model.id?.includes(':free') ||
+      model.name?.includes(':free');
+
     return !isFree;
   };
 
@@ -164,6 +206,7 @@ const MemCache: React.FC<MemCacheProps> = ({
     setShowTaskForm(false);
     setSelectedAgentId(null);
     setShowModelList(false);
+    setArbFarmView('dashboard');
     setActiveModelCategory(null);
   }, [activeSection]);
 
@@ -172,6 +215,7 @@ const MemCache: React.FC<MemCacheProps> = ({
     setAgentsError(null);
     try {
       const response = await agentService.getAgents();
+
       if (response.success && response.data) {
         setAgents(response.data.agents);
       } else {
@@ -185,7 +229,9 @@ const MemCache: React.FC<MemCacheProps> = ({
   };
 
   const fetchEngrams = useCallback(async () => {
-    if (!publicKey) return;
+    if (!publicKey) {
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -199,6 +245,7 @@ const MemCache: React.FC<MemCacheProps> = ({
       }
 
       const data = await response.json();
+
       setEngrams(data.data || data || []);
     } catch (err) {
       console.error('Error fetching engrams:', err);
@@ -222,7 +269,7 @@ const MemCache: React.FC<MemCacheProps> = ({
         throw new Error('Failed to delete engram');
       }
 
-      setEngrams(prev => prev.filter(e => e.id !== engramId));
+      setEngrams((prev) => prev.filter((e) => e.id !== engramId));
     } catch (err) {
       console.error('Error deleting engram:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete engram');
@@ -235,7 +282,9 @@ const MemCache: React.FC<MemCacheProps> = ({
     content: string;
     metadata?: Record<string, unknown>;
   }) => {
-    if (!publicKey) return;
+    if (!publicKey) {
+      return;
+    }
 
     try {
       const response = await fetch(`${EREBUS_BASE_URL}/api/engrams`, {
@@ -252,7 +301,8 @@ const MemCache: React.FC<MemCacheProps> = ({
       }
 
       const data = await response.json();
-      setEngrams(prev => [data.data || data, ...prev]);
+
+      setEngrams((prev) => [data.data || data, ...prev]);
       setShowCreateModal(false);
     } catch (err) {
       console.error('Error creating engram:', err);
@@ -260,9 +310,8 @@ const MemCache: React.FC<MemCacheProps> = ({
     }
   };
 
-  const filteredEngrams = selectedType === 'all'
-    ? engrams
-    : engrams.filter(e => e.engram_type === selectedType);
+  const filteredEngrams =
+    selectedType === 'all' ? engrams : engrams.filter((e) => e.engram_type === selectedType);
 
   // ============================================
   // TASKS RENDER FUNCTIONS
@@ -280,9 +329,13 @@ const MemCache: React.FC<MemCacheProps> = ({
     const { tasks, isLoading: tasksLoading } = taskManagement;
 
     const categorizedTasks = {
-      todo: tasks.filter(t => t.state === 'submitted'),
-      running: tasks.filter(t => ['working', 'input-required', 'auth-required'].includes(t.state)),
-      completed: tasks.filter(t => ['completed', 'failed', 'rejected', 'canceled'].includes(t.state)),
+      todo: tasks.filter((t) => t.state === 'submitted'),
+      running: tasks.filter((t) =>
+        ['working', 'input-required', 'auth-required'].includes(t.state),
+      ),
+      completed: tasks.filter((t) =>
+        ['completed', 'failed', 'rejected', 'canceled'].includes(t.state),
+      ),
     };
 
     const currentTasks = categorizedTasks[activeTaskCategory];
@@ -310,10 +363,7 @@ const MemCache: React.FC<MemCacheProps> = ({
           </button>
         </div>
 
-        <button
-          className={styles.createTaskButton}
-          onClick={() => setShowTaskForm(true)}
-        >
+        <button className={styles.createTaskButton} onClick={() => setShowTaskForm(true)}>
           + Create Task
         </button>
 
@@ -332,14 +382,16 @@ const MemCache: React.FC<MemCacheProps> = ({
           </div>
         ) : (
           <div className={styles.taskList}>
-            {currentTasks.map(task => (
+            {currentTasks.map((task) => (
               <div
                 key={task.id}
                 className={`${styles.taskItem} ${getStatusClass(task.state)}`}
                 onClick={() => setSelectedTaskId(task.id)}
               >
                 <div className={styles.taskItemHeader}>
-                  <span className={styles.taskName}>{task.message?.parts?.[0]?.content || 'Unnamed task'}</span>
+                  <span className={styles.taskName}>
+                    {task.message?.parts?.[0]?.content || 'Unnamed task'}
+                  </span>
                   <span className={styles.taskStatus}>{getStatusIcon(task.state)}</span>
                 </div>
                 <div className={styles.taskItemMeta}>
@@ -370,10 +422,15 @@ const MemCache: React.FC<MemCacheProps> = ({
   };
 
   const renderTaskDetails = () => {
-    if (!taskManagement || !selectedTaskId) return null;
+    if (!taskManagement || !selectedTaskId) {
+      return null;
+    }
 
-    const task = taskManagement.tasks.find(t => t.id === selectedTaskId);
-    if (!task) return null;
+    const task = taskManagement.tasks.find((t) => t.id === selectedTaskId);
+
+    if (!task) {
+      return null;
+    }
 
     return (
       <div className={styles.taskDetails}>
@@ -407,10 +464,7 @@ const MemCache: React.FC<MemCacheProps> = ({
                 <label>Progress:</label>
                 <div className={styles.progressContainer}>
                   <div className={styles.progressBar}>
-                    <div
-                      className={styles.progressFill}
-                      style={{ width: `${task.progress}%` }}
-                    />
+                    <div className={styles.progressFill} style={{ width: `${task.progress}%` }} />
                   </div>
                   <span>{task.progress}%</span>
                 </div>
@@ -504,7 +558,9 @@ const MemCache: React.FC<MemCacheProps> = ({
   };
 
   const renderTaskForm = () => {
-    if (!taskManagement) return null;
+    if (!taskManagement) {
+      return null;
+    }
 
     return (
       <div className={styles.taskFormWrapper}>
@@ -517,6 +573,7 @@ const MemCache: React.FC<MemCacheProps> = ({
         <TaskCreationForm
           onSubmit={async (task) => {
             const success = await taskManagement.createTask(task);
+
             if (success) {
               setShowTaskForm(false);
             }
@@ -569,7 +626,7 @@ const MemCache: React.FC<MemCacheProps> = ({
           </div>
         ) : (
           <div className={styles.agentList}>
-            {agents.map(agent => (
+            {agents.map((agent) => (
               <div
                 key={agent.name}
                 className={styles.agentItem}
@@ -577,7 +634,9 @@ const MemCache: React.FC<MemCacheProps> = ({
               >
                 <div className={styles.agentItemHeader}>
                   <span className={styles.agentName}>{agent.name}</span>
-                  <span className={`${styles.agentItemStatus} ${agent.status === 'healthy' ? styles.healthy : styles.unhealthy}`}>
+                  <span
+                    className={`${styles.agentItemStatus} ${agent.status === 'healthy' ? styles.healthy : styles.unhealthy}`}
+                  >
                     {agent.status === 'healthy' ? '●' : '○'}
                   </span>
                 </div>
@@ -585,10 +644,14 @@ const MemCache: React.FC<MemCacheProps> = ({
                 {agent.capabilities && (
                   <div className={styles.agentItemCapabilities}>
                     {agent.capabilities.slice(0, 3).map((cap, i) => (
-                      <span key={i} className={styles.capabilityTag}>🔧</span>
+                      <span key={i} className={styles.capabilityTag}>
+                        🔧
+                      </span>
                     ))}
                     {agent.capabilities.length > 3 && (
-                      <span className={styles.capabilityMore}>+{agent.capabilities.length - 3}</span>
+                      <span className={styles.capabilityMore}>
+                        +{agent.capabilities.length - 3}
+                      </span>
                     )}
                   </div>
                 )}
@@ -601,8 +664,11 @@ const MemCache: React.FC<MemCacheProps> = ({
   };
 
   const renderAgentDetails = () => {
-    const agent = agents.find(a => a.name === selectedAgentId);
-    if (!agent) return null;
+    const agent = agents.find((a) => a.name === selectedAgentId);
+
+    if (!agent) {
+      return null;
+    }
 
     return (
       <div className={styles.agentDetails}>
@@ -628,7 +694,9 @@ const MemCache: React.FC<MemCacheProps> = ({
             <h5>Status</h5>
             <div className={styles.agentField}>
               <label>Health:</label>
-              <span className={`${styles.agentStatusBadge} ${agent.status === 'healthy' ? styles.healthy : styles.unhealthy}`}>
+              <span
+                className={`${styles.agentStatusBadge} ${agent.status === 'healthy' ? styles.healthy : styles.unhealthy}`}
+              >
                 {agent.status === 'healthy' ? '● Healthy' : '○ Unhealthy'}
               </span>
             </div>
@@ -663,7 +731,9 @@ const MemCache: React.FC<MemCacheProps> = ({
               <h5>Capabilities</h5>
               <div className={styles.capabilitiesGrid}>
                 {agent.capabilities.map((cap, i) => (
-                  <span key={i} className={styles.capabilityItem}>{cap}</span>
+                  <span key={i} className={styles.capabilityItem}>
+                    {cap}
+                  </span>
                 ))}
               </div>
             </div>
@@ -701,7 +771,9 @@ const MemCache: React.FC<MemCacheProps> = ({
 
     const { isLoadingModelInfo, currentSelectedModel, availableModels: models } = modelManagement;
 
-    const currentModel = models.find((m: any) => m.id === currentSelectedModel || m.name === currentSelectedModel);
+    const currentModel = models.find(
+      (m: any) => m.id === currentSelectedModel || m.name === currentSelectedModel,
+    );
     const modelName = currentModel?.name || currentSelectedModel || 'No model selected';
     const provider = currentModel?.owned_by || currentModel?.provider || 'Unknown';
 
@@ -722,10 +794,7 @@ const MemCache: React.FC<MemCacheProps> = ({
                 <span className={styles.modelCurrentName}>{modelName}</span>
                 <span className={styles.modelCurrentProvider}>{provider}</span>
               </div>
-              <button
-                className={styles.switchModelButton}
-                onClick={() => setShowModelList(true)}
-              >
+              <button className={styles.switchModelButton} onClick={() => setShowModelList(true)}>
                 Switch
               </button>
             </div>
@@ -777,7 +846,9 @@ const MemCache: React.FC<MemCacheProps> = ({
                 Total: <span>{models.length}</span>
               </div>
               {currentModel?.tier && (
-                <div className={`${styles.tierBadge} ${currentModel.tier === 'economical' ? styles.tierFree : styles.tierPaid}`}>
+                <div
+                  className={`${styles.tierBadge} ${currentModel.tier === 'economical' ? styles.tierFree : styles.tierPaid}`}
+                >
                   {currentModel.tier === 'economical' ? 'Free' : 'Paid'}
                 </div>
               )}
@@ -792,7 +863,10 @@ const MemCache: React.FC<MemCacheProps> = ({
           </div>
         )}
 
-        <button className={styles.refreshModelsButton} onClick={() => modelManagement.loadAvailableModels()}>
+        <button
+          className={styles.refreshModelsButton}
+          onClick={() => modelManagement.loadAvailableModels()}
+        >
           🔄 Refresh Models
         </button>
       </div>
@@ -800,11 +874,14 @@ const MemCache: React.FC<MemCacheProps> = ({
   };
 
   const renderModelSelection = () => {
-    if (!modelManagement) return null;
+    if (!modelManagement) {
+      return null;
+    }
 
     const { availableModels: models, currentSelectedModel, handleModelSelection } = modelManagement;
 
     let filteredModels = models;
+
     if (activeModelCategory === 'free') {
       filteredModels = modelManagement.getFreeModels(models);
     } else if (activeModelCategory === 'fast') {
@@ -818,14 +895,19 @@ const MemCache: React.FC<MemCacheProps> = ({
     return (
       <div className={styles.modelSelection}>
         <div className={styles.modelSelectionHeader}>
-          <button className={styles.backButton} onClick={() => {
-            setShowModelList(false);
-            setActiveModelCategory(null);
-          }}>
+          <button
+            className={styles.backButton}
+            onClick={() => {
+              setShowModelList(false);
+              setActiveModelCategory(null);
+            }}
+          >
             ← Back
           </button>
           <span className={styles.modelSelectionTitle}>
-            {activeModelCategory ? `${activeModelCategory.charAt(0).toUpperCase() + activeModelCategory.slice(1)} Models` : 'Select Model'}
+            {activeModelCategory
+              ? `${activeModelCategory.charAt(0).toUpperCase() + activeModelCategory.slice(1)} Models`
+              : 'Select Model'}
           </span>
         </div>
 
@@ -878,7 +960,8 @@ const MemCache: React.FC<MemCacheProps> = ({
           ) : (
             <div className={styles.modelList}>
               {filteredModels.map((model: any) => {
-                const isSelected = model.id === currentSelectedModel || model.name === currentSelectedModel;
+                const isSelected =
+                  model.id === currentSelectedModel || model.name === currentSelectedModel;
                 const locked = isModelLocked(model);
 
                 return (
@@ -892,15 +975,17 @@ const MemCache: React.FC<MemCacheProps> = ({
                     </span>
                     <div className={styles.modelItemInfo}>
                       <span className={styles.modelItemName}>{model.name || model.id}</span>
-                      <span className={styles.modelItemProvider}>{model.owned_by || model.provider || 'Unknown'}</span>
+                      <span className={styles.modelItemProvider}>
+                        {model.owned_by || model.provider || 'Unknown'}
+                      </span>
                     </div>
                     <div className={styles.modelItemMeta}>
-                      <span className={`${styles.modelTier} ${model.tier === 'economical' ? styles.free : styles.paid}`}>
+                      <span
+                        className={`${styles.modelTier} ${model.tier === 'economical' ? styles.free : styles.paid}`}
+                      >
                         {model.tier === 'economical' ? 'Free' : 'Paid'}
                       </span>
-                      {isSelected && (
-                        <span className={styles.selectedBadge}>✓ Active</span>
-                      )}
+                      {isSelected && <span className={styles.selectedBadge}>✓ Active</span>}
                     </div>
                   </div>
                 );
@@ -928,10 +1013,7 @@ const MemCache: React.FC<MemCacheProps> = ({
               </div>
             </div>
 
-            <button
-              className={styles.createButtonFixed}
-              onClick={() => setShowCreateModal(true)}
-            >
+            <button className={styles.createButtonFixed} onClick={() => setShowCreateModal(true)}>
               + New Engram
             </button>
 
@@ -942,8 +1024,11 @@ const MemCache: React.FC<MemCacheProps> = ({
               >
                 All ({engrams.length})
               </button>
-              {(['persona', 'preference', 'strategy', 'knowledge', 'compliance'] as EngramType[]).map(type => {
-                const count = engrams.filter(e => e.engram_type === type).length;
+              {(
+                ['persona', 'preference', 'strategy', 'knowledge', 'compliance'] as EngramType[]
+              ).map((type) => {
+                const count = engrams.filter((e) => e.engram_type === type).length;
+
                 return (
                   <button
                     key={type}
@@ -983,19 +1068,23 @@ const MemCache: React.FC<MemCacheProps> = ({
         if (showTaskForm) {
           return renderTaskForm();
         }
+
         if (selectedTaskId) {
           return renderTaskDetails();
         }
+
         return renderTaskList();
       case 'agents':
         if (selectedAgentId) {
           return renderAgentDetails();
         }
+
         return renderAgentList();
       case 'model':
         if (showModelList) {
           return renderModelSelection();
         }
+
         return renderModelInfo();
       case 'listings':
         return (
@@ -1029,6 +1118,8 @@ const MemCache: React.FC<MemCacheProps> = ({
             <p>Saved items from Crossroads.</p>
           </div>
         );
+      case 'arbfarm':
+        return <ArbFarmDashboard activeView={arbFarmView} onViewChange={setArbFarmView} />;
       default:
         return null;
     }
@@ -1050,9 +1141,7 @@ const MemCache: React.FC<MemCacheProps> = ({
   return (
     <div className={styles.memcacheLayout}>
       <main className={styles.memcacheMain}>
-        <div className={styles.memcacheContentWrapper}>
-          {renderSectionContent()}
-        </div>
+        <div className={styles.memcacheContentWrapper}>{renderSectionContent()}</div>
       </main>
 
       {showCreateModal && (
@@ -1082,23 +1171,29 @@ const CreateEngramModal: React.FC<CreateEngramModalProps> = ({ onClose, onCreate
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!key.trim() || !content.trim()) return;
+
+    if (!key.trim() || !content.trim()) {
+      return;
+    }
+
     onCreate({ engram_type: engramType, key: key.trim(), content: content.trim() });
   };
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modal} onClick={e => e.stopPropagation()}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <h2>Create New Engram</h2>
-          <button className={styles.closeButton} onClick={onClose}>×</button>
+          <button className={styles.closeButton} onClick={onClose}>
+            ×
+          </button>
         </div>
         <form onSubmit={handleSubmit} className={styles.modalForm}>
           <div className={styles.formGroup}>
             <label>Type</label>
             <select
               value={engramType}
-              onChange={e => setEngramType(e.target.value as EngramType)}
+              onChange={(e) => setEngramType(e.target.value as EngramType)}
             >
               <option value="persona">Persona</option>
               <option value="preference">Preference</option>
@@ -1112,7 +1207,7 @@ const CreateEngramModal: React.FC<CreateEngramModalProps> = ({ onClose, onCreate
             <input
               type="text"
               value={key}
-              onChange={e => setKey(e.target.value)}
+              onChange={(e) => setKey(e.target.value)}
               placeholder="e.g., trading_style, risk_tolerance"
             />
           </div>
@@ -1120,7 +1215,7 @@ const CreateEngramModal: React.FC<CreateEngramModalProps> = ({ onClose, onCreate
             <label>Content</label>
             <textarea
               value={content}
-              onChange={e => setContent(e.target.value)}
+              onChange={(e) => setContent(e.target.value)}
               placeholder="Enter the engram content..."
               rows={5}
             />
@@ -1129,7 +1224,11 @@ const CreateEngramModal: React.FC<CreateEngramModalProps> = ({ onClose, onCreate
             <button type="button" className={styles.cancelButton} onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className={styles.submitButton} disabled={!key.trim() || !content.trim()}>
+            <button
+              type="submit"
+              className={styles.submitButton}
+              disabled={!key.trim() || !content.trim()}
+            >
               Create Engram
             </button>
           </div>

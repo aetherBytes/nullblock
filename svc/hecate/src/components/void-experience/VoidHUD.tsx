@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import VoidChatHUD from './chat/VoidChatHUD';
-import { useModelManagement } from '../../hooks/useModelManagement';
 import { useChat } from '../../hooks/useChat';
+import { useModelManagement } from '../../hooks/useModelManagement';
+import VoidChatHUD from './chat/VoidChatHUD';
 
 interface VoidHUDProps {
   publicKey: string | null;
@@ -26,19 +26,14 @@ const VoidHUD: React.FC<VoidHUDProps> = ({
   hasOverlappingPanels = false,
 }) => {
   // Use chat hook for agent management
-  const {
-    activeAgent,
-    setActiveAgent,
-    getImagesForMessage,
-  } = useChat(publicKey);
+  const { activeAgent, setActiveAgent, getImagesForMessage } = useChat(publicKey);
 
   // Use model management hook for current model display
-  const {
-    currentSelectedModel,
-    agentHealthStatus,
-  } = useModelManagement(publicKey, activeAgent);
+  const { currentSelectedModel, agentHealthStatus } = useModelManagement(publicKey, activeAgent);
 
-  if (!isActive || loginAnimationPhase !== 'complete') return null;
+  if (!isActive || loginAnimationPhase !== 'complete') {
+    return null;
+  }
 
   return (
     <VoidChatHUD

@@ -9,13 +9,21 @@ interface CrossroadsLandingProps {
   animationPhase?: AnimationPhase;
 }
 
-const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet, animationPhase = 'complete' }) => {
+const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({
+  onConnectWallet,
+  animationPhase = 'complete',
+}) => {
   // Determine CSS classes based on animation phase
   const getMissionPrimaryClass = () => {
     // "Silos are dead. The agent economy is open." fades in with background
-    if (animationPhase === 'background' || animationPhase === 'navbar' || animationPhase === 'complete') {
+    if (
+      animationPhase === 'background' ||
+      animationPhase === 'navbar' ||
+      animationPhase === 'complete'
+    ) {
       return `${styles.missionPrimary} ${styles.fadeIn}`;
     }
+
     return `${styles.missionPrimary} ${styles.hidden}`;
   };
 
@@ -24,6 +32,7 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet, 
     if (animationPhase === 'navbar' || animationPhase === 'complete') {
       return `${styles.missionSecondary} ${styles.neonFlickerIn}`;
     }
+
     return `${styles.missionSecondary} ${styles.hidden}`;
   };
 
@@ -32,6 +41,7 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet, 
     if (animationPhase === 'navbar' || animationPhase === 'complete') {
       return styles.neonFlickerIn;
     }
+
     return styles.hidden;
   };
 
@@ -56,9 +66,7 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet, 
               <button className={styles.connectButton} onClick={onConnectWallet}>
                 <span>🚀 Connect Wallet & Explore</span>
               </button>
-              <p className={styles.missionTagline}>
-                Picks and shovels for the new age.
-              </p>
+              <p className={styles.missionTagline}>Picks and shovels for the new age.</p>
             </div>
           </div>
 
@@ -95,4 +103,3 @@ const CrossroadsLanding: React.FC<CrossroadsLandingProps> = ({ onConnectWallet, 
 };
 
 export default CrossroadsLanding;
-

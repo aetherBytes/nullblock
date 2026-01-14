@@ -2,6 +2,7 @@
 // Integrated into Erebus as a resource module
 
 pub mod models;
-pub mod services;
+pub mod repository;
 pub mod routes;
+pub mod services;
 

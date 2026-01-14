@@ -6,37 +6,56 @@ import type { ClusterData } from '../VoidExperience';
 // Color mapping for different agent types
 const TYPE_COLORS: Record<string, string> = {
   conversational: '#e6c200', // Gold for HECATE vessel AI
-  specialized: '#b967ff',    // Purple for specialized agents
-  system: '#00d4ff',         // Cyan for system services
-  protocol: '#00ff9d',       // Green for protocols
-  tool: '#ff6b6b',           // Red for tools
-  default: '#e8e8e8',        // Silver default
+  specialized: '#b967ff', // Purple for specialized agents
+  system: '#00d4ff', // Cyan for system services
+  protocol: '#00ff9d', // Green for protocols
+  tool: '#ff6b6b', // Red for tools
+  default: '#e8e8e8', // Silver default
 };
 
 // Map agent status strings to our status types
 const mapStatus = (status: string): 'healthy' | 'unhealthy' | 'unknown' => {
   const lowerStatus = status.toLowerCase();
-  if (lowerStatus.includes('healthy') || lowerStatus.includes('running') || lowerStatus.includes('active')) {
+
+  if (
+    lowerStatus.includes('healthy') ||
+    lowerStatus.includes('running') ||
+    lowerStatus.includes('active')
+  ) {
     return 'healthy';
   }
-  if (lowerStatus.includes('unhealthy') || lowerStatus.includes('error') || lowerStatus.includes('failed')) {
+
+  if (
+    lowerStatus.includes('unhealthy') ||
+    lowerStatus.includes('error') ||
+    lowerStatus.includes('failed')
+  ) {
     return 'unhealthy';
   }
+
   return 'unknown';
 };
 
 // Map agent type to cluster type
 const mapType = (type: string): ClusterData['type'] => {
   const lowerType = type.toLowerCase();
-  if (lowerType.includes('agent') || lowerType.includes('conversational') || lowerType.includes('specialized')) {
+
+  if (
+    lowerType.includes('agent') ||
+    lowerType.includes('conversational') ||
+    lowerType.includes('specialized')
+  ) {
     return 'agent';
   }
+
   if (lowerType.includes('protocol') || lowerType.includes('a2a') || lowerType.includes('mcp')) {
     return 'protocol';
   }
+
   if (lowerType.includes('tool')) {
     return 'tool';
   }
+
   return 'service';
 };
 
@@ -47,6 +66,7 @@ const agentToCluster = (agent: Agent, index: number): ClusterData => {
 
   // Determine color based on agent name or type
   let color = TYPE_COLORS[agent.type] || TYPE_COLORS.default;
+
   if (agent.name.toLowerCase().includes('hecate')) {
     color = '#e6c200'; // Gold for Hecate
   } else if (agent.name.toLowerCase().includes('siren')) {
@@ -108,9 +128,7 @@ export const useAgentClusters = (): UseAgentClustersResult => {
         const agentClusters = response.data.agents.map(agentToCluster);
 
         // Only HECATE orbits Crossroads - filter to just HECATE
-        const hecateOnly = agentClusters.filter(c =>
-          c.name.toLowerCase().includes('hecate')
-        );
+        const hecateOnly = agentClusters.filter((c) => c.name.toLowerCase().includes('hecate'));
 
         // If we found HECATE, use it; otherwise keep fallback
         if (hecateOnly.length > 0) {
@@ -124,6 +142,7 @@ export const useAgentClusters = (): UseAgentClustersResult => {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+
       console.error('Failed to fetch agent clusters:', errorMessage);
       setError(errorMessage);
       setClusters(FALLBACK_CLUSTERS);
@@ -137,6 +156,7 @@ export const useAgentClusters = (): UseAgentClustersResult => {
 
     // Refetch every 30 seconds to keep status updated
     const interval = setInterval(fetchClusters, 30000);
+
     return () => clearInterval(interval);
   }, [fetchClusters]);
 

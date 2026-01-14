@@ -1,10 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
+import { createWalletChallenge, verifyWalletSignature } from '../../common/services/erebus-api';
 import { walletRegistry } from '../registry';
-import { WalletAdapter, ConnectionResult, ChainType, WalletInfo } from '../types';
-import {
-  createWalletChallenge,
-  verifyWalletSignature,
-} from '../../common/services/erebus-api';
+import type { WalletAdapter, ConnectionResult, WalletInfo } from '../types';
+import { ChainType } from '../types';
 
 interface UseWalletAdapterReturn {
   // State
@@ -62,18 +60,22 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
 
         // Check session expiry
         if (lastAuthTime) {
-          const elapsed = Date.now() - parseInt(lastAuthTime, 10);
+          const elapsed = Date.now() - Number.parseInt(lastAuthTime, 10);
+
           if (elapsed > SESSION_TIMEOUT_MS) {
             console.log('Session expired, clearing...');
             clearSession();
+
             return;
           }
         }
 
         // Restore adapter
         const adapter = walletRegistry.get(storedWalletType);
+
         if (!adapter) {
           console.warn(`Unknown wallet type: ${storedWalletType}`);
+
           return;
         }
 
@@ -113,7 +115,7 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
       localStorage.setItem(STORAGE_KEYS.LAST_AUTH_TIME, Date.now().toString());
       localStorage.setItem(STORAGE_KEYS.HAS_SEEN_HUD, 'true');
     },
-    []
+    [],
   );
 
   const connect = useCallback(
@@ -124,16 +126,20 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
       try {
         // Get adapter
         const adapter = walletRegistry.get(walletId);
+
         if (!adapter) {
           throw new Error(`Unknown wallet: ${walletId}`);
         }
 
         if (!adapter.isInstalled()) {
-          throw new Error(`${adapter.info.name} is not installed. Please install it and try again.`);
+          throw new Error(
+            `${adapter.info.name} is not installed. Please install it and try again.`,
+          );
         }
 
         // Connect to wallet
         const connectionResult = await adapter.connect(chain);
+
         if (!connectionResult.success) {
           throw new Error(connectionResult.error || 'Connection failed');
         }
@@ -145,10 +151,12 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
 
         // Create challenge via backend
         const challengeResponse = await createWalletChallenge(address, walletId);
+
         console.log('Challenge created:', challengeResponse.challenge_id);
 
         // Sign challenge
         const signResult = await adapter.signMessage(challengeResponse.message);
+
         if (!signResult.success) {
           throw new Error(signResult.error || 'Signing failed');
         }
@@ -159,7 +167,7 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
         const verifyResponse = await verifyWalletSignature(
           challengeResponse.challenge_id,
           signResult.signature!,
-          address
+          address,
         );
 
         if (!verifyResponse.success) {
@@ -182,8 +190,10 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
         return connectionResult;
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+
         console.error('Wallet connection error:', errorMessage);
         setError(errorMessage);
+
         return {
           success: false,
           chain: chain || ChainType.EVM,
@@ -193,7 +203,7 @@ export function useWalletAdapter(): UseWalletAdapterReturn {
         setIsConnecting(false);
       }
     },
-    [saveSession]
+    [saveSession],
   );
 
   const disconnect = useCallback(async () => {

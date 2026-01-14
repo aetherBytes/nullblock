@@ -14,14 +14,11 @@ const statusLabels: Record<ServiceStatus, string> = {
   inactive: 'Inactive',
 };
 
-const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
-  return (
-    <span className={`${styles.statusBadge} ${styles[status]}`}>
-      <span className={styles.statusDot} />
-      <span>{statusLabels[status]}</span>
-    </span>
-  );
-};
+const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => (
+  <span className={`${styles.statusBadge} ${styles[status]}`}>
+    <span className={styles.statusDot} />
+    <span>{statusLabels[status]}</span>
+  </span>
+);
 
 export default StatusBadge;
-

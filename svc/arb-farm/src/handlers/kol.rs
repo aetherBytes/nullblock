@@ -1,0 +1,517 @@
+use axum::{
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::RwLock;
+use uuid::Uuid;
+
+use crate::error::AppResult;
+use crate::models::{
+    AddKolRequest, CopyTrade, CopyTradeConfig, CopyTradeStatus, EnableCopyRequest,
+    KolEntity, KolEntityType, KolStats, KolTrade, KolTradeType, TrustScoreBreakdown,
+    UpdateKolRequest,
+};
+use crate::server::AppState;
+
+lazy_static::lazy_static! {
+    static ref KOL_STORE: RwLock<HashMap<Uuid, KolEntity>> = RwLock::new(HashMap::new());
+    static ref KOL_TRADES: RwLock<HashMap<Uuid, Vec<KolTrade>>> = RwLock::new(HashMap::new());
+    static ref COPY_TRADES: RwLock<HashMap<Uuid, Vec<CopyTrade>>> = RwLock::new(HashMap::new());
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListKolQuery {
+    pub is_active: Option<bool>,
+    pub copy_enabled: Option<bool>,
+    pub min_trust_score: Option<f64>,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct KolListResponse {
+    pub kols: Vec<KolEntity>,
+    pub total: usize,
+}
+
+pub async fn list_kols(
+    State(_state): State<AppState>,
+    Query(query): Query<ListKolQuery>,
+) -> impl IntoResponse {
+    let store = KOL_STORE.read().unwrap();
+    let mut kols: Vec<KolEntity> = store
+        .values()
+        .filter(|k| {
+            if let Some(active) = query.is_active {
+                if k.is_active != active {
+                    return false;
+                }
+            }
+            if let Some(copy_enabled) = query.copy_enabled {
+                if k.copy_trading_enabled != copy_enabled {
+                    return false;
+                }
+            }
+            if let Some(min_score) = query.min_trust_score {
+                let score: f64 = k.trust_score.try_into().unwrap_or(0.0);
+                if score < min_score {
+                    return false;
+                }
+            }
+            true
+        })
+        .cloned()
+        .collect();
+
+    kols.sort_by(|a, b| b.trust_score.cmp(&a.trust_score));
+
+    let total = kols.len();
+    let offset = query.offset.unwrap_or(0);
+    let limit = query.limit.unwrap_or(50);
+    let kols: Vec<_> = kols.into_iter().skip(offset).take(limit).collect();
+
+    (StatusCode::OK, Json(KolListResponse { kols, total }))
+}
+
+pub async fn add_kol(
+    State(_state): State<AppState>,
+    Json(request): Json<AddKolRequest>,
+) -> impl IntoResponse {
+    let (entity_type, identifier) = if let Some(wallet) = request.wallet_address {
+        (KolEntityType::Wallet, wallet)
+    } else if let Some(handle) = request.twitter_handle {
+        let handle = if handle.starts_with('@') {
+            handle
+        } else {
+            format!("@{}", handle)
+        };
+        (KolEntityType::TwitterHandle, handle)
+    } else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "Either wallet_address or twitter_handle is required"
+            })),
+        )
+            .into_response();
+    };
+
+    let mut store = KOL_STORE.write().unwrap();
+
+    if store.values().any(|k| k.identifier == identifier) {
+        return (
+            StatusCode::CONFLICT,
+            Json(serde_json::json!({
+                "error": "KOL with this identifier already exists"
+            })),
+        )
+            .into_response();
+    }
+
+    let kol = KolEntity::new(entity_type, identifier, request.display_name);
+    let id = kol.id;
+    store.insert(id, kol.clone());
+
+    (StatusCode::CREATED, Json(kol)).into_response()
+}
+
+pub async fn get_kol(
+    State(_state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    let store = KOL_STORE.read().unwrap();
+
+    match store.get(&id) {
+        Some(kol) => (StatusCode::OK, Json(kol.clone())).into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "KOL not found"})),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn update_kol(
+    State(_state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(request): Json<UpdateKolRequest>,
+) -> impl IntoResponse {
+    let mut store = KOL_STORE.write().unwrap();
+
+    match store.get_mut(&id) {
+        Some(kol) => {
+            if let Some(name) = request.display_name {
+                kol.display_name = Some(name);
+            }
+            if let Some(wallet) = request.linked_wallet {
+                kol.linked_wallet = Some(wallet);
+            }
+            if let Some(active) = request.is_active {
+                kol.is_active = active;
+            }
+            kol.updated_at = chrono::Utc::now();
+
+            (StatusCode::OK, Json(kol.clone())).into_response()
+        }
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "KOL not found"})),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn delete_kol(
+    State(_state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    let mut store = KOL_STORE.write().unwrap();
+
+    match store.remove(&id) {
+        Some(_) => {
+            let mut trades = KOL_TRADES.write().unwrap();
+            trades.remove(&id);
+            let mut copies = COPY_TRADES.write().unwrap();
+            copies.remove(&id);
+
+            (StatusCode::OK, Json(serde_json::json!({"deleted": true}))).into_response()
+        }
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "KOL not found"})),
+        )
+            .into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct KolTradesQuery {
+    pub trade_type: Option<String>,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct KolTradesResponse {
+    pub trades: Vec<KolTrade>,
+    pub total: usize,
+}
+
+pub async fn get_kol_trades(
+    State(_state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Query(query): Query<KolTradesQuery>,
+) -> impl IntoResponse {
+    let store = KOL_STORE.read().unwrap();
+    if !store.contains_key(&id) {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "KOL not found"})),
+        )
+            .into_response();
+    }
+
+    let trades_store = KOL_TRADES.read().unwrap();
+    let trades = trades_store.get(&id).cloned().unwrap_or_default();
+
+    let filtered: Vec<_> = trades
+        .into_iter()
+        .filter(|t| {
+            if let Some(ref tt) = query.trade_type {
+                let trade_type_str = match t.trade_type {
+                    KolTradeType::Buy => "buy",
+                    KolTradeType::Sell => "sell",
+                };
+                return trade_type_str == tt;
+            }
+            true
+        })
+        .collect();
+
+    let total = filtered.len();
+    let offset = query.offset.unwrap_or(0);
+    let limit = query.limit.unwrap_or(50);
+    let trades: Vec<_> = filtered.into_iter().skip(offset).take(limit).collect();
+
+    (StatusCode::OK, Json(KolTradesResponse { trades, total })).into_response()
+}
+
+pub async fn get_kol_stats(
+    State(_state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    let store = KOL_STORE.read().unwrap();
+
+    match store.get(&id) {
+        Some(kol) => {
+            let trades_store = KOL_TRADES.read().unwrap();
+            let trades = trades_store.get(&id).cloned().unwrap_or_default();
+            let total_volume: Decimal = trades.iter().map(|t| t.amount_sol).sum();
+            let last_trade = trades.last().map(|t| t.detected_at);
+
+            let copies_store = COPY_TRADES.read().unwrap();
+            let copies = copies_store.get(&id).cloned().unwrap_or_default();
+            let our_copy_count = copies
+                .iter()
+                .filter(|c| c.status == CopyTradeStatus::Executed)
+                .count() as i32;
+            let our_copy_profit: i64 = copies
+                .iter()
+                .filter_map(|c| c.profit_loss_lamports)
+                .sum();
+            let our_copy_profit_sol =
+                Decimal::new(our_copy_profit, 9);
+
+            let stats = KolStats {
+                entity_id: kol.id,
+                display_name: kol.display_name.clone(),
+                identifier: kol.identifier.clone(),
+                trust_score: kol.trust_score,
+                total_trades: kol.total_trades_tracked,
+                profitable_trades: kol.profitable_trades,
+                win_rate: kol.win_rate(),
+                avg_profit_percent: kol.avg_profit_percent,
+                max_drawdown_percent: kol.max_drawdown,
+                total_volume_sol: total_volume,
+                our_copy_count,
+                our_copy_profit_sol,
+                copy_trading_enabled: kol.copy_trading_enabled,
+                last_trade_at: last_trade,
+            };
+
+            (StatusCode::OK, Json(stats)).into_response()
+        }
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "KOL not found"})),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn get_trust_breakdown(
+    State(_state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    let store = KOL_STORE.read().unwrap();
+
+    match store.get(&id) {
+        Some(kol) => {
+            let breakdown = kol.trust_score_breakdown();
+            (StatusCode::OK, Json(breakdown)).into_response()
+        }
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "KOL not found"})),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn enable_copy_trading(
+    State(_state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(request): Json<EnableCopyRequest>,
+) -> impl IntoResponse {
+    let mut store = KOL_STORE.write().unwrap();
+
+    match store.get_mut(&id) {
+        Some(kol) => {
+            kol.copy_trading_enabled = true;
+
+            if let Some(max_pos) = request.max_position_sol {
+                kol.copy_config.max_position_sol = max_pos;
+            }
+            if let Some(delay) = request.delay_ms {
+                kol.copy_config.delay_ms = delay;
+            }
+            if let Some(min_trust) = request.min_trust_score {
+                kol.copy_config.min_trust_score = min_trust;
+            }
+            if let Some(pct) = request.copy_percentage {
+                kol.copy_config.copy_percentage = pct;
+            }
+            if let Some(whitelist) = request.token_whitelist {
+                kol.copy_config.token_whitelist = Some(whitelist);
+            }
+            if let Some(blacklist) = request.token_blacklist {
+                kol.copy_config.token_blacklist = Some(blacklist);
+            }
+
+            kol.updated_at = chrono::Utc::now();
+
+            (StatusCode::OK, Json(kol.clone())).into_response()
+        }
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "KOL not found"})),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn disable_copy_trading(
+    State(_state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    let mut store = KOL_STORE.write().unwrap();
+
+    match store.get_mut(&id) {
+        Some(kol) => {
+            kol.copy_trading_enabled = false;
+            kol.updated_at = chrono::Utc::now();
+
+            (StatusCode::OK, Json(kol.clone())).into_response()
+        }
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "KOL not found"})),
+        )
+            .into_response(),
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ActiveCopiesResponse {
+    pub active_copies: Vec<CopyTrade>,
+    pub total: usize,
+}
+
+pub async fn list_active_copies(State(_state): State<AppState>) -> impl IntoResponse {
+    let copies_store = COPY_TRADES.read().unwrap();
+    let active: Vec<_> = copies_store
+        .values()
+        .flatten()
+        .filter(|c| {
+            c.status == CopyTradeStatus::Pending || c.status == CopyTradeStatus::Executing
+        })
+        .cloned()
+        .collect();
+
+    let total = active.len();
+
+    (
+        StatusCode::OK,
+        Json(ActiveCopiesResponse {
+            active_copies: active,
+            total,
+        }),
+    )
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CopyHistoryQuery {
+    pub status: Option<String>,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CopyHistoryResponse {
+    pub copies: Vec<CopyTrade>,
+    pub total: usize,
+}
+
+pub async fn get_copy_history(
+    State(_state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Query(query): Query<CopyHistoryQuery>,
+) -> impl IntoResponse {
+    let store = KOL_STORE.read().unwrap();
+    if !store.contains_key(&id) {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "KOL not found"})),
+        )
+            .into_response();
+    }
+
+    let copies_store = COPY_TRADES.read().unwrap();
+    let copies = copies_store.get(&id).cloned().unwrap_or_default();
+
+    let filtered: Vec<_> = copies
+        .into_iter()
+        .filter(|c| {
+            if let Some(ref status) = query.status {
+                let status_str = match c.status {
+                    CopyTradeStatus::Pending => "pending",
+                    CopyTradeStatus::Executing => "executing",
+                    CopyTradeStatus::Executed => "executed",
+                    CopyTradeStatus::Failed => "failed",
+                    CopyTradeStatus::Skipped => "skipped",
+                };
+                return status_str == status;
+            }
+            true
+        })
+        .collect();
+
+    let total = filtered.len();
+    let offset = query.offset.unwrap_or(0);
+    let limit = query.limit.unwrap_or(50);
+    let copies: Vec<_> = filtered.into_iter().skip(offset).take(limit).collect();
+
+    (StatusCode::OK, Json(CopyHistoryResponse { copies, total })).into_response()
+}
+
+#[derive(Debug, Serialize)]
+pub struct CopyStatsResponse {
+    pub total_copies: usize,
+    pub executed: usize,
+    pub failed: usize,
+    pub skipped: usize,
+    pub total_profit_lamports: i64,
+    pub avg_delay_ms: f64,
+}
+
+pub async fn get_copy_stats(State(_state): State<AppState>) -> impl IntoResponse {
+    let copies_store = COPY_TRADES.read().unwrap();
+    let all_copies: Vec<_> = copies_store.values().flatten().cloned().collect();
+
+    let total_copies = all_copies.len();
+    let executed = all_copies
+        .iter()
+        .filter(|c| c.status == CopyTradeStatus::Executed)
+        .count();
+    let failed = all_copies
+        .iter()
+        .filter(|c| c.status == CopyTradeStatus::Failed)
+        .count();
+    let skipped = all_copies
+        .iter()
+        .filter(|c| c.status == CopyTradeStatus::Skipped)
+        .count();
+
+    let total_profit: i64 = all_copies
+        .iter()
+        .filter_map(|c| c.profit_loss_lamports)
+        .sum();
+
+    let avg_delay = if executed > 0 {
+        all_copies
+            .iter()
+            .filter(|c| c.status == CopyTradeStatus::Executed)
+            .map(|c| c.delay_ms as f64)
+            .sum::<f64>()
+            / executed as f64
+    } else {
+        0.0
+    };
+
+    (
+        StatusCode::OK,
+        Json(CopyStatsResponse {
+            total_copies,
+            executed,
+            failed,
+            skipped,
+            total_profit_lamports: total_profit,
+            avg_delay_ms: avg_delay,
+        }),
+    )
+}

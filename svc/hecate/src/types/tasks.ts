@@ -25,19 +25,9 @@ export interface TaskLifecycleEvent {
 
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent' | 'critical';
 
-export type TaskCategory =
-  | 'autonomous'
-  | 'user_assigned'
-  | 'system_generated'
-  | 'event_triggered';
+export type TaskCategory = 'autonomous' | 'user_assigned' | 'system_generated' | 'event_triggered';
 
-export type TaskType =
-  | 'arbitrage'
-  | 'social'
-  | 'portfolio'
-  | 'mcp'
-  | 'system'
-  | 'user_assigned';
+export type TaskType = 'arbitrage' | 'social' | 'portfolio' | 'mcp' | 'system' | 'user_assigned';
 
 export interface MessagePart {
   type: 'text' | 'file' | 'data';

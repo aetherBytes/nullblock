@@ -91,7 +91,9 @@ interface WalletVerifyResponse {
 export const getSupportedWallets = async (): Promise<WalletListResponse> => {
   try {
     const response = await axios.get<WalletListResponse>(`${EREBUS_API_BASE_URL}/api/wallets`);
+
     console.log('Fetched supported wallets:', response.data);
+
     return response.data;
   } catch (error) {
     console.error('Failed to fetch supported wallets:', error);
@@ -102,7 +104,7 @@ export const getSupportedWallets = async (): Promise<WalletListResponse> => {
 // Create wallet authentication challenge
 export const createWalletChallenge = async (
   walletAddress: string,
-  walletType: string
+  walletType: string,
 ): Promise<WalletChallengeResponse> => {
   try {
     const request: WalletChallengeRequest = {
@@ -113,10 +115,11 @@ export const createWalletChallenge = async (
     console.log('Creating wallet challenge:', request);
     const response = await axios.post<WalletChallengeResponse>(
       `${EREBUS_API_BASE_URL}/api/wallets/challenge`,
-      request
+      request,
     );
 
     console.log('Wallet challenge created:', response.data);
+
     return response.data;
   } catch (error) {
     console.error('Failed to create wallet challenge:', error);
@@ -128,7 +131,7 @@ export const createWalletChallenge = async (
 export const verifyWalletSignature = async (
   challengeId: string,
   signature: string,
-  walletAddress: string
+  walletAddress: string,
 ): Promise<WalletVerifyResponse> => {
   try {
     const request: WalletVerifyRequest = {
@@ -140,10 +143,11 @@ export const verifyWalletSignature = async (
     console.log('Verifying wallet signature:', request);
     const response = await axios.post<WalletVerifyResponse>(
       `${EREBUS_API_BASE_URL}/api/wallets/verify`,
-      request
+      request,
     );
 
     console.log('Wallet verification response:', response.data);
+
     return response.data;
   } catch (error) {
     console.error('Failed to verify wallet signature:', error);
@@ -174,14 +178,14 @@ interface UserRegistrationResponse {
 export const registerWalletUser = async (
   walletAddress: string,
   sessionToken: string,
-  network: string = 'solana'
+  network: string = 'solana',
 ): Promise<UserRegistrationResponse> => {
   try {
     const request: UserRegistrationRequest = {
       source_identifier: walletAddress,
       source_type: {
         type: 'web3_wallet',
-        network: network,
+        network,
       },
       session_token: sessionToken,
     };
@@ -189,10 +193,11 @@ export const registerWalletUser = async (
     console.log('Registering wallet user:', request);
     const response = await axios.post<UserRegistrationResponse>(
       `${EREBUS_API_BASE_URL}/api/users/register`,
-      request
+      request,
     );
 
     console.log('User registration response:', response.data);
+
     return response.data;
   } catch (error: any) {
     console.error('Failed to register wallet user:', error);
@@ -205,7 +210,9 @@ export const registerWalletUser = async (
 export const checkErebusHealth = async (): Promise<any> => {
   try {
     const response = await axios.get(`${EREBUS_API_BASE_URL}/health`);
+
     console.log('Erebus health check:', response.data);
+
     return response.data;
   } catch (error) {
     console.error('Erebus health check failed:', error);
@@ -214,7 +221,9 @@ export const checkErebusHealth = async (): Promise<any> => {
 };
 
 // Backend-driven wallet detection
-export const detectWallets = async (availableWallets: string[]): Promise<WalletDetectionResponse> => {
+export const detectWallets = async (
+  availableWallets: string[],
+): Promise<WalletDetectionResponse> => {
   try {
     const request: WalletDetectionRequest = {
       user_agent: navigator.userAgent,
@@ -224,10 +233,11 @@ export const detectWallets = async (availableWallets: string[]): Promise<WalletD
     console.log('Detecting wallets:', request);
     const response = await axios.post<WalletDetectionResponse>(
       `${EREBUS_API_BASE_URL}/api/wallets/detect`,
-      request
+      request,
     );
 
     console.log('Wallet detection response:', response.data);
+
     return response.data;
   } catch (error) {
     console.error('Failed to detect wallets:', error);
@@ -239,7 +249,7 @@ export const detectWallets = async (availableWallets: string[]): Promise<WalletD
 export const initiateWalletConnection = async (
   walletType: string,
   walletAddress: string,
-  publicKey?: string
+  publicKey?: string,
 ): Promise<WalletConnectionResponse> => {
   try {
     const request: WalletConnectionRequest = {
@@ -251,10 +261,11 @@ export const initiateWalletConnection = async (
     console.log('Initiating wallet connection:', request);
     const response = await axios.post<WalletConnectionResponse>(
       `${EREBUS_API_BASE_URL}/api/wallets/connect`,
-      request
+      request,
     );
 
     console.log('Wallet connection response:', response.data);
+
     return response.data;
   } catch (error) {
     console.error('Failed to initiate wallet connection:', error);
@@ -265,8 +276,12 @@ export const initiateWalletConnection = async (
 // Get wallet status from backend
 export const getWalletStatus = async (): Promise<WalletStatusResponse> => {
   try {
-    const response = await axios.get<WalletStatusResponse>(`${EREBUS_API_BASE_URL}/api/wallets/status`);
+    const response = await axios.get<WalletStatusResponse>(
+      `${EREBUS_API_BASE_URL}/api/wallets/status`,
+    );
+
     console.log('Wallet status:', response.data);
+
     return response.data;
   } catch (error) {
     console.error('Failed to get wallet status:', error);

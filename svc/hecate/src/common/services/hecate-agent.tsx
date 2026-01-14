@@ -52,11 +52,14 @@ class HecateAgentService {
   async connect(): Promise<boolean> {
     try {
       const response = await fetch(`${this.erebusUrl}/api/agents/health`);
+
       this.isConnected = response.ok;
+
       return this.isConnected;
     } catch (error) {
       console.error('Failed to connect to Hecate agent via Erebus:', error);
       this.isConnected = false;
+
       return false;
     }
   }
@@ -65,12 +68,12 @@ class HecateAgentService {
    * Send a chat message to Hecate agent
    */
   async sendMessage(
-    message: string, 
-    userContext?: { 
-      wallet_address?: string; 
-      wallet_type?: string; 
-      session_time?: string; 
-    }
+    message: string,
+    userContext?: {
+      wallet_address?: string;
+      wallet_type?: string;
+      session_time?: string;
+    },
   ): Promise<HecateResponse> {
     if (!this.isConnected) {
       throw new Error('Not connected to Hecate agent. Call connect() first.');
@@ -88,9 +91,9 @@ class HecateAgentService {
         },
         body: JSON.stringify({
           message,
-          user_context: userContext
+          user_context: userContext,
         }),
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
@@ -100,6 +103,7 @@ class HecateAgentService {
         let errorMessage = `HTTP error! status: ${response.status}`;
         try {
           const errorData = await response.json();
+
           if (errorData.message) {
             errorMessage = errorData.message;
           } else if (errorData.error) {
@@ -113,13 +117,16 @@ class HecateAgentService {
         throw new Error(errorMessage);
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('Failed to send message to Hecate agent:', error);
+
       if (error instanceof DOMException && error.name === 'AbortError') {
-        throw new Error('Request timed out - the model may be thinking too long or server overloaded');
+        throw new Error(
+          'Request timed out - the model may be thinking too long or server overloaded',
+        );
       }
+
       throw error;
     }
   }
@@ -134,13 +141,12 @@ class HecateAgentService {
 
     try {
       const response = await fetch(`${this.erebusUrl}/api/agents/hecate/status`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('Failed to get model status:', error);
       throw error;
@@ -150,7 +156,7 @@ class HecateAgentService {
   /**
    * Get available models
    */
-  async getAvailableModels(): Promise<{ models: any[], current_model: string | null }> {
+  async getAvailableModels(): Promise<{ models: any[]; current_model: string | null }> {
     if (!this.isConnected) {
       throw new Error('Not connected to Hecate agent. Call connect() first.');
     }
@@ -162,8 +168,7 @@ class HecateAgentService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('Failed to get available models:', error);
       throw error;
@@ -192,14 +197,13 @@ class HecateAgentService {
       }
 
       const data = await response.json();
+
       return data.success || false;
     } catch (error) {
       console.error('Failed to set model:', error);
       throw error;
     }
   }
-
-
 
   /**
    * Set agent personality (deprecated - HECATE uses unified vessel AI personality)
@@ -227,6 +231,7 @@ class HecateAgentService {
       return response.ok;
     } catch (error) {
       console.error('Failed to clear conversation:', error);
+
       return false;
     }
   }
@@ -241,13 +246,13 @@ class HecateAgentService {
 
     try {
       const response = await fetch(`${this.erebusUrl}/api/agents/hecate/history`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      
+
       // Convert backend format to frontend ChatMessage format
       return data.map((msg: any) => ({
         id: `${msg.timestamp}-${msg.role}`,
@@ -256,7 +261,7 @@ class HecateAgentService {
         message: msg.content,
         type: msg.role === 'system' ? 'system' : 'text',
         model_used: msg.model_used,
-        metadata: msg.metadata
+        metadata: msg.metadata,
       }));
     } catch (error) {
       console.error('Failed to get conversation history:', error);
@@ -275,13 +280,12 @@ class HecateAgentService {
     try {
       const params = modelName ? `?model_name=${encodeURIComponent(modelName)}` : '';
       const response = await fetch(`${this.erebusUrl}/api/agents/hecate/model-info${params}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('Failed to get model info:', error);
       throw error;
@@ -297,14 +301,15 @@ class HecateAgentService {
     }
 
     try {
-      const response = await fetch(`${this.erebusUrl}/api/agents/hecate/search-models?q=${encodeURIComponent(query)}&limit=${limit}`);
-      
+      const response = await fetch(
+        `${this.erebusUrl}/api/agents/hecate/search-models?q=${encodeURIComponent(query)}&limit=${limit}`,
+      );
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('Failed to search models:', error);
       throw error;
@@ -324,7 +329,7 @@ class HecateAgentService {
   getConnectionStatus(): { connected: boolean; url: string } {
     return {
       connected: this.isConnected,
-      url: this.erebusUrl
+      url: this.erebusUrl,
     };
   }
 }
@@ -333,4 +338,5 @@ class HecateAgentService {
 export const hecateAgent = new HecateAgentService();
 
 export default HecateAgentService;
+
 export type { ChatMessage, HecateResponse, ModelStatus };

@@ -15,9 +15,11 @@ export const useAuthentication = () => {
     const initializeMCP = async () => {
       try {
         const hasSession = restoreSession();
+
         setMcpAuthenticated(hasSession && isAuthenticated());
 
         const health = await checkMCPHealth();
+
         setMcpHealthStatus(health);
       } catch (error) {
         console.error('Failed to initialize MCP:', error);
@@ -31,6 +33,7 @@ export const useAuthentication = () => {
   const handleMCPAuthentication = async (publicKey: string | null) => {
     if (!publicKey) {
       alert('Please connect your wallet first');
+
       return;
     }
 
@@ -70,6 +73,6 @@ export const useAuthentication = () => {
     setMcpAuthenticated,
     mcpHealthStatus,
     setMcpHealthStatus,
-    handleMCPAuthentication
+    handleMCPAuthentication,
   };
 };

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { VoidExperience } from '../../components/void-experience';
-import HUD from '../../components/hud/hud';
-import { useWalletAdapter, ChainType, WalletInfo } from '../../wallet-adapters';
 import { agentService } from '../../common/services/agent-service';
+import HUD from '../../components/hud/hud';
+import { VoidExperience } from '../../components/void-experience';
+import type { WalletInfo } from '../../wallet-adapters';
+import { useWalletAdapter, ChainType } from '../../wallet-adapters';
 import styles from './index.module.scss';
 
 // Login animation phases: black → stars → background → navbar → complete
@@ -23,6 +24,7 @@ const checkExistingSession = (): { hasSession: boolean; publicKey: string | null
 
     if (savedPublicKey && lastAuth) {
       const timeSinceAuth = Date.now() - Number.parseInt(lastAuth);
+
       if (timeSinceAuth < SESSION_TIMEOUT_MS) {
         return { hasSession: true, publicKey: savedPublicKey };
       }
@@ -30,6 +32,7 @@ const checkExistingSession = (): { hasSession: boolean; publicKey: string | null
   } catch (e) {
     console.warn('Error checking existing session:', e);
   }
+
   return { hasSession: false, publicKey: null };
 };
 
@@ -60,25 +63,25 @@ const Home: React.FC = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'error' | 'info'>('error');
   const lastConnectionAttempt = React.useRef<number>(0);
-  const [hudInitialTab, setHudInitialTab] = useState<'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null>(
-    initialSession.hasSession ? 'memcache' : null
-  );
+  const [hudInitialTab, setHudInitialTab] = useState<
+    'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null
+  >(initialSession.hasSession ? 'memcache' : null);
   const [isMobileView, setIsMobileView] = useState<boolean>(false);
 
   // Shared Hecate panel state
   const [hecatePanelOpen, setHecatePanelOpen] = useState<boolean>(false);
 
   // Track active HUD tab for overlapping panel detection
-  const [activeHudTab, setActiveHudTab] = useState<'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null>(
-    initialSession.hasSession ? 'memcache' : null
-  );
+  const [activeHudTab, setActiveHudTab] = useState<
+    'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null
+  >(initialSession.hasSession ? 'memcache' : null);
 
   // Login animation state
   const [loginAnimationPhase, setLoginAnimationPhase] = useState<LoginAnimationPhase>(
-    initialSession.hasSession ? 'black' : 'idle'
+    initialSession.hasSession ? 'black' : 'idle',
   );
   const [preLoginAnimationPhase, setPreLoginAnimationPhase] = useState<LoginAnimationPhase>(
-    !initialSession.hasSession ? 'black' : 'idle'
+    !initialSession.hasSession ? 'black' : 'idle',
   );
   const previousPublicKey = React.useRef<string | null>(initialSession.publicKey);
   const animationTriggered = React.useRef<boolean>(false);
@@ -110,6 +113,7 @@ const Home: React.FC = () => {
   // Initialize theme
   useEffect(() => {
     const savedTheme = localStorage.getItem('currentTheme');
+
     if (savedTheme && (savedTheme === 'null' || savedTheme === 'light' || savedTheme === 'dark')) {
       setCurrentTheme(savedTheme as 'null' | 'light' | 'dark');
     } else {
@@ -126,6 +130,7 @@ const Home: React.FC = () => {
 
     checkMobileView();
     window.addEventListener('resize', checkMobileView);
+
     return () => window.removeEventListener('resize', checkMobileView);
   }, []);
 
@@ -183,6 +188,7 @@ const Home: React.FC = () => {
   // Login animation sequence - triggers on fresh login
   useEffect(() => {
     const isNewLogin = previousPublicKey.current === null && connectedAddress !== null;
+
     previousPublicKey.current = connectedAddress;
 
     if (isNewLogin && !animationTriggered.current) {
@@ -203,7 +209,9 @@ const Home: React.FC = () => {
     }
 
     // Reset animation when logging out (only if we've actually connected during this session)
-    const isActualLogout = connectedAddress === null && loginAnimationPhase !== 'idle' && hasEverConnected.current;
+    const isActualLogout =
+      connectedAddress === null && loginAnimationPhase !== 'idle' && hasEverConnected.current;
+
     if (isActualLogout) {
       setLoginAnimationPhase('idle');
       animationTriggered.current = false;
@@ -297,17 +305,21 @@ const Home: React.FC = () => {
 
     // Debounce rapid successive calls
     const now = Date.now();
+
     if (now - lastConnectionAttempt.current < 1000) {
       console.log('Connection attempt too soon, debouncing...');
       setInfoMessage('⏱️ Please wait before trying again.');
+
       return;
     }
+
     lastConnectionAttempt.current = now;
 
     // If no wallet specified, show selection modal
     if (!walletId) {
       console.log('No walletId specified, showing selection modal');
       setShowWalletModal(true);
+
       return;
     }
 
@@ -326,9 +338,11 @@ const Home: React.FC = () => {
         try {
           const { taskService } = await import('../../common/services/task-service');
           const network = result.chain === ChainType.SOLANA ? 'solana' : 'ethereum';
+
           taskService.setWalletContext(result.address!, network);
 
           const registrationResult = await taskService.registerUser(result.address!, network);
+
           if (registrationResult.success) {
             console.log('✅ User registered successfully:', registrationResult.data);
             setInfoMessage('✅ Account registered successfully!');
@@ -336,12 +350,14 @@ const Home: React.FC = () => {
             localStorage.removeItem('userProfile');
             localStorage.removeItem('userProfileTimestamp');
 
-            window.dispatchEvent(new CustomEvent('user-registered', {
-              detail: {
-                walletAddress: result.address,
-                network
-              }
-            }));
+            window.dispatchEvent(
+              new CustomEvent('user-registered', {
+                detail: {
+                  walletAddress: result.address,
+                  network,
+                },
+              }),
+            );
           } else {
             console.warn('⚠️ User registration failed:', registrationResult.error);
           }
@@ -365,7 +381,8 @@ const Home: React.FC = () => {
     if (errorMsg.includes('User rejected') || errorMsg.includes('cancelled')) {
       setInfoMessage('❌ Connection cancelled. Please approve the connection.');
     } else if (errorMsg.includes('not installed')) {
-      const wallet = getAllWalletsInfo().find(w => w.id === walletId);
+      const wallet = getAllWalletsInfo().find((w) => w.id === walletId);
+
       if (wallet?.installUrl) {
         setInfoMessage(`🚫 ${wallet.name} not found. Install extension and refresh.`);
         window.open(wallet.installUrl, '_blank');
@@ -377,9 +394,9 @@ const Home: React.FC = () => {
     } else if (errorMsg.includes('-32603') || errorMsg.includes('Unexpected error')) {
       setErrorMessage(
         'Wallet is not responding. Try these steps:\n\n' +
-        '1. Quit your browser completely and reopen it\n' +
-        '2. If that doesn\'t work, disable and re-enable the extension\n' +
-        '3. As a last resort, clear the wallet\'s cache in its settings'
+          '1. Quit your browser completely and reopen it\n' +
+          "2. If that doesn't work, disable and re-enable the extension\n" +
+          "3. As a last resort, clear the wallet's cache in its settings",
       );
     } else {
       setErrorMessage(`❌ Connection failed: ${errorMsg}`);
@@ -407,7 +424,7 @@ const Home: React.FC = () => {
   // Get current animation phase
   // Use initialSession.hasSession for returning users before connectedAddress is restored by hook
   // After logout, use pre-login animation even if initialSession.hasSession was true
-  const isReturningUser = !hasLoggedOut && (initialSession.hasSession || !!connectedAddress);
+  const isReturningUser = !hasLoggedOut && (initialSession.hasSession || Boolean(connectedAddress));
   const currentAnimationPhase = isReturningUser ? loginAnimationPhase : preLoginAnimationPhase;
 
   const getAnimationClass = () => {
@@ -434,18 +451,30 @@ const Home: React.FC = () => {
     if (wallet.icon && !wallet.icon.startsWith('http')) {
       return wallet.icon;
     }
+
     // Fallback icons
     switch (wallet.id) {
-      case 'phantom': return '👻';
-      case 'metamask': return '🦊';
-      case 'bitget': return <img src="/wallets/bitget_logo.png" alt="Bitget" style={{ width: '2.5rem', height: '2.5rem', objectFit: 'contain' }} />;
-      default: return '👛';
+      case 'phantom':
+        return '👻';
+      case 'metamask':
+        return '🦊';
+      case 'bitget':
+        return (
+          <img
+            src="/wallets/bitget_logo.png"
+            alt="Bitget"
+            style={{ width: '2.5rem', height: '2.5rem', objectFit: 'contain' }}
+          />
+        );
+      default:
+        return '👛';
     }
   };
 
   // Get chain description for wallet
   const getChainDescription = (wallet: WalletInfo) => {
     const chains = wallet.supportedChains;
+
     if (chains.includes(ChainType.EVM) && chains.includes(ChainType.SOLANA)) {
       return 'EVM & Solana';
     } else if (chains.includes(ChainType.EVM)) {
@@ -453,6 +482,7 @@ const Home: React.FC = () => {
     } else if (chains.includes(ChainType.SOLANA)) {
       return 'Solana';
     }
+
     return 'Multi-chain';
   };
 
@@ -465,12 +495,12 @@ const Home: React.FC = () => {
 
       <div
         className={`${styles.backgroundImage} ${connectedAddress ? styles.loggedIn : styles.loggedOut} ${
-          (isInitialized && currentAnimationPhase === 'complete') ? styles.bgReady : ''
+          isInitialized && currentAnimationPhase === 'complete' ? styles.bgReady : ''
         }`}
         style={{
           backgroundImage: isInitialized
             ? `url('${connectedAddress ? '/bg_without_logo.png' : '/bg_with_logo.png'}')`
-            : 'none'
+            : 'none',
         }}
       />
 
@@ -486,54 +516,56 @@ const Home: React.FC = () => {
       />
 
       {/* Pre-login Hero Text */}
-      {!connectedAddress && (!initialSession.hasSession || hasLoggedOut) && currentAnimationPhase !== 'black' && (
-        <div className={`${styles.heroOverlay} ${currentAnimationPhase === 'complete' ? styles.heroComplete : ''}`}>
-          <h1 className={styles.heroTitle}>The Living Directory</h1>
-          <p className={styles.heroSubtitle}>Discover agents, tools, and workflows — turn exploration into treasure</p>
-        </div>
-      )}
+      {!connectedAddress &&
+        (!initialSession.hasSession || hasLoggedOut) &&
+        currentAnimationPhase !== 'black' && (
+          <div
+            className={`${styles.heroOverlay} ${currentAnimationPhase === 'complete' ? styles.heroComplete : ''}`}
+          >
+            <h1 className={styles.heroTitle}>The Living Directory</h1>
+            <p className={styles.heroSubtitle}>
+              Discover agents, tools, and workflows — turn exploration into treasure
+            </p>
+          </div>
+        )}
 
       <div className={`${styles.scene} ${showHUD ? styles.hudActive : ''}`} />
 
-      {showHUD && isInitialized && (currentAnimationPhase === 'navbar' || currentAnimationPhase === 'complete') && (
-        <HUD
-          publicKey={connectedAddress || initialSession.publicKey}
-          onDisconnect={handleDisconnect}
-          onConnectWallet={(walletType?: 'phantom' | 'metamask') => {
-            // Map legacy wallet type names to adapter IDs
-            handleConnectWallet(walletType);
-          }}
-          theme={currentTheme}
-          systemStatus={systemStatus}
-          initialTab={hudInitialTab}
-          onToggleMobileMenu={isMobileView ? () => {} : undefined}
-          loginAnimationPhase={currentAnimationPhase}
-          onClose={() => setShowHUD(false)}
-          onThemeChange={(theme) => {
-            if (theme === 'null' || theme === 'light' || theme === 'dark') {
-              setCurrentTheme(theme);
-              localStorage.setItem('currentTheme', theme);
-            }
-          }}
-          hecatePanelOpen={hecatePanelOpen}
-          onHecatePanelChange={setHecatePanelOpen}
-          onActiveTabChange={setActiveHudTab}
-        />
-      )}
+      {showHUD &&
+        isInitialized &&
+        (currentAnimationPhase === 'navbar' || currentAnimationPhase === 'complete') && (
+          <HUD
+            publicKey={connectedAddress || initialSession.publicKey}
+            onDisconnect={handleDisconnect}
+            onConnectWallet={(walletType?: 'phantom' | 'metamask') => {
+              // Map legacy wallet type names to adapter IDs
+              handleConnectWallet(walletType);
+            }}
+            theme={currentTheme}
+            systemStatus={systemStatus}
+            initialTab={hudInitialTab}
+            onToggleMobileMenu={isMobileView ? () => {} : undefined}
+            loginAnimationPhase={currentAnimationPhase}
+            onClose={() => setShowHUD(false)}
+            onThemeChange={(theme) => {
+              if (theme === 'null' || theme === 'light' || theme === 'dark') {
+                setCurrentTheme(theme);
+                localStorage.setItem('currentTheme', theme);
+              }
+            }}
+            hecatePanelOpen={hecatePanelOpen}
+            onHecatePanelChange={setHecatePanelOpen}
+            onActiveTabChange={setActiveHudTab}
+          />
+        )}
 
       {/* Wallet Selection Modal - Now Dynamic */}
       {showWalletModal && (
-        <div
-          className={styles.modalOverlay}
-          onClick={() => setShowWalletModal(false)}
-        >
+        <div className={styles.modalOverlay} onClick={() => setShowWalletModal(false)}>
           <div className={styles.walletModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h2>🔐 Connect Wallet</h2>
-              <button
-                className={styles.closeButton}
-                onClick={() => setShowWalletModal(false)}
-              >
+              <button className={styles.closeButton} onClick={() => setShowWalletModal(false)}>
                 ×
               </button>
             </div>
@@ -563,7 +595,7 @@ const Home: React.FC = () => {
 
                 {/* Not installed wallets - show with install prompt */}
                 {getAllWalletsInfo()
-                  .filter(info => !getInstalledWallets().some(w => w.id === info.id))
+                  .filter((info) => !getInstalledWallets().some((w) => w.id === info.id))
                   .map((wallet) => (
                     <button
                       key={wallet.id}
@@ -596,8 +628,8 @@ const Home: React.FC = () => {
                 <p>Don't have a wallet?</p>
                 <div className={styles.installLinks}>
                   {getAllWalletsInfo()
-                    .filter(w => w.installUrl)
-                    .map(wallet => (
+                    .filter((w) => w.installUrl)
+                    .map((wallet) => (
                       <a
                         key={wallet.id}
                         href={wallet.installUrl}

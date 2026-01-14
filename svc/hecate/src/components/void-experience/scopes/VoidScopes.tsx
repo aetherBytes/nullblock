@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Task, TaskState } from '../../../types/tasks';
-import { Agent } from '../../../types/agents';
 import { agentService } from '../../../common/services/agent-service';
-import TaskCreationForm from '../../hud/TaskCreationForm';
+import type { Agent } from '../../../types/agents';
+import type { Task, TaskState } from '../../../types/tasks';
 import MarkdownRenderer from '../../common/MarkdownRenderer';
+import TaskCreationForm from '../../hud/TaskCreationForm';
 import styles from './voidScopes.module.scss';
 
 type ScopeType = 'tasks' | 'agents' | 'model-info' | null;
@@ -57,47 +57,78 @@ const SCOPE_OPTIONS: { id: ScopeType; label: string; icon: string }[] = [
 // Task helpers
 const getStatusIcon = (status: TaskState): string => {
   switch (status) {
-    case 'working': return '⚡';
-    case 'input-required': return '⏸️';
-    case 'completed': return '✅';
-    case 'failed': return '❌';
-    case 'rejected': return '🚫';
-    case 'canceled': return '🚫';
-    case 'submitted': return '⏳';
-    case 'auth-required': return '🔐';
-    case 'unknown': return '❓';
-    default: return '❓';
+    case 'working':
+      return '⚡';
+    case 'input-required':
+      return '⏸️';
+    case 'completed':
+      return '✅';
+    case 'failed':
+      return '❌';
+    case 'rejected':
+      return '🚫';
+    case 'canceled':
+      return '🚫';
+    case 'submitted':
+      return '⏳';
+    case 'auth-required':
+      return '🔐';
+    case 'unknown':
+      return '❓';
+    default:
+      return '❓';
   }
 };
 
 const getStatusClass = (status: TaskState): string => {
   switch (status) {
-    case 'working': return styles.statusWorking;
-    case 'input-required': return styles.statusPaused;
-    case 'completed': return styles.statusCompleted;
-    case 'failed': return styles.statusFailed;
-    case 'rejected': return styles.statusFailed;
-    case 'canceled': return styles.statusCanceled;
-    case 'submitted': return styles.statusSubmitted;
-    case 'auth-required': return styles.statusPaused;
-    case 'unknown': return styles.statusSubmitted;
-    default: return styles.statusSubmitted;
+    case 'working':
+      return styles.statusWorking;
+    case 'input-required':
+      return styles.statusPaused;
+    case 'completed':
+      return styles.statusCompleted;
+    case 'failed':
+      return styles.statusFailed;
+    case 'rejected':
+      return styles.statusFailed;
+    case 'canceled':
+      return styles.statusCanceled;
+    case 'submitted':
+      return styles.statusSubmitted;
+    case 'auth-required':
+      return styles.statusPaused;
+    case 'unknown':
+      return styles.statusSubmitted;
+    default:
+      return styles.statusSubmitted;
   }
 };
 
 const getCategoryIcon = (category: string): string => {
   switch (category) {
-    case 'user': return '👤 User';
-    case 'agent': return '🤖 Agent';
-    case 'api': return '🔗 API';
-    case 'system': return '⚙️ System';
-    case 'scheduled': return '⏰ Scheduled';
-    case 'automated': return '🤖 Automated';
-    case 'manual': return '👤 Manual';
-    case 'webhook': return '🔗 Webhook';
-    case 'cron': return '⏰ Cron';
-    case 'user_assigned': return '👤 User';
-    default: return `📋 ${category}`;
+    case 'user':
+      return '👤 User';
+    case 'agent':
+      return '🤖 Agent';
+    case 'api':
+      return '🔗 API';
+    case 'system':
+      return '⚙️ System';
+    case 'scheduled':
+      return '⏰ Scheduled';
+    case 'automated':
+      return '🤖 Automated';
+    case 'manual':
+      return '👤 Manual';
+    case 'webhook':
+      return '🔗 Webhook';
+    case 'cron':
+      return '⏰ Cron';
+    case 'user_assigned':
+      return '👤 User';
+    default:
+      return `📋 ${category}`;
   }
 };
 
@@ -114,13 +145,18 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
 }) => {
   // Helper to check if a model is locked (non-free models when user has no API key)
   const isModelLocked = (model: any): boolean => {
-    if (hasApiKey) return false; // User has API key, nothing locked
+    if (hasApiKey) {
+      return false;
+    } // User has API key, nothing locked
+
     // Check if model is free
-    const isFree = model.tier === 'economical' ||
-                   model.cost_per_1k_tokens === 0 ||
-                   model.pricing?.prompt === '0' ||
-                   model.id?.includes(':free') ||
-                   model.name?.includes(':free');
+    const isFree =
+      model.tier === 'economical' ||
+      model.cost_per_1k_tokens === 0 ||
+      model.pricing?.prompt === '0' ||
+      model.id?.includes(':free') ||
+      model.name?.includes(':free');
+
     return !isFree;
   };
   const [selectedScope, setSelectedScope] = useState<ScopeType>(null);
@@ -167,6 +203,7 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
 
     try {
       const response = await agentService.getAgents();
+
       if (response.success && response.data) {
         setAgents(response.data.agents);
       } else {
@@ -195,6 +232,7 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
     };
 
     document.addEventListener('mousedown', handleClickOutside);
+
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
@@ -220,8 +258,12 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
   };
 
   const getSelectedLabel = () => {
-    if (!selectedScope) return 'SCOPES';
-    const scope = SCOPE_OPTIONS.find(s => s.id === selectedScope);
+    if (!selectedScope) {
+      return 'SCOPES';
+    }
+
+    const scope = SCOPE_OPTIONS.find((s) => s.id === selectedScope);
+
     return scope ? scope.label.toUpperCase() : 'SCOPES';
   };
 
@@ -230,30 +272,37 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
   // ============================================
 
   const tasks = taskManagement?.tasks || [];
-  const todoTasks = tasks.filter(task => task.status.state === 'submitted');
-  const runningTasks = tasks.filter(task =>
-    task.status.state === 'working' || task.status.state === 'input-required'
+  const todoTasks = tasks.filter((task) => task.status.state === 'submitted');
+  const runningTasks = tasks.filter(
+    (task) => task.status.state === 'working' || task.status.state === 'input-required',
   );
-  const completedTasks = tasks.filter(task =>
-    task.status.state === 'completed' ||
-    task.status.state === 'failed' ||
-    task.status.state === 'canceled'
+  const completedTasks = tasks.filter(
+    (task) =>
+      task.status.state === 'completed' ||
+      task.status.state === 'failed' ||
+      task.status.state === 'canceled',
   );
 
   const getTasksForCategory = (category: TaskCategory): Task[] => {
     switch (category) {
-      case 'todo': return todoTasks;
-      case 'running': return runningTasks;
-      case 'completed': return completedTasks;
-      default: return [];
+      case 'todo':
+        return todoTasks;
+      case 'running':
+        return runningTasks;
+      case 'completed':
+        return completedTasks;
+      default:
+        return [];
     }
   };
 
   const currentCategoryTasks = getTasksForCategory(activeTaskCategory);
-  const selectedTask = selectedTaskId ? tasks.find(t => t.id === selectedTaskId) : null;
+  const selectedTask = selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) : null;
 
   const renderTaskDetails = () => {
-    if (!selectedTask || !taskManagement) return null;
+    if (!selectedTask || !taskManagement) {
+      return null;
+    }
 
     return (
       <div className={styles.taskDetails}>
@@ -277,7 +326,9 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
             </div>
             <div className={styles.taskField}>
               <label>Status:</label>
-              <span className={`${styles.statusBadge} ${getStatusClass(selectedTask.status.state)}`}>
+              <span
+                className={`${styles.statusBadge} ${getStatusClass(selectedTask.status.state)}`}
+              >
                 {getStatusIcon(selectedTask.status.state)} {selectedTask.status.state}
               </span>
             </div>
@@ -299,10 +350,17 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
                 <div className={styles.progressBar}>
                   <div
                     className={styles.progressFill}
-                    style={{ width: `${selectedTask.status.state === 'completed' ? 100 : selectedTask.progress}%` }}
+                    style={{
+                      width: `${selectedTask.status.state === 'completed' ? 100 : selectedTask.progress}%`,
+                    }}
                   />
                 </div>
-                <span>{selectedTask.status.state === 'completed' ? '100' : Math.round(selectedTask.progress)}%</span>
+                <span>
+                  {selectedTask.status.state === 'completed'
+                    ? '100'
+                    : Math.round(selectedTask.progress)}
+                  %
+                </span>
               </div>
             </div>
             {selectedTask.action_duration && (
@@ -329,30 +387,66 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
           <div className={styles.taskActions}>
             {selectedTask.status.state === 'submitted' && (
               <>
-                <button onClick={() => { taskManagement.startTask(selectedTask.id); setSelectedTaskId(null); }} className={styles.actionButton}>
+                <button
+                  onClick={() => {
+                    taskManagement.startTask(selectedTask.id);
+                    setSelectedTaskId(null);
+                  }}
+                  className={styles.actionButton}
+                >
                   ▶️ Start
                 </button>
-                <button onClick={() => { taskManagement.processTask(selectedTask.id); setSelectedTaskId(null); }} className={styles.actionButton}>
+                <button
+                  onClick={() => {
+                    taskManagement.processTask(selectedTask.id);
+                    setSelectedTaskId(null);
+                  }}
+                  className={styles.actionButton}
+                >
                   ⚡ Process
                 </button>
               </>
             )}
             {selectedTask.status.state === 'working' && (
               <>
-                <button onClick={() => { taskManagement.pauseTask(selectedTask.id); setSelectedTaskId(null); }} className={styles.actionButton}>
+                <button
+                  onClick={() => {
+                    taskManagement.pauseTask(selectedTask.id);
+                    setSelectedTaskId(null);
+                  }}
+                  className={styles.actionButton}
+                >
                   ⏸️ Pause
                 </button>
-                <button onClick={() => { taskManagement.cancelTask(selectedTask.id); setSelectedTaskId(null); }} className={styles.actionButton}>
+                <button
+                  onClick={() => {
+                    taskManagement.cancelTask(selectedTask.id);
+                    setSelectedTaskId(null);
+                  }}
+                  className={styles.actionButton}
+                >
                   🚫 Cancel
                 </button>
               </>
             )}
             {selectedTask.status.state === 'failed' && (
-              <button onClick={() => { taskManagement.retryTask(selectedTask.id); setSelectedTaskId(null); }} className={styles.actionButton}>
+              <button
+                onClick={() => {
+                  taskManagement.retryTask(selectedTask.id);
+                  setSelectedTaskId(null);
+                }}
+                className={styles.actionButton}
+              >
                 🔄 Retry
               </button>
             )}
-            <button onClick={() => { taskManagement.deleteTask(selectedTask.id); setSelectedTaskId(null); }} className={`${styles.actionButton} ${styles.dangerButton}`}>
+            <button
+              onClick={() => {
+                taskManagement.deleteTask(selectedTask.id);
+                setSelectedTaskId(null);
+              }}
+              className={`${styles.actionButton} ${styles.dangerButton}`}
+            >
               🗑️ Delete
             </button>
           </div>
@@ -374,13 +468,22 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
     return (
       <div className={styles.taskScope}>
         <div className={styles.taskTabs}>
-          <button className={`${styles.taskTab} ${activeTaskCategory === 'todo' ? styles.activeTab : ''}`} onClick={() => setActiveTaskCategory('todo')}>
+          <button
+            className={`${styles.taskTab} ${activeTaskCategory === 'todo' ? styles.activeTab : ''}`}
+            onClick={() => setActiveTaskCategory('todo')}
+          >
             ⏳ Todo ({todoTasks.length})
           </button>
-          <button className={`${styles.taskTab} ${activeTaskCategory === 'running' ? styles.activeTab : ''}`} onClick={() => setActiveTaskCategory('running')}>
+          <button
+            className={`${styles.taskTab} ${activeTaskCategory === 'running' ? styles.activeTab : ''}`}
+            onClick={() => setActiveTaskCategory('running')}
+          >
             ⚡ Running ({runningTasks.length})
           </button>
-          <button className={`${styles.taskTab} ${activeTaskCategory === 'completed' ? styles.activeTab : ''}`} onClick={() => setActiveTaskCategory('completed')}>
+          <button
+            className={`${styles.taskTab} ${activeTaskCategory === 'completed' ? styles.activeTab : ''}`}
+            onClick={() => setActiveTaskCategory('completed')}
+          >
             ✅ Done ({completedTasks.length})
           </button>
         </div>
@@ -393,28 +496,66 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
           {currentCategoryTasks.length === 0 ? (
             <div className={styles.emptyState}>
               <p>No {activeTaskCategory} tasks</p>
-              {activeTaskCategory === 'todo' && <p className={styles.emptyHint}>Create a task to get started</p>}
+              {activeTaskCategory === 'todo' && (
+                <p className={styles.emptyHint}>Create a task to get started</p>
+              )}
             </div>
           ) : (
             currentCategoryTasks.map((task) => (
-              <div key={task.id} className={`${styles.taskItem} ${getStatusClass(task.status.state)}`} onClick={() => setSelectedTaskId(task.id)}>
+              <div
+                key={task.id}
+                className={`${styles.taskItem} ${getStatusClass(task.status.state)}`}
+                onClick={() => setSelectedTaskId(task.id)}
+              >
                 <div className={styles.taskItemHeader}>
                   <span className={styles.taskName}>{task.name}</span>
                   <span className={styles.taskStatus}>{getStatusIcon(task.status.state)}</span>
                 </div>
                 <div className={styles.taskItemMeta}>
-                  <span className={styles.taskTime}>{new Date(task.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className={styles.taskTime}>
+                    {new Date(task.created_at).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
                   <span className={styles.taskCategory}>{getCategoryIcon(task.category)}</span>
                 </div>
                 <div className={styles.taskItemActions}>
                   {task.status.state === 'submitted' && (
                     <>
-                      <button onClick={(e) => { e.stopPropagation(); taskManagement.startTask(task.id); }} className={styles.taskQuickAction} title="Start">▶️</button>
-                      <button onClick={(e) => { e.stopPropagation(); taskManagement.processTask(task.id); }} className={styles.taskQuickAction} title="Process">⚡</button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          taskManagement.startTask(task.id);
+                        }}
+                        className={styles.taskQuickAction}
+                        title="Start"
+                      >
+                        ▶️
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          taskManagement.processTask(task.id);
+                        }}
+                        className={styles.taskQuickAction}
+                        title="Process"
+                      >
+                        ⚡
+                      </button>
                     </>
                   )}
                   {task.status.state === 'working' && (
-                    <button onClick={(e) => { e.stopPropagation(); taskManagement.cancelTask(task.id); }} className={styles.taskQuickAction} title="Cancel">❌</button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        taskManagement.cancelTask(task.id);
+                      }}
+                      className={styles.taskQuickAction}
+                      title="Cancel"
+                    >
+                      ❌
+                    </button>
                   )}
                 </div>
               </div>
@@ -426,18 +567,26 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
   };
 
   const renderTaskForm = () => {
-    if (!taskManagement) return null;
+    if (!taskManagement) {
+      return null;
+    }
 
     return (
       <div className={styles.taskFormWrapper}>
         <div className={styles.taskFormHeader}>
-          <button onClick={() => setShowTaskForm(false)} className={styles.backButton}>← Back</button>
+          <button onClick={() => setShowTaskForm(false)} className={styles.backButton}>
+            ← Back
+          </button>
           <span>Create Task</span>
         </div>
         <TaskCreationForm
           onCreateTask={async (request) => {
             const success = await taskManagement.createTask(request);
-            if (success) setShowTaskForm(false);
+
+            if (success) {
+              setShowTaskForm(false);
+            }
+
             return success;
           }}
           isLoading={taskManagement.isLoading}
@@ -453,10 +602,12 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
   // AGENTS SCOPE
   // ============================================
 
-  const selectedAgent = selectedAgentId ? agents.find(a => a.name === selectedAgentId) : null;
+  const selectedAgent = selectedAgentId ? agents.find((a) => a.name === selectedAgentId) : null;
 
   const renderAgentDetails = () => {
-    if (!selectedAgent) return null;
+    if (!selectedAgent) {
+      return null;
+    }
 
     const isOnline = agentService.isAgentOnline(selectedAgent);
 
@@ -472,7 +623,10 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
           <div className={styles.agentHeaderActions}>
             <button
               onClick={() => {
-                if (setActiveAgent && (selectedAgent.name === 'hecate' || selectedAgent.name === 'siren')) {
+                if (
+                  setActiveAgent &&
+                  (selectedAgent.name === 'hecate' || selectedAgent.name === 'siren')
+                ) {
                   setActiveAgent(selectedAgent.name);
                 }
               }}
@@ -493,7 +647,9 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
             </div>
             <div className={styles.agentField}>
               <label>Status:</label>
-              <span className={`${styles.agentStatusBadge} ${selectedAgent.status === 'healthy' ? styles.healthy : styles.unhealthy}`}>
+              <span
+                className={`${styles.agentStatusBadge} ${selectedAgent.status === 'healthy' ? styles.healthy : styles.unhealthy}`}
+              >
                 {selectedAgent.status === 'healthy' ? '✅' : '❌'} {selectedAgent.status}
               </span>
             </div>
@@ -514,9 +670,9 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
               <div className={styles.agentSection}>
                 <h5>Core Mission</h5>
                 <p className={styles.agentMission}>
-                  Hecate serves as NullBlock's neural core and primary conversational interface.
-                  As the orchestration engine, Hecate coordinates specialized agents for blockchain operations,
-                  DeFi analysis, market intelligence, and complex workflow management.
+                  Hecate serves as NullBlock's neural core and primary conversational interface. As
+                  the orchestration engine, Hecate coordinates specialized agents for blockchain
+                  operations, DeFi analysis, market intelligence, and complex workflow management.
                 </p>
               </div>
               <div className={styles.agentSection}>
@@ -538,8 +694,8 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
                 <h5>Core Mission</h5>
                 <p className={styles.agentMission}>
                   Siren serves as NullBlock's frontline evangelist in the decentralized arena,
-                  driving go-to-market strategies, tokenomics storytelling, and viral outreach
-                  to amplify adoption across blockchain networks.
+                  driving go-to-market strategies, tokenomics storytelling, and viral outreach to
+                  amplify adoption across blockchain networks.
                 </p>
               </div>
               <div className={styles.agentSection}>
@@ -571,7 +727,9 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
               <h5>Metrics</h5>
               <div className={styles.metricsGrid}>
                 {agentService.getAgentMetrics(selectedAgent).map((metric, index) => (
-                  <div key={index} className={styles.metricItem}>{metric}</div>
+                  <div key={index} className={styles.metricItem}>
+                    {metric}
+                  </div>
                 ))}
               </div>
             </div>
@@ -596,7 +754,9 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
         <div className={styles.scopePlaceholder}>
           <span className={styles.placeholderIcon}>❌</span>
           <span>{agentsError}</span>
-          <button onClick={fetchAgents} className={styles.retryButton}>Retry</button>
+          <button onClick={fetchAgents} className={styles.retryButton}>
+            Retry
+          </button>
         </div>
       );
     }
@@ -618,12 +778,18 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
             </div>
           ) : (
             agents.map((agent) => (
-              <div key={agent.name} className={styles.agentItem} onClick={() => setSelectedAgentId(agent.name)}>
+              <div
+                key={agent.name}
+                className={styles.agentItem}
+                onClick={() => setSelectedAgentId(agent.name)}
+              >
                 <div className={styles.agentItemHeader}>
                   <span className={styles.agentName}>
                     {agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}
                   </span>
-                  <span className={`${styles.agentItemStatus} ${agent.status === 'healthy' ? styles.healthy : styles.unhealthy}`}>
+                  <span
+                    className={`${styles.agentItemStatus} ${agent.status === 'healthy' ? styles.healthy : styles.unhealthy}`}
+                  >
                     {agent.status === 'healthy' ? '✅' : '❌'}
                   </span>
                 </div>
@@ -666,7 +832,7 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
     const { isLoadingModelInfo, currentSelectedModel, availableModels: models } = modelManagement;
 
     // Find current model info from available models
-    const currentModelInfo = models.find(m => m.name === currentSelectedModel);
+    const currentModelInfo = models.find((m) => m.name === currentSelectedModel);
 
     if (isLoadingModelInfo) {
       return (
@@ -697,17 +863,16 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
             <span className={styles.modelIcon}>{currentModelInfo?.icon || '🤖'}</span>
             <div className={styles.modelCurrentInfo}>
               <span className={styles.modelCurrentName}>
-                {currentModelInfo?.display_name || currentSelectedModel?.split('/').pop() || 'No Model'}
+                {currentModelInfo?.display_name ||
+                  currentSelectedModel?.split('/').pop() ||
+                  'No Model'}
               </span>
               <span className={styles.modelCurrentProvider}>
                 {currentModelInfo?.provider || 'Unknown'}
               </span>
             </div>
           </div>
-          <button
-            onClick={() => setShowModelList(true)}
-            className={styles.switchModelButton}
-          >
+          <button onClick={() => setShowModelList(true)} className={styles.switchModelButton}>
             Switch
           </button>
         </div>
@@ -789,8 +954,9 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
                 <div className={styles.modelStat}>
                   <label>Pricing:</label>
                   <span>
-                    {currentModelInfo.pricing.prompt === '0' ? '🆓 Free' :
-                     `$${(parseFloat(currentModelInfo.pricing.prompt) * 1000000).toFixed(2)}/M`}
+                    {currentModelInfo.pricing.prompt === '0'
+                      ? '🆓 Free'
+                      : `$${(Number.parseFloat(currentModelInfo.pricing.prompt) * 1000000).toFixed(2)}/M`}
                   </span>
                 </div>
               )}
@@ -798,9 +964,13 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
                 <div className={styles.modelStat}>
                   <label>Tier:</label>
                   <span className={styles.tierBadge}>
-                    {currentModelInfo.tier === 'economical' ? '🆓 Free' :
-                     currentModelInfo.tier === 'fast' ? '⚡ Fast' :
-                     currentModelInfo.tier === 'premium' ? '💎 Premium' : '⭐ Standard'}
+                    {currentModelInfo.tier === 'economical'
+                      ? '🆓 Free'
+                      : currentModelInfo.tier === 'fast'
+                        ? '⚡ Fast'
+                        : currentModelInfo.tier === 'premium'
+                          ? '💎 Premium'
+                          : '⭐ Standard'}
                   </span>
                 </div>
               )}
@@ -820,7 +990,9 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
   };
 
   const renderModelSelection = () => {
-    if (!modelManagement) return null;
+    if (!modelManagement) {
+      return null;
+    }
 
     const { availableModels: models, currentSelectedModel } = modelManagement;
 
@@ -862,18 +1034,24 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
         <div className={styles.modelList}>
           {displayModels.map((model, index) => {
             const locked = isModelLocked(model);
+
             return (
               <button
                 key={`${model.name}-${index}`}
                 className={`${styles.modelItem} ${model.name === currentSelectedModel ? styles.selectedModel : ''} ${locked ? styles.modelLocked : ''}`}
                 onClick={() => {
-                  if (locked) return; // Don't allow selection of locked models
+                  if (locked) {
+                    return;
+                  } // Don't allow selection of locked models
+
                   modelManagement.handleModelSelection(model.name);
                   setShowModelList(false);
                   setActiveModelCategory(null);
                 }}
                 disabled={locked}
-                title={locked ? 'Add an API key in Settings or purchase credits to unlock' : undefined}
+                title={
+                  locked ? 'Add an API key in Settings or purchase credits to unlock' : undefined
+                }
               >
                 <div className={styles.modelItemInfo}>
                   <span className={styles.modelItemIcon}>{model.icon || '🤖'}</span>
@@ -884,15 +1062,26 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
                 </div>
                 <div className={styles.modelItemMeta}>
                   {locked ? (
-                    <span className={styles.lockedIcon} title="Add an API key in Settings or purchase credits to unlock">🔒</span>
+                    <span
+                      className={styles.lockedIcon}
+                      title="Add an API key in Settings or purchase credits to unlock"
+                    >
+                      🔒
+                    </span>
                   ) : (
                     <span className={styles.modelTier}>
-                      {model.tier === 'economical' ? '🆓' :
-                       model.tier === 'fast' ? '⚡' :
-                       model.tier === 'premium' ? '💎' : '⭐'}
+                      {model.tier === 'economical'
+                        ? '🆓'
+                        : model.tier === 'fast'
+                          ? '⚡'
+                          : model.tier === 'premium'
+                            ? '💎'
+                            : '⭐'}
                     </span>
                   )}
-                  {model.name === currentSelectedModel && <span className={styles.selectedBadge}>✓</span>}
+                  {model.name === currentSelectedModel && (
+                    <span className={styles.selectedBadge}>✓</span>
+                  )}
                 </div>
               </button>
             );
@@ -909,12 +1098,21 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
   const renderScopeContent = () => {
     switch (selectedScope) {
       case 'tasks':
-        if (showTaskForm) return renderTaskForm();
-        if (selectedTaskId) return renderTaskDetails();
+        if (showTaskForm) {
+          return renderTaskForm();
+        }
+
+        if (selectedTaskId) {
+          return renderTaskDetails();
+        }
+
         return renderTaskList();
 
       case 'agents':
-        if (selectedAgentId) return renderAgentDetails();
+        if (selectedAgentId) {
+          return renderAgentDetails();
+        }
+
         return renderAgentList();
 
       case 'model-info':
@@ -925,261 +1123,276 @@ const VoidScopes: React.FC<VoidScopesProps> = ({
     }
   };
 
-  if (!isActive) return null;
+  if (!isActive) {
+    return null;
+  }
 
   // Summary info for collapsed cards
   const tasksSummary = `${tasks.length} task${tasks.length !== 1 ? 's' : ''}`;
   const runningCount = runningTasks.length;
   const agentsSummary = `${agents.length} agent${agents.length !== 1 ? 's' : ''}`;
-  const onlineCount = agents.filter(a => a.status === 'healthy').length;
-  const modelSummary = modelManagement?.currentSelectedModel?.split('/').pop()?.split(':')[0] || 'No model';
+  const onlineCount = agents.filter((a) => a.status === 'healthy').length;
+  const modelSummary =
+    modelManagement?.currentSelectedModel?.split('/').pop()?.split(':')[0] || 'No model';
 
   return (
     <>
-    <div className={styles.voidScopesContainer} ref={containerRef}>
-      {/* Accordion card stack */}
-      <div className={styles.cardStack}>
-        {/* Tasks Card */}
-        <div
-          className={styles.scopeCard}
-          data-expanded={expandedCard === 'tasks'}
-          style={expandedCard === 'tasks' ? {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 100,
-            display: 'flex',
-            flexDirection: 'column',
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(0, 168, 255, 0.3)',
-            borderRadius: '12px',
-            overflow: 'hidden',
-          } : {
-            position: 'relative',
-            flexShrink: 0,
-            flexGrow: 0,
-            background: 'rgba(0, 0, 0, 0.12)',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <button
-            type="button"
-            className={styles.cardHeader}
-            onClick={(e) => toggleCard('tasks', e)}
-            aria-expanded={expandedCard === 'tasks'}
-          >
-            <div className={styles.cardHeaderLeft}>
-              <span className={styles.cardIcon}>◈</span>
-              <span className={styles.cardTitle}>Tasks</span>
-            </div>
-            <div className={styles.cardHeaderRight}>
-              {expandedCard !== 'tasks' && (
-                <span className={styles.cardSummary}>
-                  {tasksSummary}
-                  {runningCount > 0 && <span className={styles.summaryHighlight}>⚡{runningCount}</span>}
-                </span>
-              )}
-              <span className={styles.cardChevron}>
-                {expandedCard === 'tasks' ? '▼' : '▶'}
-              </span>
-            </div>
-          </button>
-          {expandedCard === 'tasks' && (
-            <div
-              className={styles.cardContent}
-              onClick={handleContentClick}
-              style={{
-                display: 'block',
-                flex: '1 1 auto',
-                minHeight: 0,
-                padding: '16px',
-                overflow: 'auto',
-                background: 'rgba(0,0,0,0.5)'
-              }}
-            >
-              {showTaskForm ? renderTaskForm() :
-               selectedTaskId ? renderTaskDetails() :
-               renderTaskList()}
-            </div>
-          )}
-        </div>
-
-        {/* Agents Card */}
-        <div
-          className={styles.scopeCard}
-          data-expanded={expandedCard === 'agents'}
-          style={expandedCard === 'agents' ? {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 100,
-            display: 'flex',
-            flexDirection: 'column',
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(0, 168, 255, 0.3)',
-            borderRadius: '12px',
-            overflow: 'hidden',
-          } : {
-            position: 'relative',
-            flexShrink: 0,
-            flexGrow: 0,
-            background: 'rgba(0, 0, 0, 0.12)',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <button
-            type="button"
-            className={styles.cardHeader}
-            onClick={(e) => toggleCard('agents', e)}
-            aria-expanded={expandedCard === 'agents'}
-          >
-            <div className={styles.cardHeaderLeft}>
-              <span className={styles.cardIcon}>◉</span>
-              <span className={styles.cardTitle}>Agents</span>
-            </div>
-            <div className={styles.cardHeaderRight}>
-              {expandedCard !== 'agents' && (
-                <span className={styles.cardSummary}>
-                  {agentsSummary}
-                  {onlineCount > 0 && <span className={styles.summaryHighlight}>✓{onlineCount}</span>}
-                </span>
-              )}
-              <span className={styles.cardChevron}>
-                {expandedCard === 'agents' ? '▼' : '▶'}
-              </span>
-            </div>
-          </button>
-          {expandedCard === 'agents' && (
-            <div
-              className={styles.cardContent}
-              onClick={handleContentClick}
-              style={{
-                display: 'block',
-                flex: '1 1 auto',
-                minHeight: 0,
-                padding: '16px',
-                overflow: 'auto',
-                background: 'rgba(0,0,0,0.5)'
-              }}
-            >
-              {selectedAgentId ? renderAgentDetails() : renderAgentList()}
-            </div>
-          )}
-        </div>
-
-        {/* Model Info Card */}
-        <div
-          className={styles.scopeCard}
-          data-expanded={expandedCard === 'model-info'}
-          style={expandedCard === 'model-info' ? {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 100,
-            display: 'flex',
-            flexDirection: 'column',
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(0, 168, 255, 0.3)',
-            borderRadius: '12px',
-            overflow: 'hidden',
-          } : {
-            position: 'relative',
-            flexShrink: 0,
-            flexGrow: 0,
-            background: 'rgba(0, 0, 0, 0.12)',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <button
-            type="button"
-            className={styles.cardHeader}
-            onClick={(e) => toggleCard('model-info', e)}
-            aria-expanded={expandedCard === 'model-info'}
-          >
-            <div className={styles.cardHeaderLeft}>
-              <span className={styles.cardIcon}>◎</span>
-              <span className={styles.cardTitle}>Model</span>
-            </div>
-            <div className={styles.cardHeaderRight}>
-              {expandedCard !== 'model-info' && (
-                <span className={styles.cardSummary}>
-                  {modelSummary}
-                </span>
-              )}
-              <span className={styles.cardChevron}>
-                {expandedCard === 'model-info' ? '▼' : '▶'}
-              </span>
-            </div>
-          </button>
-          {expandedCard === 'model-info' && (
-            <div
-              className={styles.cardContent}
-              onClick={handleContentClick}
-              style={{
-                display: 'block',
-                flex: '1 1 auto',
-                minHeight: 0,
-                padding: '16px',
-                overflow: 'auto',
-                background: 'rgba(0,0,0,0.5)'
-              }}
-            >
-              {renderModelInfo()}
-            </div>
-          )}
-        </div>
-
-        {/* Mock Scopes - Coming Soon */}
-        {[
-          { id: 'workflows', icon: '◇', title: 'Workflows' },
-          { id: 'memory', icon: '◆', title: 'Memory' },
-          { id: 'tools', icon: '⬡', title: 'Tools' },
-          { id: 'protocols', icon: '⬢', title: 'Protocols' },
-          { id: 'analytics', icon: '◐', title: 'Analytics' },
-          { id: 'settings', icon: '⚙', title: 'Settings' },
-          { id: 'logs', icon: '▤', title: 'Logs' },
-          { id: 'network', icon: '◎', title: 'Network' },
-          { id: 'vault', icon: '⬣', title: 'Vault' },
-        ].map((scope) => (
+      <div className={styles.voidScopesContainer} ref={containerRef}>
+        {/* Accordion card stack */}
+        <div className={styles.cardStack}>
+          {/* Tasks Card */}
           <div
-            key={scope.id}
-            className={`${styles.scopeCard} ${styles.mockScope}`}
-            data-expanded="false"
+            className={styles.scopeCard}
+            data-expanded={expandedCard === 'tasks'}
+            style={
+              expandedCard === 'tasks'
+                ? {
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 100,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: 'rgba(0, 0, 0, 0.85)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(0, 168, 255, 0.3)',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                  }
+                : {
+                    position: 'relative',
+                    flexShrink: 0,
+                    flexGrow: 0,
+                    background: 'rgba(0, 0, 0, 0.12)',
+                    backdropFilter: 'blur(4px)',
+                  }
+            }
           >
-            <div className={styles.cardHeader}>
+            <button
+              type="button"
+              className={styles.cardHeader}
+              onClick={(e) => toggleCard('tasks', e)}
+              aria-expanded={expandedCard === 'tasks'}
+            >
               <div className={styles.cardHeaderLeft}>
-                <span className={styles.cardIcon}>{scope.icon}</span>
-                <span className={styles.cardTitle}>{scope.title}</span>
+                <span className={styles.cardIcon}>◈</span>
+                <span className={styles.cardTitle}>Tasks</span>
               </div>
               <div className={styles.cardHeaderRight}>
-                <span className={styles.cardSummary}>coming soon</span>
+                {expandedCard !== 'tasks' && (
+                  <span className={styles.cardSummary}>
+                    {tasksSummary}
+                    {runningCount > 0 && (
+                      <span className={styles.summaryHighlight}>⚡{runningCount}</span>
+                    )}
+                  </span>
+                )}
+                <span className={styles.cardChevron}>{expandedCard === 'tasks' ? '▼' : '▶'}</span>
+              </div>
+            </button>
+            {expandedCard === 'tasks' && (
+              <div
+                className={styles.cardContent}
+                onClick={handleContentClick}
+                style={{
+                  display: 'block',
+                  flex: '1 1 auto',
+                  minHeight: 0,
+                  padding: '16px',
+                  overflow: 'auto',
+                  background: 'rgba(0,0,0,0.5)',
+                }}
+              >
+                {showTaskForm
+                  ? renderTaskForm()
+                  : selectedTaskId
+                    ? renderTaskDetails()
+                    : renderTaskList()}
+              </div>
+            )}
+          </div>
+
+          {/* Agents Card */}
+          <div
+            className={styles.scopeCard}
+            data-expanded={expandedCard === 'agents'}
+            style={
+              expandedCard === 'agents'
+                ? {
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 100,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: 'rgba(0, 0, 0, 0.85)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(0, 168, 255, 0.3)',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                  }
+                : {
+                    position: 'relative',
+                    flexShrink: 0,
+                    flexGrow: 0,
+                    background: 'rgba(0, 0, 0, 0.12)',
+                    backdropFilter: 'blur(4px)',
+                  }
+            }
+          >
+            <button
+              type="button"
+              className={styles.cardHeader}
+              onClick={(e) => toggleCard('agents', e)}
+              aria-expanded={expandedCard === 'agents'}
+            >
+              <div className={styles.cardHeaderLeft}>
+                <span className={styles.cardIcon}>◉</span>
+                <span className={styles.cardTitle}>Agents</span>
+              </div>
+              <div className={styles.cardHeaderRight}>
+                {expandedCard !== 'agents' && (
+                  <span className={styles.cardSummary}>
+                    {agentsSummary}
+                    {onlineCount > 0 && (
+                      <span className={styles.summaryHighlight}>✓{onlineCount}</span>
+                    )}
+                  </span>
+                )}
+                <span className={styles.cardChevron}>{expandedCard === 'agents' ? '▼' : '▶'}</span>
+              </div>
+            </button>
+            {expandedCard === 'agents' && (
+              <div
+                className={styles.cardContent}
+                onClick={handleContentClick}
+                style={{
+                  display: 'block',
+                  flex: '1 1 auto',
+                  minHeight: 0,
+                  padding: '16px',
+                  overflow: 'auto',
+                  background: 'rgba(0,0,0,0.5)',
+                }}
+              >
+                {selectedAgentId ? renderAgentDetails() : renderAgentList()}
+              </div>
+            )}
+          </div>
+
+          {/* Model Info Card */}
+          <div
+            className={styles.scopeCard}
+            data-expanded={expandedCard === 'model-info'}
+            style={
+              expandedCard === 'model-info'
+                ? {
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 100,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: 'rgba(0, 0, 0, 0.85)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(0, 168, 255, 0.3)',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                  }
+                : {
+                    position: 'relative',
+                    flexShrink: 0,
+                    flexGrow: 0,
+                    background: 'rgba(0, 0, 0, 0.12)',
+                    backdropFilter: 'blur(4px)',
+                  }
+            }
+          >
+            <button
+              type="button"
+              className={styles.cardHeader}
+              onClick={(e) => toggleCard('model-info', e)}
+              aria-expanded={expandedCard === 'model-info'}
+            >
+              <div className={styles.cardHeaderLeft}>
+                <span className={styles.cardIcon}>◎</span>
+                <span className={styles.cardTitle}>Model</span>
+              </div>
+              <div className={styles.cardHeaderRight}>
+                {expandedCard !== 'model-info' && (
+                  <span className={styles.cardSummary}>{modelSummary}</span>
+                )}
+                <span className={styles.cardChevron}>
+                  {expandedCard === 'model-info' ? '▼' : '▶'}
+                </span>
+              </div>
+            </button>
+            {expandedCard === 'model-info' && (
+              <div
+                className={styles.cardContent}
+                onClick={handleContentClick}
+                style={{
+                  display: 'block',
+                  flex: '1 1 auto',
+                  minHeight: 0,
+                  padding: '16px',
+                  overflow: 'auto',
+                  background: 'rgba(0,0,0,0.5)',
+                }}
+              >
+                {renderModelInfo()}
+              </div>
+            )}
+          </div>
+
+          {/* Mock Scopes - Coming Soon */}
+          {[
+            { id: 'workflows', icon: '◇', title: 'Workflows' },
+            { id: 'memory', icon: '◆', title: 'Memory' },
+            { id: 'tools', icon: '⬡', title: 'Tools' },
+            { id: 'protocols', icon: '⬢', title: 'Protocols' },
+            { id: 'analytics', icon: '◐', title: 'Analytics' },
+            { id: 'settings', icon: '⚙', title: 'Settings' },
+            { id: 'logs', icon: '▤', title: 'Logs' },
+            { id: 'network', icon: '◎', title: 'Network' },
+            { id: 'vault', icon: '⬣', title: 'Vault' },
+          ].map((scope) => (
+            <div
+              key={scope.id}
+              className={`${styles.scopeCard} ${styles.mockScope}`}
+              data-expanded="false"
+            >
+              <div className={styles.cardHeader}>
+                <div className={styles.cardHeaderLeft}>
+                  <span className={styles.cardIcon}>{scope.icon}</span>
+                  <span className={styles.cardTitle}>{scope.title}</span>
+                </div>
+                <div className={styles.cardHeaderRight}>
+                  <span className={styles.cardSummary}>coming soon</span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    {/* Viewport - Bottom section with TV screen effect */}
-    <div className={styles.viewport}>
-      <div className={styles.viewportScreen}>
-        <div className={styles.viewportScanlines} />
-        <div className={styles.viewportContent}>
-          <span className={styles.viewportLabel}>VIEWPORT</span>
-          <span className={styles.viewportStatus}>STANDBY</span>
+          ))}
         </div>
-        <div className={styles.viewportGlow} />
       </div>
-    </div>
+
+      {/* Viewport - Bottom section with TV screen effect */}
+      <div className={styles.viewport}>
+        <div className={styles.viewportScreen}>
+          <div className={styles.viewportScanlines} />
+          <div className={styles.viewportContent}>
+            <span className={styles.viewportLabel}>VIEWPORT</span>
+            <span className={styles.viewportStatus}>STANDBY</span>
+          </div>
+          <div className={styles.viewportGlow} />
+        </div>
+      </div>
     </>
   );
 };

@@ -15,29 +15,39 @@ import App from './app';
 const log = {
   info: (message: string, data?: any) => {
     const timestamp = new Date().toISOString();
+
     console.log(`🌐 [${timestamp}] ℹ️  ${message}`, data ? data : '');
   },
   success: (message: string, data?: any) => {
     const timestamp = new Date().toISOString();
+
     console.log(`🌐 [${timestamp}] ✅ ${message}`, data ? data : '');
   },
   warning: (message: string, data?: any) => {
     const timestamp = new Date().toISOString();
+
     console.log(`🌐 [${timestamp}] ⚠️  ${message}`, data ? data : '');
   },
   error: (message: string, data?: any) => {
     const timestamp = new Date().toISOString();
+
     console.log(`🌐 [${timestamp}] ❌ ${message}`, data ? data : '');
   },
   request: (method: string, url: string, userAgent?: string) => {
     const timestamp = new Date().toISOString();
-    console.log(`🌐 [${timestamp}] 📥 ${method} ${url} ${userAgent ? `(${userAgent.substring(0, 50)}...)` : ''}`);
+
+    console.log(
+      `🌐 [${timestamp}] 📥 ${method} ${url} ${userAgent ? `(${userAgent.substring(0, 50)}...)` : ''}`,
+    );
   },
   response: (statusCode: number, url: string, duration?: number) => {
     const timestamp = new Date().toISOString();
     const emoji = statusCode >= 200 && statusCode < 300 ? '✅' : statusCode >= 400 ? '❌' : '⚠️';
-    console.log(`🌐 [${timestamp}] ${emoji} ${statusCode} ${url} ${duration ? `(${duration}ms)` : ''}`);
-  }
+
+    console.log(
+      `🌐 [${timestamp}] ${emoji} ${statusCode} ${url} ${duration ? `(${duration}ms)` : ''}`,
+    );
+  },
 };
 
 /**
@@ -61,7 +71,7 @@ export default entryServer(App, routes, {
       log.info('📋 Server Configuration:', {
         abortDelay: 20000,
         patternsToRemove: Array.from(patternsToRemove),
-        isBotPatterns: list.length
+        isBotPatterns: list.length,
       });
 
       enableStaticRendering(true);
@@ -71,14 +81,15 @@ export default entryServer(App, routes, {
       app.use((req, res, next) => {
         const start = Date.now();
         const userAgent = req.get('user-agent') || 'Unknown';
-        
+
         log.request(req.method, req.url, userAgent);
-        
+
         res.on('finish', () => {
           const duration = Date.now() - start;
+
           log.response(res.statusCode, req.url, duration);
         });
-        
+
         next();
       });
 
@@ -92,7 +103,7 @@ export default entryServer(App, routes, {
      */
     onRequest: async () => {
       log.info('🔄 Processing New Request - Initializing Managers');
-      
+
       try {
         const storeManager = new Manager({
           options: { shouldDisablePersist: true },
@@ -107,10 +118,11 @@ export default entryServer(App, routes, {
         const streamSuspense = StreamSuspense.create((suspenseId) =>
           storeManageStream.take(suspenseId),
         );
+
         log.success('🌊 Stream Suspense Created');
 
         log.success('🎯 Request Processing Complete - All Managers Ready');
-        
+
         return {
           appProps: {
             storeManager,
@@ -131,12 +143,12 @@ export default entryServer(App, routes, {
     onRouterReady: ({ context: { req } }) => {
       const userAgent = req.get('user-agent') || '';
       const isStream = !isBot(userAgent) && req.cookies?.isCrawler !== '1';
-      
+
       log.info('🎯 Router Ready - Determining Stream Mode', {
         userAgent: userAgent.substring(0, 100),
         isBot: isBot(userAgent),
         isCrawler: req.cookies?.isCrawler,
-        isStream
+        isStream,
       });
 
       return {
@@ -153,11 +165,12 @@ export default entryServer(App, routes, {
       },
     }) => {
       log.info('📄 Shell Ready - Injecting Meta Tags');
-      
+
       try {
         const newHead = MetaServer.inject(header, metaManager);
+
         log.success('✅ Meta Tags Injected Successfully');
-        
+
         return {
           header: newHead,
         };
@@ -178,13 +191,16 @@ export default entryServer(App, routes, {
     }) => {
       if (!isStream) {
         log.info('📤 Non-Stream Response - Skipping Stream Analysis');
+
         return;
       }
 
       log.info('🌊 Analyzing Stream Response');
       try {
         const result = streamSuspense.analyze(html);
+
         log.success('✅ Stream Analysis Complete');
+
         return result;
       } catch (error) {
         log.error('❌ Stream Analysis Failed', error);
@@ -202,14 +218,14 @@ export default entryServer(App, routes, {
       },
     }) => {
       log.info('📦 Preparing Server State for Client');
-      
+
       try {
         const storeState = storeManager.toJSON();
         const metaState = MetaServer.getState(metaManager);
-        
+
         log.success('✅ Server State Prepared', {
           storeStateKeys: Object.keys(storeState),
-          metaStateKeys: Object.keys(metaState)
+          metaStateKeys: Object.keys(metaState),
         });
 
         return {

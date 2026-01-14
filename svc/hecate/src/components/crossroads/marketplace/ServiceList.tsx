@@ -17,7 +17,7 @@ const ServiceList: React.FC<ServiceListProps> = ({ services, loading, onServiceC
     if (service.is_coming_soon) {
       return; // Don't allow expanding coming soon services
     }
-    
+
     if (expandedId === service.id) {
       setExpandedId(null);
     } else {
@@ -62,7 +62,7 @@ const ServiceList: React.FC<ServiceListProps> = ({ services, loading, onServiceC
               <span className={styles.comingSoonBadge}>Coming Soon</span>
             </div>
           )}
-          
+
           {/* Main service row */}
           <div
             className={styles.listItemMain}
@@ -95,9 +95,7 @@ const ServiceList: React.FC<ServiceListProps> = ({ services, loading, onServiceC
                   {service.is_free ? 'Free' : service.price_usd ? `$${service.price_usd}` : 'Paid'}
                 </span>
               </div>
-              <div className={styles.expandIcon}>
-                {expandedId === service.id ? '▼' : '▶'}
-              </div>
+              <div className={styles.expandIcon}>{expandedId === service.id ? '▼' : '▶'}</div>
             </div>
           </div>
 
@@ -135,12 +133,15 @@ const ServiceList: React.FC<ServiceListProps> = ({ services, loading, onServiceC
                   <div className={styles.statsList}>
                     <div className={styles.statItem}>
                       <span className={styles.statLabel}>Deployments:</span>
-                      <span className={styles.statValue}>{service.deployment_count?.toLocaleString() || 0}</span>
+                      <span className={styles.statValue}>
+                        {service.deployment_count?.toLocaleString() || 0}
+                      </span>
                     </div>
                     <div className={styles.statItem}>
                       <span className={styles.statLabel}>Rating:</span>
                       <span className={styles.statValue}>
-                        ⭐ {service.rating_average?.toFixed(1) || 'N/A'} ({service.rating_count || 0} reviews)
+                        ⭐ {service.rating_average?.toFixed(1) || 'N/A'} (
+                        {service.rating_count || 0} reviews)
                       </span>
                     </div>
                     <div className={styles.statItem}>
@@ -156,15 +157,9 @@ const ServiceList: React.FC<ServiceListProps> = ({ services, loading, onServiceC
                 <div className={styles.detailSection}>
                   <h4 className={styles.detailTitle}>Actions</h4>
                   <div className={styles.actionButtons}>
-                    <button className={styles.primaryButton}>
-                      View Details
-                    </button>
-                    <button className={styles.secondaryButton}>
-                      Deploy
-                    </button>
-                    <button className={styles.secondaryButton}>
-                      Save
-                    </button>
+                    <button className={styles.primaryButton}>View Details</button>
+                    <button className={styles.secondaryButton}>Deploy</button>
+                    <button className={styles.secondaryButton}>Save</button>
                   </div>
                 </div>
               </div>
@@ -177,4 +172,3 @@ const ServiceList: React.FC<ServiceListProps> = ({ services, loading, onServiceC
 };
 
 export default ServiceList;
-

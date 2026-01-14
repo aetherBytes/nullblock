@@ -1,12 +1,12 @@
 import { BaseWalletAdapter } from '../base-adapter';
-import {
+import type {
   WalletInfo,
   ConnectionResult,
   SignatureResult,
-  ChainType,
   EthereumProvider,
   SolanaProvider,
 } from '../types';
+import { ChainType } from '../types';
 
 export class BitgetAdapter extends BaseWalletAdapter {
   readonly id = 'bitget';
@@ -25,12 +25,17 @@ export class BitgetAdapter extends BaseWalletAdapter {
   private connectedAddress: string | null = null;
 
   isInstalled(): boolean {
-    if (typeof window === 'undefined') return false;
-    return !!window.bitkeep;
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    return Boolean(window.bitkeep);
   }
 
   getProvider(chain: ChainType): EthereumProvider | SolanaProvider | null {
-    if (!window.bitkeep) return null;
+    if (!window.bitkeep) {
+      return null;
+    }
 
     switch (chain) {
       case ChainType.EVM:
@@ -65,6 +70,7 @@ export class BitgetAdapter extends BaseWalletAdapter {
       };
     } catch (error: unknown) {
       const err = error as { message?: string };
+
       return {
         success: false,
         chain,
@@ -75,6 +81,7 @@ export class BitgetAdapter extends BaseWalletAdapter {
 
   private async connectEvm(): Promise<ConnectionResult> {
     const provider = this.getProvider(ChainType.EVM) as EthereumProvider | null;
+
     if (!provider) {
       return { success: false, chain: ChainType.EVM, error: 'EVM provider not available' };
     }
@@ -109,6 +116,7 @@ export class BitgetAdapter extends BaseWalletAdapter {
 
   private async connectSolana(): Promise<ConnectionResult> {
     const provider = this.getProvider(ChainType.SOLANA) as SolanaProvider | null;
+
     if (!provider) {
       return { success: false, chain: ChainType.SOLANA, error: 'Solana provider not available' };
     }
@@ -145,6 +153,7 @@ export class BitgetAdapter extends BaseWalletAdapter {
     try {
       // Disconnect from Solana if connected
       const solanaProvider = this.getProvider(ChainType.SOLANA) as SolanaProvider | null;
+
       if (solanaProvider?.disconnect) {
         await solanaProvider.disconnect();
       }
@@ -207,7 +216,7 @@ export class BitgetAdapter extends BaseWalletAdapter {
     const evmProvider = this.getProvider(ChainType.EVM) as EthereumProvider | null;
     const solanaProvider = this.getProvider(ChainType.SOLANA) as SolanaProvider | null;
 
-    return !!evmProvider?.selectedAddress || !!solanaProvider?.isConnected;
+    return Boolean(evmProvider?.selectedAddress) || Boolean(solanaProvider?.isConnected);
   }
 
   getConnectedChain(): ChainType | null {

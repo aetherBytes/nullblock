@@ -2,7 +2,17 @@ import React from 'react';
 import styles from './NullblockLogo.module.scss';
 
 interface NullblockLogoProps {
-  state?: 'base' | 'response' | 'question' | 'thinking' | 'alert' | 'error' | 'warning' | 'success' | 'processing' | 'idle';
+  state?:
+    | 'base'
+    | 'response'
+    | 'question'
+    | 'thinking'
+    | 'alert'
+    | 'error'
+    | 'warning'
+    | 'success'
+    | 'processing'
+    | 'idle';
   theme?: 'null' | 'light' | 'dark';
   onClick?: () => void;
   title?: string;
@@ -14,7 +24,7 @@ const NullblockLogo: React.FC<NullblockLogoProps> = ({
   theme = 'dark',
   onClick,
   title,
-  size = 'medium'
+  size = 'medium',
 }) => {
   const logoSrc = '/nb_logo_circle_color.png';
 
@@ -57,11 +67,7 @@ const NullblockLogo: React.FC<NullblockLogoProps> = ({
           className={styles.outerRing}
         />
       </svg>
-      <img
-        src={logoSrc}
-        alt="NullBlock"
-        className={styles.logoImage}
-      />
+      <img src={logoSrc} alt="NullBlock" className={styles.logoImage} />
     </div>
   );
 };
