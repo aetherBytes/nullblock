@@ -31,10 +31,13 @@
 
 ---
 
-# Echo Factory (COW)
+# Poly Mev (Polymarket Trading)
 
-- [Implementation Plan](./echo-factory/plan.md)
-- [Engram Integration](./echo-factory/engrams.md)
+- [Implementation Plan](./poly-mev/plan.md)
+
+# Archive
+
+- [Echo Factory (Paused)](./archive/echo-factory/plan.md)
 
 ---
 

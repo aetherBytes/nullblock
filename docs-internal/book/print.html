@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-3dd0c7be.js";
+            window.path_to_searchindex_js = "searchindex-2ec4ce82.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-e2bd4067.js"></script>
+        <script src="toc-37d0f319.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -202,7 +202,7 @@
 <tr><td><strong>Understand the architecture</strong></td><td><a href="#architecture-overview">Architecture Overview</a></td></tr>
 <tr><td><strong>Start the dev environment</strong></td><td><a href="#quick-start">Quick Start</a></td></tr>
 <tr><td><strong>Learn about Engrams</strong></td><td><a href="#engrams-service">Engrams Service</a></td></tr>
-<tr><td><strong>See Echo Factory plan</strong></td><td><a href="#echo-factory-implementation-plan">Echo Factory</a></td></tr>
+<tr><td><strong>See Echo Factory plan</strong></td><td><a href="echo-factory/plan.html">Echo Factory</a></td></tr>
 <tr><td><strong>Check API endpoints</strong></td><td><a href="#api-endpoints-6">API Reference</a></td></tr>
 </tbody>
 </table>
@@ -989,7 +989,7 @@ ENGRAMS_PORT=9004
 </code></pre>
 <h2 id="related-3"><a class="header" href="#related-3">Related</a></h2>
 <ul>
-<li><a href="#echo-factory-implementation-plan">Echo Factory Plan</a></li>
+<li><a href="echo-factory/plan.html">Echo Factory Plan</a></li>
 <li><a href="#architecture-overview">Architecture Overview</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -1106,7 +1106,7 @@ POST /api/admin/listings/feature/:id  # Feature
 <h2 id="related-4"><a class="header" href="#related-4">Related</a></h2>
 <ul>
 <li><a href="#architecture-overview">Architecture Overview</a></li>
-<li><a href="#echo-factory-implementation-plan">Echo Factory Plan</a></li>
+<li><a href="echo-factory/plan.html">Echo Factory Plan</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="agent-architecture"><a class="header" href="#agent-architecture">Agent Architecture</a></h1>
@@ -1323,7 +1323,7 @@ POST /siren/chat
 <h2 id="related-7"><a class="header" href="#related-7">Related</a></h2>
 <ul>
 <li><a href="#agent-architecture">Agent Overview</a></li>
-<li><a href="#echo-factory-implementation-plan">Echo Factory Plan</a></li>
+<li><a href="echo-factory/plan.html">Echo Factory Plan</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="llm-factory-1"><a class="header" href="#llm-factory-1">LLM Factory</a></h1>
@@ -1425,9 +1425,209 @@ FROM agent_api_keys;
 <li><a href="#hecate-agent">HECATE Agent</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="echo-factory-implementation-plan"><a class="header" href="#echo-factory-implementation-plan">Echo Factory Implementation Plan</a></h1>
-<p><strong>NullBlock’s first COW</strong> (Constellation of Work) - Autonomous X/Twitter content creation suite.</p>
+<h1 id="polyswarm-cow-implementation-plan"><a class="header" href="#polyswarm-cow-implementation-plan">PolySwarm COW Implementation Plan</a></h1>
+<p><strong>NullBlock’s Polymarket Agent Swarm</strong> - Autonomous multi-agent system for prediction market dominance.</p>
+<h2 id="vision"><a class="header" href="#vision">Vision</a></h2>
+<p>A no-failure, high-reliability agent swarm that dominates Polymarket with AI-powered insight, probability refinement, arbitrage detection, and autonomous execution. Dogfoods NullBlock infrastructure while generating revenue and viral growth.</p>
 <h2 id="status"><a class="header" href="#status">Status</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase</th><th>Status</th><th>Target</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Phase 1: Service Scaffold</strong></td><td>⏳ Next</td><td>Week 1</td></tr>
+<tr><td><strong>Phase 2: Market Scanner Agent</strong></td><td>⏳ Pending</td><td>Week 1-2</td></tr>
+<tr><td><strong>Phase 3: Probability Refiner</strong></td><td>⏳ Pending</td><td>Week 2</td></tr>
+<tr><td><strong>Phase 4: Arb Detector + Execution</strong></td><td>⏳ Pending</td><td>Week 3</td></tr>
+<tr><td><strong>Phase 5: Engram Generator + Overseer</strong></td><td>⏳ Pending</td><td>Week 4</td></tr>
+<tr><td><strong>Phase 6: Monad Deploy + Crossroads</strong></td><td>⏳ Pending</td><td>Week 5-6</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="swarm-architecture"><a class="header" href="#swarm-architecture">Swarm Architecture</a></h2>
+<pre><code>                    ┌─────────────────────┐
+                    │  Resilience Overseer │
+                    │    (Meta-Agent)      │
+                    └──────────┬──────────┘
+                               │ monitors/recovers
+           ┌───────────────────┼───────────────────┐
+           │                   │                   │
+    ┌──────▼──────┐    ┌──────▼──────┐    ┌──────▼──────┐
+    │   Market    │    │ Probability │    │     Arb     │
+    │   Scanner   │───▶│   Refiner   │───▶│  Detector   │
+    └──────┬──────┘    └──────┬──────┘    └──────┬──────┘
+           │                  │                   │
+           │           ┌──────▼──────┐           │
+           └──────────▶│  Execution  │◀──────────┘
+                       │   Engine    │
+                       └──────┬──────┘
+                              │
+                       ┌──────▼──────┐
+                       │   Insight   │
+                       │   Engram    │
+                       │  Generator  │
+                       └─────────────┘
+</code></pre>
+<h2 id="swarm-components"><a class="header" href="#swarm-components">Swarm Components</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Agent</th><th>Role</th><th>Reliability</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Market Scanner</strong></td><td>Real-time event/market fetch via Gamma API</td><td>Redundant polling, fallback nodes</td></tr>
+<tr><td><strong>Probability Refiner</strong></td><td>Sentiment/news/onchain signal analysis</td><td>Engram-backed historical accuracy</td></tr>
+<tr><td><strong>Arb Detector</strong></td><td>Cross-market mispricing detection</td><td>Multi-threaded with auto-retry</td></tr>
+<tr><td><strong>Execution Engine</strong></td><td>CLOB order placement/cancellation</td><td>Gasless via relayer, onchain fallback</td></tr>
+<tr><td><strong>Insight Engram Generator</strong></td><td>Distill edges into tradable engrams</td><td>Persistent, shareable</td></tr>
+<tr><td><strong>Resilience Overseer</strong></td><td>Swarm health monitoring, auto-recovery</td><td>Meta-agent, always-on</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="no-failure-policy"><a class="header" href="#no-failure-policy">No-Failure Policy</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Strategy</th><th>Implementation</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Redundancy</strong></td><td>Duplicate agents run in parallel; majority vote</td></tr>
+<tr><td><strong>Auto-Recovery</strong></td><td>API failure → cached engrams or delayed execution</td></tr>
+<tr><td><strong>Engram Learning</strong></td><td>Bad trades → new avoidance engrams</td></tr>
+<tr><td><strong>Testing</strong></td><td>100% unit/integration coverage + simulated events</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="nullblock-integration"><a class="header" href="#nullblock-integration">NullBlock Integration</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Usage</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>HECATE</strong></td><td>Guides swarm composition (“Shall I weave a PolySwarm?”)</td></tr>
+<tr><td><strong>Engrams</strong></td><td>Persistent memory, failure learning, edge storage</td></tr>
+<tr><td><strong>Crossroads</strong></td><td>Mint COW as NFT suite (base free, premium $0.2 SOL)</td></tr>
+<tr><td><strong>Void Canvas</strong></td><td>Swarm visualization (orbs = agents, dendrites = interactions)</td></tr>
+<tr><td><strong>Mem Cache</strong></td><td>Pinned markets, saved swarm configs</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="polymarket-api-integration"><a class="header" href="#polymarket-api-integration">Polymarket API Integration</a></h2>
+<h3 id="gamma-api-read"><a class="header" href="#gamma-api-read">Gamma API (Read)</a></h3>
+<pre><code>GET /events              # List events
+GET /markets             # Market data
+GET /prices?markets=...  # Real-time prices
+</code></pre>
+<h3 id="clob-api-trade"><a class="header" href="#clob-api-trade">CLOB API (Trade)</a></h3>
+<pre><code>POST /order              # Place order
+DELETE /order/:id        # Cancel order
+GET /orderbook/:token_id # Order book depth
+</code></pre>
+<h3 id="websocket-real-time"><a class="header" href="#websocket-real-time">WebSocket (Real-time)</a></h3>
+<pre><code>wss://clob.polymarket.com  # Price updates
+</code></pre>
+<h2 id="service-structure"><a class="header" href="#service-structure">Service Structure</a></h2>
+<pre><code>svc/poly-mev/
+├── Cargo.toml
+├── src/
+│   ├── main.rs
+│   ├── agents/
+│   │   ├── scanner.rs
+│   │   ├── refiner.rs
+│   │   ├── arb_detector.rs
+│   │   ├── executor.rs
+│   │   ├── engram_generator.rs
+│   │   └── overseer.rs
+│   ├── api/
+│   │   ├── gamma.rs          # Gamma API client
+│   │   ├── clob.rs           # CLOB API client
+│   │   └── websocket.rs      # WS price feeds
+│   ├── models/
+│   │   ├── market.rs
+│   │   ├── order.rs
+│   │   └── edge.rs
+│   └── services/
+│       ├── engram_client.rs
+│       └── monad_client.rs
+└── migrations/
+</code></pre>
+<h2 id="api-endpoints-via-erebus"><a class="header" href="#api-endpoints-via-erebus">API Endpoints (via Erebus)</a></h2>
+<h3 id="markets"><a class="header" href="#markets">Markets</a></h3>
+<pre><code class="language-bash">GET  /api/poly/markets              # List tracked markets
+GET  /api/poly/markets/:id          # Market details + odds
+POST /api/poly/markets/:id/track    # Start tracking
+</code></pre>
+<h3 id="swarm"><a class="header" href="#swarm">Swarm</a></h3>
+<pre><code class="language-bash">POST /api/poly/swarm/deploy         # Deploy swarm config
+GET  /api/poly/swarm/status         # Swarm health
+POST /api/poly/swarm/pause          # Pause execution
+</code></pre>
+<h3 id="edges"><a class="header" href="#edges">Edges</a></h3>
+<pre><code class="language-bash">GET  /api/poly/edges                # List detected edges
+POST /api/poly/edges/:id/execute    # Execute trade
+GET  /api/poly/edges/:id/engram     # Get edge as engram
+</code></pre>
+<h2 id="monad-integration"><a class="header" href="#monad-integration">Monad Integration</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Purpose</th><th>Contract</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>NFT Minting</strong></td><td>ERC-721 for COW components</td></tr>
+<tr><td><strong>Execution Proxy</strong></td><td>Simple proxy for swarm trades</td></tr>
+<tr><td><strong>Fast Polling</strong></td><td>10k TPS for real-time arb detection</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="revenue-model"><a class="header" href="#revenue-model">Revenue Model</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Stream</th><th>Rate</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Execution Fees</strong></td><td>3% on trades</td></tr>
+<tr><td><strong>Premium Engrams</strong></td><td>$10/mo subscription</td></tr>
+<tr><td><strong>Crossroads NFTs</strong></td><td>Base free, premium agents $0.2 SOL</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="viral-hooks"><a class="header" href="#viral-hooks">Viral Hooks</a></h2>
+<ul>
+<li>Swarm posts insights to X/Telegram (“Edge detected - join NullBlock!”)</li>
+<li>Tie to Echo Factory for automated posting</li>
+<li>Demo video showing arb on test market</li>
+</ul>
+<h2 id="tech-stack"><a class="header" href="#tech-stack">Tech Stack</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Layer</th><th>Technology</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Backend</strong></td><td>Rust (extend existing services)</td></tr>
+<tr><td><strong>Frontend</strong></td><td>React + Three.js (void swarm viz)</td></tr>
+<tr><td><strong>Onchain</strong></td><td>Monad (Foundry contracts, ethers.js)</td></tr>
+<tr><td><strong>APIs</strong></td><td>Polymarket Gamma/CLOB + WebSockets</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="related-9"><a class="header" href="#related-9">Related</a></h2>
+<ul>
+<li><a href="#engrams-service">Engrams Service</a></li>
+<li><a href="#crossroads-marketplace">Crossroads Marketplace</a></li>
+<li><a href="#hecate-agent">HECATE Agent</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="echo-factory-implementation-plan"><a class="header" href="#echo-factory-implementation-plan">Echo Factory Implementation Plan</a></h1>
+<blockquote>
+<p><strong>STATUS: PAUSED</strong> - Initiative paused in favor of <a href="#polyswarm-cow-implementation-plan">Poly Mev</a>. May resume after Polymarket swarm is operational.</p>
+</blockquote>
+<p><strong>NullBlock’s first COW</strong> (Constellation of Work) - Autonomous X/Twitter content creation suite.</p>
+<h2 id="status-1"><a class="header" href="#status-1">Status</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -1526,7 +1726,7 @@ FROM agent_api_keys;
 │       └── engram_client.rs
 └── migrations/
 </code></pre>
-<h2 id="api-endpoints-via-erebus"><a class="header" href="#api-endpoints-via-erebus">API Endpoints (via Erebus)</a></h2>
+<h2 id="api-endpoints-via-erebus-1"><a class="header" href="#api-endpoints-via-erebus-1">API Endpoints (via Erebus)</a></h2>
 <h3 id="personas"><a class="header" href="#personas">Personas</a></h3>
 <pre><code class="language-bash">POST /api/echo/personas          # Create
 GET  /api/echo/personas          # List
@@ -1554,90 +1754,11 @@ POST /api/echo/content/:id/publish-now  # Publish
 </tbody>
 </table>
 </div>
-<h2 id="related-9"><a class="header" href="#related-9">Related</a></h2>
-<ul>
-<li><a href="#echo-factory-engram-integration">Engram Integration</a></li>
-<li><a href="#engrams-service">Engrams Service</a></li>
-<li><a href="#crossroads-marketplace">Crossroads Marketplace</a></li>
-</ul>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="echo-factory-engram-integration"><a class="header" href="#echo-factory-engram-integration">Echo Factory Engram Integration</a></h1>
-<p>How Echo Factory uses the Engram service for persistent context.</p>
-<h2 id="engram-types-used"><a class="header" href="#engram-types-used">Engram Types Used</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Type</th><th>Key Pattern</th><th>Purpose</th></tr>
-</thead>
-<tbody>
-<tr><td><code>persona</code></td><td><code>echo.personas.{name}</code></td><td>Twitter personas</td></tr>
-<tr><td><code>preference</code></td><td><code>echo.settings.{setting}</code></td><td>User preferences</td></tr>
-<tr><td><code>knowledge</code></td><td><code>echo.content.successful</code></td><td>High-engagement posts</td></tr>
-<tr><td><code>strategy</code></td><td><code>echo.strategies.{name}</code></td><td>Content strategies</td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="persona-storage"><a class="header" href="#persona-storage">Persona Storage</a></h2>
-<p>When creating a persona, Echo Factory stores:</p>
-<pre><code class="language-json">{
-  "wallet_address": "0x742d35Cc...",
-  "engram_type": "persona",
-  "key": "echo.personas.crypto_sage",
-  "content": {
-    "name": "Crypto Sage",
-    "voice_style": "casual",
-    "tone": {
-      "professional": 0.7,
-      "humor": 0.3
-    },
-    "topics": ["DeFi", "Monad", "AI Agents"],
-    "hashtags": ["#DeFi", "#Monad"],
-    "x_account_id": "123456789",
-    "x_username": "crypto_sage"
-  },
-  "tags": ["echo", "persona", "twitter"]
-}
-</code></pre>
-<h2 id="content-learning"><a class="header" href="#content-learning">Content Learning</a></h2>
-<p>After successful posts, store as knowledge:</p>
-<pre><code class="language-json">{
-  "engram_type": "knowledge",
-  "key": "echo.content.successful",
-  "content": {
-    "posts": [
-      {
-        "text": "Just shipped a major update...",
-        "engagement": {
-          "likes": 150,
-          "retweets": 42,
-          "replies": 23
-        },
-        "timestamp": "2025-01-10T..."
-      }
-    ]
-  },
-  "tags": ["echo", "content", "high-engagement"]
-}
-</code></pre>
-<h2 id="cross-session-context"><a class="header" href="#cross-session-context">Cross-Session Context</a></h2>
-<p>Engrams enable:</p>
-<ul>
-<li>Persona persistence across sessions</li>
-<li>Learning from engagement patterns</li>
-<li>Consistent voice/tone</li>
-<li>Content strategy evolution</li>
-</ul>
-<h2 id="integration-flow"><a class="header" href="#integration-flow">Integration Flow</a></h2>
-<pre><code>1. User creates persona → Store as engram
-2. Content generation → Load persona engram
-3. Siren generates → Apply voice/tone
-4. Post succeeds → Store in knowledge engram
-5. Future generation → Use knowledge for context
-</code></pre>
 <h2 id="related-10"><a class="header" href="#related-10">Related</a></h2>
 <ul>
-<li><a href="#echo-factory-implementation-plan">Echo Factory Plan</a></li>
+<li><a href="archive/echo-factory/engrams.html">Engram Integration</a></li>
 <li><a href="#engrams-service">Engrams Service</a></li>
+<li><a href="#crossroads-marketplace">Crossroads Marketplace</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="docker--containers"><a class="header" href="#docker--containers">Docker &amp; Containers</a></h1>
