@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Erebus Router - NullBlock Internal Docs</title>
+        <title>Scanner Tool - NullBlock Internal Docs</title>
 
 
         <!-- Custom HTML head -->
@@ -147,7 +147,7 @@
                         <a href="https://github.com/aetherBytes/nullblock" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/aetherBytes/nullblock/edit/main/src/services/erebus.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/aetherBytes/nullblock/edit/main/src/poly-mev/scanner.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -181,106 +181,488 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="erebus-router"><a class="header" href="#erebus-router">Erebus Router</a></h1>
-<p><strong>The unified gateway</strong> - All frontend requests route through Erebus. No exceptions.</p>
+                        <h1 id="polyswarm-scanner"><a class="header" href="#polyswarm-scanner">PolySwarm Scanner</a></h1>
+<p>Real-time Polymarket intelligence scanner - the first forkable COW tool for prediction market data.</p>
 <h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>The scanner connects to Polymarket WebSocket and REST APIs, processes real-time market data with maximum sensitivity, and streams events for consumption by:</p>
+<ul>
+<li><strong>Sandbox viewport</strong> (MemCache tab) - live visual display</li>
+<li><strong>Agents via MCP</strong> - automated decision-making</li>
+<li><strong>Engram storage</strong> - persistent context</li>
+</ul>
+<h2 id="dogfooding-principle"><a class="header" href="#dogfooding-principle">Dogfooding Principle</a></h2>
+<p><strong>Critical</strong>: This scanner uses only public APIs that any NullBlock user could access.</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Property</th><th>Value</th></tr>
+<tr><th>Rule</th><th>Implementation</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Port</strong></td><td>3000</td></tr>
-<tr><td><strong>Location</strong></td><td><code>/svc/erebus/</code></td></tr>
-<tr><td><strong>Database</strong></td><td>PostgreSQL (port 5440)</td></tr>
-<tr><td><strong>Role</strong></td><td>API gateway, user management, Crossroads marketplace</td></tr>
+<tr><td><strong>Public APIs Only</strong></td><td>Polymarket Gamma/CLOB/WebSocket are public</td></tr>
+<tr><td><strong>Erebus Gateway</strong></td><td>All requests flow through Erebus public API routes</td></tr>
+<tr><td><strong>Tool Pattern</strong></td><td>Scanner is a Crossroads tool - users build similar tools</td></tr>
+<tr><td><strong>No Internal DB Access</strong></td><td>Scanner uses its own DB, accessed via public endpoints</td></tr>
+<tr><td><strong>Engram Storage</strong></td><td>Insights stored via public <code>/api/engrams/*</code></td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="golden-rule"><a class="header" href="#golden-rule">Golden Rule</a></h2>
-<pre><code>Frontend → Erebus → {
-  Wallet operations → Internal handlers
-  Agent chat → Hecate (9003)
-  A2A/MCP → Protocols (8001)
-  Engrams → Engrams Service (9004)
-  Marketplace → Crossroads (internal)
+<h2 id="key-decisions"><a class="header" href="#key-decisions">Key Decisions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Decision</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Market Tracking</strong></td><td>Top volume markets by default + fuzzy search/slug paste</td></tr>
+<tr><td><strong>UI Location</strong></td><td>Crossroads tool → MemCache → Sandbox tab</td></tr>
+<tr><td><strong>Signal Sensitivity</strong></td><td>Maximum - capture all meaningful signals</td></tr>
+<tr><td><strong>Backend</strong></td><td>Rust for performance, cloud-ready</td></tr>
+<tr><td><strong>MCP Compatible</strong></td><td>Full MCP server with tools for agent discovery</td></tr>
+<tr><td><strong>Forkable</strong></td><td>Users fork, customize config, get unique MCP endpoint</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
+<pre><code>Polymarket APIs                    NullBlock Backend                    Frontend
+─────────────────────────────────────────────────────────────────────────────────
+                                   ┌──────────────────┐
+wss://ws-subscriptions-clob.       │   poly-mev       │
+polymarket.com/ws/market  ────────▶│   (port 9006)    │
+                                   │                  │
+https://gamma-api.polymarket.com   │  - ws_client.rs  │────────┐
+  /events, /markets       ────────▶│  - gamma.rs      │        │
+                                   │  - scanner.rs    │        │
+https://clob.polymarket.com        │  - sse.rs        │        │
+  /orderbook              ────────▶│                  │        │
+                                   └────────┬─────────┘        │
+                                            │                  │
+                                   ┌────────▼─────────┐        │
+                                   │     Erebus       │◀───────┘
+                                   │   (port 3000)    │    SSE proxy
+                                   │ /api/poly/*      │
+                                   └────────┬─────────┘
+                                            │
+                                   ┌────────▼─────────┐
+                                   │     Hecate       │
+                                   │   (port 5173)    │
+                                   │                  │
+                                   │ MemCache/Sandbox │
+                                   │   usePolyScanner │
+                                   └──────────────────┘
+</code></pre>
+<h2 id="signal-detection"><a class="header" href="#signal-detection">Signal Detection</a></h2>
+<p>Maximum sensitivity thresholds for capturing all meaningful market signals:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Signal Type</th><th>Threshold</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Price Change</strong></td><td>2%</td><td>Any price move ≥2% triggers event</td></tr>
+<tr><td><strong>Volume Spike</strong></td><td>1.5x</td><td>Volume increase of 50%+</td></tr>
+<tr><td><strong>Spread Opportunity</strong></td><td>2%</td><td>Bid/ask spread ≥2%</td></tr>
+<tr><td><strong>Depth Change</strong></td><td>10%</td><td>Order book depth change</td></tr>
+<tr><td><strong>Market Activity</strong></td><td>5/min</td><td>High trade frequency</td></tr>
+</tbody>
+</table>
+</div>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct SignalThresholds {
+    pub price_change_percent: f64,      // 2.0
+    pub volume_spike_multiplier: f64,   // 1.5
+    pub spread_percent: f64,            // 2.0
+    pub depth_change_percent: f64,      // 10.0
+    pub activity_trades_per_min: u32,   // 5
+}
+<span class="boring">}</span></code></pre>
+<h2 id="forkable-cow-architecture"><a class="header" href="#forkable-cow-architecture">Forkable COW Architecture</a></h2>
+<p>Users can fork the scanner, customize it, and get their own MCP endpoint.</p>
+<h3 id="per-cow-endpoints"><a class="header" href="#per-cow-endpoints">Per-COW Endpoints</a></h3>
+<p>Each forked scanner gets dedicated endpoints:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Endpoint</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>GET /api/poly/scanner/{cow_id}/stream</code></td><td>SSE stream for this COW’s events</td></tr>
+<tr><td><code>GET /api/poly/scanner/{cow_id}/status</code></td><td>This COW’s scanner status</td></tr>
+<tr><td><code>GET /api/poly/scanner/{cow_id}/config</code></td><td>Get current config</td></tr>
+<tr><td><code>PUT /api/poly/scanner/{cow_id}/config</code></td><td>Update config</td></tr>
+<tr><td><code>MCP: erebus://scanner/{cow_id}</code></td><td>MCP resource for this COW</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="fork-workflow"><a class="header" href="#fork-workflow">Fork Workflow</a></h3>
+<pre><code>1. User forks base scanner in Crossroads
+   POST /api/marketplace/fork
+   → Returns: { "cow_id": "abc123" }
+
+2. User customizes config via Sandbox UI
+   PUT /api/poly/scanner/abc123/config
+
+3. User's agents subscribe to their scanner
+   MCP resources/list → "erebus://scanner/abc123"
+
+4. Fixed endpoint for set-and-forget
+   curl -N /api/poly/scanner/abc123/stream
+</code></pre>
+<h3 id="scanner-config-model"><a class="header" href="#scanner-config-model">Scanner Config Model</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ScannerConfig {
+    pub cow_id: Uuid,
+    pub owner_wallet: String,
+    pub name: String,
+
+    // Market Selection
+    pub tracked_markets: Vec&lt;String&gt;,
+    pub track_top_by_volume: bool,
+    pub top_market_count: u32,
+    pub category_filters: Vec&lt;String&gt;,
+
+    // Signal Thresholds (customizable)
+    pub price_change_threshold: f64,
+    pub volume_spike_multiplier: f64,
+    pub spread_threshold: f64,
+    pub activity_threshold: u32,
+
+    // Output Config
+    pub emit_low_significance: bool,
+    pub emit_medium_significance: bool,
+    pub emit_high_significance: bool,
+    pub emit_critical_only: bool,
+
+    pub is_active: bool,
+    pub created_at: DateTime&lt;Utc&gt;,
+    pub updated_at: DateTime&lt;Utc&gt;,
+}
+<span class="boring">}</span></code></pre>
+<h2 id="mcp-integration"><a class="header" href="#mcp-integration">MCP Integration</a></h2>
+<h3 id="scanner-tools"><a class="header" href="#scanner-tools">Scanner Tools</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>scanner_status</code></td><td>Get scanner status and statistics</td></tr>
+<tr><td><code>scanner_events</code></td><td>Get recent events with filtering</td></tr>
+<tr><td><code>scanner_track_market</code></td><td>Track a market by slug</td></tr>
+<tr><td><code>scanner_search_markets</code></td><td>Fuzzy search markets</td></tr>
+<tr><td><code>scanner_save_to_engram</code></td><td>Save event as engram</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="scanner-resources"><a class="header" href="#scanner-resources">Scanner Resources</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>URI</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>erebus://scanner</code></td><td>Scanner status and config</td></tr>
+<tr><td><code>erebus://scanner/{cow_id}</code></td><td>User’s forked scanner</td></tr>
+<tr><td><code>erebus://scanner/events</code></td><td>Live event stream (SSE)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="event-format-mcp-compatible"><a class="header" href="#event-format-mcp-compatible">Event Format (MCP Compatible)</a></h3>
+<pre><code class="language-json">{
+  "id": "uuid-here",
+  "event_type": "price_change",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "significance": "high",
+  "market": {
+    "id": "condition_id",
+    "slug": "market-slug",
+    "title": "Will X happen?"
+  },
+  "data": {
+    "outcome": "Yes",
+    "old_price": "0.45",
+    "new_price": "0.52",
+    "change_percent": "15.56"
+  }
 }
 </code></pre>
-<p><strong>NEVER</strong> connect frontend directly to backend services.</p>
+<h2 id="service-structure"><a class="header" href="#service-structure">Service Structure</a></h2>
+<pre><code>svc/poly-mev/
+├── Cargo.toml
+├── .env.example
+├── migrations/
+│   └── 001_create_scanner_tables.sql
+└── src/
+    ├── main.rs
+    ├── config.rs
+    ├── error.rs
+    ├── server.rs
+    │
+    ├── api/
+    │   ├── mod.rs
+    │   ├── gamma.rs          # Gamma API (markets, events)
+    │   ├── clob.rs           # CLOB API (orderbook, prices)
+    │   └── websocket.rs      # WebSocket client
+    │
+    ├── models/
+    │   ├── mod.rs
+    │   ├── market.rs
+    │   ├── order.rs
+    │   └── scanner_event.rs
+    │
+    ├── scanner/
+    │   ├── mod.rs
+    │   ├── engine.rs         # Main scanner loop
+    │   ├── signals.rs        # Signal detection
+    │   └── processor.rs      # Event normalization
+    │
+    ├── handlers/
+    │   ├── mod.rs
+    │   ├── health.rs
+    │   ├── markets.rs
+    │   ├── scanner.rs
+    │   └── sse.rs            # SSE streaming
+    │
+    └── database/
+        ├── mod.rs
+        └── repositories/
+            ├── mod.rs
+            ├── markets.rs
+            └── events.rs
+</code></pre>
 <h2 id="api-endpoints"><a class="header" href="#api-endpoints">API Endpoints</a></h2>
-<h3 id="users-erebus-owned"><a class="header" href="#users-erebus-owned">Users (Erebus-Owned)</a></h3>
-<pre><code class="language-bash">POST /api/users/register     # Create/update user
-POST /api/users/lookup       # Find by source identifier
-GET  /api/users/:user_id     # Get by UUID
-</code></pre>
-<h3 id="wallets"><a class="header" href="#wallets">Wallets</a></h3>
-<pre><code class="language-bash">POST /api/wallets/challenge  # Request signature challenge
-POST /api/wallets/verify     # Verify signature, get session
-</code></pre>
-<h3 id="agents-proxied-to-9003"><a class="header" href="#agents-proxied-to-9003">Agents (Proxied to 9003)</a></h3>
-<pre><code class="language-bash">POST /api/agents/chat        # Chat with agent
-GET  /api/agents/tasks       # List tasks
-POST /api/agents/tasks       # Create task
-</code></pre>
-<h3 id="engrams-proxied-to-9004"><a class="header" href="#engrams-proxied-to-9004">Engrams (Proxied to 9004)</a></h3>
-<pre><code class="language-bash">GET  /api/engrams            # List all
-POST /api/engrams            # Create
-GET  /api/engrams/:id        # Get by ID
-GET  /api/engrams/wallet/:addr  # Get by wallet
-</code></pre>
-<h3 id="marketplace"><a class="header" href="#marketplace">Marketplace</a></h3>
-<pre><code class="language-bash">GET  /api/marketplace/listings     # Browse
-POST /api/marketplace/listings     # Create listing
-GET  /api/marketplace/search       # Search
-GET  /api/marketplace/featured     # Featured services
-</code></pre>
-<h3 id="discovery"><a class="header" href="#discovery">Discovery</a></h3>
-<pre><code class="language-bash">GET  /api/discovery/agents         # Auto-discover agents
-GET  /api/discovery/health/:endpoint  # Check service health
+<h3 id="scanner-control"><a class="header" href="#scanner-control">Scanner Control</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/health</code></td><td>Service health</td></tr>
+<tr><td>GET</td><td><code>/scanner/stream</code></td><td>SSE event stream</td></tr>
+<tr><td>GET</td><td><code>/scanner/status</code></td><td>Scanner status + stats</td></tr>
+<tr><td>POST</td><td><code>/scanner/start</code></td><td>Start scanning</td></tr>
+<tr><td>POST</td><td><code>/scanner/stop</code></td><td>Stop scanning</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="markets"><a class="header" href="#markets">Markets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/markets</code></td><td>List tracked markets</td></tr>
+<tr><td>GET</td><td><code>/markets/search?q=</code></td><td>Fuzzy search markets</td></tr>
+<tr><td>POST</td><td><code>/markets/track</code></td><td>Track by slug or condition_id</td></tr>
+<tr><td>DELETE</td><td><code>/markets/:id/track</code></td><td>Untrack market</td></tr>
+<tr><td>GET</td><td><code>/markets/top?limit=50</code></td><td>Top markets by volume</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="events"><a class="header" href="#events">Events</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/events?limit=100</code></td><td>Recent scanner events</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="frontend-components"><a class="header" href="#frontend-components">Frontend Components</a></h2>
+<h3 id="sandbox-tab-memcache"><a class="header" href="#sandbox-tab-memcache">Sandbox Tab (MemCache)</a></h3>
+<p>New first tab in MemCache submenu containing:</p>
+<ul>
+<li><strong>Viewport</strong> - Live scanner feed display</li>
+<li><strong>Tool Builder</strong> - Build custom tools/COWs</li>
+<li><strong>Engram Creator</strong> - Create engrams from scanner insights</li>
+</ul>
+<h3 id="new-hook-usepolyscanner"><a class="header" href="#new-hook-usepolyscanner">New Hook: usePolyScanner</a></h3>
+<pre><code class="language-typescript">interface UsePolyScannerReturn {
+  // Event streaming
+  events: ScannerEvent[];
+  isConnected: boolean;
+  connectToStream: () =&gt; void;
+  disconnectFromStream: () =&gt; void;
+  clearEvents: () =&gt; void;
+
+  // Scanner status
+  status: ScannerStatus | null;
+
+  // Market management
+  trackedMarkets: TrackedMarket[];
+  topMarkets: TrackedMarket[];
+  searchMarkets: (query: string) =&gt; Promise&lt;TrackedMarket[]&gt;;
+  trackMarket: (slugOrId: string) =&gt; Promise&lt;boolean&gt;;
+  untrackMarket: (id: string) =&gt; Promise&lt;boolean&gt;;
+
+  // Filtering
+  getEventsByType: (type: string) =&gt; ScannerEvent[];
+  getHighSignificanceEvents: () =&gt; ScannerEvent[];
+}
 </code></pre>
 <h2 id="database-schema"><a class="header" href="#database-schema">Database Schema</a></h2>
-<p>Erebus owns the following tables:</p>
-<ul>
-<li><code>user_references</code> - User identity (wallet, API key, OAuth)</li>
-<li><code>wallets</code> - Web3 wallet connections</li>
-<li><code>sessions</code> - Authentication sessions</li>
-<li><code>crossroads_*</code> - Marketplace tables</li>
-<li><code>agent_api_keys</code> - Encrypted LLM provider keys</li>
-</ul>
-<h2 id="web3-authentication-flow"><a class="header" href="#web3-authentication-flow">Web3 Authentication Flow</a></h2>
-<pre><code>1. Wallet Connect →
-2. POST /api/wallets/challenge →
-3. User signs message →
-4. POST /api/wallets/verify →
-5. Auto-register user if new →
-6. Return session token
-</code></pre>
-<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
-<pre><code class="language-bash"># Environment
-EREBUS_PORT=3000
-DATABASE_URL=postgresql://postgres:postgres_secure_pass@localhost:5440/erebus
+<pre><code class="language-sql">-- Tracked markets
+CREATE TABLE tracked_markets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    market_id VARCHAR(255) NOT NULL UNIQUE,
+    condition_id VARCHAR(255),
+    slug VARCHAR(255),
+    title TEXT NOT NULL,
+    category VARCHAR(100),
+    last_price DECIMAL(20, 8),
+    volume_24h DECIMAL(20, 8),
+    is_top_market BOOLEAN DEFAULT false,
+    tracked_since TIMESTAMPTZ DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT true,
+    metadata JSONB DEFAULT '{}'
+);
 
-# Service URLs (for proxying)
-AGENTS_SERVICE_URL=http://localhost:9003
-PROTOCOLS_SERVICE_URL=http://localhost:8001
-ENGRAMS_SERVICE_URL=http://localhost:9004
+-- Scanner events (for history/analysis)
+CREATE TABLE scanner_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_type VARCHAR(50) NOT NULL,
+    market_id VARCHAR(255) NOT NULL,
+    significance VARCHAR(20) NOT NULL,
+    event_data JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Market snapshots (for trend detection)
+CREATE TABLE market_snapshots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    market_id VARCHAR(255) NOT NULL,
+    price DECIMAL(20, 8),
+    volume_24h DECIMAL(20, 8),
+    liquidity DECIMAL(20, 8),
+    spread DECIMAL(20, 8),
+    snapshot_at TIMESTAMPTZ DEFAULT NOW()
+);
+</code></pre>
+<h2 id="implementation-phases"><a class="header" href="#implementation-phases">Implementation Phases</a></h2>
+<h3 id="phase-1-backend-foundation"><a class="header" href="#phase-1-backend-foundation">Phase 1: Backend Foundation</a></h3>
+<ol>
+<li>Create <code>svc/poly-mev/</code> directory structure</li>
+<li>Set up Cargo.toml with dependencies</li>
+<li>Implement config, error, server modules</li>
+<li>Create all model files</li>
+<li>Implement health endpoint</li>
+</ol>
+<h3 id="phase-2-polymarket-api-clients"><a class="header" href="#phase-2-polymarket-api-clients">Phase 2: Polymarket API Clients</a></h3>
+<ol>
+<li>Implement <code>api/gamma.rs</code> - market fetching</li>
+<li>Implement <code>api/clob.rs</code> - orderbook data</li>
+<li>Implement <code>api/websocket.rs</code> - real-time stream</li>
+<li>Test connections to all APIs</li>
+</ol>
+<h3 id="phase-3-scanner-engine"><a class="header" href="#phase-3-scanner-engine">Phase 3: Scanner Engine</a></h3>
+<ol>
+<li>Implement <code>scanner/signals.rs</code> - detection algorithms</li>
+<li>Implement <code>scanner/processor.rs</code> - event normalization</li>
+<li>Implement <code>scanner/engine.rs</code> - main loop</li>
+<li>Set up broadcast channel for SSE</li>
+</ol>
+<h3 id="phase-4-http-handlers--erebus-integration"><a class="header" href="#phase-4-http-handlers--erebus-integration">Phase 4: HTTP Handlers + Erebus Integration</a></h3>
+<ol>
+<li>Implement SSE streaming handler</li>
+<li>Implement market CRUD + search</li>
+<li>Create Erebus proxy routes at <code>/api/poly/*</code></li>
+<li>Add database repositories</li>
+</ol>
+<h3 id="phase-5-frontend---sandbox-tab"><a class="header" href="#phase-5-frontend---sandbox-tab">Phase 5: Frontend - Sandbox Tab</a></h3>
+<ol>
+<li>Add “sandbox” to MemCacheSection type</li>
+<li>Create Sandbox.tsx container</li>
+<li>Create ScannerViewport.tsx</li>
+<li>Create MarketSearch.tsx</li>
+<li>Implement usePolyScanner hook</li>
+</ol>
+<h3 id="phase-6-forkable-cow--mcp"><a class="header" href="#phase-6-forkable-cow--mcp">Phase 6: Forkable COW + MCP</a></h3>
+<ol>
+<li>Create ScannerConfig model</li>
+<li>Implement per-COW SSE endpoints</li>
+<li>Add scanner tools to Erebus MCP handler</li>
+<li>Implement fork workflow in Crossroads</li>
+<li>Test agent subscription</li>
+</ol>
+<h2 id="verification"><a class="header" href="#verification">Verification</a></h2>
+<h3 id="backend-tests"><a class="header" href="#backend-tests">Backend Tests</a></h3>
+<pre><code class="language-bash"># Health check
+curl http://localhost:9006/health
+
+# Scanner status
+curl http://localhost:9006/scanner/status
+
+# Top markets
+curl http://localhost:9006/markets/top?limit=20
+
+# Search markets
+curl "http://localhost:9006/markets/search?q=trump"
+
+# SSE stream (keep open)
+curl -N http://localhost:9006/scanner/stream
+</code></pre>
+<h3 id="mcp-tests"><a class="header" href="#mcp-tests">MCP Tests</a></h3>
+<pre><code class="language-bash"># Get scanner status via MCP
+curl -X POST http://localhost:3000/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "scanner_status",
+      "arguments": {}
+    }
+  }'
+
+# Get high significance events
+curl -X POST http://localhost:3000/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "scanner_events",
+      "arguments": { "significance": "high", "limit": 5 }
+    }
+  }'
+</code></pre>
+<h3 id="forkable-cow-tests"><a class="header" href="#forkable-cow-tests">Forkable COW Tests</a></h3>
+<pre><code class="language-bash"># Fork the base scanner
+curl -X POST http://localhost:3000/api/marketplace/fork \
+  -H "Content-Type: application/json" \
+  -d '{
+    "listing_id": "scanner-base",
+    "wallet_address": "0xtest...",
+    "custom_name": "My Politics Scanner"
+  }'
+
+# Subscribe to custom scanner SSE
+curl -N http://localhost:3000/api/poly/scanner/{cow_id}/stream
 </code></pre>
 <h2 id="related"><a class="header" href="#related">Related</a></h2>
 <ul>
-<li><a href="../architecture.html">Architecture Overview</a></li>
-<li><a href="./crossroads.html">Crossroads Marketplace</a></li>
-<li><a href="../reference/wallet.html">Wallet Integration</a></li>
+<li><a href="./plan.html">Poly Mev Plan</a></li>
+<li><a href="../services/engrams.html">Engrams Service</a></li>
+<li><a href="../services/crossroads.html">Crossroads Marketplace</a></li>
+<li><a href="../reference/mcp-servers.html">MCP Servers</a></li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../ports.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../poly-mev/plan.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../services/agents.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../archive/echo-factory/plan.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -290,11 +672,11 @@ ENGRAMS_SERVICE_URL=http://localhost:9004
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../ports.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../poly-mev/plan.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../services/agents.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../archive/echo-factory/plan.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

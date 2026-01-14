@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-2ec4ce82.js";
+            window.path_to_searchindex_js = "searchindex-384a5c89.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-37d0f319.js"></script>
+        <script src="toc-e0afa262.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -203,7 +203,7 @@
 <tr><td><strong>Start the dev environment</strong></td><td><a href="#quick-start">Quick Start</a></td></tr>
 <tr><td><strong>Learn about Engrams</strong></td><td><a href="#engrams-service">Engrams Service</a></td></tr>
 <tr><td><strong>See Echo Factory plan</strong></td><td><a href="echo-factory/plan.html">Echo Factory</a></td></tr>
-<tr><td><strong>Check API endpoints</strong></td><td><a href="#api-endpoints-6">API Reference</a></td></tr>
+<tr><td><strong>Check API endpoints</strong></td><td><a href="#api-endpoints-7">API Reference</a></td></tr>
 </tbody>
 </table>
 </div>
@@ -851,7 +851,7 @@ AGENTS_SERVICE_URL=http://localhost:9003
 </code></pre>
 <h2 id="related-2"><a class="header" href="#related-2">Related</a></h2>
 <ul>
-<li><a href="#api-endpoints-6">API Reference</a></li>
+<li><a href="#api-endpoints-7">API Reference</a></li>
 <li><a href="#agents-service">Agents Service</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -1433,18 +1433,21 @@ FROM agent_api_keys;
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Phase</th><th>Status</th><th>Target</th></tr>
+<tr><th>Phase</th><th>Status</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Phase 1: Service Scaffold</strong></td><td>⏳ Next</td><td>Week 1</td></tr>
-<tr><td><strong>Phase 2: Market Scanner Agent</strong></td><td>⏳ Pending</td><td>Week 1-2</td></tr>
-<tr><td><strong>Phase 3: Probability Refiner</strong></td><td>⏳ Pending</td><td>Week 2</td></tr>
-<tr><td><strong>Phase 4: Arb Detector + Execution</strong></td><td>⏳ Pending</td><td>Week 3</td></tr>
-<tr><td><strong>Phase 5: Engram Generator + Overseer</strong></td><td>⏳ Pending</td><td>Week 4</td></tr>
-<tr><td><strong>Phase 6: Monad Deploy + Crossroads</strong></td><td>⏳ Pending</td><td>Week 5-6</td></tr>
+<tr><td><strong>Phase 1: Service Scaffold</strong></td><td>⏳ Planned</td></tr>
+<tr><td><strong>Phase 2: Market Scanner</strong></td><td>⏳ Planned → <a href="#polyswarm-scanner">Detailed Plan</a></td></tr>
+<tr><td><strong>Phase 3: Probability Refiner</strong></td><td>⏳ Pending</td></tr>
+<tr><td><strong>Phase 4: Arb Detector + Execution</strong></td><td>⏳ Pending</td></tr>
+<tr><td><strong>Phase 5: Engram Generator + Overseer</strong></td><td>⏳ Pending</td></tr>
+<tr><td><strong>Phase 6: Monad Deploy + Crossroads</strong></td><td>⏳ Pending</td></tr>
 </tbody>
 </table>
 </div>
+<blockquote>
+<p><strong>Current Focus</strong>: Market Scanner - a forkable COW tool for real-time Polymarket intelligence. See <a href="#polyswarm-scanner">scanner.md</a> for detailed implementation plan.</p>
+</blockquote>
 <h2 id="swarm-architecture"><a class="header" href="#swarm-architecture">Swarm Architecture</a></h2>
 <pre><code>                    ┌─────────────────────┐
                     │  Resilience Overseer │
@@ -1622,6 +1625,479 @@ GET  /api/poly/edges/:id/engram     # Get edge as engram
 <li><a href="#hecate-agent">HECATE Agent</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="polyswarm-scanner"><a class="header" href="#polyswarm-scanner">PolySwarm Scanner</a></h1>
+<p>Real-time Polymarket intelligence scanner - the first forkable COW tool for prediction market data.</p>
+<h2 id="overview-6"><a class="header" href="#overview-6">Overview</a></h2>
+<p>The scanner connects to Polymarket WebSocket and REST APIs, processes real-time market data with maximum sensitivity, and streams events for consumption by:</p>
+<ul>
+<li><strong>Sandbox viewport</strong> (MemCache tab) - live visual display</li>
+<li><strong>Agents via MCP</strong> - automated decision-making</li>
+<li><strong>Engram storage</strong> - persistent context</li>
+</ul>
+<h2 id="dogfooding-principle"><a class="header" href="#dogfooding-principle">Dogfooding Principle</a></h2>
+<p><strong>Critical</strong>: This scanner uses only public APIs that any NullBlock user could access.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Rule</th><th>Implementation</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Public APIs Only</strong></td><td>Polymarket Gamma/CLOB/WebSocket are public</td></tr>
+<tr><td><strong>Erebus Gateway</strong></td><td>All requests flow through Erebus public API routes</td></tr>
+<tr><td><strong>Tool Pattern</strong></td><td>Scanner is a Crossroads tool - users build similar tools</td></tr>
+<tr><td><strong>No Internal DB Access</strong></td><td>Scanner uses its own DB, accessed via public endpoints</td></tr>
+<tr><td><strong>Engram Storage</strong></td><td>Insights stored via public <code>/api/engrams/*</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="key-decisions"><a class="header" href="#key-decisions">Key Decisions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Aspect</th><th>Decision</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Market Tracking</strong></td><td>Top volume markets by default + fuzzy search/slug paste</td></tr>
+<tr><td><strong>UI Location</strong></td><td>Crossroads tool → MemCache → Sandbox tab</td></tr>
+<tr><td><strong>Signal Sensitivity</strong></td><td>Maximum - capture all meaningful signals</td></tr>
+<tr><td><strong>Backend</strong></td><td>Rust for performance, cloud-ready</td></tr>
+<tr><td><strong>MCP Compatible</strong></td><td>Full MCP server with tools for agent discovery</td></tr>
+<tr><td><strong>Forkable</strong></td><td>Users fork, customize config, get unique MCP endpoint</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
+<pre><code>Polymarket APIs                    NullBlock Backend                    Frontend
+─────────────────────────────────────────────────────────────────────────────────
+                                   ┌──────────────────┐
+wss://ws-subscriptions-clob.       │   poly-mev       │
+polymarket.com/ws/market  ────────▶│   (port 9006)    │
+                                   │                  │
+https://gamma-api.polymarket.com   │  - ws_client.rs  │────────┐
+  /events, /markets       ────────▶│  - gamma.rs      │        │
+                                   │  - scanner.rs    │        │
+https://clob.polymarket.com        │  - sse.rs        │        │
+  /orderbook              ────────▶│                  │        │
+                                   └────────┬─────────┘        │
+                                            │                  │
+                                   ┌────────▼─────────┐        │
+                                   │     Erebus       │◀───────┘
+                                   │   (port 3000)    │    SSE proxy
+                                   │ /api/poly/*      │
+                                   └────────┬─────────┘
+                                            │
+                                   ┌────────▼─────────┐
+                                   │     Hecate       │
+                                   │   (port 5173)    │
+                                   │                  │
+                                   │ MemCache/Sandbox │
+                                   │   usePolyScanner │
+                                   └──────────────────┘
+</code></pre>
+<h2 id="signal-detection"><a class="header" href="#signal-detection">Signal Detection</a></h2>
+<p>Maximum sensitivity thresholds for capturing all meaningful market signals:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Signal Type</th><th>Threshold</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Price Change</strong></td><td>2%</td><td>Any price move ≥2% triggers event</td></tr>
+<tr><td><strong>Volume Spike</strong></td><td>1.5x</td><td>Volume increase of 50%+</td></tr>
+<tr><td><strong>Spread Opportunity</strong></td><td>2%</td><td>Bid/ask spread ≥2%</td></tr>
+<tr><td><strong>Depth Change</strong></td><td>10%</td><td>Order book depth change</td></tr>
+<tr><td><strong>Market Activity</strong></td><td>5/min</td><td>High trade frequency</td></tr>
+</tbody>
+</table>
+</div>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct SignalThresholds {
+    pub price_change_percent: f64,      // 2.0
+    pub volume_spike_multiplier: f64,   // 1.5
+    pub spread_percent: f64,            // 2.0
+    pub depth_change_percent: f64,      // 10.0
+    pub activity_trades_per_min: u32,   // 5
+}
+<span class="boring">}</span></code></pre>
+<h2 id="forkable-cow-architecture"><a class="header" href="#forkable-cow-architecture">Forkable COW Architecture</a></h2>
+<p>Users can fork the scanner, customize it, and get their own MCP endpoint.</p>
+<h3 id="per-cow-endpoints"><a class="header" href="#per-cow-endpoints">Per-COW Endpoints</a></h3>
+<p>Each forked scanner gets dedicated endpoints:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Endpoint</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>GET /api/poly/scanner/{cow_id}/stream</code></td><td>SSE stream for this COW’s events</td></tr>
+<tr><td><code>GET /api/poly/scanner/{cow_id}/status</code></td><td>This COW’s scanner status</td></tr>
+<tr><td><code>GET /api/poly/scanner/{cow_id}/config</code></td><td>Get current config</td></tr>
+<tr><td><code>PUT /api/poly/scanner/{cow_id}/config</code></td><td>Update config</td></tr>
+<tr><td><code>MCP: erebus://scanner/{cow_id}</code></td><td>MCP resource for this COW</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="fork-workflow"><a class="header" href="#fork-workflow">Fork Workflow</a></h3>
+<pre><code>1. User forks base scanner in Crossroads
+   POST /api/marketplace/fork
+   → Returns: { "cow_id": "abc123" }
+
+2. User customizes config via Sandbox UI
+   PUT /api/poly/scanner/abc123/config
+
+3. User's agents subscribe to their scanner
+   MCP resources/list → "erebus://scanner/abc123"
+
+4. Fixed endpoint for set-and-forget
+   curl -N /api/poly/scanner/abc123/stream
+</code></pre>
+<h3 id="scanner-config-model"><a class="header" href="#scanner-config-model">Scanner Config Model</a></h3>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ScannerConfig {
+    pub cow_id: Uuid,
+    pub owner_wallet: String,
+    pub name: String,
+
+    // Market Selection
+    pub tracked_markets: Vec&lt;String&gt;,
+    pub track_top_by_volume: bool,
+    pub top_market_count: u32,
+    pub category_filters: Vec&lt;String&gt;,
+
+    // Signal Thresholds (customizable)
+    pub price_change_threshold: f64,
+    pub volume_spike_multiplier: f64,
+    pub spread_threshold: f64,
+    pub activity_threshold: u32,
+
+    // Output Config
+    pub emit_low_significance: bool,
+    pub emit_medium_significance: bool,
+    pub emit_high_significance: bool,
+    pub emit_critical_only: bool,
+
+    pub is_active: bool,
+    pub created_at: DateTime&lt;Utc&gt;,
+    pub updated_at: DateTime&lt;Utc&gt;,
+}
+<span class="boring">}</span></code></pre>
+<h2 id="mcp-integration"><a class="header" href="#mcp-integration">MCP Integration</a></h2>
+<h3 id="scanner-tools"><a class="header" href="#scanner-tools">Scanner Tools</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>scanner_status</code></td><td>Get scanner status and statistics</td></tr>
+<tr><td><code>scanner_events</code></td><td>Get recent events with filtering</td></tr>
+<tr><td><code>scanner_track_market</code></td><td>Track a market by slug</td></tr>
+<tr><td><code>scanner_search_markets</code></td><td>Fuzzy search markets</td></tr>
+<tr><td><code>scanner_save_to_engram</code></td><td>Save event as engram</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="scanner-resources"><a class="header" href="#scanner-resources">Scanner Resources</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>URI</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>erebus://scanner</code></td><td>Scanner status and config</td></tr>
+<tr><td><code>erebus://scanner/{cow_id}</code></td><td>User’s forked scanner</td></tr>
+<tr><td><code>erebus://scanner/events</code></td><td>Live event stream (SSE)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="event-format-mcp-compatible"><a class="header" href="#event-format-mcp-compatible">Event Format (MCP Compatible)</a></h3>
+<pre><code class="language-json">{
+  "id": "uuid-here",
+  "event_type": "price_change",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "significance": "high",
+  "market": {
+    "id": "condition_id",
+    "slug": "market-slug",
+    "title": "Will X happen?"
+  },
+  "data": {
+    "outcome": "Yes",
+    "old_price": "0.45",
+    "new_price": "0.52",
+    "change_percent": "15.56"
+  }
+}
+</code></pre>
+<h2 id="service-structure-1"><a class="header" href="#service-structure-1">Service Structure</a></h2>
+<pre><code>svc/poly-mev/
+├── Cargo.toml
+├── .env.example
+├── migrations/
+│   └── 001_create_scanner_tables.sql
+└── src/
+    ├── main.rs
+    ├── config.rs
+    ├── error.rs
+    ├── server.rs
+    │
+    ├── api/
+    │   ├── mod.rs
+    │   ├── gamma.rs          # Gamma API (markets, events)
+    │   ├── clob.rs           # CLOB API (orderbook, prices)
+    │   └── websocket.rs      # WebSocket client
+    │
+    ├── models/
+    │   ├── mod.rs
+    │   ├── market.rs
+    │   ├── order.rs
+    │   └── scanner_event.rs
+    │
+    ├── scanner/
+    │   ├── mod.rs
+    │   ├── engine.rs         # Main scanner loop
+    │   ├── signals.rs        # Signal detection
+    │   └── processor.rs      # Event normalization
+    │
+    ├── handlers/
+    │   ├── mod.rs
+    │   ├── health.rs
+    │   ├── markets.rs
+    │   ├── scanner.rs
+    │   └── sse.rs            # SSE streaming
+    │
+    └── database/
+        ├── mod.rs
+        └── repositories/
+            ├── mod.rs
+            ├── markets.rs
+            └── events.rs
+</code></pre>
+<h2 id="api-endpoints-6"><a class="header" href="#api-endpoints-6">API Endpoints</a></h2>
+<h3 id="scanner-control"><a class="header" href="#scanner-control">Scanner Control</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/health</code></td><td>Service health</td></tr>
+<tr><td>GET</td><td><code>/scanner/stream</code></td><td>SSE event stream</td></tr>
+<tr><td>GET</td><td><code>/scanner/status</code></td><td>Scanner status + stats</td></tr>
+<tr><td>POST</td><td><code>/scanner/start</code></td><td>Start scanning</td></tr>
+<tr><td>POST</td><td><code>/scanner/stop</code></td><td>Stop scanning</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="markets-1"><a class="header" href="#markets-1">Markets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/markets</code></td><td>List tracked markets</td></tr>
+<tr><td>GET</td><td><code>/markets/search?q=</code></td><td>Fuzzy search markets</td></tr>
+<tr><td>POST</td><td><code>/markets/track</code></td><td>Track by slug or condition_id</td></tr>
+<tr><td>DELETE</td><td><code>/markets/:id/track</code></td><td>Untrack market</td></tr>
+<tr><td>GET</td><td><code>/markets/top?limit=50</code></td><td>Top markets by volume</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="events"><a class="header" href="#events">Events</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/events?limit=100</code></td><td>Recent scanner events</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="frontend-components"><a class="header" href="#frontend-components">Frontend Components</a></h2>
+<h3 id="sandbox-tab-memcache"><a class="header" href="#sandbox-tab-memcache">Sandbox Tab (MemCache)</a></h3>
+<p>New first tab in MemCache submenu containing:</p>
+<ul>
+<li><strong>Viewport</strong> - Live scanner feed display</li>
+<li><strong>Tool Builder</strong> - Build custom tools/COWs</li>
+<li><strong>Engram Creator</strong> - Create engrams from scanner insights</li>
+</ul>
+<h3 id="new-hook-usepolyscanner"><a class="header" href="#new-hook-usepolyscanner">New Hook: usePolyScanner</a></h3>
+<pre><code class="language-typescript">interface UsePolyScannerReturn {
+  // Event streaming
+  events: ScannerEvent[];
+  isConnected: boolean;
+  connectToStream: () =&gt; void;
+  disconnectFromStream: () =&gt; void;
+  clearEvents: () =&gt; void;
+
+  // Scanner status
+  status: ScannerStatus | null;
+
+  // Market management
+  trackedMarkets: TrackedMarket[];
+  topMarkets: TrackedMarket[];
+  searchMarkets: (query: string) =&gt; Promise&lt;TrackedMarket[]&gt;;
+  trackMarket: (slugOrId: string) =&gt; Promise&lt;boolean&gt;;
+  untrackMarket: (id: string) =&gt; Promise&lt;boolean&gt;;
+
+  // Filtering
+  getEventsByType: (type: string) =&gt; ScannerEvent[];
+  getHighSignificanceEvents: () =&gt; ScannerEvent[];
+}
+</code></pre>
+<h2 id="database-schema-2"><a class="header" href="#database-schema-2">Database Schema</a></h2>
+<pre><code class="language-sql">-- Tracked markets
+CREATE TABLE tracked_markets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    market_id VARCHAR(255) NOT NULL UNIQUE,
+    condition_id VARCHAR(255),
+    slug VARCHAR(255),
+    title TEXT NOT NULL,
+    category VARCHAR(100),
+    last_price DECIMAL(20, 8),
+    volume_24h DECIMAL(20, 8),
+    is_top_market BOOLEAN DEFAULT false,
+    tracked_since TIMESTAMPTZ DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT true,
+    metadata JSONB DEFAULT '{}'
+);
+
+-- Scanner events (for history/analysis)
+CREATE TABLE scanner_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_type VARCHAR(50) NOT NULL,
+    market_id VARCHAR(255) NOT NULL,
+    significance VARCHAR(20) NOT NULL,
+    event_data JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Market snapshots (for trend detection)
+CREATE TABLE market_snapshots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    market_id VARCHAR(255) NOT NULL,
+    price DECIMAL(20, 8),
+    volume_24h DECIMAL(20, 8),
+    liquidity DECIMAL(20, 8),
+    spread DECIMAL(20, 8),
+    snapshot_at TIMESTAMPTZ DEFAULT NOW()
+);
+</code></pre>
+<h2 id="implementation-phases"><a class="header" href="#implementation-phases">Implementation Phases</a></h2>
+<h3 id="phase-1-backend-foundation"><a class="header" href="#phase-1-backend-foundation">Phase 1: Backend Foundation</a></h3>
+<ol>
+<li>Create <code>svc/poly-mev/</code> directory structure</li>
+<li>Set up Cargo.toml with dependencies</li>
+<li>Implement config, error, server modules</li>
+<li>Create all model files</li>
+<li>Implement health endpoint</li>
+</ol>
+<h3 id="phase-2-polymarket-api-clients"><a class="header" href="#phase-2-polymarket-api-clients">Phase 2: Polymarket API Clients</a></h3>
+<ol>
+<li>Implement <code>api/gamma.rs</code> - market fetching</li>
+<li>Implement <code>api/clob.rs</code> - orderbook data</li>
+<li>Implement <code>api/websocket.rs</code> - real-time stream</li>
+<li>Test connections to all APIs</li>
+</ol>
+<h3 id="phase-3-scanner-engine"><a class="header" href="#phase-3-scanner-engine">Phase 3: Scanner Engine</a></h3>
+<ol>
+<li>Implement <code>scanner/signals.rs</code> - detection algorithms</li>
+<li>Implement <code>scanner/processor.rs</code> - event normalization</li>
+<li>Implement <code>scanner/engine.rs</code> - main loop</li>
+<li>Set up broadcast channel for SSE</li>
+</ol>
+<h3 id="phase-4-http-handlers--erebus-integration"><a class="header" href="#phase-4-http-handlers--erebus-integration">Phase 4: HTTP Handlers + Erebus Integration</a></h3>
+<ol>
+<li>Implement SSE streaming handler</li>
+<li>Implement market CRUD + search</li>
+<li>Create Erebus proxy routes at <code>/api/poly/*</code></li>
+<li>Add database repositories</li>
+</ol>
+<h3 id="phase-5-frontend---sandbox-tab"><a class="header" href="#phase-5-frontend---sandbox-tab">Phase 5: Frontend - Sandbox Tab</a></h3>
+<ol>
+<li>Add “sandbox” to MemCacheSection type</li>
+<li>Create Sandbox.tsx container</li>
+<li>Create ScannerViewport.tsx</li>
+<li>Create MarketSearch.tsx</li>
+<li>Implement usePolyScanner hook</li>
+</ol>
+<h3 id="phase-6-forkable-cow--mcp"><a class="header" href="#phase-6-forkable-cow--mcp">Phase 6: Forkable COW + MCP</a></h3>
+<ol>
+<li>Create ScannerConfig model</li>
+<li>Implement per-COW SSE endpoints</li>
+<li>Add scanner tools to Erebus MCP handler</li>
+<li>Implement fork workflow in Crossroads</li>
+<li>Test agent subscription</li>
+</ol>
+<h2 id="verification"><a class="header" href="#verification">Verification</a></h2>
+<h3 id="backend-tests"><a class="header" href="#backend-tests">Backend Tests</a></h3>
+<pre><code class="language-bash"># Health check
+curl http://localhost:9006/health
+
+# Scanner status
+curl http://localhost:9006/scanner/status
+
+# Top markets
+curl http://localhost:9006/markets/top?limit=20
+
+# Search markets
+curl "http://localhost:9006/markets/search?q=trump"
+
+# SSE stream (keep open)
+curl -N http://localhost:9006/scanner/stream
+</code></pre>
+<h3 id="mcp-tests"><a class="header" href="#mcp-tests">MCP Tests</a></h3>
+<pre><code class="language-bash"># Get scanner status via MCP
+curl -X POST http://localhost:3000/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "scanner_status",
+      "arguments": {}
+    }
+  }'
+
+# Get high significance events
+curl -X POST http://localhost:3000/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "scanner_events",
+      "arguments": { "significance": "high", "limit": 5 }
+    }
+  }'
+</code></pre>
+<h3 id="forkable-cow-tests"><a class="header" href="#forkable-cow-tests">Forkable COW Tests</a></h3>
+<pre><code class="language-bash"># Fork the base scanner
+curl -X POST http://localhost:3000/api/marketplace/fork \
+  -H "Content-Type: application/json" \
+  -d '{
+    "listing_id": "scanner-base",
+    "wallet_address": "0xtest...",
+    "custom_name": "My Politics Scanner"
+  }'
+
+# Subscribe to custom scanner SSE
+curl -N http://localhost:3000/api/poly/scanner/{cow_id}/stream
+</code></pre>
+<h2 id="related-10"><a class="header" href="#related-10">Related</a></h2>
+<ul>
+<li><a href="#polyswarm-cow-implementation-plan">Poly Mev Plan</a></li>
+<li><a href="#engrams-service">Engrams Service</a></li>
+<li><a href="#crossroads-marketplace">Crossroads Marketplace</a></li>
+<li><a href="#mcp-servers">MCP Servers</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="echo-factory-implementation-plan"><a class="header" href="#echo-factory-implementation-plan">Echo Factory Implementation Plan</a></h1>
 <blockquote>
 <p><strong>STATUS: PAUSED</strong> - Initiative paused in favor of <a href="#polyswarm-cow-implementation-plan">Poly Mev</a>. May resume after Polymarket swarm is operational.</p>
@@ -1673,7 +2149,7 @@ GET  /api/poly/edges/:id/engram     # Get edge as engram
 </tbody>
 </table>
 </div>
-<h2 id="dogfooding-principle"><a class="header" href="#dogfooding-principle">Dogfooding Principle</a></h2>
+<h2 id="dogfooding-principle-1"><a class="header" href="#dogfooding-principle-1">Dogfooding Principle</a></h2>
 <p>Echo Factory MUST use only public APIs through Erebus. No privileged access.</p>
 <p><strong>External developers get the same experience:</strong></p>
 <div class="table-wrapper">
@@ -1754,7 +2230,7 @@ POST /api/echo/content/:id/publish-now  # Publish
 </tbody>
 </table>
 </div>
-<h2 id="related-10"><a class="header" href="#related-10">Related</a></h2>
+<h2 id="related-11"><a class="header" href="#related-11">Related</a></h2>
 <ul>
 <li><a href="archive/echo-factory/engrams.html">Engram Integration</a></li>
 <li><a href="#engrams-service">Engrams Service</a></li>
@@ -1855,7 +2331,7 @@ PGPASSWORD="..." psql -h localhost -p 5441 -U postgres -d agents \
 # Run migration again
 cd svc/nullblock-agents &amp;&amp; sqlx migrate run
 </code></pre>
-<h2 id="related-11"><a class="header" href="#related-11">Related</a></h2>
+<h2 id="related-12"><a class="header" href="#related-12">Related</a></h2>
 <ul>
 <li><a href="#database-architecture">Database Architecture</a></li>
 <li><a href="#tmuxinator-setup">Tmuxinator Setup</a></li>
@@ -1956,7 +2432,7 @@ pg_dump -h localhost -p 5441 -U postgres agents &gt; agents_backup.sql
 <pre><code class="language-bash">psql -h localhost -p 5440 -U postgres erebus &lt; erebus_backup.sql
 psql -h localhost -p 5441 -U postgres agents &lt; agents_backup.sql
 </code></pre>
-<h2 id="related-12"><a class="header" href="#related-12">Related</a></h2>
+<h2 id="related-13"><a class="header" href="#related-13">Related</a></h2>
 <ul>
 <li><a href="#docker--containers">Docker &amp; Containers</a></li>
 <li><a href="#service-ports">Service Ports</a></li>
@@ -2062,13 +2538,13 @@ Ctrl+B, &lt;window-number&gt;
 
 # Check for errors in output
 </code></pre>
-<h2 id="related-13"><a class="header" href="#related-13">Related</a></h2>
+<h2 id="related-14"><a class="header" href="#related-14">Related</a></h2>
 <ul>
 <li><a href="#quick-start">Quick Start</a></li>
 <li><a href="#docker--containers">Docker &amp; Containers</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="api-endpoints-6"><a class="header" href="#api-endpoints-6">API Endpoints</a></h1>
+<h1 id="api-endpoints-7"><a class="header" href="#api-endpoints-7">API Endpoints</a></h1>
 <p>Complete reference for all NullBlock API endpoints.</p>
 <p><strong>All requests go through Erebus (port 3000).</strong></p>
 <h2 id="authentication"><a class="header" href="#authentication">Authentication</a></h2>
@@ -2323,7 +2799,7 @@ curl http://localhost:9003/health   # Agents
 curl http://localhost:9004/health   # Engrams
 curl http://localhost:8001/health   # Protocols
 </code></pre>
-<h2 id="related-14"><a class="header" href="#related-14">Related</a></h2>
+<h2 id="related-15"><a class="header" href="#related-15">Related</a></h2>
 <ul>
 <li><a href="#erebus-router">Erebus Router</a></li>
 <li><a href="#wallet-integration">Wallet Integration</a></li>
@@ -2331,7 +2807,7 @@ curl http://localhost:8001/health   # Protocols
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="mcp-servers"><a class="header" href="#mcp-servers">MCP Servers</a></h1>
 <p>Model Context Protocol servers integrated with NullBlock development.</p>
-<h2 id="overview-6"><a class="header" href="#overview-6">Overview</a></h2>
+<h2 id="overview-7"><a class="header" href="#overview-7">Overview</a></h2>
 <p>MCP servers extend Claude Code’s capabilities. Automatically available when running Claude Code in the NullBlock project.</p>
 <h2 id="nullblock-mcp-server"><a class="header" href="#nullblock-mcp-server">NullBlock MCP Server</a></h2>
 <p><strong>Purpose</strong>: NullBlock’s own MCP server exposing agent tools, engrams, and resources.</p>
@@ -2499,7 +2975,7 @@ claude mcp list
 # Test standalone
 npx chrome-devtools-mcp@latest
 </code></pre>
-<h2 id="related-15"><a class="header" href="#related-15">Related</a></h2>
+<h2 id="related-16"><a class="header" href="#related-16">Related</a></h2>
 <ul>
 <li><a href="#tmuxinator-setup">Tmuxinator Setup</a></li>
 <li><a href="#quick-start">Quick Start</a></li>
@@ -2601,7 +3077,7 @@ DATABASE_URL=postgresql://postgres:pass@nullblock-postgres-agents:5432/agents
 # ❌ Host access (don't use in containers)
 DATABASE_URL=postgresql://postgres:pass@localhost:5441/agents
 </code></pre>
-<h2 id="related-16"><a class="header" href="#related-16">Related</a></h2>
+<h2 id="related-17"><a class="header" href="#related-17">Related</a></h2>
 <ul>
 <li><a href="#docker--containers">Docker &amp; Containers</a></li>
 <li><a href="#database-architecture">Database Architecture</a></li>
@@ -2671,7 +3147,7 @@ import { Identity } from '@coinbase/onchainkit/identity';
 <li>Cleared on refresh/logout</li>
 <li>Re-authenticate after expiration</li>
 </ul>
-<h2 id="database-schema-2"><a class="header" href="#database-schema-2">Database Schema</a></h2>
+<h2 id="database-schema-3"><a class="header" href="#database-schema-3">Database Schema</a></h2>
 <h3 id="user_references"><a class="header" href="#user_references">user_references</a></h3>
 <pre><code class="language-sql">CREATE TABLE user_references (
     id UUID PRIMARY KEY,
@@ -2720,9 +3196,9 @@ import { Identity } from '@coinbase/onchainkit/identity';
 <li>Session tokens have expiration</li>
 <li>Challenge messages include nonce</li>
 </ul>
-<h2 id="related-17"><a class="header" href="#related-17">Related</a></h2>
+<h2 id="related-18"><a class="header" href="#related-18">Related</a></h2>
 <ul>
-<li><a href="#api-endpoints-6">API Endpoints</a></li>
+<li><a href="#api-endpoints-7">API Endpoints</a></li>
 <li><a href="#erebus-router">Erebus Router</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -2852,9 +3328,9 @@ cargo publish
 client = Client(api_url="http://localhost:3000")
 response = client.agents.chat("Hello HECATE")
 </code></pre>
-<h2 id="related-18"><a class="header" href="#related-18">Related</a></h2>
+<h2 id="related-19"><a class="header" href="#related-19">Related</a></h2>
 <ul>
-<li><a href="#api-endpoints-6">API Endpoints</a></li>
+<li><a href="#api-endpoints-7">API Endpoints</a></li>
 <li><a href="#architecture-overview">Architecture Overview</a></li>
 </ul>
 

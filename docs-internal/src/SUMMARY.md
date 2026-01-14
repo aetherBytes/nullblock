@@ -34,6 +34,7 @@
 # Poly Mev (Polymarket Trading)
 
 - [Implementation Plan](./poly-mev/plan.md)
+- [Scanner Tool](./poly-mev/scanner.md)
 
 # Archive
 

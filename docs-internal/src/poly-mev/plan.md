@@ -8,14 +8,16 @@ A no-failure, high-reliability agent swarm that dominates Polymarket with AI-pow
 
 ## Status
 
-| Phase | Status | Target |
-|-------|--------|--------|
-| **Phase 1: Service Scaffold** | ⏳ Next | Week 1 |
-| **Phase 2: Market Scanner Agent** | ⏳ Pending | Week 1-2 |
-| **Phase 3: Probability Refiner** | ⏳ Pending | Week 2 |
-| **Phase 4: Arb Detector + Execution** | ⏳ Pending | Week 3 |
-| **Phase 5: Engram Generator + Overseer** | ⏳ Pending | Week 4 |
-| **Phase 6: Monad Deploy + Crossroads** | ⏳ Pending | Week 5-6 |
+| Phase | Status |
+|-------|--------|
+| **Phase 1: Service Scaffold** | ⏳ Planned |
+| **Phase 2: Market Scanner** | ⏳ Planned → [Detailed Plan](./scanner.md) |
+| **Phase 3: Probability Refiner** | ⏳ Pending |
+| **Phase 4: Arb Detector + Execution** | ⏳ Pending |
+| **Phase 5: Engram Generator + Overseer** | ⏳ Pending |
+| **Phase 6: Monad Deploy + Crossroads** | ⏳ Pending |
+
+> **Current Focus**: Market Scanner - a forkable COW tool for real-time Polymarket intelligence. See [scanner.md](./scanner.md) for detailed implementation plan.
 
 ## Swarm Architecture
 
