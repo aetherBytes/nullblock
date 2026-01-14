@@ -781,3 +781,1114 @@
     margin: 0;
   }
 }
+
+// ============================================
+// TASKS SCOPE STYLES
+// ============================================
+
+$void-blue: #00a8ff;
+$void-silver: #e8e8e8;
+$void-success: #4ade80;
+$void-warning: #fbbf24;
+$void-danger: #ef4444;
+$void-border: rgba(0, 168, 255, 0.2);
+
+.taskScope {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.taskTabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.taskTab {
+  flex: 1;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.1);
+    color: $void-blue;
+  }
+
+  &.activeTab {
+    background: rgba(0, 168, 255, 0.2);
+    color: $void-blue;
+    text-shadow: 0 0 8px rgba(0, 168, 255, 0.4);
+  }
+}
+
+.createTaskButton {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(0, 168, 255, 0.1);
+  border: 1px solid $void-border;
+  border-radius: 8px;
+  color: $void-blue;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.2);
+    border-color: rgba(0, 168, 255, 0.4);
+    box-shadow: 0 0 15px rgba(0, 168, 255, 0.2);
+  }
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.taskItem {
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 168, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.08);
+    border-color: rgba(0, 168, 255, 0.35);
+    box-shadow: 0 0 20px rgba($void-blue, 0.15);
+  }
+}
+
+.taskItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.taskName {
+  color: $void-silver;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+}
+
+.taskStatus {
+  font-size: 16px;
+}
+
+.taskItemMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.taskTime {
+  color: rgba(255, 255, 255, 0.4);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.taskCategory {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.taskItemActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.taskQuickAction {
+  padding: 6px 12px;
+  background: rgba(0, 168, 255, 0.1);
+  border: 1px solid rgba(0, 168, 255, 0.2);
+  border-radius: 4px;
+  color: $void-blue;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.2);
+    border-color: rgba(0, 168, 255, 0.4);
+  }
+}
+
+.emptyHint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(0, 168, 255, 0.5);
+}
+
+// Task Details View
+.taskDetails {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.taskDetailsHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0, 168, 255, 0.1);
+}
+
+.backButton {
+  background: transparent;
+  border: none;
+  color: $void-blue;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.1);
+  }
+}
+
+.taskDetailsTitle {
+  color: $void-silver;
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.taskDetailsBody {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.taskSection {
+  margin-bottom: 24px;
+
+  h5 {
+    color: $void-blue;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin: 0 0 14px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0, 168, 255, 0.15);
+    text-shadow: 0 0 12px rgba($void-blue, 0.4);
+  }
+}
+
+.taskField {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+
+  label {
+    color: rgba(255, 255, 255, 0.5);
+    min-width: 90px;
+  }
+
+  span {
+    color: $void-silver;
+  }
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.priorityBadge {
+  padding: 4px 10px;
+  background: rgba(0, 168, 255, 0.1);
+  border: 1px solid rgba(0, 168, 255, 0.2);
+  border-radius: 4px;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.progressContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+
+  span {
+    min-width: 45px;
+    text-align: right;
+  }
+}
+
+.progressBar {
+  flex: 1;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, $void-blue, rgba(0, 168, 255, 0.6));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.taskResultBox {
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 168, 255, 0.1);
+  border-radius: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.taskActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 168, 255, 0.1);
+}
+
+.dangerButton {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+  color: $void-danger !important;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+  }
+}
+
+// Task Form Wrapper
+.taskFormWrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.taskFormHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0, 168, 255, 0.1);
+  color: $void-silver;
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+// Status colors
+.statusSubmitted {
+  border-left: 3px solid rgba(255, 255, 255, 0.3);
+
+  .statusBadge {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+}
+
+.statusWorking {
+  border-left: 3px solid $void-blue;
+
+  .statusBadge {
+    background: rgba(0, 168, 255, 0.1);
+    border: 1px solid rgba(0, 168, 255, 0.3);
+    color: $void-blue;
+  }
+}
+
+.statusPaused {
+  border-left: 3px solid $void-warning;
+
+  .statusBadge {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    color: $void-warning;
+  }
+}
+
+.statusCompleted {
+  border-left: 3px solid $void-success;
+
+  .statusBadge {
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    color: $void-success;
+  }
+}
+
+.statusFailed {
+  border-left: 3px solid $void-danger;
+
+  .statusBadge {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: $void-danger;
+  }
+}
+
+.statusCanceled {
+  border-left: 3px solid rgba(255, 255, 255, 0.2);
+  opacity: 0.7;
+
+  .statusBadge {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+// ============================================
+// AGENTS SCOPE STYLES
+// ============================================
+
+.agentScope {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.agentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.agentCount {
+  color: $void-silver;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.retryButton {
+  margin-top: 12px;
+  padding: 10px 18px;
+  background: rgba(0, 168, 255, 0.1);
+  border: 1px solid $void-border;
+  border-radius: 6px;
+  color: $void-blue;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.2);
+    border-color: rgba(0, 168, 255, 0.4);
+  }
+}
+
+.agentList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agentItem {
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 168, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.08);
+    border-color: rgba(0, 168, 255, 0.35);
+    box-shadow: 0 0 20px rgba($void-blue, 0.15);
+  }
+}
+
+.agentItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.agentName {
+  color: $void-silver;
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.agentItemStatus {
+  font-size: 16px;
+
+  &.healthy {
+    color: $void-success;
+  }
+
+  &.unhealthy {
+    color: $void-danger;
+  }
+}
+
+.agentItemType {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.agentItemCapabilities {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.capabilityTag {
+  font-size: 14px;
+}
+
+.capabilityMore {
+  color: rgba(255, 255, 255, 0.4);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+// Agent Details
+.agentDetails {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.agentDetailsHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0, 168, 255, 0.1);
+}
+
+.agentDetailsTitle {
+  flex: 1;
+  color: $void-silver;
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.agentHeaderActions {
+  display: flex;
+  gap: 10px;
+}
+
+.agentChatButton {
+  padding: 8px 14px;
+  background: rgba(0, 168, 255, 0.1);
+  border: 1px solid rgba(0, 168, 255, 0.2);
+  border-radius: 4px;
+  color: $void-blue;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(0, 168, 255, 0.2);
+    border-color: rgba(0, 168, 255, 0.4);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.agentDetailsBody {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.agentSection {
+  margin-bottom: 24px;
+
+  h5 {
+    color: $void-blue;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin: 0 0 14px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0, 168, 255, 0.15);
+    text-shadow: 0 0 12px rgba($void-blue, 0.4);
+  }
+}
+
+.agentField {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+
+  label {
+    color: rgba(255, 255, 255, 0.5);
+    min-width: 80px;
+  }
+
+  span {
+    color: $void-silver;
+  }
+}
+
+.agentStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+
+  &.healthy {
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    color: $void-success;
+  }
+
+  &.unhealthy {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: $void-danger;
+  }
+}
+
+.agentEndpoint {
+  font-size: 11px !important;
+  opacity: 0.7;
+  word-break: break-all;
+}
+
+.agentDescription {
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.agentMission {
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.capabilitiesGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.capabilityItem {
+  padding: 8px 12px;
+  background: rgba(0, 168, 255, 0.05);
+  border: 1px solid rgba(0, 168, 255, 0.1);
+  border-radius: 4px;
+  color: $void-silver;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.metricsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.metricItem {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 168, 255, 0.1);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+// ============================================
+// MODEL INFO SCOPE STYLES
+// ============================================
+
+.modelScope {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+}
+
+.modelSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  h5 {
+    color: $void-blue;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin: 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0, 168, 255, 0.15);
+    text-shadow: 0 0 12px rgba($void-blue, 0.4);
+  }
+}
+
+.modelCurrent {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 168, 255, 0.15);
+  border-radius: 10px;
+}
+
+.modelCurrentHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.modelIcon {
+  font-size: 28px;
+  color: $void-blue;
+  text-shadow: 0 0 12px rgba(0, 168, 255, 0.4);
+}
+
+.modelCurrentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.modelCurrentLabel {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.modelCurrentName {
+  color: $void-blue;
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(0, 168, 255, 0.3);
+  word-break: break-word;
+}
+
+.modelCurrentProvider {
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.switchModelButton {
+  padding: 10px 16px;
+  background: rgba(0, 168, 255, 0.1);
+  border: 1px solid rgba(0, 168, 255, 0.25);
+  border-radius: 6px;
+  color: $void-blue;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.2);
+    border-color: rgba(0, 168, 255, 0.4);
+    box-shadow: 0 0 12px rgba(0, 168, 255, 0.2);
+  }
+}
+
+.modelCategories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.modelCategoryButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 168, 255, 0.1);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.1);
+    border-color: rgba(0, 168, 255, 0.25);
+    color: $void-silver;
+  }
+
+  &.activeCategory {
+    background: rgba(0, 168, 255, 0.15);
+    border-color: rgba(0, 168, 255, 0.4);
+    color: $void-blue;
+  }
+}
+
+.categoryCount {
+  padding: 2px 6px;
+  background: rgba(0, 168, 255, 0.15);
+  border-radius: 3px;
+  font-size: 11px;
+  color: $void-blue;
+}
+
+.categoryLocked {
+  opacity: 0.7;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+.lockBadge {
+  font-size: 11px;
+  margin-left: 3px;
+}
+
+.modelStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(0, 168, 255, 0.08);
+}
+
+.modelStat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+
+  span {
+    color: $void-silver;
+    font-weight: 500;
+  }
+}
+
+.tierBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &.tierFree {
+    background: rgba(74, 222, 128, 0.15);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    color: $void-success;
+  }
+
+  &.tierPaid {
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    color: $void-warning;
+  }
+}
+
+.refreshModelsButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid rgba(0, 168, 255, 0.15);
+  border-radius: 4px;
+  color: rgba(0, 168, 255, 0.7);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.1);
+    border-color: rgba(0, 168, 255, 0.3);
+    color: $void-blue;
+  }
+}
+
+// Model Selection List View
+.modelSelection {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.modelSelectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0, 168, 255, 0.1);
+}
+
+.modelSelectionTitle {
+  flex: 1;
+  color: $void-silver;
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.apiKeyWarning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 6px;
+  margin: 12px 16px;
+  color: $void-warning;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+
+  .warningIcon {
+    font-size: 16px;
+  }
+}
+
+.modelCategoryTabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  overflow-x: auto;
+}
+
+.modelCategoryTab {
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 168, 255, 0.1);
+    color: $void-silver;
+  }
+
+  &.activeTab {
+    background: rgba(0, 168, 255, 0.15);
+    border-color: rgba(0, 168, 255, 0.3);
+    color: $void-blue;
+  }
+}
+
+.scopeContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.modelList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modelItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 168, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(.modelLocked) {
+    background: rgba(0, 168, 255, 0.08);
+    border-color: rgba(0, 168, 255, 0.25);
+  }
+
+  &.selectedModel {
+    background: rgba(0, 168, 255, 0.12);
+    border-color: rgba(0, 168, 255, 0.4);
+    box-shadow: 0 0 12px rgba(0, 168, 255, 0.15);
+  }
+
+  &.modelLocked {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.lockedIcon {
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+.modelItemIcon {
+  font-size: 20px;
+  color: $void-blue;
+}
+
+.modelItemInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.modelItemName {
+  color: $void-silver;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelItemProvider {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.modelItemMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.modelTier {
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &.free {
+    background: rgba(74, 222, 128, 0.12);
+    border: 1px solid rgba(74, 222, 128, 0.25);
+    color: $void-success;
+  }
+
+  &.paid {
+    background: rgba(251, 191, 36, 0.12);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    color: $void-warning;
+  }
+}
+
+.selectedBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: $void-blue;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  text-shadow: 0 0 8px rgba(0, 168, 255, 0.4);
+}
+
+.modelListEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  text-align: center;
+}
+
+.noModelsHint {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(0, 168, 255, 0.5);
+}
+
+.modelLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 50px 30px;
+  color: rgba(0, 168, 255, 0.7);
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+}
