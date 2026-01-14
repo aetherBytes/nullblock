@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-c3b6163e.js";
+            window.path_to_searchindex_js = "../searchindex-3a7eda19.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-061c334f.js"></script>
@@ -430,11 +430,161 @@ GET /a2a/v1/tasks/:id
 GET /a2a/v1/tasks
 POST /a2a/v1/messages
 </code></pre>
+<h2 id="arbfarm-solana-mev"><a class="header" href="#arbfarm-solana-mev">ArbFarm (Solana MEV)</a></h2>
+<p>All ArbFarm endpoints require authentication via wallet session.</p>
+<h3 id="scanner"><a class="header" href="#scanner">Scanner</a></h3>
+<pre><code class="language-bash"># Get scanner status
+GET /api/arb/scanner/status
+
+# Start/stop scanner
+POST /api/arb/scanner/start
+POST /api/arb/scanner/stop
+
+# SSE event stream
+GET /api/arb/scanner/stream
+</code></pre>
+<h3 id="edges-opportunities"><a class="header" href="#edges-opportunities">Edges (Opportunities)</a></h3>
+<pre><code class="language-bash"># List detected edges
+GET /api/arb/edges
+GET /api/arb/edges?status=detected&amp;edge_type=dex_arb
+
+# Get edge details
+GET /api/arb/edges/:id
+
+# Approve/reject/execute
+POST /api/arb/edges/:id/approve
+POST /api/arb/edges/:id/reject
+{
+  "reason": "Too risky"
+}
+POST /api/arb/edges/:id/execute
+{
+  "max_slippage_bps": 50
+}
+</code></pre>
+<h3 id="strategies"><a class="header" href="#strategies">Strategies</a></h3>
+<pre><code class="language-bash"># List strategies
+GET /api/arb/strategies
+
+# Create strategy
+POST /api/arb/strategies
+{
+  "name": "DEX Arb Strategy",
+  "strategy_type": "dex_arb",
+  "venue_types": ["dex_amm"],
+  "execution_mode": "autonomous",
+  "risk_params": {
+    "max_position_sol": 1.0,
+    "min_profit_bps": 25,
+    "max_slippage_bps": 50
+  }
+}
+
+# Toggle enable/disable
+POST /api/arb/strategies/:id/toggle
+{
+  "enabled": true
+}
+</code></pre>
+<h3 id="swarm-management"><a class="header" href="#swarm-management">Swarm Management</a></h3>
+<pre><code class="language-bash"># Get swarm health
+GET /api/arb/swarm/status
+
+# Pause/resume execution
+POST /api/arb/swarm/pause
+POST /api/arb/swarm/resume
+
+# List agent statuses
+GET /api/arb/swarm/agents
+</code></pre>
+<h3 id="threat-detection"><a class="header" href="#threat-detection">Threat Detection</a></h3>
+<pre><code class="language-bash"># Check token threat score
+GET /api/arb/threat/check/:mint
+
+# Check wallet for scam history
+GET /api/arb/threat/wallet/:address
+
+# List blocked entities
+GET /api/arb/threat/blocked
+
+# Report a threat
+POST /api/arb/threat/report
+{
+  "entity_type": "token",
+  "address": "TokenMint...",
+  "category": "rug_pull",
+  "reason": "Creator dumped 80% of supply"
+}
+
+# Get recent alerts
+GET /api/arb/threat/alerts
+</code></pre>
+<h3 id="cow-marketplace"><a class="header" href="#cow-marketplace">COW Marketplace</a></h3>
+<pre><code class="language-bash"># List all COWs
+GET /api/marketplace/arbfarm/cows
+GET /api/marketplace/arbfarm/cows?filter=forkable
+
+# Create a COW
+POST /api/marketplace/arbfarm/cows
+{
+  "name": "My DEX Arb Strategy",
+  "description": "Custom DEX arbitrage",
+  "strategies": [...],
+  "venue_types": ["dex_amm"],
+  "risk_profile": {
+    "profile_type": "balanced",
+    "max_position_sol": 2.0
+  },
+  "price_sol": 0,
+  "is_public": true,
+  "is_forkable": true
+}
+
+# Get COW details
+GET /api/marketplace/arbfarm/cows/:id
+
+# Fork a COW
+POST /api/marketplace/arbfarm/cows/:id/fork
+{
+  "name": "My Forked Strategy",
+  "risk_profile_overrides": {
+    "profile_type": "conservative"
+  },
+  "inherit_engrams": true
+}
+
+# Get COW strategies
+GET /api/marketplace/arbfarm/cows/:id/strategies
+
+# Get COW forks
+GET /api/marketplace/arbfarm/cows/:id/forks
+
+# Get COW revenue
+GET /api/marketplace/arbfarm/cows/:id/revenue
+
+# Get wallet earnings
+GET /api/marketplace/arbfarm/earnings/:wallet_address
+
+# Get ArbFarm stats
+GET /api/marketplace/arbfarm/stats
+</code></pre>
+<h3 id="trades"><a class="header" href="#trades">Trades</a></h3>
+<pre><code class="language-bash"># Get trade history
+GET /api/arb/trades
+
+# Get trade details
+GET /api/arb/trades/:id
+
+# Get P&amp;L statistics
+GET /api/arb/trades/stats
+GET /api/arb/trades/stats?period=7d
+</code></pre>
 <h2 id="health-checks"><a class="header" href="#health-checks">Health Checks</a></h2>
 <pre><code class="language-bash">curl http://localhost:3000/health   # Erebus
 curl http://localhost:9003/health   # Agents
 curl http://localhost:9004/health   # Engrams
 curl http://localhost:8001/health   # Protocols
+curl http://localhost:9007/health   # ArbFarm
 </code></pre>
 <h2 id="related"><a class="header" href="#related">Related</a></h2>
 <ul>
@@ -477,22 +627,6 @@ curl http://localhost:8001/health   # Protocols
         <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
         <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
-        <!-- Livereload script (if served using the cli tool) -->
-        <script>
-            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
-            const socket = new WebSocket(wsAddress);
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload();
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
 
 
         <script>
