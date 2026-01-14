@@ -1,11 +1,6 @@
 import { BaseWalletAdapter } from '../base-adapter';
-import {
-  WalletInfo,
-  ConnectionResult,
-  SignatureResult,
-  ChainType,
-  EthereumProvider,
-} from '../types';
+import type { WalletInfo, ConnectionResult, SignatureResult, EthereumProvider } from '../types';
+import { ChainType } from '../types';
 
 export class MetaMaskAdapter extends BaseWalletAdapter {
   readonly id = 'metamask';
@@ -20,22 +15,33 @@ export class MetaMaskAdapter extends BaseWalletAdapter {
   };
 
   isInstalled(): boolean {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
     return this.getMetaMaskProvider() !== null;
   }
 
   getProvider(chain: ChainType): EthereumProvider | null {
-    if (chain !== ChainType.EVM) return null;
+    if (chain !== ChainType.EVM) {
+      return null;
+    }
+
     return this.getMetaMaskProvider();
   }
 
   private getMetaMaskProvider(): EthereumProvider | null {
-    if (typeof window === 'undefined' || !window.ethereum) return null;
+    if (typeof window === 'undefined' || !window.ethereum) {
+      return null;
+    }
 
     // Check for multiple providers (e.g., when Coinbase and MetaMask are both installed)
     if (window.ethereum.providers?.length) {
       const metaMaskProvider = window.ethereum.providers.find((p) => p.isMetaMask);
-      if (metaMaskProvider) return metaMaskProvider;
+
+      if (metaMaskProvider) {
+        return metaMaskProvider;
+      }
     }
 
     // Single provider
@@ -56,6 +62,7 @@ export class MetaMaskAdapter extends BaseWalletAdapter {
     }
 
     const provider = this.getMetaMaskProvider();
+
     if (!provider) {
       return {
         success: false,
@@ -122,6 +129,7 @@ export class MetaMaskAdapter extends BaseWalletAdapter {
 
   async signMessage(message: string): Promise<SignatureResult> {
     const provider = this.getMetaMaskProvider();
+
     if (!provider) {
       return { success: false, error: 'MetaMask not installed' };
     }

@@ -14,12 +14,19 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
     if (num >= 1000) {
       return `${(num / 1000).toFixed(1)}k`;
     }
+
     return num.toString();
   };
 
   const formatAddress = (address: string): string => {
-    if (!address) return 'Unknown';
-    if (address.length <= 12) return address;
+    if (!address) {
+      return 'Unknown';
+    }
+
+    if (address.length <= 12) {
+      return address;
+    }
+
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
@@ -39,7 +46,11 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
         <div className={styles.headerLeft}>
           <div className={styles.serviceIcon}>
             {service.icon_url ? (
-              <img src={service.icon_url} alt={service.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img
+                src={service.icon_url}
+                alt={service.title}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             ) : (
               <span style={{ fontSize: '1.5rem' }}>
                 {service.listing_type === 'Agent' && '🤖'}
@@ -48,6 +59,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
                 {service.listing_type === 'McpServer' && '🌐'}
                 {service.listing_type === 'Dataset' && '📊'}
                 {service.listing_type === 'Model' && '🧠'}
+                {service.listing_type === 'ArbFarm' && '⚡'}
               </span>
             )}
           </div>
@@ -55,11 +67,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
             <CategoryBadge category={service.listing_type} />
           </div>
         </div>
-        {service.is_featured && (
-          <div className={styles.featuredBadge}>
-            ⭐ Featured
-          </div>
-        )}
+        {service.is_featured && <div className={styles.featuredBadge}>⭐ Featured</div>}
       </div>
 
       {service.is_coming_soon && (
@@ -77,9 +85,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
             <div className={styles.ownerAvatar}>
               <span style={{ fontSize: '0.75rem' }}>👤</span>
             </div>
-            <span className={styles.ownerName}>
-              {formatAddress(service.owner_address)}
-            </span>
+            <span className={styles.ownerName}>{formatAddress(service.owner_address)}</span>
           </div>
         </div>
 
@@ -90,9 +96,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
             </span>
           )}
           {service.deployment_count > 0 && (
-            <span className={styles.deployments}>
-              🚀 {formatNumber(service.deployment_count)}
-            </span>
+            <span className={styles.deployments}>🚀 {formatNumber(service.deployment_count)}</span>
           )}
           <span className={styles.status}>
             <StatusBadge status={service.health_status} />
@@ -112,11 +116,22 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick }) => {
       </div>
 
       <div className={styles.cardActions}>
-        <button className={styles.primary} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
+        <button
+          className={styles.primary}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.();
+          }}
+        >
           View Details
         </button>
         {service.is_free && (
-          <button className={styles.secondary} onClick={(e) => { e.stopPropagation(); }}>
+          <button
+            className={styles.secondary}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
             Quick Deploy
           </button>
         )}

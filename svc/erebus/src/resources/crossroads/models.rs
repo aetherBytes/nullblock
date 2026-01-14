@@ -20,6 +20,7 @@ pub struct HealthResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
 pub enum ListingType {
     Agent,
     Workflow,
@@ -27,6 +28,7 @@ pub enum ListingType {
     McpServer,
     Dataset,
     Model,
+    ArbFarm,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -369,4 +371,231 @@ pub enum SchemaType {
     Configuration,
     Metadata,
     Event,
+}
+
+// =============================================================================
+// ArbFarm COW (Constellation of Work) Models
+// =============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArbFarmCow {
+    pub id: Uuid,
+    pub listing_id: Uuid,
+    pub creator_wallet: String,
+    pub name: String,
+    pub description: String,
+    pub strategies: Vec<ArbFarmStrategy>,
+    pub venue_types: Vec<ArbFarmVenueType>,
+    pub risk_profile: ArbFarmRiskProfile,
+    pub parent_cow_id: Option<Uuid>,
+    pub fork_count: i32,
+    pub total_profit_generated_lamports: i64,
+    pub total_trades: i32,
+    pub win_rate: f32,
+    pub creator_revenue_share_bps: i32,
+    pub fork_revenue_share_bps: i32,
+    pub is_public: bool,
+    pub is_forkable: bool,
+    pub inherited_engrams: Vec<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArbFarmStrategy {
+    pub id: Uuid,
+    pub name: String,
+    pub strategy_type: ArbFarmStrategyType,
+    pub venue_types: Vec<ArbFarmVenueType>,
+    pub execution_mode: ArbFarmExecutionMode,
+    pub risk_params: ArbFarmRiskParams,
+    pub is_active: bool,
+    pub performance: Option<ArbFarmStrategyPerformance>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ArbFarmStrategyType {
+    DexArb,
+    CurveArb,
+    Liquidation,
+    JitLiquidity,
+    Backrun,
+    Sandwich,
+    CopyTrade,
+    Custom,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ArbFarmVenueType {
+    DexAmm,
+    BondingCurve,
+    Lending,
+    Orderbook,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ArbFarmExecutionMode {
+    Autonomous,
+    AgentDirected,
+    Hybrid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArbFarmRiskParams {
+    pub max_position_sol: f64,
+    pub min_profit_bps: i32,
+    pub max_slippage_bps: i32,
+    pub max_risk_score: i32,
+    pub daily_loss_limit_sol: Option<f64>,
+    pub require_consensus: bool,
+    pub min_consensus_agreement: Option<f32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArbFarmRiskProfile {
+    pub profile_type: ArbFarmRiskProfileType,
+    pub max_position_sol: f64,
+    pub daily_loss_limit_sol: f64,
+    pub max_concurrent_positions: i32,
+    pub allowed_venue_types: Vec<ArbFarmVenueType>,
+    pub blocked_tokens: Vec<String>,
+    pub custom_params: Option<Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ArbFarmRiskProfileType {
+    Conservative,
+    Balanced,
+    Aggressive,
+    Custom,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArbFarmStrategyPerformance {
+    pub total_trades: i32,
+    pub successful_trades: i32,
+    pub win_rate: f32,
+    pub total_profit_lamports: i64,
+    pub avg_profit_per_trade_lamports: i64,
+    pub max_drawdown_lamports: i64,
+    pub sharpe_ratio: Option<f32>,
+    pub last_trade_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateArbFarmCowRequest {
+    pub name: String,
+    pub description: String,
+    pub strategies: Vec<CreateArbFarmStrategyRequest>,
+    pub venue_types: Vec<ArbFarmVenueType>,
+    pub risk_profile: ArbFarmRiskProfile,
+    pub price_sol: Option<f64>,
+    pub creator_revenue_share_bps: Option<i32>,
+    pub fork_revenue_share_bps: Option<i32>,
+    pub is_public: bool,
+    pub is_forkable: bool,
+    pub tags: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateArbFarmStrategyRequest {
+    pub name: String,
+    pub strategy_type: ArbFarmStrategyType,
+    pub venue_types: Vec<ArbFarmVenueType>,
+    pub execution_mode: ArbFarmExecutionMode,
+    pub risk_params: ArbFarmRiskParams,
+    pub is_active: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ForkArbFarmCowRequest {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub risk_profile_overrides: Option<ArbFarmRiskProfile>,
+    pub inherit_engrams: bool,
+    pub engram_filters: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArbFarmCowFork {
+    pub id: Uuid,
+    pub parent_cow_id: Uuid,
+    pub forked_cow_id: Uuid,
+    pub forker_wallet: String,
+    pub inherited_strategies: Vec<Uuid>,
+    pub inherited_engrams: Vec<String>,
+    pub fork_price_paid_lamports: i64,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArbFarmRevenue {
+    pub id: Uuid,
+    pub cow_id: Uuid,
+    pub wallet_address: String,
+    pub revenue_type: ArbFarmRevenueType,
+    pub amount_lamports: i64,
+    pub source_trade_id: Option<Uuid>,
+    pub source_fork_id: Option<Uuid>,
+    pub period_start: DateTime<Utc>,
+    pub period_end: DateTime<Utc>,
+    pub is_distributed: bool,
+    pub distributed_at: Option<DateTime<Utc>>,
+    pub tx_signature: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ArbFarmRevenueType {
+    TradingProfit,
+    ForkFee,
+    RevenueShare,
+    CreatorRoyalty,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArbFarmEarningsSummary {
+    pub wallet_address: String,
+    pub total_earnings_lamports: i64,
+    pub trading_profit_lamports: i64,
+    pub fork_fees_lamports: i64,
+    pub revenue_share_lamports: i64,
+    pub creator_royalties_lamports: i64,
+    pub pending_distribution_lamports: i64,
+    pub cow_count: i32,
+    pub fork_count: i32,
+    pub period: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ArbFarmCowListResponse {
+    pub cows: Vec<ArbFarmCowSummary>,
+    pub total_count: i64,
+    pub page: i32,
+    pub per_page: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArbFarmCowSummary {
+    pub id: Uuid,
+    pub listing_id: Uuid,
+    pub name: String,
+    pub description: String,
+    pub creator_wallet: String,
+    pub strategy_count: i32,
+    pub venue_types: Vec<ArbFarmVenueType>,
+    pub risk_profile_type: ArbFarmRiskProfileType,
+    pub fork_count: i32,
+    pub total_profit_sol: f64,
+    pub win_rate: f32,
+    pub price_sol: Option<f64>,
+    pub is_free: bool,
+    pub is_forkable: bool,
+    pub rating: Option<f32>,
+    pub created_at: DateTime<Utc>,
 }

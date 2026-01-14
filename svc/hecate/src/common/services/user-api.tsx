@@ -1,4 +1,4 @@
-import { UserLookupRequest, UserLookupResponse } from '../../types/user';
+import type { UserLookupRequest, UserLookupResponse } from '../../types/user';
 
 const EREBUS_BASE_URL = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000';
 
@@ -18,16 +18,17 @@ export const userApi = {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+
         return {
           success: false,
           error: errorData.error || `HTTP ${response.status}: ${response.statusText}`,
         };
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('User lookup error:', error);
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error during user lookup',
@@ -46,16 +47,17 @@ export const userApi = {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+
         return {
           success: false,
           error: errorData.error || `HTTP ${response.status}: ${response.statusText}`,
         };
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('Get user by ID error:', error);
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error fetching user',

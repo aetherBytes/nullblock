@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
 import * as THREE from 'three';
 import CrossroadsOrb from './CrossroadsOrb';
-import ParticleField from './ParticleField';
 import NeuralLines from './NeuralLines';
+import ParticleField from './ParticleField';
 
 // Shared constellation node type
 export interface ConstellationNode {
@@ -13,10 +13,10 @@ export interface ConstellationNode {
 
 // Orbital parameters for each connected cluster
 export interface ClusterOrbit {
-  speed: number;       // Radians per second
-  tiltX: number;       // Orbital plane tilt on X axis
-  tiltZ: number;       // Orbital plane tilt on Z axis
-  phase: number;       // Initial phase offset
+  speed: number; // Radians per second
+  tiltX: number; // Orbital plane tilt on X axis
+  tiltZ: number; // Orbital plane tilt on Z axis
+  phase: number; // Initial phase offset
 }
 
 const VoidScene: React.FC = () => {
@@ -43,10 +43,10 @@ const VoidScene: React.FC = () => {
         position: new THREE.Vector3(
           r * Math.sin(phi) * Math.cos(theta),
           r * Math.sin(phi) * Math.sin(theta),
-          r * Math.cos(phi)
+          r * Math.cos(phi),
         ),
         connections: [],
-        clusterId: -1 // Will be assigned after connections are made
+        clusterId: -1, // Will be assigned after connections are made
       });
     }
 
@@ -59,6 +59,7 @@ const VoidScene: React.FC = () => {
 
       for (let j = i + 1; j < nodes.length; j++) {
         const dist = nodes[i].position.distanceTo(nodes[j].position);
+
         if (dist < connectionDistance) {
           distances.push({ index: j, dist });
         }
@@ -68,8 +69,10 @@ const VoidScene: React.FC = () => {
       const connectTo = distances.slice(0, maxConnections);
 
       for (const conn of connectTo) {
-        if (nodes[i].connections.length < maxConnections &&
-            nodes[conn.index].connections.length < maxConnections) {
+        if (
+          nodes[i].connections.length < maxConnections &&
+          nodes[conn.index].connections.length < maxConnections
+        ) {
           nodes[i].connections.push(conn.index);
           nodes[conn.index].connections.push(i);
         }
@@ -82,6 +85,7 @@ const VoidScene: React.FC = () => {
       if (nodes[i].clusterId === -1) {
         // BFS to find all connected nodes
         const queue = [i];
+
         nodes[i].clusterId = currentCluster;
 
         while (queue.length > 0) {
@@ -101,10 +105,10 @@ const VoidScene: React.FC = () => {
     const orbits: ClusterOrbit[] = [];
     for (let c = 0; c < currentCluster; c++) {
       orbits.push({
-        speed: 0.02 + Math.random() * 0.04,  // 0.02-0.06 rad/sec (very slow)
-        tiltX: (Math.random() - 0.5) * 0.3,  // Small tilt variation
+        speed: 0.02 + Math.random() * 0.04, // 0.02-0.06 rad/sec (very slow)
+        tiltX: (Math.random() - 0.5) * 0.3, // Small tilt variation
         tiltZ: (Math.random() - 0.5) * 0.3,
-        phase: Math.random() * Math.PI * 2   // Random starting phase
+        phase: Math.random() * Math.PI * 2, // Random starting phase
       });
     }
 
@@ -128,6 +132,7 @@ const VoidScene: React.FC = () => {
       // Use a distribution that spreads them out more evenly
       const distanceBand = Math.random();
       let clusterRadius;
+
       if (distanceBand < 0.35) {
         // Closer band (20-28)
         clusterRadius = minRadius + Math.random() * 8;
@@ -138,13 +143,14 @@ const VoidScene: React.FC = () => {
         // Outer band (33-42)
         clusterRadius = 33 + Math.random() * (maxRadius - 33);
       }
+
       const clusterTheta = Math.random() * Math.PI * 2;
       const clusterPhi = Math.acos(2 * Math.random() - 1);
 
       const clusterCenter = new THREE.Vector3(
         clusterRadius * Math.sin(clusterPhi) * Math.cos(clusterTheta),
         clusterRadius * Math.sin(clusterPhi) * Math.sin(clusterTheta),
-        clusterRadius * Math.cos(clusterPhi)
+        clusterRadius * Math.cos(clusterPhi),
       );
 
       const clusterStartIdx = nodes.length;
@@ -157,29 +163,35 @@ const VoidScene: React.FC = () => {
         const direction = new THREE.Vector3(
           Math.random() - 0.5,
           Math.random() - 0.5,
-          Math.random() - 0.5
+          Math.random() - 0.5,
         ).normalize();
         const perpendicular = new THREE.Vector3(
           Math.random() - 0.5,
           Math.random() - 0.5,
-          Math.random() - 0.5
-        ).cross(direction).normalize();
+          Math.random() - 0.5,
+        )
+          .cross(direction)
+          .normalize();
 
         for (let i = 0; i < clusterSize; i++) {
-          const t = (i / (clusterSize - 1)) - 0.5; // -0.5 to 0.5
+          const t = i / (clusterSize - 1) - 0.5; // -0.5 to 0.5
           const curve = Math.sin(t * Math.PI) * 1.5; // Slight curve
-          const offset = direction.clone().multiplyScalar(t * 8)
+          const offset = direction
+            .clone()
+            .multiplyScalar(t * 8)
             .add(perpendicular.clone().multiplyScalar(curve))
-            .add(new THREE.Vector3(
-              (Math.random() - 0.5) * 1,
-              (Math.random() - 0.5) * 1,
-              (Math.random() - 0.5) * 1
-            ));
+            .add(
+              new THREE.Vector3(
+                (Math.random() - 0.5) * 1,
+                (Math.random() - 0.5) * 1,
+                (Math.random() - 0.5) * 1,
+              ),
+            );
 
           nodes.push({
             position: clusterCenter.clone().add(offset),
             connections: [],
-            clusterId: cluster
+            clusterId: cluster,
           });
         }
       } else if (shapeType < 0.5) {
@@ -190,7 +202,7 @@ const VoidScene: React.FC = () => {
         const tiltAxis = new THREE.Vector3(
           Math.random() - 0.5,
           Math.random() - 0.5,
-          Math.random() - 0.5
+          Math.random() - 0.5,
         ).normalize();
 
         for (let i = 0; i < clusterSize; i++) {
@@ -198,18 +210,21 @@ const VoidScene: React.FC = () => {
           const offset = new THREE.Vector3(
             Math.cos(angle) * arcRadius,
             Math.sin(angle) * arcRadius * 0.5,
-            Math.sin(angle) * arcRadius
-          ).applyAxisAngle(tiltAxis, Math.random() * Math.PI)
-            .add(new THREE.Vector3(
-              (Math.random() - 0.5) * 0.8,
-              (Math.random() - 0.5) * 0.8,
-              (Math.random() - 0.5) * 0.8
-            ));
+            Math.sin(angle) * arcRadius,
+          )
+            .applyAxisAngle(tiltAxis, Math.random() * Math.PI)
+            .add(
+              new THREE.Vector3(
+                (Math.random() - 0.5) * 0.8,
+                (Math.random() - 0.5) * 0.8,
+                (Math.random() - 0.5) * 0.8,
+              ),
+            );
 
           nodes.push({
             position: clusterCenter.clone().add(offset),
             connections: [],
-            clusterId: cluster
+            clusterId: cluster,
           });
         }
       } else if (shapeType < 0.75) {
@@ -218,7 +233,7 @@ const VoidScene: React.FC = () => {
         nodes.push({
           position: clusterCenter.clone(),
           connections: [],
-          clusterId: cluster
+          clusterId: cluster,
         });
 
         // Spoke nodes around it
@@ -228,13 +243,13 @@ const VoidScene: React.FC = () => {
           const offset = new THREE.Vector3(
             Math.cos(angle) * spokeLen,
             (Math.random() - 0.5) * 2,
-            Math.sin(angle) * spokeLen
+            Math.sin(angle) * spokeLen,
           );
 
           nodes.push({
             position: clusterCenter.clone().add(offset),
             connections: [],
-            clusterId: cluster
+            clusterId: cluster,
           });
         }
       } else {
@@ -243,13 +258,13 @@ const VoidScene: React.FC = () => {
           const offset = new THREE.Vector3(
             (Math.random() - 0.5) * 7,
             (Math.random() - 0.5) * 5,
-            (Math.random() - 0.5) * 7
+            (Math.random() - 0.5) * 7,
           );
 
           nodes.push({
             position: clusterCenter.clone().add(offset),
             connections: [],
-            clusterId: cluster
+            clusterId: cluster,
           });
         }
       }
@@ -265,6 +280,7 @@ const VoidScene: React.FC = () => {
         for (let j = i + 1; j < clusterNodes.length; j++) {
           const otherIdx = clusterStartIdx + j;
           const dist = nodes[nodeIdx].position.distanceTo(nodes[otherIdx].position);
+
           distances.push({ index: otherIdx, dist });
         }
 
@@ -272,8 +288,10 @@ const VoidScene: React.FC = () => {
         const connectTo = distances.slice(0, maxConn);
 
         for (const conn of connectTo) {
-          if (nodes[nodeIdx].connections.length < maxConn &&
-              nodes[conn.index].connections.length < maxConn) {
+          if (
+            nodes[nodeIdx].connections.length < maxConn &&
+            nodes[conn.index].connections.length < maxConn
+          ) {
             nodes[nodeIdx].connections.push(conn.index);
             nodes[conn.index].connections.push(nodeIdx);
           }
@@ -285,10 +303,10 @@ const VoidScene: React.FC = () => {
     const orbits: ClusterOrbit[] = [];
     for (let c = 0; c < numClusters; c++) {
       orbits.push({
-        speed: 0.008 + Math.random() * 0.015,  // Very slow
+        speed: 0.008 + Math.random() * 0.015, // Very slow
         tiltX: (Math.random() - 0.5) * 0.2,
         tiltZ: (Math.random() - 0.5) * 0.2,
-        phase: Math.random() * Math.PI * 2
+        phase: Math.random() * Math.PI * 2,
       });
     }
 
@@ -297,12 +315,12 @@ const VoidScene: React.FC = () => {
 
   // Ref to hold animated node positions (updated by NeuralLines, read by CrossroadsOrb)
   const animatedPositionsRef = useRef<THREE.Vector3[]>(
-    constellationNodes.map(n => n.position.clone())
+    constellationNodes.map((n) => n.position.clone()),
   );
 
   // Ref for outer constellation positions
   const outerAnimatedPositionsRef = useRef<THREE.Vector3[]>(
-    outerNodes.map(n => n.position.clone())
+    outerNodes.map((n) => n.position.clone()),
   );
 
   return (

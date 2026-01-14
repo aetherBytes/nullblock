@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import * as THREE from 'three';
-import AgentCluster from './AgentCluster';
-import { useAgentClusters } from '../hooks/useAgentClusters';
+import type * as THREE from 'three';
 import type { ClusterData } from '../VoidExperience';
+import { useAgentClusters } from '../hooks/useAgentClusters';
+import AgentCluster from './AgentCluster';
 
 interface AgentClustersProps {
   hoveredCluster: string | null;
@@ -56,6 +56,7 @@ const AgentClusters: React.FC<AgentClustersProps> = ({
     <group>
       {clusterPositions.map(({ cluster, basePosition, orbitPhase, orbitRadius }, index) => {
         const isHecate = cluster.name.toLowerCase().includes('hecate');
+
         return (
           <AgentCluster
             key={cluster.id}

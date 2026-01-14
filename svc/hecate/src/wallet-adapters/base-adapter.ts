@@ -1,10 +1,5 @@
-import {
-  WalletAdapter,
-  WalletInfo,
-  ConnectionResult,
-  SignatureResult,
-  ChainType,
-} from './types';
+import type { WalletAdapter, WalletInfo, ConnectionResult, SignatureResult } from './types';
+import { ChainType } from './types';
 
 export abstract class BaseWalletAdapter implements WalletAdapter {
   abstract readonly id: string;
@@ -22,11 +17,11 @@ export abstract class BaseWalletAdapter implements WalletAdapter {
       const solanaProvider = this.getProvider(ChainType.SOLANA);
 
       if (evmProvider && typeof evmProvider === 'object' && 'selectedAddress' in evmProvider) {
-        return !!(evmProvider as { selectedAddress?: string }).selectedAddress;
+        return Boolean((evmProvider as { selectedAddress?: string }).selectedAddress);
       }
 
       if (solanaProvider && typeof solanaProvider === 'object' && 'isConnected' in solanaProvider) {
-        return !!(solanaProvider as { isConnected?: boolean }).isConnected;
+        return Boolean((solanaProvider as { isConnected?: boolean }).isConnected);
       }
 
       return false;
@@ -36,8 +31,14 @@ export abstract class BaseWalletAdapter implements WalletAdapter {
   }
 
   detectChain(address: string): ChainType | null {
-    if (this.isEvmAddress(address)) return ChainType.EVM;
-    if (this.isSolanaAddress(address)) return ChainType.SOLANA;
+    if (this.isEvmAddress(address)) {
+      return ChainType.EVM;
+    }
+
+    if (this.isSolanaAddress(address)) {
+      return ChainType.SOLANA;
+    }
+
     return null;
   }
 
@@ -49,6 +50,7 @@ export abstract class BaseWalletAdapter implements WalletAdapter {
     // Solana addresses are Base58 encoded, 32-44 characters
     // Valid Base58 alphabet (no 0, O, I, l)
     const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
     return base58Regex.test(address);
   }
 

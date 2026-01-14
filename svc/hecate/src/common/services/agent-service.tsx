@@ -1,10 +1,5 @@
-import {
-  Agent,
-  AgentServiceResponse,
-  AgentDiscoveryResponse,
-  AgentType,
-  AgentStatus
-} from '../../types/agents';
+import type { Agent, AgentServiceResponse, AgentDiscoveryResponse } from '../../types/agents';
+import { AgentType, AgentStatus } from '../../types/agents';
 
 class AgentService {
   private erebusUrl: string;
@@ -17,18 +12,21 @@ class AgentService {
   async connect(): Promise<boolean> {
     try {
       const response = await fetch(`${this.erebusUrl}/health`);
+
       this.isConnected = response.ok;
+
       return this.isConnected;
     } catch (error) {
       console.error('Failed to connect to Erebus:', error);
       this.isConnected = false;
+
       return false;
     }
   }
 
   private async makeRequest<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<AgentServiceResponse<T>> {
     try {
       if (!this.isConnected) {
@@ -52,11 +50,14 @@ class AgentService {
       return {
         success: response.ok,
         data: response.ok ? responseJson : undefined,
-        error: response.ok ? undefined : responseJson.message || responseJson.error || 'Request failed',
+        error: response.ok
+          ? undefined
+          : responseJson.message || responseJson.error || 'Request failed',
         timestamp: new Date(),
       };
     } catch (error) {
       console.error('Agent service request failed:', error);
+
       return {
         success: false,
         error: (error as Error).message,
@@ -75,7 +76,6 @@ class AgentService {
   }
 
   async getAgentCapabilities(agentName: string): Promise<AgentServiceResponse<any>> {
-
     // For specialized endpoints, route to specific agent capabilities
     if (agentName === 'siren') {
       return this.makeRequest<any>(`/api/agents/siren/themes`);
@@ -182,6 +182,7 @@ class AgentService {
       if (agent.metrics.tasks_processed !== undefined) {
         metrics.push(`Tasks: ${agent.metrics.tasks_processed}`);
       }
+
       if (agent.metrics.last_activity) {
         metrics.push(`Last: ${agent.metrics.last_activity}`);
       }
@@ -192,6 +193,7 @@ class AgentService {
         if (agent.metrics.llm_factory) {
           metrics.push(`LLM: ${agent.metrics.llm_factory}`);
         }
+
         if (agent.metrics.orchestration_enabled) {
           metrics.push(`Orchestration: Active`);
         }
@@ -200,9 +202,11 @@ class AgentService {
         if (agent.metrics.content_themes !== undefined) {
           metrics.push(`Themes: ${agent.metrics.content_themes}`);
         }
+
         if (agent.metrics.twitter_integration) {
           metrics.push(`Twitter: ${agent.metrics.twitter_integration}`);
         }
+
         if (agent.metrics.campaigns_active !== undefined) {
           metrics.push(`Campaigns: ${agent.metrics.campaigns_active}`);
         }
@@ -211,6 +215,7 @@ class AgentService {
         if (agent.metrics.success_rate !== undefined) {
           metrics.push(`Success: ${agent.metrics.success_rate}%`);
         }
+
         if (agent.metrics.uptime) {
           metrics.push(`Uptime: ${agent.metrics.uptime}`);
         }
@@ -222,4 +227,5 @@ class AgentService {
 }
 
 export const agentService = new AgentService();
+
 export default AgentService;

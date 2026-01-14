@@ -1,4 +1,4 @@
-import {
+import type {
   ApiKeyListResponse,
   ApiKeySingleResponse,
   CreateApiKeyRequest,
@@ -18,16 +18,17 @@ export const apiKeysService = {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+
         return {
           success: false,
           error: errorData.error || `HTTP ${response.status}: ${response.statusText}`,
         };
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('List API keys error:', error);
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error fetching API keys',
@@ -47,16 +48,17 @@ export const apiKeysService = {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+
         return {
           success: false,
           error: errorData.error || `HTTP ${response.status}: ${response.statusText}`,
         };
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('Create API key error:', error);
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error creating API key',
@@ -75,16 +77,17 @@ export const apiKeysService = {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+
         return {
           success: false,
           error: errorData.error || `HTTP ${response.status}: ${response.statusText}`,
         };
       }
 
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('Delete API key error:', error);
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error deleting API key',

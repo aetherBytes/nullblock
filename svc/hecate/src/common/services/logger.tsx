@@ -26,8 +26,9 @@ class Logger {
   constructor() {
     // Set log level from environment
     const envLevel = import.meta.env.VITE_LOG_LEVEL || 'INFO';
+
     this.logLevel = LogLevel[envLevel as keyof typeof LogLevel] || LogLevel.INFO;
-    
+
     // Setup periodic log persistence
     if (typeof window !== 'undefined') {
       this.setupLogPersistence();
@@ -39,6 +40,7 @@ class Logger {
     setInterval(() => {
       try {
         const recentLogs = this.logs.slice(-100); // Keep last 100 entries
+
         localStorage.setItem('hecate_logs', JSON.stringify(recentLogs));
       } catch (error) {
         console.warn('Failed to persist logs to localStorage:', error);
@@ -48,11 +50,13 @@ class Logger {
     // Load existing logs on startup
     try {
       const stored = localStorage.getItem('hecate_logs');
+
       if (stored) {
         const parsedLogs = JSON.parse(stored);
+
         this.logs = parsedLogs.map((log: any) => ({
           ...log,
-          timestamp: new Date(log.timestamp)
+          timestamp: new Date(log.timestamp),
         }));
       }
     } catch (error) {
@@ -61,18 +65,20 @@ class Logger {
   }
 
   private addLog(level: LogLevel, component: string, message: string, data?: any) {
-    if (level < this.logLevel) return;
+    if (level < this.logLevel) {
+      return;
+    }
 
     const entry: LogEntry = {
       timestamp: new Date(),
       level,
       component,
       message,
-      data
+      data,
     };
 
     this.logs.push(entry);
-    
+
     // Keep only recent logs
     if (this.logs.length > this.maxLogs) {
       this.logs = this.logs.slice(-this.maxLogs);
@@ -91,7 +97,7 @@ class Logger {
       [LogLevel.DEBUG]: 'color: #888',
       [LogLevel.INFO]: 'color: #00ffff',
       [LogLevel.WARN]: 'color: #ffff00',
-      [LogLevel.ERROR]: 'color: #ff4444; font-weight: bold'
+      [LogLevel.ERROR]: 'color: #ff4444; font-weight: bold',
     };
 
     const style = styles[entry.level];
@@ -121,29 +127,38 @@ class Logger {
 
   // Get logs for debugging/export
   getLogs(since?: Date): LogEntry[] {
-    if (!since) return [...this.logs];
-    return this.logs.filter(log => log.timestamp >= since);
+    if (!since) {
+      return [...this.logs];
+    }
+
+    return this.logs.filter((log) => log.timestamp >= since);
   }
 
   // Get logs from last N minutes
   getRecentLogs(minutes: number = 15): LogEntry[] {
     const since = new Date(Date.now() - minutes * 60 * 1000);
+
     return this.getLogs(since);
   }
 
   // Export logs as text
   exportLogs(since?: Date): string {
     const logs = this.getLogs(since);
-    return logs.map(log => 
-      `${log.timestamp.toISOString()} [${LogLevel[log.level]}] [${log.component}] ${log.message}${
-        log.data ? ' ' + JSON.stringify(log.data) : ''
-      }`
-    ).join('\n');
+
+    return logs
+      .map(
+        (log) =>
+          `${log.timestamp.toISOString()} [${LogLevel[log.level]}] [${log.component}] ${log.message}${
+            log.data ? ` ${JSON.stringify(log.data)}` : ''
+          }`,
+      )
+      .join('\n');
   }
 
   // Clear all logs
   clearLogs() {
     this.logs = [];
+
     if (typeof window !== 'undefined') {
       localStorage.removeItem('hecate_logs');
     }

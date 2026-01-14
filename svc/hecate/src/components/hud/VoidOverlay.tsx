@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
+import type { MemCacheSection } from '../memcache';
 import NullblockLogo from './NullblockLogo';
-import { MemCacheSection } from '../memcache';
 import styles from './VoidOverlay.module.scss';
 
 const MEMCACHE_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
   { id: 'engrams', icon: '◈', label: 'Engrams' },
   { id: 'workflows', icon: '⬡', label: 'Workflows' },
   { id: 'tasks', icon: '▣', label: 'Tasks' },
+  { id: 'arbfarm', icon: '⚡', label: 'ArbFarm' },
   { id: 'agents', icon: '◉', label: 'Agents' },
   { id: 'model', icon: '◎', label: 'Model' },
   { id: 'listings', icon: '◇', label: 'Listings' },
@@ -61,6 +62,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
 
     if (settingsOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
@@ -100,11 +102,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
           onClick={onResetToVoid}
           title="Return to Void"
         />
-        <div
-          className={styles.nullblockTextLogo}
-          onClick={onResetToVoid}
-          title="Return to Void"
-        >
+        <div className={styles.nullblockTextLogo} onClick={onResetToVoid} title="Return to Void">
           NULLBLOCK
         </div>
       </div>
@@ -117,18 +115,20 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             {/* Extra submenu items - only visible when memcache active */}
             {activeTab === 'memcache' && (
               <div className={styles.submenuExtra}>
-                {MEMCACHE_ITEMS.slice(2).reverse().map((item, index) => (
-                  <React.Fragment key={item.id}>
-                    <button
-                      className={`${styles.submenuItemExtra} ${memcacheSection === item.id ? styles.submenuItemActive : ''}`}
-                      onClick={() => onMemcacheSectionChange?.(item.id)}
-                      style={{ animationDelay: `${(MEMCACHE_ITEMS.length - 2 - index) * 0.03}s` }}
-                    >
-                      {item.label}
-                    </button>
-                    {index < MEMCACHE_ITEMS.length - 3 && <span className={styles.navDivider} />}
-                  </React.Fragment>
-                ))}
+                {MEMCACHE_ITEMS.slice(2)
+                  .reverse()
+                  .map((item, index) => (
+                    <React.Fragment key={item.id}>
+                      <button
+                        className={`${styles.submenuItemExtra} ${memcacheSection === item.id ? styles.submenuItemActive : ''}`}
+                        onClick={() => onMemcacheSectionChange?.(item.id)}
+                        style={{ animationDelay: `${(MEMCACHE_ITEMS.length - 2 - index) * 0.03}s` }}
+                      >
+                        {item.label}
+                      </button>
+                      {index < MEMCACHE_ITEMS.length - 3 && <span className={styles.navDivider} />}
+                    </React.Fragment>
+                  ))}
                 <span className={styles.navDivider} />
               </div>
             )}
@@ -209,11 +209,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             )}
           </div>
         ) : (
-          <button
-            className={styles.connectButton}
-            onClick={onConnectWallet}
-            title="Connect Wallet"
-          >
+          <button className={styles.connectButton} onClick={onConnectWallet} title="Connect Wallet">
             Connect
           </button>
         )}

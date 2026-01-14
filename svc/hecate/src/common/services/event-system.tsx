@@ -1,4 +1,4 @@
-import { TaskEvent, TaskCreationRequest, EventType } from '../../types/tasks';
+import type { TaskEvent, TaskCreationRequest, EventType } from '../../types/tasks';
 
 export interface EventSubscription {
   id: string;
@@ -36,7 +36,7 @@ class EventSystem {
       ...event,
       id: this.generateEventId(),
       timestamp: new Date(),
-      processed: false
+      processed: false,
     };
 
     this.eventQueue.push(fullEvent);
@@ -56,10 +56,11 @@ class EventSystem {
     const id = this.generateSubscriptionId();
     const fullSubscription: EventSubscription = {
       ...subscription,
-      id
+      id,
     };
 
     this.subscriptions.set(id, fullSubscription);
+
     return id;
   }
 
@@ -78,6 +79,7 @@ class EventSystem {
     try {
       while (this.eventQueue.length > 0) {
         const event = this.eventQueue.shift();
+
         if (event && !event.processed) {
           await this.processEvent(event);
           event.processed = true;
@@ -175,6 +177,7 @@ class EventSystem {
       // Check cooldown
       if (rule.lastTriggered) {
         const timeSinceLastTrigger = Date.now() - rule.lastTriggered.getTime();
+
         if (timeSinceLastTrigger < rule.cooldown) {
           continue;
         }
@@ -184,6 +187,7 @@ class EventSystem {
       try {
         if (rule.condition(event)) {
           const taskRequest = await rule.action(event);
+
           if (taskRequest) {
             // TODO: Integrate with actual task creation service
             // await taskService.createTask(taskRequest);
@@ -226,7 +230,7 @@ class EventSystem {
       data: { symbol, price, change },
       source: 'market_data',
       timestamp: new Date(),
-      processed: false
+      processed: false,
     });
   }
 
@@ -236,7 +240,7 @@ class EventSystem {
       data: { type, ...data },
       source: 'opportunity_scanner',
       timestamp: new Date(),
-      processed: false
+      processed: false,
     });
   }
 
@@ -246,7 +250,7 @@ class EventSystem {
       data: { action, context },
       source: 'user_interface',
       timestamp: new Date(),
-      processed: false
+      processed: false,
     });
   }
 
@@ -256,7 +260,7 @@ class EventSystem {
       data: { agentName, taskId, result, ...data },
       source: `agent_${agentName}`,
       timestamp: new Date(),
-      processed: false
+      processed: false,
     });
   }
 
@@ -266,7 +270,7 @@ class EventSystem {
       data: { level, message, component, ...data },
       source: 'system_monitor',
       timestamp: new Date(),
-      processed: false
+      processed: false,
     });
   }
 
@@ -276,11 +280,12 @@ class EventSystem {
       data: { metric, value, threshold, ...data },
       source: 'threshold_monitor',
       timestamp: new Date(),
-      processed: false
+      processed: false,
     });
   }
 }
 
 // Singleton instance
 export const eventSystem = new EventSystem();
+
 export default EventSystem;

@@ -1,0 +1,1742 @@
+// ArbFarm Dashboard Styles
+// Solana MEV Agent Swarm UI
+
+$color-bg: #0a0a0f;
+$color-bg-elevated: #12121a;
+$color-bg-card: #1a1a24;
+$color-border: #2a2a3a;
+$color-border-active: #3a3a5a;
+$color-text: #e8e8e8;
+$color-text-muted: #8888aa;
+$color-text-dim: #555566;
+
+$color-success: #22c55e;
+$color-success-dim: rgba(34, 197, 94, 0.2);
+$color-warning: #f59e0b;
+$color-warning-dim: rgba(245, 158, 11, 0.2);
+$color-danger: #ef4444;
+$color-danger-dim: rgba(239, 68, 68, 0.2);
+$color-info: #3b82f6;
+$color-info-dim: rgba(59, 130, 246, 0.2);
+$color-purple: #8b5cf6;
+$color-purple-dim: rgba(139, 92, 246, 0.2);
+
+$font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
+
+// ============================================
+// Layout & Containers
+// ============================================
+
+.dashboardView,
+.opportunitiesView,
+.strategiesView,
+.threatsView,
+.kolView,
+.settingsView,
+.researchView {
+  padding: 1.5rem;
+  min-height: 100%;
+  background: $color-bg;
+}
+
+.dashboardHeader,
+.viewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid $color-border;
+
+  h1, h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: $color-text;
+    margin: 0;
+  }
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.backButton {
+  background: none;
+  border: none;
+  color: $color-text-muted;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.5rem;
+
+  &:hover {
+    color: $color-text;
+  }
+}
+
+.refreshButton,
+.settingsButton {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text-muted;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+
+  &:hover {
+    background: $color-bg-elevated;
+    border-color: $color-border-active;
+  }
+}
+
+.actionButton {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid;
+
+  &.pauseBtn {
+    background: $color-warning-dim;
+    border-color: $color-warning;
+    color: $color-warning;
+
+    &:hover {
+      background: $color-warning;
+      color: $color-bg;
+    }
+  }
+
+  &.resumeBtn {
+    background: $color-success-dim;
+    border-color: $color-success;
+    color: $color-success;
+
+    &:hover {
+      background: $color-success;
+      color: $color-bg;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.createButton {
+  background: $color-info;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+
+  &:hover {
+    background: lighten($color-info, 10%);
+  }
+}
+
+// ============================================
+// Metrics Grid
+// ============================================
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.metricCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: all 0.2s;
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      border-color: $color-border-active;
+      transform: translateY(-2px);
+    }
+  }
+}
+
+.metricLabel {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metricValue {
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-family: $font-mono;
+}
+
+.metricSubValue {
+  font-size: 0.8rem;
+  color: $color-text-dim;
+}
+
+.metricTrend {
+  font-size: 0.75rem;
+  font-family: $font-mono;
+
+  &.up {
+    color: $color-success;
+  }
+
+  &.down {
+    color: $color-danger;
+  }
+}
+
+// ============================================
+// Dashboard Grid
+// ============================================
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gridSection {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+
+  h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: $color-text;
+    margin: 0;
+  }
+}
+
+.healthBadge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+
+  &.healthy {
+    background: $color-success-dim;
+    color: $color-success;
+  }
+
+  &.degraded {
+    background: $color-warning-dim;
+    color: $color-warning;
+  }
+
+  &.unhealthy {
+    background: $color-danger-dim;
+    color: $color-danger;
+  }
+
+  &.dead, &.unknown {
+    background: rgba(107, 114, 128, 0.2);
+    color: #6b7280;
+  }
+}
+
+.viewAllButton {
+  background: none;
+  border: none;
+  color: $color-info;
+  cursor: pointer;
+  font-size: 0.8rem;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.statsLabel {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
+// ============================================
+// Lists
+// ============================================
+
+.opportunitiesList,
+.tradesList,
+.alertsList,
+.edgesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.loadingState,
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: $color-text-muted;
+  text-align: center;
+
+  p {
+    margin: 0.25rem 0;
+  }
+}
+
+.emptyHint {
+  font-size: 0.8rem;
+  color: $color-text-dim;
+}
+
+// ============================================
+// Swarm Status Card
+// ============================================
+
+.swarmStatusCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.swarmOverview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.swarmIndicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.swarmInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.swarmLabel {
+  font-size: 0.7rem;
+  color: $color-text-dim;
+  text-transform: uppercase;
+}
+
+.swarmValue {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.pausedBadge {
+  background: $color-warning-dim;
+  color: $color-warning;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.agentBreakdown {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.agentStat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.agentDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.scannerInfo {
+  padding-top: 1rem;
+  border-top: 1px solid $color-border;
+}
+
+.scannerHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.scannerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+
+  &.running {
+    background: $color-success;
+    animation: pulse 1.5s infinite;
+  }
+
+  &.stopped {
+    background: $color-text-dim;
+  }
+}
+
+.scannerStats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
+// ============================================
+// Edge Card
+// ============================================
+
+.edgeCard,
+.edgeCardCompact {
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+
+  &.priorityCritical {
+    border-left: 3px solid $color-danger;
+  }
+
+  &.priorityHigh {
+    border-left: 3px solid $color-warning;
+  }
+
+  &.priorityMedium {
+    border-left: 3px solid $color-info;
+  }
+
+  &.priorityLow {
+    border-left: 3px solid $color-text-dim;
+  }
+}
+
+.edgeCardCompact {
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.edgeCard {
+  padding: 1rem;
+}
+
+.edgeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.edgeTypeInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edgeIcon {
+  font-size: 1.2rem;
+}
+
+.edgeTypeName {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.edgeType {
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.venueType {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  text-transform: capitalize;
+}
+
+.edgeStatus {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  text-transform: capitalize;
+}
+
+.edgeRoute {
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.routeTokens {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: $font-mono;
+}
+
+.token {
+  color: $color-text;
+  font-weight: 500;
+}
+
+.routeArrow {
+  color: $color-text-dim;
+}
+
+.routeVenues {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  margin-top: 0.25rem;
+}
+
+.edgeMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metricLabel {
+  font-size: 0.7rem;
+  color: $color-text-dim;
+  text-transform: uppercase;
+}
+
+.metricValue {
+  font-size: 0.9rem;
+  font-family: $font-mono;
+
+  &.positive {
+    color: $color-success;
+  }
+
+  &.negative {
+    color: $color-danger;
+  }
+}
+
+.edgeProfit {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: $font-mono;
+  font-size: 0.9rem;
+  margin-left: auto;
+}
+
+.positive {
+  color: $color-success;
+}
+
+.negative {
+  color: $color-danger;
+}
+
+.guaranteedBadge {
+  font-size: 0.65rem;
+  background: $color-success-dim;
+  color: $color-success;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+}
+
+.guaranteedBanner {
+  background: $color-success-dim;
+  color: $color-success;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  text-align: center;
+  margin-bottom: 0.75rem;
+  border-radius: 4px;
+}
+
+.rejectionReason {
+  background: $color-danger-dim;
+  color: $color-danger;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+  border-radius: 4px;
+}
+
+.edgeActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid $color-border;
+}
+
+.quickActions {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.approveBtn,
+.executeBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.approveBtn {
+  background: $color-success-dim;
+  color: $color-success;
+
+  &:hover {
+    background: $color-success;
+    color: white;
+  }
+}
+
+.executeBtn {
+  background: $color-info-dim;
+  color: $color-info;
+
+  &:hover {
+    background: $color-info;
+    color: white;
+  }
+}
+
+.approveButton,
+.rejectButton,
+.executeButton {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.approveButton {
+  background: $color-success-dim;
+  border-color: $color-success;
+  color: $color-success;
+
+  &:hover {
+    background: $color-success;
+    color: white;
+  }
+}
+
+.rejectButton {
+  background: $color-danger-dim;
+  border-color: $color-danger;
+  color: $color-danger;
+
+  &:hover {
+    background: $color-danger;
+    color: white;
+  }
+}
+
+.executeButton {
+  background: $color-info-dim;
+  border-color: $color-info;
+  color: $color-info;
+
+  &:hover {
+    background: $color-info;
+    color: white;
+  }
+}
+
+.rejectInput {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+
+  input {
+    flex: 1;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    padding: 0.5rem;
+    color: $color-text;
+    font-size: 0.8rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+
+  button {
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+
+    &:first-of-type {
+      background: $color-danger;
+      color: white;
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    &:last-of-type {
+      background: $color-bg-card;
+      color: $color-text-muted;
+    }
+  }
+}
+
+.edgeFooter {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.7rem;
+  color: $color-text-dim;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid $color-border;
+}
+
+.edgeId {
+  font-family: $font-mono;
+}
+
+// ============================================
+// Trade History Card
+// ============================================
+
+.tradeCard,
+.tradeCardCompact {
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  overflow: hidden;
+
+  &.win {
+    border-left: 3px solid $color-success;
+  }
+
+  &.loss {
+    border-left: 3px solid $color-danger;
+  }
+}
+
+.tradeCardCompact {
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.tradeCard {
+  padding: 1rem;
+}
+
+.tradeIndicator {
+  font-weight: 600;
+}
+
+.tradeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.tradeId {
+  font-family: $font-mono;
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
+.tradeMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.tradeProfit {
+  font-family: $font-mono;
+  font-weight: 500;
+}
+
+.tradeSlippage {
+  color: $color-text-dim;
+  font-size: 0.75rem;
+}
+
+.tradeTime {
+  color: $color-text-dim;
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
+.tradePrices {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+  margin-bottom: 0.75rem;
+}
+
+.tradeTx {
+  margin-bottom: 0.75rem;
+}
+
+.txLink {
+  font-size: 0.8rem;
+  color: $color-info;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.tradeFooter {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
+// ============================================
+// Threat Alert Card
+// ============================================
+
+.alertCard,
+.alertCardCompact {
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  overflow: hidden;
+
+  &.critical {
+    border-left: 3px solid $color-danger;
+  }
+
+  &.high {
+    border-left: 3px solid #f97316;
+  }
+
+  &.medium {
+    border-left: 3px solid $color-warning;
+  }
+
+  &.low {
+    border-left: 3px solid $color-text-dim;
+  }
+}
+
+.alertCardCompact {
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.alertCard {
+  padding: 1rem;
+}
+
+.alertIcon {
+  font-size: 1rem;
+}
+
+.alertInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.alertHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.alertSeverity {
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.alertType {
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.alertAddress {
+  font-family: $font-mono;
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
+.alertBody {
+  margin-bottom: 0.75rem;
+}
+
+.alertEntity {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.entityType {
+  color: $color-text-muted;
+  text-transform: capitalize;
+}
+
+.entityAddress {
+  font-family: $font-mono;
+  word-break: break-all;
+}
+
+.alertDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.detailItem {
+  font-size: 0.75rem;
+  background: $color-bg;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  color: $color-text-muted;
+}
+
+.alertFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  padding-top: 0.75rem;
+  border-top: 1px solid $color-border;
+}
+
+.alertAction {
+  text-transform: capitalize;
+}
+
+.alertTime {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  margin-left: auto;
+}
+
+// ============================================
+// Strategies Overview
+// ============================================
+
+.strategiesOverview {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.strategiesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.strategyChip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.strategyIndicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.strategyName {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.strategyType {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  text-transform: capitalize;
+}
+
+// ============================================
+// COW Marketplace Overview (Dashboard)
+// ============================================
+
+.cowsOverview {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.cowsSummary {
+  margin-top: 0.75rem;
+}
+
+.cowsStats {
+  display: flex;
+  gap: 2rem;
+}
+
+.cowStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cowStatValue {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: $color-info;
+}
+
+.cowStatLabel {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  text-transform: uppercase;
+}
+
+// ============================================
+// Strategies Grid
+// ============================================
+
+.strategiesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.strategyCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.strategyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.toggleButton {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &.active {
+    background: $color-success-dim;
+    border-color: $color-success;
+    color: $color-success;
+  }
+
+  &:not(.active) {
+    background: $color-bg;
+    border-color: $color-border;
+    color: $color-text-dim;
+  }
+}
+
+.strategyMeta,
+.strategyRisk,
+.strategyStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+  margin-bottom: 0.5rem;
+
+  span {
+    background: $color-bg;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+}
+
+.strategyStats {
+  padding-top: 0.5rem;
+  border-top: 1px solid $color-border;
+}
+
+// ============================================
+// Threats View
+// ============================================
+
+.tokenChecker {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+
+  h3 {
+    font-size: 0.9rem;
+    margin: 0 0 1rem 0;
+  }
+}
+
+.checkerInput {
+  display: flex;
+  gap: 0.5rem;
+
+  input {
+    flex: 1;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    padding: 0.75rem;
+    color: $color-text;
+    font-family: $font-mono;
+    font-size: 0.85rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+
+    &::placeholder {
+      color: $color-text-dim;
+    }
+  }
+
+  button {
+    background: $color-info;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    font-weight: 500;
+
+    &:hover:not(:disabled) {
+      background: lighten($color-info, 10%);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.checkResult {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: $color-bg;
+  border-radius: 6px;
+}
+
+.threatScore {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+
+  &.critical {
+    color: $color-danger;
+  }
+
+  &.warning {
+    color: $color-warning;
+  }
+
+  &.safe {
+    color: $color-success;
+  }
+}
+
+.threatFactors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.factorBad {
+  background: $color-danger-dim;
+  color: $color-danger;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.factorWarning {
+  background: $color-warning-dim;
+  color: $color-warning;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.alertsSection,
+.blockedSection {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+
+  h3 {
+    font-size: 0.9rem;
+    margin: 0 0 1rem 0;
+  }
+}
+
+.blockedList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.blockedItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: $color-bg;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.blockedType {
+  text-transform: capitalize;
+  color: $color-text-muted;
+  min-width: 60px;
+}
+
+.blockedAddress {
+  font-family: $font-mono;
+  flex: 1;
+}
+
+.blockedCategory {
+  font-size: 0.75rem;
+  background: $color-danger-dim;
+  color: $color-danger;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  text-transform: capitalize;
+}
+
+// ============================================
+// Filter Bar
+// ============================================
+
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.filterChip {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  color: $color-text-muted;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+
+  &.active {
+    background: $color-info-dim;
+    border-color: $color-info;
+    color: $color-info;
+  }
+}
+
+.count {
+  background: $color-bg;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+}
+
+// ============================================
+// SSE Status
+// ============================================
+
+.sseStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  padding: 0.5rem;
+  background: $color-bg-card;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.sseIndicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $color-success;
+  animation: pulse 1.5s infinite;
+}
+
+// ============================================
+// COWs View
+// ============================================
+
+.cowsView {
+  padding: 1.5rem;
+  min-height: 100%;
+  background: $color-bg;
+}
+
+.cowsStatsBar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 120px;
+
+  .statLabel {
+    font-size: 0.7rem;
+    color: $color-text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .statValue {
+    font-size: 1.25rem;
+    font-weight: 600;
+    font-family: $font-mono;
+  }
+}
+
+.cowsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.cowCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1.25rem;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+    transform: translateY(-2px);
+  }
+}
+
+.cowHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.cowTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+  }
+}
+
+.riskBadge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  color: white;
+  text-transform: uppercase;
+}
+
+.cowPrice {
+  .freeTag {
+    background: $color-success-dim;
+    color: $color-success;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+
+  .priceTag {
+    background: $color-purple-dim;
+    color: $color-purple;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: $font-mono;
+  }
+}
+
+.cowDescription {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cowMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.creator {
+  color: $color-text-dim;
+  font-family: $font-mono;
+}
+
+.venueIcons {
+  display: flex;
+  gap: 0.25rem;
+  font-size: 1rem;
+}
+
+.cowStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid $color-border;
+  border-bottom: 1px solid $color-border;
+  margin-bottom: 0.75rem;
+}
+
+.cowStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+
+  .statLabel {
+    font-size: 0.65rem;
+    color: $color-text-dim;
+    text-transform: uppercase;
+  }
+
+  .statValue {
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: $font-mono;
+
+    &.positive {
+      color: $color-success;
+    }
+
+    &.negative {
+      color: $color-danger;
+    }
+  }
+}
+
+.cowRating {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: $color-warning;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+
+  .ratingValue {
+    color: $color-text-muted;
+    margin-left: 0.25rem;
+  }
+}
+
+.cowActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.viewButton,
+.forkButton {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.viewButton {
+  background: $color-bg;
+  border-color: $color-border;
+  color: $color-text-muted;
+
+  &:hover {
+    border-color: $color-border-active;
+    color: $color-text;
+  }
+}
+
+.forkButton {
+  background: $color-purple-dim;
+  border-color: $color-purple;
+  color: $color-purple;
+
+  &:hover {
+    background: $color-purple;
+    color: white;
+  }
+}
+
+// ============================================
+// Modal
+// ============================================
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid $color-border;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: $color-text-muted;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+
+  &:hover {
+    color: $color-text;
+  }
+}
+
+.modalBody {
+  padding: 1.25rem;
+
+  p {
+    margin: 0 0 1rem 0;
+    color: $color-text-muted;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+}
+
+.forkCost {
+  background: $color-purple-dim;
+  padding: 0.75rem;
+  border-radius: 6px;
+  text-align: center;
+
+  strong {
+    color: $color-purple;
+    font-family: $font-mono;
+  }
+}
+
+.forkOptions {
+  margin-top: 1rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: $color-text-muted;
+
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: $color-purple;
+  }
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid $color-border;
+  background: $color-bg-elevated;
+}
+
+.cancelButton,
+.confirmButton {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.cancelButton {
+  background: $color-bg;
+  color: $color-text-muted;
+
+  &:hover {
+    background: $color-border;
+    color: $color-text;
+  }
+}
+
+.confirmButton {
+  background: $color-purple;
+  color: white;
+
+  &:hover {
+    background: lighten($color-purple, 10%);
+  }
+}

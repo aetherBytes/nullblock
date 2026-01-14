@@ -10,7 +10,10 @@ use tracing::{info, warn};
 use uuid::Uuid;
 use std::sync::Arc;
 
-use crate::resources::crossroads::models::CreateListingRequest;
+use crate::resources::crossroads::models::{
+    CreateListingRequest, CreateArbFarmCowRequest, ForkArbFarmCowRequest,
+};
+use crate::resources::crossroads::repository::ArbFarmRepository;
 use crate::resources::crossroads::services::NullblockServiceIntegrator;
 use crate::resources::ExternalService;
 
@@ -36,7 +39,18 @@ pub fn create_crossroads_routes(_external_service: &Arc<ExternalService>) -> Rou
         .route("/api/admin/listings/approve/:id", post(approve_listing))
         .route("/api/admin/listings/reject/:id", post(reject_listing))
         .route("/api/admin/listings/feature/:id", post(feature_listing))
-        
+
+        // ArbFarm COW API - MEV Strategy Marketplace
+        .route("/api/marketplace/arbfarm/cows", get(list_arbfarm_cows))
+        .route("/api/marketplace/arbfarm/cows", post(create_arbfarm_cow))
+        .route("/api/marketplace/arbfarm/cows/:id", get(get_arbfarm_cow))
+        .route("/api/marketplace/arbfarm/cows/:id/fork", post(fork_arbfarm_cow))
+        .route("/api/marketplace/arbfarm/cows/:id/strategies", get(get_arbfarm_cow_strategies))
+        .route("/api/marketplace/arbfarm/cows/:id/forks", get(get_arbfarm_cow_forks))
+        .route("/api/marketplace/arbfarm/cows/:id/revenue", get(get_arbfarm_cow_revenue))
+        .route("/api/marketplace/arbfarm/earnings/:wallet", get(get_arbfarm_earnings))
+        .route("/api/marketplace/arbfarm/stats", get(get_arbfarm_stats))
+
         // Health endpoint
         .route("/api/crossroads/health", get(crossroads_health))
 }
@@ -262,9 +276,275 @@ async fn feature_listing(Path(id): Path<Uuid>) -> Result<Json<Value>, StatusCode
 
 async fn crossroads_health(State(app_state): State<crate::AppState>) -> Json<Value> {
     info!("🏥 Crossroads marketplace health check requested");
-    
+
     let integrator = NullblockServiceIntegrator::new(app_state.external_service.clone());
     let services_health = integrator.check_services_health().await;
-    
+
     Json(services_health)
+}
+
+// =============================================================================
+// ArbFarm COW Endpoints - MEV Strategy Marketplace
+// =============================================================================
+
+async fn list_arbfarm_cows(
+    State(app_state): State<crate::AppState>,
+) -> Result<Json<Value>, StatusCode> {
+    info!("🐄 Listing ArbFarm COWs");
+
+    let pool = app_state.database.pool();
+    match ArbFarmRepository::list_cows(pool, 20, 0, Some(true), None).await {
+        Ok(cows) => {
+            let count = cows.len();
+            Ok(Json(json!({
+                "cows": cows,
+                "total_count": count,
+                "page": 1,
+                "per_page": 20
+            })))
+        }
+        Err(e) => {
+            warn!("❌ Failed to list ArbFarm COWs: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn create_arbfarm_cow(
+    State(app_state): State<crate::AppState>,
+    Json(payload): Json<CreateArbFarmCowRequest>,
+) -> Result<Json<Value>, StatusCode> {
+    info!("🐄 Creating ArbFarm COW: {}", payload.name);
+
+    let pool = app_state.database.pool();
+    let creator_wallet = "anonymous";
+
+    match ArbFarmRepository::create_cow(pool, &payload, creator_wallet).await {
+        Ok(cow) => Ok(Json(json!({
+            "id": cow.id,
+            "listing_id": cow.listing_id,
+            "name": cow.name,
+            "description": cow.description,
+            "strategies": cow.strategies,
+            "venue_types": cow.venue_types,
+            "risk_profile": cow.risk_profile,
+            "is_public": cow.is_public,
+            "is_forkable": cow.is_forkable,
+            "status": "pending",
+            "created_at": cow.created_at,
+            "message": "ArbFarm COW created successfully - pending approval"
+        }))),
+        Err(e) => {
+            warn!("❌ Failed to create ArbFarm COW: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_arbfarm_cow(
+    State(app_state): State<crate::AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Value>, StatusCode> {
+    info!("🐄 Fetching ArbFarm COW: {}", id);
+
+    let pool = app_state.database.pool();
+    match ArbFarmRepository::get_cow_by_id(pool, id).await {
+        Ok(Some(cow)) => Ok(Json(json!(cow))),
+        Ok(None) => {
+            warn!("❌ ArbFarm COW not found: {}", id);
+            Err(StatusCode::NOT_FOUND)
+        }
+        Err(e) => {
+            warn!("❌ Failed to fetch ArbFarm COW: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn fork_arbfarm_cow(
+    State(app_state): State<crate::AppState>,
+    Path(parent_id): Path<Uuid>,
+    Json(payload): Json<ForkArbFarmCowRequest>,
+) -> Result<Json<Value>, StatusCode> {
+    let fork_name = payload.name.clone().unwrap_or_else(|| format!("Fork of {}", parent_id));
+    info!("🍴 Forking ArbFarm COW: {} as {}", parent_id, fork_name);
+
+    let pool = app_state.database.pool();
+    let forker_wallet = "anonymous";
+
+    match ArbFarmRepository::fork_cow(
+        pool,
+        parent_id,
+        forker_wallet,
+        payload.name,
+        payload.description,
+        payload.inherit_engrams,
+        payload.engram_filters,
+    )
+    .await
+    {
+        Ok((cow, fork)) => Ok(Json(json!({
+            "fork_id": fork.id,
+            "forked_cow_id": cow.id,
+            "parent_cow_id": parent_id,
+            "name": cow.name,
+            "description": cow.description,
+            "inherit_engrams": payload.inherit_engrams,
+            "inherited_strategies": fork.inherited_strategies,
+            "inherited_engrams": fork.inherited_engrams,
+            "status": "pending",
+            "created_at": cow.created_at,
+            "message": "ArbFarm COW forked successfully - pending approval"
+        }))),
+        Err(e) => {
+            warn!("❌ Failed to fork ArbFarm COW: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_arbfarm_cow_strategies(
+    State(app_state): State<crate::AppState>,
+    Path(cow_id): Path<Uuid>,
+) -> Result<Json<Value>, StatusCode> {
+    info!("📊 Fetching strategies for ArbFarm COW: {}", cow_id);
+
+    let pool = app_state.database.pool();
+    match ArbFarmRepository::get_strategies_for_cow(pool, cow_id).await {
+        Ok(strategies) => {
+            let count = strategies.len();
+            Ok(Json(json!({
+                "cow_id": cow_id,
+                "strategies": strategies,
+                "total_count": count
+            })))
+        }
+        Err(e) => {
+            warn!("❌ Failed to fetch strategies: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_arbfarm_cow_forks(
+    State(app_state): State<crate::AppState>,
+    Path(cow_id): Path<Uuid>,
+) -> Result<Json<Value>, StatusCode> {
+    info!("🍴 Fetching forks of ArbFarm COW: {}", cow_id);
+
+    let pool = app_state.database.pool();
+    match ArbFarmRepository::get_forks_for_cow(pool, cow_id).await {
+        Ok(forks) => {
+            let count = forks.len();
+            Ok(Json(json!({
+                "parent_cow_id": cow_id,
+                "forks": forks,
+                "total_count": count
+            })))
+        }
+        Err(e) => {
+            warn!("❌ Failed to fetch forks: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_arbfarm_cow_revenue(
+    State(app_state): State<crate::AppState>,
+    Path(cow_id): Path<Uuid>,
+) -> Result<Json<Value>, StatusCode> {
+    info!("💰 Fetching revenue for ArbFarm COW: {}", cow_id);
+
+    let pool = app_state.database.pool();
+    match ArbFarmRepository::get_revenue_for_cow(pool, cow_id).await {
+        Ok(revenues) => {
+            let total: i64 = revenues.iter().map(|r| r.amount_lamports).sum();
+            let trading: i64 = revenues
+                .iter()
+                .filter(|r| matches!(r.revenue_type, crate::resources::crossroads::models::ArbFarmRevenueType::TradingProfit))
+                .map(|r| r.amount_lamports)
+                .sum();
+            let fork_fees: i64 = revenues
+                .iter()
+                .filter(|r| matches!(r.revenue_type, crate::resources::crossroads::models::ArbFarmRevenueType::ForkFee))
+                .map(|r| r.amount_lamports)
+                .sum();
+            let royalties: i64 = revenues
+                .iter()
+                .filter(|r| matches!(r.revenue_type, crate::resources::crossroads::models::ArbFarmRevenueType::CreatorRoyalty))
+                .map(|r| r.amount_lamports)
+                .sum();
+            let pending: i64 = revenues
+                .iter()
+                .filter(|r| !r.is_distributed)
+                .map(|r| r.amount_lamports)
+                .sum();
+
+            Ok(Json(json!({
+                "cow_id": cow_id,
+                "revenue_entries": revenues,
+                "total_revenue_lamports": total,
+                "trading_profit_lamports": trading,
+                "fork_fees_lamports": fork_fees,
+                "creator_royalties_lamports": royalties,
+                "pending_distribution_lamports": pending
+            })))
+        }
+        Err(e) => {
+            warn!("❌ Failed to fetch revenue: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_arbfarm_earnings(
+    State(app_state): State<crate::AppState>,
+    Path(wallet): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    info!("💰 Fetching ArbFarm earnings for wallet: {}", wallet);
+
+    let pool = app_state.database.pool();
+    match ArbFarmRepository::get_earnings_for_wallet(pool, &wallet).await {
+        Ok((total, trading, fork_fees, royalties, pending, cows_owned, cows_forked)) => {
+            Ok(Json(json!({
+                "wallet_address": wallet,
+                "total_earnings_lamports": total,
+                "trading_profit_lamports": trading,
+                "fork_fees_earned_lamports": fork_fees,
+                "creator_royalties_lamports": royalties,
+                "pending_distribution_lamports": pending,
+                "cows_owned": cows_owned,
+                "cows_forked_from": cows_forked,
+                "period": "all_time"
+            })))
+        }
+        Err(e) => {
+            warn!("❌ Failed to fetch earnings: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_arbfarm_stats(
+    State(app_state): State<crate::AppState>,
+) -> Result<Json<Value>, StatusCode> {
+    info!("📊 Fetching ArbFarm marketplace statistics");
+
+    let pool = app_state.database.pool();
+    match ArbFarmRepository::get_stats(pool).await {
+        Ok(stats) => Ok(Json(json!({
+            "total_cows": stats.total_cows,
+            "active_cows": stats.active_cows,
+            "total_forks": stats.total_forks,
+            "total_trades_executed": stats.total_trades_executed,
+            "total_profit_generated_lamports": stats.total_profit_generated_lamports,
+            "total_revenue_distributed_lamports": stats.total_revenue_distributed_lamports,
+            "avg_win_rate": stats.avg_win_rate,
+            "last_updated": chrono::Utc::now()
+        }))),
+        Err(e) => {
+            warn!("❌ Failed to fetch stats: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }

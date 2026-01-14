@@ -10,6 +10,7 @@ pub mod logs;
 pub mod external_service;
 pub mod api_keys;
 pub mod engrams;
+pub mod arb;
 
 // Re-export commonly used types and traits
 pub use types::{
@@ -20,4 +21,5 @@ pub use wallets::WalletManager;
 pub use crossroads::routes::create_crossroads_routes;
 pub use engrams::create_engram_routes;
 pub use mcp::routes::create_mcp_routes;
+pub use arb::create_arb_routes;
 pub use external_service::ExternalService;

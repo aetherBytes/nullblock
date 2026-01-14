@@ -1,9 +1,4 @@
-import {
-  Task,
-  TaskCreationRequest,
-  TaskUpdateRequest,
-  TaskFilter
-} from '../../types/tasks';
+import type { Task, TaskCreationRequest, TaskUpdateRequest, TaskFilter } from '../../types/tasks';
 
 export interface TaskServiceResponse<T = any> {
   success: boolean;
@@ -30,18 +25,21 @@ class TaskService {
   async connect(): Promise<boolean> {
     try {
       const response = await fetch(`${this.erebusUrl}/health`);
+
       this.isConnected = response.ok;
+
       return this.isConnected;
     } catch (error) {
       console.error('Failed to connect to Erebus:', error);
       this.isConnected = false;
+
       return false;
     }
   }
 
   private async makeRequest<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<TaskServiceResponse<T>> {
     try {
       if (!this.isConnected) {
@@ -57,11 +55,13 @@ class TaskService {
       if (this.walletAddress) {
         headers['x-wallet-address'] = this.walletAddress;
       }
+
       if (this.walletChain) {
         headers['x-wallet-chain'] = this.walletChain;
       }
 
       const url = `${this.erebusUrl}/api/agents/tasks${endpoint}`;
+
       console.log('🌐 Making request to:', url);
       console.log('📋 Headers:', headers);
       console.log('📋 Options:', options);
@@ -75,27 +75,34 @@ class TaskService {
       console.log('📤 Response headers:', Object.fromEntries(response.headers.entries()));
 
       const responseJson = await response.json();
+
       console.log('📤 Response data:', responseJson);
       console.log('🔍 Response has success field:', 'success' in responseJson);
       console.log('🔍 Response.success value:', responseJson.success);
       console.log('🔍 Response has data field:', 'data' in responseJson);
-      console.log('🔍 Response.data exists:', !!responseJson.data);
+      console.log('🔍 Response.data exists:', Boolean(responseJson.data));
 
       // Handle backend API response format which wraps data in { data: [...], success: true }
-      const actualData = response.ok && responseJson.data !== undefined ? responseJson.data : responseJson;
+      const actualData =
+        response.ok && responseJson.data !== undefined ? responseJson.data : responseJson;
+
       console.log('🔍 actualData:', actualData);
 
       const result = {
         success: response.ok,
         data: response.ok ? actualData : undefined,
-        error: response.ok ? undefined : responseJson.message || responseJson.error || 'Request failed',
+        error: response.ok
+          ? undefined
+          : responseJson.message || responseJson.error || 'Request failed',
         timestamp: new Date(),
       };
+
       console.log('🔍 Returning from task-service:', result);
 
       return result;
     } catch (error) {
       console.error('Task service request failed:', error);
+
       return {
         success: false,
         error: (error as Error).message,
@@ -183,29 +190,39 @@ class TaskService {
   }
 
   // User management
-  async registerUser(walletAddress: string, chain: string = 'solana'): Promise<TaskServiceResponse<any>> {
+  async registerUser(
+    walletAddress: string,
+    chain: string = 'solana',
+  ): Promise<TaskServiceResponse<any>> {
     console.log('🔗 TaskService.registerUser called with:', { walletAddress, chain });
-    console.log('🔗 Current wallet context:', { walletAddress: this.walletAddress, chain: this.walletChain });
+    console.log('🔗 Current wallet context:', {
+      walletAddress: this.walletAddress,
+      chain: this.walletChain,
+    });
     console.log('🔗 Erebus URL:', this.erebusUrl);
 
     try {
       // Determine provider based on chain
-      const provider = chain === 'solana' ? 'phantom' : chain === 'ethereum' ? 'metamask' : 'unknown';
+      const provider =
+        chain === 'solana' ? 'phantom' : chain === 'ethereum' ? 'metamask' : 'unknown';
 
       const requestBody = {
         source_identifier: walletAddress,
-        network: chain,  // Primary field (required)
-        chain: chain,    // Legacy field for backward compatibility
+        network: chain, // Primary field (required)
+        chain, // Legacy field for backward compatibility
         source_type: {
-          type: "web3_wallet",
-          provider: provider,
+          type: 'web3_wallet',
+          provider,
           network: chain,
-          metadata: {}
+          metadata: {},
         },
-        wallet_type: null
+        wallet_type: null,
       };
 
-      console.log('📤 Sending registration request to:', `${this.erebusUrl}/api/agents/users/register`);
+      console.log(
+        '📤 Sending registration request to:',
+        `${this.erebusUrl}/api/agents/users/register`,
+      );
       console.log('📤 Request body:', requestBody);
 
       // Use direct Erebus endpoint for user registration (not through tasks)
@@ -223,6 +240,7 @@ class TaskService {
 
       console.log('📤 Response status:', response.status);
       const data = await response.json();
+
       console.log('📤 Response data:', data);
 
       if (response.ok) {
@@ -239,6 +257,7 @@ class TaskService {
       };
     } catch (error) {
       console.error('❌ User registration error:', error);
+
       return {
         success: false,
         error: (error as Error).message,
@@ -247,8 +266,6 @@ class TaskService {
     }
   }
 
-
-
   // Utility methods
   private filterToParams(filter: TaskFilter): Record<string, string> {
     const params: Record<string, string> = {};
@@ -256,21 +273,27 @@ class TaskService {
     if (filter.status) {
       params.status = filter.status.join(',');
     }
+
     if (filter.type) {
       params.task_type = filter.type.join(',');
     }
+
     if (filter.category) {
       params.category = filter.category.join(',');
     }
+
     if (filter.priority) {
       params.priority = filter.priority.join(',');
     }
+
     if (filter.assigned_agent_id) {
       params.assigned_agent_id = filter.assigned_agent_id;
     }
+
     if (filter.search_term) {
       params.search = filter.search_term;
     }
+
     if (filter.date_range) {
       params.start_date = filter.date_range.start.toISOString();
       params.end_date = filter.date_range.end.toISOString();
@@ -283,6 +306,7 @@ class TaskService {
     const now = new Date();
     const lastUpdate = new Date(task.updated_at);
     const staleThreshold = 5 * 60 * 1000; // 5 minutes
+
     return now.getTime() - lastUpdate.getTime() > staleThreshold;
   }
 
@@ -294,6 +318,7 @@ class TaskService {
       urgent: 4,
       critical: 5,
     };
+
     return priorityScores[task.priority];
   }
 
@@ -307,11 +332,18 @@ class TaskService {
 
     const totalComplexity = factors.reduce((sum, factor) => sum + factor, 0);
 
-    if (totalComplexity <= 3) return 'simple';
-    if (totalComplexity <= 8) return 'moderate';
+    if (totalComplexity <= 3) {
+      return 'simple';
+    }
+
+    if (totalComplexity <= 8) {
+      return 'moderate';
+    }
+
     return 'complex';
   }
 }
 
 export const taskService = new TaskService();
+
 export default TaskService;

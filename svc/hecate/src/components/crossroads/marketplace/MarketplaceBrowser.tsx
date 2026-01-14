@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from '../crossroads.module.scss';
+import type { ServiceListing, FilterState, ServiceCategory } from '../types';
+import CommandBar from './CommandBar';
 import ServiceGrid from './ServiceGrid';
 import ServiceList from './ServiceList';
-import CommandBar from './CommandBar';
-import type { ServiceListing, FilterState, ServiceCategory } from '../types';
 
 interface MarketplaceBrowserProps {
   onServiceClick?: (service: ServiceListing) => void;
 }
 
-const categories: Array<{ value: ServiceCategory | 'All'; label: string }> = [
+const categories: { value: ServiceCategory | 'All'; label: string }[] = [
   { value: 'All', label: 'All Services' },
   { value: 'Agent', label: 'Agents' },
   { value: 'Workflow', label: 'Workflows' },
@@ -23,7 +23,8 @@ const mockServices: ServiceListing[] = [
   {
     id: '1',
     title: 'Hecate Orchestrator',
-    short_description: 'Main conversational interface and orchestration engine for multi-agent coordination',
+    short_description:
+      'Main conversational interface and orchestration engine for multi-agent coordination',
     listing_type: 'Agent',
     owner_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
     endpoint_url: 'http://localhost:9003/hecate',
@@ -137,12 +138,19 @@ const mockServices: ServiceListing[] = [
   {
     id: '6',
     title: 'Context Keeping Tools',
-    short_description: 'Free engram-based context storage for agent memory, personas, strategies, and preferences via MCP',
+    short_description:
+      'Free engram-based context storage for agent memory, personas, strategies, and preferences via MCP',
     listing_type: 'Tool',
     owner_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
     endpoint_url: 'http://localhost:8001/mcp',
     version: '1.0.0',
-    capabilities: ['context_storage', 'persona_management', 'strategy_templates', 'knowledge_base', 'preference_tracking'],
+    capabilities: [
+      'context_storage',
+      'persona_management',
+      'strategy_templates',
+      'knowledge_base',
+      'preference_tracking',
+    ],
     category_tags: ['context', 'memory', 'engrams', 'protocol', 'nullblock', 'mcp'],
     is_free: true,
     pricing_model: 'Free',
@@ -181,11 +189,12 @@ const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({ onServiceClick 
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
+
       filtered = filtered.filter(
         (s) =>
           s.title.toLowerCase().includes(query) ||
           s.short_description.toLowerCase().includes(query) ||
-          s.category_tags.some((tag) => tag.toLowerCase().includes(query))
+          s.category_tags.some((tag) => tag.toLowerCase().includes(query)),
       );
     }
 
@@ -206,12 +215,15 @@ const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({ onServiceClick 
           filtered.sort((a, b) => b.deployment_count - a.deployment_count);
           break;
         case 'recent':
-          filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          filtered.sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+          );
           break;
         case 'price':
           filtered.sort((a, b) => {
             const priceA = a.is_free ? 0 : a.price_usd || a.price_mon || 0;
             const priceB = b.is_free ? 0 : b.price_usd || b.price_mon || 0;
+
             return priceA - priceB;
           });
           break;
@@ -320,4 +332,3 @@ const MarketplaceBrowser: React.FC<MarketplaceBrowserProps> = ({ onServiceClick 
 };
 
 export default MarketplaceBrowser;
-

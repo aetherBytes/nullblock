@@ -1,11 +1,6 @@
 import { BaseWalletAdapter } from '../base-adapter';
-import {
-  WalletInfo,
-  ConnectionResult,
-  SignatureResult,
-  ChainType,
-  SolanaProvider,
-} from '../types';
+import type { WalletInfo, ConnectionResult, SignatureResult, SolanaProvider } from '../types';
+import { ChainType } from '../types';
 
 export class PhantomAdapter extends BaseWalletAdapter {
   readonly id = 'phantom';
@@ -20,12 +15,18 @@ export class PhantomAdapter extends BaseWalletAdapter {
   };
 
   isInstalled(): boolean {
-    if (typeof window === 'undefined') return false;
-    return !!window.phantom?.solana;
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    return Boolean(window.phantom?.solana);
   }
 
   getProvider(chain: ChainType): SolanaProvider | null {
-    if (chain !== ChainType.SOLANA) return null;
+    if (chain !== ChainType.SOLANA) {
+      return null;
+    }
+
     return window.phantom?.solana || null;
   }
 
@@ -39,6 +40,7 @@ export class PhantomAdapter extends BaseWalletAdapter {
     }
 
     const provider = this.getProvider(ChainType.SOLANA);
+
     if (!provider) {
       return {
         success: false,
@@ -95,6 +97,7 @@ export class PhantomAdapter extends BaseWalletAdapter {
 
   async disconnect(): Promise<void> {
     const provider = this.getProvider(ChainType.SOLANA);
+
     if (provider?.disconnect) {
       try {
         await provider.disconnect();
@@ -106,6 +109,7 @@ export class PhantomAdapter extends BaseWalletAdapter {
 
   async signMessage(message: string): Promise<SignatureResult> {
     const provider = this.getProvider(ChainType.SOLANA);
+
     if (!provider) {
       return { success: false, error: 'Phantom not installed' };
     }

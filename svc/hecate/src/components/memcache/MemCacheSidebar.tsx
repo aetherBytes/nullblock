@@ -8,7 +8,8 @@ export type MemCacheSection =
   | 'listings'
   | 'earnings'
   | 'connections'
-  | 'bookmarks';
+  | 'bookmarks'
+  | 'arbfarm';
 
 interface MemCacheSidebarProps {
   activeSection: MemCacheSection;
@@ -21,6 +22,7 @@ const SIDEBAR_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
   { id: 'engrams', icon: '◈', label: 'Engrams' },
   { id: 'workflows', icon: '⬡', label: 'Workflows' },
   { id: 'tasks', icon: '▣', label: 'Active Tasks' },
+  { id: 'arbfarm', icon: '⚡', label: 'ArbFarm' },
   { id: 'listings', icon: '◇', label: 'Listings' },
   { id: 'earnings', icon: '◆', label: 'Earnings' },
   { id: 'connections', icon: '○', label: 'Connections' },
@@ -35,6 +37,7 @@ const MemCacheSidebar: React.FC<MemCacheSidebarProps> = ({
 }) => {
   const handleItemClick = (section: MemCacheSection) => {
     onSectionChange(section);
+
     if (onClose) {
       onClose();
     }
@@ -42,9 +45,7 @@ const MemCacheSidebar: React.FC<MemCacheSidebarProps> = ({
 
   return (
     <>
-      {isOpen && (
-        <div className={styles.sidebarOverlay} onClick={onClose} />
-      )}
+      {isOpen && <div className={styles.sidebarOverlay} onClick={onClose} />}
       <aside className={`${styles.memcacheSidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
         <nav className={styles.sidebarNav}>
           {SIDEBAR_ITEMS.map((item) => (

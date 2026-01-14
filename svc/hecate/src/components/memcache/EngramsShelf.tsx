@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import type { Engram } from '../../types/engrams';
+import { ENGRAM_TYPE_ICONS, ENGRAM_TYPE_COLORS } from '../../types/engrams';
 import styles from './memcache.module.scss';
-import { Engram, ENGRAM_TYPE_ICONS, ENGRAM_TYPE_COLORS } from '../../types/engrams';
 
 interface EngramsShelfProps {
   engrams: Engram[];
@@ -9,12 +10,7 @@ interface EngramsShelfProps {
   onRefresh: () => void;
 }
 
-const EngramsShelf: React.FC<EngramsShelfProps> = ({
-  engrams,
-  isLoading,
-  onDelete,
-  onRefresh,
-}) => {
+const EngramsShelf: React.FC<EngramsShelfProps> = ({ engrams, isLoading, onDelete, onRefresh }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (isLoading) {
@@ -34,9 +30,7 @@ const EngramsShelf: React.FC<EngramsShelfProps> = ({
         <div className={styles.emptyState}>
           <div className={styles.emptyIcon}>💾</div>
           <p className={styles.emptyTitle}>No engrams etched yet.</p>
-          <p className={styles.emptySubtitle}>
-            Explore the Crossroads to create scars.
-          </p>
+          <p className={styles.emptySubtitle}>Explore the Crossroads to create scars.</p>
           <button className={styles.refreshButton} onClick={onRefresh}>
             Refresh
           </button>
@@ -48,7 +42,7 @@ const EngramsShelf: React.FC<EngramsShelfProps> = ({
   return (
     <div className={styles.engramsShelf}>
       <div className={styles.engramsGrid}>
-        {engrams.map(engram => (
+        {engrams.map((engram) => (
           <EngramCard
             key={engram.id}
             engram={engram}
@@ -69,18 +63,14 @@ interface EngramCardProps {
   onDelete: () => void;
 }
 
-const EngramCard: React.FC<EngramCardProps> = ({
-  engram,
-  isExpanded,
-  onToggle,
-  onDelete,
-}) => {
+const EngramCard: React.FC<EngramCardProps> = ({ engram, isExpanded, onToggle, onDelete }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const typeColor = ENGRAM_TYPE_COLORS[engram.engram_type];
   const typeIcon = ENGRAM_TYPE_ICONS[engram.engram_type];
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
+
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -89,12 +79,16 @@ const EngramCard: React.FC<EngramCardProps> = ({
   };
 
   const truncateContent = (content: string, maxLength: number = 120) => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+    if (content.length <= maxLength) {
+      return content;
+    }
+
+    return `${content.substring(0, maxLength)}...`;
   };
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
+
     if (showDeleteConfirm) {
       onDelete();
       setShowDeleteConfirm(false);
@@ -115,9 +109,7 @@ const EngramCard: React.FC<EngramCardProps> = ({
           <span className={styles.typeIcon}>{typeIcon}</span>
           <span className={styles.typeName}>{engram.engram_type}</span>
         </div>
-        {engram.version > 1 && (
-          <span className={styles.versionBadge}>v{engram.version}</span>
-        )}
+        {engram.version > 1 && <span className={styles.versionBadge}>v{engram.version}</span>}
       </div>
 
       <h3 className={styles.cardTitle}>{engram.key}</h3>
@@ -128,16 +120,20 @@ const EngramCard: React.FC<EngramCardProps> = ({
 
       {engram.metadata && Object.keys(engram.metadata).length > 0 && (
         <div className={styles.cardMetadata}>
-          {Object.entries(engram.metadata).slice(0, 3).map(([key, value]) => (
-            <span key={key} className={styles.metaTag}>
-              {key}: {String(value)}
-            </span>
-          ))}
+          {Object.entries(engram.metadata)
+            .slice(0, 3)
+            .map(([key, value]) => (
+              <span key={key} className={styles.metaTag}>
+                {key}: {String(value)}
+              </span>
+            ))}
         </div>
       )}
 
       <div className={styles.cardFooter}>
-        <span className={styles.cardDate}>{formatDate(engram.updated_at || engram.created_at)}</span>
+        <span className={styles.cardDate}>
+          {formatDate(engram.updated_at || engram.created_at)}
+        </span>
         <div className={styles.cardActions}>
           {engram.is_public && (
             <span className={styles.publicBadge} title="Published to Crossroads">
@@ -156,13 +152,13 @@ const EngramCard: React.FC<EngramCardProps> = ({
 
       {isExpanded && (
         <div className={styles.expandedActions}>
-          <button className={styles.expandedButton} onClick={e => e.stopPropagation()}>
+          <button className={styles.expandedButton} onClick={(e) => e.stopPropagation()}>
             Refine
           </button>
-          <button className={styles.expandedButton} onClick={e => e.stopPropagation()}>
+          <button className={styles.expandedButton} onClick={(e) => e.stopPropagation()}>
             Fork
           </button>
-          <button className={styles.expandedButton} onClick={e => e.stopPropagation()}>
+          <button className={styles.expandedButton} onClick={(e) => e.stopPropagation()}>
             Publish
           </button>
         </div>

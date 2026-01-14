@@ -1,11 +1,10 @@
-import React, { Suspense, useState, useCallback, useRef, useEffect } from 'react';
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Preload } from '@react-three/drei';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import React, { Suspense, useState, useCallback, useRef, useEffect } from 'react';
 import * as THREE from 'three';
-import VoidScene from './scene/VoidScene';
-import VoidHUD from './VoidHUD';
 import styles from './VoidExperience.module.scss';
-
+import VoidHUD from './VoidHUD';
+import VoidScene from './scene/VoidScene';
 
 interface VoidExperienceProps {
   publicKey: string | null;
@@ -52,14 +51,13 @@ const CameraAnimator: React.FC<CameraAnimatorProps> = ({ isLoggedIn, orbitContro
     }
   }, [isLoggedIn, camera, orbitControlsRef]);
 
-  const easeInOutQuint = (t: number): number => {
-    return t < 0.5
-      ? 16 * t * t * t * t * t
-      : 1 - Math.pow(-2 * t + 2, 5) / 2;
-  };
+  const easeInOutQuint = (t: number): number =>
+    t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;
 
   useFrame((_, delta) => {
-    if (!isAnimating.current) return;
+    if (!isAnimating.current) {
+      return;
+    }
 
     animationProgress.current += delta / duration;
 
@@ -68,15 +66,18 @@ const CameraAnimator: React.FC<CameraAnimatorProps> = ({ isLoggedIn, orbitContro
       isAnimating.current = false;
 
       camera.position.copy(targetPosition.current);
+
       if (orbitControlsRef.current) {
         orbitControlsRef.current.target.copy(LOOK_AT_TARGET);
         orbitControlsRef.current.enabled = true;
         orbitControlsRef.current.update();
       }
+
       return;
     }
 
     const easedProgress = easeInOutQuint(animationProgress.current);
+
     camera.position.lerpVectors(startPosition.current, targetPosition.current, easedProgress);
 
     if (orbitControlsRef.current) {
@@ -118,7 +119,10 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
   return (
     <div className={styles.voidContainer}>
       <Canvas
-        camera={{ position: [PRE_LOGIN_POSITION.x, PRE_LOGIN_POSITION.y, PRE_LOGIN_POSITION.z], fov: 60 }}
+        camera={{
+          position: [PRE_LOGIN_POSITION.x, PRE_LOGIN_POSITION.y, PRE_LOGIN_POSITION.z],
+          fov: 60,
+        }}
         gl={{ antialias: true, alpha: false }}
         dpr={[1, 2]}
         style={{ touchAction: 'none' }}
@@ -155,7 +159,7 @@ const VoidExperience: React.FC<VoidExperienceProps> = ({
       {isLoggedIn && (
         <VoidHUD
           publicKey={publicKey}
-          isActive={true}
+          isActive
           loginAnimationPhase={loginAnimationPhase}
           onAgentResponseReceived={handleAgentResponseReceived}
           glowActive={glowActive}

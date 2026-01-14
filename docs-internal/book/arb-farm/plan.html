@@ -1,0 +1,2540 @@
+<!DOCTYPE HTML>
+<html lang="en" class="coal sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Implementation Plan - NullBlock Internal Docs</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Internal development documentation for NullBlock - the agent mesh platform">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../custom-5cfdc93f.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "coal";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-c3b6163e.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-061c334f.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('coal')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">NullBlock Internal Docs</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/aetherBytes/nullblock" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/aetherBytes/nullblock/edit/main/src/arb-farm/plan.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="arbfarm-solana-mev-agent-swarm"><a class="header" href="#arbfarm-solana-mev-agent-swarm">ArbFarm: Solana MEV Agent Swarm</a></h1>
+<p><strong>NullBlock’s Solana Arbitrage &amp; MEV Agent Swarm</strong> - Autonomous multi-agent system for capturing MEV opportunities on Solana with intelligent threat detection and composable event architecture.</p>
+<hr>
+<h2 id="golden-rule-protocol-first-event-architecture"><a class="header" href="#golden-rule-protocol-first-event-architecture">GOLDEN RULE: Protocol-First Event Architecture</a></h2>
+<p><strong>ALL agent-to-agent and tool communications MUST use standardized protocols with subscribable events. This enables future agents to plug in and consume events without modifying existing code.</strong></p>
+<h3 id="protocol-standards"><a class="header" href="#protocol-standards">Protocol Standards</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Communication Type</th><th>Protocol</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td>Agent ↔ Agent</td><td>A2A</td><td>Inter-agent coordination, task delegation</td></tr>
+<tr><td>Agent ↔ Tools</td><td>MCP</td><td>Tool invocation, resource access</td></tr>
+<tr><td>Events → Subscribers</td><td>Event Bus</td><td>Publish/subscribe for all system events</td></tr>
+<tr><td>External → Service</td><td>REST/SSE</td><td>HTTP API and real-time streams</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="event-bus-architecture"><a class="header" href="#event-bus-architecture">Event Bus Architecture</a></h3>
+<p>Every agent and tool MUST emit events to a central event bus. Events are:</p>
+<ol>
+<li><strong>Persisted to DB</strong> for history and replay</li>
+<li><strong>Streamed via SSE</strong> for real-time subscribers</li>
+<li><strong>Subscribable by any agent</strong> via topic filters</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ArbEvent {
+    pub id: EventId,
+    pub event_type: EventType,
+    pub source: EventSource,       // Which agent/tool emitted
+    pub topic: String,             // e.g., "arb.edge.detected", "arb.trade.executed"
+    pub payload: serde_json::Value,
+    pub timestamp: DateTime&lt;Utc&gt;,
+    pub correlation_id: Option&lt;String&gt;, // Link related events
+}
+
+pub enum EventSource {
+    Agent(AgentType),
+    Tool(String),
+    External(String),
+}
+
+pub enum AgentType {
+    Scanner,
+    Refiner,
+    MevHunter,
+    Executor,
+    StrategyEngine,
+    ResearchDD,
+    CopyTrade,
+    ThreatDetector,
+    EngramHarvester,
+    Overseer,
+}
+<span class="boring">}</span></code></pre>
+<h3 id="event-topics-subscribable"><a class="header" href="#event-topics-subscribable">Event Topics (Subscribable)</a></h3>
+<pre><code>arb.scanner.*                    # All scanner events
+arb.scanner.signal.detected      # New signal detected
+arb.scanner.venue.added          # New venue discovered
+
+arb.edge.*                       # All edge events
+arb.edge.detected                # New opportunity found
+arb.edge.approved                # Edge approved for execution
+arb.edge.rejected                # Edge rejected
+arb.edge.executing               # Trade in progress
+arb.edge.executed                # Trade completed
+arb.edge.failed                  # Trade failed
+
+arb.strategy.*                   # Strategy events
+arb.strategy.created             # New strategy added
+arb.strategy.updated             # Strategy modified
+arb.strategy.triggered           # Strategy conditions met
+
+arb.research.*                   # Research/DD events
+arb.research.url.ingested        # URL analyzed
+arb.research.strategy.discovered # New strategy found
+arb.research.strategy.approved   # Strategy approved for testing
+
+arb.kol.*                        # KOL tracking events
+arb.kol.trade.detected           # KOL made a trade
+arb.kol.trade.copied             # We copied the trade
+arb.kol.trust.updated            # Trust score changed
+
+arb.threat.*                     # Threat detection events
+arb.threat.detected              # Threat identified
+arb.threat.blocked               # Entity blocked
+arb.threat.alert                 # Alert raised
+
+arb.engram.*                     # Engram events
+arb.engram.created               # New engram stored
+arb.engram.pattern.matched       # Pattern recognized
+arb.engram.avoidance.created     # Avoidance rule created
+arb.engram.strategy.optimized    # Strategy optimized via engram analysis
+
+arb.consensus.*                  # Consensus events
+arb.consensus.requested          # Consensus request initiated
+arb.consensus.completed          # Consensus decision completed
+arb.consensus.failed             # Consensus failed (timeout/disagreement)
+
+arb.swarm.*                      # Swarm health events
+arb.swarm.agent.started          # Agent spawned
+arb.swarm.agent.failed           # Agent crashed
+arb.swarm.agent.recovered        # Agent restarted
+</code></pre>
+<h3 id="subscribing-to-events-any-agenttool"><a class="header" href="#subscribing-to-events-any-agenttool">Subscribing to Events (Any Agent/Tool)</a></h3>
+<p><strong>MCP Resource for Event Subscription</strong>:</p>
+<pre><code class="language-yaml">erebus://arb/events:
+  description: "Subscribe to ArbFarm events"
+  params:
+    topics: ["arb.edge.*", "arb.trade.*"]  # Filter by topic pattern
+    since: "2024-01-01T00:00:00Z"          # Replay from timestamp
+</code></pre>
+<p><strong>Example: Content Generation Agent (Future Fork)</strong>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// A new agent that subscribes to events and generates X content
+impl ContentAgent {
+    async fn start(&amp;self, event_bus: &amp;EventBus) {
+        // Subscribe to interesting events
+        let subscription = event_bus.subscribe(vec![
+            "arb.edge.executed",
+            "arb.research.strategy.discovered",
+            "arb.threat.detected",
+        ]).await;
+
+        while let Some(event) = subscription.next().await {
+            match event.topic.as_str() {
+                "arb.edge.executed" =&gt; {
+                    let trade: TradeResult = serde_json::from_value(event.payload)?;
+                    if trade.profit_sol &gt; 0.1 {
+                        self.generate_win_tweet(trade).await;
+                    }
+                }
+                "arb.threat.detected" =&gt; {
+                    let threat: ThreatAlert = serde_json::from_value(event.payload)?;
+                    self.generate_warning_tweet(threat).await;
+                }
+                _ =&gt; {}
+            }
+        }
+    }
+}
+<span class="boring">}</span></code></pre>
+<h3 id="composability-example"><a class="header" href="#composability-example">Composability Example</a></h3>
+<p><strong>Adding a Content Generation Agent to an existing fork:</strong></p>
+<ol>
+<li><strong>Fork ArbFarm COW</strong></li>
+<li><strong>Create new agent</strong>: <code>agents/content_gen.rs</code></li>
+<li><strong>Subscribe to events</strong>:
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>event_bus.subscribe(["arb.edge.executed", "arb.threat.detected"])
+<span class="boring">}</span></code></pre>
+</li>
+<li><strong>Process events and generate content</strong></li>
+<li><strong>Publish own events</strong>: <code>arb.content.tweet.generated</code></li>
+<li><strong>Other agents can subscribe</strong> to content events</li>
+</ol>
+<p><strong>No modification to existing agents required</strong> - just plug in and subscribe!</p>
+<hr>
+<h2 id="core-concepts"><a class="header" href="#core-concepts">Core Concepts</a></h2>
+<h3 id="abstract-mev-venue-model"><a class="header" href="#abstract-mev-venue-model">Abstract MEV Venue Model</a></h3>
+<p>Different MEV opportunities (DEXes, bonding curves, lending, etc.) share common patterns. We model them abstractly to support any venue type.</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait MevVenue {
+    fn venue_type(&amp;self) -&gt; VenueType;
+    fn scan_for_edges(&amp;self) -&gt; Vec&lt;Edge&gt;;
+    fn estimate_profit(&amp;self, edge: &amp;Edge) -&gt; ProfitEstimate;
+    fn execute(&amp;self, edge: &amp;Edge) -&gt; ExecutionResult;
+}
+
+pub enum VenueType {
+    DexAmm,           // Jupiter, Raydium, Orca
+    BondingCurve,     // pump.fun, moonshot
+    Lending,          // Marginfi, Kamino
+    Orderbook,        // Phoenix, OpenBook
+}
+<span class="boring">}</span></code></pre>
+<h3 id="multi-llm-consensus-engine"><a class="header" href="#multi-llm-consensus-engine">Multi-LLM Consensus Engine</a></h3>
+<p>Agent-directed trades require consensus from multiple LLMs to reduce hallucination risk and improve decision quality.</p>
+<p><strong>How it works</strong>:</p>
+<ol>
+<li>Edge surfaced to agent via MCP/SSE</li>
+<li>Agent queries multiple LLMs (via OpenRouter) with edge context</li>
+<li>Each LLM returns approve/reject with confidence score</li>
+<li>Weighted voting determines outcome</li>
+<li>Consensus outcome stored as engram for pattern learning</li>
+</ol>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ConsensusRequest {
+    pub edge_id: Uuid,
+    pub models: Vec&lt;String&gt;,  // ["claude-3-opus", "gpt-4-turbo", "llama-3-70b"]
+    pub prompt_template: String,
+    pub min_agreement: f32,   // 0.5 = majority
+    pub timeout_secs: u32,
+}
+
+pub struct ConsensusResult {
+    pub approved: bool,
+    pub agreement_score: f32,
+    pub model_votes: Vec&lt;ModelVote&gt;,
+    pub reasoning_summary: String,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Engram Integration</strong>: Store consensus outcomes as engrams for pattern learning - which model combinations produce best results for which edge types.</p>
+<h3 id="atomic-profit-guarantees"><a class="header" href="#atomic-profit-guarantees">Atomic Profit Guarantees</a></h3>
+<p>Some MEV opportunities are <strong>atomic</strong> - profit is guaranteed or transaction reverts. These deserve aggressive execution with minimal risk checks since the only downside is gas cost on failure.</p>
+<p><strong>Atomic Opportunity Types</strong>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Atomicity</th><th>Risk Profile</th></tr>
+</thead>
+<tbody>
+<tr><td>Flash Loan Arb</td><td>Fully Atomic</td><td>Zero capital risk (reverts if unprofitable)</td></tr>
+<tr><td>Bundled DEX Arb</td><td>Fully Atomic</td><td>Zero capital risk (Jito bundle fails atomically)</td></tr>
+<tr><td>Sandwich (Jito)</td><td>Fully Atomic</td><td>Fails if frontrun doesn’t setup backrun</td></tr>
+<tr><td>JIT Liquidity</td><td>Fully Atomic</td><td>LP provided and withdrawn in same block</td></tr>
+<tr><td>Multi-leg Arb</td><td>Depends</td><td>Atomic if all legs in single tx/bundle</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Non-Atomic (Capital at Risk)</strong>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Risk</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Cross-chain Arb</td><td>High</td><td>Bridge delay exposes to price movement</td></tr>
+<tr><td>Delayed Exit</td><td>Medium</td><td>Entry and exit in separate transactions</td></tr>
+<tr><td>Copy Trading</td><td>Medium</td><td>Following KOL with delay</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Atomicity Classification</strong>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub enum AtomicityLevel {
+    FullyAtomic,      // Reverts if unprofitable, zero capital risk
+    PartiallyAtomic,  // Some legs atomic, some not
+    NonAtomic,        // Traditional trade with capital at risk
+}
+
+pub struct Edge {
+    // ... existing fields ...
+    pub atomicity: AtomicityLevel,
+    pub simulated_profit_guaranteed: bool,  // Simulation passed
+    pub max_gas_cost: u64,                  // Only risk on atomic trades
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Aggressive Config for Atomic Trades</strong>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct AtomicTradeConfig {
+    pub priority: Priority::Critical,       // Execute ASAP
+    pub skip_agent_approval: bool,          // Auto-execute (no consensus needed)
+    pub max_gas_willing: u64,               // Higher gas tolerance
+    pub min_profit_after_gas_bps: u16,      // Lower threshold (e.g., 10bps)
+    pub retry_with_higher_gas: bool,        // Aggressive retry
+    pub bundle_tip_bps: u16,                // Tip for Jito priority
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Detection Flow</strong>:</p>
+<pre><code>Edge Detected
+     │
+     ▼
+┌─────────────────────┐
+│ Classify Atomicity  │
+│ - All legs in 1 tx? │
+│ - Flash loan used?  │
+│ - Jito bundle?      │
+└──────────┬──────────┘
+           │
+    ┌──────┴──────┐
+    ▼             ▼
+  Atomic      Non-Atomic
+    │             │
+    ▼             ▼
+Simulate      Normal
+Transaction   Risk Flow
+    │
+    ▼
+┌─────────────────────┐
+│ Simulation Success? │
+└──────────┬──────────┘
+     ┌─────┴─────┐
+     ▼           ▼
+   Yes          No
+     │           │
+     ▼           ▼
+Execute      Discard
+Aggressively (no capital loss)
+</code></pre>
+<h3 id="dynamic-risk-tuning"><a class="header" href="#dynamic-risk-tuning">Dynamic Risk Tuning</a></h3>
+<p>Risk parameters adjust based on multiple signals:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Signal</th><th>Adjustment</th></tr>
+</thead>
+<tbody>
+<tr><td>High volatility</td><td>Reduce position sizes</td></tr>
+<tr><td>Drawdown &gt; threshold</td><td>Pause autonomous trades</td></tr>
+<tr><td>New token (&lt; 24h)</td><td>Require manual approval</td></tr>
+<tr><td>Research agent flags</td><td>Adjust strategy risk scores</td></tr>
+<tr><td>Failed trade streak</td><td>Reduce aggression</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="swarm-architecture"><a class="header" href="#swarm-architecture">Swarm Architecture</a></h2>
+<pre><code>                    ┌─────────────────────┐
+                    │  Resilience Overseer │
+                    │    (Meta-Agent)      │
+                    └──────────┬──────────┘
+                               │ monitors/recovers
+    ┌──────────────────────────┼──────────────────────────┐
+    │                          │                          │
+┌───▼───┐  ┌───────┐  ┌───────▼───────┐  ┌───────┐  ┌───▼───┐
+│Scanner│─▶│Refiner│─▶│Strategy Engine│─▶│Executor│─▶│Engram │
+│       │  │       │  │               │  │        │  │Harvest│
+└───┬───┘  └───────┘  └───────┬───────┘  └────────┘  └───────┘
+    │                         │
+    │  ┌──────────────────────┼──────────────────────┐
+    │  │                      │                      │
+    │  ▼                      ▼                      ▼
+    │ ┌────────┐        ┌──────────┐          ┌──────────┐
+    │ │Research│        │Copy Trade│          │  Threat  │
+    │ │  /DD   │        │  Agent   │          │ Detector │
+    │ └────────┘        └──────────┘          └──────────┘
+    │
+    ▼
+┌─────────┐
+│MEV      │
+│Hunter   │
+└─────────┘
+</code></pre>
+<hr>
+<h2 id="agent-definitions"><a class="header" href="#agent-definitions">Agent Definitions</a></h2>
+<h3 id="1-venue-scanner-agent"><a class="header" href="#1-venue-scanner-agent">1. Venue Scanner Agent</a></h3>
+<p><strong>Purpose</strong>: Continuously scan Solana for MEV opportunities across all venue types</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Monitor DEX pools (Jupiter, Raydium, Orca)</li>
+<li>Track bonding curve tokens (pump.fun, moonshot)</li>
+<li>Watch lending positions (Marginfi, Kamino)</li>
+<li>Detect price discrepancies across venues</li>
+<li>Emit raw signals via event bus</li>
+</ul>
+<p><strong>Data Sources</strong>:</p>
+<ul>
+<li>Helius RPC (enhanced Solana node)</li>
+<li>Jupiter Price API</li>
+<li>Raydium SDK</li>
+<li>pump.fun API</li>
+<li>Birdeye API</li>
+</ul>
+<h3 id="2-signal-refiner-agent"><a class="header" href="#2-signal-refiner-agent">2. Signal Refiner Agent</a></h3>
+<p><strong>Purpose</strong>: Filter and enrich raw scanner signals</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Calculate true profitability (accounting for fees, slippage)</li>
+<li>Apply historical pattern matching from engrams</li>
+<li>Score signal quality (1-100)</li>
+<li>Flag signals for manual review vs auto-execute</li>
+<li>Enrich with market context</li>
+</ul>
+<h3 id="3-mev-hunter-agent"><a class="header" href="#3-mev-hunter-agent">3. MEV Hunter Agent</a></h3>
+<p><strong>Purpose</strong>: Specialized detection for advanced MEV patterns</p>
+<p><strong>Types Detected</strong>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Pattern</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>DEX Arbitrage</td><td>Price differences across AMMs</td></tr>
+<tr><td>Liquidation</td><td>Undercollateralized lending positions</td></tr>
+<tr><td>JIT Liquidity</td><td>Just-in-time LP provision before large swaps</td></tr>
+<tr><td>Sandwich</td><td>Frontrun + backrun profitable swaps</td></tr>
+<tr><td>Backrun</td><td>Profit from price impact of large trades</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="4-execution-engine-agent"><a class="header" href="#4-execution-engine-agent">4. Execution Engine Agent</a></h3>
+<p><strong>Purpose</strong>: Execute approved trades with maximum reliability</p>
+<p><strong>Capabilities</strong>:</p>
+<ul>
+<li>Jito bundle submission (priority ordering)</li>
+<li>Transaction simulation before execution</li>
+<li>Slippage protection</li>
+<li>Gas optimization</li>
+<li>Retry logic with exponential backoff</li>
+<li>Multi-leg atomic execution</li>
+</ul>
+<p><strong>Execution Modes</strong>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Trigger</th><th>Approval</th></tr>
+</thead>
+<tbody>
+<tr><td>Autonomous</td><td>High confidence, within risk params</td><td>Auto-execute</td></tr>
+<tr><td>Hybrid</td><td>Medium confidence</td><td>Auto if profit &gt; X, else surface</td></tr>
+<tr><td>Agent-Directed</td><td>Low confidence, novel pattern</td><td>Require MCP approval</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="5-strategy-engine-agent"><a class="header" href="#5-strategy-engine-agent">5. Strategy Engine Agent</a></h3>
+<p><strong>Purpose</strong>: Route opportunities to correct execution path based on strategy classification and atomicity</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Evaluate incoming edges against active strategies</li>
+<li><strong>Classify atomicity</strong> (guaranteed profit vs capital-at-risk)</li>
+<li>Route atomic trades to aggressive execution path</li>
+<li>Route autonomous strategies directly to execution</li>
+<li>Surface agent-directed opportunities via MCP/SSE</li>
+<li>Apply dynamic risk adjustments before execution</li>
+<li>Track strategy performance for optimization</li>
+</ul>
+<p><strong>Decision Flow</strong> (with Atomicity):</p>
+<pre><code>Edge Detected
+    │
+    ▼
+┌─────────────────────┐
+│ Classify Atomicity  │
+└────────┬────────────┘
+         │
+    ┌────┴────┐
+    ▼         ▼
+ Atomic    Non-Atomic
+    │         │
+    ▼         ▼
+┌────────┐ ┌─────────────────┐
+│Simulate│ │ Match Strategy? │──No──▶ Log &amp; Discard
+│  Tx    │ └────────┬────────┘
+└───┬────┘          │ Yes
+    │               ▼
+    ▼          ┌─────────────────────┐
+Success?       │ Within Risk Params? │──No──▶ Adjust or Reject
+    │          └────────┬────────────┘
+┌───┴───┐               │ Yes
+▼       ▼               ▼
+Yes     No         ┌─────────────────────┐
+│       │          │  Execution Mode?    │
+▼       ▼          └────────┬────────────┘
+Execute Discard             │
+AGGRESSIVE     ┌────────────┼────────────┐
+(skip risk     ▼            ▼            ▼
+ checks)     Auto        Hybrid       Agent
+             │            │             │
+             ▼            ▼             ▼
+          Execute     Check Params   Surface
+                                     to Agent
+</code></pre>
+<p><strong>Atomic Trade Execution</strong>:</p>
+<ul>
+<li>Skip normal risk checks (only gas cost at risk)</li>
+<li>Lower profit threshold (10bps vs 50bps)</li>
+<li>Higher priority in Jito bundles</li>
+<li>Auto-retry with increasing gas</li>
+<li>No agent approval needed</li>
+</ul>
+<p><strong>Bonding Curve Tools</strong> (pump.fun, moonshot, etc.):</p>
+<pre><code>curve_buy_token        - Buy on any bonding curve
+curve_sell_token       - Sell (before/after graduation)
+curve_check_progress   - Check graduation progress %
+curve_get_holder_stats - Top holders, concentration
+curve_graduation_eta   - Estimated graduation time
+</code></pre>
+<h3 id="6-researchdd-agent"><a class="header" href="#6-researchdd-agent">6. Research/DD Agent</a></h3>
+<p><strong>Purpose</strong>: Ingest external intelligence from URLs, social media, and perform due diligence</p>
+<p><strong>Capabilities</strong>:</p>
+<ul>
+<li><strong>URL Ingestion</strong>: WebFetch-style analysis of links (tweets, articles, threads)</li>
+<li><strong>Strategy Extraction</strong>: Parse trading strategies from content</li>
+<li><strong>X/Twitter Monitoring</strong>: Track specified accounts for alpha</li>
+<li><strong>Backtesting</strong>: Simulate discovered strategies against historical data</li>
+</ul>
+<p><strong>Workflow</strong>:</p>
+<pre><code>URL/Content Input
+       │
+       ▼
+┌──────────────────┐
+│ Content Analysis │
+│ (LLM extraction) │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Strategy Found?  │──No──▶ Store as intel engram
+└────────┬─────────┘
+         │ Yes
+         ▼
+┌──────────────────┐
+│ Backtest Strategy│
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  Profitable?     │──No──▶ Archive
+└────────┬─────────┘
+         │ Yes
+         ▼
+┌──────────────────┐
+│ Surface for      │
+│ Approval/Testing │
+└──────────────────┘
+</code></pre>
+<p><strong>MCP Tools</strong>:</p>
+<pre><code class="language-yaml">research_ingest_url:
+  description: "Ingest and analyze a URL for trading strategies"
+  params: [url, context]
+
+research_monitor_account:
+  description: "Add X/Twitter account to monitoring list"
+  params: [handle, track_type]
+
+research_backtest_strategy:
+  description: "Backtest a discovered strategy"
+  params: [strategy_id, period_days]
+
+research_list_discoveries:
+  description: "List discovered strategies pending review"
+  params: [status, limit]
+</code></pre>
+<h3 id="7-kol-tracking--copy-trade-agent"><a class="header" href="#7-kol-tracking--copy-trade-agent">7. KOL Tracking + Copy Trade Agent</a></h3>
+<p><strong>Purpose</strong>: Track Key Opinion Leaders and optionally copy their trades</p>
+<p><strong>Features</strong>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Feature</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Wallet Tracking</td><td>Monitor specified wallets via Helius webhooks</td></tr>
+<tr><td>Social Handle Tracking</td><td>Link X handles to wallets</td></tr>
+<tr><td>Trust Scoring</td><td>Track KOL performance over time</td></tr>
+<tr><td>Copy Trading</td><td>Auto-copy trades with configurable delay</td></tr>
+<tr><td>Auto-Disable</td><td>Stop copying if trust score drops below threshold</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Trust Score Calculation</strong>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct TrustScore {
+    pub total_trades_tracked: u32,
+    pub profitable_trades: u32,
+    pub avg_profit_percent: f32,
+    pub max_drawdown: f32,
+    pub consistency_score: f32,  // Low variance = higher score
+    pub final_score: f32,        // Weighted combination (0-100)
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Copy Trade Config</strong>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct CopyTradeConfig {
+    pub entity_id: Uuid,          // KOL ID
+    pub enabled: bool,
+    pub max_position_sol: f64,    // Max per-trade
+    pub delay_ms: u64,            // Wait before copying (avoid frontrun)
+    pub min_trust_score: f32,     // Auto-disable if below
+    pub copy_percentage: f32,     // 1.0 = match position, 0.5 = half size
+    pub token_whitelist: Option&lt;Vec&lt;String&gt;&gt;,
+    pub token_blacklist: Option&lt;Vec&lt;String&gt;&gt;,
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Flow</strong>:</p>
+<pre><code>Helius Webhook (KOL Trade)
+         │
+         ▼
+┌──────────────────┐
+│ Parse Trade Data │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Check Copy Config│
+│ - Enabled?       │
+│ - Trust &gt; min?   │
+│ - Within limits? │
+└────────┬─────────┘
+         │ Pass
+         ▼
+┌──────────────────┐
+│   Apply Delay    │
+│   (config.delay) │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Execute Copy     │
+│ (w/ delay)       │
+└──────────────────┘
+</code></pre>
+<h3 id="8-threat-detection-agent"><a class="header" href="#8-threat-detection-agent">8. Threat Detection Agent</a></h3>
+<p><strong>Purpose</strong>: Identify and block bad actors, rug pulls, honeypots, and malicious activity</p>
+<p><strong>Threat Categories</strong>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Indicators</th><th>Response</th></tr>
+</thead>
+<tbody>
+<tr><td>Rug Pull</td><td>Creator sells &gt;50%, liquidity removal</td><td>Block token, warn swarm</td></tr>
+<tr><td>Honeypot</td><td>Buy works, sell reverts</td><td>Blacklist contract</td></tr>
+<tr><td>Pump &amp; Dump</td><td>Coordinated buys followed by dump</td><td>Avoid entry, track wallets</td></tr>
+<tr><td>Sandwich Attack</td><td>Frontrun/backrun targeting us</td><td>Flag bundle, adjust routes</td></tr>
+<tr><td>Malicious Bundle</td><td>Jito bundle with hidden exploit</td><td>Reject, report</td></tr>
+<tr><td>Wash Trading</td><td>Same wallets cycling volume</td><td>Discount volume signals</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>External Threat Intelligence APIs</strong>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Source</th><th>Purpose</th><th>Data</th></tr>
+</thead>
+<tbody>
+<tr><td>RugCheck API</td><td>Contract audit</td><td>Ownership, mint authority, freeze</td></tr>
+<tr><td>GoPlus Security</td><td>Honeypot detection</td><td>Buy/sell tax, transfer restrictions</td></tr>
+<tr><td>Birdeye</td><td>Holder analysis</td><td>Top holders, concentration</td></tr>
+<tr><td>Helius</td><td>Transaction patterns</td><td>Unusual activity, related wallets</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>X/Twitter Threat Feeds</strong> (via Research Agent):</p>
+<ul>
+<li>@ZachXBT - Scam exposés</li>
+<li>@CryptoSlam - Rug alerts</li>
+<li>@RugDocIO - Contract audits</li>
+<li>Custom keyword monitoring: “rug”, “honeypot”, “scam”, “$TOKEN”</li>
+</ul>
+<p><strong>In-House Threat Metrics</strong>:</p>
+<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct ThreatScore {
+    pub token_mint: String,
+    pub overall_score: f32,        // 0 (safe) - 1 (threat)
+    pub factors: ThreatFactors,
+    pub confidence: f32,
+    pub last_updated: DateTime&lt;Utc&gt;,
+}
+
+pub struct ThreatFactors {
+    // Contract Analysis
+    pub has_mint_authority: bool,      // Can mint infinite tokens
+    pub has_freeze_authority: bool,    // Can freeze wallets
+    pub has_blacklist: bool,           // Can block addresses
+    pub upgradeable: bool,             // Proxy contract
+
+    // Holder Analysis
+    pub top_10_concentration: f32,     // % held by top 10
+    pub creator_holdings: f32,         // % held by deployer
+    pub suspicious_holder_count: u32,  // Known scam wallets
+
+    // Trading Patterns
+    pub sell_pressure_score: f32,      // Recent insider selling
+    pub wash_trade_likelihood: f32,    // Fake volume detection
+    pub bundle_manipulation: bool,     // Suspicious Jito bundles
+
+    // External Signals
+    pub rugcheck_score: f32,           // 0-1, external audit
+    pub goplus_honeypot: bool,         // External honeypot check
+    pub community_warnings: u32,       // X/Telegram mentions
+}
+<span class="boring">}</span></code></pre>
+<p><strong>Detection Flow</strong>:</p>
+<pre><code>New Token/Venue Detected
+         │
+         ▼
+┌─────────────────────────┐
+│ Parallel Threat Checks  │
+├─────────────────────────┤
+│ - RugCheck API          │
+│ - GoPlus honeypot       │
+│ - Holder concentration  │
+│ - Creator wallet history│
+│ - Contract analysis     │
+└──────────┬──────────────┘
+           │
+           ▼
+┌─────────────────────────┐
+│   Calculate ThreatScore │
+└──────────┬──────────────┘
+           │
+    ┌──────┴──────┐
+    ▼             ▼
+ Safe (&lt;0.3)   Risky (&gt;0.3)
+    │             │
+    ▼             ▼
+ Allow         Block/Flag
+ Trading       │
+               ▼
+         ┌─────────────┐
+         │ &gt;0.7 = Block│
+         │ 0.3-0.7=Flag│
+         │ + Engram    │
+         └─────────────┘
+</code></pre>
+<p><strong>Real-Time Monitoring</strong>:</p>
+<ul>
+<li>Track creator wallet activity (large sells = warning)</li>
+<li>Monitor liquidity pool changes (removal = rug indicator)</li>
+<li>Watch for coordinated bundle activity</li>
+<li>Alert on X/Twitter scam mentions</li>
+</ul>
+<p><strong>MCP Tools</strong>:</p>
+<pre><code class="language-yaml">threat_check_token:
+  description: "Run full threat analysis on a token"
+  params: [token_mint]
+
+threat_check_wallet:
+  description: "Analyze wallet for scam history"
+  params: [wallet_address]
+
+threat_list_blocked:
+  description: "List blocked tokens/wallets"
+  params: [category, limit]
+
+threat_report:
+  description: "Manually report a threat (saves to engram)"
+  params: [entity_type, address, reason, evidence_url]
+
+threat_score_history:
+  description: "Get threat score history for a token"
+  params: [token_mint]
+
+threat_watch_creator:
+  description: "Add creator wallet to high-alert monitoring"
+  params: [wallet_address, token_mint]
+</code></pre>
+<p><strong>Engram Integration</strong>:</p>
+<ul>
+<li>Store known scam wallets as <code>arb.threat.wallet.{address}</code></li>
+<li>Store honeypot contracts as <code>arb.threat.honeypot.{mint}</code></li>
+<li>Share threat intel across forked COWs</li>
+</ul>
+<h3 id="9-engram-harvester-agent"><a class="header" href="#9-engram-harvester-agent">9. Engram Harvester Agent</a></h3>
+<p><strong>Purpose</strong>: Extract patterns from successful trades and create shareable engrams</p>
+<p><strong>Engram Types Created</strong>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Example Key</th><th>Content</th></tr>
+</thead>
+<tbody>
+<tr><td>Edge Pattern</td><td><code>arb.pattern.dex_spread</code></td><td>Profitable trade signature</td></tr>
+<tr><td>Avoidance</td><td><code>arb.avoid.honeypot.{mint}</code></td><td>Token to never trade</td></tr>
+<tr><td>Strategy</td><td><code>arb.strategy.curve_graduation</code></td><td>Full strategy config</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="10-resilience-overseer-meta-agent"><a class="header" href="#10-resilience-overseer-meta-agent">10. Resilience Overseer (Meta-Agent)</a></h3>
+<p><strong>Purpose</strong>: Swarm health, coordination, and recovery</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Monitor agent heartbeats</li>
+<li>Detect and recover failed agents</li>
+<li>Balance load across agent instances</li>
+<li>Coordinate graceful shutdown</li>
+<li>Manage circuit breakers</li>
+</ul>
+<hr>
+<h2 id="service-structure"><a class="header" href="#service-structure">Service Structure</a></h2>
+<pre><code>svc/arb-farm/
+├── Cargo.toml
+├── .env.example
+├── src/
+│   ├── main.rs
+│   ├── config.rs
+│   ├── error.rs
+│   ├── server.rs
+│   │
+│   ├── agents/
+│   │   ├── mod.rs
+│   │   ├── scanner.rs         # Venue Scanner Agent
+│   │   ├── refiner.rs         # Signal Refiner Agent
+│   │   ├── mev_hunter.rs      # MEV Hunter Agent
+│   │   ├── executor.rs        # Execution Engine Agent
+│   │   ├── strategy_engine.rs # Strategy Engine Agent
+│   │   ├── research_dd.rs     # Research/DD Agent
+│   │   ├── copy_trade.rs      # Copy Trade Agent
+│   │   ├── threat_detector.rs # Threat Detection Agent
+│   │   ├── engram_harvester.rs
+│   │   └── overseer.rs        # Resilience Overseer
+│   │
+│   ├── events/                 # Event bus (GOLDEN RULE)
+│   │   ├── mod.rs
+│   │   ├── bus.rs              # Event bus implementation
+│   │   ├── types.rs            # ArbEvent, EventSource
+│   │   ├── topics.rs           # Topic constants
+│   │   ├── publisher.rs        # Publish events
+│   │   ├── subscriber.rs       # Subscribe to events
+│   │   └── persistence.rs      # DB storage and replay
+│   │
+│   ├── threat/                 # Threat detection subsystem
+│   │   ├── mod.rs
+│   │   ├── score.rs           # ThreatScore calculation
+│   │   ├── factors.rs         # ThreatFactors analysis
+│   │   ├── monitor.rs         # Real-time threat monitoring
+│   │   └── external/
+│   │       ├── mod.rs
+│   │       ├── rugcheck.rs    # RugCheck API client
+│   │       ├── goplus.rs      # GoPlus Security API
+│   │       └── birdeye.rs     # Birdeye holder analysis
+│   │
+│   ├── research/               # Research/DD subsystem
+│   │   ├── mod.rs
+│   │   ├── url_ingest.rs      # WebFetch-style URL ingestion
+│   │   ├── strategy_extract.rs # LLM strategy extraction
+│   │   ├── backtest.rs        # Strategy backtesting
+│   │   └── social_monitor.rs  # X/Twitter monitoring
+│   │
+│   ├── venues/
+│   │   ├── mod.rs
+│   │   ├── traits.rs          # MevVenue trait
+│   │   ├── dex/
+│   │   │   ├── jupiter.rs
+│   │   │   ├── raydium.rs
+│   │   │   └── orca.rs
+│   │   ├── curves/
+│   │   │   ├── pump_fun.rs
+│   │   │   └── moonshot.rs
+│   │   └── lending/
+│   │       ├── marginfi.rs
+│   │       └── kamino.rs
+│   │
+│   ├── consensus/
+│   │   ├── mod.rs
+│   │   ├── engine.rs          # Multi-LLM consensus
+│   │   ├── openrouter.rs      # OpenRouter client
+│   │   └── voting.rs          # Weighted voting logic
+│   │
+│   ├── execution/
+│   │   ├── mod.rs
+│   │   ├── jito.rs            # Jito bundle submission
+│   │   ├── simulation.rs      # Pre-execution simulation
+│   │   └── atomic.rs          # Atomic execution helper
+│   │
+│   ├── models/
+│   │   ├── mod.rs
+│   │   ├── edge.rs
+│   │   ├── strategy.rs
+│   │   ├── trade.rs
+│   │   └── signal.rs
+│   │
+│   ├── handlers/
+│   │   ├── mod.rs
+│   │   ├── health.rs
+│   │   ├── scanner.rs
+│   │   ├── edges.rs
+│   │   ├── strategies.rs
+│   │   ├── consensus.rs       # Multi-LLM consensus endpoints
+│   │   ├── research.rs        # Research/DD endpoints
+│   │   ├── copy_trade.rs      # Copy trading endpoints
+│   │   ├── threat.rs          # Threat detection endpoints
+│   │   ├── swarm.rs           # Swarm management endpoints
+│   │   └── sse.rs             # Server-sent events
+│   │
+│   └── database/
+│       ├── mod.rs
+│       └── repositories/
+│           ├── mod.rs
+│           ├── edges.rs
+│           ├── strategies.rs
+│           └── trades.rs
+│
+├── migrations/
+│   ├── 001_create_arb_tables.sql
+│   ├── 002_strategies.sql
+│   ├── 003_venues.sql
+│   ├── 004_bonding_curves.sql
+│   ├── 005_curve_tokens.sql
+│   ├── 006_consensus.sql
+│   ├── 007_research.sql
+│   ├── 008_kol_copy_trade.sql
+│   ├── 009_threat_detection.sql
+│   └── 010_events.sql
+│
+└── tests/
+    ├── integration/
+    └── simulation/
+</code></pre>
+<hr>
+<h2 id="api-endpoints-via-erebus"><a class="header" href="#api-endpoints-via-erebus">API Endpoints (via Erebus)</a></h2>
+<h3 id="scanner"><a class="header" href="#scanner">Scanner</a></h3>
+<pre><code>GET  /api/arb/scanner/status           # Scanner status
+GET  /api/arb/scanner/stream           # SSE event stream
+POST /api/arb/scanner/start            # Start scanning
+POST /api/arb/scanner/stop             # Stop scanning
+</code></pre>
+<h3 id="venues"><a class="header" href="#venues">Venues</a></h3>
+<pre><code>GET  /api/arb/venues                   # List tracked venues
+POST /api/arb/venues                   # Add venue
+GET  /api/arb/venues/:id               # Venue details
+DELETE /api/arb/venues/:id             # Remove venue
+</code></pre>
+<h3 id="edges-opportunities"><a class="header" href="#edges-opportunities">Edges (Opportunities)</a></h3>
+<pre><code>GET  /api/arb/edges                    # List detected edges
+GET  /api/arb/edges/:id                # Edge details
+POST /api/arb/edges/:id/approve        # Approve for execution
+POST /api/arb/edges/:id/reject         # Reject with reason
+POST /api/arb/edges/:id/execute        # Execute immediately
+GET  /api/arb/edges/stream             # SSE for new edges
+</code></pre>
+<h3 id="strategies"><a class="header" href="#strategies">Strategies</a></h3>
+<pre><code>GET  /api/arb/strategies               # List strategies
+POST /api/arb/strategies               # Create strategy
+GET  /api/arb/strategies/:id           # Strategy details
+PUT  /api/arb/strategies/:id           # Update strategy
+DELETE /api/arb/strategies/:id         # Delete strategy
+POST /api/arb/strategies/:id/toggle    # Enable/disable
+GET  /api/arb/strategies/:id/stats     # Performance stats
+</code></pre>
+<h3 id="consensus"><a class="header" href="#consensus">Consensus</a></h3>
+<pre><code>POST /api/arb/consensus/request        # Request multi-LLM consensus
+GET  /api/arb/consensus/:id            # Get consensus result
+GET  /api/arb/consensus/history        # Past consensus decisions
+</code></pre>
+<h3 id="researchdd"><a class="header" href="#researchdd">Research/DD</a></h3>
+<pre><code>POST /api/arb/research/ingest          # Ingest URL for analysis
+GET  /api/arb/research/discoveries     # List discovered strategies
+POST /api/arb/research/discoveries/:id/approve   # Approve for testing
+POST /api/arb/research/discoveries/:id/reject    # Reject
+GET  /api/arb/research/sources         # List monitored sources
+POST /api/arb/research/sources         # Add source to monitor
+DELETE /api/arb/research/sources/:id   # Remove source
+</code></pre>
+<h3 id="kol-tracking"><a class="header" href="#kol-tracking">KOL Tracking</a></h3>
+<pre><code>GET  /api/arb/kol                      # List tracked KOLs
+POST /api/arb/kol                      # Add KOL to track
+GET  /api/arb/kol/:id                  # KOL details + stats
+PUT  /api/arb/kol/:id                  # Update tracking config
+DELETE /api/arb/kol/:id                # Stop tracking
+GET  /api/arb/kol/:id/trades           # KOL trade history
+POST /api/arb/kol/:id/copy/enable      # Enable copy trading
+POST /api/arb/kol/:id/copy/disable     # Disable copy trading
+</code></pre>
+<h3 id="threat-detection"><a class="header" href="#threat-detection">Threat Detection</a></h3>
+<pre><code>GET  /api/arb/threat/check/:mint       # Full threat analysis for token
+GET  /api/arb/threat/wallet/:address   # Check wallet for scam history
+GET  /api/arb/threat/blocked           # List blocked tokens/wallets
+POST /api/arb/threat/report            # Manually report a threat
+GET  /api/arb/threat/score/:mint       # Get current threat score
+GET  /api/arb/threat/score/:mint/history # Threat score history
+POST /api/arb/threat/watch             # Add creator to high-alert
+GET  /api/arb/threat/alerts            # Recent threat alerts
+POST /api/arb/threat/whitelist         # Whitelist trusted token/wallet
+</code></pre>
+<h3 id="swarm-management"><a class="header" href="#swarm-management">Swarm Management</a></h3>
+<pre><code>GET  /api/arb/swarm/status             # Swarm health
+POST /api/arb/swarm/pause              # Pause all execution
+POST /api/arb/swarm/resume             # Resume execution
+GET  /api/arb/swarm/agents             # List agent statuses
+POST /api/arb/swarm/agents/:type/restart # Restart specific agent
+</code></pre>
+<h3 id="trades"><a class="header" href="#trades">Trades</a></h3>
+<pre><code>GET  /api/arb/trades                   # Trade history
+GET  /api/arb/trades/:id               # Trade details
+GET  /api/arb/trades/stats             # P&amp;L statistics
+</code></pre>
+<hr>
+<h2 id="mcp-tools"><a class="header" href="#mcp-tools">MCP Tools</a></h2>
+<pre><code class="language-yaml"># Scanner Tools
+scanner_status:
+  description: "Get scanner status and statistics"
+  params: []
+
+scanner_signals:
+  description: "Get recent signals with filtering"
+  params: [venue_type, min_profit_bps, limit]
+
+scanner_add_venue:
+  description: "Add a venue to scan"
+  params: [venue_type, address, config]
+
+# Edge Tools
+edge_list:
+  description: "List detected edges (opportunities)"
+  params: [status, venue_type, min_profit, limit]
+
+edge_details:
+  description: "Get full edge details"
+  params: [edge_id]
+
+edge_approve:
+  description: "Approve edge for execution"
+  params: [edge_id]
+
+edge_reject:
+  description: "Reject edge with reason (saved as avoidance engram)"
+  params: [edge_id, reason]
+
+# Atomicity Tools (Guaranteed Profit Detection)
+edge_classify_atomicity:
+  description: "Analyze if edge is atomic (guaranteed profit or revert)"
+  params: [edge_id]
+
+edge_simulate_atomic:
+  description: "Simulate atomic trade, returns guaranteed profit or failure"
+  params: [edge_id, gas_price_lamports]
+
+edge_list_atomic:
+  description: "List all atomic edges with guaranteed profit"
+  params: [min_profit_lamports, limit]
+
+edge_execute_atomic:
+  description: "Execute atomic trade with aggressive config"
+  params: [edge_id, max_gas_lamports, bundle_tip_bps]
+
+# Strategy Tools
+strategy_list:
+  description: "List active trading strategies"
+  params: []
+
+strategy_create:
+  description: "Create a new trading strategy"
+  params: [name, venue_types, risk_params, execution_mode]
+
+strategy_toggle:
+  description: "Enable or disable a strategy"
+  params: [strategy_id, enabled]
+
+# Consensus Tools
+consensus_request:
+  description: "Request multi-LLM consensus on a trade"
+  params: [edge_id, models, min_agreement]
+
+consensus_result:
+  description: "Get consensus result"
+  params: [consensus_id]
+
+consensus_history:
+  description: "Get history of consensus decisions"
+  params: [edge_id, approved_only, limit]
+
+# Engram Tools
+engram_create:
+  description: "Create a new engram (pattern, avoidance, strategy, or intel)"
+  params: [key, engram_type, content, confidence, tags, expires_in_hours]
+
+engram_get:
+  description: "Get an engram by its key"
+  params: [key]
+
+engram_search:
+  description: "Search engrams with filtering"
+  params: [engram_type, key_prefix, tag, min_confidence, limit, offset]
+
+engram_find_patterns:
+  description: "Find matching patterns for an edge type and venue"
+  params: [edge_type, venue_type, route_signature, min_success_rate]
+
+engram_check_avoidance:
+  description: "Check if an entity should be avoided based on stored avoidance engrams"
+  params: [entity_type, address]
+
+engram_create_avoidance:
+  description: "Create an avoidance engram for a bad actor or risky entity"
+  params: [entity_type, address, reason, category, severity]
+
+engram_create_pattern:
+  description: "Create an edge pattern engram from successful trade data"
+  params: [edge_type, venue_type, route_signature, success_rate, avg_profit_bps, sample_count]
+
+engram_delete:
+  description: "Delete an engram by its key"
+  params: [key]
+
+engram_stats:
+  description: "Get engram harvester statistics"
+  params: []
+
+# Research/DD Tools
+research_ingest_url:
+  description: "Ingest and analyze a URL for trading strategies"
+  params: [url, context]
+
+research_monitor_account:
+  description: "Add X/Twitter account to monitoring list"
+  params: [handle, track_type]
+
+research_backtest_strategy:
+  description: "Backtest a discovered strategy"
+  params: [strategy_id, period_days]
+
+research_list_discoveries:
+  description: "List discovered strategies pending review"
+  params: [status, limit]
+
+# KOL/Copy Trade Tools
+kol_track:
+  description: "Start tracking a KOL wallet or social handle"
+  params: [wallet_address, twitter_handle, name]
+
+kol_list:
+  description: "List tracked KOLs with trust scores"
+  params: []
+
+kol_stats:
+  description: "Get detailed KOL performance stats"
+  params: [kol_id]
+
+copy_enable:
+  description: "Enable copy trading for a KOL"
+  params: [kol_id, max_position_sol, delay_ms]
+
+copy_disable:
+  description: "Disable copy trading for a KOL"
+  params: [kol_id]
+
+copy_active:
+  description: "List currently active copy positions"
+  params: []
+
+# Threat Detection Tools
+threat_check_token:
+  description: "Run full threat analysis on a token"
+  params: [token_mint]
+
+threat_check_wallet:
+  description: "Analyze wallet for scam history"
+  params: [wallet_address]
+
+threat_list_blocked:
+  description: "List blocked tokens/wallets"
+  params: [category, limit]
+
+threat_report:
+  description: "Manually report a threat (saves to engram)"
+  params: [entity_type, address, reason, evidence_url]
+
+threat_score_history:
+  description: "Get threat score history for a token"
+  params: [token_mint]
+
+threat_watch_creator:
+  description: "Add creator wallet to high-alert monitoring"
+  params: [wallet_address, token_mint]
+
+threat_whitelist:
+  description: "Whitelist a trusted token or wallet"
+  params: [entity_type, address, reason]
+
+threat_alerts:
+  description: "Get recent threat alerts"
+  params: [severity, limit]
+
+# Event Tools
+event_publish:
+  description: "Publish an event to the event bus"
+  params: [topic, payload, correlation_id]
+
+event_subscribe:
+  description: "Subscribe to events matching topic patterns"
+  params: [topics, since_timestamp]
+
+event_history:
+  description: "Query historical events"
+  params: [topics, since, until, limit]
+
+event_replay:
+  description: "Replay events from a point in time"
+  params: [subscription_id, from_event_id]
+
+# Execution Tools
+execute_trade:
+  description: "Execute an approved edge"
+  params: [edge_id, max_slippage_bps]
+
+trade_history:
+  description: "Get trade execution history"
+  params: [limit, offset]
+
+trade_stats:
+  description: "Get P&amp;L statistics"
+  params: [period]
+
+# Swarm Management Tools
+swarm_status:
+  description: "Get full swarm status including agents and circuit breakers"
+  params: []
+
+swarm_health:
+  description: "Get swarm health summary"
+  params: []
+
+swarm_agents:
+  description: "List all registered agents"
+  params: []
+
+swarm_agent_status:
+  description: "Get status for a specific agent"
+  params: [agent_id]
+
+swarm_pause:
+  description: "Pause all swarm trading activity"
+  params: []
+
+swarm_resume:
+  description: "Resume swarm trading activity"
+  params: []
+
+swarm_heartbeat:
+  description: "Record agent heartbeat"
+  params: [agent_id]
+
+swarm_report_failure:
+  description: "Report agent failure"
+  params: [agent_id, error]
+
+circuit_breakers_list:
+  description: "List all circuit breakers and their states"
+  params: []
+
+circuit_breaker_reset:
+  description: "Reset a specific circuit breaker"
+  params: [name]
+
+circuit_breakers_reset_all:
+  description: "Reset all circuit breakers"
+  params: []
+</code></pre>
+<hr>
+<h2 id="database-schema"><a class="header" href="#database-schema">Database Schema</a></h2>
+<pre><code class="language-sql">-- Events (GOLDEN RULE - all agents emit here)
+CREATE TABLE arb_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_type TEXT NOT NULL,
+    source_type TEXT NOT NULL, -- agent, tool, external
+    source_id TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    correlation_id UUID,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_events_topic ON arb_events(topic);
+CREATE INDEX idx_events_source ON arb_events(source_type, source_id);
+CREATE INDEX idx_events_created ON arb_events(created_at DESC);
+CREATE INDEX idx_events_correlation ON arb_events(correlation_id) WHERE correlation_id IS NOT NULL;
+
+-- Topic subscriptions for agents
+CREATE TABLE arb_event_subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    subscriber_id TEXT NOT NULL, -- agent or external subscriber
+    topics TEXT[] NOT NULL,      -- ["arb.edge.*", "arb.trade.*"]
+    is_active BOOLEAN DEFAULT true,
+    last_event_id UUID,          -- For replay cursor
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tracked venues
+CREATE TABLE arb_venues (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    venue_type TEXT NOT NULL, -- dex_amm, bonding_curve, lending
+    name TEXT NOT NULL,
+    address TEXT, -- contract/pool address if applicable
+    config JSONB DEFAULT '{}',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Trading strategies
+CREATE TABLE arb_strategies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    wallet_address VARCHAR NOT NULL,
+    name TEXT NOT NULL,
+    strategy_type TEXT NOT NULL, -- dex_arb, curve_arb, liquidation, etc.
+    venue_types TEXT[] NOT NULL,
+    execution_mode TEXT NOT NULL, -- autonomous, agent_directed, hybrid
+    risk_params JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Detected edges (opportunities)
+CREATE TABLE arb_edges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    strategy_id UUID REFERENCES arb_strategies(id),
+    edge_type TEXT NOT NULL, -- dex_arb, curve_arb, liquidation, backrun, jit
+    execution_mode TEXT NOT NULL, -- autonomous, agent_directed, hybrid
+
+    -- Atomicity classification (guaranteed profit vs capital-at-risk)
+    atomicity TEXT NOT NULL DEFAULT 'non_atomic', -- fully_atomic, partially_atomic, non_atomic
+    simulated_profit_guaranteed BOOLEAN DEFAULT false, -- Simulation passed
+    simulation_tx_hash TEXT,                          -- Reference simulation
+    max_gas_cost_lamports BIGINT,                     -- Only risk on atomic trades
+
+    estimated_profit_lamports BIGINT,
+    risk_score INTEGER, -- 1-100 (lower for atomic trades)
+    route_data JSONB NOT NULL,
+    status TEXT DEFAULT 'detected', -- detected, pending_approval, executing, executed, expired, failed, rejected
+    rejection_reason TEXT,
+    executed_at TIMESTAMPTZ,
+    actual_profit_lamports BIGINT,
+    actual_gas_cost_lamports BIGINT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ
+);
+CREATE INDEX idx_edges_status ON arb_edges(status);
+CREATE INDEX idx_edges_strategy ON arb_edges(strategy_id);
+CREATE INDEX idx_edges_mode ON arb_edges(execution_mode);
+CREATE INDEX idx_edges_atomicity ON arb_edges(atomicity);
+CREATE INDEX idx_edges_guaranteed ON arb_edges(simulated_profit_guaranteed) WHERE simulated_profit_guaranteed = true;
+
+-- Trade history
+CREATE TABLE arb_trades (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    edge_id UUID REFERENCES arb_edges(id),
+    strategy_id UUID REFERENCES arb_strategies(id),
+    tx_signature TEXT,
+    bundle_id TEXT, -- Jito bundle ID if applicable
+    entry_price NUMERIC(20, 9),
+    exit_price NUMERIC(20, 9),
+    profit_lamports BIGINT,
+    gas_cost_lamports BIGINT,
+    slippage_bps INTEGER,
+    executed_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_trades_edge ON arb_trades(edge_id);
+CREATE INDEX idx_trades_strategy ON arb_trades(strategy_id);
+CREATE INDEX idx_trades_executed ON arb_trades(executed_at DESC);
+
+-- Consensus requests/results
+CREATE TABLE arb_consensus (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    edge_id UUID REFERENCES arb_edges(id),
+    models TEXT[] NOT NULL,
+    model_votes JSONB NOT NULL,
+    approved BOOLEAN,
+    agreement_score NUMERIC(3, 2),
+    reasoning_summary TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_consensus_edge ON arb_consensus(edge_id);
+
+-- Research discoveries
+CREATE TABLE arb_research_discoveries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_url TEXT,
+    source_type TEXT NOT NULL, -- url, twitter, telegram
+    source_account TEXT, -- @handle if applicable
+    extracted_strategy JSONB,
+    backtest_result JSONB,
+    status TEXT DEFAULT 'pending', -- pending, approved, rejected, testing, live
+    confidence_score NUMERIC(3, 2),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_research_status ON arb_research_discoveries(status);
+
+-- Monitored sources (X accounts, Telegram channels, etc.)
+CREATE TABLE arb_research_sources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_type TEXT NOT NULL, -- twitter, telegram, rss
+    handle_or_url TEXT NOT NULL,
+    track_type TEXT NOT NULL, -- alpha, threat, both
+    is_active BOOLEAN DEFAULT true,
+    last_checked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- KOL/Wallet tracking
+CREATE TABLE arb_kol_entities (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type TEXT NOT NULL, -- wallet, twitter_handle
+    identifier TEXT NOT NULL UNIQUE, -- wallet address or @handle
+    display_name TEXT,
+    linked_wallet TEXT, -- If twitter handle, linked wallet if known
+    trust_score NUMERIC(5, 2) DEFAULT 50.0,
+    total_trades_tracked INTEGER DEFAULT 0,
+    profitable_trades INTEGER DEFAULT 0,
+    avg_profit_percent NUMERIC(8, 4),
+    max_drawdown NUMERIC(8, 4),
+    copy_trading_enabled BOOLEAN DEFAULT false,
+    copy_config JSONB DEFAULT '{}',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_kol_identifier ON arb_kol_entities(identifier);
+CREATE INDEX idx_kol_trust ON arb_kol_entities(trust_score DESC);
+
+-- KOL trade history
+CREATE TABLE arb_kol_trades (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_id UUID REFERENCES arb_kol_entities(id),
+    tx_signature TEXT NOT NULL,
+    trade_type TEXT NOT NULL, -- buy, sell
+    token_mint TEXT NOT NULL,
+    amount_sol NUMERIC(20, 9),
+    price_at_trade NUMERIC(20, 9),
+    detected_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_kol_trades_entity ON arb_kol_trades(entity_id);
+
+-- Copy trade executions
+CREATE TABLE arb_copy_trades (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_id UUID REFERENCES arb_kol_entities(id),
+    kol_trade_id UUID REFERENCES arb_kol_trades(id),
+    our_tx_signature TEXT,
+    copy_amount_sol NUMERIC(20, 9),
+    delay_ms BIGINT,
+    profit_loss_lamports BIGINT,
+    status TEXT DEFAULT 'pending', -- pending, executed, failed
+    executed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_copy_trades_entity ON arb_copy_trades(entity_id);
+CREATE INDEX idx_copy_trades_status ON arb_copy_trades(status);
+
+-- Threat scores for tokens
+CREATE TABLE arb_threat_scores (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    token_mint TEXT NOT NULL,
+    overall_score NUMERIC(3,2) NOT NULL, -- 0-1
+    factors JSONB NOT NULL,              -- ThreatFactors
+    confidence NUMERIC(3,2),
+    external_data JSONB DEFAULT '{}',    -- RugCheck, GoPlus responses
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_threat_scores_token ON arb_threat_scores(token_mint);
+CREATE INDEX idx_threat_scores_score ON arb_threat_scores(overall_score DESC);
+CREATE INDEX idx_threat_scores_created ON arb_threat_scores(created_at DESC);
+
+-- Blocked/flagged entities
+CREATE TABLE arb_threat_blocked (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type TEXT NOT NULL, -- token, wallet, contract
+    address TEXT UNIQUE NOT NULL,
+    threat_category TEXT NOT NULL, -- rug_pull, honeypot, scam_wallet, wash_trader
+    threat_score NUMERIC(3,2),
+    reason TEXT,
+    evidence_url TEXT,
+    reported_by TEXT, -- system, user, external
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_threat_blocked_type ON arb_threat_blocked(entity_type);
+CREATE INDEX idx_threat_blocked_category ON arb_threat_blocked(threat_category);
+
+-- Whitelisted trusted entities
+CREATE TABLE arb_threat_whitelist (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type TEXT NOT NULL, -- token, wallet
+    address TEXT UNIQUE NOT NULL,
+    reason TEXT,
+    whitelisted_by TEXT, -- user, system
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- High-alert monitoring (creator wallets, etc.)
+CREATE TABLE arb_threat_watched (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    wallet_address TEXT NOT NULL,
+    related_token_mint TEXT,
+    watch_reason TEXT,
+    alert_on_sell BOOLEAN DEFAULT true,
+    alert_on_transfer BOOLEAN DEFAULT true,
+    alert_threshold_sol NUMERIC(20,9), -- Alert if sells &gt; this
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_threat_watched_wallet ON arb_threat_watched(wallet_address);
+
+-- Threat alerts history
+CREATE TABLE arb_threat_alerts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    alert_type TEXT NOT NULL, -- rug_detected, honeypot_detected, large_sell, etc.
+    severity TEXT NOT NULL, -- low, medium, high, critical
+    entity_type TEXT NOT NULL,
+    address TEXT NOT NULL,
+    details JSONB NOT NULL,
+    action_taken TEXT, -- blocked, flagged, warned
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_threat_alerts_type ON arb_threat_alerts(alert_type);
+CREATE INDEX idx_threat_alerts_severity ON arb_threat_alerts(severity);
+CREATE INDEX idx_threat_alerts_created ON arb_threat_alerts(created_at DESC);
+</code></pre>
+<hr>
+<h2 id="frontend-uiux-memcache-integration"><a class="header" href="#frontend-uiux-memcache-integration">Frontend UI/UX (MemCache Integration)</a></h2>
+<h3 id="navigation-structure"><a class="header" href="#navigation-structure">Navigation Structure</a></h3>
+<pre><code>MemCache Tab
+├── Sandbox (existing)
+├── Pinned (existing)
+└── ArbFarm (new submenu)
+    ├── Dashboard        # Overview, P&amp;L, key metrics
+    ├── Opportunities    # Live edge feed
+    ├── Strategies       # Strategy management
+    ├── Research         # Discovered strategies, URL ingestion
+    ├── KOL Tracker      # Tracked wallets, copy trading
+    ├── Threats          # Blocked tokens, alerts
+    └── Settings         # Configuration, risk params
+</code></pre>
+<h3 id="dashboard-view"><a class="header" href="#dashboard-view">Dashboard View</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  ArbFarm Dashboard                              [Pause] [⚙️] │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ Total P&amp;L    │  │ Today's P&amp;L  │  │ Win Rate     │      │
+│  │ +12.5 SOL    │  │ +0.8 SOL     │  │ 67%          │      │
+│  │ ↑ 15%        │  │ ↑ 3.2%       │  │ 134/200      │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │               P&amp;L Chart (7 days)                     │   │
+│  │  [Line chart showing daily P&amp;L over time]            │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌──────────────────────┐  ┌─────────────────────────┐     │
+│  │ Active Strategies    │  │ Recent Trades           │     │
+│  │ ───────────────────  │  │ ─────────────────────── │     │
+│  │ ● DEX Arb     ON  ↗ │  │ ✓ +0.05 SOL  PEPE arb  │     │
+│  │ ● Curve Arb   ON  ↗ │  │ ✓ +0.12 SOL  JIT liq   │     │
+│  │ ● JIT Liquidity ON ↗│  │ ✗ -0.01 SOL  gas only  │     │
+│  │ ○ Copy Trade OFF    │  │ ✓ +0.08 SOL  backrun   │     │
+│  └──────────────────────┘  └─────────────────────────┘     │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Swarm Status: 🟢 Healthy | Agents: 10/10 | Uptime: 99.9% │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="opportunities-view-live-feed"><a class="header" href="#opportunities-view-live-feed">Opportunities View (Live Feed)</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  Live Opportunities                    [Filter ▼] [Refresh] │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  🔴 CRITICAL - Atomic                                       │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ DEX Arb: BONK/SOL                    +45 bps profit │   │
+│  │ Route: Jupiter → Raydium                            │   │
+│  │ Est. Profit: 0.15 SOL | Gas: 0.001 SOL             │   │
+│  │ Atomicity: ✅ Guaranteed | Risk: 5/100              │   │
+│  │                               [Simulate] [Execute]  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  🟡 HIGH - Agent Directed                                   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Curve Arb: New pump.fun token                       │   │
+│  │ Token: $WOJAK | Progress: 85%                       │   │
+│  │ Opportunity: Buy pre-graduation, sell on Raydium    │   │
+│  │ Est. Profit: 0.5 SOL | Risk: 45/100                 │   │
+│  │ Consensus: Awaiting (2/3 models queried)            │   │
+│  │                     [View Details] [Approve] [Reject]│   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  🟢 MEDIUM - Auto Executing...                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ JIT Liquidity: SOL/USDC Pool                        │   │
+│  │ Status: Executing bundle...                         │   │
+│  │ Est. Profit: 0.03 SOL | Progress: ████████░░ 80%   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="strategy-management-view"><a class="header" href="#strategy-management-view">Strategy Management View</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  Strategies                                  [+ New Strategy]│
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ DEX Arbitrage                               🟢 ON   │   │
+│  │ Mode: Autonomous | Venues: Jupiter, Raydium, Orca   │   │
+│  │ ───────────────────────────────────────────────     │   │
+│  │ Profit Threshold: 25 bps | Max Risk: 30/100         │   │
+│  │ ───────────────────────────────────────────────     │   │
+│  │ Performance (7d):                                   │   │
+│  │   Trades: 145 | Win Rate: 78% | P&amp;L: +2.3 SOL      │   │
+│  │   Avg Profit: +35 bps | Best: +120 bps             │   │
+│  │                                    [Edit] [Toggle]  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Bonding Curve Graduation                    🟢 ON   │   │
+│  │ Mode: Hybrid | Venues: pump.fun, moonshot           │   │
+│  │ ───────────────────────────────────────────────     │   │
+│  │ Auto-execute if: profit &gt; 50bps AND risk &lt; 40      │   │
+│  │ Otherwise: Surface for approval                     │   │
+│  │ ───────────────────────────────────────────────     │   │
+│  │ Performance (7d):                                   │   │
+│  │   Trades: 23 | Win Rate: 65% | P&amp;L: +1.8 SOL       │   │
+│  │                                    [Edit] [Toggle]  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="researchdd-view"><a class="header" href="#researchdd-view">Research/DD View</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  Research &amp; Discovery                    [+ Ingest URL]     │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  URL Ingestion                                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ 🔗 https://twitter.com/whale/status/123...          │   │
+│  │    [Paste URL]                          [Analyze]   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Discovered Strategies (Pending Review)                     │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ 📊 "Early pump.fun Entry" - Confidence: 72%         │   │
+│  │ Source: @CryptoKOL tweet                            │   │
+│  │ Pattern: Buy tokens &lt; 20% curve, sell at 70%        │   │
+│  │ Backtest: +34% over 30 days (simulated)             │   │
+│  │                      [View Details] [Approve] [Reject]│  │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Monitored Sources                                          │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ @ZachXBT          Twitter    🟢 Active   [Remove]   │   │
+│  │ @CryptoSlam       Twitter    🟢 Active   [Remove]   │   │
+│  │ Solana Alpha TG   Telegram   🟢 Active   [Remove]   │   │
+│  │                                       [+ Add Source] │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="kol-tracker-view"><a class="header" href="#kol-tracker-view">KOL Tracker View</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  KOL &amp; Wallet Tracking                     [+ Track Wallet] │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Copy Trading: 🟢 Enabled (2 KOLs active)                   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ 🐋 WhaleWallet.sol                     Trust: 78%   │   │
+│  │ Address: 7Vk3...8xNp                                │   │
+│  │ ───────────────────────────────────────────────     │   │
+│  │ Tracked Trades: 45 | Our Copies: 23 | Win: 74%      │   │
+│  │ Our P&amp;L from copying: +1.2 SOL                      │   │
+│  │ ───────────────────────────────────────────────     │   │
+│  │ Recent: Bought 5 SOL of $PEPE (2 min ago)           │   │
+│  │ Copy Status: ✅ Copied (0.5 SOL, 500ms delay)       │   │
+│  │                           [View Trades] [Configure]  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ 📊 @TradingGuru                        Trust: 62%   │   │
+│  │ Type: Twitter Handle                                │   │
+│  │ ───────────────────────────────────────────────     │   │
+│  │ Copy Trading: 🔴 OFF (trust below 70% threshold)    │   │
+│  │ Tracked Mentions: 34 | Strategies Extracted: 8      │   │
+│  │                    [Enable Copy] [View History]      │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="threat-alerts-view"><a class="header" href="#threat-alerts-view">Threat Alerts View</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  Threat Detection                        [Blocked] [Alerts] │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Recent Alerts                                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ 🔴 CRITICAL - Rug Pull Detected         2 min ago   │   │
+│  │ Token: $SCAM (9xK2...4mNp)                          │   │
+│  │ Creator sold 80% of supply                          │   │
+│  │ Action: AUTO-BLOCKED                                │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ 🟡 WARNING - Honeypot Suspected         15 min ago  │   │
+│  │ Token: $FAKE (3jL9...2kPq)                          │   │
+│  │ GoPlus: Sell function has restrictions              │   │
+│  │ Action: FLAGGED - requires manual review            │   │
+│  │                               [Investigate] [Block]  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Token Quick Check                                          │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ [Enter token mint address...]           [Check]     │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Blocked Tokens: 23 | Blocked Wallets: 45 | Whitelisted: 12│
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="settings-view"><a class="header" href="#settings-view">Settings View</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  ArbFarm Settings                                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Risk Configuration                                         │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Base Profile: [Balanced ▼]                          │   │
+│  │                                                     │   │
+│  │ Max Position Size:     [____] SOL                   │   │
+│  │ Daily Loss Limit:      [____] SOL                   │   │
+│  │ Min Profit Threshold:  [____] bps                   │   │
+│  │ Max Slippage:          [____] bps                   │   │
+│  │                                                     │   │
+│  │ Dynamic Adjustments:   [✓] Enabled                  │   │
+│  │   - Volatility scaling                              │   │
+│  │   - Drawdown scaling                                │   │
+│  │   - Research agent input                            │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Multi-LLM Consensus                                        │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Active Models:                                      │   │
+│  │   [✓] Claude 3 Opus      Weight: 1.5               │   │
+│  │   [✓] GPT-4 Turbo        Weight: 1.0               │   │
+│  │   [✓] Llama 3 70B        Weight: 0.8               │   │
+│  │                                                     │   │
+│  │ Min Agreement: [50%]  Timeout: [30s]               │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Execution Settings                                         │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ [✓] Enable Atomic Trade Aggressive Mode            │   │
+│  │ [✓] Auto-retry failed transactions                  │   │
+│  │ [ ] Require approval for all trades                 │   │
+│  │                                                     │   │
+│  │ Jito Bundle Tip: [____] bps                        │   │
+│  │ Priority Fee: [Auto ▼]                             │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│                                      [Reset] [Save Changes] │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="frontend-components-reacttypescript"><a class="header" href="#frontend-components-reacttypescript">Frontend Components (React/TypeScript)</a></h3>
+<pre><code>svc/hecate/src/components/memcache/
+├── arbfarm/
+│   ├── ArbFarmSubmenu.tsx      # Main submenu container
+│   ├── Dashboard/
+│   │   ├── DashboardView.tsx   # Main dashboard
+│   │   ├── PLChart.tsx         # P&amp;L line chart
+│   │   ├── MetricCard.tsx      # Reusable metric card
+│   │   ├── RecentTrades.tsx    # Recent trades list
+│   │   └── SwarmStatus.tsx     # Agent health indicator
+│   ├── Opportunities/
+│   │   ├── OpportunitiesView.tsx
+│   │   ├── EdgeCard.tsx        # Single opportunity card
+│   │   ├── EdgeFilters.tsx     # Filter controls
+│   │   └── ExecuteModal.tsx    # Execution confirmation
+│   ├── Strategies/
+│   │   ├── StrategiesView.tsx
+│   │   ├── StrategyCard.tsx
+│   │   ├── StrategyEditor.tsx  # Create/edit strategy
+│   │   └── PerformanceChart.tsx
+│   ├── Research/
+│   │   ├── ResearchView.tsx
+│   │   ├── URLIngest.tsx       # URL input + analysis
+│   │   ├── DiscoveredStrategies.tsx
+│   │   └── SourcesManager.tsx
+│   ├── KOLTracker/
+│   │   ├── KOLTrackerView.tsx
+│   │   ├── KOLCard.tsx
+│   │   ├── WalletMonitor.tsx
+│   │   └── CopyTradeConfig.tsx
+│   ├── Threats/
+│   │   ├── ThreatsView.tsx
+│   │   ├── AlertCard.tsx
+│   │   ├── TokenChecker.tsx
+│   │   └── BlockedList.tsx
+│   ├── Settings/
+│   │   ├── SettingsView.tsx
+│   │   ├── RiskConfig.tsx
+│   │   ├── ConsensusConfig.tsx
+│   │   └── ExecutionConfig.tsx
+│   └── hooks/
+│       ├── useArbFarm.ts       # Main data hook
+│       ├── useOpportunities.ts # SSE subscription
+│       ├── useStrategies.ts
+│       ├── useKOLTracker.ts
+│       └── useThreats.ts
+</code></pre>
+<h3 id="real-time-updates-sse"><a class="header" href="#real-time-updates-sse">Real-Time Updates (SSE)</a></h3>
+<pre><code class="language-typescript">// Subscribe to live opportunities
+const useOpportunities = () =&gt; {
+  const [opportunities, setOpportunities] = useState&lt;Edge[]&gt;([]);
+
+  useEffect(() =&gt; {
+    const eventSource = new EventSource('/api/arb/scanner/stream');
+
+    eventSource.onmessage = (event) =&gt; {
+      const data = JSON.parse(event.data);
+      setOpportunities(prev =&gt; [data, ...prev].slice(0, 50));
+    };
+
+    return () =&gt; eventSource.close();
+  }, []);
+
+  return opportunities;
+};
+</code></pre>
+<h3 id="key-frontend-features"><a class="header" href="#key-frontend-features">Key Frontend Features</a></h3>
+<ul>
+<li><strong>Real-time SSE updates</strong> for live opportunity feed</li>
+<li><strong>Interactive charts</strong> (P&amp;L over time, strategy performance)</li>
+<li><strong>One-click execution</strong> for approved opportunities</li>
+<li><strong>Drag-and-drop</strong> strategy prioritization</li>
+<li><strong>Quick token check</strong> for threat analysis</li>
+<li><strong>Toast notifications</strong> for important events (executed trades, threats)</li>
+<li><strong>Dark mode</strong> by default (matches existing MemCache)</li>
+<li><strong>Responsive</strong> for different screen sizes</li>
+</ul>
+<hr>
+<h2 id="external-api-dependencies"><a class="header" href="#external-api-dependencies">External API Dependencies</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>API</th><th>Purpose</th><th>Rate Limits</th><th>Fallback</th></tr>
+</thead>
+<tbody>
+<tr><td>Jupiter v6</td><td>DEX aggregation</td><td>600/min</td><td>Cached routes</td></tr>
+<tr><td>Raydium</td><td>AMM pools</td><td>100/min</td><td>Jupiter fallback</td></tr>
+<tr><td>pump.fun</td><td>Token creation/trading</td><td>TBD</td><td>Queue + retry</td></tr>
+<tr><td>Helius</td><td>Enhanced RPC + webhooks</td><td>Tier-based</td><td>Public RPC</td></tr>
+<tr><td>Jito</td><td>Bundle submission</td><td>Unlimited</td><td>Direct RPC</td></tr>
+<tr><td>Birdeye</td><td>Token data + holder analysis</td><td>100/min</td><td>Cached data</td></tr>
+<tr><td>OpenRouter</td><td>Multi-LLM consensus</td><td>Varies by model</td><td>Single model fallback</td></tr>
+<tr><td>Anthropic</td><td>Claude direct (optional)</td><td>Tier-based</td><td>OpenRouter</td></tr>
+<tr><td>OpenAI</td><td>GPT direct (optional)</td><td>Tier-based</td><td>OpenRouter</td></tr>
+<tr><td>Marginfi</td><td>Lending positions</td><td>TBD</td><td>Cached state</td></tr>
+<tr><td>Kamino</td><td>Lending positions</td><td>TBD</td><td>Cached state</td></tr>
+<tr><td>RugCheck</td><td>Contract audit / threat intel</td><td>TBD</td><td>In-house analysis</td></tr>
+<tr><td>GoPlus Security</td><td>Honeypot detection</td><td>TBD</td><td>Simulation fallback</td></tr>
+<tr><td>Twitter/X API</td><td>Social monitoring / KOL tracking</td><td>Tier-based</td><td>Semantic search</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="implementation-phases"><a class="header" href="#implementation-phases">Implementation Phases</a></h2>
+<h3 id="phase-1-service-scaffold--core-models-"><a class="header" href="#phase-1-service-scaffold--core-models-">Phase 1: Service Scaffold + Core Models ✅</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> Create <code>svc/arb-farm/</code> directory structure</li>
+<li><input disabled="" type="checkbox" checked=""> Set up Cargo.toml with dependencies</li>
+<li><input disabled="" type="checkbox" checked=""> Implement config, error, server modules</li>
+<li><input disabled="" type="checkbox" checked=""> Create all model files (edge, strategy, trade, signal)</li>
+<li><input disabled="" type="checkbox" checked=""> Implement health endpoint</li>
+<li><input disabled="" type="checkbox" checked=""> Set up database migrations</li>
+<li><input disabled="" type="checkbox" checked=""> <strong>Event bus infrastructure</strong> (GOLDEN RULE)</li>
+</ul>
+<p><strong>Verification</strong>:</p>
+<pre><code class="language-bash">curl http://localhost:9007/health
+# Should return: {"status": "ok", "service": "arb-farm"}
+</code></pre>
+<h3 id="phase-2-venue-scanner--strategy-engine-"><a class="header" href="#phase-2-venue-scanner--strategy-engine-">Phase 2: Venue Scanner + Strategy Engine ✅</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> Implement MevVenue trait</li>
+<li><input disabled="" type="checkbox" checked=""> Jupiter DEX scanner</li>
+<li><input disabled="" type="checkbox" checked=""> Raydium AMM scanner</li>
+<li><input disabled="" type="checkbox" checked=""> Signal detection engine</li>
+<li><input disabled="" type="checkbox" checked=""> Strategy matching logic</li>
+<li><input disabled="" type="checkbox" checked=""> SSE streaming for edges</li>
+<li><input disabled="" type="checkbox" checked=""> MCP tools: scanner_status, scanner_signals</li>
+</ul>
+<p><strong>Verification</strong>:</p>
+<pre><code class="language-bash"># Start SSE stream
+curl -N http://localhost:3000/api/arb/scanner/stream
+
+# Get scanner status
+curl http://localhost:3000/api/arb/scanner/status
+</code></pre>
+<h3 id="phase-3-execution-engine--risk-management-"><a class="header" href="#phase-3-execution-engine--risk-management-">Phase 3: Execution Engine + Risk Management ✅</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> Jito bundle submission</li>
+<li><input disabled="" type="checkbox" checked=""> Transaction simulation</li>
+<li><input disabled="" type="checkbox" checked=""> Risk parameter enforcement</li>
+<li><input disabled="" type="checkbox" checked=""> Execution modes (auto/hybrid/agent)</li>
+<li><input disabled="" type="checkbox" checked=""> Trade history persistence</li>
+<li><input disabled="" type="checkbox" checked=""> MCP tools: edge_approve, edge_reject, execute_trade</li>
+</ul>
+<p><strong>Verification</strong>:</p>
+<pre><code class="language-bash"># Get edges
+curl http://localhost:3000/api/arb/edges
+
+# Simulate execution
+curl -X POST http://localhost:3000/api/arb/edges/{id}/simulate
+
+# Execute trade
+curl -X POST http://localhost:3000/api/arb/edges/{id}/execute
+</code></pre>
+<h3 id="phase-4-bonding-curve-integration-pumpfun-moonshot-"><a class="header" href="#phase-4-bonding-curve-integration-pumpfun-moonshot-">Phase 4: Bonding Curve Integration (pump.fun, moonshot) ✅</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> pump.fun API client</li>
+<li><input disabled="" type="checkbox" checked=""> moonshot API client</li>
+<li><input disabled="" type="checkbox" checked=""> Graduation progress tracking</li>
+<li><input disabled="" type="checkbox" checked=""> Cross-venue arbitrage detection</li>
+<li><input disabled="" type="checkbox" checked=""> Curve-specific MCP tools</li>
+</ul>
+<p><strong>Verification</strong>:</p>
+<pre><code class="language-bash"># Check graduation progress
+curl http://localhost:9007/curves/{token}/progress
+
+# Get curve opportunity
+curl http://localhost:9007/edges?venue_type=bonding_curve
+</code></pre>
+<h3 id="phase-5-mev-detection-dex-arb-liquidations-jit-"><a class="header" href="#phase-5-mev-detection-dex-arb-liquidations-jit-">Phase 5: MEV Detection (DEX Arb, Liquidations, JIT) ✅</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> DEX arbitrage detection</li>
+<li><input disabled="" type="checkbox" checked=""> Lending liquidation scanner (Marginfi, Kamino)</li>
+<li><input disabled="" type="checkbox" checked=""> JIT liquidity opportunity detection</li>
+<li><input disabled="" type="checkbox" checked=""> Backrun opportunity detection</li>
+<li><input disabled="" type="checkbox" checked=""> Priority queue for time-sensitive edges</li>
+</ul>
+<p><strong>Verification</strong>:</p>
+<pre><code class="language-bash"># Get MEV opportunities by type
+curl "http://localhost:9007/edges?edge_type=liquidation"
+curl "http://localhost:9007/edges?edge_type=jit"
+</code></pre>
+<h3 id="phase-6-researchdd-agent--url-ingestion-"><a class="header" href="#phase-6-researchdd-agent--url-ingestion-">Phase 6: Research/DD Agent + URL Ingestion ✅</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> URL ingestion pipeline (WebFetch-style)</li>
+<li><input disabled="" type="checkbox" checked=""> LLM strategy extraction</li>
+<li><input disabled="" type="checkbox" checked=""> Backtest engine (simulated historical)</li>
+<li><input disabled="" type="checkbox" checked=""> X/Twitter monitoring integration</li>
+<li><input disabled="" type="checkbox" checked=""> MCP tools: research_ingest_url, research_backtest_strategy</li>
+</ul>
+<p><strong>Verification</strong>:</p>
+<pre><code class="language-bash"># Ingest a URL
+curl -X POST http://localhost:9007/research/ingest \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://twitter.com/trader/status/123"}'
+
+# List discoveries
+curl http://localhost:9007/research/discoveries
+</code></pre>
+<h3 id="phase-7-kol-tracking--copy-trading-"><a class="header" href="#phase-7-kol-tracking--copy-trading-">Phase 7: KOL Tracking + Copy Trading ✅</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> Helius webhook integration for wallet monitoring</li>
+<li><input disabled="" type="checkbox" checked=""> Trust score calculation</li>
+<li><input disabled="" type="checkbox" checked=""> Copy trade execution (with delay)</li>
+<li><input disabled="" type="checkbox" checked=""> Auto-disable on poor performance</li>
+<li><input disabled="" type="checkbox" checked=""> MCP tools: kol_track, copy_enable, copy_disable</li>
+</ul>
+<p><strong>Verification</strong>:</p>
+<pre><code class="language-bash"># Track a KOL
+curl -X POST http://localhost:9007/kol \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_address": "7Vk3...", "name": "WhaleWallet"}'
+
+# Enable copy trading
+curl -X POST http://localhost:9007/kol/{id}/copy/enable \
+  -H "Content-Type: application/json" \
+  -d '{"max_position_sol": 0.5, "min_delay_ms": 500}'
+</code></pre>
+<h3 id="phase-8-threat-detection--safety-"><a class="header" href="#phase-8-threat-detection--safety-">Phase 8: Threat Detection + Safety ✅</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> RugCheck API integration</li>
+<li><input disabled="" type="checkbox" checked=""> GoPlus Security API integration</li>
+<li><input disabled="" type="checkbox" checked=""> In-house threat scoring system</li>
+<li><input disabled="" type="checkbox" checked=""> Holder concentration analysis</li>
+<li><input disabled="" type="checkbox" checked=""> Creator wallet monitoring (Helius webhooks)</li>
+<li><input disabled="" type="checkbox" checked=""> Honeypot simulation detection</li>
+<li><input disabled="" type="checkbox" checked=""> Blocklist/whitelist management</li>
+<li><input disabled="" type="checkbox" checked=""> Real-time threat alerts</li>
+<li><input disabled="" type="checkbox" checked=""> MCP tools: threat_check_token, threat_check_wallet, threat_report</li>
+</ul>
+<p><strong>Verification</strong>:</p>
+<pre><code class="language-bash"># Check token threat score
+curl http://localhost:9007/threat/check/TokenMintHere
+
+# Check wallet for scam history
+curl http://localhost:9007/threat/wallet/WalletAddressHere
+
+# List blocked entities
+curl http://localhost:9007/threat/blocked
+</code></pre>
+<h3 id="phase-9-engram-integration--learning-"><a class="header" href="#phase-9-engram-integration--learning-">Phase 9: Engram Integration + Learning ✅</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> Engram harvester agent implementation</li>
+<li><input disabled="" type="checkbox" checked=""> Pattern storage (successful edges)</li>
+<li><input disabled="" type="checkbox" checked=""> Avoidance engram creation (failed trades, rug pulls)</li>
+<li><input disabled="" type="checkbox" checked=""> Multi-LLM consensus engine</li>
+<li><input disabled="" type="checkbox" checked=""> Strategy optimization via engram analysis</li>
+<li><input disabled="" type="checkbox" checked=""> MCP tools: engram_create, engram_get, engram_search, engram_patterns, engram_avoidance, engram_stats</li>
+<li><input disabled="" type="checkbox" checked=""> Consensus tools: consensus_request, consensus_result, consensus_history</li>
+</ul>
+<p><strong>Verification</strong>:</p>
+<pre><code class="language-bash"># Get engram harvester stats
+curl http://localhost:9007/engram/stats
+
+# Search for engrams
+curl "http://localhost:9007/engram/search?engram_type=edge_pattern"
+
+# Check avoidance
+curl http://localhost:9007/engram/avoidance/token/TokenMintHere
+
+# Create an avoidance engram
+curl -X POST http://localhost:9007/engram/avoidance \
+  -H "Content-Type: application/json" \
+  -d '{"entity_type":"token","address":"BadTokenMint","reason":"Rug pull","category":"rug_pull","severity":"high"}'
+</code></pre>
+<h3 id="phase-10-swarm-orchestration--resilience-"><a class="header" href="#phase-10-swarm-orchestration--resilience-">Phase 10: Swarm Orchestration + Resilience ✅</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> Resilience overseer meta-agent</li>
+<li><input disabled="" type="checkbox" checked=""> Agent health monitoring (heartbeats)</li>
+<li><input disabled="" type="checkbox" checked=""> Auto-recovery logic (respawn failed agents)</li>
+<li><input disabled="" type="checkbox" checked=""> Circuit breakers for API failures</li>
+<li><input disabled="" type="checkbox" checked=""> API failover handling (cached engrams as fallback)</li>
+<li><input disabled="" type="checkbox" checked=""> Swarm management endpoints</li>
+</ul>
+<p><strong>Key Files</strong>:</p>
+<ul>
+<li><code>src/agents/overseer.rs</code> - ResilienceOverseer meta-agent</li>
+<li><code>src/resilience/circuit_breaker.rs</code> - Circuit breaker pattern</li>
+<li><code>src/handlers/swarm.rs</code> - Swarm management HTTP handlers</li>
+</ul>
+<p><strong>Verification</strong>:</p>
+<pre><code class="language-bash"># Get swarm status
+curl http://localhost:9007/swarm/status
+
+# Get swarm health (quick check)
+curl http://localhost:9007/swarm/health
+
+# List all agents
+curl http://localhost:9007/swarm/agents
+
+# List circuit breakers
+curl http://localhost:9007/swarm/circuit-breakers
+
+# Pause swarm
+curl -X POST http://localhost:9007/swarm/pause
+
+# Resume swarm
+curl -X POST http://localhost:9007/swarm/resume
+
+# Reset a circuit breaker
+curl -X POST http://localhost:9007/swarm/circuit-breakers/jupiter_api/reset
+
+# Reset all circuit breakers
+curl -X POST http://localhost:9007/swarm/circuit-breakers/reset-all
+</code></pre>
+<h3 id="phase-11-frontend-dashboard-memcache-integration-"><a class="header" href="#phase-11-frontend-dashboard-memcache-integration-">Phase 11: Frontend Dashboard (MemCache Integration) ✅</a></h3>
+<ul>
+<li><input disabled="" type="checkbox" checked=""> ArbFarm submenu in MemCache tab</li>
+<li><input disabled="" type="checkbox" checked=""> Live opportunity feed component</li>
+<li><input disabled="" type="checkbox" checked=""> P&amp;L dashboard with metrics</li>
+<li><input disabled="" type="checkbox" checked=""> Strategy performance cards</li>
+<li><input disabled="" type="checkbox" checked=""> Threat alerts panel</li>
+<li><input disabled="" type="checkbox" checked=""> KOL tracker interface (placeholder)</li>
+<li><input disabled="" type="checkbox" checked=""> Settings/configuration panel (placeholder)</li>
+<li><input disabled="" type="checkbox" checked=""> Real-time SSE integration</li>
+</ul>
+<p><strong>Key Files Created</strong>:</p>
+<pre><code>svc/hecate/src/
+├── types/arbfarm.ts                    # TypeScript type definitions (~550 lines)
+├── common/
+│   ├── services/arbfarm-service.tsx    # API service class (~600 lines)
+│   └── hooks/
+│       ├── useArbFarm.ts               # Main data hook (~650 lines)
+│       └── index.ts
+└── components/memcache/arbfarm/
+    ├── ArbFarmDashboard.tsx            # Main dashboard component
+    ├── arbfarm.module.scss             # SCSS styles (~700 lines)
+    ├── index.tsx
+    └── components/
+        ├── MetricCard.tsx
+        ├── SwarmStatusCard.tsx
+        ├── EdgeCard.tsx
+        ├── TradeHistoryCard.tsx
+        ├── ThreatAlertCard.tsx
+        └── index.ts
+</code></pre>
+<p><strong>Frontend Architecture</strong>:</p>
+<ul>
+<li>
+<p><strong>Types</strong> (<code>types/arbfarm.ts</code>): Comprehensive TypeScript types for all ArbFarm entities</p>
+<ul>
+<li>Edge, Trade, Scanner, Swarm, Strategy, Threat, KOL, Curve, Engram types</li>
+<li>Color constants for status visualization</li>
+<li>Filter interfaces for list views</li>
+</ul>
+</li>
+<li>
+<p><strong>Service</strong> (<code>arbfarm-service.tsx</code>): API service class with methods for all endpoints</p>
+<ul>
+<li>Edge operations: list, get, approve, reject, execute, simulate</li>
+<li>Trade operations: list, get, stats, daily stats</li>
+<li>Scanner operations: status, start, stop, signals</li>
+<li>Swarm operations: status, pause, resume, agents, circuit breakers</li>
+<li>Threat operations: check token, list blocked, report, whitelist</li>
+<li>KOL operations: list, add, remove, enable/disable copy trading</li>
+<li>Curve operations: list tokens, graduation candidates, quotes</li>
+<li>SSE stream URL getters for real-time updates</li>
+</ul>
+</li>
+<li>
+<p><strong>Hook</strong> (<code>useArbFarm.ts</code>): Comprehensive React hook with:</p>
+<ul>
+<li>Auto-polling for scanner and swarm status</li>
+<li>SSE connection management with auto-reconnect</li>
+<li>State management for all entity types</li>
+<li>Action methods for CRUD operations</li>
+<li>Filter state for edge views</li>
+</ul>
+</li>
+<li>
+<p><strong>Components</strong>:</p>
+<ul>
+<li><code>ArbFarmDashboard</code>: Multi-view dashboard with internal navigation</li>
+<li><code>MetricCard</code>: P&amp;L and stats display</li>
+<li><code>SwarmStatusCard</code>: Agent health visualization</li>
+<li><code>EdgeCard</code>: Opportunity display with approve/reject/execute</li>
+<li><code>TradeHistoryCard</code>: Trade history with P&amp;L</li>
+<li><code>ThreatAlertCard</code>: Threat alert display with severity</li>
+</ul>
+</li>
+</ul>
+<p><strong>Views Implemented</strong>:</p>
+<ol>
+<li><strong>Dashboard</strong>: Overview with metrics, swarm status, top opportunities, recent trades</li>
+<li><strong>Opportunities</strong>: Full edge list with filtering and actions</li>
+<li><strong>Strategies</strong>: Strategy management with toggle and stats</li>
+<li><strong>Threats</strong>: Token checker, alerts, blocked list</li>
+<li><strong>KOL Tracker</strong>: Placeholder for wallet tracking</li>
+<li><strong>Research</strong>: Placeholder for URL ingestion</li>
+<li><strong>Settings</strong>: Placeholder for configuration</li>
+</ol>
+<p><strong>Integration Points</strong>:</p>
+<ul>
+<li>Added to <code>MemCacheSidebar</code> as navigation item</li>
+<li>Added to <code>MemCache</code> component with view state</li>
+<li>SSE subscriptions for: <code>arb.edge.*</code>, <code>arb.trade.*</code>, <code>arb.threat.*</code>, <code>arb.swarm.*</code></li>
+</ul>
+<p><strong>Verification</strong>:</p>
+<pre><code class="language-bash"># Navigate in browser
+1. Open http://localhost:5173
+2. Connect wallet
+3. Go to MemCache tab
+4. Click "ArbFarm" in sidebar
+5. Verify dashboard loads
+
+# Verify SSE connection
+- Check browser console for "Live updates active"
+- SSE indicator should show green dot
+
+# Verify API integration
+- Dashboard should show metrics (or loading states)
+- Opportunities list should populate when scanner is running
+</code></pre>
+<h3 id="phase-12-crossroads-integration--revenue-"><a class="header" href="#phase-12-crossroads-integration--revenue-">Phase 12: Crossroads Integration + Revenue ⏳</a></h3>
+<p><strong>Status</strong>: Next Phase - Ready to implement</p>
+<p>The final phase integrates ArbFarm with the Crossroads marketplace to enable forkable, sellable MEV strategies as COW (Constellation of Work) NFTs.</p>
+<h4 id="tasks"><a class="header" href="#tasks">Tasks</a></h4>
+<ul>
+<li>
+<p><input disabled="" type="checkbox"> <strong>COW NFT Minting on Monad</strong></p>
+<ul>
+<li>Define ArbFarm COW metadata schema</li>
+<li>Implement COW minting contract on Monad</li>
+<li>Create minting UI in MemCache</li>
+<li>Connect to existing Crossroads listing flow</li>
+</ul>
+</li>
+<li>
+<p><input disabled="" type="checkbox"> <strong>Forkable Scanner/Strategy Patterns</strong></p>
+<ul>
+<li>Define exportable strategy format</li>
+<li>Implement strategy serialization/deserialization</li>
+<li>Create “Fork Strategy” action in UI</li>
+<li>Handle engram inheritance on fork</li>
+</ul>
+</li>
+<li>
+<p><input disabled="" type="checkbox"> <strong>Per-COW Configuration and Isolation</strong></p>
+<ul>
+<li>Implement COW-scoped configuration storage</li>
+<li>Add wallet-specific strategy instances</li>
+<li>Ensure data isolation between forked COWs</li>
+<li>API key management per-COW</li>
+</ul>
+</li>
+<li>
+<p><input disabled="" type="checkbox"> <strong>Revenue Sharing Model</strong></p>
+<ul>
+<li>Define revenue split logic (original creator vs forker)</li>
+<li>Implement profit tracking per-COW</li>
+<li>Create revenue distribution mechanism</li>
+<li>Dashboard for earnings tracking</li>
+</ul>
+</li>
+</ul>
+<h4 id="cow-metadata-schema"><a class="header" href="#cow-metadata-schema">COW Metadata Schema</a></h4>
+<pre><code class="language-typescript">interface ArbFarmCOW {
+  // Standard COW fields
+  id: string;
+  name: string;
+  description: string;
+  creator_wallet: string;
+
+  // ArbFarm-specific
+  included_strategies: Strategy[];
+  venue_types: VenueType[];
+  risk_profile: RiskParams;
+
+  // Fork tracking
+  parent_cow_id?: string;
+  fork_count: number;
+  total_profit_generated: number;
+
+  // Revenue
+  creator_revenue_share_bps: number;  // e.g., 500 = 5%
+  fork_revenue_share_bps: number;     // Revenue to original on forks
+}
+</code></pre>
+<h4 id="integration-points"><a class="header" href="#integration-points">Integration Points</a></h4>
+<ol>
+<li><strong>Crossroads Listing</strong>: ArbFarm strategies appear as listable COWs</li>
+<li><strong>Fork Flow</strong>: Users can fork existing ArbFarm COWs</li>
+<li><strong>Engram Inheritance</strong>: Forked COWs inherit avoidance engrams</li>
+<li><strong>Revenue Split</strong>: Profits split between original creator and forker</li>
+</ol>
+<h4 id="verification"><a class="header" href="#verification">Verification</a></h4>
+<pre><code class="language-bash"># List ArbFarm COWs in marketplace
+curl http://localhost:3000/api/marketplace/listings?type=arbfarm
+
+# Create new ArbFarm COW
+curl -X POST http://localhost:3000/api/marketplace/listings \
+  -H "Content-Type: application/json" \
+  -d '{"type": "arbfarm", "strategies": [...], "price_sol": 0.5}'
+
+# Fork existing COW
+curl -X POST http://localhost:3000/api/marketplace/listings/{id}/fork
+
+# Check revenue earnings
+curl http://localhost:3000/api/marketplace/earnings
+</code></pre>
+<hr>
+<h2 id="verification-summary"><a class="header" href="#verification-summary">Verification Summary</a></h2>
+<pre><code class="language-bash"># Service health
+curl http://localhost:9007/health
+
+# Scanner status
+curl http://localhost:9007/scanner/status
+
+# Live edge stream
+curl -N http://localhost:9007/edges/stream
+
+# Trade statistics
+curl http://localhost:9007/trades/stats
+
+# Engram stats
+curl http://localhost:9007/engram/stats
+
+# Swarm health
+curl http://localhost:9007/swarm/health
+
+# Swarm status (full)
+curl http://localhost:9007/swarm/status
+
+# Circuit breakers
+curl http://localhost:9007/swarm/circuit-breakers
+</code></pre>
+<hr>
+<h2 id="risk-considerations"><a class="header" href="#risk-considerations">Risk Considerations</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Risk</th><th>Mitigation</th></tr>
+</thead>
+<tbody>
+<tr><td>API rate limits</td><td>Caching, fallback providers, exponential backoff</td></tr>
+<tr><td>Slippage</td><td>Pre-execution simulation, max slippage params</td></tr>
+<tr><td>Front-running</td><td>Jito bundles, private mempool</td></tr>
+<tr><td>Rug pulls</td><td>Threat detection agent, blocklist</td></tr>
+<tr><td>LLM hallucination</td><td>Multi-model consensus, human-in-loop for large trades</td></tr>
+<tr><td>Smart contract bugs</td><td>Simulation before execution, start with small positions</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="related-documentation"><a class="header" href="#related-documentation">Related Documentation</a></h2>
+<ul>
+<li><a href="./poly-mev/plan.html">Poly Mev Plan</a> - Polymarket swarm (different service)</li>
+<li><a href="./services/engrams.html">Engrams Service</a></li>
+<li><a href="./services/crossroads.html">Crossroads Marketplace</a></li>
+<li><a href="./architecture.html">Architecture</a></li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../poly-mev/scanner.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../arb-farm/service.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../poly-mev/scanner.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../arb-farm/service.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

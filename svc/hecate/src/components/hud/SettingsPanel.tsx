@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import type { UserProfile } from '../../types/user';
 import ApiKeyManagement from './ApiKeyManagement';
-import { UserProfile } from '../../types/user';
 import styles from './SettingsPanel.module.scss';
 
 interface SettingsPanelProps {
@@ -26,7 +26,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   // Helper functions for profile display
   const shortenAddress = (address: string): string => {
-    if (address.length <= 12) return address;
+    if (address.length <= 12) {
+      return address;
+    }
+
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
@@ -35,6 +38,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       const date = new Date(createdAt);
       const month = date.toLocaleDateString('en-US', { month: 'short' });
       const year = date.getFullYear();
+
       return `Member since ${month} ${year}`;
     } catch (err) {
       return 'New User';
@@ -59,7 +63,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const isNewUser = (createdAt: string): boolean => {
     try {
       const createdDate = new Date(createdAt);
-      const daysSinceCreation = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+      const daysSinceCreation = Math.floor(
+        (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
       return daysSinceCreation < 7;
     } catch (err) {
       return false;
@@ -70,6 +77,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     if (isNewUser(profile.created_at)) {
       return 'New User';
     }
+
     return getUserTypeBadge(profile.user_type);
   };
 
@@ -99,6 +107,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     };
 
     document.addEventListener('keydown', handleEscape);
+
     return () => {
       document.removeEventListener('keydown', handleEscape);
     };
@@ -156,7 +165,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       </div>
                       {userProfile && (
                         <>
-                          <div className={styles.accountAge}>{formatAccountAge(userProfile.created_at)}</div>
+                          <div className={styles.accountAge}>
+                            {formatAccountAge(userProfile.created_at)}
+                          </div>
                           <span className={styles.userBadge}>{getBadgeText(userProfile)}</span>
                         </>
                       )}
@@ -194,7 +205,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <div className={styles.errorState}>
                 <p className={styles.errorIcon}>⚠️</p>
                 <p>User profile not found</p>
-                <p className={styles.errorHint}>Your wallet is connected but profile didn't load.</p>
+                <p className={styles.errorHint}>
+                  Your wallet is connected but profile didn't load.
+                </p>
                 <button
                   className={styles.refreshButton}
                   onClick={() => {
@@ -215,10 +228,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </div>
 
         <div className={styles.settingsFooter}>
-          <button
-            className={styles.closeFooterButton}
-            onClick={handleClose}
-          >
+          <button className={styles.closeFooterButton} onClick={handleClose}>
             Close Settings
           </button>
         </div>

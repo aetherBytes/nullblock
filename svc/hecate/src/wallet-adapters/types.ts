@@ -67,7 +67,9 @@ export interface SolanaProvider {
   isBitKeep?: boolean;
   isConnected?: boolean;
   publicKey?: { toString: () => string; toBase58?: () => string };
-  connect: (options?: { onlyIfTrusted?: boolean }) => Promise<{ publicKey: { toString: () => string } }>;
+  connect: (options?: {
+    onlyIfTrusted?: boolean;
+  }) => Promise<{ publicKey: { toString: () => string } }>;
   disconnect: () => Promise<void>;
   signMessage: (message: Uint8Array, encoding?: string) => Promise<{ signature: Uint8Array }>;
   on?: (event: string, handler: (...args: unknown[]) => void) => void;

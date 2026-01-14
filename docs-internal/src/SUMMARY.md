@@ -36,6 +36,24 @@
 - [Implementation Plan](./poly-mev/plan.md)
 - [Scanner Tool](./poly-mev/scanner.md)
 
+---
+
+# ArbFarm (Solana MEV)
+
+- [Implementation Plan](./arb-farm/plan.md)
+- [Service Architecture](./arb-farm/service.md)
+- [Development Guide](./arb-farm/development.md)
+- [API Reference](./arb-farm/api.md)
+- [Event Bus](./arb-farm/events.md)
+- [Frontend Dashboard](./arb-farm/frontend.md)
+- [Research Module](./arb-farm/research.md)
+- [Bonding Curves](./arb-farm/curves.md)
+- [KOL Tracking](./arb-farm/kol.md)
+- [Threat Detection](./arb-farm/threat.md)
+- [Engram System](./arb-farm/engram.md)
+- [Consensus Engine](./arb-farm/consensus.md)
+- [Swarm Orchestration](./arb-farm/swarm.md)
+
 # Archive
 
 - [Echo Factory (Paused)](./archive/echo-factory/plan.md)

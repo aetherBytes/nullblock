@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useModelManagement } from '../../hooks/useModelManagement';
-import { useChat } from '../../hooks/useChat';
+import { useApiKeyCheck } from '../../hooks/useApiKeyCheck';
 import { useAuthentication } from '../../hooks/useAuthentication';
-import { useTaskManagement } from '../../hooks/useTaskManagement';
+import { useChat } from '../../hooks/useChat';
 import { useEventSystem } from '../../hooks/useEventSystem';
 import { useLogs } from '../../hooks/useLogs';
+import { useModelManagement } from '../../hooks/useModelManagement';
+import { useTaskManagement } from '../../hooks/useTaskManagement';
 import { useUserProfile } from '../../hooks/useUserProfile';
-import { useApiKeyCheck } from '../../hooks/useApiKeyCheck';
+import { Task, TaskCreationRequest } from '../../types/tasks';
+import { UserProfile } from '../../types/user';
 import Crossroads from '../crossroads/Crossroads';
-import { MemCache, MemCacheSection } from '../memcache';
+import type { MemCacheSection } from '../memcache';
+import { MemCache } from '../memcache';
 import SettingsPanel from './SettingsPanel';
 import VoidOverlay from './VoidOverlay';
 import styles from './hud.module.scss';
-import { Task, TaskCreationRequest } from '../../types/tasks';
-import { UserProfile } from '../../types/user';
 
 type Theme = 'null' | 'light' | 'dark';
 
@@ -46,7 +47,9 @@ interface HUDProps {
   loginAnimationPhase?: LoginAnimationPhase;
   hecatePanelOpen?: boolean;
   onHecatePanelChange?: (open: boolean) => void;
-  onActiveTabChange?: (tab: 'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null) => void;
+  onActiveTabChange?: (
+    tab: 'crossroads' | 'memcache' | 'tasks' | 'agents' | 'logs' | 'canvas' | null,
+  ) => void;
 }
 
 interface AscentLevel {
@@ -99,6 +102,7 @@ const HUD: React.FC<HUDProps> = ({
     if (typeof window !== 'undefined') {
       return localStorage.getItem('nullblock_void_welcome_seen') === 'true';
     }
+
     return false;
   });
 
@@ -116,17 +120,18 @@ const HUD: React.FC<HUDProps> = ({
 
   // Detect if we're in void mode (logged in but no tab selected)
   // Note: We check for void mode during ALL animation phases to prevent old HUD from flickering in
-  const inVoidMode = !!publicKey && mainHudActiveTab === null;
+  const inVoidMode = Boolean(publicKey) && mainHudActiveTab === null;
 
   // User profile state
   const { userProfile, isLoading: isLoadingUser } = useUserProfile(publicKey);
   const { hasApiKeys } = useApiKeyCheck(userProfile?.id || null);
 
-
   // Tab functionality state
   const [autoScroll, setAutoScroll] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [logFilter, setLogFilter] = useState<'all' | 'info' | 'warning' | 'error' | 'success' | 'debug'>('all');
+  const [logFilter, setLogFilter] = useState<
+    'all' | 'info' | 'warning' | 'error' | 'success' | 'debug'
+  >('all');
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   // Model info and UI state
@@ -151,24 +156,30 @@ const HUD: React.FC<HUDProps> = ({
   const modelManagement = useModelManagement(publicKey, chat.activeAgent);
   const taskManagement = useTaskManagement(publicKey, {}, true, chat.addTaskNotification);
   const eventSystem = useEventSystem(true, 3000);
-  const logsHook = useLogs({ autoConnect: !!publicKey, maxLogs: 500 });
+  const logsHook = useLogs({ autoConnect: Boolean(publicKey), maxLogs: 500 });
 
   // Create task management interface for MemCache
-  const taskManagementInterface = useMemo(() => ({
-    tasks: taskManagement.tasks,
-    isLoading: taskManagement.isLoading,
-    createTask: taskManagement.createTask,
-    startTask: taskManagement.startTask,
-    pauseTask: taskManagement.pauseTask,
-    resumeTask: taskManagement.resumeTask,
-    cancelTask: taskManagement.cancelTask,
-    retryTask: taskManagement.retryTask,
-    processTask: taskManagement.processTask,
-    deleteTask: taskManagement.deleteTask,
-  }), [taskManagement]);
+  const taskManagementInterface = useMemo(
+    () => ({
+      tasks: taskManagement.tasks,
+      isLoading: taskManagement.isLoading,
+      createTask: taskManagement.createTask,
+      startTask: taskManagement.startTask,
+      pauseTask: taskManagement.pauseTask,
+      resumeTask: taskManagement.resumeTask,
+      cancelTask: taskManagement.cancelTask,
+      retryTask: taskManagement.retryTask,
+      processTask: taskManagement.processTask,
+      deleteTask: taskManagement.deleteTask,
+    }),
+    [taskManagement],
+  );
 
   useEffect(() => {
-    const hasImages = chat.chatMessages.some(msg => msg.content?.imageIds && msg.content.imageIds.length > 0);
+    const hasImages = chat.chatMessages.some(
+      (msg) => msg.content?.imageIds && msg.content.imageIds.length > 0,
+    );
+
     if (hasImages && !eventSystem.isPerformanceMode) {
       eventSystem.setPerformanceMode(true);
     } else if (!hasImages && eventSystem.isPerformanceMode) {
@@ -176,14 +187,15 @@ const HUD: React.FC<HUDProps> = ({
     }
   }, [chat.chatMessages, eventSystem]);
 
-
   // Watch for initialTab prop changes and mobile menu toggle
   useEffect(() => {
     if (initialTab !== undefined && initialTab !== mainHudActiveTab) {
       setMainHudActiveTab(initialTab);
+
       // If initialTab is 'crossroads', also show the marketplace
       if (initialTab === 'crossroads') {
         setShowCrossroadsMarketplace(true);
+
         // Toggle mobile menu if callback is provided (mobile hint clicked)
         if (onToggleMobileMenu) {
           setShowMobileMenu(true);
@@ -229,6 +241,7 @@ const HUD: React.FC<HUDProps> = ({
       modelManagement.isLoadingModelsRef.current = false;
       modelManagement.setModelsCached(false);
       setNulleyeState('base');
+
       return;
     }
 
@@ -328,7 +341,6 @@ const HUD: React.FC<HUDProps> = ({
     };
   }, [showSearchDropdown]);
 
-
   // Safety effect to ensure NullEye returns to base state when ready
   useEffect(() => {
     if (
@@ -355,12 +367,17 @@ const HUD: React.FC<HUDProps> = ({
     modelManagement.isModelChanging,
     modelManagement.isLoadingModels,
     chat.isProcessingChat,
-    nullviewState
+    nullviewState,
   ]);
 
   // Auto-load Latest models when model selection opens
   useEffect(() => {
-    if (showModelSelection && activeQuickAction === 'latest' && categoryModels.length === 0 && !isLoadingCategory) {
+    if (
+      showModelSelection &&
+      activeQuickAction === 'latest' &&
+      categoryModels.length === 0 &&
+      !isLoadingCategory
+    ) {
       loadCategoryModels('latest');
     }
   }, [showModelSelection, activeQuickAction, categoryModels.length, isLoadingCategory]);
@@ -380,11 +397,12 @@ const HUD: React.FC<HUDProps> = ({
     // Publish user interaction events when chat messages are sent
     if (chat.chatMessages.length > 0) {
       const lastMessage = chat.chatMessages[chat.chatMessages.length - 1];
+
       if (lastMessage.sender === 'user') {
         eventSystem.publishUserInteraction('chat_message', {
           message: lastMessage.message,
           timestamp: lastMessage.timestamp,
-          conversationLength: chat.chatMessages.length
+          conversationLength: chat.chatMessages.length,
         });
       }
     }
@@ -405,7 +423,6 @@ const HUD: React.FC<HUDProps> = ({
   //   }
   // }, [chat.chatMessages, chat.chatAutoScroll, chat.isUserScrolling]);
 
-
   const loadModelInfo = async (modelName?: string) => {
     if (isLoadingModelInfo) {
       return;
@@ -417,6 +434,7 @@ const HUD: React.FC<HUDProps> = ({
       const { hecateAgent } = await import('../../common/services/hecate-agent');
 
       const connected = await hecateAgent.connect();
+
       if (!connected) {
         return;
       }
@@ -425,29 +443,36 @@ const HUD: React.FC<HUDProps> = ({
 
       if (!currentModelName) {
         setModelInfo({ error: 'No model currently selected' });
+
         return;
       }
 
-      let currentModelInfo = modelManagement.availableModels?.find((model: any) => model.name === currentModelName);
+      let currentModelInfo = modelManagement.availableModels?.find(
+        (model: any) => model.name === currentModelName,
+      );
 
       if (!currentModelInfo && modelManagement.availableModels.length === 0) {
         await modelManagement.loadAvailableModels();
-        currentModelInfo = modelManagement.availableModels?.find((model: any) => model.name === currentModelName);
+        currentModelInfo = modelManagement.availableModels?.find(
+          (model: any) => model.name === currentModelName,
+        );
       }
 
       if (!currentModelInfo) {
-        setModelInfo({ error: `Model ${currentModelName} not found in available models (${modelManagement.availableModels.length} cached)` });
+        setModelInfo({
+          error: `Model ${currentModelName} not found in available models (${modelManagement.availableModels.length} cached)`,
+        });
+
         return;
       }
 
       const enrichedModelInfo = {
         ...currentModelInfo,
         is_current: currentModelName === modelManagement.currentSelectedModel,
-        info_loaded_at: new Date().toISOString()
+        info_loaded_at: new Date().toISOString(),
       };
 
       setModelInfo(enrichedModelInfo);
-
     } catch (error) {
       console.error('Error loading model info:', error);
       setModelInfo({ error: (error as Error).message });
@@ -475,18 +500,21 @@ const HUD: React.FC<HUDProps> = ({
         } else {
           score += 5;
         }
+
         lastMatchIndex = i;
         queryIndex++;
       }
     }
 
     const allMatched = queryIndex === queryLower.length;
+
     return { matches: allMatched, score: allMatched ? score : 0 };
   };
 
   const searchModels = async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
+
       return;
     }
 
@@ -511,11 +539,14 @@ const HUD: React.FC<HUDProps> = ({
             nameMatch.score,
             displayNameMatch.score,
             descriptionMatch.score,
-            providerMatch.score
+            providerMatch.score,
           );
 
-          const matches = nameMatch.matches || displayNameMatch.matches ||
-                         descriptionMatch.matches || providerMatch.matches;
+          const matches =
+            nameMatch.matches ||
+            displayNameMatch.matches ||
+            descriptionMatch.matches ||
+            providerMatch.matches;
 
           return { model, score: maxScore, matches };
         })
@@ -533,7 +564,9 @@ const HUD: React.FC<HUDProps> = ({
   };
 
   const loadCategoryModels = async (category: string) => {
-    if (isLoadingCategory) return;
+    if (isLoadingCategory) {
+      return;
+    }
 
     try {
       setIsLoadingCategory(true);
@@ -550,10 +583,15 @@ const HUD: React.FC<HUDProps> = ({
       switch (category) {
         case 'latest':
           filteredModels = allModels
-            .filter(model => {
-              if (!model || !model.available) return false;
+            .filter((model) => {
+              if (!model || !model.available) {
+                return false;
+              }
+
               const hasCreatedAt = model.created_at !== undefined && model.created_at !== null;
-              const hasCreated = model.created !== undefined && model.created !== null && model.created !== 0;
+              const hasCreated =
+                model.created !== undefined && model.created !== null && model.created !== 0;
+
               return hasCreatedAt || hasCreated;
             })
             .sort((a, b) => {
@@ -563,6 +601,7 @@ const HUD: React.FC<HUDProps> = ({
               if (typeof aCreated === 'string') {
                 aCreated = new Date(aCreated).getTime();
               }
+
               if (typeof bCreated === 'string') {
                 bCreated = new Date(bCreated).getTime();
               }
@@ -578,32 +617,48 @@ const HUD: React.FC<HUDProps> = ({
 
         case 'free':
           filteredModels = allModels
-            .filter(model => model && model.available && (model.tier === 'economical' || model.cost_per_1k_tokens === 0))
+            .filter(
+              (model) =>
+                model &&
+                model.available &&
+                (model.tier === 'economical' || model.cost_per_1k_tokens === 0),
+            )
             .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
             .slice(0, 15);
           break;
 
         case 'premium':
           filteredModels = allModels
-            .filter(model => model && model.available && model.tier === 'premium')
+            .filter((model) => model && model.available && model.tier === 'premium')
             .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
             .slice(0, 15);
           break;
 
         case 'fast':
           filteredModels = allModels
-            .filter(model => model && model.available && model.tier === 'fast')
+            .filter((model) => model && model.available && model.tier === 'fast')
             .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
             .slice(0, 15);
           break;
 
         case 'thinkers':
           filteredModels = allModels
-            .filter(model => {
-              if (!model || !model.available) return false;
+            .filter((model) => {
+              if (!model || !model.available) {
+                return false;
+              }
+
               const name = (model.display_name || model.name).toLowerCase();
-              return (model.capabilities && (model.capabilities.includes('reasoning') || model.capabilities.includes('reasoning_tokens'))) ||
-                     name.includes('reasoning') || name.includes('think') || name.includes('r1') || name.includes('o1');
+
+              return (
+                (model.capabilities &&
+                  (model.capabilities.includes('reasoning') ||
+                    model.capabilities.includes('reasoning_tokens'))) ||
+                name.includes('reasoning') ||
+                name.includes('think') ||
+                name.includes('r1') ||
+                name.includes('o1')
+              );
             })
             .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
             .slice(0, 15);
@@ -611,9 +666,13 @@ const HUD: React.FC<HUDProps> = ({
 
         case 'instruct':
           filteredModels = allModels
-            .filter(model => {
-              if (!model || !model.available) return false;
+            .filter((model) => {
+              if (!model || !model.available) {
+                return false;
+              }
+
               const name = (model.display_name || model.name).toLowerCase();
+
               return name.includes('instruct') || name.includes('it') || name.includes('chat');
             })
             .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
@@ -621,11 +680,10 @@ const HUD: React.FC<HUDProps> = ({
           break;
 
         default:
-          filteredModels = allModels.filter(model => model && model.available).slice(0, 15);
+          filteredModels = allModels.filter((model) => model && model.available).slice(0, 15);
       }
 
       setCategoryModels(filteredModels);
-
     } catch (error) {
       setCategoryModels([]);
     } finally {
@@ -636,16 +694,21 @@ const HUD: React.FC<HUDProps> = ({
   // Legacy functions for stats display (using cached data)
 
   const getLatestModels = (models: any[], limit: number = 10) => {
-    const filtered = models.filter(model => {
-      if (!model || typeof model !== 'object') return false;
+    const filtered = models.filter((model) => {
+      if (!model || typeof model !== 'object') {
+        return false;
+      }
+
       const hasCreatedAt = model.created_at !== undefined && model.created_at !== null;
-      const hasCreated = model.created !== undefined && model.created !== null && model.created !== 0;
+      const hasCreated =
+        model.created !== undefined && model.created !== null && model.created !== 0;
       const isAvailable = model.available !== false;
+
       return (hasCreatedAt || hasCreated) && isAvailable;
     });
 
     if (filtered.length === 0) {
-      return models.filter(model => model && model.available !== false).slice(0, limit);
+      return models.filter((model) => model && model.available !== false).slice(0, limit);
     }
 
     const sorted = filtered.sort((a, b) => {
@@ -655,6 +718,7 @@ const HUD: React.FC<HUDProps> = ({
       if (typeof aCreated === 'string') {
         aCreated = new Date(aCreated).getTime();
       }
+
       if (typeof bCreated === 'string') {
         bCreated = new Date(bCreated).getTime();
       }
@@ -669,134 +733,182 @@ const HUD: React.FC<HUDProps> = ({
     return sorted.slice(0, limit);
   };
 
-  const getFreeModels = (models: any[], limit: number = 10) => {
-    return models
-      .filter(model => model.available && (model.tier === 'economical' || model.cost_per_1k_tokens === 0))
+  const getFreeModels = (models: any[], limit: number = 10) =>
+    models
+      .filter(
+        (model) =>
+          model.available && (model.tier === 'economical' || model.cost_per_1k_tokens === 0),
+      )
       .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
       .slice(0, limit);
-  };
 
-  const getFastModels = (models: any[], limit: number = 10) => {
-    return models
-      .filter(model => model.available && model.tier === 'fast')
+  const getFastModels = (models: any[], limit: number = 10) =>
+    models
+      .filter((model) => model.available && model.tier === 'fast')
       .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
       .slice(0, limit);
-  };
 
-  const getThinkerModels = (models: any[], limit: number = 10) => {
-    return models
-      .filter(model => {
-        if (!model.available) return false;
+  const getThinkerModels = (models: any[], limit: number = 10) =>
+    models
+      .filter((model) => {
+        if (!model.available) {
+          return false;
+        }
+
         const name = (model.display_name || model.name).toLowerCase();
-        return (model.capabilities && (model.capabilities.includes('reasoning') || model.capabilities.includes('reasoning_tokens'))) ||
-               name.includes('reasoning') || name.includes('think') || name.includes('r1') || name.includes('o1');
+
+        return (
+          (model.capabilities &&
+            (model.capabilities.includes('reasoning') ||
+              model.capabilities.includes('reasoning_tokens'))) ||
+          name.includes('reasoning') ||
+          name.includes('think') ||
+          name.includes('r1') ||
+          name.includes('o1')
+        );
       })
       .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
       .slice(0, limit);
-  };
 
-  const getInstructModels = (models: any[], limit: number = 10) => {
-    return models
-      .filter(model => {
-        if (!model.available) return false;
+  const getInstructModels = (models: any[], limit: number = 10) =>
+    models
+      .filter((model) => {
+        if (!model.available) {
+          return false;
+        }
+
         const name = (model.display_name || model.name).toLowerCase();
+
         return name.includes('instruct') || name.includes('it') || name.includes('chat');
       })
       .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
       .slice(0, limit);
-  };
 
-  const getImageModels = (models: any[], limit: number = 10) => {
-    return models
-      .filter(model => {
-        if (!model.available) return false;
-        return model.architecture?.output_modalities?.includes('image') ||
-               (model.capabilities && model.capabilities.includes('image_generation'));
+  const getImageModels = (models: any[], limit: number = 10) =>
+    models
+      .filter((model) => {
+        if (!model.available) {
+          return false;
+        }
+
+        return (
+          model.architecture?.output_modalities?.includes('image') ||
+          (model.capabilities && model.capabilities.includes('image_generation'))
+        );
       })
       .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name))
       .slice(0, limit);
-  };
 
   // Create model management interface for MemCache
-  const modelManagementInterface = useMemo(() => ({
-    isLoadingModelInfo: modelManagement.isLoadingModels,
-    currentSelectedModel: modelManagement.currentSelectedModel,
-    availableModels: modelManagement.availableModels,
-    showModelSelection,
-    setShowModelSelection,
-    handleModelSelection: modelManagement.handleModelSelection,
-    loadAvailableModels: modelManagement.loadAvailableModels,
-    getFreeModels,
-    getFastModels,
-    getThinkerModels,
-    getImageModels,
-  }), [
-    modelManagement.isLoadingModels,
-    modelManagement.currentSelectedModel,
-    modelManagement.availableModels,
-    showModelSelection,
-    modelManagement.handleModelSelection,
-    modelManagement.loadAvailableModels,
-  ]);
+  const modelManagementInterface = useMemo(
+    () => ({
+      isLoadingModelInfo: modelManagement.isLoadingModels,
+      currentSelectedModel: modelManagement.currentSelectedModel,
+      availableModels: modelManagement.availableModels,
+      showModelSelection,
+      setShowModelSelection,
+      handleModelSelection: modelManagement.handleModelSelection,
+      loadAvailableModels: modelManagement.loadAvailableModels,
+      getFreeModels,
+      getFastModels,
+      getThinkerModels,
+      getImageModels,
+    }),
+    [
+      modelManagement.isLoadingModels,
+      modelManagement.currentSelectedModel,
+      modelManagement.availableModels,
+      showModelSelection,
+      modelManagement.handleModelSelection,
+      modelManagement.loadAvailableModels,
+    ],
+  );
 
   const renderTabContent = () => {
     if (!publicKey) {
       return (
         <>
-          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' || mainHudActiveTab === null ? '' : styles.hidden}`}>
-            <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} showMarketplace={showCrossroadsMarketplace} resetToLanding={resetCrossroadsToLanding} animationPhase={loginAnimationPhase} />
-          </div>
-          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'canvas' ? '' : styles.hidden}`}>
-            <div className={styles.canvasView}>
-              <div className={styles.canvasBackground} />
-              <div className={styles.canvasEmpty}>
-                <p className={styles.canvasMessage}>Empty Canvas</p>
-                <p className={styles.canvasHint}>Click the logo to return to Hecate</p>
-              </div>
-            </div>
-          </div>
-          {mainHudActiveTab !== 'crossroads' && mainHudActiveTab !== 'canvas' && mainHudActiveTab !== null && (
-            <div className={styles.defaultTab}>
-              <p>Connect your wallet to access full features</p>
-            </div>
-          )}
-        </>
-      );
-    } else {
-      return (
-        <>
-          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'canvas' ? '' : styles.hidden}`}>
-            <div className={styles.canvasView}>
-              <div className={styles.canvasBackground} />
-              <div className={styles.canvasEmpty}>
-                <p className={styles.canvasMessage}>Empty Canvas</p>
-                <p className={styles.canvasHint}>Click the logo to return to Hecate</p>
-              </div>
-            </div>
-          </div>
-          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' ? '' : styles.hidden}`}>
-            <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} showMarketplace={showCrossroadsMarketplace} resetToLanding={resetCrossroadsToLanding} animationPhase={loginAnimationPhase} />
-          </div>
-          <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'memcache' ? '' : styles.hidden}`}>
-            <MemCache
+          <div
+            className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' || mainHudActiveTab === null ? '' : styles.hidden}`}
+          >
+            <Crossroads
               publicKey={publicKey}
-              activeSection={memcacheSection}
-              taskManagement={taskManagementInterface}
-              modelManagement={modelManagementInterface}
-              availableModels={modelManagement.availableModels}
-              activeAgent={chat.activeAgent}
-              setActiveAgent={chat.setActiveAgent}
-              hasApiKey={hasApiKeys === true}
+              onConnectWallet={onConnectWallet}
+              showMarketplace={showCrossroadsMarketplace}
+              resetToLanding={resetCrossroadsToLanding}
+              animationPhase={loginAnimationPhase}
             />
           </div>
-          {mainHudActiveTab !== 'canvas' && mainHudActiveTab !== 'crossroads' && mainHudActiveTab !== 'memcache' && !inVoidMode && (
+          <div
+            className={`${styles.tabWrapper} ${mainHudActiveTab === 'canvas' ? '' : styles.hidden}`}
+          >
+            <div className={styles.canvasView}>
+              <div className={styles.canvasBackground} />
+              <div className={styles.canvasEmpty}>
+                <p className={styles.canvasMessage}>Empty Canvas</p>
+                <p className={styles.canvasHint}>Click the logo to return to Hecate</p>
+              </div>
+            </div>
+          </div>
+          {mainHudActiveTab !== 'crossroads' &&
+            mainHudActiveTab !== 'canvas' &&
+            mainHudActiveTab !== null && (
+              <div className={styles.defaultTab}>
+                <p>Connect your wallet to access full features</p>
+              </div>
+            )}
+        </>
+      );
+    }
+
+    return (
+      <>
+        <div
+          className={`${styles.tabWrapper} ${mainHudActiveTab === 'canvas' ? '' : styles.hidden}`}
+        >
+          <div className={styles.canvasView}>
+            <div className={styles.canvasBackground} />
+            <div className={styles.canvasEmpty}>
+              <p className={styles.canvasMessage}>Empty Canvas</p>
+              <p className={styles.canvasHint}>Click the logo to return to Hecate</p>
+            </div>
+          </div>
+        </div>
+        <div
+          className={`${styles.tabWrapper} ${mainHudActiveTab === 'crossroads' ? '' : styles.hidden}`}
+        >
+          <Crossroads
+            publicKey={publicKey}
+            onConnectWallet={onConnectWallet}
+            showMarketplace={showCrossroadsMarketplace}
+            resetToLanding={resetCrossroadsToLanding}
+            animationPhase={loginAnimationPhase}
+          />
+        </div>
+        <div
+          className={`${styles.tabWrapper} ${mainHudActiveTab === 'memcache' ? '' : styles.hidden}`}
+        >
+          <MemCache
+            publicKey={publicKey}
+            activeSection={memcacheSection}
+            taskManagement={taskManagementInterface}
+            modelManagement={modelManagementInterface}
+            availableModels={modelManagement.availableModels}
+            activeAgent={chat.activeAgent}
+            setActiveAgent={chat.setActiveAgent}
+            hasApiKey={hasApiKeys === true}
+          />
+        </div>
+        {mainHudActiveTab !== 'canvas' &&
+          mainHudActiveTab !== 'crossroads' &&
+          mainHudActiveTab !== 'memcache' &&
+          !inVoidMode && (
             <div className={styles.defaultTab}>
               <p>Select a tab to view content</p>
             </div>
           )}
-        </>
-      );
-    }
+      </>
+    );
   };
 
   const handleTabSelect = (tab: 'crossroads' | 'memcache') => {
@@ -807,11 +919,13 @@ const HUD: React.FC<HUDProps> = ({
 
     if (mainHudActiveTab === tab) {
       setMainHudActiveTab(null);
+
       if (tab === 'crossroads') {
         setShowCrossroadsMarketplace(false);
       }
     } else {
       setMainHudActiveTab(tab);
+
       if (tab === 'crossroads') {
         setShowCrossroadsMarketplace(true);
       }
@@ -824,6 +938,7 @@ const HUD: React.FC<HUDProps> = ({
       setMainHudActiveTab(null);
       setShowCrossroadsMarketplace(false);
     }
+
     setHecatePanelOpen(open);
   };
 
@@ -841,6 +956,7 @@ const HUD: React.FC<HUDProps> = ({
 
   const handleDismissVoidWelcome = () => {
     setHasSeenVoidWelcome(true);
+
     if (typeof window !== 'undefined') {
       localStorage.setItem('nullblock_void_welcome_seen', 'true');
     }
@@ -862,7 +978,9 @@ const HUD: React.FC<HUDProps> = ({
   );
 
   return (
-    <div className={`${styles.echoContainer} ${publicKey ? styles[theme] : styles.loggedOut} ${inVoidMode ? styles.voidMode : ''}`}>
+    <div
+      className={`${styles.echoContainer} ${publicKey ? styles[theme] : styles.loggedOut} ${inVoidMode ? styles.voidMode : ''}`}
+    >
       {/* VoidOverlay navbar - visible during navbar phase and after */}
       {(loginAnimationPhase === 'navbar' || loginAnimationPhase === 'complete') && (
         <VoidOverlay
@@ -874,7 +992,11 @@ const HUD: React.FC<HUDProps> = ({
           showWelcome={inVoidMode && !hasSeenVoidWelcome}
           onDismissWelcome={handleDismissVoidWelcome}
           publicKey={publicKey}
-          activeTab={mainHudActiveTab === 'crossroads' || mainHudActiveTab === 'memcache' ? mainHudActiveTab : null}
+          activeTab={
+            mainHudActiveTab === 'crossroads' || mainHudActiveTab === 'memcache'
+              ? mainHudActiveTab
+              : null
+          }
           memcacheSection={memcacheSection}
           onMemcacheSectionChange={setMemcacheSection}
         />

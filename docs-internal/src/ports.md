@@ -11,6 +11,8 @@ Quick reference for all NullBlock service ports.
 | **8001** | Protocols | A2A/MCP protocol server |
 | **9003** | Agents | HECATE agent API |
 | **9004** | Engrams | Memory/context layer |
+| **9006** | Poly Mev | Polymarket scanner (planned) |
+| **9007** | ArbFarm | Solana MEV agent swarm |
 
 ## Infrastructure
 
@@ -59,4 +61,5 @@ curl http://localhost:3000/health   # Erebus
 curl http://localhost:9003/health   # Agents
 curl http://localhost:9004/health   # Engrams
 curl http://localhost:8001/health   # Protocols
+curl http://localhost:9007/health   # ArbFarm
 ```

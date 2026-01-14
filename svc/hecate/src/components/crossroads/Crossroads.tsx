@@ -17,7 +17,13 @@ interface CrossroadsProps {
 
 type View = 'landing' | 'marketplace' | 'service-detail' | 'my-services';
 
-const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet, showMarketplace, resetToLanding, animationPhase = 'complete' }) => {
+const Crossroads: React.FC<CrossroadsProps> = ({
+  publicKey,
+  onConnectWallet,
+  showMarketplace,
+  resetToLanding,
+  animationPhase = 'complete',
+}) => {
   const [currentView, setCurrentView] = useState<View>('landing');
   const [selectedService, setSelectedService] = useState<ServiceListing | null>(null);
 
@@ -71,7 +77,13 @@ const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet, sho
         );
 
       case 'marketplace':
-        return <MarketplaceBrowser onServiceClick={handleServiceClick} publicKey={publicKey} onConnectWallet={onConnectWallet} />;
+        return (
+          <MarketplaceBrowser
+            onServiceClick={handleServiceClick}
+            publicKey={publicKey}
+            onConnectWallet={onConnectWallet}
+          />
+        );
 
       case 'service-detail':
         return (
@@ -105,7 +117,9 @@ const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet, sho
                 <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>
                   {selectedService.short_description}
                 </p>
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+                <div
+                  style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}
+                >
                   {selectedService.capabilities.map((cap) => (
                     <span
                       key={cap}
@@ -132,7 +146,11 @@ const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet, sho
                   <strong>Deployments:</strong> {selectedService.deployment_count}
                 </p>
                 <p style={{ color: '#cbd5e1', marginBottom: '2rem' }}>
-                  <strong>Rating:</strong> {selectedService.rating_average ? `${selectedService.rating_average}/5` : 'No ratings yet'} ({selectedService.rating_count} reviews)
+                  <strong>Rating:</strong>{' '}
+                  {selectedService.rating_average
+                    ? `${selectedService.rating_average}/5`
+                    : 'No ratings yet'}{' '}
+                  ({selectedService.rating_count} reviews)
                 </p>
                 <button
                   style={{
@@ -167,11 +185,7 @@ const Crossroads: React.FC<CrossroadsProps> = ({ publicKey, onConnectWallet, sho
     }
   };
 
-  return (
-    <div className={styles.crossroadsContainer}>
-      {renderView()}
-    </div>
-  );
+  return <div className={styles.crossroadsContainer}>{renderView()}</div>;
 };
 
 export default Crossroads;

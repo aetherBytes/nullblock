@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { UserProfile } from '../types/user';
 import { userApi } from '../common/services/user-api';
+import type { UserProfile } from '../types/user';
 
 const CACHE_DURATION = 30 * 60 * 1000;
 const CACHE_KEY = 'userProfile';
@@ -21,9 +21,11 @@ const inferNetworkFromAddress = (address: string): string => {
   if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) {
     return 'solana';
   }
+
   if (/^0x[a-fA-F0-9]{40}$/.test(address)) {
     return 'ethereum';
   }
+
   return 'unknown';
 };
 
@@ -36,6 +38,7 @@ export const useUserProfile = (publicKey: string | null) => {
     if (!publicKey) {
       console.log('👤 useUserProfile: No publicKey, skipping fetch');
       setUserProfile(null);
+
       return;
     }
 
@@ -45,12 +48,15 @@ export const useUserProfile = (publicKey: string | null) => {
     const cacheTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
 
     if (cached && cacheTimestamp) {
-      const age = Date.now() - parseInt(cacheTimestamp, 10);
+      const age = Date.now() - Number.parseInt(cacheTimestamp, 10);
+
       if (age < CACHE_DURATION) {
         try {
           const parsed = JSON.parse(cached);
+
           if (parsed.source_identifier === publicKey) {
             setUserProfile(parsed);
+
             return;
           }
         } catch (err) {
@@ -73,6 +79,7 @@ export const useUserProfile = (publicKey: string | null) => {
         if (network === 'unknown') {
           setError('Unable to determine wallet network. Please reconnect your wallet.');
           setIsLoading(false);
+
           return;
         }
 
@@ -81,6 +88,7 @@ export const useUserProfile = (publicKey: string | null) => {
 
       console.log('👤 useUserProfile: Calling API lookup with', { publicKey, network });
       const lookupResult = await userApi.lookupUser(publicKey, network);
+
       console.log('👤 useUserProfile: API response:', lookupResult);
 
       // Handle both response formats: {success, data} and {found, user}
@@ -98,6 +106,7 @@ export const useUserProfile = (publicKey: string | null) => {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch user profile';
+
       setError(errorMessage);
       console.error('User profile fetch error:', err);
     } finally {

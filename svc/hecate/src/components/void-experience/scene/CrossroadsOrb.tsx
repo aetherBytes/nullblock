@@ -1,5 +1,5 @@
-import React, { useRef, useMemo, useCallback } from 'react';
 import { useFrame, useThree, extend } from '@react-three/fiber';
+import React, { useRef, useMemo, useCallback } from 'react';
 import * as THREE from 'three';
 import type { ConstellationNode } from './VoidScene';
 
@@ -404,7 +404,7 @@ class DendriteMaterial extends THREE.ShaderMaterial {
       uniforms: {
         uTime: { value: 0 },
         uGrowth: { value: 0 }, // 0 = not visible, 1 = fully grown
-        uFade: { value: 1 },   // 1 = visible, 0 = faded out
+        uFade: { value: 1 }, // 1 = visible, 0 = faded out
         uThickness: { value: 1.0 }, // Base thickness multiplier (randomized per tendril)
         uDirection: { value: 1.0 }, // 1.0 = outward (sending), -1.0 = inward (receiving)
         uOpacity: { value: 1.0 }, // Random opacity per tendril
@@ -666,12 +666,14 @@ interface CrossroadsOrbProps {
 const createGlowTexture = () => {
   const size = 512;
   const canvas = document.createElement('canvas');
+
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
 
   // Use more gradient stops for smoother falloff
-  const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+
   gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
   gradient.addColorStop(0.05, 'rgba(255, 255, 255, 0.6)');
   gradient.addColorStop(0.1, 'rgba(255, 255, 255, 0.4)');
@@ -688,7 +690,9 @@ const createGlowTexture = () => {
   ctx.fillRect(0, 0, size, size);
 
   const texture = new THREE.CanvasTexture(canvas);
+
   texture.needsUpdate = true;
+
   return texture;
 };
 
@@ -696,11 +700,13 @@ const createGlowTexture = () => {
 const createParticleTexture = (color: [number, number, number]) => {
   const size = 64;
   const canvas = document.createElement('canvas');
+
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
 
-  const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+
   gradient.addColorStop(0, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 1)`);
   gradient.addColorStop(0.3, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.5)`);
   gradient.addColorStop(0.6, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.15)`);
@@ -708,11 +714,13 @@ const createParticleTexture = (color: [number, number, number]) => {
 
   ctx.fillStyle = gradient;
   ctx.beginPath();
-  ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+  ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
   ctx.fill();
 
   const texture = new THREE.CanvasTexture(canvas);
+
   texture.needsUpdate = true;
+
   return texture;
 };
 
@@ -726,7 +734,14 @@ interface SolarParticle {
   radius: number;
 }
 
-const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], constellationNodes = [], animatedPositionsRef, outerNodes = [], outerAnimatedPositionsRef, onActiveNodesChange }) => {
+const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({
+  position = [0, 0, 0],
+  constellationNodes = [],
+  animatedPositionsRef,
+  outerNodes = [],
+  outerAnimatedPositionsRef,
+  onActiveNodesChange,
+}) => {
   const groupRef = useRef<THREE.Group>(null);
   const sunPlaneRef = useRef<THREE.Mesh>(null);
   const coronaGroupRef = useRef<THREE.Group>(null);
@@ -773,28 +788,29 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
 
       flares.push({ theta, phi, length, width, phase });
     }
+
     return flares;
   }, [flareCount]);
 
   // Dynamic dendrite state - each tendril has a lifecycle
   interface DendriteState {
     targetNodeIndex: number; // Index of constellation node this tendril connects to
-    targetIsOuter: boolean;  // true if targeting outer constellation, false for inner
+    targetIsOuter: boolean; // true if targeting outer constellation, false for inner
     length: number;
     width: number;
-    thickness: number;   // Random thickness multiplier for variety
-    opacity: number;     // Random opacity per tendril
+    thickness: number; // Random thickness multiplier for variety
+    opacity: number; // Random opacity per tendril
     dir: THREE.Vector3;
     quaternion: THREE.Quaternion;
     // Lifecycle
     state: 'growing' | 'holding' | 'fading' | 'waiting';
-    growth: number;      // 0-1 how much has grown
-    fade: number;        // 1-0 fade out
-    lifetime: number;    // How long to hold
-    elapsed: number;     // Time in current state
-    growSpeed: number;   // How fast to grow
+    growth: number; // 0-1 how much has grown
+    fade: number; // 1-0 fade out
+    lifetime: number; // How long to hold
+    elapsed: number; // Time in current state
+    growSpeed: number; // How fast to grow
     growsOutward: boolean; // true = outward (sending), false = inward (receiving)
-    lingers: boolean;    // true = stays connected much longer
+    lingers: boolean; // true = stays connected much longer
   }
 
   const dendritesState = useRef<DendriteState[]>([]);
@@ -839,93 +855,104 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
   }, [dendriteCount]);
 
   // Helper to get current position of a node (animated or static)
-  const getNodePosition = useCallback((index: number, isOuter: boolean): THREE.Vector3 => {
-    if (isOuter) {
-      if (outerAnimatedPositionsRef && outerAnimatedPositionsRef.current[index]) {
-        return outerAnimatedPositionsRef.current[index];
+  const getNodePosition = useCallback(
+    (index: number, isOuter: boolean): THREE.Vector3 => {
+      if (isOuter) {
+        if (outerAnimatedPositionsRef && outerAnimatedPositionsRef.current[index]) {
+          return outerAnimatedPositionsRef.current[index];
+        }
+
+        return outerNodes[index]?.position || new THREE.Vector3();
       }
-      return outerNodes[index]?.position || new THREE.Vector3();
-    } else {
+
       if (animatedPositionsRef && animatedPositionsRef.current[index]) {
         return animatedPositionsRef.current[index];
       }
+
       return constellationNodes[index]?.position || new THREE.Vector3();
-    }
-  }, [animatedPositionsRef, constellationNodes, outerAnimatedPositionsRef, outerNodes]);
+    },
+    [animatedPositionsRef, constellationNodes, outerAnimatedPositionsRef, outerNodes],
+  );
 
   // Function to spawn a new tendril targeting a constellation node
-  const spawnDendrite = useCallback((d: DendriteState) => {
-    const totalInnerNodes = constellationNodes.length;
-    const totalOuterNodes = outerNodes.length;
-    const totalNodes = totalInnerNodes + totalOuterNodes;
+  const spawnDendrite = useCallback(
+    (d: DendriteState) => {
+      const totalInnerNodes = constellationNodes.length;
+      const totalOuterNodes = outerNodes.length;
+      const totalNodes = totalInnerNodes + totalOuterNodes;
 
-    // If no constellation nodes at all, fall back to random direction
-    if (totalNodes === 0) {
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.PI * 0.2 + Math.random() * Math.PI * 0.6;
-      d.dir = new THREE.Vector3(
-        Math.sin(phi) * Math.cos(theta),
-        Math.cos(phi),
-        Math.sin(phi) * Math.sin(theta)
-      ).normalize();
-      d.length = 2.0 + Math.random() * 3.0;
-      d.targetNodeIndex = -1;
-      d.targetIsOuter = false;
-    } else {
-      // Pick a random node from combined pool (inner + outer)
-      // Weight slightly toward inner nodes since they're closer and more visible
-      const innerWeight = totalInnerNodes > 0 ? 0.7 : 0;
-      const pickOuter = totalOuterNodes > 0 && (totalInnerNodes === 0 || Math.random() > innerWeight);
+      // If no constellation nodes at all, fall back to random direction
+      if (totalNodes === 0) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.PI * 0.2 + Math.random() * Math.PI * 0.6;
 
-      if (pickOuter) {
-        d.targetIsOuter = true;
-        d.targetNodeIndex = Math.floor(Math.random() * totalOuterNodes);
-      } else {
+        d.dir = new THREE.Vector3(
+          Math.sin(phi) * Math.cos(theta),
+          Math.cos(phi),
+          Math.sin(phi) * Math.sin(theta),
+        ).normalize();
+        d.length = 2.0 + Math.random() * 3.0;
+        d.targetNodeIndex = -1;
         d.targetIsOuter = false;
-        d.targetNodeIndex = Math.floor(Math.random() * totalInnerNodes);
+      } else {
+        // Pick a random node from combined pool (inner + outer)
+        // Weight slightly toward inner nodes since they're closer and more visible
+        const innerWeight = totalInnerNodes > 0 ? 0.7 : 0;
+        const pickOuter =
+          totalOuterNodes > 0 && (totalInnerNodes === 0 || Math.random() > innerWeight);
+
+        if (pickOuter) {
+          d.targetIsOuter = true;
+          d.targetNodeIndex = Math.floor(Math.random() * totalOuterNodes);
+        } else {
+          d.targetIsOuter = false;
+          d.targetNodeIndex = Math.floor(Math.random() * totalInnerNodes);
+        }
+
+        const targetPos = getNodePosition(d.targetNodeIndex, d.targetIsOuter);
+
+        // Direction from orb center to constellation node
+        d.dir = targetPos.clone().normalize();
+
+        // Calculate exact length needed to reach the node from orb surface
+        // Tip position = sunRadius + length (along direction)
+        // We want tip to reach the node, so: sunRadius + length = distToNode
+        // Therefore: length = distToNode - sunRadius
+        const distToNode = targetPos.length();
+
+        d.length = Math.max(1.5, distToNode - sunRadius);
       }
 
-      const targetPos = getNodePosition(d.targetNodeIndex, d.targetIsOuter);
+      d.width = 0.15 + Math.random() * 0.1; // Base width 0.15-0.25 (slightly thicker)
+      d.thickness = 0.6 + Math.random() * 0.4; // Thickness variation 0.6-1.0
+      d.opacity = 0.6 + Math.random() * 0.4; // Random opacity 0.6-1.0 (more visible)
 
-      // Direction from orb center to constellation node
-      d.dir = targetPos.clone().normalize();
+      // Random direction: outward (sending) or inward (receiving)
+      d.growsOutward = Math.random() > 0.4; // 60% outward, 40% inward
 
-      // Calculate exact length needed to reach the node from orb surface
-      // Tip position = sunRadius + length (along direction)
-      // We want tip to reach the node, so: sunRadius + length = distToNode
-      // Therefore: length = distToNode - sunRadius
-      const distToNode = targetPos.length();
-      d.length = Math.max(1.5, distToNode - sunRadius);
-    }
+      // Some tendrils linger much longer (30% chance)
+      d.lingers = Math.random() < 0.3;
 
-    d.width = 0.15 + Math.random() * 0.1; // Base width 0.15-0.25 (slightly thicker)
-    d.thickness = 0.6 + Math.random() * 0.4; // Thickness variation 0.6-1.0
-    d.opacity = 0.6 + Math.random() * 0.4; // Random opacity 0.6-1.0 (more visible)
+      // Calculate rotation to point the tendril outward
+      d.quaternion = new THREE.Quaternion();
+      d.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), d.dir);
 
-    // Random direction: outward (sending) or inward (receiving)
-    d.growsOutward = Math.random() > 0.4; // 60% outward, 40% inward
+      d.state = 'growing';
+      d.growth = 0;
+      d.fade = 1;
 
-    // Some tendrils linger much longer (30% chance)
-    d.lingers = Math.random() < 0.3;
+      // Lingering tendrils stay connected 3-8 seconds, normal ones 0.8-4.8 seconds
+      if (d.lingers) {
+        d.lifetime = 3.0 + Math.random() * 5.0;
+      } else {
+        d.lifetime = 0.8 + Math.random() * 4.0;
+      }
 
-    // Calculate rotation to point the tendril outward
-    d.quaternion = new THREE.Quaternion();
-    d.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), d.dir);
-
-    d.state = 'growing';
-    d.growth = 0;
-    d.fade = 1;
-
-    // Lingering tendrils stay connected 3-8 seconds, normal ones 0.8-4.8 seconds
-    if (d.lingers) {
-      d.lifetime = 3.0 + Math.random() * 5.0;
-    } else {
-      d.lifetime = 0.8 + Math.random() * 4.0;
-    }
-
-    d.elapsed = 0;
-    d.growSpeed = 0.3 + Math.random() * 0.9; // Growth speed 0.3-1.2
-  }, [constellationNodes, outerNodes, sunRadius, getNodePosition]);
+      d.elapsed = 0;
+      d.growSpeed = 0.3 + Math.random() * 0.9; // Growth speed 0.3-1.2
+    },
+    [constellationNodes, outerNodes, sunRadius, getNodePosition],
+  );
 
   // Textures
   const glowTexture = useMemo(() => createGlowTexture(), []);
@@ -941,19 +968,20 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
     const eps2 = 2 * eps;
 
     // Simplified noise - fewer octaves (2 instead of 3)
-    const noise2D = (px: number, py: number): number => {
-      return Math.sin(px * 1.5 + time) * Math.sin(py * 1.5) * 0.6 +
-             Math.sin(px * 3.7 - time * 0.7) * Math.sin(py * 2.3) * 0.4;
-    };
+    const noise2D = (px: number, py: number): number =>
+      Math.sin(px * 1.5 + time) * Math.sin(py * 1.5) * 0.6 +
+      Math.sin(px * 3.7 - time * 0.7) * Math.sin(py * 2.3) * 0.4;
 
     const curl = tempCurlResult.current;
 
     let n1 = noise2D(x, y + eps);
     let n2 = noise2D(x, y - eps);
     let a = (n1 - n2) / eps2;
+
     n1 = noise2D(x, z + eps);
     n2 = noise2D(x, z - eps);
     let b = (n1 - n2) / eps2;
+
     curl.x = a - b;
 
     n1 = noise2D(y, z + eps);
@@ -986,18 +1014,22 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       const pos = new THREE.Vector3(
         r * Math.sin(phi) * Math.cos(theta),
         r * Math.sin(phi) * Math.sin(theta),
-        r * Math.cos(phi)
+        r * Math.cos(phi),
       );
 
       particles.push({
         position: pos.clone(),
         basePosition: pos.clone(),
-        velocity: pos.clone().normalize().multiplyScalar(0.3 + Math.random() * 0.6),
+        velocity: pos
+          .clone()
+          .normalize()
+          .multiplyScalar(0.3 + Math.random() * 0.6),
         phase: Math.random() * Math.PI * 2,
         speed: 0.15 + Math.random() * 0.35,
         radius: r,
       });
     }
+
     return particles;
   }, [sunRadius, brightParticleCount]);
 
@@ -1012,7 +1044,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       const pos = new THREE.Vector3(
         r * Math.sin(phi) * Math.cos(theta),
         r * Math.sin(phi) * Math.sin(theta),
-        r * Math.cos(phi)
+        r * Math.cos(phi),
       );
 
       particles.push({
@@ -1024,12 +1056,19 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
         radius: r,
       });
     }
+
     return particles;
   }, [sunRadius, streamParticleCount]);
 
   // Position arrays
-  const brightPositions = useMemo(() => new Float32Array(brightParticleCount * 3), [brightParticleCount]);
-  const streamPositions = useMemo(() => new Float32Array(streamParticleCount * 3), [streamParticleCount]);
+  const brightPositions = useMemo(
+    () => new Float32Array(brightParticleCount * 3),
+    [brightParticleCount],
+  );
+  const streamPositions = useMemo(
+    () => new Float32Array(streamParticleCount * 3),
+    [streamParticleCount],
+  );
 
   useFrame((state, delta) => {
     const time = state.clock.elapsedTime;
@@ -1044,10 +1083,12 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       isHovered.current = mouseWorld.current.distanceTo(tempGroupPos.current) < sunRadius + 2;
 
       const targetHover = isHovered.current ? 1.0 : 0.0;
+
       hoverAmount.current += (targetHover - hoverAmount.current) * 0.08;
 
       // Gentle breathing
       const breathe = Math.sin(time * 0.2) * 0.015;
+
       groupRef.current.position.y = position[1] + breathe;
     }
 
@@ -1061,9 +1102,11 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
     if (coronaMaterialRef.current) {
       coronaMaterialRef.current.uniforms.uTime.value = time;
     }
+
     if (corona2MaterialRef.current) {
       corona2MaterialRef.current.uniforms.uTime.value = time;
     }
+
     if (corona3MaterialRef.current) {
       corona3MaterialRef.current.uniforms.uTime.value = time;
     }
@@ -1079,15 +1122,18 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       align.isAligning = true;
       align.alignProgress = 0;
       align.holdTime = 0;
+
       // Store current rotations as base to blend from
       if (coronaGroupRef.current) {
         align.ring1BaseRot.x = coronaGroupRef.current.rotation.x;
         align.ring1BaseRot.z = coronaGroupRef.current.rotation.z;
       }
+
       if (corona2GroupRef.current) {
         align.ring2BaseRot.z = corona2GroupRef.current.rotation.z;
         align.ring2BaseRot.y = corona2GroupRef.current.rotation.y;
       }
+
       if (corona3GroupRef.current) {
         align.ring3BaseRot.y = corona3GroupRef.current.rotation.y;
         align.ring3BaseRot.x = corona3GroupRef.current.rotation.x;
@@ -1109,16 +1155,20 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
           coronaGroupRef.current.rotation.z = align.ring1BaseRot.z * (1 - ease);
           coronaGroupRef.current.rotation.y = sharedSpin;
         }
+
         if (corona2GroupRef.current) {
           // Blend from tilted to flat
           const baseTiltX = Math.PI / 3;
+
           corona2GroupRef.current.rotation.x = baseTiltX * (1 - ease);
           corona2GroupRef.current.rotation.z = align.ring2BaseRot.z * (1 - ease);
           corona2GroupRef.current.rotation.y = sharedSpin;
         }
+
         if (corona3GroupRef.current) {
           // Blend from tilted to flat
           const baseTiltZ = Math.PI / 3;
+
           corona3GroupRef.current.rotation.z = baseTiltZ * (1 - ease);
           corona3GroupRef.current.rotation.x = align.ring3BaseRot.x * (1 - ease);
           corona3GroupRef.current.rotation.y = sharedSpin;
@@ -1129,9 +1179,17 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
         const sharedSpin = time * 0.15;
 
         // Keep spinning together while aligned
-        if (coronaGroupRef.current) coronaGroupRef.current.rotation.y = sharedSpin;
-        if (corona2GroupRef.current) corona2GroupRef.current.rotation.y = sharedSpin;
-        if (corona3GroupRef.current) corona3GroupRef.current.rotation.y = sharedSpin;
+        if (coronaGroupRef.current) {
+          coronaGroupRef.current.rotation.y = sharedSpin;
+        }
+
+        if (corona2GroupRef.current) {
+          corona2GroupRef.current.rotation.y = sharedSpin;
+        }
+
+        if (corona3GroupRef.current) {
+          corona3GroupRef.current.rotation.y = sharedSpin;
+        }
 
         if (align.holdTime > 0.8 + Math.random() * 0.7) {
           // End alignment, schedule next one
@@ -1146,10 +1204,12 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
         coronaGroupRef.current.rotation.x += delta * 0.18;
         coronaGroupRef.current.rotation.z += delta * 0.06;
       }
+
       if (corona2GroupRef.current) {
         corona2GroupRef.current.rotation.z -= delta * 0.15;
         corona2GroupRef.current.rotation.y += delta * 0.07;
       }
+
       if (corona3GroupRef.current) {
         corona3GroupRef.current.rotation.y += delta * 0.11;
         corona3GroupRef.current.rotation.x -= delta * 0.09;
@@ -1161,11 +1221,14 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       flaresRef.current.rotation.y += delta * 0.02;
       flaresRef.current.children.forEach((flare, i) => {
         const material = flareMaterialsRef.current[i];
+
         if (material) {
           material.uniforms.uTime.value = time;
         }
+
         // Subtle scale pulsing per flare
         const pulseFactor = 0.9 + Math.sin(time * 2 + i * 1.5) * 0.15;
+
         flare.scale.y = pulseFactor;
       });
     }
@@ -1177,19 +1240,23 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       switch (d.state) {
         case 'waiting':
           d.elapsed += delta;
+
           // Random spawn after waiting period - more staggered (2-8 seconds)
           if (d.elapsed > 2.0 + Math.random() * 6.0) {
             spawnDendrite(d);
           }
+
           if (material) {
             material.uniforms.uGrowth.value = 0;
             material.uniforms.uFade.value = 0;
           }
+
           break;
 
         case 'growing':
           d.elapsed += delta;
           d.growth = Math.min(1.0, d.growth + delta * d.growSpeed);
+
           if (material) {
             material.uniforms.uTime.value = time;
             material.uniforms.uGrowth.value = d.growth;
@@ -1197,15 +1264,18 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
             material.uniforms.uDirection.value = d.growsOutward ? 1.0 : -1.0;
             material.uniforms.uOpacity.value = d.opacity;
           }
+
           // Transition to holding when fully grown
           if (d.growth >= 1.0) {
             d.state = 'holding';
             d.elapsed = 0;
           }
+
           break;
 
         case 'holding':
           d.elapsed += delta;
+
           if (material) {
             material.uniforms.uTime.value = time;
             material.uniforms.uGrowth.value = 1;
@@ -1213,16 +1283,19 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
             material.uniforms.uDirection.value = d.growsOutward ? 1.0 : -1.0;
             material.uniforms.uOpacity.value = d.opacity;
           }
+
           // Transition to fading after hold time
           if (d.elapsed > d.lifetime) {
             d.state = 'fading';
             d.elapsed = 0;
           }
+
           break;
 
         case 'fading':
           d.elapsed += delta;
           d.fade = Math.max(0, d.fade - delta * 1.2); // Slower fade
+
           if (material) {
             material.uniforms.uTime.value = time;
             material.uniforms.uGrowth.value = 1;
@@ -1230,11 +1303,13 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
             material.uniforms.uDirection.value = d.growsOutward ? 1.0 : -1.0;
             material.uniforms.uOpacity.value = d.opacity;
           }
+
           // Transition to waiting when fully faded
           if (d.fade <= 0) {
             d.state = 'waiting';
             d.elapsed = Math.random() * 4; // Random wait before next spawn
           }
+
           break;
       }
     });
@@ -1242,12 +1317,17 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
     // Track which constellation nodes have active tendrils connected
     if (onActiveNodesChange) {
       const activeNodes = new Set<number>();
+
       dendritesState.current.forEach((d) => {
         if (d.targetNodeIndex >= 0 && d.state !== 'waiting') {
           if (d.growsOutward) {
             // Outward tendril (crossroads → node): node lights up when tendril TIP reaches it
             // The tip reaches the node when growth is complete (or nearly complete)
-            if (d.state === 'holding' || d.state === 'fading' || (d.state === 'growing' && d.growth >= 0.95)) {
+            if (
+              d.state === 'holding' ||
+              d.state === 'fading' ||
+              (d.state === 'growing' && d.growth >= 0.95)
+            ) {
               activeNodes.add(d.targetNodeIndex);
             }
           } else {
@@ -1260,8 +1340,8 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
 
       // Only call callback if the set changed
       const prevSet = prevActiveNodes.current;
-      const hasChanged = activeNodes.size !== prevSet.size ||
-        [...activeNodes].some(n => !prevSet.has(n));
+      const hasChanged =
+        activeNodes.size !== prevSet.size || [...activeNodes].some((n) => !prevSet.has(n));
 
       if (hasChanged) {
         prevActiveNodes.current = activeNodes;
@@ -1274,7 +1354,10 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       dendritesRef.current.children.forEach((mesh, i) => {
         const d = dendritesState.current[i];
         const material = dendriteMaterialsRef.current[i];
-        if (!d) return;
+
+        if (!d) {
+          return;
+        }
 
         // Control visibility based on state
         mesh.visible = d.state !== 'waiting';
@@ -1283,10 +1366,13 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
           // For dendrites targeting constellation nodes, update direction/length each frame
           // to track moving nodes in orbit
           const hasAnimRef = d.targetIsOuter ? outerAnimatedPositionsRef : animatedPositionsRef;
+
           if (d.targetNodeIndex >= 0 && hasAnimRef) {
             const targetPos = getNodePosition(d.targetNodeIndex, d.targetIsOuter);
+
             d.dir = targetPos.clone().normalize();
             const distToNode = targetPos.length();
+
             d.length = Math.max(1.5, distToNode - sunRadius);
             // Update quaternion for new direction
             d.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), d.dir);
@@ -1297,11 +1383,8 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
           // After scaling by d.length/2.0, actual height = d.length
           // To place BASE at surface: center = surface + halfLength along direction
           const meshCenter = sunRadius + d.length * 0.5;
-          mesh.position.set(
-            d.dir.x * meshCenter,
-            d.dir.y * meshCenter,
-            d.dir.z * meshCenter
-          );
+
+          mesh.position.set(d.dir.x * meshCenter, d.dir.y * meshCenter, d.dir.z * meshCenter);
 
           // Apply stored quaternion to point local +Y toward d.dir (outward from sphere)
           mesh.quaternion.copy(d.quaternion);
@@ -1309,6 +1392,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
           // Scale: width and length relative to base geometry (0.08 x 2.0)
           const widthScale = d.width / 0.08;
           const lengthScale = d.length / 2.0;
+
           mesh.scale.set(widthScale, lengthScale, 1);
 
           // Update thickness uniform for shader-based taper variation
@@ -1328,6 +1412,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       const pulse = 1 + Math.sin(time * 0.4) * 0.02 + Math.sin(time * 0.7) * 0.01;
       const hoverScale = 1 + hoverAmount.current * 0.05;
       const scale = pulse * hoverScale;
+
       sunPlaneRef.current.scale.setScalar(scale);
     }
 
@@ -1335,14 +1420,17 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
     const basePulse = Math.sin(time * 0.5) * 0.5;
     const breathePulse = Math.sin(time * 0.25) * 0.3;
     const quickPulse = Math.sin(time * 1.5) * 0.15;
-    const hoverBoost = hoverAmount.current * 1.0;
+    const hoverBoost = Number(hoverAmount.current);
 
     if (glowRef.current) {
       const scale = 8 + basePulse + breathePulse + quickPulse + hoverBoost;
+
       glowRef.current.scale.set(scale, scale, 1);
     }
+
     if (glow2Ref.current) {
       const scale = 16 + basePulse * 1.5 + breathePulse + hoverBoost;
+
       glow2Ref.current.scale.set(scale, scale, 1);
     }
 
@@ -1355,6 +1443,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
 
       // Reset when too far
       const dist = p.position.length();
+
       if (dist > sunRadius + 4) {
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos(2 * Math.random() - 1);
@@ -1363,9 +1452,14 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
         p.position.set(
           r * Math.sin(phi) * Math.cos(theta),
           r * Math.sin(phi) * Math.sin(theta),
-          r * Math.cos(phi)
+          r * Math.cos(phi),
         );
-        p.velocity.copy(p.position.clone().normalize().multiplyScalar(0.3 + Math.random() * 0.6));
+        p.velocity.copy(
+          p.position
+            .clone()
+            .normalize()
+            .multiplyScalar(0.3 + Math.random() * 0.6),
+        );
       }
 
       brightPositions[i * 3] = p.position.x;
@@ -1388,6 +1482,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       // Only recalculate curl every 3 frames, otherwise use cached value
       if (shouldRecalculateCurl) {
         const curl = curl3D(p.position.x * 0.2, p.position.y * 0.2, p.position.z * 0.2, time * 0.5);
+
         curlCache.current[i].copy(curl);
       }
 
@@ -1398,6 +1493,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       p.position.add(blended.multiplyScalar(delta * p.speed));
 
       const dist = p.position.length();
+
       if (dist > sunRadius + 3.5 || dist < sunRadius + 0.3) {
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos(2 * Math.random() - 1);
@@ -1406,7 +1502,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
         p.position.set(
           r * Math.sin(phi) * Math.cos(theta),
           r * Math.sin(phi) * Math.sin(theta),
-          r * Math.cos(phi)
+          r * Math.cos(phi),
         );
       }
 
@@ -1419,6 +1515,7 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
     if (brightParticlesRef.current) {
       brightParticlesRef.current.geometry.attributes.position.needsUpdate = true;
     }
+
     if (streamParticlesRef.current) {
       streamParticlesRef.current.geometry.attributes.position.needsUpdate = true;
     }
@@ -1501,20 +1598,19 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
 
           // Create rotation to point flare outward
           const quaternion = new THREE.Quaternion();
+
           quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
           const euler = new THREE.Euler().setFromQuaternion(quaternion);
 
           return (
-            <mesh
-              key={i}
-              position={[x, y, z]}
-              rotation={[euler.x, euler.y, euler.z]}
-            >
+            <mesh key={i} position={[x, y, z]} rotation={[euler.x, euler.y, euler.z]}>
               <planeGeometry args={[flare.width, flare.length]} />
               {/* @ts-ignore */}
               <solarFlareMaterial
                 ref={(el: SolarFlareMaterial | null) => {
-                  if (el) flareMaterialsRef.current[i] = el;
+                  if (el) {
+                    flareMaterialsRef.current[i] = el;
+                  }
                 }}
                 uFlarePhase={flare.phase}
               />
@@ -1526,17 +1622,16 @@ const CrossroadsOrb: React.FC<CrossroadsOrbProps> = ({ position = [0, 0, 0], con
       {/* Dendrites/wisps - flowing energy tendrils (dynamic lifecycle) */}
       <group ref={dendritesRef}>
         {Array.from({ length: dendriteCount }).map((_, i) => (
-          <mesh
-            key={`dendrite-${i}`}
-            position={[0, sunRadius + 1, 0]}
-          >
+          <mesh key={`dendrite-${i}`} position={[0, sunRadius + 1, 0]}>
             {/* Cylinder: radiusTop, radiusBottom, height, radialSegments, heightSegments */}
             {/* Using same radius for both - shader handles the taper */}
             <cylinderGeometry args={[0.04, 0.04, 2.0, 8, 24]} />
             {/* @ts-ignore */}
             <dendriteMaterial
               ref={(el: DendriteMaterial | null) => {
-                if (el) dendriteMaterialsRef.current[i] = el;
+                if (el) {
+                  dendriteMaterialsRef.current[i] = el;
+                }
               }}
             />
           </mesh>

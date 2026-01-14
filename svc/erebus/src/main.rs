@@ -49,7 +49,7 @@ use resources::agents::routes::{
 };
 use resources::users::routes::{create_user_endpoint, lookup_user_endpoint, get_user_endpoint};
 use resources::wallets::routes::create_wallet_routes;
-use resources::{WalletManager, create_crossroads_routes, create_engram_routes, create_mcp_routes, ExternalService};
+use resources::{WalletManager, create_crossroads_routes, create_engram_routes, create_mcp_routes, create_arb_routes, ExternalService};
 
 #[derive(Serialize)]
 struct StatusResponse {
@@ -481,6 +481,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(create_mcp_routes())
         // Merge API key routes
         .merge(resources::api_keys::create_api_key_routes(api_key_service.clone()))
+        // Merge ArbFarm routes
+        .merge(create_arb_routes())
         .with_state(app_state.clone())
         // Add logging middleware
         .layer(middleware::from_fn(logging_middleware))
@@ -530,6 +532,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("📚 MCP resources: {}/mcp/resources", erebus_base_url);
     info!("💬 MCP prompts: {}/mcp/prompts", erebus_base_url);
     info!("🏥 MCP health: {}/mcp/health", erebus_base_url);
+    info!("🎯 ArbFarm API: {}/api/arb", erebus_base_url);
+    info!("📊 ArbFarm Scanner: {}/api/arb/scanner/status", erebus_base_url);
+    info!("💹 ArbFarm Edges: {}/api/arb/edges", erebus_base_url);
+    info!("🔍 ArbFarm Threats: {}/api/arb/threat/check/:mint", erebus_base_url);
     info!("💡 Ready for agentic workflows, marketplace operations, engrams, MCP, and service discovery");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));

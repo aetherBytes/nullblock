@@ -10,13 +10,15 @@ export const useApiKeyCheck = (userId: string | null) => {
     if (!userId) {
       setHasApiKeys(false);
       setIsLoading(false);
+
       return;
     }
 
     fetch(`${EREBUS_API_URL}/api/users/${userId}/api-keys`)
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         const hasKeys = data.success && data.data.length > 0;
+
         setHasApiKeys(hasKeys);
         setIsLoading(false);
       })

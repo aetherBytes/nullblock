@@ -36,6 +36,7 @@ export interface AgentServiceResponse<T = any> {
 }
 
 export type AgentType = 'conversational' | 'specialized' | 'system';
+
 export type AgentStatus = 'healthy' | 'unhealthy' | 'unknown';
 
 export interface AgentMetrics {

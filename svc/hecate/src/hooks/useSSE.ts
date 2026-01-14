@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { TaskLifecycleEvent } from '../types/tasks';
+import type { TaskLifecycleEvent } from '../types/tasks';
 
 interface UseSSEOptions {
   onTaskUpdate?: (event: TaskLifecycleEvent) => void;
@@ -37,89 +37,103 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
 
   const erebusUrl = import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000';
 
-  const createTaskSubscription = useCallback((taskId: string) => {
-    if (taskSubscriptions.current.has(taskId)) {
-      return;
-    }
+  const createTaskSubscription = useCallback(
+    (taskId: string) => {
+      if (taskSubscriptions.current.has(taskId)) {
+        return;
+      }
 
-    const url = `${erebusUrl}/a2a/tasks/${taskId}/sse`;
+      const url = `${erebusUrl}/a2a/tasks/${taskId}/sse`;
 
-    try {
-      const eventSource = new EventSource(url);
+      try {
+        const eventSource = new EventSource(url);
 
-      eventSource.onopen = () => {
-        isConnectedRef.current = true;
-        if (onConnect) {
-          onConnect();
-        }
-      };
+        eventSource.onopen = () => {
+          isConnectedRef.current = true;
 
-      eventSource.onmessage = (event) => {
-        try {
-          if (event.data && event.data !== 'keep-alive') {
-            const parsedEvent = JSON.parse(event.data) as TaskLifecycleEvent;
+          if (onConnect) {
+            onConnect();
+          }
+        };
 
-            if (onTaskUpdate) {
-              onTaskUpdate(parsedEvent);
+        eventSource.onmessage = (event) => {
+          try {
+            if (event.data && event.data !== 'keep-alive') {
+              const parsedEvent = JSON.parse(event.data) as TaskLifecycleEvent;
+
+              if (onTaskUpdate) {
+                onTaskUpdate(parsedEvent);
+              }
+            }
+          } catch (error) {
+            console.error(`Failed to parse SSE event for task ${taskId}:`, error);
+
+            if (onError) {
+              onError(error as Error);
             }
           }
-        } catch (error) {
-          console.error(`Failed to parse SSE event for task ${taskId}:`, error);
-          if (onError) {
-            onError(error as Error);
+        };
+
+        eventSource.onerror = () => {
+          eventSource.close();
+          taskSubscriptions.current.delete(taskId);
+          isConnectedRef.current =
+            taskSubscriptions.current.size > 0 || messageSubscription.current !== null;
+
+          if (onDisconnect) {
+            onDisconnect();
           }
-        }
-      };
 
-      eventSource.onerror = () => {
-        eventSource.close();
-        taskSubscriptions.current.delete(taskId);
-        isConnectedRef.current = taskSubscriptions.current.size > 0 || messageSubscription.current !== null;
+          if (onError) {
+            onError(new Error(`SSE connection error for task ${taskId}`));
+          }
 
-        if (onDisconnect) {
-          onDisconnect();
-        }
+          if (autoReconnect) {
+            const timeout = setTimeout(() => {
+              createTaskSubscription(taskId);
+            }, reconnectInterval);
+
+            reconnectTimeouts.current.set(taskId, timeout);
+          }
+        };
+
+        taskSubscriptions.current.set(taskId, eventSource);
+      } catch (error) {
+        console.error(`Failed to create SSE connection for task ${taskId}:`, error);
 
         if (onError) {
-          onError(new Error(`SSE connection error for task ${taskId}`));
+          onError(error as Error);
+        }
+      }
+    },
+    [erebusUrl, onTaskUpdate, onError, onConnect, onDisconnect, autoReconnect, reconnectInterval],
+  );
+
+  const destroyTaskSubscription = useCallback(
+    (taskId: string) => {
+      const eventSource = taskSubscriptions.current.get(taskId);
+
+      if (eventSource) {
+        eventSource.close();
+        taskSubscriptions.current.delete(taskId);
+
+        const timeout = reconnectTimeouts.current.get(taskId);
+
+        if (timeout) {
+          clearTimeout(timeout);
+          reconnectTimeouts.current.delete(taskId);
         }
 
-        if (autoReconnect) {
-          const timeout = setTimeout(() => {
-            createTaskSubscription(taskId);
-          }, reconnectInterval);
-          reconnectTimeouts.current.set(taskId, timeout);
+        isConnectedRef.current =
+          taskSubscriptions.current.size > 0 || messageSubscription.current !== null;
+
+        if (!isConnectedRef.current && onDisconnect) {
+          onDisconnect();
         }
-      };
-
-      taskSubscriptions.current.set(taskId, eventSource);
-    } catch (error) {
-      console.error(`Failed to create SSE connection for task ${taskId}:`, error);
-      if (onError) {
-        onError(error as Error);
       }
-    }
-  }, [erebusUrl, onTaskUpdate, onError, onConnect, onDisconnect, autoReconnect, reconnectInterval]);
-
-  const destroyTaskSubscription = useCallback((taskId: string) => {
-    const eventSource = taskSubscriptions.current.get(taskId);
-    if (eventSource) {
-      eventSource.close();
-      taskSubscriptions.current.delete(taskId);
-
-      const timeout = reconnectTimeouts.current.get(taskId);
-      if (timeout) {
-        clearTimeout(timeout);
-        reconnectTimeouts.current.delete(taskId);
-      }
-
-      isConnectedRef.current = taskSubscriptions.current.size > 0 || messageSubscription.current !== null;
-
-      if (!isConnectedRef.current && onDisconnect) {
-        onDisconnect();
-      }
-    }
-  }, [onDisconnect]);
+    },
+    [onDisconnect],
+  );
 
   const createMessageSubscription = useCallback(() => {
     if (messageSubscription.current) {
@@ -133,6 +147,7 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
 
       eventSource.onopen = () => {
         isConnectedRef.current = true;
+
         if (onConnect) {
           onConnect();
         }
@@ -180,7 +195,15 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
         onError(error as Error);
       }
     }
-  }, [erebusUrl, onMessageUpdate, onError, onConnect, onDisconnect, autoReconnect, reconnectInterval]);
+  }, [
+    erebusUrl,
+    onMessageUpdate,
+    onError,
+    onConnect,
+    onDisconnect,
+    autoReconnect,
+    reconnectInterval,
+  ]);
 
   const destroyMessageSubscription = useCallback(() => {
     if (messageSubscription.current) {
@@ -194,8 +217,8 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
     }
   }, [onDisconnect]);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       taskSubscriptions.current.forEach((eventSource) => {
         eventSource.close();
       });
@@ -209,8 +232,9 @@ export const useSSE = (options: UseSSEOptions = {}): UseSSEReturn => {
       if (messageSubscription.current) {
         messageSubscription.current.close();
       }
-    };
-  }, []);
+    },
+    [],
+  );
 
   return {
     subscribeToTask: createTaskSubscription,

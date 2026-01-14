@@ -68,4 +68,3 @@ const CommandBar: React.FC<CommandBarProps> = ({ filters, onFilterChange }) => {
 };
 
 export default CommandBar;
-

@@ -49,99 +49,99 @@ const customTheme = {
     borderRadius: '0.3em',
     backgroundAttachment: 'local',
   },
-  'comment': {
+  comment: {
     color: '#6a9955',
     fontStyle: 'italic',
   },
-  'prolog': {
+  prolog: {
     color: '#6a9955',
   },
-  'doctype': {
+  doctype: {
     color: '#6a9955',
   },
-  'cdata': {
+  cdata: {
     color: '#6a9955',
   },
-  'punctuation': {
+  punctuation: {
     color: '#d4d4d4',
   },
-  'property': {
+  property: {
     color: '#9cdcfe',
   },
-  'tag': {
+  tag: {
     color: '#f92672',
   },
-  'constant': {
+  constant: {
     color: '#f92672',
   },
-  'symbol': {
+  symbol: {
     color: '#f92672',
   },
-  'deleted': {
+  deleted: {
     color: '#f92672',
   },
-  'boolean': {
+  boolean: {
     color: '#569cd6',
   },
-  'number': {
+  number: {
     color: '#b5cea8',
   },
-  'selector': {
+  selector: {
     color: '#ce9178',
   },
   'attr-name': {
     color: '#ce9178',
   },
-  'string': {
+  string: {
     color: '#ce9178',
   },
-  'char': {
+  char: {
     color: '#ce9178',
   },
-  'builtin': {
+  builtin: {
     color: '#ce9178',
   },
-  'inserted': {
+  inserted: {
     color: '#ce9178',
   },
-  'operator': {
+  operator: {
     color: '#d4d4d4',
   },
-  'entity': {
+  entity: {
     color: '#d4d4d4',
   },
-  'url': {
+  url: {
     color: '#d4d4d4',
   },
-  'variable': {
+  variable: {
     color: '#d4d4d4',
   },
-  'atrule': {
+  atrule: {
     color: '#dcdcaa',
   },
   'attr-value': {
     color: '#dcdcaa',
   },
-  'function': {
+  function: {
     color: '#4ec9b0',
   },
   'class-name': {
     color: '#4ec9b0',
   },
-  'keyword': {
+  keyword: {
     color: '#569cd6',
   },
-  'regex': {
+  regex: {
     color: '#d16969',
   },
-  'important': {
+  important: {
     color: '#d16969',
     fontWeight: 'bold',
   },
-  'bold': {
+  bold: {
     fontWeight: 'bold',
   },
-  'italic': {
+  italic: {
     fontStyle: 'italic',
   },
 };
@@ -151,11 +151,11 @@ import styles from './MarkdownRenderer.module.scss';
 interface MarkdownRendererProps {
   content: string;
   className?: string;
-  images?: Array<{
+  images?: {
     url: string;
     alt?: string;
     caption?: string;
-  }>;
+  }[];
 }
 
 // Copy button component
@@ -184,10 +184,10 @@ const CopyButton: React.FC<{ code: string }> = ({ code }) => {
 };
 
 // Image display component
-const ImageDisplay: React.FC<{ 
-  url: string; 
-  alt?: string; 
-  caption?: string; 
+const ImageDisplay: React.FC<{
+  url: string;
+  alt?: string;
+  caption?: string;
 }> = ({ url, alt, caption }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
@@ -196,14 +196,15 @@ const ImageDisplay: React.FC<{
   const handleDownload = async () => {
     try {
       setDownloading(true);
-      
+
       // Generate filename with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
       const filename = `hecate-image-${timestamp}.png`;
-      
+
       if (url.startsWith('data:')) {
         // Handle base64 data URLs
         const link = document.createElement('a');
+
         link.href = url;
         link.download = filename;
         document.body.appendChild(link);
@@ -214,14 +215,15 @@ const ImageDisplay: React.FC<{
         const response = await fetch(url);
         const blob = await response.blob();
         const blobUrl = window.URL.createObjectURL(blob);
-        
+
         const link = document.createElement('a');
+
         link.href = blobUrl;
         link.download = filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
         // Clean up blob URL
         window.URL.revokeObjectURL(blobUrl);
       }
@@ -273,30 +275,21 @@ const ImageDisplay: React.FC<{
               </button>
             </div>
           </div>
-          {caption && (
-            <div className={styles.imageCaption}>
-              {caption}
-            </div>
-          )}
+          {caption && <div className={styles.imageCaption}>{caption}</div>}
         </>
       )}
     </div>
   );
 };
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(({ content, className, images = [] }) => {
-  return (
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
+  ({ content, className, images = [] }) => (
     <div className={`${styles.markdownContainer} ${className || ''}`}>
       {/* Render images first if they exist */}
       {images.length > 0 && (
         <div className={styles.imagesContainer}>
           {images.map((image, index) => (
-            <ImageDisplay
-              key={index}
-              url={image.url}
-              alt={image.alt}
-              caption={image.caption}
-            />
+            <ImageDisplay key={index} url={image.url} alt={image.alt} caption={image.caption} />
           ))}
         </div>
       )}
@@ -307,25 +300,26 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(({ content,
           code: ({ node, inline, className, children, ...props }) => {
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
-            
+
             // Language mapping for common aliases
             const languageMap: { [key: string]: string } = {
-              'js': 'javascript',
-              'ts': 'typescript',
-              'golang': 'go',
-              'c': 'cpp',
-              'cs': 'csharp',
-              'rb': 'ruby',
-              'shell': 'bash',
-              'sh': 'bash',
-              'yml': 'yaml',
-              'md': 'markdown'
+              js: 'javascript',
+              ts: 'typescript',
+              golang: 'go',
+              c: 'cpp',
+              cs: 'csharp',
+              rb: 'ruby',
+              shell: 'bash',
+              sh: 'bash',
+              yml: 'yaml',
+              md: 'markdown',
             };
-            
+
             const normalizedLanguage = languageMap[language] || language;
-            
+
             if (!inline && normalizedLanguage) {
               const codeString = String(children).replace(/\n$/, '');
+
               return (
                 <div className={styles.codeBlockWrapper}>
                   <CopyButton code={codeString} />
@@ -344,8 +338,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(({ content,
                       border: '1px solid rgba(185, 103, 255, 0.2)',
                     }}
                     showLineNumbers={false}
-                    wrapLines={true}
-                    wrapLongLines={true}
+                    wrapLines
+                    wrapLongLines
                     {...props}
                   >
                     {codeString}
@@ -353,7 +347,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(({ content,
                 </div>
               );
             }
-            
+
             return (
               <code className={styles.inlineCode} {...props}>
                 {children}
@@ -366,29 +360,16 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(({ content,
             if (React.isValidElement(children) && children.type === SyntaxHighlighter) {
               return children;
             }
-            return (
-              <div className={styles.preWrapper}>
-                {children}
-              </div>
-            );
+
+            return <div className={styles.preWrapper}>{children}</div>;
           },
           // Custom styling for blockquotes
           blockquote: ({ children }) => (
-            <blockquote className={styles.blockquote}>
-              {children}
-            </blockquote>
+            <blockquote className={styles.blockquote}>{children}</blockquote>
           ),
           // Custom styling for lists
-          ul: ({ children }) => (
-            <ul className={styles.list}>
-              {children}
-            </ul>
-          ),
-          ol: ({ children }) => (
-            <ol className={styles.orderedList}>
-              {children}
-            </ol>
-          ),
+          ul: ({ children }) => <ul className={styles.list}>{children}</ul>,
+          ol: ({ children }) => <ol className={styles.orderedList}>{children}</ol>,
           // Custom styling for links
           a: ({ href, children }) => (
             <a href={href} className={styles.link} target="_blank" rel="noopener noreferrer">
@@ -398,9 +379,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(({ content,
           // Custom styling for tables
           table: ({ children }) => (
             <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                {children}
-              </table>
+              <table className={styles.table}>{children}</table>
             </div>
           ),
         }}
@@ -408,15 +387,13 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(({ content,
         {content}
       </ReactMarkdown>
     </div>
-  );
-}, (prevProps, nextProps) => {
-  return (
+  ),
+  (prevProps, nextProps) =>
     prevProps.content === nextProps.content &&
     prevProps.className === nextProps.className &&
     prevProps.images?.length === nextProps.images?.length &&
-    prevProps.images?.every((img, idx) => img.url === nextProps.images?.[idx]?.url)
-  );
-});
+    prevProps.images?.every((img, idx) => img.url === nextProps.images?.[idx]?.url),
+);
 
 MarkdownRenderer.displayName = 'MarkdownRenderer';
 

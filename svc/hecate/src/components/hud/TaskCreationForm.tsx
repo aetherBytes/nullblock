@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { TaskCreationRequest, TaskType, TaskPriority, TaskCategory, SubTaskRequest } from '../../types/tasks';
-import { Agent } from '../../types/agents';
 import { agentService } from '../../common/services/agent-service';
+import type { Agent } from '../../types/agents';
+import type {
+  TaskCreationRequest,
+  TaskType,
+  TaskPriority,
+  TaskCategory,
+  SubTaskRequest,
+} from '../../types/tasks';
 import styles from './hud.module.scss';
 
 interface TaskCreationFormProps {
@@ -17,7 +23,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
   isLoading,
   onCancel,
   variant = 'default',
-  availableModels = []
+  availableModels = [],
 }) => {
   const [formData, setFormData] = useState<TaskCreationRequest>({
     name: '',
@@ -35,7 +41,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
       timeout_ms: 300000,
     },
     dependencies: [],
-    sub_tasks: []
+    sub_tasks: [],
   });
 
   const [subTasks, setSubTasks] = useState<SubTaskRequest[]>([]);
@@ -47,9 +53,9 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
   useEffect(() => {
     console.log('🔘 Button state:', {
       isLoading,
-      hasName: !!formData.name.trim(),
-      hasDescription: !!formData.description.trim(),
-      isDisabled: isLoading || !formData.name.trim() || !formData.description.trim()
+      hasName: Boolean(formData.name.trim()),
+      hasDescription: Boolean(formData.description.trim()),
+      isDisabled: isLoading || !formData.name.trim() || !formData.description.trim(),
     });
   }, [isLoading, formData.name, formData.description]);
 
@@ -58,6 +64,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
     const fetchAgents = async () => {
       try {
         const response = await agentService.getAgents();
+
         if (response.success && response.data) {
           setAgents(response.data.agents);
         }
@@ -65,22 +72,23 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
         console.warn('Failed to load agents:', err);
       }
     };
+
     fetchAgents();
   }, []);
 
   const taskTypes: { value: TaskType; label: string }[] = [
-    { value: 'system', label: 'User Generated' }
+    { value: 'system', label: 'User Generated' },
   ];
 
   const priorities: { value: TaskPriority; label: string; color: string }[] = [
     { value: 'urgent', label: 'Urgent', color: '#ff3333' },
     { value: 'high', label: 'High', color: '#ff6b47' },
     { value: 'medium', label: 'Medium', color: '#4ecdc4' },
-    { value: 'low', label: 'Low', color: '#95a5a6' }
+    { value: 'low', label: 'Low', color: '#95a5a6' },
   ];
 
   const categories: { value: TaskCategory; label: string }[] = [
-    { value: 'user_assigned', label: 'User Generated' }
+    { value: 'user_assigned', label: 'User Generated' },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,11 +97,13 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
 
     if (!formData.name.trim()) {
       setError('Task name is required');
+
       return;
     }
 
     if (!formData.description.trim()) {
       setError('Task description is required');
+
       return;
     }
 
@@ -102,11 +112,14 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
     try {
       const requestData = {
         ...formData,
-        sub_tasks: subTasks.filter(st => st.name.trim() && st.description.trim())
+        sub_tasks: subTasks.filter((st) => st.name.trim() && st.description.trim()),
       };
+
       console.log('📤 Calling onCreateTask with:', requestData);
       const success = await onCreateTask(requestData);
+
       console.log('📤 Task creation result:', success);
+
       if (success) {
         console.log('✅ Task created successfully, closing form');
         onCancel();
@@ -126,7 +139,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
             timeout_ms: 300000,
           },
           dependencies: [],
-          sub_tasks: []
+          sub_tasks: [],
         });
         setSubTasks([]);
       } else {
@@ -140,9 +153,9 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
   };
 
   const handleInputChange = (field: keyof TaskCreationRequest, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -156,6 +169,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
 
   const updateSubTask = (index: number, field: keyof SubTaskRequest, value: any) => {
     const updated = [...subTasks];
+
     updated[index] = { ...updated[index], [field]: value };
     setSubTasks(updated);
   };
@@ -163,15 +177,20 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
   const updateParameter = (key: string, value: any) => {
     setFormData({
       ...formData,
-      parameters: { ...formData.parameters, [key]: value }
+      parameters: { ...formData.parameters, [key]: value },
     });
   };
 
   return (
-    <div className={`${styles.taskCreationForm} ${
-      variant === 'embedded' ? styles.embeddedForm : 
-      variant === 'fullscreen' ? styles.fullscreenForm : ''
-    }`}>
+    <div
+      className={`${styles.taskCreationForm} ${
+        variant === 'embedded'
+          ? styles.embeddedForm
+          : variant === 'fullscreen'
+            ? styles.fullscreenForm
+            : ''
+      }`}
+    >
       {variant !== 'fullscreen' && (
         <div className={styles.formHeader}>
           <h5>📋 Create New Task</h5>
@@ -233,7 +252,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
             disabled={isLoading}
           >
             <option value="">Auto (Hecate Orchestrator)</option>
-            {agents.map(agent => (
+            {agents.map((agent) => (
               <option key={agent.name} value={agent.name}>
                 {agent.name} - {agent.capabilities?.slice(0, 2).join(', ')}
               </option>
@@ -263,12 +282,17 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
               />
               <select
                 value={st.assigned_agent_id || ''}
-                onChange={(e) => updateSubTask(idx, 'assigned_agent_id', e.target.value || undefined)}
+                onChange={(e) =>
+                  updateSubTask(idx, 'assigned_agent_id', e.target.value || undefined)}
                 className={styles.formSelect}
                 disabled={isLoading}
               >
                 <option value="">Auto</option>
-                {agents.map(a => <option key={a.name} value={a.name}>{a.name}</option>)}
+                {agents.map((a) => (
+                  <option key={a.name} value={a.name}>
+                    {a.name}
+                  </option>
+                ))}
               </select>
               <button
                 type="button"
@@ -302,7 +326,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
             disabled={isLoading}
           >
             <option value="">Use Agent Default</option>
-            {availableModels.slice(0, 10).map(model => (
+            {availableModels.slice(0, 10).map((model) => (
               <option key={model.name} value={model.name}>
                 {model.display_name} ({model.tier})
               </option>
@@ -330,7 +354,9 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
                   max="1"
                   step="0.1"
                   value={formData.parameters?.temperature || 0.7}
-                  onChange={(e) => updateParameter('temperature', parseFloat(e.target.value))}
+                  onChange={(e) =>
+                    updateParameter('temperature', Number.parseFloat(e.target.value))
+                  }
                   disabled={isLoading}
                 />
               </label>
@@ -340,7 +366,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
                 <input
                   type="number"
                   value={formData.parameters?.max_tokens || 2000}
-                  onChange={(e) => updateParameter('max_tokens', parseInt(e.target.value))}
+                  onChange={(e) => updateParameter('max_tokens', Number.parseInt(e.target.value))}
                   className={styles.formInput}
                   disabled={isLoading}
                 />
@@ -351,7 +377,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
                 <input
                   type="number"
                   value={formData.parameters?.timeout_ms || 300000}
-                  onChange={(e) => updateParameter('timeout_ms', parseInt(e.target.value))}
+                  onChange={(e) => updateParameter('timeout_ms', Number.parseInt(e.target.value))}
                   className={styles.formInput}
                   disabled={isLoading}
                 />
@@ -371,7 +397,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
             className={styles.formSelect}
             disabled={isLoading}
           >
-            {priorities.map(priority => (
+            {priorities.map((priority) => (
               <option key={priority.value} value={priority.value}>
                 {priority.label}
               </option>
@@ -401,11 +427,7 @@ const TaskCreationForm: React.FC<TaskCreationFormProps> = ({
           </label>
         </div>
 
-        {error && (
-          <div className={styles.formError}>
-            ⚠️ {error}
-          </div>
-        )}
+        {error && <div className={styles.formError}>⚠️ {error}</div>}
 
         <div className={styles.formActions}>
           <button

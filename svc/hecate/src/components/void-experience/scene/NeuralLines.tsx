@@ -1,5 +1,5 @@
-import React, { useRef, useMemo } from 'react';
 import { useFrame, extend } from '@react-three/fiber';
+import React, { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import type { ConstellationNode, ClusterOrbit } from './VoidScene';
 
@@ -215,14 +215,13 @@ declare global {
 const createNodeGlowTexture = () => {
   const size = 128;
   const canvas = document.createElement('canvas');
+
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
 
-  const gradient = ctx.createRadialGradient(
-    size / 2, size / 2, 0,
-    size / 2, size / 2, size / 2
-  );
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+
   // Soft white glow that fades out
   gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
   gradient.addColorStop(0.1, 'rgba(255, 255, 255, 0.8)');
@@ -236,7 +235,9 @@ const createNodeGlowTexture = () => {
   ctx.fillRect(0, 0, size, size);
 
   const texture = new THREE.CanvasTexture(canvas);
+
   texture.needsUpdate = true;
+
   return texture;
 };
 
@@ -262,7 +263,7 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
   nodes,
   activeNodes = new Set(),
   clusterOrbits,
-  animatedPositionsRef
+  animatedPositionsRef,
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const linesRef = useRef<THREE.LineSegments>(null);
@@ -282,14 +283,13 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
   const nodeGlowTexture = useMemo(() => {
     const size = 128;
     const canvas = document.createElement('canvas');
+
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
 
-    const gradient = ctx.createRadialGradient(
-      size / 2, size / 2, 0,
-      size / 2, size / 2, size / 2
-    );
+    const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+
     // Subtle blue glow
     gradient.addColorStop(0, 'rgba(100, 180, 255, 0.6)');
     gradient.addColorStop(0.2, 'rgba(80, 150, 230, 0.3)');
@@ -301,17 +301,21 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
     ctx.fillRect(0, 0, size, size);
 
     const texture = new THREE.CanvasTexture(canvas);
+
     texture.needsUpdate = true;
+
     return texture;
   }, []);
 
   // Generate per-node variations (hue and brightness)
-  const nodeVariations = useMemo(() => {
-    return nodes.map(() => ({
-      hue: 0.55 + Math.random() * 0.1, // 0.55-0.65 for blue range
-      brightness: 0.4 + Math.random() * 0.6, // 0.4-1.0 brightness variation
-    }));
-  }, [nodes]);
+  const nodeVariations = useMemo(
+    () =>
+      nodes.map(() => ({
+        hue: 0.55 + Math.random() * 0.1, // 0.55-0.65 for blue range
+        brightness: 0.4 + Math.random() * 0.6, // 0.4-1.0 brightness variation
+      })),
+    [nodes],
+  );
 
   // Build line geometry from nodes
   const { linePositions, lineOpacities } = useMemo(() => {
@@ -322,38 +326,48 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
     for (let i = 0; i < nodes.length; i++) {
       for (const j of nodes[i].connections) {
         const pairKey = i < j ? `${i}-${j}` : `${j}-${i}`;
-        if (processedPairs.has(pairKey)) continue;
+
+        if (processedPairs.has(pairKey)) {
+          continue;
+        }
+
         processedPairs.add(pairKey);
 
         linePositions.push(
-          nodes[i].position.x, nodes[i].position.y, nodes[i].position.z,
-          nodes[j].position.x, nodes[j].position.y, nodes[j].position.z
+          nodes[i].position.x,
+          nodes[i].position.y,
+          nodes[i].position.z,
+          nodes[j].position.x,
+          nodes[j].position.y,
+          nodes[j].position.z,
         );
 
         // Random base opacity for each line
         const baseOpacity = 0.1 + Math.random() * 0.12;
+
         lineOpacities.push(baseOpacity, baseOpacity);
       }
     }
 
     return {
       linePositions: new Float32Array(linePositions),
-      lineOpacities: new Float32Array(lineOpacities)
+      lineOpacities: new Float32Array(lineOpacities),
     };
   }, [nodes]);
 
   // Create animated opacity attribute
-  const opacityAttr = useMemo(() => {
-    return new THREE.BufferAttribute(lineOpacities.slice(), 1);
-  }, [lineOpacities]);
+  const opacityAttr = useMemo(
+    () => new THREE.BufferAttribute(lineOpacities.slice(), 1),
+    [lineOpacities],
+  );
 
   // Store base positions for orbital calculations
-  const basePositions = useMemo(() => {
-    return nodes.map(n => n.position.clone());
-  }, [nodes]);
+  const basePositions = useMemo(() => nodes.map((n) => n.position.clone()), [nodes]);
 
   useFrame((state) => {
-    if (!linesRef.current) return;
+    if (!linesRef.current) {
+      return;
+    }
 
     const time = state.clock.elapsedTime;
 
@@ -362,7 +376,10 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
       const orbit = clusterOrbits[node.clusterId];
-      if (!orbit) continue;
+
+      if (!orbit) {
+        continue;
+      }
 
       const basePos = basePositions[i];
       const angle = orbit.phase + time * orbit.speed;
@@ -379,6 +396,7 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
 
       // Update the node group position
       const nodeGroup = nodeGroupRefs.current[i];
+
       if (nodeGroup) {
         nodeGroup.position.copy(tempVec.current);
       }
@@ -388,13 +406,18 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
     const lineGeom = linesRef.current.geometry;
     const positions = lineGeom.attributes.position.array as Float32Array;
     let lineIdx = 0;
+
     // Reuse pre-allocated Set, clear instead of creating new
     processedPairsSet.current.clear();
 
     for (let i = 0; i < nodes.length; i++) {
       for (const j of nodes[i].connections) {
         const pairKey = i < j ? `${i}-${j}` : `${j}-${i}`;
-        if (processedPairsSet.current.has(pairKey)) continue;
+
+        if (processedPairsSet.current.has(pairKey)) {
+          continue;
+        }
+
         processedPairsSet.current.add(pairKey);
 
         const posA = animatedPositionsRef.current[i];
@@ -417,6 +440,7 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
       const baseOpacity = lineOpacities[i];
       const pulse = Math.sin(time * 0.5 + i * 0.1) * 0.02;
       const newOpacity = Math.max(0.01, baseOpacity + pulse);
+
       opacities[i] = newOpacity;
       opacities[i + 1] = newOpacity;
     }
@@ -440,10 +464,7 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
             array={linePositions}
             itemSize={3}
           />
-          <bufferAttribute
-            attach="attributes-opacity"
-            {...opacityAttr}
-          />
+          <bufferAttribute attach="attributes-opacity" {...opacityAttr} />
         </bufferGeometry>
         <lineBasicMaterial
           color="#ffffff"
@@ -458,10 +479,13 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
       {nodes.map((node, i) => {
         const isActive = activeNodes.has(i);
         const variation = nodeVariations[i] || { hue: 0.6, brightness: 0.5 };
+
         return (
           <group
             key={i}
-            ref={(el) => { nodeGroupRefs.current[i] = el; }}
+            ref={(el) => {
+              nodeGroupRefs.current[i] = el;
+            }}
             position={[node.position.x, node.position.y, node.position.z]}
           >
             {/* Ambient blue glow behind node (always visible) */}
@@ -506,6 +530,7 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
               <constellationCoreMaterial
                 ref={(el: THREE.ShaderMaterial | null) => {
                   nodeMaterialRefs.current[i] = el;
+
                   if (el) {
                     el.uniforms.uHue.value = variation.hue;
                     el.uniforms.uBrightness.value = variation.brightness;
@@ -516,7 +541,7 @@ const NeuralLines: React.FC<NeuralLinesProps> = ({
 
             {/* Subtle point light for each node */}
             <pointLight
-              color={isActive ? "#ffffff" : "#4488ff"}
+              color={isActive ? '#ffffff' : '#4488ff'}
               intensity={isActive ? 0.4 : 0.15}
               distance={isActive ? 2.0 : 1.0}
               decay={2}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { eventSystem, EventSubscription, EventRule } from '../common/services/event-system';
-import { TaskEvent, EventType, TaskCreationRequest } from '../types/tasks';
+import type { EventSubscription, EventRule } from '../common/services/event-system';
+import { eventSystem } from '../common/services/event-system';
+import type { TaskEvent, EventType, TaskCreationRequest } from '../types/tasks';
 
 interface UseEventSystemReturn {
   // Event publishing
@@ -13,7 +14,11 @@ interface UseEventSystemReturn {
   publishThresholdBreach: (metric: string, value: number, threshold: number, data?: any) => void;
 
   // Event subscription
-  subscribe: (eventType: EventType, callback: (event: TaskEvent) => void, filter?: (event: TaskEvent) => boolean) => string;
+  subscribe: (
+    eventType: EventType,
+    callback: (event: TaskEvent) => void,
+    filter?: (event: TaskEvent) => boolean,
+  ) => string;
   unsubscribe: (subscriptionId: string) => boolean;
 
   // Event data
@@ -35,7 +40,7 @@ interface UseEventSystemReturn {
 
 export const useEventSystem = (
   enableAutoRefresh: boolean = true,
-  refreshInterval: number = 5000
+  refreshInterval: number = 5000,
 ): UseEventSystemReturn => {
   const [recentEvents, setRecentEvents] = useState<TaskEvent[]>([]);
   const [rules, setRules] = useState<EventRule[]>([]);
@@ -57,81 +62,123 @@ export const useEventSystem = (
 
     if (enableAutoRefresh) {
       const interval = setInterval(refreshData, currentInterval);
+
       return () => clearInterval(interval);
     }
   }, [enableAutoRefresh, currentInterval, refreshData]);
 
   // Event publishing functions
-  const publishEvent = useCallback(async (event: Omit<TaskEvent, 'id'>) => {
-    await eventSystem.publishEvent(event);
-    refreshData();
-  }, [refreshData]);
+  const publishEvent = useCallback(
+    async (event: Omit<TaskEvent, 'id'>) => {
+      await eventSystem.publishEvent(event);
+      refreshData();
+    },
+    [refreshData],
+  );
 
-  const publishPriceChange = useCallback((symbol: string, price: string, change: string) => {
-    eventSystem.publishPriceChange(symbol, price, change);
-    refreshData();
-  }, [refreshData]);
+  const publishPriceChange = useCallback(
+    (symbol: string, price: string, change: string) => {
+      eventSystem.publishPriceChange(symbol, price, change);
+      refreshData();
+    },
+    [refreshData],
+  );
 
-  const publishMarketOpportunity = useCallback((type: string, data: any) => {
-    eventSystem.publishMarketOpportunity(type, data);
-    refreshData();
-  }, [refreshData]);
+  const publishMarketOpportunity = useCallback(
+    (type: string, data: any) => {
+      eventSystem.publishMarketOpportunity(type, data);
+      refreshData();
+    },
+    [refreshData],
+  );
 
-  const publishUserInteraction = useCallback((action: string, context: any) => {
-    eventSystem.publishUserInteraction(action, context);
-    refreshData();
-  }, [refreshData]);
+  const publishUserInteraction = useCallback(
+    (action: string, context: any) => {
+      eventSystem.publishUserInteraction(action, context);
+      refreshData();
+    },
+    [refreshData],
+  );
 
-  const publishAgentCompletion = useCallback((agentName: string, taskId: string, result: string, data?: any) => {
-    eventSystem.publishAgentCompletion(agentName, taskId, result, data);
-    refreshData();
-  }, [refreshData]);
+  const publishAgentCompletion = useCallback(
+    (agentName: string, taskId: string, result: string, data?: any) => {
+      eventSystem.publishAgentCompletion(agentName, taskId, result, data);
+      refreshData();
+    },
+    [refreshData],
+  );
 
-  const publishSystemAlert = useCallback((level: string, message: string, component: string, data?: any) => {
-    eventSystem.publishSystemAlert(level, message, component, data);
-    refreshData();
-  }, [refreshData]);
+  const publishSystemAlert = useCallback(
+    (level: string, message: string, component: string, data?: any) => {
+      eventSystem.publishSystemAlert(level, message, component, data);
+      refreshData();
+    },
+    [refreshData],
+  );
 
-  const publishThresholdBreach = useCallback((metric: string, value: number, threshold: number, data?: any) => {
-    eventSystem.publishThresholdBreach(metric, value, threshold, data);
-    refreshData();
-  }, [refreshData]);
+  const publishThresholdBreach = useCallback(
+    (metric: string, value: number, threshold: number, data?: any) => {
+      eventSystem.publishThresholdBreach(metric, value, threshold, data);
+      refreshData();
+    },
+    [refreshData],
+  );
 
   // Event subscription functions
-  const subscribe = useCallback((
-    eventType: EventType,
-    callback: (event: TaskEvent) => void,
-    filter?: (event: TaskEvent) => boolean
-  ): string => {
-    const subscriptionId = eventSystem.subscribe({
-      eventType,
-      callback,
-      filter
-    });
-    refreshData();
-    return subscriptionId;
-  }, [refreshData]);
+  const subscribe = useCallback(
+    (
+      eventType: EventType,
+      callback: (event: TaskEvent) => void,
+      filter?: (event: TaskEvent) => boolean,
+    ): string => {
+      const subscriptionId = eventSystem.subscribe({
+        eventType,
+        callback,
+        filter,
+      });
 
-  const unsubscribe = useCallback((subscriptionId: string): boolean => {
-    const result = eventSystem.unsubscribe(subscriptionId);
-    refreshData();
-    return result;
-  }, [refreshData]);
+      refreshData();
+
+      return subscriptionId;
+    },
+    [refreshData],
+  );
+
+  const unsubscribe = useCallback(
+    (subscriptionId: string): boolean => {
+      const result = eventSystem.unsubscribe(subscriptionId);
+
+      refreshData();
+
+      return result;
+    },
+    [refreshData],
+  );
 
   // Automation rule functions
-  const addRule = useCallback((rule: EventRule) => {
-    eventSystem.addRule(rule);
-    refreshData();
-  }, [refreshData]);
+  const addRule = useCallback(
+    (rule: EventRule) => {
+      eventSystem.addRule(rule);
+      refreshData();
+    },
+    [refreshData],
+  );
 
-  const removeRule = useCallback((ruleId: string): boolean => {
-    const result = eventSystem.removeRule(ruleId);
-    refreshData();
-    return result;
-  }, [refreshData]);
+  const removeRule = useCallback(
+    (ruleId: string): boolean => {
+      const result = eventSystem.removeRule(ruleId);
+
+      refreshData();
+
+      return result;
+    },
+    [refreshData],
+  );
 
   const setPerformanceMode = useCallback((enabled: boolean) => {
-    console.log(`🎯 Event system performance mode: ${enabled ? 'ENABLED (10s interval)' : 'DISABLED (normal interval)'}`);
+    console.log(
+      `🎯 Event system performance mode: ${enabled ? 'ENABLED (10s interval)' : 'DISABLED (normal interval)'}`,
+    );
     setIsPerformanceMode(enabled);
   }, []);
 
@@ -160,6 +207,6 @@ export const useEventSystem = (
 
     // Performance controls
     setPerformanceMode,
-    isPerformanceMode
+    isPerformanceMode,
   };
 };
