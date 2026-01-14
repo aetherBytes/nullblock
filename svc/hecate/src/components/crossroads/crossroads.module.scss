@@ -250,7 +250,7 @@ $category-model: #ec4899;
 }
 
 .initialViewport {
-  min-height: calc(100vh - 100px);
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -260,18 +260,18 @@ $category-model: #ec4899;
   padding-bottom: 2rem;
 
   @media (max-width: 768px) {
-    min-height: 68vh;
+    min-height: 100vh;
     padding: 1rem;
     padding-top: 0;
-    padding-bottom: 2rem;
+    padding-bottom: 1.5rem;
     justify-content: flex-end;
   }
 
   @media (max-width: 480px) {
-    min-height: 66vh;
+    min-height: 100vh;
     padding: 0.75rem;
     padding-top: 0;
-    padding-bottom: 1.5rem;
+    padding-bottom: 1rem;
     justify-content: flex-end;
   }
 
@@ -280,7 +280,7 @@ $category-model: #ec4899;
     padding-right: 5rem;
     min-height: 100vh;
     justify-content: flex-end;
-    padding-bottom: 2rem;
+    padding-bottom: 1rem;
   }
 }
 

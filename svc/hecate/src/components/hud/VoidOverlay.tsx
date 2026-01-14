@@ -7,6 +7,8 @@ const MEMCACHE_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
   { id: 'engrams', icon: '◈', label: 'Engrams' },
   { id: 'workflows', icon: '⬡', label: 'Workflows' },
   { id: 'tasks', icon: '▣', label: 'Tasks' },
+  { id: 'agents', icon: '◉', label: 'Agents' },
+  { id: 'model', icon: '◎', label: 'Model' },
   { id: 'listings', icon: '◇', label: 'Listings' },
   { id: 'earnings', icon: '◆', label: 'Earnings' },
   { id: 'connections', icon: '○', label: 'Connections' },
@@ -21,8 +23,6 @@ interface VoidOverlayProps {
   onResetToVoid?: () => void;
   showWelcome?: boolean;
   onDismissWelcome?: () => void;
-  hecatePanelOpen?: boolean;
-  onHecateToggle?: (open: boolean) => void;
   publicKey?: string | null;
   activeTab?: 'crossroads' | 'memcache' | null;
   memcacheSection?: MemCacheSection;
@@ -37,8 +37,6 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   onResetToVoid,
   showWelcome = false,
   onDismissWelcome,
-  hecatePanelOpen = false,
-  onHecateToggle,
   publicKey,
   activeTab,
   memcacheSection = 'engrams',
@@ -119,16 +117,16 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
             {/* Extra submenu items - only visible when memcache active */}
             {activeTab === 'memcache' && (
               <div className={styles.submenuExtra}>
-                {MEMCACHE_ITEMS.slice(3).reverse().map((item, index) => (
+                {MEMCACHE_ITEMS.slice(2).reverse().map((item, index) => (
                   <React.Fragment key={item.id}>
                     <button
                       className={`${styles.submenuItemExtra} ${memcacheSection === item.id ? styles.submenuItemActive : ''}`}
                       onClick={() => onMemcacheSectionChange?.(item.id)}
-                      style={{ animationDelay: `${(MEMCACHE_ITEMS.length - 3 - index) * 0.03}s` }}
+                      style={{ animationDelay: `${(MEMCACHE_ITEMS.length - 2 - index) * 0.03}s` }}
                     >
                       {item.label}
                     </button>
-                    {index < MEMCACHE_ITEMS.length - 4 && <span className={styles.navDivider} />}
+                    {index < MEMCACHE_ITEMS.length - 3 && <span className={styles.navDivider} />}
                   </React.Fragment>
                 ))}
                 <span className={styles.navDivider} />
@@ -151,18 +149,11 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
               >
                 Crossroads
               </button>
-              <span className={styles.navDivider} />
-              <button
-                className={`${styles.navItem} ${hecatePanelOpen ? styles.navItemActive : ''}`}
-                onClick={() => onHecateToggle?.(!hecatePanelOpen)}
-              >
-                Studio
-              </button>
 
               {/* Row 2: Submenu buttons (same grid columns) */}
               {activeTab === 'memcache' && (
                 <>
-                  {MEMCACHE_ITEMS.slice(0, 3).map((item, index) => (
+                  {MEMCACHE_ITEMS.slice(0, 2).map((item, index) => (
                     <React.Fragment key={item.id}>
                       <button
                         className={`${styles.submenuItem} ${memcacheSection === item.id ? styles.submenuItemActive : ''}`}
@@ -171,7 +162,7 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
                       >
                         {item.label}
                       </button>
-                      {index < 2 && <span className={styles.submenuDivider} />}
+                      {index < 1 && <span className={styles.submenuDivider} />}
                     </React.Fragment>
                   ))}
                 </>

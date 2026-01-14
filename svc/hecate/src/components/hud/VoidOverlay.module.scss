@@ -83,7 +83,7 @@ $void-purple: #b967ff;
   right: 24px;
   z-index: 10005;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   pointer-events: auto;
 
@@ -103,7 +103,7 @@ $void-purple: #b967ff;
 // Sleek void navigation - 2-row grid for perfect column alignment
 .voidNav {
   display: grid;
-  grid-template-columns: 1fr auto 1fr auto 1fr;
+  grid-template-columns: 1fr auto 1fr;
   grid-template-rows: 48px;
   align-items: center;
   background: rgba(99, 102, 241, 0.08);
@@ -207,14 +207,9 @@ $void-purple: #b967ff;
     background: #ec4899;
   }
 
-  // Crossroads (3rd element, after 1st divider) - purple
+  // Crossroads (2nd button) - purple
   &:nth-of-type(2)::after {
     background: #8b5cf6;
-  }
-
-  // Studio (5th element, after 2nd divider) - blue
-  &:nth-of-type(3)::after {
-    background: #6366f1;
   }
 
   @media (max-width: 768px) {

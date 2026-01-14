@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useModelManagement } from '../../hooks/useModelManagement';
 import { useChat } from '../../hooks/useChat';
 import { useAuthentication } from '../../hooks/useAuthentication';
@@ -6,6 +6,7 @@ import { useTaskManagement } from '../../hooks/useTaskManagement';
 import { useEventSystem } from '../../hooks/useEventSystem';
 import { useLogs } from '../../hooks/useLogs';
 import { useUserProfile } from '../../hooks/useUserProfile';
+import { useApiKeyCheck } from '../../hooks/useApiKeyCheck';
 import Crossroads from '../crossroads/Crossroads';
 import { MemCache, MemCacheSection } from '../memcache';
 import SettingsPanel from './SettingsPanel';
@@ -119,6 +120,7 @@ const HUD: React.FC<HUDProps> = ({
 
   // User profile state
   const { userProfile, isLoading: isLoadingUser } = useUserProfile(publicKey);
+  const { hasApiKeys } = useApiKeyCheck(userProfile?.id || null);
 
 
   // Tab functionality state
@@ -150,6 +152,20 @@ const HUD: React.FC<HUDProps> = ({
   const taskManagement = useTaskManagement(publicKey, {}, true, chat.addTaskNotification);
   const eventSystem = useEventSystem(true, 3000);
   const logsHook = useLogs({ autoConnect: !!publicKey, maxLogs: 500 });
+
+  // Create task management interface for MemCache
+  const taskManagementInterface = useMemo(() => ({
+    tasks: taskManagement.tasks,
+    isLoading: taskManagement.isLoading,
+    createTask: taskManagement.createTask,
+    startTask: taskManagement.startTask,
+    pauseTask: taskManagement.pauseTask,
+    resumeTask: taskManagement.resumeTask,
+    cancelTask: taskManagement.cancelTask,
+    retryTask: taskManagement.retryTask,
+    processTask: taskManagement.processTask,
+    deleteTask: taskManagement.deleteTask,
+  }), [taskManagement]);
 
   useEffect(() => {
     const hasImages = chat.chatMessages.some(msg => msg.content?.imageIds && msg.content.imageIds.length > 0);
@@ -701,6 +717,28 @@ const HUD: React.FC<HUDProps> = ({
       .slice(0, limit);
   };
 
+  // Create model management interface for MemCache
+  const modelManagementInterface = useMemo(() => ({
+    isLoadingModelInfo: modelManagement.isLoadingModels,
+    currentSelectedModel: modelManagement.currentSelectedModel,
+    availableModels: modelManagement.availableModels,
+    showModelSelection,
+    setShowModelSelection,
+    handleModelSelection: modelManagement.handleModelSelection,
+    loadAvailableModels: modelManagement.loadAvailableModels,
+    getFreeModels,
+    getFastModels,
+    getThinkerModels,
+    getImageModels,
+  }), [
+    modelManagement.isLoadingModels,
+    modelManagement.currentSelectedModel,
+    modelManagement.availableModels,
+    showModelSelection,
+    modelManagement.handleModelSelection,
+    modelManagement.loadAvailableModels,
+  ]);
+
   const renderTabContent = () => {
     if (!publicKey) {
       return (
@@ -740,7 +778,16 @@ const HUD: React.FC<HUDProps> = ({
             <Crossroads publicKey={publicKey} onConnectWallet={onConnectWallet} showMarketplace={showCrossroadsMarketplace} resetToLanding={resetCrossroadsToLanding} animationPhase={loginAnimationPhase} />
           </div>
           <div className={`${styles.tabWrapper} ${mainHudActiveTab === 'memcache' ? '' : styles.hidden}`}>
-            <MemCache publicKey={publicKey} activeSection={memcacheSection} />
+            <MemCache
+              publicKey={publicKey}
+              activeSection={memcacheSection}
+              taskManagement={taskManagementInterface}
+              modelManagement={modelManagementInterface}
+              availableModels={modelManagement.availableModels}
+              activeAgent={chat.activeAgent}
+              setActiveAgent={chat.setActiveAgent}
+              hasApiKey={hasApiKeys === true}
+            />
           </div>
           {mainHudActiveTab !== 'canvas' && mainHudActiveTab !== 'crossroads' && mainHudActiveTab !== 'memcache' && !inVoidMode && (
             <div className={styles.defaultTab}>
@@ -826,8 +873,6 @@ const HUD: React.FC<HUDProps> = ({
           onResetToVoid={handleResetToVoid}
           showWelcome={inVoidMode && !hasSeenVoidWelcome}
           onDismissWelcome={handleDismissVoidWelcome}
-          hecatePanelOpen={hecatePanelOpen}
-          onHecateToggle={handleHecateToggle}
           publicKey={publicKey}
           activeTab={mainHudActiveTab === 'crossroads' || mainHudActiveTab === 'memcache' ? mainHudActiveTab : null}
           memcacheSection={memcacheSection}
