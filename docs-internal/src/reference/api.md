@@ -307,6 +307,178 @@ GET /a2a/v1/tasks
 POST /a2a/v1/messages
 ```
 
+## ArbFarm (Solana MEV)
+
+All ArbFarm endpoints require authentication via wallet session.
+
+### Scanner
+
+```bash
+# Get scanner status
+GET /api/arb/scanner/status
+
+# Start/stop scanner
+POST /api/arb/scanner/start
+POST /api/arb/scanner/stop
+
+# SSE event stream
+GET /api/arb/scanner/stream
+```
+
+### Edges (Opportunities)
+
+```bash
+# List detected edges
+GET /api/arb/edges
+GET /api/arb/edges?status=detected&edge_type=dex_arb
+
+# Get edge details
+GET /api/arb/edges/:id
+
+# Approve/reject/execute
+POST /api/arb/edges/:id/approve
+POST /api/arb/edges/:id/reject
+{
+  "reason": "Too risky"
+}
+POST /api/arb/edges/:id/execute
+{
+  "max_slippage_bps": 50
+}
+```
+
+### Strategies
+
+```bash
+# List strategies
+GET /api/arb/strategies
+
+# Create strategy
+POST /api/arb/strategies
+{
+  "name": "DEX Arb Strategy",
+  "strategy_type": "dex_arb",
+  "venue_types": ["dex_amm"],
+  "execution_mode": "autonomous",
+  "risk_params": {
+    "max_position_sol": 1.0,
+    "min_profit_bps": 25,
+    "max_slippage_bps": 50
+  }
+}
+
+# Toggle enable/disable
+POST /api/arb/strategies/:id/toggle
+{
+  "enabled": true
+}
+```
+
+### Swarm Management
+
+```bash
+# Get swarm health
+GET /api/arb/swarm/status
+
+# Pause/resume execution
+POST /api/arb/swarm/pause
+POST /api/arb/swarm/resume
+
+# List agent statuses
+GET /api/arb/swarm/agents
+```
+
+### Threat Detection
+
+```bash
+# Check token threat score
+GET /api/arb/threat/check/:mint
+
+# Check wallet for scam history
+GET /api/arb/threat/wallet/:address
+
+# List blocked entities
+GET /api/arb/threat/blocked
+
+# Report a threat
+POST /api/arb/threat/report
+{
+  "entity_type": "token",
+  "address": "TokenMint...",
+  "category": "rug_pull",
+  "reason": "Creator dumped 80% of supply"
+}
+
+# Get recent alerts
+GET /api/arb/threat/alerts
+```
+
+### COW Marketplace
+
+```bash
+# List all COWs
+GET /api/marketplace/arbfarm/cows
+GET /api/marketplace/arbfarm/cows?filter=forkable
+
+# Create a COW
+POST /api/marketplace/arbfarm/cows
+{
+  "name": "My DEX Arb Strategy",
+  "description": "Custom DEX arbitrage",
+  "strategies": [...],
+  "venue_types": ["dex_amm"],
+  "risk_profile": {
+    "profile_type": "balanced",
+    "max_position_sol": 2.0
+  },
+  "price_sol": 0,
+  "is_public": true,
+  "is_forkable": true
+}
+
+# Get COW details
+GET /api/marketplace/arbfarm/cows/:id
+
+# Fork a COW
+POST /api/marketplace/arbfarm/cows/:id/fork
+{
+  "name": "My Forked Strategy",
+  "risk_profile_overrides": {
+    "profile_type": "conservative"
+  },
+  "inherit_engrams": true
+}
+
+# Get COW strategies
+GET /api/marketplace/arbfarm/cows/:id/strategies
+
+# Get COW forks
+GET /api/marketplace/arbfarm/cows/:id/forks
+
+# Get COW revenue
+GET /api/marketplace/arbfarm/cows/:id/revenue
+
+# Get wallet earnings
+GET /api/marketplace/arbfarm/earnings/:wallet_address
+
+# Get ArbFarm stats
+GET /api/marketplace/arbfarm/stats
+```
+
+### Trades
+
+```bash
+# Get trade history
+GET /api/arb/trades
+
+# Get trade details
+GET /api/arb/trades/:id
+
+# Get P&L statistics
+GET /api/arb/trades/stats
+GET /api/arb/trades/stats?period=7d
+```
+
 ## Health Checks
 
 ```bash
@@ -314,6 +486,7 @@ curl http://localhost:3000/health   # Erebus
 curl http://localhost:9003/health   # Agents
 curl http://localhost:9004/health   # Engrams
 curl http://localhost:8001/health   # Protocols
+curl http://localhost:9007/health   # ArbFarm
 ```
 
 ## Related
