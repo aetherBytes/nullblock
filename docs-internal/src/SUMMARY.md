@@ -40,6 +40,7 @@
 
 # ArbFarm (Solana MEV)
 
+- [Quickstart Guide](./arb-farm/quickstart.md)
 - [Implementation Plan](./arb-farm/plan.md)
 - [Service Architecture](./arb-farm/service.md)
 - [Development Guide](./arb-farm/development.md)
