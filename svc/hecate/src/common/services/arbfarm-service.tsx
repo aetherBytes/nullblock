@@ -76,7 +76,7 @@ class ArbFarmService {
   private isConnected: boolean = false;
   private walletAddress: string | null = null;
 
-  constructor(baseUrl: string = import.meta.env.VITE_ARBFARM_API_URL || 'http://localhost:9007') {
+  constructor(baseUrl: string = import.meta.env.VITE_ARBFARM_API_URL || 'http://localhost:3000/api/arb') {
     this.baseUrl = baseUrl;
   }
 
