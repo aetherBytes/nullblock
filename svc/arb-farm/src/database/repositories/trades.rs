@@ -161,16 +161,16 @@ impl TradeRepository {
         let query = format!(
             r#"
             SELECT
-                COUNT(*) as total_trades,
-                COUNT(*) FILTER (WHERE profit_lamports > 0) as winning_trades,
-                COUNT(*) FILTER (WHERE profit_lamports < 0) as losing_trades,
-                COALESCE(SUM(profit_lamports) FILTER (WHERE profit_lamports > 0), 0) as total_profit,
-                COALESCE(SUM(ABS(profit_lamports)) FILTER (WHERE profit_lamports < 0), 0) as total_loss,
-                COALESCE(SUM(profit_lamports), 0) as net_pnl,
-                COALESCE(SUM(gas_cost_lamports), 0) as total_gas,
+                COUNT(*)::BIGINT as total_trades,
+                COUNT(*) FILTER (WHERE profit_lamports > 0)::BIGINT as winning_trades,
+                COUNT(*) FILTER (WHERE profit_lamports < 0)::BIGINT as losing_trades,
+                COALESCE(SUM(profit_lamports) FILTER (WHERE profit_lamports > 0), 0)::BIGINT as total_profit,
+                COALESCE(SUM(ABS(profit_lamports)) FILTER (WHERE profit_lamports < 0), 0)::BIGINT as total_loss,
+                COALESCE(SUM(profit_lamports), 0)::BIGINT as net_pnl,
+                COALESCE(SUM(gas_cost_lamports), 0)::BIGINT as total_gas,
                 COALESCE(AVG(profit_lamports), 0) as avg_profit,
-                COALESCE(MAX(profit_lamports) FILTER (WHERE profit_lamports > 0), 0) as largest_win,
-                COALESCE(MIN(profit_lamports) FILTER (WHERE profit_lamports < 0), 0) as largest_loss
+                COALESCE(MAX(profit_lamports) FILTER (WHERE profit_lamports > 0), 0)::BIGINT as largest_win,
+                COALESCE(MIN(profit_lamports) FILTER (WHERE profit_lamports < 0), 0)::BIGINT as largest_loss
             FROM arb_trades
             {}
             "#,

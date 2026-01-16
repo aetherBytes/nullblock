@@ -51,6 +51,10 @@ pub fn create_crossroads_routes(_external_service: &Arc<ExternalService>) -> Rou
         .route("/api/marketplace/arbfarm/earnings/:wallet", get(get_arbfarm_earnings))
         .route("/api/marketplace/arbfarm/stats", get(get_arbfarm_stats))
 
+        // Wallet Stash API - Tool ownership and COW tab unlocks
+        .route("/api/marketplace/wallet/:address/stash", get(get_wallet_stash))
+        .route("/api/marketplace/wallet/:address/unlocks", get(get_wallet_unlocks))
+
         // Health endpoint
         .route("/api/crossroads/health", get(crossroads_health))
 }
@@ -547,4 +551,56 @@ async fn get_arbfarm_stats(
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
+}
+
+async fn get_wallet_stash(
+    Path(wallet_address): Path<String>,
+) -> Json<Value> {
+    info!("📦 Fetching stash for wallet: {}", wallet_address);
+
+    let owned_cows: Vec<Value> = vec![];
+    let owned_tools: Vec<Value> = vec![];
+    let unlocked_tabs = vec!["arbfarm"];
+
+    let unlock_progress = vec![
+        json!({
+            "cowId": "arbfarm",
+            "cowName": "ArbFarm",
+            "owned": 5,
+            "required": 5,
+            "percent": 100,
+            "isNullBlockService": true
+        }),
+        json!({
+            "cowId": "polymev",
+            "cowName": "PolyMev",
+            "owned": 0,
+            "required": 5,
+            "percent": 0,
+            "isNullBlockService": true
+        })
+    ];
+
+    Json(json!({
+        "wallet_address": wallet_address,
+        "owned_cows": owned_cows,
+        "owned_tools": owned_tools,
+        "unlocked_tabs": unlocked_tabs,
+        "unlock_progress": unlock_progress
+    }))
+}
+
+async fn get_wallet_unlocks(
+    Path(wallet_address): Path<String>,
+) -> Json<Value> {
+    info!("🔓 Fetching unlocked tabs for wallet: {}", wallet_address);
+
+    Json(json!({
+        "wallet_address": wallet_address,
+        "unlocked_tabs": ["arbfarm"],
+        "unlock_progress": {
+            "arbfarm": { "owned": 5, "required": 5, "percent": 100 },
+            "polymev": { "owned": 0, "required": 5, "percent": 0 }
+        }
+    }))
 }

@@ -141,6 +141,10 @@ on_project_start: |
   echo "🚀 Starting all infrastructure services using 'just start'..."
   just start
   echo ""
+  echo "🗄️ Running ArbFarm database migrations..."
+  sleep 3  # Wait for postgres to be ready
+  ~/nullblock/scripts/migrate-arbfarm.sh || echo "⚠️ Migration may have failed, check database"
+  echo ""
   echo "🚀 Nullblock Development Environment Ready (macOS)!"
   echo "================================================"
   echo "🏗️  Architecture: Client ↔ Erebus ↔ Services"
