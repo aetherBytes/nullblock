@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-009195a1.js";
+            window.path_to_searchindex_js = "searchindex-2234a273.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-061c334f.js"></script>
+        <script src="toc-b011f5da.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -436,7 +436,6 @@ curl http://localhost:9004/health   # Engrams
 <tr><th>Port</th><th>Service</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>9222</strong></td><td>Chrome DevTools</td><td>Browser debugging</td></tr>
 <tr><td><strong>3001</strong></td><td>mdBook</td><td>Internal documentation (this site)</td></tr>
 </tbody>
 </table>
@@ -2144,6 +2143,309 @@ curl -N http://localhost:3000/api/poly/scanner/{cow_id}/stream
 <li><a href="#crossroads-marketplace">Crossroads Marketplace</a></li>
 <li><a href="#mcp-servers">MCP Servers</a></li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="arbfarm-quickstart-guide"><a class="header" href="#arbfarm-quickstart-guide">ArbFarm Quickstart Guide</a></h1>
+<p>Get ArbFarm running and ready for mainnet testing in 10 minutes.</p>
+<h2 id="overview-7"><a class="header" href="#overview-7">Overview</a></h2>
+<p>ArbFarm is an autonomous MEV agent swarm for Solana. It:</p>
+<ul>
+<li>Scans for arbitrage, liquidation, and copy trading opportunities</li>
+<li>Uses multi-LLM consensus for agent-directed decisions</li>
+<li>Executes via Jito bundles for MEV protection</li>
+<li>Manages risk with configurable limits and policies</li>
+</ul>
+<h2 id="prerequisites-1"><a class="header" href="#prerequisites-1">Prerequisites</a></h2>
+<p>Before starting, ensure you have:</p>
+<ol>
+<li>
+<p><strong>Solana Wallet</strong> - Phantom or any Solana wallet</p>
+</li>
+<li>
+<p><strong>API Keys</strong> (store in Erebus, not .env files):</p>
+<ul>
+<li><code>HELIUS_API_KEY</code> - For RPC and webhooks (<a href="https://helius.dev">helius.dev</a>)</li>
+<li><code>OPENROUTER_API_KEY</code> - For LLM consensus (<a href="https://openrouter.ai">openrouter.ai</a>)</li>
+<li><code>BIRDEYE_API_KEY</code> - For token data (optional)</li>
+</ul>
+</li>
+<li>
+<p><strong>Services Running</strong>:</p>
+</li>
+</ol>
+<pre><code class="language-bash">just dev-mac  # or just dev-linux
+</code></pre>
+<h2 id="step-1-access-the-dashboard"><a class="header" href="#step-1-access-the-dashboard">Step 1: Access the Dashboard</a></h2>
+<ol>
+<li>Open the Hecate frontend: <code>http://localhost:5173</code></li>
+<li>Navigate to <strong>MemCache</strong> → <strong>ArbFarm</strong> in the sidebar</li>
+<li>You’ll see the ArbFarm dashboard</li>
+</ol>
+<h2 id="step-2-configure-wallet"><a class="header" href="#step-2-configure-wallet">Step 2: Configure Wallet</a></h2>
+<p>ArbFarm uses Turnkey for secure wallet delegation - your private keys are never stored in NullBlock.</p>
+<ol>
+<li>Go to <strong>Settings</strong> view (gear icon)</li>
+<li>In the <strong>Wallet Setup</strong> section, click <strong>Connect Wallet</strong></li>
+<li>Approve the Phantom popup</li>
+<li>Turnkey creates a delegated wallet with policy controls</li>
+</ol>
+<h3 id="default-policy-limits-dev-testing"><a class="header" href="#default-policy-limits-dev-testing">Default Policy Limits (Dev Testing)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td>Max per transaction</td><td>5 SOL</td></tr>
+<tr><td>Daily volume limit</td><td>25 SOL</td></tr>
+<tr><td>Max concurrent positions</td><td>10</td></tr>
+<tr><td>Allowed programs</td><td>Jupiter, Raydium, pump.fun, System, Token</td></tr>
+</tbody>
+</table>
+</div>
+<p>You can adjust these in Settings → Risk Parameters.</p>
+<h2 id="step-3-configure-api-keys"><a class="header" href="#step-3-configure-api-keys">Step 3: Configure API Keys</a></h2>
+<p>API keys are stored in the Erebus database, not in environment files.</p>
+<ol>
+<li>
+<p>In Settings → <strong>API Keys</strong>, verify status:</p>
+<ul>
+<li>Helius: Required for RPC</li>
+<li>OpenRouter: Required for consensus</li>
+<li>Birdeye: Optional for token data</li>
+</ul>
+</li>
+<li>
+<p>If missing, seed them:</p>
+</li>
+</ol>
+<pre><code class="language-bash">cd svc/erebus &amp;&amp; cargo run --bin seed_agent_keys
+</code></pre>
+<p>Or add via the API:</p>
+<pre><code class="language-bash">curl -X POST http://localhost:3000/api/agents/keys \
+  -H "Content-Type: application/json" \
+  -d '{"service": "helius", "api_key": "your-key-here"}'
+</code></pre>
+<h2 id="step-4-configure-risk-parameters"><a class="header" href="#step-4-configure-risk-parameters">Step 4: Configure Risk Parameters</a></h2>
+<p>Go to Settings → <strong>Risk Parameters</strong>:</p>
+<h3 id="presets"><a class="header" href="#presets">Presets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Preset</th><th>Max Position</th><th>Daily Limit</th><th>Use Case</th></tr>
+</thead>
+<tbody>
+<tr><td>Conservative</td><td>0.5 SOL</td><td>5 SOL</td><td>Initial testing</td></tr>
+<tr><td><strong>Dev Testing</strong></td><td>5 SOL</td><td>25 SOL</td><td>Active development</td></tr>
+<tr><td>Aggressive</td><td>10 SOL</td><td>100 SOL</td><td>Production</td></tr>
+</tbody>
+</table>
+</div>
+<p>Click a preset button to apply, or customize individual values.</p>
+<h3 id="recommended-starting-config"><a class="header" href="#recommended-starting-config">Recommended Starting Config</a></h3>
+<pre><code>Max Position: 0.5 SOL (start small)
+Daily Loss Limit: 2 SOL
+Max Slippage: 100 bps (1%)
+Require Simulation: ON
+</code></pre>
+<h2 id="step-5-enable-venues"><a class="header" href="#step-5-enable-venues">Step 5: Enable Venues</a></h2>
+<p>In Settings → <strong>Venues</strong>, toggle which markets to scan:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Venue</th><th>Type</th><th>Recommended</th></tr>
+</thead>
+<tbody>
+<tr><td>Jupiter</td><td>DEX Aggregator</td><td>✅ Enable</td></tr>
+<tr><td>Raydium</td><td>AMM</td><td>✅ Enable</td></tr>
+<tr><td>pump.fun</td><td>Bonding Curve</td><td>✅ Enable</td></tr>
+<tr><td>Moonshot</td><td>Bonding Curve</td><td>✅ Enable</td></tr>
+<tr><td>Marginfi</td><td>Lending</td><td>Optional</td></tr>
+<tr><td>Kamino</td><td>Lending</td><td>Optional</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="step-6-start-the-scanner"><a class="header" href="#step-6-start-the-scanner">Step 6: Start the Scanner</a></h2>
+<ol>
+<li>Go to <strong>Dashboard</strong> view</li>
+<li>Click <strong>Start Scanner</strong> in the header</li>
+<li>The scanner begins detecting opportunities</li>
+</ol>
+<h3 id="scanner-status-indicators"><a class="header" href="#scanner-status-indicators">Scanner Status Indicators</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Status</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td>🟢 Active</td><td>Scanning all venues</td></tr>
+<tr><td>🟡 Paused</td><td>Manually paused</td></tr>
+<tr><td>🔴 Error</td><td>Check logs</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="step-7-review-opportunities"><a class="header" href="#step-7-review-opportunities">Step 7: Review Opportunities</a></h2>
+<p>As the scanner finds opportunities, they appear in <strong>Opportunities</strong> view:</p>
+<h3 id="edge-types"><a class="header" href="#edge-types">Edge Types</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Arbitrage</td><td>Cross-venue price differences</td></tr>
+<tr><td>Liquidation</td><td>Undercollateralized positions</td></tr>
+<tr><td>GraduationArb</td><td>Bonding curve → DEX migration</td></tr>
+<tr><td>CopyTrade</td><td>KOL wallet mirroring</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="edge-actions"><a class="header" href="#edge-actions">Edge Actions</a></h3>
+<ul>
+<li><strong>Simulate</strong> - Test without executing</li>
+<li><strong>Approve</strong> - Queue for execution</li>
+<li><strong>Execute</strong> - Execute immediately</li>
+<li><strong>Reject</strong> - Skip this opportunity</li>
+</ul>
+<h2 id="step-8-set-up-kol-tracking-optional"><a class="header" href="#step-8-set-up-kol-tracking-optional">Step 8: Set Up KOL Tracking (Optional)</a></h2>
+<p>Track and copy-trade successful wallets:</p>
+<ol>
+<li>Go to <strong>KOL Tracker</strong> view</li>
+<li>Click <strong>Add KOL</strong></li>
+<li>Enter wallet address or Twitter handle</li>
+<li>Helius webhook is automatically registered</li>
+</ol>
+<h3 id="enable-copy-trading"><a class="header" href="#enable-copy-trading">Enable Copy Trading</a></h3>
+<ol>
+<li>Select a KOL from the list</li>
+<li>Configure copy parameters:
+<ul>
+<li>Max position: 0.5 SOL</li>
+<li>Delay: 500ms</li>
+<li>Min trust score: 60</li>
+</ul>
+</li>
+<li>Toggle <strong>Enable Copy Trading</strong></li>
+</ol>
+<h2 id="step-9-test-consensus-optional"><a class="header" href="#step-9-test-consensus-optional">Step 9: Test Consensus (Optional)</a></h2>
+<p>The Research view lets you test multi-LLM consensus:</p>
+<ol>
+<li>Go to <strong>Research</strong> view</li>
+<li>Click <strong>Request Test Consensus</strong></li>
+<li>View votes from multiple LLMs (Claude, GPT-4, Llama)</li>
+<li>See agreement scores and reasoning</li>
+</ol>
+<p>Consensus is automatically used for agent-directed strategies.</p>
+<h2 id="monitoring"><a class="header" href="#monitoring">Monitoring</a></h2>
+<h3 id="real-time-events"><a class="header" href="#real-time-events">Real-time Events</a></h3>
+<p>Events stream in real-time via SSE:</p>
+<pre><code class="language-bash">curl -N http://localhost:9007/events/stream
+</code></pre>
+<h3 id="key-metrics"><a class="header" href="#key-metrics">Key Metrics</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Location</th></tr>
+</thead>
+<tbody>
+<tr><td>P&amp;L</td><td>Dashboard header</td></tr>
+<tr><td>Win Rate</td><td>Dashboard stats</td></tr>
+<tr><td>Active Positions</td><td>Dashboard</td></tr>
+<tr><td>Threat Alerts</td><td>Threats view</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h3 id="scanner-not-starting"><a class="header" href="#scanner-not-starting">Scanner Not Starting</a></h3>
+<ol>
+<li>Check Helius API key is configured</li>
+<li>Verify RPC endpoint is responding:</li>
+</ol>
+<pre><code class="language-bash">curl -X POST https://mainnet.helius-rpc.com/?api-key=YOUR_KEY \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"getHealth"}'
+</code></pre>
+<h3 id="consensus-failing"><a class="header" href="#consensus-failing">Consensus Failing</a></h3>
+<ol>
+<li>Verify OpenRouter API key</li>
+<li>Check credit balance on openrouter.ai</li>
+<li>Test manually:</li>
+</ol>
+<pre><code class="language-bash">curl -X POST http://localhost:9007/consensus/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "edge_type": "Arbitrage",
+    "venue": "jupiter",
+    "token_pair": ["SOL", "USDC"],
+    "estimated_profit_lamports": 50000000,
+    "risk_score": 25,
+    "route_data": {}
+  }'
+</code></pre>
+<h3 id="wallet-connection-failed"><a class="header" href="#wallet-connection-failed">Wallet Connection Failed</a></h3>
+<ol>
+<li>Ensure Phantom extension is installed</li>
+<li>Check browser console for errors</li>
+<li>Try disconnecting and reconnecting</li>
+</ol>
+<h3 id="execution-failing"><a class="header" href="#execution-failing">Execution Failing</a></h3>
+<ol>
+<li>Check wallet has sufficient SOL for gas</li>
+<li>Verify transaction simulation passes</li>
+<li>Check Jito bundle status in logs</li>
+</ol>
+<h2 id="mainnet-testing-progression"><a class="header" href="#mainnet-testing-progression">Mainnet Testing Progression</a></h2>
+<p>Follow this progression to safely ramp up:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Phase</th><th>Max Position</th><th>Duration</th><th>Goal</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>0.1 SOL</td><td>48 hours</td><td>Verify signal accuracy</td></tr>
+<tr><td>2</td><td>0.5 SOL</td><td>1 week</td><td>Test execution flow</td></tr>
+<tr><td>3</td><td>1 SOL</td><td>1 week</td><td>Validate risk limits</td></tr>
+<tr><td>4</td><td>5 SOL</td><td>Ongoing</td><td>Full operation</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li><a href="#arbfarm-api-reference">API Reference</a> - All endpoints documented</li>
+<li><a href="#arbfarm-development-guide">Development Guide</a> - Extend the system</li>
+<li><a href="#researchdd-module">Research Module</a> - Strategy discovery</li>
+<li><a href="#threat-detection-system">Threat Detection</a> - Safety systems</li>
+<li><a href="#kol-tracking--copy-trading-1">KOL Tracking</a> - Copy trading details</li>
+</ul>
+<h2 id="quick-reference"><a class="header" href="#quick-reference">Quick Reference</a></h2>
+<h3 id="ports"><a class="header" href="#ports">Ports</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Service</th><th>Port</th></tr>
+</thead>
+<tbody>
+<tr><td>Hecate (Frontend)</td><td>5173</td></tr>
+<tr><td>Erebus (Router)</td><td>3000</td></tr>
+<tr><td>ArbFarm</td><td>9007</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="key-endpoints"><a class="header" href="#key-endpoints">Key Endpoints</a></h3>
+<pre><code class="language-bash"># Health check
+curl http://localhost:9007/health
+
+# List opportunities
+curl http://localhost:9007/edges
+
+# Scanner status
+curl http://localhost:9007/scanner/status
+
+# KOL list
+curl http://localhost:9007/kol
+
+# Consensus stats
+curl http://localhost:9007/consensus/stats
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="arbfarm-solana-mev-agent-swarm"><a class="header" href="#arbfarm-solana-mev-agent-swarm">ArbFarm: Solana MEV Agent Swarm</a></h1>
 <p><strong>NullBlock’s Solana Arbitrage &amp; MEV Agent Swarm</strong> - Autonomous multi-agent system for capturing MEV opportunities on Solana with intelligent threat detection and composable event architecture.</p>
@@ -4431,7 +4733,7 @@ curl http://localhost:9007/swarm/circuit-breakers
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="arbfarm-service-architecture"><a class="header" href="#arbfarm-service-architecture">ArbFarm Service Architecture</a></h1>
 <p>ArbFarm is a Solana MEV Agent Swarm service that provides autonomous multi-agent trading capabilities.</p>
-<h2 id="overview-7"><a class="header" href="#overview-7">Overview</a></h2>
+<h2 id="overview-8"><a class="header" href="#overview-8">Overview</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -4630,7 +4932,7 @@ cargo run
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="arbfarm-development-guide"><a class="header" href="#arbfarm-development-guide">ArbFarm Development Guide</a></h1>
 <p>This guide covers how to develop and extend the ArbFarm service.</p>
-<h2 id="prerequisites-1"><a class="header" href="#prerequisites-1">Prerequisites</a></h2>
+<h2 id="prerequisites-2"><a class="header" href="#prerequisites-2">Prerequisites</a></h2>
 <ul>
 <li>Rust 1.75+</li>
 <li>PostgreSQL 15+</li>
@@ -6221,7 +6523,7 @@ npm run lint:format
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="researchdd-module"><a class="header" href="#researchdd-module">Research/DD Module</a></h1>
 <p>The Research module enables intelligent strategy discovery through URL ingestion, LLM-powered strategy extraction, backtesting, and social media monitoring.</p>
-<h2 id="overview-8"><a class="header" href="#overview-8">Overview</a></h2>
+<h2 id="overview-9"><a class="header" href="#overview-9">Overview</a></h2>
 <pre><code>URL/Content Input → Analysis → Strategy Extraction → Backtest → Approval
         │                              │
         ▼                              ▼
@@ -6576,7 +6878,7 @@ Alert     Alert
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="bonding-curves-module"><a class="header" href="#bonding-curves-module">Bonding Curves Module</a></h1>
 <p>The Curves module handles bonding curve tokens from platforms like pump.fun and moonshot, enabling graduation tracking, cross-venue arbitrage, and holder analysis.</p>
-<h2 id="overview-9"><a class="header" href="#overview-9">Overview</a></h2>
+<h2 id="overview-10"><a class="header" href="#overview-10">Overview</a></h2>
 <p>Bonding curves are token launch mechanisms where price increases algorithmically as supply is bought. When enough SOL is deposited, the token “graduates” to a DEX like Raydium.</p>
 <pre><code>Token Creation → Bonding Curve Trading → Graduation → DEX Trading
                         │
@@ -6811,7 +7113,7 @@ curl -X POST http://localhost:9007/curves/ABC123.../quote \
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="kol-tracking--copy-trading-1"><a class="header" href="#kol-tracking--copy-trading-1">KOL Tracking + Copy Trading</a></h1>
 <p>The KOL (Key Opinion Leader) module enables tracking of whale wallets and influential traders, with optional automated copy trading.</p>
-<h2 id="overview-10"><a class="header" href="#overview-10">Overview</a></h2>
+<h2 id="overview-11"><a class="header" href="#overview-11">Overview</a></h2>
 <pre><code>Wallet/Handle → Track Trades → Calculate Trust → Optional Copy Trading
                      │                │
                      ▼                ▼
@@ -6929,7 +7231,7 @@ curl -X POST http://localhost:9007/curves/ABC123.../quote \
     "display_name": "Crypto Whale"
   }'
 </code></pre>
-<h3 id="enable-copy-trading"><a class="header" href="#enable-copy-trading">Enable Copy Trading</a></h3>
+<h3 id="enable-copy-trading-1"><a class="header" href="#enable-copy-trading-1">Enable Copy Trading</a></h3>
 <pre><code class="language-bash">curl -X POST http://localhost:9007/kol/{id}/copy/enable \
   -H "Content-Type: application/json" \
   -d '{
@@ -7382,7 +7684,7 @@ curl http://localhost:9007/threat/check/TokenMintAddress
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="engram-system"><a class="header" href="#engram-system">Engram System</a></h1>
 <p>The Engram system provides pattern learning and memory capabilities for the ArbFarm MEV agent swarm. It enables agents to learn from successful trades, avoid known threats, and optimize strategies over time.</p>
-<h2 id="overview-11"><a class="header" href="#overview-11">Overview</a></h2>
+<h2 id="overview-12"><a class="header" href="#overview-12">Overview</a></h2>
 <p>Engrams are persistent, typed memory units that capture:</p>
 <ul>
 <li><strong>Edge Patterns</strong> - Successful trade signatures and routes</li>
@@ -7629,7 +7931,7 @@ Examples:
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="multi-llm-consensus-engine-1"><a class="header" href="#multi-llm-consensus-engine-1">Multi-LLM Consensus Engine</a></h1>
 <p>The Consensus Engine enables multi-model decision making for trade approvals, reducing hallucination risk and improving decision quality through weighted voting across multiple LLMs.</p>
-<h2 id="overview-12"><a class="header" href="#overview-12">Overview</a></h2>
+<h2 id="overview-13"><a class="header" href="#overview-13">Overview</a></h2>
 <p>When an edge (opportunity) requires approval, the consensus engine:</p>
 <ol>
 <li>Queries multiple LLMs with edge context</li>
@@ -8380,7 +8682,7 @@ PGPASSWORD="postgres_secure_pass" psql -h localhost -p 5440 -U postgres -d erebu
 PGPASSWORD="postgres_secure_pass" psql -h localhost -p 5441 -U postgres -d agents \
   -c "SELECT COUNT(*) FROM user_references;"
 </code></pre>
-<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
+<h2 id="troubleshooting-1"><a class="header" href="#troubleshooting-1">Troubleshooting</a></h2>
 <h3 id="container-wont-start"><a class="header" href="#container-wont-start">Container Won’t Start</a></h3>
 <pre><code class="language-bash"># Check logs
 docker logs nullblock-postgres-erebus
@@ -8595,7 +8897,7 @@ cd ~/nullblock/svc/nullblock-protocols &amp;&amp; cargo run
 # Terminal 5 - Frontend
 cd ~/nullblock/svc/hecate &amp;&amp; npm run develop
 </code></pre>
-<h2 id="troubleshooting-1"><a class="header" href="#troubleshooting-1">Troubleshooting</a></h2>
+<h2 id="troubleshooting-2"><a class="header" href="#troubleshooting-2">Troubleshooting</a></h2>
 <h3 id="session-not-creating"><a class="header" href="#session-not-creating">Session Not Creating</a></h3>
 <pre><code class="language-bash"># Kill existing session
 tmux kill-session -t nullblock-dev
@@ -9050,7 +9352,7 @@ curl http://localhost:9007/health   # ArbFarm
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="mcp-servers"><a class="header" href="#mcp-servers">MCP Servers</a></h1>
 <p>Model Context Protocol servers integrated with NullBlock development.</p>
-<h2 id="overview-13"><a class="header" href="#overview-13">Overview</a></h2>
+<h2 id="overview-14"><a class="header" href="#overview-14">Overview</a></h2>
 <p>MCP servers extend Claude Code’s capabilities. Automatically available when running Claude Code in the NullBlock project.</p>
 <h2 id="nullblock-mcp-server"><a class="header" href="#nullblock-mcp-server">NullBlock MCP Server</a></h2>
 <p><strong>Purpose</strong>: NullBlock’s own MCP server exposing agent tools, engrams, and resources.</p>
@@ -9203,7 +9505,7 @@ curl http://localhost:9007/health   # ArbFarm
 </code></pre>
 <h3 id="auto-start-integration"><a class="header" href="#auto-start-integration">Auto-Start Integration</a></h3>
 <p>Edit <code>scripts/nullblock-dev-mac.yml</code> to add startup commands.</p>
-<h2 id="troubleshooting-2"><a class="header" href="#troubleshooting-2">Troubleshooting</a></h2>
+<h2 id="troubleshooting-3"><a class="header" href="#troubleshooting-3">Troubleshooting</a></h2>
 <h3 id="chrome-not-connecting"><a class="header" href="#chrome-not-connecting">Chrome Not Connecting</a></h3>
 <pre><code class="language-bash"># Verify Chrome running
 lsof -i :9222
@@ -9600,22 +9902,6 @@ response = client.agents.chat("Hello HECATE")
         <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
         <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
-        <!-- Livereload script (if served using the cli tool) -->
-        <script>
-            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
-            const socket = new WebSocket(wsAddress);
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload();
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
 
 
         <script>
