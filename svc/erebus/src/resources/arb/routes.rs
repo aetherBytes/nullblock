@@ -617,6 +617,92 @@ pub async fn trade_stats(
     proxy_request("GET", &endpoint, None).await
 }
 
+// Consensus Stats & Models
+pub async fn consensus_stats() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Consensus stats requested");
+    proxy_request("GET", "consensus/stats", None).await
+}
+
+pub async fn consensus_models() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🤖 Consensus models requested");
+    proxy_request("GET", "consensus/models", None).await
+}
+
+// Wallet Management
+pub async fn wallet_status() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("👛 Wallet status requested");
+    proxy_request("GET", "wallet/status", None).await
+}
+
+pub async fn wallet_setup(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("👛 Wallet setup requested");
+    proxy_request("POST", "wallet/setup", Some(request)).await
+}
+
+pub async fn wallet_policy(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📜 Wallet policy update requested");
+    proxy_request("PUT", "wallet/policy", Some(request)).await
+}
+
+pub async fn wallet_balance() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("💰 Wallet balance requested");
+    proxy_request("GET", "wallet/balance", None).await
+}
+
+pub async fn wallet_disconnect() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🔌 Wallet disconnect requested");
+    proxy_request("POST", "wallet/disconnect", None).await
+}
+
+pub async fn wallet_usage() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📈 Wallet usage requested");
+    proxy_request("GET", "wallet/usage", None).await
+}
+
+pub async fn wallet_test_sign(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🔏 Wallet test sign requested");
+    proxy_request("POST", "wallet/test-sign", Some(request)).await
+}
+
+// Settings
+pub async fn get_risk_settings() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Get risk settings requested");
+    proxy_request("GET", "settings/risk", None).await
+}
+
+pub async fn update_risk_settings(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Update risk settings requested");
+    proxy_request("PUT", "settings/risk", Some(request)).await
+}
+
+pub async fn get_venue_settings() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Get venue settings requested");
+    proxy_request("GET", "settings/venues", None).await
+}
+
+pub async fn get_api_keys_status() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🔑 Get API keys status requested");
+    proxy_request("GET", "settings/api-keys", None).await
+}
+
+// Events Stream
+pub async fn events_stream() -> Result<Response, StatusCode> {
+    proxy_sse("events/stream").await
+}
+
+// Threat Stream
+pub async fn threat_stream() -> Result<Response, StatusCode> {
+    proxy_sse("threat/stream").await
+}
+
 pub fn create_arb_routes<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -657,6 +743,8 @@ where
         // Consensus
         .route("/api/arb/consensus/request", post(request_consensus))
         .route("/api/arb/consensus/history", get(consensus_history))
+        .route("/api/arb/consensus/stats", get(consensus_stats))
+        .route("/api/arb/consensus/models", get(consensus_models))
         .route("/api/arb/consensus/:id", get(get_consensus))
 
         // Research/DD
@@ -700,4 +788,23 @@ where
         .route("/api/arb/trades", get(list_trades))
         .route("/api/arb/trades/stats", get(trade_stats))
         .route("/api/arb/trades/:id", get(get_trade))
+
+        // Wallet Management
+        .route("/api/arb/wallet/status", get(wallet_status))
+        .route("/api/arb/wallet/setup", post(wallet_setup))
+        .route("/api/arb/wallet/policy", put(wallet_policy))
+        .route("/api/arb/wallet/balance", get(wallet_balance))
+        .route("/api/arb/wallet/disconnect", post(wallet_disconnect))
+        .route("/api/arb/wallet/usage", get(wallet_usage))
+        .route("/api/arb/wallet/test-sign", post(wallet_test_sign))
+
+        // Settings
+        .route("/api/arb/settings/risk", get(get_risk_settings))
+        .route("/api/arb/settings/risk", put(update_risk_settings))
+        .route("/api/arb/settings/venues", get(get_venue_settings))
+        .route("/api/arb/settings/api-keys", get(get_api_keys_status))
+
+        // Event Streams
+        .route("/api/arb/events/stream", get(events_stream))
+        .route("/api/arb/threat/stream", get(threat_stream))
 }
