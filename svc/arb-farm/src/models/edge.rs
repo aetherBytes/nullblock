@@ -15,6 +15,7 @@ pub struct Edge {
     pub estimated_profit_lamports: Option<i64>,
     pub risk_score: Option<i32>,
     pub route_data: serde_json::Value,
+    pub signal_data: Option<serde_json::Value>,
     pub status: EdgeStatus,
     pub token_mint: Option<String>,
     pub created_at: DateTime<Utc>,

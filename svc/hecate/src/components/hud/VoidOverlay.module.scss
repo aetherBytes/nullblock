@@ -98,6 +98,17 @@ $void-purple: #b967ff;
 .navWrapper {
   display: flex;
   align-items: flex-start;
+
+  @media (max-width: 768px) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    max-width: calc(100vw - 120px);
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
 }
 
 // Sleek void navigation - 2-row grid for perfect column alignment
@@ -254,10 +265,12 @@ $void-purple: #b967ff;
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
   border-left: 1px solid rgba(99, 102, 241, 0.25);
+  flex-shrink: 0;
 
   @media (max-width: 768px) {
     height: 44px;
     margin-top: 45px;
+    flex-wrap: nowrap;
   }
 }
 

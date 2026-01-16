@@ -41,6 +41,47 @@ impl Default for RiskConfig {
     }
 }
 
+impl RiskConfig {
+    pub fn dev_testing() -> Self {
+        Self {
+            max_position_sol: 5.0,
+            daily_loss_limit_sol: 2.0,
+            max_drawdown_percent: 40.0,
+            max_concurrent_positions: 10,
+            max_position_per_token_sol: 2.0,
+            cooldown_after_loss_ms: 2000,
+            volatility_scaling_enabled: true,
+            auto_pause_on_drawdown: false,
+        }
+    }
+
+    pub fn conservative() -> Self {
+        Self {
+            max_position_sol: 1.0,
+            daily_loss_limit_sol: 0.5,
+            max_drawdown_percent: 10.0,
+            max_concurrent_positions: 3,
+            max_position_per_token_sol: 0.5,
+            cooldown_after_loss_ms: 10000,
+            volatility_scaling_enabled: true,
+            auto_pause_on_drawdown: true,
+        }
+    }
+
+    pub fn aggressive() -> Self {
+        Self {
+            max_position_sol: 10.0,
+            daily_loss_limit_sol: 5.0,
+            max_drawdown_percent: 50.0,
+            max_concurrent_positions: 20,
+            max_position_per_token_sol: 5.0,
+            cooldown_after_loss_ms: 1000,
+            volatility_scaling_enabled: false,
+            auto_pause_on_drawdown: false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 struct DailyStats {
     date: chrono::NaiveDate,

@@ -1,13 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useWalletTools } from '../../common/hooks/useWalletTools';
+import { NULLBLOCK_SERVICE_COWS } from '../../constants/nullblock';
 import type { MemCacheSection } from '../memcache';
 import NullblockLogo from './NullblockLogo';
 import styles from './VoidOverlay.module.scss';
 
-const MEMCACHE_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
+const DEV_SHOW_ALL_COW_TABS = true;
+
+const BASE_MEMCACHE_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
   { id: 'engrams', icon: '◈', label: 'Engrams' },
-  { id: 'workflows', icon: '⬡', label: 'Workflows' },
+  { id: 'stash', icon: '⬡', label: 'Stash' },
   { id: 'tasks', icon: '▣', label: 'Tasks' },
-  { id: 'arbfarm', icon: '⚡', label: 'ArbFarm' },
   { id: 'agents', icon: '◉', label: 'Agents' },
   { id: 'model', icon: '◎', label: 'Model' },
   { id: 'listings', icon: '◇', label: 'Listings' },
@@ -48,6 +51,27 @@ const VoidOverlay: React.FC<VoidOverlayProps> = ({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
   const memcacheRef = useRef<HTMLElement>(null);
+
+  const { unlockedTabs } = useWalletTools(publicKey || null, { autoFetch: true });
+
+  const MEMCACHE_ITEMS = useMemo(() => {
+    const items = [...BASE_MEMCACHE_ITEMS];
+    const insertIndex = 3;
+
+    NULLBLOCK_SERVICE_COWS.forEach((cow) => {
+      const isUnlocked = unlockedTabs.includes(cow.id) || DEV_SHOW_ALL_COW_TABS;
+
+      if (isUnlocked) {
+        items.splice(insertIndex, 0, {
+          id: cow.id as MemCacheSection,
+          icon: cow.menuIcon,
+          label: cow.name,
+        });
+      }
+    });
+
+    return items;
+  }, [unlockedTabs]);
 
   useEffect(() => {
     setWelcomeVisible(showWelcome);

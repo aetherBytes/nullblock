@@ -3,7 +3,7 @@ import styles from './memcache.module.scss';
 
 export type MemCacheSection =
   | 'engrams'
-  | 'workflows'
+  | 'stash'
   | 'tasks'
   | 'listings'
   | 'earnings'
@@ -20,7 +20,7 @@ interface MemCacheSidebarProps {
 
 const SIDEBAR_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
   { id: 'engrams', icon: '◈', label: 'Engrams' },
-  { id: 'workflows', icon: '⬡', label: 'Workflows' },
+  { id: 'stash', icon: '⬡', label: 'Stash' },
   { id: 'tasks', icon: '▣', label: 'Active Tasks' },
   { id: 'arbfarm', icon: '⚡', label: 'ArbFarm' },
   { id: 'listings', icon: '◇', label: 'Listings' },

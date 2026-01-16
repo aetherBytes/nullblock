@@ -8,11 +8,12 @@ import TaskCreationForm from '../hud/TaskCreationForm';
 import EngramsShelf from './EngramsShelf';
 import { ArbFarmDashboard } from './arbfarm';
 import type { ArbFarmView } from './arbfarm';
+import { StashView } from './stash';
 import styles from './memcache.module.scss';
 
 export type MemCacheSection =
   | 'engrams'
-  | 'workflows'
+  | 'stash'
   | 'tasks'
   | 'listings'
   | 'earnings'
@@ -1056,14 +1057,8 @@ const MemCache: React.FC<MemCacheProps> = ({
             />
           </>
         );
-      case 'workflows':
-        return (
-          <div className={styles.placeholderSection}>
-            <div className={styles.placeholderIcon}>⬡</div>
-            <h2>Workflows</h2>
-            <p>Your COWs (Constellations of Work) will appear here.</p>
-          </div>
-        );
+      case 'stash':
+        return <StashView walletAddress={publicKey} />;
       case 'tasks':
         if (showTaskForm) {
           return renderTaskForm();

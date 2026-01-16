@@ -58,6 +58,17 @@ interface UseArbFarmResult {
     approve: (id: string) => Promise<boolean>;
     reject: (id: string, reason: string) => Promise<boolean>;
     execute: (id: string, maxSlippageBps?: number) => Promise<boolean>;
+    executeAuto: (
+      id: string,
+      slippageBps?: number,
+    ) => Promise<{
+      success: boolean;
+      txSignature?: string;
+      bundleId?: string;
+      profitLamports?: number;
+      executionTimeMs?: number;
+      error?: string;
+    }>;
   };
 
   trades: {
@@ -344,6 +355,61 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
       return false;
     }
   }, []);
+
+  const executeEdgeAuto = useCallback(
+    async (
+      id: string,
+      slippageBps?: number,
+    ): Promise<{
+      success: boolean;
+      txSignature?: string;
+      bundleId?: string;
+      profitLamports?: number;
+      executionTimeMs?: number;
+      error?: string;
+    }> => {
+      try {
+        setEdges((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, status: 'executing' as EdgeStatus } : e)),
+        );
+
+        const response = await arbFarmService.executeEdgeAuto(id, slippageBps);
+
+        if (response.success && response.data) {
+          const status = response.data.success ? ('executed' as EdgeStatus) : ('failed' as EdgeStatus);
+          setEdges((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)));
+
+          return {
+            success: response.data.success,
+            txSignature: response.data.tx_signature,
+            bundleId: response.data.bundle_id,
+            profitLamports: response.data.profit_lamports,
+            executionTimeMs: response.data.execution_time_ms,
+            error: response.data.error,
+          };
+        }
+
+        setEdges((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, status: 'failed' as EdgeStatus } : e)),
+        );
+
+        return {
+          success: false,
+          error: response.error || 'Execution failed',
+        };
+      } catch (err) {
+        setEdges((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, status: 'failed' as EdgeStatus } : e)),
+        );
+
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        };
+      }
+    },
+    [],
+  );
 
   const fetchTrades = useCallback(async () => {
     setTradesLoading(true);
@@ -1095,6 +1161,7 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
       approve: approveEdge,
       reject: rejectEdge,
       execute: executeEdge,
+      executeAuto: executeEdgeAuto,
     },
 
     trades: {

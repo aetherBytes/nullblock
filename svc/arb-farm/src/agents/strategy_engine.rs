@@ -3,6 +3,7 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
 
+use crate::consensus::{ConsensusEngine, format_edge_context};
 use crate::error::AppResult;
 use crate::events::{ArbEvent, AgentType, AtomicityLevel, EventSource, edge as edge_topics, strategy as strategy_topics};
 use crate::models::{Edge, EdgeStatus, RiskParams, Signal, Strategy};
@@ -188,6 +189,7 @@ impl StrategyEngine {
             estimated_profit_lamports: Some((signal.estimated_profit_bps as i64) * 10000),
             risk_score: Some(((1.0 - signal.confidence) * 100.0) as i32),
             route_data: signal.metadata.clone(),
+            signal_data: Some(signal.metadata.clone()),
             status: EdgeStatus::Detected,
             token_mint: signal.token_mint.clone(),
             created_at: chrono::Utc::now(),
@@ -200,6 +202,147 @@ impl StrategyEngine {
 
         for signal in signals {
             if let Some(result) = self.match_signal(&signal).await {
+                results.push(result);
+            }
+        }
+
+        results
+    }
+
+    pub async fn match_signal_with_consensus(
+        &self,
+        signal: &Signal,
+        consensus_engine: &ConsensusEngine,
+    ) -> Option<MatchResult> {
+        let strategies = self.strategies.read().await;
+
+        for strategy in strategies.values() {
+            if !strategy.is_active {
+                continue;
+            }
+
+            if !self.signal_matches_strategy(signal, strategy) {
+                continue;
+            }
+
+            let risk_params = self.get_risk_params(strategy);
+
+            if !self.check_risk_params(signal, &risk_params) {
+                return Some(MatchResult {
+                    signal_id: signal.id,
+                    strategy_id: strategy.id,
+                    execution_mode: strategy.execution_mode.clone(),
+                    approved: false,
+                    reason: Some("Signal exceeds risk parameters".to_string()),
+                    created_edge: None,
+                });
+            }
+
+            let edge = self.create_edge_from_signal(signal, strategy);
+
+            let requires_consensus = strategy.execution_mode.to_lowercase().contains("agent")
+                || strategy.execution_mode.to_lowercase().contains("directed");
+
+            if requires_consensus {
+                let edge_context = format_edge_context(
+                    &edge.edge_type,
+                    &format!("{:?}", signal.venue_type),
+                    &[
+                        signal.token_mint.clone().unwrap_or_default(),
+                        "SOL".to_string(),
+                    ],
+                    edge.estimated_profit_lamports.unwrap_or(0),
+                    edge.risk_score.unwrap_or(50),
+                    &edge.route_data,
+                );
+
+                match consensus_engine
+                    .request_consensus(edge.id, &edge_context, None)
+                    .await
+                {
+                    Ok(consensus_result) => {
+                        let event = consensus_engine.create_consensus_event(edge.id, &consensus_result);
+                        let _ = self.event_tx.send(event);
+
+                        if !consensus_result.approved {
+                            let _ = self.event_tx.send(ArbEvent::new(
+                                "edge_rejected_by_consensus",
+                                EventSource::Agent(AgentType::StrategyEngine),
+                                edge_topics::REJECTED,
+                                serde_json::json!({
+                                    "edge_id": edge.id,
+                                    "signal_id": signal.id,
+                                    "strategy_id": strategy.id,
+                                    "agreement_score": consensus_result.agreement_score,
+                                    "reasoning": consensus_result.reasoning_summary,
+                                }),
+                            ));
+
+                            return Some(MatchResult {
+                                signal_id: signal.id,
+                                strategy_id: strategy.id,
+                                execution_mode: strategy.execution_mode.clone(),
+                                approved: false,
+                                reason: Some(format!(
+                                    "Consensus rejected: {}",
+                                    consensus_result.reasoning_summary
+                                )),
+                                created_edge: Some(edge),
+                            });
+                        }
+
+                        tracing::info!(
+                            edge_id = %edge.id,
+                            agreement = consensus_result.agreement_score,
+                            "Edge approved by consensus"
+                        );
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            edge_id = %edge.id,
+                            error = %e,
+                            "Consensus request failed, falling back to standard approval"
+                        );
+                    }
+                }
+            }
+
+            let _ = self.event_tx.send(ArbEvent::new(
+                "edge_detected",
+                EventSource::Agent(AgentType::StrategyEngine),
+                edge_topics::DETECTED,
+                serde_json::json!({
+                    "edge_id": edge.id,
+                    "signal_id": signal.id,
+                    "strategy_id": strategy.id,
+                    "execution_mode": format!("{:?}", strategy.execution_mode),
+                    "estimated_profit_bps": signal.estimated_profit_bps,
+                    "consensus_required": requires_consensus,
+                }),
+            ));
+
+            return Some(MatchResult {
+                signal_id: signal.id,
+                strategy_id: strategy.id,
+                execution_mode: strategy.execution_mode.clone(),
+                approved: true,
+                reason: None,
+                created_edge: Some(edge),
+            });
+        }
+
+        None
+    }
+
+    pub async fn process_signals_with_consensus(
+        &self,
+        signals: Vec<Signal>,
+        consensus_engine: &ConsensusEngine,
+    ) -> Vec<MatchResult> {
+        let mut results = Vec::new();
+
+        for signal in signals {
+            if let Some(result) = self.match_signal_with_consensus(&signal, consensus_engine).await {
                 results.push(result);
             }
         }

@@ -8,15 +8,18 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::RwLock;
+use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::error::AppResult;
+use crate::events::ArbEvent;
 use crate::models::{
     AddKolRequest, CopyTrade, CopyTradeConfig, CopyTradeStatus, EnableCopyRequest,
     KolEntity, KolEntityType, KolStats, KolTrade, KolTradeType, TrustScoreBreakdown,
     UpdateKolRequest,
 };
 use crate::server::AppState;
+use crate::webhooks::helius::{WebhookConfig, TransactionType, WebhookType};
 
 lazy_static::lazy_static! {
     static ref KOL_STORE: RwLock<HashMap<Uuid, KolEntity>> = RwLock::new(HashMap::new());
@@ -79,18 +82,18 @@ pub async fn list_kols(
 }
 
 pub async fn add_kol(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Json(request): Json<AddKolRequest>,
 ) -> impl IntoResponse {
-    let (entity_type, identifier) = if let Some(wallet) = request.wallet_address {
-        (KolEntityType::Wallet, wallet)
+    let (entity_type, identifier, wallet_address) = if let Some(wallet) = request.wallet_address.clone() {
+        (KolEntityType::Wallet, wallet.clone(), Some(wallet))
     } else if let Some(handle) = request.twitter_handle {
         let handle = if handle.starts_with('@') {
             handle
         } else {
             format!("@{}", handle)
         };
-        (KolEntityType::TwitterHandle, handle)
+        (KolEntityType::TwitterHandle, handle, None)
     } else {
         return (
             StatusCode::BAD_REQUEST,
@@ -101,21 +104,74 @@ pub async fn add_kol(
             .into_response();
     };
 
-    let mut store = KOL_STORE.write().unwrap();
-
-    if store.values().any(|k| k.identifier == identifier) {
-        return (
-            StatusCode::CONFLICT,
-            Json(serde_json::json!({
-                "error": "KOL with this identifier already exists"
-            })),
-        )
-            .into_response();
+    {
+        let store = KOL_STORE.read().unwrap();
+        if store.values().any(|k| k.identifier == identifier) {
+            return (
+                StatusCode::CONFLICT,
+                Json(serde_json::json!({
+                    "error": "KOL with this identifier already exists"
+                })),
+            )
+                .into_response();
+        }
     }
 
-    let kol = KolEntity::new(entity_type, identifier, request.display_name);
+    let mut kol = KolEntity::new(entity_type, identifier, request.display_name);
     let id = kol.id;
-    store.insert(id, kol.clone());
+
+    if let Some(wallet) = wallet_address {
+        if state.helius_client.is_configured() {
+            info!("Registering Helius webhook for KOL wallet: {}", wallet);
+            let webhook_url = format!(
+                "{}/webhooks/helius",
+                std::env::var("ARB_FARM_SERVICE_URL").unwrap_or_else(|_| "http://localhost:9007".to_string())
+            );
+
+            let config = WebhookConfig {
+                webhook_url,
+                account_addresses: vec![wallet.clone()],
+                transaction_types: vec![TransactionType::Swap],
+                webhook_type: WebhookType::Enhanced,
+                auth_header: None,
+            };
+
+            match state.helius_client.create_webhook(&config).await {
+                Ok(registration) => {
+                    info!("Helius webhook registered: {}", registration.webhook_id);
+                    kol.linked_wallet = Some(wallet);
+                }
+                Err(e) => {
+                    warn!("Failed to register Helius webhook: {}. KOL added without webhook.", e);
+                    kol.linked_wallet = Some(wallet);
+                }
+            }
+        } else {
+            kol.linked_wallet = Some(wallet);
+        }
+
+        state.kol_tracker.add_kol(
+            kol.linked_wallet.as_deref().unwrap_or(&kol.identifier),
+            kol.display_name.clone(),
+            kol.trust_score.try_into().unwrap_or(50.0),
+        ).await;
+    }
+
+    {
+        let mut store = KOL_STORE.write().unwrap();
+        store.insert(id, kol.clone());
+    }
+
+    let _ = state.event_tx.send(ArbEvent::new(
+        "kol_added",
+        crate::events::EventSource::Agent(crate::events::AgentType::CopyTrade),
+        "kol",
+        serde_json::json!({
+            "entity_id": id,
+            "identifier": kol.identifier,
+            "display_name": kol.display_name,
+        }),
+    ));
 
     (StatusCode::CREATED, Json(kol)).into_response()
 }

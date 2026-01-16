@@ -212,6 +212,28 @@ GET /api/discovery/health/:endpoint
 POST /api/discovery/scan
 ```
 
+### Wallet Stash
+
+```bash
+# Get wallet's tool inventory, owned COWs, and unlock progress
+GET /api/marketplace/wallet/:address/stash
+
+# Response
+{
+  "wallet_address": "0x742d35Cc...",
+  "owned_cows": [...],
+  "owned_tools": [...],
+  "unlocked_tabs": ["arbfarm"],
+  "unlock_progress": [
+    { "cowId": "arbfarm", "owned": 5, "required": 5, "percent": 100 },
+    { "cowId": "polymev", "owned": 0, "required": 5, "percent": 0 }
+  ]
+}
+
+# Get only unlocked tabs
+GET /api/marketplace/wallet/:address/unlocks
+```
+
 ## MCP Protocol
 
 Model Context Protocol (2025-11-25) for AI tool integration.

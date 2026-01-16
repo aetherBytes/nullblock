@@ -453,6 +453,135 @@ pub async fn list_atomic_edges(
     Ok(Json(ListEdgesResponse { edges, total }))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ExecuteEdgeAutoRequest {
+    pub slippage_bps: Option<u16>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ExecuteEdgeAutoResponse {
+    pub edge_id: Uuid,
+    pub success: bool,
+    pub tx_signature: Option<String>,
+    pub bundle_id: Option<String>,
+    pub profit_lamports: Option<i64>,
+    pub gas_cost_lamports: Option<u64>,
+    pub execution_time_ms: u64,
+    pub error: Option<String>,
+    pub route_info: Option<serde_json::Value>,
+}
+
+pub async fn execute_edge_auto(
+    State(state): State<AppState>,
+    Path(edge_id): Path<Uuid>,
+    Json(request): Json<ExecuteEdgeAutoRequest>,
+) -> AppResult<Json<ExecuteEdgeAutoResponse>> {
+    let edge_record = state
+        .edge_repo
+        .get_by_id(edge_id)
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("Edge {} not found", edge_id)))?;
+
+    if edge_record.status != "detected"
+        && edge_record.status != "pending_approval"
+        && edge_record.status != "approved"
+    {
+        return Err(AppError::BadRequest(format!(
+            "Edge {} cannot be executed in status: {}",
+            edge_id, edge_record.status
+        )));
+    }
+
+    let strategy_id = edge_record
+        .strategy_id
+        .ok_or_else(|| AppError::BadRequest("Edge has no associated strategy".to_string()))?;
+
+    let strategy_record = state
+        .strategy_repo
+        .get_by_id(strategy_id)
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("Strategy {} not found", strategy_id)))?;
+
+    let edge = record_to_edge(&edge_record)?;
+    let strategy = record_to_strategy(&strategy_record)?;
+
+    let slippage_bps = request.slippage_bps.unwrap_or(100); // Default 1% slippage
+
+    let result = state
+        .executor
+        .execute_edge_auto(
+            &edge,
+            &strategy,
+            &state.tx_builder,
+            &state.turnkey_signer,
+            slippage_bps,
+        )
+        .await?;
+
+    if result.success {
+        state
+            .trade_repo
+            .create(crate::database::repositories::trades::CreateTradeRecord {
+                edge_id,
+                strategy_id,
+                tx_signature: result.tx_signature.clone(),
+                bundle_id: result.bundle_id.clone(),
+                entry_price: None,
+                exit_price: None,
+                profit_lamports: result.profit_lamports,
+                gas_cost_lamports: result.gas_cost_lamports.map(|g| g as i64),
+                slippage_bps: Some(slippage_bps as i32),
+            })
+            .await?;
+
+        state
+            .edge_repo
+            .update(
+                edge_id,
+                crate::database::repositories::edges::UpdateEdgeRecord {
+                    status: Some(crate::models::EdgeStatus::Executed),
+                    rejection_reason: None,
+                    executed_at: Some(chrono::Utc::now()),
+                    actual_profit_lamports: result.profit_lamports,
+                    actual_gas_cost_lamports: result.gas_cost_lamports.map(|g| g as i64),
+                    simulation_tx_hash: None,
+                    max_gas_cost_lamports: None,
+                    simulated_profit_guaranteed: None,
+                },
+            )
+            .await?;
+    } else {
+        state
+            .edge_repo
+            .update(
+                edge_id,
+                crate::database::repositories::edges::UpdateEdgeRecord {
+                    status: Some(crate::models::EdgeStatus::Failed),
+                    rejection_reason: result.error.clone(),
+                    executed_at: Some(chrono::Utc::now()),
+                    actual_profit_lamports: None,
+                    actual_gas_cost_lamports: result.gas_cost_lamports.map(|g| g as i64),
+                    simulation_tx_hash: None,
+                    max_gas_cost_lamports: None,
+                    simulated_profit_guaranteed: None,
+                },
+            )
+            .await?;
+    }
+
+    Ok(Json(ExecuteEdgeAutoResponse {
+        edge_id,
+        success: result.success,
+        tx_signature: result.tx_signature,
+        bundle_id: result.bundle_id,
+        profit_lamports: result.profit_lamports,
+        gas_cost_lamports: result.gas_cost_lamports,
+        execution_time_ms: result.execution_time_ms,
+        error: result.error,
+        route_info: None,
+    }))
+}
+
 fn record_to_edge(
     record: &crate::database::repositories::edges::EdgeRecord,
 ) -> AppResult<crate::models::Edge> {
@@ -483,6 +612,7 @@ fn record_to_edge(
         estimated_profit_lamports: record.estimated_profit_lamports,
         risk_score: record.risk_score,
         route_data: record.route_data.clone(),
+        signal_data: Some(record.route_data.clone()),
         status,
         token_mint: None,
         created_at: record.created_at,

@@ -42,19 +42,28 @@ svc/hecate/src/
 
 ### Navigation Integration
 
-ArbFarm is registered in `VoidOverlay.tsx` as part of the MemCache submenu:
+ArbFarm is dynamically added to the MemCache submenu when the wallet has unlocked it (owns all ArbFarm tools). In development mode, it's always visible.
 
 ```typescript
 // src/components/hud/VoidOverlay.tsx
-const MEMCACHE_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
+
+// Base menu items (always visible)
+const BASE_MEMCACHE_ITEMS = [
   { id: 'engrams', icon: '◈', label: 'Engrams' },
-  { id: 'workflows', icon: '⬡', label: 'Workflows' },
+  { id: 'stash', icon: '⬡', label: 'Stash' },  // Tool inventory
   { id: 'tasks', icon: '▣', label: 'Tasks' },
-  { id: 'arbfarm', icon: '⚡', label: 'ArbFarm' },  // ArbFarm entry
   { id: 'agents', icon: '◉', label: 'Agents' },
   // ...
 ];
+
+// NullBlock COW tabs are added dynamically when unlocked
+const NULLBLOCK_SERVICE_COWS = [
+  { id: 'arbfarm', name: 'ArbFarm', menuIcon: '⚡' },
+  { id: 'polymev', name: 'PolyMev', menuIcon: '🎯' },
+];
 ```
+
+The tab unlock system is managed by `useWalletTools` hook and the `DEV_SHOW_ALL_COW_TABS` flag.
 
 ### Type System (`types/arbfarm.ts`)
 

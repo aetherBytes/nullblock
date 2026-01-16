@@ -28,7 +28,6 @@ Quick reference for all NullBlock service ports.
 
 | Port | Service | Description |
 |------|---------|-------------|
-| **9222** | Chrome DevTools | Browser debugging |
 | **3001** | mdBook | Internal documentation (this site) |
 
 ## Port Mapping

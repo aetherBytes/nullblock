@@ -1,6 +1,7 @@
 mod edge;
 mod engram;
 mod kol;
+mod kol_tracker;
 mod signal;
 mod strategy;
 mod threat;
@@ -10,6 +11,7 @@ mod venue;
 pub use edge::*;
 pub use engram::*;
 pub use kol::*;
+pub use kol_tracker::*;
 pub use signal::*;
 pub use strategy::*;
 pub use threat::*;

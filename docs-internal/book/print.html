@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "searchindex-3a7eda19.js";
+            window.path_to_searchindex_js = "searchindex-009195a1.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-061c334f.js"></script>
@@ -1097,6 +1097,50 @@ POST /api/marketplace/listings/:id/favorite # Favorite
 POST /api/admin/listings/reject/:id   # Reject
 POST /api/admin/listings/feature/:id  # Feature
 </code></pre>
+<h3 id="wallet-stash"><a class="header" href="#wallet-stash">Wallet Stash</a></h3>
+<pre><code class="language-bash">GET /api/marketplace/wallet/:address/stash    # Get wallet's owned COWs, tools, unlock progress
+GET /api/marketplace/wallet/:address/unlocks  # Get which COW tabs are unlocked
+</code></pre>
+<h2 id="stash-tool-inventory--unlock-system"><a class="header" href="#stash-tool-inventory--unlock-system">Stash: Tool Inventory &amp; Unlock System</a></h2>
+<p>The <strong>Stash</strong> tab in MemCache shows a wallet’s personal inventory of tools, COWs, and access rights from Crossroads.</p>
+<h3 id="what-stash-displays"><a class="header" href="#what-stash-displays">What Stash Displays</a></h3>
+<ul>
+<li><strong>Owned COWs</strong> - Full COWs the wallet created or forked</li>
+<li><strong>Individual Tools</strong> - MCP tools, Agents, strategies with active/inactive status</li>
+<li><strong>NullBlock Branded Items</strong> - Special branding for official NullBlock tools</li>
+<li><strong>Unlock Progress</strong> - Progress toward unlocking full COW tabs</li>
+</ul>
+<h3 id="nullblock-branding"><a class="header" href="#nullblock-branding">NullBlock Branding</a></h3>
+<p>A COW or tool is “NullBlock Branded” if it meets one of these conditions:</p>
+<p><strong>Condition 1: Official Wallet</strong></p>
+<p>Created by one of the NullBlock official wallet addresses:</p>
+<ul>
+<li><code>0x7D05f6Be03D54cB2Ea05DD4b885A6f6da1Aafe8E</code> (EVM)</li>
+<li><code>6xu5aRG6z7ej3hKmQkv23cENWyxzMiFA49Ww1FRzmEaU</code> (Solana)</li>
+<li><code>0xcEcEe0C5f8d0d08F42727402b7081bf7Bc895D44</code> (EVM)</li>
+<li><code>5wrmi85pTPmB4NDv7rUYncEMi1KqVo93bZn3XtXSbjYT</code> (Solana)</li>
+<li><code>0x3be88EDa9E12ac15bBfD16Bb13eEFDd9871Bb6B7</code> (EVM)</li>
+<li><code>AncqdtRrVVbGjWCCv6z2gwL8SwrWTomyUbswJeCbe4vJ</code> (Solana)</li>
+</ul>
+<p><strong>Condition 2: Dedicated Service</strong></p>
+<p>Has a corresponding service implementation in the NullBlock codebase:</p>
+<ul>
+<li><code>svc/arb-farm/</code> → ArbFarm COW</li>
+<li><code>svc/poly-mev/</code> → PolyMev COW (planned)</li>
+</ul>
+<p>NullBlock branded items get:</p>
+<ul>
+<li>NullBlock logo indicator (⬢) in Stash</li>
+<li>Special UI tab in MemCache when fully owned</li>
+</ul>
+<h3 id="cow-tab-unlock-system"><a class="header" href="#cow-tab-unlock-system">COW Tab Unlock System</a></h3>
+<p>When a wallet owns all tools of a NullBlock-branded COW, it unlocks a dedicated submenu tab in MemCache (like the ArbFarm tab).</p>
+<p><strong>Unlock Flow:</strong></p>
+<ol>
+<li>User acquires tools individually from Crossroads</li>
+<li>Progress tracked in Stash → Unlocks view</li>
+<li>When all tools owned, tab appears in MemCache submenu</li>
+</ol>
 <h2 id="database-tables"><a class="header" href="#database-tables">Database Tables</a></h2>
 <ul>
 <li><code>crossroads_listings</code> - Service listings</li>
@@ -5702,17 +5746,25 @@ LIMIT 100;
 <hr>
 <h2 id="implementation-details"><a class="header" href="#implementation-details">Implementation Details</a></h2>
 <h3 id="navigation-integration"><a class="header" href="#navigation-integration">Navigation Integration</a></h3>
-<p>ArbFarm is registered in <code>VoidOverlay.tsx</code> as part of the MemCache submenu:</p>
+<p>ArbFarm is dynamically added to the MemCache submenu when the wallet has unlocked it (owns all ArbFarm tools). In development mode, it’s always visible.</p>
 <pre><code class="language-typescript">// src/components/hud/VoidOverlay.tsx
-const MEMCACHE_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
+
+// Base menu items (always visible)
+const BASE_MEMCACHE_ITEMS = [
   { id: 'engrams', icon: '◈', label: 'Engrams' },
-  { id: 'workflows', icon: '⬡', label: 'Workflows' },
+  { id: 'stash', icon: '⬡', label: 'Stash' },  // Tool inventory
   { id: 'tasks', icon: '▣', label: 'Tasks' },
-  { id: 'arbfarm', icon: '⚡', label: 'ArbFarm' },  // ArbFarm entry
   { id: 'agents', icon: '◉', label: 'Agents' },
   // ...
 ];
+
+// NullBlock COW tabs are added dynamically when unlocked
+const NULLBLOCK_SERVICE_COWS = [
+  { id: 'arbfarm', name: 'ArbFarm', menuIcon: '⚡' },
+  { id: 'polymev', name: 'PolyMev', menuIcon: '🎯' },
+];
 </code></pre>
+<p>The tab unlock system is managed by <code>useWalletTools</code> hook and the <code>DEV_SHOW_ALL_COW_TABS</code> flag.</p>
 <h3 id="type-system-typesarbfarmts"><a class="header" href="#type-system-typesarbfarmts">Type System (<code>types/arbfarm.ts</code>)</a></h3>
 <p>Comprehensive TypeScript definitions (~500 lines) for all ArbFarm entities:</p>
 <h4 id="core-types"><a class="header" href="#core-types">Core Types</a></h4>
@@ -8733,6 +8785,25 @@ GET /api/discovery/tools
 GET /api/discovery/health/:endpoint
 POST /api/discovery/scan
 </code></pre>
+<h3 id="wallet-stash-1"><a class="header" href="#wallet-stash-1">Wallet Stash</a></h3>
+<pre><code class="language-bash"># Get wallet's tool inventory, owned COWs, and unlock progress
+GET /api/marketplace/wallet/:address/stash
+
+# Response
+{
+  "wallet_address": "0x742d35Cc...",
+  "owned_cows": [...],
+  "owned_tools": [...],
+  "unlocked_tabs": ["arbfarm"],
+  "unlock_progress": [
+    { "cowId": "arbfarm", "owned": 5, "required": 5, "percent": 100 },
+    { "cowId": "polymev", "owned": 0, "required": 5, "percent": 0 }
+  ]
+}
+
+# Get only unlocked tabs
+GET /api/marketplace/wallet/:address/unlocks
+</code></pre>
 <h2 id="mcp-protocol-1"><a class="header" href="#mcp-protocol-1">MCP Protocol</a></h2>
 <p>Model Context Protocol (2025-11-25) for AI tool integration.</p>
 <h3 id="json-rpc"><a class="header" href="#json-rpc">JSON-RPC</a></h3>
@@ -9529,6 +9600,22 @@ response = client.agents.chat("Hello HECATE")
         <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
         <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
 
 
         <script>

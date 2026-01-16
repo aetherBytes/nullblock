@@ -734,3 +734,131 @@ export const RISK_PROFILE_COLORS: Record<ArbFarmRiskProfileType, string> = {
   aggressive: '#f59e0b',
   custom: '#8b5cf6',
 };
+
+// ============================================================================
+// Wallet Types
+// ============================================================================
+
+export type DelegationStatus = 'not_configured' | 'pending' | 'active' | 'revoked' | 'error';
+
+export interface WalletStatus {
+  is_connected: boolean;
+  wallet_address?: string;
+  turnkey_wallet_id?: string;
+  balance_lamports?: number;
+  daily_usage: DailyUsage;
+  policy: ArbFarmPolicy;
+  delegation_status: DelegationStatus;
+}
+
+export interface DailyUsage {
+  date: string;
+  total_volume_lamports: number;
+  transaction_count: number;
+}
+
+export interface ArbFarmPolicy {
+  max_transaction_amount_lamports: number;
+  daily_volume_limit_lamports: number;
+  max_transactions_per_day: number;
+  allowed_programs: string[];
+  require_simulation: boolean;
+  min_profit_threshold_lamports: number;
+}
+
+export interface WalletSetupRequest {
+  user_wallet_address: string;
+  wallet_name?: string;
+}
+
+export interface WalletSetupResponse {
+  success: boolean;
+  wallet_status?: WalletStatus;
+  error?: string;
+}
+
+export interface UpdatePolicyRequest {
+  max_transaction_amount_sol?: number;
+  daily_volume_limit_sol?: number;
+  max_transactions_per_day?: number;
+  require_simulation?: boolean;
+  min_profit_threshold_sol?: number;
+}
+
+export interface WalletBalanceResponse {
+  balance_lamports: number;
+  balance_sol: number;
+}
+
+export interface DailyUsageResponse {
+  date: string;
+  volume_lamports: number;
+  volume_sol: number;
+  transaction_count: number;
+  remaining_volume_sol: number;
+  remaining_transactions: number;
+}
+
+// ============================================================================
+// Settings Types
+// ============================================================================
+
+export interface RiskConfig {
+  max_position_sol: number;
+  daily_loss_limit_sol: number;
+  max_drawdown_percent: number;
+  max_concurrent_positions: number;
+  max_position_per_token_sol: number;
+  cooldown_after_loss_ms: number;
+  volatility_scaling_enabled: boolean;
+  auto_pause_on_drawdown: boolean;
+}
+
+export interface RiskPreset {
+  name: string;
+  description: string;
+  config: RiskConfig;
+}
+
+export interface RiskSettingsResponse {
+  config: RiskConfig;
+  presets: RiskPreset[];
+}
+
+export interface VenueConfig {
+  name: string;
+  venue_type: string;
+  enabled: boolean;
+  api_url: string;
+  has_api_key: boolean;
+}
+
+export interface ApiKeyStatus {
+  name: string;
+  configured: boolean;
+  required: boolean;
+}
+
+export interface AllSettingsResponse {
+  risk: RiskConfig;
+  risk_presets: RiskPreset[];
+  venues: VenueConfig[];
+  api_keys: ApiKeyStatus[];
+  wallet_connected: boolean;
+}
+
+export const DELEGATION_STATUS_COLORS: Record<DelegationStatus, string> = {
+  not_configured: '#6b7280',
+  pending: '#f59e0b',
+  active: '#22c55e',
+  revoked: '#ef4444',
+  error: '#ef4444',
+};
+
+export const DELEGATION_STATUS_LABELS: Record<DelegationStatus, string> = {
+  not_configured: 'Not Connected',
+  pending: 'Pending',
+  active: 'Active',
+  revoked: 'Revoked',
+  error: 'Error',
+};

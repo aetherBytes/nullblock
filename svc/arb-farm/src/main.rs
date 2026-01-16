@@ -20,10 +20,12 @@ mod resilience;
 mod server;
 mod threat;
 mod venues;
+mod wallet;
+mod webhooks;
 
 use axum::Json;
 use crate::config::Config;
-use crate::handlers::{curves, edges, engram as engram_handlers, health, kol, research as research_handlers, scanner, sse, swarm, threat as threat_handlers, trades};
+use crate::handlers::{consensus as consensus_handlers, curves, edges, engram as engram_handlers, health, kol, research as research_handlers, scanner, settings, sse, swarm, threat as threat_handlers, trades, wallet as wallet_handlers, webhooks as webhook_handlers};
 use crate::mcp::{get_manifest, get_all_tools};
 
 #[tokio::main]
@@ -70,6 +72,8 @@ async fn main() -> anyhow::Result<()> {
     info!("🧠 Engram API: {}/engram", base_url);
     info!("🤝 Consensus API: {}/consensus", base_url);
     info!("🐝 Swarm Management API: {}/swarm", base_url);
+    info!("💰 Wallet API: {}/wallet", base_url);
+    info!("⚙️ Settings API: {}/settings", base_url);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("✅ Server listening on {}", addr);
@@ -106,6 +110,7 @@ fn create_router(state: server::AppState) -> Router {
         .route("/edges/:id/approve", post(edges::approve_edge))
         .route("/edges/:id/reject", post(edges::reject_edge))
         .route("/edges/:id/execute", post(edges::execute_edge))
+        .route("/edges/:id/execute-auto", post(edges::execute_edge_auto))
         .route("/edges/:id/simulate", post(edges::simulate_edge))
         // Trades
         .route("/trades", get(trades::list_trades))
@@ -137,6 +142,12 @@ fn create_router(state: server::AppState) -> Router {
         .route("/research/alerts", get(research_handlers::list_alerts))
         .route("/research/stats", get(research_handlers::get_monitor_stats))
         .route("/research/monitor", post(research_handlers::monitor_account))
+        // Consensus (Multi-LLM voting)
+        .route("/consensus", get(consensus_handlers::list_consensus_history))
+        .route("/consensus/stats", get(consensus_handlers::get_consensus_stats))
+        .route("/consensus/models", get(consensus_handlers::list_available_models))
+        .route("/consensus/request", post(consensus_handlers::request_consensus))
+        .route("/consensus/:id", get(consensus_handlers::get_consensus_detail))
         // KOL Tracking + Copy Trading
         .route("/kol", get(kol::list_kols))
         .route("/kol", post(kol::add_kol))
@@ -189,6 +200,27 @@ fn create_router(state: server::AppState) -> Router {
         .route("/swarm/circuit-breakers", get(swarm::list_circuit_breakers))
         .route("/swarm/circuit-breakers/:name/reset", post(swarm::reset_circuit_breaker))
         .route("/swarm/circuit-breakers/reset-all", post(swarm::reset_all_circuit_breakers))
+        // Wallet (Turnkey delegation)
+        .route("/wallet/status", get(wallet_handlers::get_wallet_status))
+        .route("/wallet/setup", post(wallet_handlers::setup_wallet))
+        .route("/wallet/policy", post(wallet_handlers::update_policy))
+        .route("/wallet/balance", get(wallet_handlers::get_balance))
+        .route("/wallet/disconnect", post(wallet_handlers::disconnect_wallet))
+        .route("/wallet/usage", get(wallet_handlers::get_daily_usage))
+        .route("/wallet/test-sign", post(wallet_handlers::test_sign))
+        // Settings
+        .route("/settings", get(settings::get_all_settings))
+        .route("/settings/risk", get(settings::get_risk_settings))
+        .route("/settings/risk", post(settings::update_risk_settings))
+        .route("/settings/venues", get(settings::get_venue_settings))
+        .route("/settings/api-keys", get(settings::get_api_key_status))
+        // Webhooks (Helius)
+        .route("/webhooks/status", get(webhook_handlers::get_webhook_status))
+        .route("/webhooks/register", post(webhook_handlers::register_webhook))
+        .route("/webhooks", get(webhook_handlers::list_webhooks))
+        .route("/webhooks", axum::routing::delete(webhook_handlers::delete_webhook))
+        .route("/webhooks/helius", post(webhook_handlers::receive_helius_webhook))
+        .route("/webhooks/events", get(webhook_handlers::get_recent_webhook_events))
         // SSE Streams
         .route("/scanner/stream", get(sse::scanner_stream))
         .route("/edges/stream", get(sse::edges_stream))
