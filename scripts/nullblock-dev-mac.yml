@@ -124,17 +124,10 @@ on_project_start: |
   done
   sleep 1
   echo "✅ Ports cleared"
-  echo "🌐 Starting Chrome with remote debugging (port 9222)..."
-  pkill -f "Chrome.*remote-debugging-port=9222" 2>/dev/null || true
-  sleep 1
-  /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
-    --remote-debugging-port=9222 \
-    --user-data-dir=/tmp/chrome-nullblock-dev \
-    --no-first-run \
-    --no-default-browser-check \
-    "http://localhost:5173" \
-    "http://localhost:3001" &
-  echo "✅ Chrome DevTools MCP ready on port 9222"
+  echo "🌐 Opening development URLs in default browser..."
+  sleep 2
+  open "http://localhost:5173" "http://localhost:3001"
+  echo "✅ Browser tabs opened"
   echo "📁 Creating log directory structure..."
   mkdir -p logs
   mkdir -p svc/nullblock-agents/logs
@@ -161,7 +154,6 @@ on_project_start: |
   echo "   ⚡ ArbFarm (Solana MEV): http://localhost:9007"
   echo "   🎨 Frontend: http://localhost:5173"
   echo "   📚 Internal Docs: http://localhost:3001"
-  echo "   🔧 Chrome DevTools (MCP): localhost:9222"
   echo ""
   echo "🦀 Rust Services:"
   echo "   ✅ Hecate Agent - High-performance conversational AI"
@@ -185,6 +177,4 @@ on_project_start: |
 on_project_stop: |
   echo "🛑 Stopping development services using 'just term'..."
   just term
-  echo "🌐 Stopping Chrome debug instance..."
-  pkill -f "Chrome.*remote-debugging-port=9222" 2>/dev/null || true
   echo "✅ All services stopped and cleaned up"
