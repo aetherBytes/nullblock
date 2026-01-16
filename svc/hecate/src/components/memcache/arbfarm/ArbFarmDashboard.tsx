@@ -7,8 +7,20 @@ import {
   RISK_PROFILE_LABELS,
   RISK_PROFILE_COLORS,
   VENUE_TYPE_ICONS,
+  DELEGATION_STATUS_COLORS,
+  DELEGATION_STATUS_LABELS,
 } from '../../../types/arbfarm';
-import type { Edge, ThreatAlert, ArbFarmCowSummary } from '../../../types/arbfarm';
+import type {
+  Edge,
+  ThreatAlert,
+  ArbFarmCowSummary,
+  WalletStatus,
+  RiskConfig,
+  RiskPreset,
+  VenueConfig,
+  ApiKeyStatus,
+} from '../../../types/arbfarm';
+import { arbFarmService } from '../../../common/services/arbfarm-service';
 import styles from './arbfarm.module.scss';
 import EdgeCard from './components/EdgeCard';
 import MetricCard from './components/MetricCard';
@@ -32,7 +44,7 @@ interface ArbFarmDashboardProps {
 }
 
 const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewChange }) => {
-  const { dashboard, edges, trades, scanner, swarm, strategies, threats, cows, sse } = useArbFarm({
+  const { dashboard, edges, trades, scanner, swarm, strategies, threats, cows, kols, sse } = useArbFarm({
     pollInterval: 10000,
     autoFetchDashboard: true,
     autoFetchScanner: true,
@@ -45,6 +57,39 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
   const [threatChecking, setThreatChecking] = useState(false);
   const [cowsFilter, setCowsFilter] = useState<'all' | 'mine' | 'forkable'>('all');
   const [selectedCowForFork, setSelectedCowForFork] = useState<ArbFarmCowSummary | null>(null);
+
+  // KOL Tracker state
+  const [showAddKolModal, setShowAddKolModal] = useState(false);
+  const [newKolWallet, setNewKolWallet] = useState('');
+  const [newKolName, setNewKolName] = useState('');
+  const [newKolTwitter, setNewKolTwitter] = useState('');
+  const [selectedKolId, setSelectedKolId] = useState<string | null>(null);
+  const [kolTrades, setKolTrades] = useState<any[]>([]);
+  const [kolTradesLoading, setKolTradesLoading] = useState(false);
+  const [copyConfig, setCopyConfig] = useState<{ maxPosition: number; delay: number }>({
+    maxPosition: 0.5,
+    delay: 500,
+  });
+
+  // Research & Consensus state
+  const [consensusDecisions, setConsensusDecisions] = useState<any[]>([]);
+  const [consensusStats, setConsensusStats] = useState<any>(null);
+  const [availableModels, setAvailableModels] = useState<any[]>([]);
+  const [selectedConsensusId, setSelectedConsensusId] = useState<string | null>(null);
+  const [consensusDetail, setConsensusDetail] = useState<any>(null);
+  const [researchLoading, setResearchLoading] = useState(false);
+  const [testConsensusLoading, setTestConsensusLoading] = useState(false);
+  const [testConsensusResult, setTestConsensusResult] = useState<any>(null);
+
+  // Settings state
+  const [walletStatus, setWalletStatus] = useState<WalletStatus | null>(null);
+  const [riskConfig, setRiskConfig] = useState<RiskConfig | null>(null);
+  const [riskPresets, setRiskPresets] = useState<RiskPreset[]>([]);
+  const [venues, setVenues] = useState<VenueConfig[]>([]);
+  const [apiKeys, setApiKeys] = useState<ApiKeyStatus[]>([]);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [walletSetupAddress, setWalletSetupAddress] = useState('');
+  const [settingsTab, setSettingsTab] = useState<'wallet' | 'risk' | 'venues' | 'api'>('wallet');
 
   useEffect(() => {
     sse.connect(['arb.edge.*', 'arb.trade.*', 'arb.threat.*', 'arb.swarm.*']);
@@ -64,7 +109,119 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     if (activeView === 'cows') {
       cows.refresh();
       cows.refreshStats();
+    } else if (activeView === 'kol-tracker') {
+      kols.refresh();
+    } else if (activeView === 'research') {
+      fetchConsensusData();
     }
+  }, [activeView]);
+
+  const fetchConsensusData = async () => {
+    setResearchLoading(true);
+    try {
+      const [historyRes, statsRes, modelsRes] = await Promise.all([
+        arbFarmService.listConsensusHistory(20),
+        arbFarmService.getConsensusStats(),
+        arbFarmService.listAvailableModels(),
+      ]);
+
+      if (historyRes.success && historyRes.data) {
+        setConsensusDecisions(historyRes.data.decisions || []);
+      }
+      if (statsRes.success && statsRes.data) {
+        setConsensusStats(statsRes.data);
+      }
+      if (modelsRes.success && modelsRes.data) {
+        setAvailableModels(modelsRes.data.models || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch consensus data:', err);
+    } finally {
+      setResearchLoading(false);
+    }
+  };
+
+  const handleTestConsensus = async () => {
+    setTestConsensusLoading(true);
+    setTestConsensusResult(null);
+    try {
+      const res = await arbFarmService.requestConsensus({
+        edge_type: 'Arbitrage',
+        venue: 'jupiter',
+        token_pair: ['SOL', 'USDC'],
+        estimated_profit_lamports: 50000000,
+        risk_score: 25,
+        route_data: { test: true },
+      });
+      if (res.success && res.data) {
+        setTestConsensusResult(res.data);
+        fetchConsensusData();
+      }
+    } catch (err) {
+      console.error('Consensus test failed:', err);
+    } finally {
+      setTestConsensusLoading(false);
+    }
+  };
+
+  const handleViewConsensusDetail = async (consensusId: string) => {
+    setSelectedConsensusId(consensusId);
+    try {
+      const res = await arbFarmService.getConsensusDetail(consensusId);
+      if (res.success && res.data) {
+        setConsensusDetail(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch consensus detail:', err);
+    }
+  };
+
+  useEffect(() => {
+    const fetchKolTrades = async () => {
+      if (selectedKolId) {
+        setKolTradesLoading(true);
+        try {
+          const trades = await kols.getTrades(selectedKolId);
+          setKolTrades(trades || []);
+        } catch (err) {
+          console.error('Failed to fetch KOL trades:', err);
+        } finally {
+          setKolTradesLoading(false);
+        }
+      }
+    };
+    fetchKolTrades();
+  }, [selectedKolId]);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      if (activeView === 'settings') {
+        setSettingsLoading(true);
+        try {
+          const [settingsRes, walletRes] = await Promise.all([
+            arbFarmService.getAllSettings(),
+            arbFarmService.getWalletStatus(),
+          ]);
+
+          if (settingsRes.success && settingsRes.data) {
+            setRiskConfig(settingsRes.data.risk);
+            setRiskPresets(settingsRes.data.risk_presets);
+            setVenues(settingsRes.data.venues);
+            setApiKeys(settingsRes.data.api_keys);
+          }
+
+          if (walletRes.success && walletRes.data) {
+            setWalletStatus(walletRes.data);
+          }
+        } catch (err) {
+          console.error('Failed to fetch settings:', err);
+        } finally {
+          setSettingsLoading(false);
+        }
+      }
+    };
+
+    fetchSettings();
   }, [activeView]);
 
   const formatSol = (lamports: number): string => {
@@ -540,21 +697,410 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     );
   };
 
-  const renderKOLTrackerView = () => (
-    <div className={styles.kolView}>
-      <div className={styles.viewHeader}>
-        <button className={styles.backButton} onClick={() => onViewChange('dashboard')}>
-          ← Back
-        </button>
-        <h2>KOL Tracker</h2>
-        <button className={styles.createButton}>+ Track Wallet</button>
+  const handleAddKol = async () => {
+    if (!newKolWallet && !newKolTwitter) return;
+
+    const success = await kols.add(
+      newKolWallet || '',
+      newKolName || undefined,
+      newKolTwitter || undefined,
+    );
+
+    if (success) {
+      setShowAddKolModal(false);
+      setNewKolWallet('');
+      setNewKolName('');
+      setNewKolTwitter('');
+      kols.refresh();
+    }
+  };
+
+  const handleEnableCopyTrading = async (kolId: string) => {
+    const success = await kols.enableCopy(kolId, {
+      maxPositionSol: copyConfig.maxPosition,
+      delayMs: copyConfig.delay,
+    });
+    if (success) {
+      kols.refresh();
+    }
+  };
+
+  const handleDisableCopyTrading = async (kolId: string) => {
+    const success = await kols.disableCopy(kolId);
+    if (success) {
+      kols.refresh();
+    }
+  };
+
+  const handleRemoveKol = async (kolId: string) => {
+    const success = await kols.remove(kolId);
+    if (success) {
+      if (selectedKolId === kolId) {
+        setSelectedKolId(null);
+        setKolTrades([]);
+      }
+      kols.refresh();
+    }
+  };
+
+  const getTrustScoreColor = (score: number): string => {
+    if (score >= 70) return '#22c55e';
+    if (score >= 40) return '#f59e0b';
+    return '#ef4444';
+  };
+
+  const renderKOLTrackerView = () => {
+    const selectedKol = kols.data.find((k) => k.id === selectedKolId);
+
+    return (
+      <div className={styles.kolView}>
+        <div className={styles.viewHeader}>
+          <button className={styles.backButton} onClick={() => onViewChange('dashboard')}>
+            ← Back
+          </button>
+          <h2>KOL Tracker</h2>
+          <button className={styles.createButton} onClick={() => setShowAddKolModal(true)}>
+            + Track Wallet
+          </button>
+        </div>
+
+        <div className={styles.kolLayout}>
+          <div className={styles.kolListSection}>
+            <h3>
+              Tracked Wallets ({kols.data.length})
+              <button className={styles.refreshButton} onClick={() => kols.refresh()}>
+                🔄
+              </button>
+            </h3>
+
+            <div className={styles.kolList}>
+              {kols.isLoading ? (
+                <div className={styles.loadingState}>Loading KOLs...</div>
+              ) : kols.data.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <p>No wallets tracked</p>
+                  <p className={styles.emptyHint}>Add a wallet to start tracking</p>
+                </div>
+              ) : (
+                kols.data.map((kol) => (
+                  <div
+                    key={kol.id}
+                    className={`${styles.kolCard} ${selectedKolId === kol.id ? styles.selected : ''}`}
+                    onClick={() => setSelectedKolId(kol.id)}
+                  >
+                    <div className={styles.kolHeader}>
+                      <div className={styles.kolIdentity}>
+                        <span className={styles.kolName}>
+                          {kol.display_name || kol.identifier.slice(0, 8)}...
+                        </span>
+                        <span className={styles.kolType}>
+                          {kol.entity_type === 'wallet' ? '💼' : '🐦'}
+                        </span>
+                      </div>
+                      <div
+                        className={styles.trustScore}
+                        style={{ backgroundColor: getTrustScoreColor(kol.trust_score) }}
+                      >
+                        {kol.trust_score.toFixed(0)}
+                      </div>
+                    </div>
+
+                    <div className={styles.kolStats}>
+                      <span>Trades: {kol.total_trades_tracked}</span>
+                      <span>Win: {kol.profitable_trades}/{kol.total_trades_tracked}</span>
+                      {kol.avg_profit_percent && (
+                        <span className={kol.avg_profit_percent >= 0 ? styles.positive : styles.negative}>
+                          {kol.avg_profit_percent >= 0 ? '+' : ''}
+                          {kol.avg_profit_percent.toFixed(1)}%
+                        </span>
+                      )}
+                    </div>
+
+                    <div className={styles.kolActions}>
+                      {kol.copy_trading_enabled ? (
+                        <span className={styles.copyEnabled}>✓ Copy Trading</span>
+                      ) : (
+                        <span className={styles.copyDisabled}>Copy Off</span>
+                      )}
+                      <span className={kol.is_active ? styles.active : styles.inactive}>
+                        {kol.is_active ? '● Active' : '○ Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className={styles.kolDetailSection}>
+            {selectedKol ? (
+              <>
+                <div className={styles.kolDetailHeader}>
+                  <h3>{selectedKol.display_name || 'KOL Details'}</h3>
+                  <div className={styles.kolDetailActions}>
+                    <button
+                      className={styles.removeButton}
+                      onClick={() => handleRemoveKol(selectedKol.id)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.kolDetailInfo}>
+                  <div className={styles.infoRow}>
+                    <span className={styles.label}>Identifier</span>
+                    <span className={styles.value}>{selectedKol.identifier}</span>
+                  </div>
+                  {selectedKol.linked_wallet && (
+                    <div className={styles.infoRow}>
+                      <span className={styles.label}>Wallet</span>
+                      <span className={styles.value}>
+                        {selectedKol.linked_wallet.slice(0, 8)}...{selectedKol.linked_wallet.slice(-6)}
+                      </span>
+                    </div>
+                  )}
+                  <div className={styles.infoRow}>
+                    <span className={styles.label}>Trust Score</span>
+                    <span
+                      className={styles.value}
+                      style={{ color: getTrustScoreColor(selectedKol.trust_score) }}
+                    >
+                      {selectedKol.trust_score.toFixed(1)}
+                    </span>
+                  </div>
+                  <div className={styles.infoRow}>
+                    <span className={styles.label}>Total Trades</span>
+                    <span className={styles.value}>{selectedKol.total_trades_tracked}</span>
+                  </div>
+                  <div className={styles.infoRow}>
+                    <span className={styles.label}>Win Rate</span>
+                    <span className={styles.value}>
+                      {selectedKol.total_trades_tracked > 0
+                        ? ((selectedKol.profitable_trades / selectedKol.total_trades_tracked) * 100).toFixed(1)
+                        : 0}
+                      %
+                    </span>
+                  </div>
+                  {selectedKol.max_drawdown && (
+                    <div className={styles.infoRow}>
+                      <span className={styles.label}>Max Drawdown</span>
+                      <span className={styles.value} style={{ color: '#ef4444' }}>
+                        -{selectedKol.max_drawdown.toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className={styles.copyTradingSection}>
+                  <h4>Copy Trading</h4>
+                  {selectedKol.copy_trading_enabled ? (
+                    <div className={styles.copyEnabled}>
+                      <div className={styles.copyConfig}>
+                        <div className={styles.configRow}>
+                          <span>Max Position</span>
+                          <span>{selectedKol.copy_config.max_position_sol} SOL</span>
+                        </div>
+                        <div className={styles.configRow}>
+                          <span>Delay</span>
+                          <span>{selectedKol.copy_config.delay_ms}ms</span>
+                        </div>
+                        <div className={styles.configRow}>
+                          <span>Min Trust</span>
+                          <span>{selectedKol.copy_config.min_trust_score}</span>
+                        </div>
+                      </div>
+                      <button
+                        className={styles.disableButton}
+                        onClick={() => handleDisableCopyTrading(selectedKol.id)}
+                      >
+                        Disable Copy Trading
+                      </button>
+                    </div>
+                  ) : (
+                    <div className={styles.copySetup}>
+                      <div className={styles.configInput}>
+                        <label>Max Position (SOL)</label>
+                        <input
+                          type="number"
+                          value={copyConfig.maxPosition}
+                          onChange={(e) =>
+                            setCopyConfig((c) => ({ ...c, maxPosition: parseFloat(e.target.value) || 0 }))
+                          }
+                          step="0.1"
+                          min="0.01"
+                          max="5"
+                        />
+                      </div>
+                      <div className={styles.configInput}>
+                        <label>Delay (ms)</label>
+                        <input
+                          type="number"
+                          value={copyConfig.delay}
+                          onChange={(e) =>
+                            setCopyConfig((c) => ({ ...c, delay: parseInt(e.target.value) || 0 }))
+                          }
+                          step="100"
+                          min="0"
+                          max="5000"
+                        />
+                      </div>
+                      <button
+                        className={styles.enableButton}
+                        onClick={() => handleEnableCopyTrading(selectedKol.id)}
+                      >
+                        Enable Copy Trading
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className={styles.kolTradesSection}>
+                  <h4>Recent Trades</h4>
+                  <div className={styles.tradesList}>
+                    {kolTradesLoading ? (
+                      <div className={styles.loadingState}>Loading trades...</div>
+                    ) : kolTrades.length === 0 ? (
+                      <div className={styles.emptyState}>No trades recorded</div>
+                    ) : (
+                      kolTrades.slice(0, 10).map((trade: any) => (
+                        <div key={trade.id} className={styles.kolTradeItem}>
+                          <div className={styles.tradeHeader}>
+                            <span className={`${styles.tradeType} ${styles[trade.trade_type]}`}>
+                              {trade.trade_type.toUpperCase()}
+                            </span>
+                            <span className={styles.tradeAmount}>{trade.amount_sol} SOL</span>
+                          </div>
+                          <div className={styles.tradeMeta}>
+                            <span className={styles.tokenMint}>
+                              {trade.token_mint?.slice(0, 8)}...
+                            </span>
+                            <span className={styles.tradeTime}>
+                              {new Date(trade.detected_at).toLocaleTimeString()}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className={styles.emptyDetail}>
+                <p>Select a KOL to view details</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {showAddKolModal && (
+          <div className={styles.modalOverlay} onClick={() => setShowAddKolModal(false)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalHeader}>
+                <h3>Track New Wallet</h3>
+                <button className={styles.closeButton} onClick={() => setShowAddKolModal(false)}>
+                  ×
+                </button>
+              </div>
+              <div className={styles.modalBody}>
+                <div className={styles.formGroup}>
+                  <label>Wallet Address</label>
+                  <input
+                    type="text"
+                    placeholder="Enter Solana wallet address..."
+                    value={newKolWallet}
+                    onChange={(e) => setNewKolWallet(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Display Name (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Whale Alpha"
+                    value={newKolName}
+                    onChange={(e) => setNewKolName(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Twitter Handle (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="@handle"
+                    value={newKolTwitter}
+                    onChange={(e) => setNewKolTwitter(e.target.value)}
+                  />
+                </div>
+                <p className={styles.modalHint}>
+                  When you add a wallet, ArbFarm will register a Helius webhook to track transactions
+                  in real-time.
+                </p>
+              </div>
+              <div className={styles.modalActions}>
+                <button className={styles.cancelButton} onClick={() => setShowAddKolModal(false)}>
+                  Cancel
+                </button>
+                <button
+                  className={styles.confirmButton}
+                  onClick={handleAddKol}
+                  disabled={!newKolWallet && !newKolTwitter}
+                >
+                  Track Wallet
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-      <div className={styles.emptyState}>
-        <p>KOL tracking coming soon</p>
-        <p className={styles.emptyHint}>Track wallets and enable copy trading</p>
-      </div>
-    </div>
-  );
+    );
+  };
+
+  const handleWalletSetup = async () => {
+    if (!walletSetupAddress.trim()) return;
+
+    setSettingsLoading(true);
+    try {
+      const res = await arbFarmService.setupWallet(walletSetupAddress.trim());
+      if (res.success && res.data?.wallet_status) {
+        setWalletStatus(res.data.wallet_status);
+        setWalletSetupAddress('');
+      }
+    } catch (err) {
+      console.error('Wallet setup failed:', err);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleDisconnectWallet = async () => {
+    setSettingsLoading(true);
+    try {
+      const res = await arbFarmService.disconnectWallet();
+      if (res.success) {
+        const walletRes = await arbFarmService.getWalletStatus();
+        if (walletRes.success && walletRes.data) {
+          setWalletStatus(walletRes.data);
+        }
+      }
+    } catch (err) {
+      console.error('Disconnect failed:', err);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleRiskPresetChange = async (presetName: string) => {
+    setSettingsLoading(true);
+    try {
+      const res = await arbFarmService.updateRiskSettings(presetName);
+      if (res.success && res.data?.config) {
+        setRiskConfig(res.data.config);
+      }
+    } catch (err) {
+      console.error('Failed to update risk settings:', err);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
 
   const renderSettingsView = () => (
     <div className={styles.settingsView}>
@@ -564,12 +1110,306 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
         </button>
         <h2>Settings</h2>
       </div>
-      <div className={styles.emptyState}>
-        <p>Settings panel coming soon</p>
-        <p className={styles.emptyHint}>Configure risk parameters and execution settings</p>
+
+      <div className={styles.settingsTabs}>
+        {(['wallet', 'risk', 'venues', 'api'] as const).map((tab) => (
+          <button
+            key={tab}
+            className={`${styles.settingsTab} ${settingsTab === tab ? styles.active : ''}`}
+            onClick={() => setSettingsTab(tab)}
+          >
+            {tab === 'wallet' && '💼 Wallet'}
+            {tab === 'risk' && '⚠️ Risk'}
+            {tab === 'venues' && '🏛️ Venues'}
+            {tab === 'api' && '🔑 API Keys'}
+          </button>
+        ))}
       </div>
+
+      {settingsLoading ? (
+        <div className={styles.loadingState}>Loading settings...</div>
+      ) : (
+        <div className={styles.settingsContent}>
+          {settingsTab === 'wallet' && (
+            <div className={styles.settingsSection}>
+              <h3>Turnkey Wallet Delegation</h3>
+              <p className={styles.sectionDescription}>
+                Connect your wallet to enable autonomous trading. ArbFarm uses Turnkey delegation
+                to sign transactions without storing your private keys.
+              </p>
+
+              {walletStatus?.is_connected ? (
+                <div className={styles.walletConnected}>
+                  <div className={styles.walletStatusCard}>
+                    <div className={styles.walletHeader}>
+                      <span
+                        className={styles.statusIndicator}
+                        style={{
+                          backgroundColor: DELEGATION_STATUS_COLORS[walletStatus.delegation_status],
+                        }}
+                      />
+                      <span className={styles.statusLabel}>
+                        {DELEGATION_STATUS_LABELS[walletStatus.delegation_status]}
+                      </span>
+                    </div>
+
+                    <div className={styles.walletInfo}>
+                      <div className={styles.infoRow}>
+                        <span className={styles.label}>Wallet Address</span>
+                        <span className={styles.value}>
+                          {walletStatus.wallet_address?.slice(0, 8)}...
+                          {walletStatus.wallet_address?.slice(-6)}
+                        </span>
+                      </div>
+                      <div className={styles.infoRow}>
+                        <span className={styles.label}>Balance</span>
+                        <span className={styles.value}>
+                          {((walletStatus.balance_lamports || 0) / 1e9).toFixed(4)} SOL
+                        </span>
+                      </div>
+                      <div className={styles.infoRow}>
+                        <span className={styles.label}>Daily Volume Used</span>
+                        <span className={styles.value}>
+                          {(walletStatus.daily_usage.total_volume_lamports / 1e9).toFixed(4)} SOL
+                        </span>
+                      </div>
+                      <div className={styles.infoRow}>
+                        <span className={styles.label}>Transactions Today</span>
+                        <span className={styles.value}>
+                          {walletStatus.daily_usage.transaction_count}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className={styles.policySection}>
+                      <h4>Policy Limits</h4>
+                      <div className={styles.policyGrid}>
+                        <div className={styles.policyItem}>
+                          <span className={styles.policyLabel}>Max Transaction</span>
+                          <span className={styles.policyValue}>
+                            {(walletStatus.policy.max_transaction_amount_lamports / 1e9).toFixed(1)}{' '}
+                            SOL
+                          </span>
+                        </div>
+                        <div className={styles.policyItem}>
+                          <span className={styles.policyLabel}>Daily Limit</span>
+                          <span className={styles.policyValue}>
+                            {(walletStatus.policy.daily_volume_limit_lamports / 1e9).toFixed(1)} SOL
+                          </span>
+                        </div>
+                        <div className={styles.policyItem}>
+                          <span className={styles.policyLabel}>Max Txs/Day</span>
+                          <span className={styles.policyValue}>
+                            {walletStatus.policy.max_transactions_per_day}
+                          </span>
+                        </div>
+                        <div className={styles.policyItem}>
+                          <span className={styles.policyLabel}>Simulation</span>
+                          <span className={styles.policyValue}>
+                            {walletStatus.policy.require_simulation ? 'Required' : 'Optional'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button className={styles.disconnectButton} onClick={handleDisconnectWallet}>
+                      Disconnect Wallet
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.walletSetup}>
+                  <div className={styles.setupForm}>
+                    <input
+                      type="text"
+                      placeholder="Enter your Solana wallet address..."
+                      value={walletSetupAddress}
+                      onChange={(e) => setWalletSetupAddress(e.target.value)}
+                      className={styles.walletInput}
+                    />
+                    <button
+                      className={styles.connectButton}
+                      onClick={handleWalletSetup}
+                      disabled={!walletSetupAddress.trim()}
+                    >
+                      Connect Wallet
+                    </button>
+                  </div>
+                  <div className={styles.setupInfo}>
+                    <h4>How it works:</h4>
+                    <ul>
+                      <li>Your private keys never leave your wallet</li>
+                      <li>Turnkey creates a delegated signing key</li>
+                      <li>Policy limits enforce safe trading bounds</li>
+                      <li>You can disconnect at any time</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {settingsTab === 'risk' && (
+            <div className={styles.settingsSection}>
+              <h3>Risk Configuration</h3>
+              <p className={styles.sectionDescription}>
+                Configure position limits, loss thresholds, and trading behavior.
+              </p>
+
+              <div className={styles.presetSelector}>
+                <h4>Risk Presets</h4>
+                <div className={styles.presetGrid}>
+                  {riskPresets.map((preset) => (
+                    <button
+                      key={preset.name}
+                      className={`${styles.presetCard} ${
+                        riskConfig?.max_position_sol === preset.config.max_position_sol
+                          ? styles.active
+                          : ''
+                      }`}
+                      onClick={() => handleRiskPresetChange(preset.name)}
+                    >
+                      <span className={styles.presetName}>{preset.name}</span>
+                      <span className={styles.presetDescription}>{preset.description}</span>
+                      <div className={styles.presetStats}>
+                        <span>Max: {preset.config.max_position_sol} SOL</span>
+                        <span>Loss: {preset.config.daily_loss_limit_sol} SOL</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {riskConfig && (
+                <div className={styles.currentConfig}>
+                  <h4>Current Configuration</h4>
+                  <div className={styles.configGrid}>
+                    <div className={styles.configItem}>
+                      <span className={styles.configLabel}>Max Position</span>
+                      <span className={styles.configValue}>{riskConfig.max_position_sol} SOL</span>
+                    </div>
+                    <div className={styles.configItem}>
+                      <span className={styles.configLabel}>Daily Loss Limit</span>
+                      <span className={styles.configValue}>
+                        {riskConfig.daily_loss_limit_sol} SOL
+                      </span>
+                    </div>
+                    <div className={styles.configItem}>
+                      <span className={styles.configLabel}>Max Drawdown</span>
+                      <span className={styles.configValue}>
+                        {riskConfig.max_drawdown_percent}%
+                      </span>
+                    </div>
+                    <div className={styles.configItem}>
+                      <span className={styles.configLabel}>Concurrent Positions</span>
+                      <span className={styles.configValue}>
+                        {riskConfig.max_concurrent_positions}
+                      </span>
+                    </div>
+                    <div className={styles.configItem}>
+                      <span className={styles.configLabel}>Per-Token Max</span>
+                      <span className={styles.configValue}>
+                        {riskConfig.max_position_per_token_sol} SOL
+                      </span>
+                    </div>
+                    <div className={styles.configItem}>
+                      <span className={styles.configLabel}>Loss Cooldown</span>
+                      <span className={styles.configValue}>
+                        {(riskConfig.cooldown_after_loss_ms / 1000).toFixed(0)}s
+                      </span>
+                    </div>
+                    <div className={styles.configItem}>
+                      <span className={styles.configLabel}>Volatility Scaling</span>
+                      <span className={styles.configValue}>
+                        {riskConfig.volatility_scaling_enabled ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+                    <div className={styles.configItem}>
+                      <span className={styles.configLabel}>Auto-Pause</span>
+                      <span className={styles.configValue}>
+                        {riskConfig.auto_pause_on_drawdown ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {settingsTab === 'venues' && (
+            <div className={styles.settingsSection}>
+              <h3>Venue Configuration</h3>
+              <p className={styles.sectionDescription}>
+                Enable or disable trading venues for opportunity scanning.
+              </p>
+
+              <div className={styles.venueList}>
+                {venues.map((venue) => (
+                  <div key={venue.name} className={styles.venueCard}>
+                    <div className={styles.venueHeader}>
+                      <span className={styles.venueName}>{venue.name}</span>
+                      <span
+                        className={`${styles.venueStatus} ${venue.enabled ? styles.enabled : styles.disabled}`}
+                      >
+                        {venue.enabled ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <div className={styles.venueInfo}>
+                      <span className={styles.venueType}>{venue.venue_type}</span>
+                      <span className={styles.venueUrl}>{venue.api_url}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {settingsTab === 'api' && (
+            <div className={styles.settingsSection}>
+              <h3>API Key Status</h3>
+              <p className={styles.sectionDescription}>
+                Status of external API integrations. Configure keys in environment variables.
+              </p>
+
+              <div className={styles.apiKeyList}>
+                {apiKeys.map((key) => (
+                  <div key={key.name} className={styles.apiKeyCard}>
+                    <div className={styles.apiKeyHeader}>
+                      <span className={styles.apiKeyName}>{key.name}</span>
+                      <span
+                        className={`${styles.apiKeyStatus} ${key.configured ? styles.configured : styles.missing}`}
+                      >
+                        {key.configured ? '✓ Configured' : '✗ Missing'}
+                      </span>
+                    </div>
+                    {key.required && !key.configured && (
+                      <span className={styles.requiredBadge}>Required</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
+
+  const getModelShortName = (modelId: string): string => {
+    const parts = modelId.split('/');
+    return parts.length > 1 ? parts[1] : modelId;
+  };
+
+  const getProviderIcon = (provider: string): string => {
+    switch (provider.toLowerCase()) {
+      case 'anthropic': return '🔮';
+      case 'openai': return '🧠';
+      case 'meta-llama': return '🦙';
+      case 'google': return '🌐';
+      case 'mistralai': return '🌪️';
+      default: return '🤖';
+    }
+  };
 
   const renderResearchView = () => (
     <div className={styles.researchView}>
@@ -577,12 +1417,253 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
         <button className={styles.backButton} onClick={() => onViewChange('dashboard')}>
           ← Back
         </button>
-        <h2>Research & Discovery</h2>
+        <h2>Research & Consensus</h2>
+        <button className={styles.refreshButton} onClick={fetchConsensusData}>
+          🔄
+        </button>
       </div>
-      <div className={styles.emptyState}>
-        <p>Research module coming soon</p>
-        <p className={styles.emptyHint}>Ingest URLs and discover strategies</p>
-      </div>
+
+      {researchLoading ? (
+        <div className={styles.loadingState}>Loading consensus data...</div>
+      ) : (
+        <>
+          {consensusStats && (
+            <div className={styles.consensusStatsBar}>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>Total Decisions</span>
+                <span className={styles.statValue}>{consensusStats.total_decisions}</span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>Approved</span>
+                <span className={`${styles.statValue} ${styles.positive}`}>
+                  {consensusStats.approved_count}
+                </span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>Rejected</span>
+                <span className={`${styles.statValue} ${styles.negative}`}>
+                  {consensusStats.rejected_count}
+                </span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>Avg Agreement</span>
+                <span className={styles.statValue}>
+                  {(consensusStats.average_agreement * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>Avg Latency</span>
+                <span className={styles.statValue}>
+                  {consensusStats.average_latency_ms.toFixed(0)}ms
+                </span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>Last 24h</span>
+                <span className={styles.statValue}>{consensusStats.decisions_last_24h}</span>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.researchGrid}>
+            <div className={styles.gridSection}>
+              <div className={styles.sectionHeader}>
+                <h3>Test Consensus</h3>
+              </div>
+              <div className={styles.testConsensusSection}>
+                <p className={styles.sectionDescription}>
+                  Test the multi-LLM consensus system with a sample trade decision.
+                </p>
+                <button
+                  className={styles.testButton}
+                  onClick={handleTestConsensus}
+                  disabled={testConsensusLoading}
+                >
+                  {testConsensusLoading ? 'Requesting...' : 'Request Test Consensus'}
+                </button>
+
+                {testConsensusResult && (
+                  <div className={styles.testResult}>
+                    <div className={styles.testResultHeader}>
+                      <span
+                        className={`${styles.decisionBadge} ${testConsensusResult.approved ? styles.approved : styles.rejected}`}
+                      >
+                        {testConsensusResult.approved ? '✓ APPROVED' : '✗ REJECTED'}
+                      </span>
+                      <span className={styles.agreementScore}>
+                        {(testConsensusResult.agreement_score * 100).toFixed(1)}% agreement
+                      </span>
+                    </div>
+                    <div className={styles.votesPreview}>
+                      {testConsensusResult.model_votes?.slice(0, 3).map((vote: any) => (
+                        <div
+                          key={vote.model}
+                          className={`${styles.voteChip} ${vote.approved ? styles.approve : styles.reject}`}
+                        >
+                          {getModelShortName(vote.model)}:{' '}
+                          {vote.approved ? '✓' : '✗'}
+                        </div>
+                      ))}
+                    </div>
+                    <p className={styles.reasoningSummary}>{testConsensusResult.reasoning_summary}</p>
+                    <span className={styles.latency}>
+                      Total latency: {testConsensusResult.total_latency_ms}ms
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.modelsSection}>
+                <h4>Available Models</h4>
+                <div className={styles.modelsList}>
+                  {availableModels.map((model) => (
+                    <div key={model.id} className={styles.modelCard}>
+                      <span className={styles.modelIcon}>{getProviderIcon(model.provider)}</span>
+                      <div className={styles.modelInfo}>
+                        <span className={styles.modelName}>{model.name}</span>
+                        <span className={styles.modelProvider}>{model.provider}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.gridSection}>
+              <div className={styles.sectionHeader}>
+                <h3>Consensus History</h3>
+                <span className={styles.statsLabel}>{consensusDecisions.length} decisions</span>
+              </div>
+              <div className={styles.consensusHistory}>
+                {consensusDecisions.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <p>No consensus decisions yet</p>
+                    <p className={styles.emptyHint}>
+                      Agent-directed edges will use multi-LLM consensus for approval
+                    </p>
+                  </div>
+                ) : (
+                  consensusDecisions.map((decision) => (
+                    <div
+                      key={decision.id}
+                      className={`${styles.consensusCard} ${selectedConsensusId === decision.id ? styles.selected : ''}`}
+                      onClick={() => handleViewConsensusDetail(decision.id)}
+                    >
+                      <div className={styles.consensusHeader}>
+                        <span
+                          className={`${styles.decisionBadge} ${decision.result.approved ? styles.approved : styles.rejected}`}
+                        >
+                          {decision.result.approved ? '✓' : '✗'}
+                        </span>
+                        <span className={styles.edgeId}>
+                          Edge: {decision.edge_id.slice(0, 8)}...
+                        </span>
+                        <span className={styles.timestamp}>
+                          {new Date(decision.created_at).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <div className={styles.consensusStats}>
+                        <span>
+                          Agreement: {(decision.result.agreement_score * 100).toFixed(0)}%
+                        </span>
+                        <span>
+                          Confidence: {(decision.result.weighted_confidence * 100).toFixed(0)}%
+                        </span>
+                        <span>
+                          Votes: {decision.result.model_votes?.length || 0}
+                        </span>
+                      </div>
+                      <p className={styles.reasoningPreview}>
+                        {decision.result.reasoning_summary?.slice(0, 100)}...
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {consensusDetail && selectedConsensusId && (
+            <div className={styles.modalOverlay} onClick={() => setSelectedConsensusId(null)}>
+              <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.modalHeader}>
+                  <h3>Consensus Decision Details</h3>
+                  <button
+                    className={styles.closeButton}
+                    onClick={() => setSelectedConsensusId(null)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className={styles.modalBody}>
+                  <div className={styles.consensusDetailHeader}>
+                    <span
+                      className={`${styles.decisionBadge} ${styles.large} ${consensusDetail.approved ? styles.approved : styles.rejected}`}
+                    >
+                      {consensusDetail.approved ? '✓ APPROVED' : '✗ REJECTED'}
+                    </span>
+                    <div className={styles.detailStats}>
+                      <div>
+                        <span className={styles.label}>Agreement Score</span>
+                        <span className={styles.value}>
+                          {(consensusDetail.agreement_score * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div>
+                        <span className={styles.label}>Weighted Confidence</span>
+                        <span className={styles.value}>
+                          {(consensusDetail.weighted_confidence * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div>
+                        <span className={styles.label}>Total Latency</span>
+                        <span className={styles.value}>{consensusDetail.total_latency_ms}ms</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={styles.reasoningSection}>
+                    <h4>Reasoning Summary</h4>
+                    <p>{consensusDetail.reasoning_summary}</p>
+                  </div>
+
+                  <div className={styles.votesSection}>
+                    <h4>Model Votes</h4>
+                    <div className={styles.votesList}>
+                      {consensusDetail.model_votes?.map((vote: any, index: number) => (
+                        <div
+                          key={index}
+                          className={`${styles.voteCard} ${vote.approved ? styles.approve : styles.reject}`}
+                        >
+                          <div className={styles.voteHeader}>
+                            <span className={styles.modelName}>
+                              {getProviderIcon(vote.model.split('/')[0])} {getModelShortName(vote.model)}
+                            </span>
+                            <span
+                              className={`${styles.voteBadge} ${vote.approved ? styles.approve : styles.reject}`}
+                            >
+                              {vote.approved ? '✓ Approve' : '✗ Reject'}
+                            </span>
+                          </div>
+                          <div className={styles.voteStats}>
+                            <span>Confidence: {(vote.confidence * 100).toFixed(0)}%</span>
+                            <span>Latency: {vote.latency_ms}ms</span>
+                          </div>
+                          <p className={styles.voteReasoning}>{vote.reasoning}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className={styles.contextSection}>
+                    <h4>Edge Context</h4>
+                    <pre className={styles.contextPre}>{consensusDetail.edge_context}</pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 

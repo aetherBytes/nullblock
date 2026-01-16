@@ -33,6 +33,12 @@ pub struct Config {
     pub openrouter_api_url: String,
     pub openrouter_api_key: Option<String>,
 
+    // Turnkey wallet delegation
+    pub turnkey_api_url: String,
+    pub turnkey_organization_id: Option<String>,
+    pub turnkey_api_public_key: Option<String>,
+    pub turnkey_api_private_key: Option<String>,
+
     // Risk defaults
     pub default_max_position_sol: f64,
     pub default_daily_loss_limit_sol: f64,
@@ -99,15 +105,22 @@ impl Config {
                 .unwrap_or_else(|_| "https://openrouter.ai/api/v1".to_string()),
             openrouter_api_key: env::var("OPENROUTER_API_KEY").ok(),
 
-            // Risk defaults (balanced profile)
+            // Turnkey wallet delegation
+            turnkey_api_url: env::var("TURNKEY_API_URL")
+                .unwrap_or_else(|_| "https://api.turnkey.com".to_string()),
+            turnkey_organization_id: env::var("TURNKEY_ORGANIZATION_ID").ok(),
+            turnkey_api_public_key: env::var("TURNKEY_API_PUBLIC_KEY").ok(),
+            turnkey_api_private_key: env::var("TURNKEY_API_PRIVATE_KEY").ok(),
+
+            // Risk defaults (dev_testing profile)
             default_max_position_sol: env::var("DEFAULT_MAX_POSITION_SOL")
                 .ok()
                 .and_then(|v| v.parse().ok())
-                .unwrap_or(1.0),
+                .unwrap_or(5.0),
             default_daily_loss_limit_sol: env::var("DEFAULT_DAILY_LOSS_LIMIT_SOL")
                 .ok()
                 .and_then(|v| v.parse().ok())
-                .unwrap_or(0.5),
+                .unwrap_or(2.0),
             default_min_profit_bps: env::var("DEFAULT_MIN_PROFIT_BPS")
                 .ok()
                 .and_then(|v| v.parse().ok())

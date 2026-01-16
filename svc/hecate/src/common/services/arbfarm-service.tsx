@@ -52,6 +52,16 @@ import type {
   CreateArbFarmCowRequest,
   ForkArbFarmCowRequest,
   ArbFarmCowStrategy,
+  WalletStatus,
+  WalletSetupResponse,
+  WalletBalanceResponse,
+  DailyUsageResponse,
+  UpdatePolicyRequest,
+  AllSettingsResponse,
+  RiskSettingsResponse,
+  RiskConfig,
+  VenueConfig,
+  ApiKeyStatus,
 } from '../../types/arbfarm';
 
 export interface ArbFarmServiceResponse<T = unknown> {
@@ -271,6 +281,34 @@ class ArbFarmService {
     return this.makeRequest(`/edges/${id}/execute`, {
       method: 'POST',
       body: JSON.stringify({ max_slippage_bps: maxSlippageBps }),
+    });
+  }
+
+  async executeEdgeAuto(
+    id: string,
+    slippageBps?: number,
+  ): Promise<
+    ArbFarmServiceResponse<{
+      edge_id: string;
+      success: boolean;
+      tx_signature?: string;
+      bundle_id?: string;
+      profit_lamports?: number;
+      gas_cost_lamports?: number;
+      execution_time_ms: number;
+      error?: string;
+      route_info?: {
+        input_mint: string;
+        output_mint: string;
+        in_amount: number;
+        out_amount: number;
+        price_impact_bps: number;
+      };
+    }>
+  > {
+    return this.makeRequest(`/edges/${id}/execute-auto`, {
+      method: 'POST',
+      body: JSON.stringify({ slippage_bps: slippageBps }),
     });
   }
 
@@ -1027,6 +1065,214 @@ class ArbFarmService {
         timestamp: new Date(),
       };
     }
+  }
+
+  // ============================================================================
+  // Wallet Operations
+  // ============================================================================
+
+  async getWalletStatus(): Promise<ArbFarmServiceResponse<WalletStatus>> {
+    return this.makeRequest('/wallet/status');
+  }
+
+  async setupWallet(
+    userWalletAddress: string,
+    walletName?: string,
+  ): Promise<ArbFarmServiceResponse<WalletSetupResponse>> {
+    return this.makeRequest('/wallet/setup', {
+      method: 'POST',
+      body: JSON.stringify({
+        user_wallet_address: userWalletAddress,
+        wallet_name: walletName,
+      }),
+    });
+  }
+
+  async updateWalletPolicy(
+    policy: UpdatePolicyRequest,
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; policy: unknown }>> {
+    return this.makeRequest('/wallet/policy', {
+      method: 'POST',
+      body: JSON.stringify(policy),
+    });
+  }
+
+  async getWalletBalance(): Promise<ArbFarmServiceResponse<WalletBalanceResponse>> {
+    return this.makeRequest('/wallet/balance');
+  }
+
+  async disconnectWallet(): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    return this.makeRequest('/wallet/disconnect', { method: 'POST' });
+  }
+
+  async getDailyUsage(): Promise<ArbFarmServiceResponse<DailyUsageResponse>> {
+    return this.makeRequest('/wallet/usage');
+  }
+
+  async testSign(
+    amountSol: number,
+    description: string,
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; message?: string; violation?: unknown }>> {
+    return this.makeRequest('/wallet/test-sign', {
+      method: 'POST',
+      body: JSON.stringify({
+        amount_sol: amountSol,
+        description,
+      }),
+    });
+  }
+
+  // ============================================================================
+  // Settings Operations
+  // ============================================================================
+
+  async getAllSettings(): Promise<ArbFarmServiceResponse<AllSettingsResponse>> {
+    return this.makeRequest('/settings');
+  }
+
+  async getRiskSettings(): Promise<ArbFarmServiceResponse<RiskSettingsResponse>> {
+    return this.makeRequest('/settings/risk');
+  }
+
+  async updateRiskSettings(
+    preset?: string,
+    custom?: RiskConfig,
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; config?: RiskConfig; error?: string }>> {
+    return this.makeRequest('/settings/risk', {
+      method: 'POST',
+      body: JSON.stringify({ preset, custom }),
+    });
+  }
+
+  async getVenueSettings(): Promise<ArbFarmServiceResponse<{ venues: VenueConfig[] }>> {
+    return this.makeRequest('/settings/venues');
+  }
+
+  async getApiKeyStatus(): Promise<ArbFarmServiceResponse<{ services: ApiKeyStatus[] }>> {
+    return this.makeRequest('/settings/api-keys');
+  }
+
+  // ============================================================================
+  // Consensus Operations
+  // ============================================================================
+
+  async listConsensusHistory(
+    limit?: number,
+    offset?: number,
+    approvedOnly?: boolean,
+  ): Promise<
+    ArbFarmServiceResponse<{
+      decisions: Array<{
+        id: string;
+        edge_id: string;
+        result: {
+          approved: boolean;
+          agreement_score: number;
+          weighted_confidence: number;
+          reasoning_summary: string;
+          model_votes: Array<{
+            model: string;
+            approved: boolean;
+            confidence: number;
+            reasoning: string;
+            latency_ms: number;
+          }>;
+        };
+        edge_context: string;
+        created_at: string;
+      }>;
+      total: number;
+    }>
+  > {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    if (approvedOnly !== undefined) params.append('approved_only', approvedOnly.toString());
+    const queryString = params.toString();
+
+    return this.makeRequest(`/consensus${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getConsensusDetail(consensusId: string): Promise<
+    ArbFarmServiceResponse<{
+      id: string;
+      edge_id: string;
+      approved: boolean;
+      agreement_score: number;
+      weighted_confidence: number;
+      reasoning_summary: string;
+      model_votes: Array<{
+        model: string;
+        approved: boolean;
+        confidence: number;
+        reasoning: string;
+        latency_ms: number;
+      }>;
+      edge_context: string;
+      total_latency_ms: number;
+      created_at: string;
+    }>
+  > {
+    return this.makeRequest(`/consensus/${consensusId}`);
+  }
+
+  async requestConsensus(params: {
+    edge_type: string;
+    venue: string;
+    token_pair: string[];
+    estimated_profit_lamports: number;
+    risk_score: number;
+    route_data: Record<string, unknown>;
+    models?: string[];
+  }): Promise<
+    ArbFarmServiceResponse<{
+      consensus_id: string;
+      edge_id: string;
+      approved: boolean;
+      agreement_score: number;
+      weighted_confidence: number;
+      reasoning_summary: string;
+      model_votes: Array<{
+        model: string;
+        approved: boolean;
+        confidence: number;
+        reasoning: string;
+        latency_ms: number;
+      }>;
+      total_latency_ms: number;
+    }>
+  > {
+    return this.makeRequest('/consensus/request', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  async getConsensusStats(): Promise<
+    ArbFarmServiceResponse<{
+      total_decisions: number;
+      approved_count: number;
+      rejected_count: number;
+      average_agreement: number;
+      average_confidence: number;
+      average_latency_ms: number;
+      decisions_last_24h: number;
+    }>
+  > {
+    return this.makeRequest('/consensus/stats');
+  }
+
+  async listAvailableModels(): Promise<
+    ArbFarmServiceResponse<{
+      models: Array<{
+        id: string;
+        name: string;
+        provider: string;
+      }>;
+      default_models: string[];
+    }>
+  > {
+    return this.makeRequest('/consensus/models');
   }
 
   // ============================================================================

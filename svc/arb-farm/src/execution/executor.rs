@@ -7,10 +7,12 @@ use uuid::Uuid;
 use crate::error::{AppError, AppResult};
 use crate::events::{ArbEvent, AtomicityLevel};
 use crate::models::{Edge, EdgeStatus, Strategy};
+use crate::wallet::turnkey::{SignRequest, TurnkeySigner};
 
 use super::jito::{BundleConfig, BundleState, JitoClient};
 use super::risk::{RiskManager, RiskCheck, ViolationSeverity};
 use super::simulation::{SimulationConfig, SimulationResult, TransactionSimulator};
+use super::transaction_builder::{TransactionBuilder, BuildResult};
 
 pub struct ExecutorAgent {
     id: Uuid,
@@ -527,6 +529,269 @@ impl ExecutorAgent {
 
     pub async fn get_risk_stats(&self) -> super::risk::DailyRiskStats {
         self.risk_manager.get_stats().await
+    }
+
+    pub async fn execute_edge_auto(
+        &self,
+        edge: &Edge,
+        strategy: &Strategy,
+        tx_builder: &TransactionBuilder,
+        signer: &TurnkeySigner,
+        slippage_bps: u16,
+    ) -> AppResult<ExecutionResult> {
+        let start = std::time::Instant::now();
+        let edge_id = edge.id;
+        let strategy_id = strategy.id;
+
+        self.create_pending_execution(edge_id, strategy_id).await;
+        self.emit_edge_event(edge_id, EdgeStatus::Executing).await;
+
+        // Step 1: Get wallet status and address
+        let wallet_status = signer.get_status().await;
+        let user_wallet = match &wallet_status.wallet_address {
+            Some(addr) => addr.clone(),
+            None => {
+                return Ok(ExecutionResult {
+                    edge_id,
+                    strategy_id,
+                    success: false,
+                    tx_signature: None,
+                    bundle_id: None,
+                    profit_lamports: None,
+                    gas_cost_lamports: None,
+                    execution_time_ms: start.elapsed().as_millis() as u64,
+                    error: Some("No wallet configured".to_string()),
+                    landed_slot: None,
+                });
+            }
+        };
+
+        // Step 2: Build the transaction
+        self.update_execution_status(edge_id, ExecutionStatus::Simulating).await;
+        let build_result = match tx_builder.build_swap(edge, &user_wallet, slippage_bps).await {
+            Ok(result) => result,
+            Err(e) => {
+                return Ok(ExecutionResult {
+                    edge_id,
+                    strategy_id,
+                    success: false,
+                    tx_signature: None,
+                    bundle_id: None,
+                    profit_lamports: None,
+                    gas_cost_lamports: None,
+                    execution_time_ms: start.elapsed().as_millis() as u64,
+                    error: Some(format!("Failed to build transaction: {}", e)),
+                    landed_slot: None,
+                });
+            }
+        };
+
+        // Step 3: Risk check
+        self.update_execution_status(edge_id, ExecutionStatus::RiskCheck).await;
+        let risk_check = self.risk_manager.check_edge(edge, &strategy.risk_params).await;
+        self.store_risk_check(edge_id, &risk_check).await;
+
+        if !risk_check.passed {
+            let blocking_violations: Vec<_> = risk_check
+                .violations
+                .iter()
+                .filter(|v| v.severity == ViolationSeverity::Block)
+                .map(|v| v.message.clone())
+                .collect();
+
+            return Ok(ExecutionResult {
+                edge_id,
+                strategy_id,
+                success: false,
+                tx_signature: None,
+                bundle_id: None,
+                profit_lamports: None,
+                gas_cost_lamports: None,
+                execution_time_ms: start.elapsed().as_millis() as u64,
+                error: Some(format!("Risk check failed: {}", blocking_violations.join("; "))),
+                landed_slot: None,
+            });
+        }
+
+        // Step 4: Sign the transaction via Turnkey
+        let sign_request = SignRequest {
+            transaction_base64: build_result.transaction_base64.clone(),
+            estimated_amount_lamports: build_result.route_info.in_amount,
+            estimated_profit_lamports: edge.estimated_profit_lamports,
+            edge_id: Some(edge_id),
+            description: format!(
+                "Swap {} -> {} for edge {}",
+                build_result.route_info.input_mint,
+                build_result.route_info.output_mint,
+                edge_id
+            ),
+        };
+
+        let sign_result = match signer.sign_transaction(sign_request).await {
+            Ok(result) => result,
+            Err(e) => {
+                return Ok(ExecutionResult {
+                    edge_id,
+                    strategy_id,
+                    success: false,
+                    tx_signature: None,
+                    bundle_id: None,
+                    profit_lamports: None,
+                    gas_cost_lamports: None,
+                    execution_time_ms: start.elapsed().as_millis() as u64,
+                    error: Some(format!("Signing failed: {}", e)),
+                    landed_slot: None,
+                });
+            }
+        };
+
+        if !sign_result.success {
+            return Ok(ExecutionResult {
+                edge_id,
+                strategy_id,
+                success: false,
+                tx_signature: None,
+                bundle_id: None,
+                profit_lamports: None,
+                gas_cost_lamports: None,
+                execution_time_ms: start.elapsed().as_millis() as u64,
+                error: sign_result.error.or_else(|| {
+                    sign_result.policy_violation.map(|v| v.message)
+                }),
+                landed_slot: None,
+            });
+        }
+
+        let signed_tx = match sign_result.signed_transaction_base64 {
+            Some(tx) => tx,
+            None => {
+                return Ok(ExecutionResult {
+                    edge_id,
+                    strategy_id,
+                    success: false,
+                    tx_signature: None,
+                    bundle_id: None,
+                    profit_lamports: None,
+                    gas_cost_lamports: None,
+                    execution_time_ms: start.elapsed().as_millis() as u64,
+                    error: Some("No signed transaction returned".to_string()),
+                    landed_slot: None,
+                });
+            }
+        };
+
+        // Step 5: Submit to Jito
+        self.update_execution_status(edge_id, ExecutionStatus::Submitting).await;
+
+        let estimated_profit = edge.estimated_profit_lamports.unwrap_or(0);
+        let tip = self.config.bundle.calculate_tip(estimated_profit);
+
+        let tx_base58 = base64_to_base58(&signed_tx)?;
+
+        let bundle_result = match self.jito_client.send_bundle(vec![tx_base58], tip).await {
+            Ok(result) => result,
+            Err(e) => {
+                return Ok(ExecutionResult {
+                    edge_id,
+                    strategy_id,
+                    success: false,
+                    tx_signature: None,
+                    bundle_id: None,
+                    profit_lamports: None,
+                    gas_cost_lamports: Some(build_result.priority_fee_lamports),
+                    execution_time_ms: start.elapsed().as_millis() as u64,
+                    error: Some(format!("Jito bundle submission failed: {}", e)),
+                    landed_slot: None,
+                });
+            }
+        };
+
+        let bundle_id = bundle_result.id.to_string();
+        self.store_bundle_id(edge_id, &bundle_id).await;
+
+        // Step 6: Wait for confirmation
+        self.update_execution_status(edge_id, ExecutionStatus::Confirming).await;
+
+        let status = match self.jito_client.wait_for_bundle(&bundle_id, self.config.execution_timeout_secs).await {
+            Ok(status) => status,
+            Err(e) => {
+                return Ok(ExecutionResult {
+                    edge_id,
+                    strategy_id,
+                    success: false,
+                    tx_signature: None,
+                    bundle_id: Some(bundle_id),
+                    profit_lamports: None,
+                    gas_cost_lamports: Some(build_result.priority_fee_lamports),
+                    execution_time_ms: start.elapsed().as_millis() as u64,
+                    error: Some(format!("Bundle confirmation failed: {}", e)),
+                    landed_slot: None,
+                });
+            }
+        };
+
+        let execution_time_ms = start.elapsed().as_millis() as u64;
+
+        match status.status {
+            BundleState::Landed => {
+                self.risk_manager
+                    .open_position(edge_id, edge.token_mint.clone(), build_result.route_info.in_amount as f64 / 1e9)
+                    .await;
+
+                if let Some(profit) = edge.estimated_profit_lamports {
+                    self.risk_manager.record_trade_result(profit).await;
+                }
+
+                self.emit_edge_event(edge_id, EdgeStatus::Executed).await;
+
+                Ok(ExecutionResult {
+                    edge_id,
+                    strategy_id,
+                    success: true,
+                    tx_signature: sign_result.signature,
+                    bundle_id: Some(bundle_id),
+                    profit_lamports: edge.estimated_profit_lamports,
+                    gas_cost_lamports: Some(build_result.priority_fee_lamports),
+                    execution_time_ms,
+                    error: None,
+                    landed_slot: status.landed_slot,
+                })
+            }
+
+            BundleState::Failed | BundleState::Dropped => {
+                self.emit_edge_event(edge_id, EdgeStatus::Failed).await;
+
+                Ok(ExecutionResult {
+                    edge_id,
+                    strategy_id,
+                    success: false,
+                    tx_signature: None,
+                    bundle_id: Some(bundle_id.clone()),
+                    profit_lamports: None,
+                    gas_cost_lamports: Some(build_result.priority_fee_lamports),
+                    execution_time_ms,
+                    error: Some(format!("Bundle {}: {:?}", bundle_id, status.status)),
+                    landed_slot: None,
+                })
+            }
+
+            BundleState::Pending => {
+                self.emit_edge_event(edge_id, EdgeStatus::Failed).await;
+
+                Ok(ExecutionResult {
+                    edge_id,
+                    strategy_id,
+                    success: false,
+                    tx_signature: None,
+                    bundle_id: Some(bundle_id),
+                    profit_lamports: None,
+                    gas_cost_lamports: None,
+                    execution_time_ms,
+                    error: Some("Bundle timed out in pending state".to_string()),
+                    landed_slot: None,
+                })
+            }
+        }
     }
 }
 
