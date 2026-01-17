@@ -3,9 +3,11 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
+use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
+use crate::events::AtomicityLevel;
 use crate::server::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -505,6 +507,67 @@ pub async fn execute_edge_auto(
     let edge = record_to_edge(&edge_record)?;
     let strategy = record_to_strategy(&strategy_record)?;
 
+    // Determine if this is an atomic trade (no capital at risk)
+    let is_atomic = matches!(edge.atomicity, AtomicityLevel::FullyAtomic);
+
+    // Calculate required capital for non-atomic trades
+    let required_capital_lamports = if is_atomic {
+        0 // Atomic trades don't lock capital
+    } else {
+        // Use the estimated profit as a proxy for position size, or use max_position_sol
+        let max_position_lamports = (strategy.risk_params.max_position_sol * 1_000_000_000.0) as u64;
+        max_position_lamports
+    };
+
+    // Check capital allocation for non-atomic trades
+    if !is_atomic && required_capital_lamports > 0 {
+        if let Err(e) = state.capital_manager.can_allocate(strategy_id, required_capital_lamports).await {
+            warn!(
+                "Capital allocation check failed for strategy {}: {}",
+                strategy_id, e
+            );
+            return Ok(Json(ExecuteEdgeAutoResponse {
+                edge_id,
+                success: false,
+                tx_signature: None,
+                bundle_id: None,
+                profit_lamports: None,
+                gas_cost_lamports: None,
+                execution_time_ms: 0,
+                error: Some(format!("Capital allocation denied: {}", e)),
+                route_info: None,
+            }));
+        }
+    }
+
+    // Reserve capital before execution (for non-atomic trades)
+    let position_id = Uuid::new_v4();
+    if !is_atomic && required_capital_lamports > 0 {
+        if let Err(e) = state.capital_manager.reserve_capital(strategy_id, position_id, required_capital_lamports).await {
+            warn!(
+                "Failed to reserve capital for strategy {}: {}",
+                strategy_id, e
+            );
+            return Ok(Json(ExecuteEdgeAutoResponse {
+                edge_id,
+                success: false,
+                tx_signature: None,
+                bundle_id: None,
+                profit_lamports: None,
+                gas_cost_lamports: None,
+                execution_time_ms: 0,
+                error: Some(format!("Capital reservation failed: {}", e)),
+                route_info: None,
+            }));
+        }
+        info!(
+            "💼 Reserved {} SOL capital for edge {} (strategy {})",
+            required_capital_lamports as f64 / 1_000_000_000.0,
+            edge_id,
+            strategy_id
+        );
+    }
+
     let slippage_bps = request.slippage_bps.unwrap_or(100); // Default 1% slippage
 
     let result = state
@@ -550,7 +613,30 @@ pub async fn execute_edge_auto(
                 },
             )
             .await?;
+
+        // For atomic trades, capital is already released (never locked)
+        // For non-atomic trades that succeed immediately (instant profit), release capital
+        if is_atomic {
+            info!("⚡ Atomic trade {} completed - no capital was locked", edge_id);
+        } else {
+            // Keep capital reserved until position is closed
+            // Capital will be released when position exits (SL/TP/manual close)
+            info!(
+                "💰 Non-atomic trade {} executed - capital remains reserved until position closes",
+                edge_id
+            );
+        }
     } else {
+        // Execution failed - release reserved capital
+        if !is_atomic && required_capital_lamports > 0 {
+            state.capital_manager.release_capital(position_id).await;
+            info!(
+                "💸 Released {} SOL capital after failed execution for edge {}",
+                required_capital_lamports as f64 / 1_000_000_000.0,
+                edge_id
+            );
+        }
+
         state
             .edge_repo
             .update(
@@ -638,5 +724,8 @@ fn record_to_strategy(
         is_active: record.is_active,
         created_at: record.created_at,
         updated_at: record.updated_at,
+        last_tested_at: None,
+        last_executed_at: None,
+        test_results: None,
     })
 }

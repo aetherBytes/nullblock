@@ -57,7 +57,7 @@ impl ConsensusEngine {
         let prompt = generate_trade_prompt(edge_context);
 
         let system_prompt = Some(
-            "You are an expert MEV trader. Analyze opportunities carefully and respond with valid JSON.",
+            "You are an autonomous MEV trading agent. Your PRIMARY OBJECTIVE is to maximize profit measured in base currency (SOL or USDC). After any trade, positions are settled back to base currency - you should not hold random tokens. Analyze opportunities with profit maximization as your core goal. Only approve trades with clear, measurable profit potential. Respond with valid JSON.",
         );
 
         let futures: Vec<_> = models_to_query
@@ -231,25 +231,44 @@ pub fn format_edge_context(
     risk_score: i32,
     route_data: &serde_json::Value,
 ) -> String {
-    format!(
-        r#"Edge Type: {}
-Venue: {}
-Token Pair: {} / {}
-Estimated Profit: {} lamports ({:.4} SOL)
-Risk Score: {}/100
+    let profit_sol = estimated_profit_lamports as f64 / 1_000_000_000.0;
+    let profit_assessment = if profit_sol >= 0.01 {
+        "STRONG"
+    } else if profit_sol >= 0.005 {
+        "MODERATE"
+    } else if profit_sol >= 0.001 {
+        "MARGINAL"
+    } else {
+        "MINIMAL"
+    };
 
-Route Data:
+    format!(
+        r#"## PROFIT OPPORTUNITY SUMMARY
+- ESTIMATED NET PROFIT: {:.6} SOL ({} lamports)
+- Profit Assessment: {} opportunity
+- Base Currency: SOL/USDC (profit measured in base currency)
+- Settlement: After trade, convert back to base currency
+
+## Trade Details
+- Edge Type: {}
+- Venue: {}
+- Token Pair: {} / {}
+- Risk Score: {}/100 (lower is better)
+
+## Route Data
 {}
 
-Additional Context:
-- Current timestamp: {}
-- Atomicity: Evaluate based on route structure"#,
+## Execution Context
+- Timestamp: {}
+- Atomicity: Evaluate based on route structure
+- Goal: Maximize profit in SOL/USDC (settle to base currency after trade)"#,
+        profit_sol,
+        estimated_profit_lamports,
+        profit_assessment,
         edge_type,
         venue,
         token_pair.first().unwrap_or(&"?".to_string()),
         token_pair.get(1).unwrap_or(&"?".to_string()),
-        estimated_profit_lamports,
-        estimated_profit_lamports as f64 / 1_000_000_000.0,
         risk_score,
         serde_json::to_string_pretty(route_data).unwrap_or_default(),
         Utc::now().to_rfc3339()

@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::error::AppResult;
 use crate::research::{
     url_ingest::{UrlIngester, IngestResult},
-    strategy_extract::{StrategyExtractor, ExtractedStrategy},
+    strategy_extract::{StrategyExtractor, ExtractedStrategy, TextStrategyExtractor},
     backtest::{BacktestEngine, BacktestConfig, BacktestResult},
     social_monitor::{SocialMonitor, MonitoredSource, SourceType, TrackType, SocialAlert, MonitorStats},
 };
@@ -68,6 +68,67 @@ pub async fn ingest_url(
             extracted_strategy,
         }),
     ).into_response()
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ExtractFromTextRequest {
+    pub description: String,
+    pub context: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ExtractFromTextResponse {
+    pub extracted_strategy: Option<ExtractedStrategy>,
+    pub success: bool,
+    pub error: Option<String>,
+}
+
+pub async fn extract_strategy_from_text(
+    State(state): State<AppState>,
+    Json(request): Json<ExtractFromTextRequest>,
+) -> impl IntoResponse {
+    if request.description.trim().is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ExtractFromTextResponse {
+                extracted_strategy: None,
+                success: false,
+                error: Some("Description is required".to_string()),
+            }),
+        ).into_response();
+    }
+
+    let extractor = TextStrategyExtractor::new(
+        state.config.openrouter_api_url.clone(),
+        state.config.openrouter_api_key.clone(),
+    );
+
+    match extractor.extract_from_text(&request.description, request.context.as_deref()).await {
+        Ok(Some(strategy)) => (
+            StatusCode::OK,
+            Json(ExtractFromTextResponse {
+                extracted_strategy: Some(strategy),
+                success: true,
+                error: None,
+            }),
+        ).into_response(),
+        Ok(None) => (
+            StatusCode::OK,
+            Json(ExtractFromTextResponse {
+                extracted_strategy: None,
+                success: false,
+                error: Some("Could not extract a clear trading strategy from the description. Try being more specific about entry/exit conditions.".to_string()),
+            }),
+        ).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ExtractFromTextResponse {
+                extracted_strategy: None,
+                success: false,
+                error: Some(format!("Extraction failed: {}", e)),
+            }),
+        ).into_response(),
+    }
 }
 
 #[derive(Debug, Deserialize)]

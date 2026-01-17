@@ -8,6 +8,7 @@ use crate::error::AppResult;
 use crate::events::{ArbEvent, AgentType, EventSource, scanner as scanner_topics, swarm as swarm_topics};
 use crate::models::{Signal, VenueType};
 use crate::venues::MevVenue;
+use super::StrategyEngine;
 
 pub struct ScannerAgent {
     id: Uuid,
@@ -16,6 +17,7 @@ pub struct ScannerAgent {
     scan_interval_ms: u64,
     is_running: Arc<RwLock<bool>>,
     stats: Arc<RwLock<ScannerStats>>,
+    strategy_engine: Arc<RwLock<Option<Arc<StrategyEngine>>>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -55,11 +57,18 @@ impl ScannerAgent {
             scan_interval_ms,
             is_running: Arc::new(RwLock::new(false)),
             stats: Arc::new(RwLock::new(ScannerStats::default())),
+            strategy_engine: Arc::new(RwLock::new(None)),
         }
     }
 
     pub fn id(&self) -> Uuid {
         self.id
+    }
+
+    pub async fn set_strategy_engine(&self, engine: Arc<StrategyEngine>) {
+        let mut se = self.strategy_engine.write().await;
+        *se = Some(engine);
+        tracing::info!("📡 Scanner: Strategy engine connected (auto-processing enabled)");
     }
 
     pub async fn add_venue(&self, venue: Box<dyn MevVenue>) {
@@ -130,6 +139,7 @@ impl ScannerAgent {
         let stats = Arc::clone(&self.stats);
         let is_running = Arc::clone(&self.is_running);
         let scan_interval = self.scan_interval_ms;
+        let strategy_engine = Arc::clone(&self.strategy_engine);
 
         let _ = event_tx.send(ArbEvent::new(
             "scanner_started",
@@ -212,6 +222,24 @@ impl ScannerAgent {
 
                     let venue_id = signal.venue_id.to_string();
                     *stats_guard.signals_by_venue.entry(venue_id).or_insert(0) += 1;
+                }
+                drop(stats_guard);
+
+                // Auto-process signals through strategy engine if configured
+                if !all_signals.is_empty() {
+                    let se_guard = strategy_engine.read().await;
+                    if let Some(engine) = se_guard.as_ref() {
+                        let signal_count = all_signals.len();
+                        let results = engine.process_signals(all_signals.clone()).await;
+                        let edge_count = results.iter().filter(|r| r.approved).count();
+                        if edge_count > 0 {
+                            tracing::info!(
+                                "📡 Auto-processed {} signals → {} edges created",
+                                signal_count,
+                                edge_count
+                            );
+                        }
+                    }
                 }
             }
         });

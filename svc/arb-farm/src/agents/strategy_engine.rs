@@ -91,6 +91,26 @@ impl StrategyEngine {
         }
     }
 
+    pub async fn set_risk_params(&self, strategy_id: Uuid, risk_params: crate::models::RiskParams) -> AppResult<Strategy> {
+        let mut strategies = self.strategies.write().await;
+        if let Some(strategy) = strategies.get_mut(&strategy_id) {
+            strategy.risk_params = risk_params;
+            strategy.updated_at = chrono::Utc::now();
+            let _ = self.event_tx.send(ArbEvent::new(
+                "strategy_risk_updated",
+                EventSource::Agent(AgentType::StrategyEngine),
+                strategy_topics::UPDATED,
+                serde_json::json!({
+                    "strategy_id": strategy_id,
+                    "risk_params": serde_json::to_value(&strategy.risk_params).unwrap_or_default(),
+                }),
+            ));
+            Ok(strategy.clone())
+        } else {
+            Err(crate::error::AppError::NotFound(format!("Strategy {} not found", strategy_id)))
+        }
+    }
+
     pub async fn get_strategy(&self, strategy_id: Uuid) -> Option<Strategy> {
         let strategies = self.strategies.read().await;
         strategies.get(&strategy_id).cloned()
@@ -99,6 +119,95 @@ impl StrategyEngine {
     pub async fn list_strategies(&self) -> Vec<Strategy> {
         let strategies = self.strategies.read().await;
         strategies.values().cloned().collect()
+    }
+
+    pub async fn update_strategy(&self, strategy_id: Uuid, request: crate::models::UpdateStrategyRequest) -> AppResult<Strategy> {
+        let mut strategies = self.strategies.write().await;
+        if let Some(strategy) = strategies.get_mut(&strategy_id) {
+            if let Some(name) = request.name {
+                strategy.name = name;
+            }
+            if let Some(venue_types) = request.venue_types {
+                strategy.venue_types = venue_types;
+            }
+            if let Some(execution_mode) = request.execution_mode {
+                strategy.execution_mode = execution_mode;
+            }
+            if let Some(risk_params) = request.risk_params {
+                strategy.risk_params = risk_params;
+            }
+            if let Some(is_active) = request.is_active {
+                strategy.is_active = is_active;
+            }
+            strategy.updated_at = chrono::Utc::now();
+
+            let _ = self.event_tx.send(ArbEvent::new(
+                "strategy_updated",
+                EventSource::Agent(AgentType::StrategyEngine),
+                strategy_topics::UPDATED,
+                serde_json::json!({
+                    "strategy_id": strategy_id,
+                    "name": strategy.name,
+                }),
+            ));
+
+            Ok(strategy.clone())
+        } else {
+            Err(crate::error::AppError::NotFound(format!("Strategy {} not found", strategy_id)))
+        }
+    }
+
+    pub async fn reset_stats(&self, strategy_id: Uuid) -> AppResult<()> {
+        let strategies = self.strategies.read().await;
+        if strategies.contains_key(&strategy_id) {
+            let _ = self.event_tx.send(ArbEvent::new(
+                "strategy_stats_reset",
+                EventSource::Agent(AgentType::StrategyEngine),
+                strategy_topics::UPDATED,
+                serde_json::json!({
+                    "strategy_id": strategy_id,
+                    "stats_reset": true,
+                }),
+            ));
+            Ok(())
+        } else {
+            Err(crate::error::AppError::NotFound(format!("Strategy {} not found", strategy_id)))
+        }
+    }
+
+    pub async fn kill_strategy(&self, strategy_id: Uuid) -> AppResult<String> {
+        let mut strategies = self.strategies.write().await;
+        if let Some(strategy) = strategies.get_mut(&strategy_id) {
+            let strategy_name = strategy.name.clone();
+
+            // Disable the strategy immediately
+            strategy.is_active = false;
+
+            // Emit a kill event - this signals all components to stop any in-flight operations
+            let _ = self.event_tx.send(ArbEvent::new(
+                "strategy_killed",
+                EventSource::Agent(AgentType::StrategyEngine),
+                strategy_topics::DISABLED,
+                serde_json::json!({
+                    "strategy_id": strategy_id,
+                    "strategy_name": strategy_name,
+                    "killed": true,
+                    "action": "emergency_stop",
+                    "cancel_pending_edges": true,
+                    "cancel_pending_approvals": true,
+                }),
+            ));
+
+            tracing::warn!(
+                strategy_id = %strategy_id,
+                strategy_name = %strategy_name,
+                "Strategy killed - all related operations should halt"
+            );
+
+            Ok(strategy_name)
+        } else {
+            Err(crate::error::AppError::NotFound(format!("Strategy {} not found", strategy_id)))
+        }
     }
 
     pub async fn match_signal(&self, signal: &Signal) -> Option<MatchResult> {
@@ -136,7 +245,8 @@ impl StrategyEngine {
                     "edge_id": edge.id,
                     "signal_id": signal.id,
                     "strategy_id": strategy.id,
-                    "execution_mode": format!("{:?}", strategy.execution_mode),
+                    "execution_mode": &strategy.execution_mode,
+                    "token_mint": signal.token_mint,
                     "estimated_profit_bps": signal.estimated_profit_bps,
                 }),
             ));
@@ -315,7 +425,8 @@ impl StrategyEngine {
                     "edge_id": edge.id,
                     "signal_id": signal.id,
                     "strategy_id": strategy.id,
-                    "execution_mode": format!("{:?}", strategy.execution_mode),
+                    "execution_mode": &strategy.execution_mode,
+                    "token_mint": signal.token_mint,
                     "estimated_profit_bps": signal.estimated_profit_bps,
                     "consensus_required": requires_consensus,
                 }),

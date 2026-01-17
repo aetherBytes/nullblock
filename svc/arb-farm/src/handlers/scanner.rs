@@ -7,6 +7,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::agents::{ScannerStatus, VenueStatus};
+use crate::database::repositories::edges::CreateEdgeRecord;
+use crate::events::AtomicityLevel;
 use crate::models::VenueType;
 use crate::server::AppState;
 
@@ -170,6 +172,105 @@ pub async fn get_signals(
                 "signals": responses,
                 "count": responses.len()
             })).into_response()
+        }
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": e.to_string()
+        }))).into_response(),
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ProcessSignalsResponse {
+    pub signals_detected: usize,
+    pub edges_created: usize,
+    pub edges_rejected: usize,
+    pub created_edge_ids: Vec<String>,
+    pub rejection_reasons: Vec<String>,
+}
+
+pub async fn process_signals(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let signals_result = state.scanner.scan_once().await;
+
+    match signals_result {
+        Ok(signals) => {
+            let signals_detected = signals.len();
+            let mut edges_created = 0;
+            let mut edges_rejected = 0;
+            let mut created_edge_ids = Vec::new();
+            let mut rejection_reasons = Vec::new();
+
+            for signal in signals {
+                match state.strategy_engine.match_signal(&signal).await {
+                    Some(result) => {
+                        if result.approved {
+                            if let Some(edge) = result.created_edge {
+                                let create_record = CreateEdgeRecord {
+                                    strategy_id: Some(result.strategy_id),
+                                    edge_type: edge.edge_type.clone(),
+                                    execution_mode: edge.execution_mode.clone(),
+                                    atomicity: edge.atomicity,
+                                    simulated_profit_guaranteed: edge.simulated_profit_guaranteed,
+                                    estimated_profit_lamports: edge.estimated_profit_lamports,
+                                    risk_score: edge.risk_score,
+                                    route_data: edge.route_data,
+                                    expires_at: edge.expires_at,
+                                };
+
+                                match state.edge_repo.create(create_record).await {
+                                    Ok(record) => {
+                                        edges_created += 1;
+                                        created_edge_ids.push(record.id.to_string());
+                                        tracing::info!(
+                                            edge_id = %record.id,
+                                            signal_type = %edge.edge_type,
+                                            "Edge created from signal"
+                                        );
+
+                                        // Capture edge as engram for learning/sharing
+                                        if state.engrams_client.is_configured() {
+                                            let wallet = state.config.wallet_address.clone()
+                                                .unwrap_or_else(|| "default".to_string());
+                                            let token_mint = signal.token_mint.as_deref();
+                                            let _ = state.engrams_client.save_edge(
+                                                &wallet,
+                                                &record.id.to_string(),
+                                                &record.edge_type,
+                                                token_mint,
+                                                record.estimated_profit_lamports.unwrap_or(0),
+                                                record.risk_score.unwrap_or(50),
+                                                &signal.metadata,
+                                            ).await;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        edges_rejected += 1;
+                                        rejection_reasons.push(format!("DB error: {}", e));
+                                        tracing::error!(error = %e, "Failed to create edge in DB");
+                                    }
+                                }
+                            }
+                        } else {
+                            edges_rejected += 1;
+                            if let Some(reason) = result.reason {
+                                rejection_reasons.push(reason);
+                            }
+                        }
+                    }
+                    None => {
+                        // No matching strategy found - not an error, just no match
+                    }
+                }
+            }
+
+            Json(ProcessSignalsResponse {
+                signals_detected,
+                edges_created,
+                edges_rejected,
+                created_edge_ids,
+                rejection_reasons,
+            }).into_response()
         }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
             "error": e.to_string()

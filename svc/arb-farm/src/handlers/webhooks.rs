@@ -77,7 +77,7 @@ pub async fn register_webhook(
         auth_header: None,
     };
 
-    match state.helius_client.create_webhook(&config).await {
+    match state.helius_webhook_client.create_webhook(&config).await {
         Ok(registration) => Ok(Json(RegisterWebhookResponse {
             success: true,
             webhook_id: Some(registration.webhook_id),
@@ -113,7 +113,7 @@ pub async fn list_webhooks(
         return Ok(Json(ListWebhooksResponse { webhooks: vec![] }));
     }
 
-    match state.helius_client.list_webhooks().await {
+    match state.helius_webhook_client.list_webhooks().await {
         Ok(registrations) => {
             let webhooks = registrations
                 .into_iter()
@@ -149,7 +149,7 @@ pub async fn delete_webhook(
     State(state): State<AppState>,
     Json(request): Json<DeleteWebhookRequest>,
 ) -> AppResult<Json<DeleteWebhookResponse>> {
-    match state.helius_client.delete_webhook(&request.webhook_id).await {
+    match state.helius_webhook_client.delete_webhook(&request.webhook_id).await {
         Ok(()) => Ok(Json(DeleteWebhookResponse {
             success: true,
             error: None,

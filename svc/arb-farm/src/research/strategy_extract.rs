@@ -436,6 +436,234 @@ struct LlmRiskParams {
     max_slippage_bps: Option<u16>,
 }
 
+pub struct TextStrategyExtractor {
+    client: Client,
+    openrouter_url: String,
+    openrouter_key: Option<String>,
+    model: String,
+}
+
+impl TextStrategyExtractor {
+    pub fn new(openrouter_url: String, openrouter_key: Option<String>) -> Self {
+        Self {
+            client: Client::new(),
+            openrouter_url,
+            openrouter_key,
+            model: "anthropic/claude-3-haiku".to_string(),
+        }
+    }
+
+    pub async fn extract_from_text(&self, description: &str, context: Option<&str>) -> AppResult<Option<ExtractedStrategy>> {
+        let prompt = self.build_text_extraction_prompt(description, context);
+        let response = self.call_llm(&prompt).await?;
+        self.parse_llm_response(&response, description)
+    }
+
+    fn build_text_extraction_prompt(&self, description: &str, context: Option<&str>) -> String {
+        let context_section = context
+            .map(|c| format!("\nAdditional Context:\n{}", c))
+            .unwrap_or_default();
+
+        format!(
+            r#"Extract a trading strategy from this natural language description.
+
+User's Strategy Description:
+{}
+{}
+
+Create a structured trading strategy based on this description. Identify:
+- Strategy type (dex_arb, bonding_curve, momentum, mean_reversion, breakout, scalping, swing, copy_trade, liquidation)
+- Entry conditions (when to buy)
+- Exit conditions (when to sell)
+- Risk parameters (position size, stop loss, take profit, etc.)
+
+Respond with JSON in this exact format:
+{{
+  "found": true,
+  "name": "Strategy Name based on description",
+  "description": "Clear description of the strategy",
+  "strategy_type": "one of: dex_arb, bonding_curve, momentum, mean_reversion, breakout, scalping, swing, copy_trade, liquidation",
+  "entry_conditions": [
+    {{"description": "condition description", "type": "price_above|price_below|volume_spike|time_window|percentage_gain|percentage_loss|curve_progress|holder_concentration|market_cap|custom", "params": {{}}}}
+  ],
+  "exit_conditions": [
+    {{"description": "condition description", "type": "same types as entry", "params": {{}}}}
+  ],
+  "risk_params": {{
+    "max_position_sol": 1.0,
+    "stop_loss_percent": 10,
+    "take_profit_percent": 50,
+    "max_slippage_bps": 100,
+    "time_limit_minutes": 60
+  }},
+  "venue_types": ["dex_amm", "bonding_curve"],
+  "execution_mode": "agent_directed",
+  "confidence": 0.75
+}}
+
+If the description is too vague or doesn't describe a clear trading strategy, respond with:
+{{"found": false, "reason": "explanation"}}
+
+Be helpful - try to infer reasonable defaults from the description. If the user mentions "small positions" use 0.5 SOL, if they mention "aggressive" use higher take profits, etc."#,
+            description,
+            context_section,
+        )
+    }
+
+    async fn call_llm(&self, prompt: &str) -> AppResult<String> {
+        let api_key = self.openrouter_key.as_ref()
+            .ok_or_else(|| AppError::Configuration("OpenRouter API key not configured".to_string()))?;
+
+        let request_body = serde_json::json!({
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a helpful trading strategy assistant. Convert natural language descriptions into structured trading strategies. Be practical and infer reasonable defaults. Respond only with valid JSON."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.3,
+            "max_tokens": 2000
+        });
+
+        let response = self.client
+            .post(format!("{}/chat/completions", self.openrouter_url))
+            .header("Authorization", format!("Bearer {}", api_key))
+            .header("Content-Type", "application/json")
+            .json(&request_body)
+            .send()
+            .await?;
+
+        let response_json: serde_json::Value = response.json().await?;
+
+        let content = response_json["choices"][0]["message"]["content"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+
+        Ok(content)
+    }
+
+    fn parse_llm_response(&self, response: &str, original_description: &str) -> AppResult<Option<ExtractedStrategy>> {
+        let json_str = self.extract_json_from_response(response);
+
+        let parsed: TextExtractionResponse = match serde_json::from_str(&json_str) {
+            Ok(p) => p,
+            Err(_) => return Ok(None),
+        };
+
+        if !parsed.found {
+            return Ok(None);
+        }
+
+        let strategy_type = StrategyType::from_str(&parsed.strategy_type.unwrap_or_default());
+
+        let entry_conditions = parsed.entry_conditions
+            .unwrap_or_default()
+            .into_iter()
+            .map(|c| Condition {
+                description: c.description,
+                condition_type: self.parse_condition_type(&c.condition_type),
+                parameters: c.params.unwrap_or(serde_json::json!({})),
+            })
+            .collect();
+
+        let exit_conditions = parsed.exit_conditions
+            .unwrap_or_default()
+            .into_iter()
+            .map(|c| Condition {
+                description: c.description,
+                condition_type: self.parse_condition_type(&c.condition_type),
+                parameters: c.params.unwrap_or(serde_json::json!({})),
+            })
+            .collect();
+
+        let risk_params = if let Some(rp) = parsed.risk_params {
+            RiskParams {
+                max_position_sol: rp.max_position_sol,
+                stop_loss_percent: rp.stop_loss_percent,
+                take_profit_percent: rp.take_profit_percent,
+                max_slippage_bps: rp.max_slippage_bps,
+                time_limit_minutes: rp.time_limit_minutes,
+            }
+        } else {
+            RiskParams::default()
+        };
+
+        let confidence_score = parsed.confidence.unwrap_or(0.5);
+
+        Ok(Some(ExtractedStrategy {
+            id: Uuid::new_v4(),
+            source_id: Uuid::new_v4(),
+            source_url: "user_input".to_string(),
+            name: parsed.name.unwrap_or_else(|| "Custom Strategy".to_string()),
+            description: parsed.description.unwrap_or_else(|| original_description.to_string()),
+            strategy_type,
+            entry_conditions,
+            exit_conditions,
+            risk_params,
+            tokens_mentioned: Vec::new(),
+            confidence: StrategyConfidence::from_score(confidence_score),
+            confidence_score,
+            raw_extraction: response.to_string(),
+            extracted_at: Utc::now(),
+        }))
+    }
+
+    fn extract_json_from_response(&self, response: &str) -> String {
+        if let Some(start) = response.find('{') {
+            if let Some(end) = response.rfind('}') {
+                return response[start..=end].to_string();
+            }
+        }
+        response.to_string()
+    }
+
+    fn parse_condition_type(&self, s: &str) -> ConditionType {
+        match s.to_lowercase().as_str() {
+            "price_above" => ConditionType::PriceAbove,
+            "price_below" => ConditionType::PriceBelow,
+            "volume_spike" => ConditionType::VolumeSpike,
+            "time_window" => ConditionType::TimeWindow,
+            "percentage_gain" => ConditionType::PercentageGain,
+            "percentage_loss" => ConditionType::PercentageLoss,
+            "curve_progress" => ConditionType::CurveProgress,
+            "holder_concentration" => ConditionType::HolderConcentration,
+            "market_cap" | "market_cap_threshold" => ConditionType::MarketCapThreshold,
+            _ => ConditionType::Custom,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct TextExtractionResponse {
+    found: bool,
+    name: Option<String>,
+    description: Option<String>,
+    strategy_type: Option<String>,
+    entry_conditions: Option<Vec<LlmCondition>>,
+    exit_conditions: Option<Vec<LlmCondition>>,
+    risk_params: Option<TextLlmRiskParams>,
+    #[allow(dead_code)]
+    venue_types: Option<Vec<String>>,
+    #[allow(dead_code)]
+    execution_mode: Option<String>,
+    confidence: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TextLlmRiskParams {
+    max_position_sol: Option<f64>,
+    stop_loss_percent: Option<f64>,
+    take_profit_percent: Option<f64>,
+    max_slippage_bps: Option<u16>,
+    time_limit_minutes: Option<u32>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

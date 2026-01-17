@@ -121,7 +121,7 @@ pub async fn add_kol(
     let id = kol.id;
 
     if let Some(wallet) = wallet_address {
-        if state.helius_client.is_configured() {
+        if state.helius_webhook_client.is_configured() {
             info!("Registering Helius webhook for KOL wallet: {}", wallet);
             let webhook_url = format!(
                 "{}/webhooks/helius",
@@ -136,7 +136,7 @@ pub async fn add_kol(
                 auth_header: None,
             };
 
-            match state.helius_client.create_webhook(&config).await {
+            match state.helius_webhook_client.create_webhook(&config).await {
                 Ok(registration) => {
                     info!("Helius webhook registered: {}", registration.webhook_id);
                     kol.linked_wallet = Some(wallet);
@@ -570,4 +570,187 @@ pub async fn get_copy_stats(State(_state): State<AppState>) -> impl IntoResponse
             avg_delay_ms: avg_delay,
         }),
     )
+}
+
+#[derive(Debug, Serialize)]
+pub struct DiscoveryStatusResponse {
+    pub is_running: bool,
+    pub total_wallets_analyzed: u64,
+    pub total_kols_discovered: u64,
+    pub last_scan_at: Option<String>,
+    pub scan_interval_ms: u64,
+}
+
+pub async fn get_discovery_status(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let stats = state.kol_discovery.get_stats().await;
+
+    Json(DiscoveryStatusResponse {
+        is_running: stats.is_running,
+        total_wallets_analyzed: stats.total_wallets_analyzed,
+        total_kols_discovered: stats.total_kols_discovered,
+        last_scan_at: stats.last_scan_at.map(|t| t.to_rfc3339()),
+        scan_interval_ms: stats.scan_interval_ms,
+    })
+}
+
+pub async fn start_discovery(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    state.kol_discovery.start().await;
+
+    (StatusCode::OK, Json(serde_json::json!({
+        "status": "started",
+        "message": "KOL discovery agent started"
+    })))
+}
+
+pub async fn stop_discovery(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    state.kol_discovery.stop().await;
+
+    (StatusCode::OK, Json(serde_json::json!({
+        "status": "stopped",
+        "message": "KOL discovery agent stopped"
+    })))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DiscoveredKolsQuery {
+    pub min_trust_score: Option<f64>,
+    pub min_win_rate: Option<f64>,
+    pub source: Option<String>,
+    pub limit: Option<usize>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DiscoveredKolsResponse {
+    pub discovered: Vec<crate::agents::DiscoveredKol>,
+    pub total: usize,
+}
+
+pub async fn list_discovered_kols(
+    State(state): State<AppState>,
+    Query(query): Query<DiscoveredKolsQuery>,
+) -> impl IntoResponse {
+    let limit = query.limit.unwrap_or(50);
+    let mut discovered = state.kol_discovery.get_discovered_kols(Some(limit)).await;
+
+    if let Some(min_trust) = query.min_trust_score {
+        discovered.retain(|k| k.trust_score >= min_trust);
+    }
+    if let Some(min_wr) = query.min_win_rate {
+        discovered.retain(|k| k.win_rate >= min_wr);
+    }
+    if let Some(ref source) = query.source {
+        discovered.retain(|k| k.source == *source);
+    }
+
+    let total = discovered.len();
+
+    Json(DiscoveredKolsResponse { discovered, total })
+}
+
+pub async fn scan_for_kols_now(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    match state.kol_discovery.scan_once().await {
+        Ok(discovered) => {
+            let count = discovered.len();
+
+            for kol in &discovered {
+                state.kol_tracker.add_kol(
+                    &kol.wallet_address,
+                    kol.display_name.clone(),
+                    kol.trust_score,
+                ).await;
+            }
+
+            (StatusCode::OK, Json(serde_json::json!({
+                "discovered": discovered,
+                "count": count,
+                "message": format!("Discovered {} new KOLs", count)
+            }))).into_response()
+        }
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+            "error": e.to_string()
+        }))).into_response(),
+    }
+}
+
+pub async fn promote_discovered_kol(
+    State(state): State<AppState>,
+    Path(wallet_address): Path<String>,
+) -> impl IntoResponse {
+    let discovered = state.kol_discovery.get_discovered_kols(None).await;
+
+    let kol = discovered.iter().find(|k| k.wallet_address == wallet_address);
+
+    match kol {
+        Some(discovered_kol) => {
+            let request = AddKolRequest {
+                wallet_address: Some(discovered_kol.wallet_address.clone()),
+                twitter_handle: None,
+                display_name: discovered_kol.display_name.clone(),
+            };
+
+            let (entity_type, identifier) = (KolEntityType::Wallet, discovered_kol.wallet_address.clone());
+
+            {
+                let store = KOL_STORE.read().unwrap();
+                if store.values().any(|k| k.identifier == identifier) {
+                    return (
+                        StatusCode::CONFLICT,
+                        Json(serde_json::json!({
+                            "error": "KOL already promoted",
+                            "wallet_address": wallet_address
+                        })),
+                    ).into_response();
+                }
+            }
+
+            let mut kol_entity = KolEntity::new(entity_type, identifier.clone(), discovered_kol.display_name.clone());
+            kol_entity.linked_wallet = Some(discovered_kol.wallet_address.clone());
+            kol_entity.trust_score = rust_decimal::Decimal::from_f64_retain(discovered_kol.trust_score)
+                .unwrap_or(rust_decimal::Decimal::new(500, 1));
+            kol_entity.total_trades_tracked = discovered_kol.total_trades as i32;
+            kol_entity.profitable_trades = discovered_kol.winning_trades as i32;
+
+            let id = kol_entity.id;
+
+            {
+                let mut store = KOL_STORE.write().unwrap();
+                store.insert(id, kol_entity.clone());
+            }
+
+            state.kol_tracker.add_kol(
+                &discovered_kol.wallet_address,
+                discovered_kol.display_name.clone(),
+                discovered_kol.trust_score,
+            ).await;
+
+            let _ = state.event_tx.send(ArbEvent::new(
+                "kol_promoted",
+                crate::events::EventSource::Agent(crate::events::AgentType::CopyTrade),
+                "kol",
+                serde_json::json!({
+                    "entity_id": id,
+                    "wallet_address": discovered_kol.wallet_address,
+                    "trust_score": discovered_kol.trust_score,
+                    "source": discovered_kol.source,
+                }),
+            ));
+
+            (StatusCode::CREATED, Json(kol_entity)).into_response()
+        }
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "error": "Discovered KOL not found",
+                "wallet_address": wallet_address
+            })),
+        ).into_response(),
+    }
 }

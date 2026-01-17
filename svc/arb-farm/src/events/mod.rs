@@ -1,5 +1,5 @@
 mod types;
-mod topics;
+pub mod topics;
 mod bus;
 
 pub use types::*;

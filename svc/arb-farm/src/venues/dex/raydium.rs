@@ -138,7 +138,8 @@ impl MevVenue for RaydiumVenue {
     }
 
     async fn is_healthy(&self) -> bool {
-        let url = format!("{}/main/health", self.base_url);
+        // Test the v2 API by fetching basic info
+        let url = format!("{}/main/info", self.base_url);
         self.client
             .get(&url)
             .timeout(std::time::Duration::from_secs(5))

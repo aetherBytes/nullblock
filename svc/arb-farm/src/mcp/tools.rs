@@ -243,7 +243,7 @@ pub fn get_strategy_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "strategy_toggle".to_string(),
-            description: "Enable or disable a strategy".to_string(),
+            description: "Enable or disable a strategy (pause/resume)".to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -257,6 +257,20 @@ pub fn get_strategy_tools() -> Vec<McpTool> {
                     }
                 },
                 "required": ["strategy_id", "enabled"]
+            }),
+        },
+        McpTool {
+            name: "strategy_kill".to_string(),
+            description: "Emergency stop - immediately halt all running operations for a strategy. Cancels pending approvals and stops executions but keeps the strategy in your list.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "strategy_id": {
+                        "type": "string",
+                        "description": "UUID of the strategy to kill"
+                    }
+                },
+                "required": ["strategy_id"]
             }),
         },
     ]
@@ -1542,6 +1556,119 @@ pub fn get_swarm_tools() -> Vec<McpTool> {
     ]
 }
 
+pub fn get_approval_tools() -> Vec<McpTool> {
+    vec![
+        McpTool {
+            name: "approval_list".to_string(),
+            description: "List all pending approvals that need review".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+        },
+        McpTool {
+            name: "approval_details".to_string(),
+            description: "Get details of a specific approval request".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "approval_id": {
+                        "type": "string",
+                        "description": "UUID of the approval"
+                    }
+                },
+                "required": ["approval_id"]
+            }),
+        },
+        McpTool {
+            name: "approval_approve".to_string(),
+            description: "Approve an execution request".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "approval_id": {
+                        "type": "string",
+                        "description": "UUID of the approval"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "description": "Optional approval notes"
+                    }
+                },
+                "required": ["approval_id"]
+            }),
+        },
+        McpTool {
+            name: "approval_reject".to_string(),
+            description: "Reject an execution request with a reason".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "approval_id": {
+                        "type": "string",
+                        "description": "UUID of the approval"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Reason for rejection"
+                    }
+                },
+                "required": ["approval_id", "reason"]
+            }),
+        },
+        McpTool {
+            name: "execution_config_get".to_string(),
+            description: "Get current execution configuration including auto-execution settings".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+        },
+        McpTool {
+            name: "execution_toggle".to_string(),
+            description: "Enable or disable auto-execution globally".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "enabled": {
+                        "type": "boolean",
+                        "description": "Whether to enable auto-execution"
+                    }
+                },
+                "required": ["enabled"]
+            }),
+        },
+        McpTool {
+            name: "approval_recommend".to_string(),
+            description: "Provide a recommendation for an approval (Hecate-only)".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "approval_id": {
+                        "type": "string",
+                        "description": "UUID of the approval"
+                    },
+                    "decision": {
+                        "type": "boolean",
+                        "description": "Recommendation (true = approve, false = reject)"
+                    },
+                    "reasoning": {
+                        "type": "string",
+                        "description": "Explanation for the recommendation"
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "description": "Confidence score (0.0-1.0)"
+                    }
+                },
+                "required": ["approval_id", "decision", "reasoning", "confidence"]
+            }),
+        },
+    ]
+}
+
 pub fn get_all_tools() -> Vec<McpTool> {
     let mut tools = Vec::new();
     tools.extend(get_scanner_tools());
@@ -1555,6 +1682,7 @@ pub fn get_all_tools() -> Vec<McpTool> {
     tools.extend(get_engram_tools());
     tools.extend(get_consensus_tools());
     tools.extend(get_swarm_tools());
+    tools.extend(get_approval_tools());
     tools
 }
 

@@ -1,6 +1,7 @@
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -16,19 +17,39 @@ lazy_static::lazy_static! {
     static ref ENGRAM_HARVESTER: std::sync::RwLock<Option<EngramHarvester>> = std::sync::RwLock::new(None);
 }
 
+#[derive(Debug, Serialize)]
+pub struct ErrorResponse {
+    pub error: String,
+    pub code: u16,
+}
+
+impl IntoResponse for ErrorResponse {
+    fn into_response(self) -> axum::response::Response {
+        let status = StatusCode::from_u16(self.code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        (status, Json(self)).into_response()
+    }
+}
+
+fn json_error(status: StatusCode, message: &str) -> ErrorResponse {
+    ErrorResponse {
+        error: message.to_string(),
+        code: status.as_u16(),
+    }
+}
+
 pub fn init_harvester(harvester: EngramHarvester) {
     let mut guard = ENGRAM_HARVESTER.write().unwrap();
     *guard = Some(harvester);
 }
 
-fn get_harvester_clone() -> Result<EngramHarvester, (StatusCode, String)> {
+fn get_harvester_clone() -> Result<EngramHarvester, ErrorResponse> {
     let guard = ENGRAM_HARVESTER
         .read()
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Lock poisoned".to_string()))?;
+        .map_err(|_| json_error(StatusCode::INTERNAL_SERVER_ERROR, "Lock poisoned"))?;
     guard
         .as_ref()
         .cloned()
-        .ok_or((StatusCode::SERVICE_UNAVAILABLE, "Harvester not initialized".to_string()))
+        .ok_or_else(|| json_error(StatusCode::SERVICE_UNAVAILABLE, "Harvester not initialized"))
 }
 
 #[derive(Debug, Serialize)]
@@ -91,7 +112,7 @@ pub struct HarvesterStatsResponse {
 pub async fn create_engram(
     State(_state): State<AppState>,
     Json(request): Json<CreateEngramRequest>,
-) -> Result<Json<EngramResponse>, (StatusCode, String)> {
+) -> Result<Json<EngramResponse>, ErrorResponse> {
     let harvester = get_harvester_clone()?;
 
     let mut engram = ArbEngram::new(
@@ -120,14 +141,14 @@ pub async fn create_engram(
             engram: Some(engram),
             message: None,
         })),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+        Err(e) => Err(json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string())),
     }
 }
 
 pub async fn get_engram(
     State(_state): State<AppState>,
     Path(key): Path<String>,
-) -> Result<Json<EngramResponse>, (StatusCode, String)> {
+) -> Result<Json<EngramResponse>, ErrorResponse> {
     let harvester = get_harvester_clone()?;
 
     match harvester.get_engram(&key).await {
@@ -136,14 +157,14 @@ pub async fn get_engram(
             engram: Some(engram),
             message: None,
         })),
-        None => Err((StatusCode::NOT_FOUND, format!("Engram not found: {}", key))),
+        None => Err(json_error(StatusCode::NOT_FOUND, &format!("Engram not found: {}", key))),
     }
 }
 
 pub async fn search_engrams(
     State(_state): State<AppState>,
     Query(query): Query<EngramQueryParams>,
-) -> Result<Json<EngramListResponse>, (StatusCode, String)> {
+) -> Result<Json<EngramListResponse>, ErrorResponse> {
     let harvester = get_harvester_clone()?;
 
     let engram_type = query.engram_type.and_then(|t| parse_engram_type(&t));
@@ -179,7 +200,7 @@ pub struct EngramQueryParams {
 pub async fn find_patterns(
     State(_state): State<AppState>,
     Json(request): Json<PatternMatchRequest>,
-) -> Result<Json<PatternMatchResponse>, (StatusCode, String)> {
+) -> Result<Json<PatternMatchResponse>, ErrorResponse> {
     let harvester = get_harvester_clone()?;
 
     let matches = harvester.find_matching_patterns(&request).await;
@@ -194,7 +215,7 @@ pub async fn find_patterns(
 pub async fn check_avoidance(
     State(_state): State<AppState>,
     Path((entity_type, address)): Path<(String, String)>,
-) -> Result<Json<AvoidanceCheckResponse>, (StatusCode, String)> {
+) -> Result<Json<AvoidanceCheckResponse>, ErrorResponse> {
     let harvester = get_harvester_clone()?;
 
     match harvester.should_avoid(&entity_type, &address).await {
@@ -216,11 +237,11 @@ pub async fn check_avoidance(
 pub async fn create_avoidance(
     State(_state): State<AppState>,
     Json(request): Json<CreateAvoidanceRequest>,
-) -> Result<Json<EngramResponse>, (StatusCode, String)> {
+) -> Result<Json<EngramResponse>, ErrorResponse> {
     let harvester = get_harvester_clone()?;
 
     let severity = parse_severity(&request.severity)
-        .ok_or((StatusCode::BAD_REQUEST, "Invalid severity".to_string()))?;
+        .ok_or_else(|| json_error(StatusCode::BAD_REQUEST, "Invalid severity"))?;
 
     match harvester
         .create_avoidance_engram(
@@ -241,14 +262,14 @@ pub async fn create_avoidance(
                 message: Some(format!("Created avoidance engram: {}", id)),
             }))
         }
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+        Err(e) => Err(json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string())),
     }
 }
 
 pub async fn create_pattern(
     State(_state): State<AppState>,
     Json(request): Json<CreatePatternRequest>,
-) -> Result<Json<EngramResponse>, (StatusCode, String)> {
+) -> Result<Json<EngramResponse>, ErrorResponse> {
     let harvester = get_harvester_clone()?;
 
     match harvester
@@ -267,14 +288,14 @@ pub async fn create_pattern(
             engram: None,
             message: Some(format!("Created pattern engram: {}", id)),
         })),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+        Err(e) => Err(json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string())),
     }
 }
 
 pub async fn delete_engram(
     State(_state): State<AppState>,
     Path(key): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
     let harvester = get_harvester_clone()?;
 
     if harvester.delete_engram(&key).await {
@@ -283,13 +304,13 @@ pub async fn delete_engram(
             "message": format!("Deleted engram: {}", key)
         })))
     } else {
-        Err((StatusCode::NOT_FOUND, format!("Engram not found: {}", key)))
+        Err(json_error(StatusCode::NOT_FOUND, &format!("Engram not found: {}", key)))
     }
 }
 
 pub async fn get_harvester_stats(
     State(_state): State<AppState>,
-) -> Result<Json<HarvesterStatsResponse>, (StatusCode, String)> {
+) -> Result<Json<HarvesterStatsResponse>, ErrorResponse> {
     let harvester = get_harvester_clone()?;
 
     let stats = harvester.get_stats().await;

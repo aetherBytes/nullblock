@@ -24,7 +24,8 @@ impl MoonshotVenue {
     }
 
     pub async fn get_token_info(&self, mint: &str) -> AppResult<MoonshotToken> {
-        let url = format!("{}/token/{}", self.base_url, mint);
+        // Use DexScreener to get token info
+        let url = format!("{}/tokens/{}", self.base_url, mint);
 
         let response = self
             .client
@@ -32,26 +33,32 @@ impl MoonshotVenue {
             .timeout(std::time::Duration::from_secs(10))
             .send()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("moonshot token request failed: {}", e)))?;
+            .map_err(|e| AppError::ExternalApi(format!("DexScreener token request failed: {}", e)))?;
 
         if !response.status().is_success() {
             return Err(AppError::ExternalApi(format!(
-                "moonshot returned error: {}",
+                "DexScreener returned error: {}",
                 response.status()
             )));
         }
 
-        response
+        let dex_response: DexScreenerTokenResponse = response
             .json()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse moonshot response: {}", e)))
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e)))?;
+
+        // Find a moonshot pair
+        let pair = dex_response.pairs
+            .into_iter()
+            .find(|p| p.dex_id == "moonshot")
+            .ok_or_else(|| AppError::NotFound(format!("No moonshot pair found for {}", mint)))?;
+
+        Ok(MoonshotToken::from_dexscreener(pair))
     }
 
     pub async fn get_new_tokens(&self, limit: u32) -> AppResult<Vec<MoonshotToken>> {
-        let url = format!(
-            "{}/tokens?sort=created&order=desc&limit={}",
-            self.base_url, limit
-        );
+        // Use DexScreener search for moonshot tokens
+        let url = format!("{}/search?q=moonshot", self.base_url);
 
         let response = self
             .client
@@ -59,21 +66,28 @@ impl MoonshotVenue {
             .timeout(std::time::Duration::from_secs(15))
             .send()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("moonshot list request failed: {}", e)))?;
+            .map_err(|e| AppError::ExternalApi(format!("DexScreener search failed: {}", e)))?;
 
         if !response.status().is_success() {
             return Err(AppError::ExternalApi(format!(
-                "moonshot list returned error: {}",
+                "DexScreener returned error: {}",
                 response.status()
             )));
         }
 
-        let list_response: MoonshotListResponse = response
+        let dex_response: DexScreenerSearchResponse = response
             .json()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse moonshot list: {}", e)))?;
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e)))?;
 
-        Ok(list_response.tokens)
+        let tokens: Vec<MoonshotToken> = dex_response.pairs
+            .into_iter()
+            .filter(|p| p.dex_id == "moonshot")
+            .take(limit as usize)
+            .map(MoonshotToken::from_dexscreener)
+            .collect();
+
+        Ok(tokens)
     }
 
     pub async fn get_graduation_progress(&self, mint: &str) -> AppResult<MoonshotGraduationProgress> {
@@ -394,7 +408,8 @@ impl MevVenue for MoonshotVenue {
     }
 
     async fn is_healthy(&self) -> bool {
-        let url = format!("{}/tokens?limit=1", self.base_url);
+        // Test DexScreener API with a moonshot search
+        let url = format!("{}/search?q=moonshot", self.base_url);
         self.client
             .get(&url)
             .timeout(std::time::Duration::from_secs(5))
@@ -405,7 +420,70 @@ impl MevVenue for MoonshotVenue {
     }
 }
 
+// DexScreener response types
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DexScreenerTokenResponse {
+    pub pairs: Vec<DexScreenerPair>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DexScreenerSearchResponse {
+    pub pairs: Vec<DexScreenerPair>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DexScreenerPair {
+    pub chain_id: String,
+    pub dex_id: String,
+    pub pair_address: String,
+    pub base_token: DexScreenerToken,
+    pub quote_token: DexScreenerToken,
+    pub price_native: Option<String>,
+    pub price_usd: Option<String>,
+    pub volume: Option<DexScreenerVolume>,
+    pub price_change: Option<DexScreenerPriceChange>,
+    pub fdv: Option<f64>,
+    pub market_cap: Option<f64>,
+    pub pair_created_at: Option<i64>,
+    pub moonshot: Option<DexScreenerMoonshotInfo>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DexScreenerToken {
+    pub address: String,
+    pub name: String,
+    pub symbol: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DexScreenerVolume {
+    pub h24: Option<f64>,
+    pub h6: Option<f64>,
+    pub h1: Option<f64>,
+    pub m5: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DexScreenerPriceChange {
+    pub h24: Option<f64>,
+    pub h6: Option<f64>,
+    pub h1: Option<f64>,
+    pub m5: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DexScreenerMoonshotInfo {
+    pub progress: Option<f64>,
+    pub creator: Option<String>,
+    pub curve_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MoonshotToken {
     pub mint: String,
@@ -430,6 +508,55 @@ pub struct MoonshotToken {
     #[serde(default = "default_curve_type")]
     pub curve_type: String,
     pub initial_price_sol: Option<f64>,
+}
+
+impl MoonshotToken {
+    pub fn from_dexscreener(pair: DexScreenerPair) -> Self {
+        let market_cap = pair.market_cap.or(pair.fdv).unwrap_or(0.0);
+        let volume_24h = pair.volume.as_ref().and_then(|v| v.h24).unwrap_or(0.0);
+        let price_change_24h = pair.price_change.as_ref().and_then(|p| p.h24);
+        let price_usd = pair.price_usd.as_ref()
+            .and_then(|p| p.parse::<f64>().ok())
+            .unwrap_or(0.0);
+        let price_native = pair.price_native.as_ref()
+            .and_then(|p| p.parse::<f64>().ok())
+            .unwrap_or(0.0);
+
+        let moonshot_info = pair.moonshot.as_ref();
+        let progress = moonshot_info.and_then(|m| m.progress).unwrap_or(0.0);
+        let curve_type = moonshot_info
+            .and_then(|m| m.curve_type.clone())
+            .unwrap_or_else(|| "linear".to_string());
+        let creator = moonshot_info
+            .and_then(|m| m.creator.clone())
+            .unwrap_or_default();
+
+        // Moonshot graduation is typically at 100% progress
+        let is_graduated = progress >= 100.0;
+
+        Self {
+            mint: pair.base_token.address,
+            name: pair.base_token.name,
+            symbol: pair.base_token.symbol,
+            description: None,
+            image_uri: None,
+            creator,
+            created_at: pair.pair_created_at.unwrap_or(0) / 1000,
+            market_cap_usd: market_cap,
+            price_sol: price_native,
+            price_usd,
+            sol_price_usd: Some(price_usd / price_native.max(0.0001)),
+            total_supply: 1_000_000_000.0,
+            circulating_supply: 1_000_000_000.0,
+            volume_24h_usd: volume_24h,
+            price_change_24h,
+            is_graduated,
+            dex_pool_address: if is_graduated { Some(pair.pair_address) } else { None },
+            graduation_market_cap: Some(500_000.0), // Typical moonshot threshold
+            curve_type,
+            initial_price_sol: None,
+        }
+    }
 }
 
 fn default_curve_type() -> String {

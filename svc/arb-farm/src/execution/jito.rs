@@ -171,6 +171,17 @@ impl JitoClient {
         })
     }
 
+    pub async fn send_bundle_fast(&self, transactions: &[Vec<u8>]) -> AppResult<String> {
+        let encoded: Vec<String> = transactions
+            .iter()
+            .map(|tx| bs58::encode(tx).into_string())
+            .collect();
+
+        let default_tip = 100_000;
+        let result = self.send_bundle(encoded, default_tip).await?;
+        Ok(result.id.to_string())
+    }
+
     pub async fn get_bundle_status(&self, bundle_id: &str) -> AppResult<BundleStatus> {
         let request = GetBundleStatusRequest {
             jsonrpc: "2.0".to_string(),

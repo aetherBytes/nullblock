@@ -29,7 +29,7 @@ impl Default for ArbFarmPolicy {
         Self {
             max_transaction_amount_lamports: 5_000_000_000, // 5 SOL
             daily_volume_limit_lamports: 25_000_000_000,    // 25 SOL
-            max_transactions_per_day: 100,
+            max_transactions_per_day: 10_000,
             require_simulation: true,
             allowed_programs: ALLOWED_PROGRAMS.iter().map(|s| s.to_string()).collect(),
             blocked_tokens: Vec::new(),
@@ -43,7 +43,7 @@ impl ArbFarmPolicy {
         Self {
             max_transaction_amount_lamports: 5_000_000_000, // 5 SOL
             daily_volume_limit_lamports: 25_000_000_000,    // 25 SOL
-            max_transactions_per_day: 200,
+            max_transactions_per_day: 10_000,
             require_simulation: true,
             allowed_programs: ALLOWED_PROGRAMS.iter().map(|s| s.to_string()).collect(),
             blocked_tokens: Vec::new(),
