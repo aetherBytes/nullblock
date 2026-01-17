@@ -468,6 +468,21 @@ impl PositionManager {
             .collect()
     }
 
+    pub async fn has_open_position_for_mint(&self, mint: &str) -> bool {
+        let positions = self.positions.read().await;
+        positions
+            .values()
+            .any(|p| p.status == PositionStatus::Open && p.token_mint == mint)
+    }
+
+    pub async fn get_open_position_for_mint(&self, mint: &str) -> Option<OpenPosition> {
+        let positions = self.positions.read().await;
+        positions
+            .values()
+            .find(|p| p.status == PositionStatus::Open && p.token_mint == mint)
+            .cloned()
+    }
+
     pub async fn get_pending_exit_signals(&self) -> Vec<ExitSignal> {
         let signals = self.exit_signals.read().await;
         signals.clone()

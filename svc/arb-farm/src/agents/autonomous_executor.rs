@@ -1,6 +1,6 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::agents::StrategyEngine;
 use crate::error::{AppError, AppResult};
 use crate::events::{edge as edge_topics, ArbEvent, AgentType, EventSource};
-use crate::execution::{CurveBuyParams, CurveTransactionBuilder};
+use crate::execution::{CurveBuyParams, CurveTransactionBuilder, ExitConfig, PositionManager};
 use crate::helius::HeliusSender;
 use crate::models::{Edge, EdgeStatus, Strategy};
 use crate::wallet::DevWalletSigner;
@@ -16,6 +16,9 @@ use crate::wallet::turnkey::SignRequest;
 
 const MAX_EXECUTION_RETRIES: u32 = 2;
 const EXECUTION_COOLDOWN_MS: u64 = 1000;
+const MINT_COOLDOWN_SECONDS: i64 = 300;
+const MIN_PROFIT_THRESHOLD_LAMPORTS: u64 = 500_000;
+const ESTIMATED_GAS_COST_LAMPORTS: u64 = 250_000;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutoExecutionRecord {
@@ -56,8 +59,10 @@ pub struct AutonomousExecutor {
     curve_builder: Arc<CurveTransactionBuilder>,
     dev_signer: Arc<DevWalletSigner>,
     helius_sender: Arc<HeliusSender>,
+    position_manager: Arc<PositionManager>,
     event_tx: broadcast::Sender<ArbEvent>,
     executions: Arc<RwLock<HashMap<Uuid, AutoExecutionRecord>>>,
+    recent_mints: Arc<RwLock<HashMap<String, DateTime<Utc>>>>,
     stats: Arc<RwLock<AutoExecutorStats>>,
     is_running: Arc<RwLock<bool>>,
     default_wallet: String,
@@ -70,6 +75,7 @@ impl AutonomousExecutor {
         curve_builder: Arc<CurveTransactionBuilder>,
         dev_signer: Arc<DevWalletSigner>,
         helius_sender: Arc<HeliusSender>,
+        position_manager: Arc<PositionManager>,
         event_tx: broadcast::Sender<ArbEvent>,
         default_wallet: String,
     ) -> Self {
@@ -78,8 +84,10 @@ impl AutonomousExecutor {
             curve_builder,
             dev_signer,
             helius_sender,
+            position_manager,
             event_tx,
             executions: Arc::new(RwLock::new(HashMap::new())),
+            recent_mints: Arc::new(RwLock::new(HashMap::new())),
             stats: Arc::new(RwLock::new(AutoExecutorStats {
                 executions_attempted: 0,
                 executions_succeeded: 0,
@@ -89,7 +97,7 @@ impl AutonomousExecutor {
             })),
             is_running: Arc::new(RwLock::new(false)),
             default_wallet,
-            default_slippage_bps: 150,
+            default_slippage_bps: 500,
         }
     }
 
@@ -114,8 +122,10 @@ impl AutonomousExecutor {
         let curve_builder = self.curve_builder.clone();
         let dev_signer = self.dev_signer.clone();
         let helius_sender = self.helius_sender.clone();
+        let position_manager = self.position_manager.clone();
         let event_tx = self.event_tx.clone();
         let executions = self.executions.clone();
+        let recent_mints = self.recent_mints.clone();
         let stats = self.stats.clone();
         let is_running = self.is_running.clone();
         let default_wallet = self.default_wallet.clone();
@@ -147,8 +157,10 @@ impl AutonomousExecutor {
                                 &curve_builder,
                                 &dev_signer,
                                 &helius_sender,
+                                &position_manager,
                                 &event_tx,
                                 &executions,
+                                &recent_mints,
                                 &stats,
                                 &default_wallet,
                                 default_slippage_bps,
@@ -189,8 +201,10 @@ impl AutonomousExecutor {
         curve_builder: &Arc<CurveTransactionBuilder>,
         dev_signer: &Arc<DevWalletSigner>,
         helius_sender: &Arc<HeliusSender>,
+        position_manager: &Arc<PositionManager>,
         event_tx: &broadcast::Sender<ArbEvent>,
         executions: &Arc<RwLock<HashMap<Uuid, AutoExecutionRecord>>>,
+        recent_mints: &Arc<RwLock<HashMap<String, DateTime<Utc>>>>,
         stats: &Arc<RwLock<AutoExecutorStats>>,
         default_wallet: &str,
         default_slippage_bps: u16,
@@ -263,13 +277,99 @@ impl AutonomousExecutor {
             }
         };
 
+        if position_manager.has_open_position_for_mint(&mint).await {
+            tracing::info!(
+                edge_id = %edge_id,
+                mint = %mint,
+                "⏭️ Skipping: already have open position for this mint"
+            );
+            return Ok(());
+        }
+
+        {
+            let now = Utc::now();
+            let cooldown = Duration::seconds(MINT_COOLDOWN_SECONDS);
+            let mut mints = recent_mints.write().await;
+
+            mints.retain(|_, last_exec| now.signed_duration_since(*last_exec) < cooldown);
+
+            if let Some(last_exec) = mints.get(&mint) {
+                let elapsed = now.signed_duration_since(*last_exec);
+                tracing::info!(
+                    edge_id = %edge_id,
+                    mint = %mint,
+                    elapsed_secs = elapsed.num_seconds(),
+                    cooldown_secs = MINT_COOLDOWN_SECONDS,
+                    "⏭️ Skipping: mint on cooldown ({}s remaining)",
+                    MINT_COOLDOWN_SECONDS - elapsed.num_seconds()
+                );
+                return Ok(());
+            }
+        }
+
         let sol_amount_lamports = (strategy.risk_params.max_position_sol * 1_000_000_000.0) as u64;
+
+        let curve_state = match curve_builder.get_curve_state(&mint).await {
+            Ok(state) => state,
+            Err(e) => {
+                tracing::warn!(
+                    edge_id = %edge_id,
+                    mint = %mint,
+                    error = %e,
+                    "⏭️ Skipping: failed to fetch curve state"
+                );
+                return Ok(());
+            }
+        };
+
+        if curve_state.is_complete {
+            tracing::info!(
+                edge_id = %edge_id,
+                mint = %mint,
+                "⏭️ Skipping: token has already graduated"
+            );
+            return Ok(());
+        }
+
+        let max_liquidity_contribution = 0.10;
+        let our_contribution = sol_amount_lamports as f64 / curve_state.real_sol_reserves as f64;
+        if our_contribution > max_liquidity_contribution {
+            tracing::info!(
+                edge_id = %edge_id,
+                mint = %mint,
+                our_sol = sol_amount_lamports as f64 / 1e9,
+                pool_sol = curve_state.real_sol_reserves as f64 / 1e9,
+                contribution_pct = our_contribution * 100.0,
+                max_pct = max_liquidity_contribution * 100.0,
+                "⏭️ Skipping: would contribute {:.1}% of liquidity (max {:.0}%)",
+                our_contribution * 100.0,
+                max_liquidity_contribution * 100.0
+            );
+            return Ok(());
+        }
+
+        let min_pool_sol = 5.0;
+        let pool_sol = curve_state.real_sol_reserves as f64 / 1e9;
+        if pool_sol < min_pool_sol {
+            tracing::info!(
+                edge_id = %edge_id,
+                mint = %mint,
+                pool_sol = pool_sol,
+                min_required = min_pool_sol,
+                "⏭️ Skipping: pool has only {:.2} SOL (min {:.0} SOL required)",
+                pool_sol,
+                min_pool_sol
+            );
+            return Ok(());
+        }
 
         tracing::info!(
             edge_id = %edge_id,
             strategy_id = %strategy_id,
             mint = %mint,
             sol_amount = sol_amount_lamports as f64 / 1e9,
+            pool_sol = pool_sol,
+            contribution_pct = our_contribution * 100.0,
             "🚀 Auto-executing curve buy"
         );
 
@@ -359,6 +459,41 @@ impl AutonomousExecutor {
                         "significance": "critical",
                     }),
                 ));
+
+                {
+                    let mut mints = recent_mints.write().await;
+                    mints.insert(mint.clone(), Utc::now());
+                }
+
+                let tokens_received = tokens_out.unwrap_or(0);
+                if tokens_received > 0 {
+                    let entry_price = sol_amount_lamports as f64 / tokens_received as f64;
+                    let exit_config = ExitConfig::default();
+
+                    if let Err(e) = position_manager.open_position(
+                        edge_id,
+                        strategy_id,
+                        mint.clone(),
+                        None,
+                        sol_amount_lamports as f64 / 1e9,
+                        tokens_received as f64,
+                        entry_price,
+                        exit_config,
+                    ).await {
+                        tracing::warn!(
+                            edge_id = %edge_id,
+                            error = %e,
+                            "Failed to create position tracking (buy succeeded)"
+                        );
+                    } else {
+                        tracing::info!(
+                            edge_id = %edge_id,
+                            mint = %mint,
+                            tokens = tokens_received,
+                            "📊 Position opened for tracking"
+                        );
+                    }
+                }
 
                 Ok(())
             }
@@ -460,6 +595,7 @@ pub fn spawn_autonomous_executor(
     curve_builder: Arc<CurveTransactionBuilder>,
     dev_signer: Arc<DevWalletSigner>,
     helius_sender: Arc<HeliusSender>,
+    position_manager: Arc<PositionManager>,
     event_tx: broadcast::Sender<ArbEvent>,
     default_wallet: String,
 ) -> Arc<AutonomousExecutor> {
@@ -468,6 +604,7 @@ pub fn spawn_autonomous_executor(
         curve_builder,
         dev_signer,
         helius_sender,
+        position_manager,
         event_tx,
         default_wallet,
     ));

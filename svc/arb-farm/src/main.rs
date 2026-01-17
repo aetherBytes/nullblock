@@ -371,6 +371,7 @@ fn create_router(state: server::AppState) -> Router {
         .route("/helius/priority-fees/cached", get(helius_handlers::get_cached_priority_fees))
         .route("/helius/sender/stats", get(helius_handlers::get_sender_stats))
         .route("/helius/sender/ping", post(helius_handlers::ping_sender))
+        .route("/helius/sender/send", post(helius_handlers::send_transaction))
         .route("/helius/das/lookup", post(helius_handlers::das_lookup))
         .route("/helius/das/assets", get(helius_handlers::das_assets_by_owner))
         .route("/helius/config", get(helius_handlers::get_helius_config))
