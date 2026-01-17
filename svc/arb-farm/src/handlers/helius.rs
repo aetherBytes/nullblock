@@ -230,3 +230,42 @@ pub async fn update_helius_config(
 
     Ok(Json(current))
 }
+
+#[derive(Debug, Deserialize)]
+pub struct SendTransactionRequest {
+    pub signed_transaction_base64: String,
+    #[serde(default)]
+    pub skip_preflight: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SendTransactionResponse {
+    pub success: bool,
+    pub signature: Option<String>,
+    pub error: Option<String>,
+}
+
+pub async fn send_transaction(
+    State(state): State<AppState>,
+    Json(request): Json<SendTransactionRequest>,
+) -> AppResult<Json<SendTransactionResponse>> {
+    match state.helius_sender.send_transaction(
+        &request.signed_transaction_base64,
+        request.skip_preflight,
+    ).await {
+        Ok(signature) => {
+            Ok(Json(SendTransactionResponse {
+                success: true,
+                signature: Some(signature),
+                error: None,
+            }))
+        }
+        Err(e) => {
+            Ok(Json(SendTransactionResponse {
+                success: false,
+                signature: None,
+                error: Some(e.to_string()),
+            }))
+        }
+    }
+}

@@ -306,7 +306,7 @@ impl AppState {
             "agent_directed",  // Manual approval required by default
             RiskParams {
                 // Moderate risk profile by default
-                max_position_sol: config.default_max_position_sol.min(0.5), // Cap at 0.5 SOL
+                max_position_sol: config.default_max_position_sol.min(0.01), // Cap at 0.01 SOL for testing
                 daily_loss_limit_sol: 1.0,              // Max 1 SOL loss per day
                 min_profit_bps: 50,                     // Require 0.5% min profit
                 max_slippage_bps: 150,                  // 1.5% max slippage
@@ -570,6 +570,7 @@ impl AppState {
             curve_builder.clone(),
             dev_signer.clone(),
             helius_sender.clone(),
+            position_manager.clone(),
             event_tx.clone(),
             default_wallet_for_executor,
         );

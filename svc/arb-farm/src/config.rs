@@ -133,7 +133,7 @@ impl Config {
             default_max_position_sol: env::var("DEFAULT_MAX_POSITION_SOL")
                 .ok()
                 .and_then(|v| v.parse().ok())
-                .unwrap_or(5.0),
+                .unwrap_or(0.01),
             default_daily_loss_limit_sol: env::var("DEFAULT_DAILY_LOSS_LIMIT_SOL")
                 .ok()
                 .and_then(|v| v.parse().ok())
