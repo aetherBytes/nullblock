@@ -355,6 +355,56 @@ impl EngramHarvester {
             false
         }
     }
+
+    pub async fn save_strategies(&self, strategies: &[crate::models::Strategy]) -> AppResult<usize> {
+        let mut count = 0;
+
+        for strategy in strategies {
+            let key = format!("arb.strategy.{}", strategy.id);
+
+            let content = serde_json::json!({
+                "id": strategy.id,
+                "name": strategy.name,
+                "strategy_type": strategy.strategy_type,
+                "venue_types": strategy.venue_types,
+                "execution_mode": strategy.execution_mode,
+                "risk_params": strategy.risk_params,
+                "is_active": strategy.is_active,
+                "created_at": strategy.created_at,
+                "updated_at": strategy.updated_at,
+            });
+
+            let mut metadata = EngramMetadata::default();
+            metadata.tags = vec![
+                format!("strategy_type:{}", strategy.strategy_type),
+                format!("execution_mode:{}", strategy.execution_mode),
+            ];
+
+            let engram = ArbEngram::new(
+                key,
+                EngramType::Strategy,
+                content,
+                EngramSource::Agent("strategy_engine".to_string()),
+            )
+            .with_confidence(0.9)
+            .with_metadata(metadata);
+
+            self.store_engram(engram).await?;
+            count += 1;
+        }
+
+        let _ = self.event_tx.send(ArbEvent::new(
+            "strategies_saved_to_engrams",
+            EventSource::Agent(AgentType::EngramHarvester),
+            engram_topics::CREATED,
+            serde_json::json!({
+                "count": count,
+                "saved_at": chrono::Utc::now(),
+            }),
+        ));
+
+        Ok(count)
+    }
 }
 
 fn calculate_pattern_confidence(success_rate: f64, sample_count: u32) -> f64 {

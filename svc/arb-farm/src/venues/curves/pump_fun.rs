@@ -24,7 +24,8 @@ impl PumpFunVenue {
     }
 
     pub async fn get_token_info(&self, mint: &str) -> AppResult<PumpFunToken> {
-        let url = format!("{}/coins/{}", self.base_url, mint);
+        // Use DexScreener to get token info
+        let url = format!("{}/tokens/{}", self.base_url, mint);
 
         let response = self
             .client
@@ -32,24 +33,32 @@ impl PumpFunVenue {
             .timeout(std::time::Duration::from_secs(10))
             .send()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("pump.fun token request failed: {}", e)))?;
+            .map_err(|e| AppError::ExternalApi(format!("DexScreener token request failed: {}", e)))?;
 
         if !response.status().is_success() {
             return Err(AppError::ExternalApi(format!(
-                "pump.fun returned error: {}",
+                "DexScreener returned error: {}",
                 response.status()
             )));
         }
 
-        response
+        let dex_response: DexScreenerTokenResponse = response
             .json()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse pump.fun response: {}", e)))
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e)))?;
+
+        // Find the pump.fun pair
+        let pair = dex_response.pairs
+            .into_iter()
+            .find(|p| p.dex_id == "pumpfun")
+            .ok_or_else(|| AppError::NotFound(format!("No pump.fun pair found for {}", mint)))?;
+
+        Ok(PumpFunToken::from_dexscreener(pair))
     }
 
     pub async fn get_new_tokens(&self, limit: u32) -> AppResult<Vec<PumpFunToken>> {
-        let url = format!("{}/coins?offset=0&limit={}&sort=created_timestamp&order=DESC",
-            self.base_url, limit);
+        // Use DexScreener search to get pump.fun tokens
+        let url = format!("{}/search?q=pumpfun", self.base_url);
 
         let response = self
             .client
@@ -57,19 +66,28 @@ impl PumpFunVenue {
             .timeout(std::time::Duration::from_secs(15))
             .send()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("pump.fun list request failed: {}", e)))?;
+            .map_err(|e| AppError::ExternalApi(format!("DexScreener search failed: {}", e)))?;
 
         if !response.status().is_success() {
             return Err(AppError::ExternalApi(format!(
-                "pump.fun list returned error: {}",
+                "DexScreener returned error: {}",
                 response.status()
             )));
         }
 
-        response
+        let dex_response: DexScreenerSearchResponse = response
             .json()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse pump.fun list: {}", e)))
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e)))?;
+
+        let tokens: Vec<PumpFunToken> = dex_response.pairs
+            .into_iter()
+            .filter(|p| p.dex_id == "pumpfun" && p.chain_id == "solana")
+            .take(limit as usize)
+            .map(PumpFunToken::from_dexscreener)
+            .collect();
+
+        Ok(tokens)
     }
 
     pub async fn get_graduation_progress(&self, mint: &str) -> AppResult<GraduationProgress> {
@@ -212,8 +230,8 @@ impl PumpFunVenue {
 
             let progress = (token.market_cap / token.graduation_threshold.unwrap_or(69000.0)) * 100.0;
 
-            // Look for tokens approaching graduation (70-95% progress)
-            if progress >= 70.0 && progress < 95.0 {
+            // Look for tokens approaching graduation (50-95% progress)
+            if progress >= 50.0 && progress < 95.0 {
                 let significance = if progress >= 85.0 {
                     Significance::High
                 } else {
@@ -330,7 +348,8 @@ impl MevVenue for PumpFunVenue {
     }
 
     async fn is_healthy(&self) -> bool {
-        let url = format!("{}/coins?limit=1", self.base_url);
+        // Test DexScreener API with a pump.fun search
+        let url = format!("{}/search?q=pumpfun", self.base_url);
         self.client
             .get(&url)
             .timeout(std::time::Duration::from_secs(5))
@@ -341,7 +360,61 @@ impl MevVenue for PumpFunVenue {
     }
 }
 
+// DexScreener response types
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DexScreenerTokenResponse {
+    pub pairs: Vec<DexScreenerPair>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DexScreenerSearchResponse {
+    pub pairs: Vec<DexScreenerPair>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DexScreenerPair {
+    pub chain_id: String,
+    pub dex_id: String,
+    pub pair_address: String,
+    pub base_token: DexScreenerToken,
+    pub quote_token: DexScreenerToken,
+    pub price_native: Option<String>,
+    pub price_usd: Option<String>,
+    pub volume: Option<DexScreenerVolume>,
+    pub price_change: Option<DexScreenerPriceChange>,
+    pub fdv: Option<f64>,
+    pub market_cap: Option<f64>,
+    pub pair_created_at: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DexScreenerToken {
+    pub address: String,
+    pub name: String,
+    pub symbol: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DexScreenerVolume {
+    pub h24: Option<f64>,
+    pub h6: Option<f64>,
+    pub h1: Option<f64>,
+    pub m5: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DexScreenerPriceChange {
+    pub h24: Option<f64>,
+    pub h6: Option<f64>,
+    pub h1: Option<f64>,
+    pub m5: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PumpFunToken {
     pub mint: String,
@@ -359,6 +432,35 @@ pub struct PumpFunToken {
     pub bonding_curve_complete: bool,
     pub raydium_pool: Option<String>,
     pub graduation_threshold: Option<f64>,
+}
+
+impl PumpFunToken {
+    pub fn from_dexscreener(pair: DexScreenerPair) -> Self {
+        let market_cap = pair.market_cap.or(pair.fdv).unwrap_or(0.0);
+        let volume_24h = pair.volume.as_ref().and_then(|v| v.h24).unwrap_or(0.0);
+        let price_change_24h = pair.price_change.as_ref().and_then(|p| p.h24);
+
+        // pump.fun graduation threshold is typically ~$69k (85 SOL bonding curve)
+        let graduation_threshold = 69000.0;
+        let bonding_curve_complete = market_cap >= graduation_threshold;
+
+        Self {
+            mint: pair.base_token.address,
+            name: pair.base_token.name,
+            symbol: pair.base_token.symbol,
+            description: None,
+            image_uri: None,
+            creator: String::new(),
+            created_timestamp: pair.pair_created_at.unwrap_or(0) / 1000, // Convert from ms
+            market_cap,
+            total_supply: 1_000_000_000.0, // pump.fun default
+            volume_24h,
+            price_change_24h,
+            bonding_curve_complete,
+            raydium_pool: if bonding_curve_complete { Some(pair.pair_address.clone()) } else { None },
+            graduation_threshold: Some(graduation_threshold),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

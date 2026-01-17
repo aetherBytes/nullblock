@@ -1,6 +1,7 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -15,6 +16,26 @@ lazy_static::lazy_static! {
     static ref CIRCUIT_BREAKERS: std::sync::RwLock<Option<CircuitBreakerRegistry>> = std::sync::RwLock::new(None);
 }
 
+#[derive(Debug, Serialize)]
+pub struct ErrorResponse {
+    pub error: String,
+    pub code: u16,
+}
+
+impl IntoResponse for ErrorResponse {
+    fn into_response(self) -> axum::response::Response {
+        let status = StatusCode::from_u16(self.code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        (status, Json(self)).into_response()
+    }
+}
+
+fn json_error(status: StatusCode, message: &str) -> ErrorResponse {
+    ErrorResponse {
+        error: message.to_string(),
+        code: status.as_u16(),
+    }
+}
+
 pub fn init_overseer(overseer: ResilienceOverseer) {
     let mut guard = OVERSEER.write().unwrap();
     *guard = Some(overseer);
@@ -25,24 +46,24 @@ pub fn init_circuit_breakers(registry: CircuitBreakerRegistry) {
     *guard = Some(registry);
 }
 
-fn get_overseer_clone() -> Result<ResilienceOverseer, (StatusCode, String)> {
+fn get_overseer_clone() -> Result<ResilienceOverseer, ErrorResponse> {
     let guard = OVERSEER
         .read()
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Lock poisoned".to_string()))?;
+        .map_err(|_| json_error(StatusCode::INTERNAL_SERVER_ERROR, "Lock poisoned"))?;
     guard
         .as_ref()
         .cloned()
-        .ok_or((StatusCode::SERVICE_UNAVAILABLE, "Overseer not initialized".to_string()))
+        .ok_or_else(|| json_error(StatusCode::SERVICE_UNAVAILABLE, "Overseer not initialized"))
 }
 
-fn get_circuit_breakers_clone() -> Result<CircuitBreakerRegistry, (StatusCode, String)> {
+fn get_circuit_breakers_clone() -> Result<CircuitBreakerRegistry, ErrorResponse> {
     let guard = CIRCUIT_BREAKERS
         .read()
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Lock poisoned".to_string()))?;
+        .map_err(|_| json_error(StatusCode::INTERNAL_SERVER_ERROR, "Lock poisoned"))?;
     guard
         .as_ref()
         .cloned()
-        .ok_or((StatusCode::SERVICE_UNAVAILABLE, "Circuit breakers not initialized".to_string()))
+        .ok_or_else(|| json_error(StatusCode::SERVICE_UNAVAILABLE, "Circuit breakers not initialized"))
 }
 
 #[derive(Debug, Serialize)]
@@ -112,7 +133,7 @@ pub struct SwarmStatusResponse {
 
 pub async fn get_swarm_status(
     State(_state): State<AppState>,
-) -> Result<Json<SwarmStatusResponse>, (StatusCode, String)> {
+) -> Result<Json<SwarmStatusResponse>, ErrorResponse> {
     let overseer = get_overseer_clone()?;
     let circuit_breakers = get_circuit_breakers_clone().ok();
 
@@ -141,7 +162,7 @@ pub async fn get_swarm_status(
 
 pub async fn get_swarm_health(
     State(_state): State<AppState>,
-) -> Result<Json<SwarmHealthResponse>, (StatusCode, String)> {
+) -> Result<Json<SwarmHealthResponse>, ErrorResponse> {
     let overseer = get_overseer_clone()?;
     let health = overseer.get_swarm_health().await;
     Ok(Json(health.into()))
@@ -149,7 +170,7 @@ pub async fn get_swarm_health(
 
 pub async fn list_agents(
     State(_state): State<AppState>,
-) -> Result<Json<Vec<AgentStatusResponse>>, (StatusCode, String)> {
+) -> Result<Json<Vec<AgentStatusResponse>>, ErrorResponse> {
     let overseer = get_overseer_clone()?;
     let agents = overseer.get_all_agent_statuses().await;
     Ok(Json(agents.into_iter().map(Into::into).collect()))
@@ -158,21 +179,21 @@ pub async fn list_agents(
 pub async fn get_agent_status(
     State(_state): State<AppState>,
     Path(agent_id): Path<String>,
-) -> Result<Json<AgentStatusResponse>, (StatusCode, String)> {
+) -> Result<Json<AgentStatusResponse>, ErrorResponse> {
     let overseer = get_overseer_clone()?;
 
     let id = Uuid::parse_str(&agent_id)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid agent ID".to_string()))?;
+        .map_err(|_| json_error(StatusCode::BAD_REQUEST, "Invalid agent ID"))?;
 
     match overseer.get_agent_status(id).await {
         Some(status) => Ok(Json(status.into())),
-        None => Err((StatusCode::NOT_FOUND, format!("Agent not found: {}", agent_id))),
+        None => Err(json_error(StatusCode::NOT_FOUND, &format!("Agent not found: {}", agent_id))),
     }
 }
 
 pub async fn pause_swarm(
     State(_state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
     let overseer = get_overseer_clone()?;
     overseer.pause_swarm().await;
 
@@ -184,7 +205,7 @@ pub async fn pause_swarm(
 
 pub async fn resume_swarm(
     State(_state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
     let overseer = get_overseer_clone()?;
     overseer.resume_swarm().await;
 
@@ -202,11 +223,11 @@ pub struct HeartbeatRequest {
 pub async fn record_heartbeat(
     State(_state): State<AppState>,
     Json(request): Json<HeartbeatRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
     let overseer = get_overseer_clone()?;
 
     let id = Uuid::parse_str(&request.agent_id)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid agent ID".to_string()))?;
+        .map_err(|_| json_error(StatusCode::BAD_REQUEST, "Invalid agent ID"))?;
 
     overseer.record_heartbeat(id).await;
 
@@ -225,11 +246,11 @@ pub struct ReportFailureRequest {
 pub async fn report_failure(
     State(_state): State<AppState>,
     Json(request): Json<ReportFailureRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
     let overseer = get_overseer_clone()?;
 
     let id = Uuid::parse_str(&request.agent_id)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid agent ID".to_string()))?;
+        .map_err(|_| json_error(StatusCode::BAD_REQUEST, "Invalid agent ID"))?;
 
     overseer.record_agent_failure(id, &request.error).await;
 
@@ -241,7 +262,7 @@ pub async fn report_failure(
 
 pub async fn list_circuit_breakers(
     State(_state): State<AppState>,
-) -> Result<Json<Vec<CircuitBreakerStatusResponse>>, (StatusCode, String)> {
+) -> Result<Json<Vec<CircuitBreakerStatusResponse>>, ErrorResponse> {
     let registry = get_circuit_breakers_clone()?;
     let states = registry.get_all_states().await;
 
@@ -259,7 +280,7 @@ pub async fn list_circuit_breakers(
 pub async fn reset_circuit_breaker(
     State(_state): State<AppState>,
     Path(name): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
     let registry = get_circuit_breakers_clone()?;
 
     if let Some(breaker) = registry.get(&name).await {
@@ -269,13 +290,13 @@ pub async fn reset_circuit_breaker(
             "message": format!("Circuit breaker '{}' reset", name)
         })))
     } else {
-        Err((StatusCode::NOT_FOUND, format!("Circuit breaker not found: {}", name)))
+        Err(json_error(StatusCode::NOT_FOUND, &format!("Circuit breaker not found: {}", name)))
     }
 }
 
 pub async fn reset_all_circuit_breakers(
     State(_state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+) -> Result<Json<serde_json::Value>, ErrorResponse> {
     let registry = get_circuit_breakers_clone()?;
     registry.reset_all().await;
 

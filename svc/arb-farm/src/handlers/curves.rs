@@ -4,13 +4,19 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::agents::{
+    DetailedCurveMetrics, OpportunityScore, Recommendation, ScoringWeights, ScoringThresholds,
+};
 use crate::error::{AppError, AppResult};
+use crate::execution::{CurveBuildResult, CurveBuyParams, CurveSellParams, SimulatedTrade};
 use crate::server::AppState;
-use crate::venues::MevVenue;
 use crate::venues::curves::{
+    derive_pump_fun_bonding_curve, GraduationStatus, OnChainCurveState, RaydiumPoolInfo,
+    HolderDistribution,
     moonshot::{MoonshotGraduationProgress, MoonshotHolderStats, MoonshotQuote, CurveParameters},
     pump_fun::{GraduationProgress, HolderStats, PumpFunQuote},
 };
+use crate::venues::MevVenue;
 
 #[derive(Debug, Deserialize)]
 pub struct GetProgressQuery {
@@ -309,17 +315,29 @@ pub async fn detect_cross_venue_arb(
 }
 
 #[derive(Debug, Serialize)]
-pub struct GraduationCandidate {
+pub struct CurveTokenInfo {
     pub mint: String,
     pub name: String,
     pub symbol: String,
     pub venue: String,
-    pub progress_percent: f64,
-    pub market_cap: f64,
-    pub graduation_threshold: f64,
-    pub estimated_blocks_to_graduation: u64,
-    pub volume_24h: f64,
-    pub volume_velocity: f64,
+    pub creator: String,
+    pub graduation_progress: f64,
+    pub current_price_sol: f64,
+    pub market_cap_sol: f64,
+    pub volume_24h_sol: f64,
+    pub holder_count: u32,
+    pub is_graduated: bool,
+    pub raydium_pool: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GraduationCandidate {
+    pub token: CurveTokenInfo,
+    pub graduation_eta_minutes: Option<u64>,
+    pub momentum_score: u32,
+    pub risk_score: u32,
 }
 
 #[derive(Debug, Serialize)]
@@ -346,6 +364,7 @@ pub async fn list_graduation_candidates(
     let venue = query.venue.as_deref();
 
     let mut candidates = Vec::new();
+    let now = chrono::Utc::now();
 
     if venue.is_none() || venue == Some("pump_fun") || venue == Some("pumpfun") {
         let tokens = state.pump_fun_venue.get_new_tokens(100).await?;
@@ -361,23 +380,51 @@ pub async fn list_graduation_candidates(
             if progress >= min_progress && progress <= max_progress {
                 let velocity = token.volume_24h / 24.0;
                 let remaining_mc = threshold - token.market_cap;
-                let estimated_blocks = if velocity > 0.0 {
-                    ((remaining_mc / velocity) * 600.0) as u64
+                let eta_minutes = if velocity > 0.0 {
+                    Some((remaining_mc / velocity * 60.0) as u64)
                 } else {
-                    u64::MAX
+                    None
                 };
 
+                // Calculate price from market cap and total supply
+                let price_sol = if token.total_supply > 0.0 {
+                    token.market_cap / token.total_supply / 200.0 // Approximate USD to SOL
+                } else {
+                    0.0
+                };
+
+                // Estimate holder count from market cap and volume (heuristic)
+                let estimated_holders = estimate_holder_count(token.market_cap, token.volume_24h);
+
+                // Calculate scores using available data
+                let momentum_score = calculate_momentum_score(progress, velocity, estimated_holders);
+                let risk_score = calculate_risk_score_from_volume(token.volume_24h, token.market_cap, estimated_holders);
+
+                // Convert timestamp to RFC3339
+                let created_at = chrono::DateTime::from_timestamp(token.created_timestamp, 0)
+                    .map(|t| t.to_rfc3339())
+                    .unwrap_or_else(|| now.to_rfc3339());
+
                 candidates.push(GraduationCandidate {
-                    mint: token.mint,
-                    name: token.name,
-                    symbol: token.symbol,
-                    venue: "pump_fun".to_string(),
-                    progress_percent: progress,
-                    market_cap: token.market_cap,
-                    graduation_threshold: threshold,
-                    estimated_blocks_to_graduation: estimated_blocks,
-                    volume_24h: token.volume_24h,
-                    volume_velocity: velocity,
+                    token: CurveTokenInfo {
+                        mint: token.mint,
+                        name: token.name,
+                        symbol: token.symbol,
+                        venue: "pump_fun".to_string(),
+                        creator: token.creator,
+                        graduation_progress: progress,
+                        current_price_sol: price_sol,
+                        market_cap_sol: token.market_cap / 200.0,
+                        volume_24h_sol: token.volume_24h / 200.0,
+                        holder_count: estimated_holders,
+                        is_graduated: false,
+                        raydium_pool: token.raydium_pool,
+                        created_at,
+                        updated_at: now.to_rfc3339(),
+                    },
+                    graduation_eta_minutes: eta_minutes,
+                    momentum_score,
+                    risk_score,
                 });
             }
         }
@@ -397,31 +444,48 @@ pub async fn list_graduation_candidates(
             if progress >= min_progress && progress <= max_progress {
                 let velocity = token.volume_24h_usd / 24.0;
                 let remaining_mc = threshold - token.market_cap_usd;
-                let estimated_blocks = if velocity > 0.0 {
-                    ((remaining_mc / velocity) * 600.0) as u64
+                let eta_minutes = if velocity > 0.0 {
+                    Some((remaining_mc / velocity * 60.0) as u64)
                 } else {
-                    u64::MAX
+                    None
                 };
 
+                let estimated_holders = estimate_holder_count(token.market_cap_usd, token.volume_24h_usd);
+                let momentum_score = calculate_momentum_score(progress, velocity, estimated_holders);
+                let risk_score = calculate_risk_score_from_volume(token.volume_24h_usd, token.market_cap_usd, estimated_holders);
+
+                let created_at = chrono::DateTime::from_timestamp(token.created_at, 0)
+                    .map(|t| t.to_rfc3339())
+                    .unwrap_or_else(|| now.to_rfc3339());
+
                 candidates.push(GraduationCandidate {
-                    mint: token.mint,
-                    name: token.name,
-                    symbol: token.symbol,
-                    venue: "moonshot".to_string(),
-                    progress_percent: progress,
-                    market_cap: token.market_cap_usd,
-                    graduation_threshold: threshold,
-                    estimated_blocks_to_graduation: estimated_blocks,
-                    volume_24h: token.volume_24h_usd,
-                    volume_velocity: velocity,
+                    token: CurveTokenInfo {
+                        mint: token.mint,
+                        name: token.name,
+                        symbol: token.symbol,
+                        venue: "moonshot".to_string(),
+                        creator: token.creator,
+                        graduation_progress: progress,
+                        current_price_sol: token.price_sol,
+                        market_cap_sol: token.market_cap_usd / 200.0,
+                        volume_24h_sol: token.volume_24h_usd / 200.0,
+                        holder_count: estimated_holders,
+                        is_graduated: false,
+                        raydium_pool: token.dex_pool_address,
+                        created_at,
+                        updated_at: now.to_rfc3339(),
+                    },
+                    graduation_eta_minutes: eta_minutes,
+                    momentum_score,
+                    risk_score,
                 });
             }
         }
     }
 
     candidates.sort_by(|a, b| {
-        b.progress_percent
-            .partial_cmp(&a.progress_percent)
+        b.token.graduation_progress
+            .partial_cmp(&a.token.graduation_progress)
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
@@ -429,6 +493,53 @@ pub async fn list_graduation_candidates(
     let total = candidates.len();
 
     Ok(Json(GraduationCandidatesResponse { candidates, total }))
+}
+
+fn estimate_holder_count(market_cap: f64, volume_24h: f64) -> u32 {
+    // Heuristic: tokens with higher market cap and volume tend to have more holders
+    // This is a rough estimate until we integrate holder data APIs
+    let mc_factor = (market_cap / 1000.0).sqrt().min(500.0);
+    let vol_factor = (volume_24h / 100.0).sqrt().min(200.0);
+    (mc_factor + vol_factor).max(10.0) as u32
+}
+
+fn calculate_momentum_score(progress: f64, volume_velocity: f64, holder_count: u32) -> u32 {
+    let mut score: f64 = 0.0;
+
+    // Progress contributes up to 40 points (higher progress = higher momentum)
+    score += (progress / 100.0) * 40.0;
+
+    // Volume velocity contributes up to 35 points
+    let velocity_factor = (volume_velocity / 1000.0).min(1.0);
+    score += velocity_factor * 35.0;
+
+    // Holder count contributes up to 25 points
+    let holder_factor = (holder_count as f64 / 500.0).min(1.0);
+    score += holder_factor * 25.0;
+
+    score.round().min(100.0) as u32
+}
+
+fn calculate_risk_score_from_volume(volume_24h: f64, market_cap: f64, holder_count: u32) -> u32 {
+    let mut risk: f64 = 20.0; // Base risk for bonding curves
+
+    // Low volume relative to market cap = higher risk
+    let volume_ratio = if market_cap > 0.0 { volume_24h / market_cap } else { 0.0 };
+    if volume_ratio < 0.1 {
+        risk += 20.0 * (1.0 - volume_ratio / 0.1);
+    }
+
+    // Low holder count = higher risk
+    if holder_count < 50 {
+        risk += 30.0 * (1.0 - (holder_count as f64 / 50.0));
+    }
+
+    // Very new tokens (low market cap) have higher risk
+    if market_cap < 10000.0 {
+        risk += 15.0 * (1.0 - market_cap / 10000.0);
+    }
+
+    risk.min(100.0).round() as u32
 }
 
 #[derive(Debug, Serialize)]
@@ -463,6 +574,655 @@ pub async fn get_venues_health(
             name: "moonshot".to_string(),
             is_healthy: moonshot_healthy,
             last_check: now,
+        },
+    }))
+}
+
+#[derive(Debug, Serialize)]
+pub struct OnChainStateResponse {
+    pub mint: String,
+    pub bonding_curve_address: String,
+    pub associated_bonding_curve: String,
+    pub virtual_sol_reserves: u64,
+    pub virtual_token_reserves: u64,
+    pub real_sol_reserves: u64,
+    pub real_token_reserves: u64,
+    pub graduation_progress_percent: f64,
+    pub is_complete: bool,
+    pub current_price_sol: f64,
+    pub market_cap_sol: f64,
+}
+
+pub async fn get_on_chain_state(
+    State(state): State<AppState>,
+    Path(mint): Path<String>,
+) -> AppResult<Json<OnChainStateResponse>> {
+    let curve_state = state.curve_builder.get_curve_state(&mint).await?;
+
+    let graduation_progress = curve_state.to_params().graduation_progress();
+    let price = curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64;
+    let market_cap = price * curve_state.token_total_supply as f64;
+
+    Ok(Json(OnChainStateResponse {
+        mint: curve_state.mint,
+        bonding_curve_address: curve_state.bonding_curve_address,
+        associated_bonding_curve: curve_state.associated_bonding_curve,
+        virtual_sol_reserves: curve_state.virtual_sol_reserves,
+        virtual_token_reserves: curve_state.virtual_token_reserves,
+        real_sol_reserves: curve_state.real_sol_reserves,
+        real_token_reserves: curve_state.real_token_reserves,
+        graduation_progress_percent: graduation_progress,
+        is_complete: curve_state.is_complete,
+        current_price_sol: price,
+        market_cap_sol: market_cap / 1_000_000_000.0,
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CurveBuyRequest {
+    pub sol_amount: f64,
+    pub slippage_bps: Option<u16>,
+    pub user_wallet: String,
+    pub simulate: Option<bool>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CurveBuyResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_base64: Option<String>,
+    pub expected_tokens_out: u64,
+    pub min_tokens_out: u64,
+    pub price_impact_percent: f64,
+    pub fee_lamports: u64,
+    pub simulated: bool,
+}
+
+pub async fn buy_curve_token(
+    State(state): State<AppState>,
+    Path(mint): Path<String>,
+    Json(request): Json<CurveBuyRequest>,
+) -> AppResult<Json<CurveBuyResponse>> {
+    let sol_lamports = (request.sol_amount * 1_000_000_000.0) as u64;
+    let slippage = request.slippage_bps.unwrap_or(100);
+    let simulate_only = request.simulate.unwrap_or(false);
+
+    let params = CurveBuyParams {
+        mint: mint.clone(),
+        sol_amount_lamports: sol_lamports,
+        slippage_bps: slippage,
+        user_wallet: request.user_wallet.clone(),
+    };
+
+    if simulate_only {
+        let simulation = state.curve_builder.simulate_buy(&params).await?;
+        return Ok(Json(CurveBuyResponse {
+            transaction_base64: None,
+            expected_tokens_out: simulation.output_amount,
+            min_tokens_out: simulation.min_output,
+            price_impact_percent: simulation.price_impact_percent,
+            fee_lamports: simulation.fee_lamports,
+            simulated: true,
+        }));
+    }
+
+    let result = state.curve_builder.build_pump_fun_buy(&params).await?;
+
+    Ok(Json(CurveBuyResponse {
+        transaction_base64: Some(result.transaction_base64),
+        expected_tokens_out: result.expected_tokens_out.unwrap_or(0),
+        min_tokens_out: result.min_tokens_out.unwrap_or(0),
+        price_impact_percent: result.price_impact_percent,
+        fee_lamports: result.fee_lamports,
+        simulated: false,
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CurveSellRequest {
+    pub token_amount: u64,
+    pub slippage_bps: Option<u16>,
+    pub user_wallet: String,
+    pub simulate: Option<bool>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CurveSellResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_base64: Option<String>,
+    pub expected_sol_out: u64,
+    pub min_sol_out: u64,
+    pub price_impact_percent: f64,
+    pub fee_lamports: u64,
+    pub simulated: bool,
+}
+
+pub async fn sell_curve_token(
+    State(state): State<AppState>,
+    Path(mint): Path<String>,
+    Json(request): Json<CurveSellRequest>,
+) -> AppResult<Json<CurveSellResponse>> {
+    let slippage = request.slippage_bps.unwrap_or(100);
+    let simulate_only = request.simulate.unwrap_or(false);
+
+    let params = CurveSellParams {
+        mint: mint.clone(),
+        token_amount: request.token_amount,
+        slippage_bps: slippage,
+        user_wallet: request.user_wallet.clone(),
+    };
+
+    if simulate_only {
+        let simulation = state.curve_builder.simulate_sell(&params).await?;
+        return Ok(Json(CurveSellResponse {
+            transaction_base64: None,
+            expected_sol_out: simulation.output_amount,
+            min_sol_out: simulation.min_output,
+            price_impact_percent: simulation.price_impact_percent,
+            fee_lamports: simulation.fee_lamports,
+            simulated: true,
+        }));
+    }
+
+    let result = state.curve_builder.build_pump_fun_sell(&params).await?;
+
+    Ok(Json(CurveSellResponse {
+        transaction_base64: Some(result.transaction_base64),
+        expected_sol_out: result.expected_sol_out.unwrap_or(0),
+        min_sol_out: result.min_sol_out.unwrap_or(0),
+        price_impact_percent: result.price_impact_percent,
+        fee_lamports: result.fee_lamports,
+        simulated: false,
+    }))
+}
+
+#[derive(Debug, Serialize)]
+pub struct PostGraduationPoolResponse {
+    pub mint: String,
+    pub graduation_status: String,
+    pub raydium_pool: Option<RaydiumPoolInfo>,
+    pub graduation_progress: f64,
+}
+
+pub async fn get_post_graduation_pool(
+    State(state): State<AppState>,
+    Path(mint): Path<String>,
+) -> AppResult<Json<PostGraduationPoolResponse>> {
+    let status = state.on_chain_fetcher.is_token_graduated(&mint).await?;
+
+    let (status_str, raydium_pool, progress) = match &status {
+        GraduationStatus::PreGraduation { progress } => {
+            ("pre_graduation".to_string(), None, *progress)
+        }
+        GraduationStatus::NearGraduation { progress } => {
+            ("near_graduation".to_string(), None, *progress)
+        }
+        GraduationStatus::Graduating => {
+            ("graduating".to_string(), None, 99.0)
+        }
+        GraduationStatus::Graduated { raydium_pool, .. } => {
+            let pool_info = if raydium_pool.is_some() {
+                state.on_chain_fetcher.find_raydium_pool(&mint).await?
+            } else {
+                None
+            };
+            ("graduated".to_string(), pool_info, 100.0)
+        }
+        GraduationStatus::Failed { reason } => {
+            return Err(AppError::Internal(format!("Graduation failed: {}", reason)));
+        }
+    };
+
+    Ok(Json(PostGraduationPoolResponse {
+        mint,
+        graduation_status: status_str,
+        raydium_pool,
+        graduation_progress: progress,
+    }))
+}
+
+#[derive(Debug, Serialize)]
+pub struct CurveAddressesResponse {
+    pub mint: String,
+    pub bonding_curve: String,
+    pub associated_bonding_curve: String,
+}
+
+pub async fn get_curve_addresses(
+    Path(mint): Path<String>,
+) -> AppResult<Json<CurveAddressesResponse>> {
+    let (bonding_curve, associated) = derive_pump_fun_bonding_curve(&mint)?;
+
+    Ok(Json(CurveAddressesResponse {
+        mint,
+        bonding_curve,
+        associated_bonding_curve: associated,
+    }))
+}
+
+// ============================================================================
+// Metrics & Scoring Endpoints
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+pub struct MetricsQuery {
+    pub venue: Option<String>,
+    pub max_age_seconds: Option<i64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DetailedMetricsResponse {
+    pub mint: String,
+    pub venue: String,
+    pub volume_1h: f64,
+    pub volume_24h: f64,
+    pub volume_velocity: f64,
+    pub volume_acceleration: f64,
+    pub trade_count_1h: u32,
+    pub trade_count_24h: u32,
+    pub unique_buyers_1h: u32,
+    pub unique_buyers_24h: u32,
+    pub holder_count: u32,
+    pub holder_growth_1h: i32,
+    pub holder_growth_24h: i32,
+    pub top_10_concentration: f64,
+    pub top_20_concentration: f64,
+    pub creator_holdings_percent: f64,
+    pub price_momentum_1h: f64,
+    pub price_momentum_24h: f64,
+    pub buy_sell_ratio_1h: f64,
+    pub avg_trade_size_sol: f64,
+    pub graduation_progress: f64,
+    pub market_cap_sol: f64,
+    pub liquidity_depth_sol: f64,
+    pub holder_quality_score: f64,
+    pub activity_score: f64,
+    pub momentum_score: f64,
+    pub last_updated: String,
+}
+
+impl From<DetailedCurveMetrics> for DetailedMetricsResponse {
+    fn from(m: DetailedCurveMetrics) -> Self {
+        let volume_acceleration = m.volume_acceleration();
+        let holder_quality_score = m.holder_quality_score();
+        let activity_score = m.activity_score();
+        let momentum_score = m.momentum_score();
+        Self {
+            mint: m.mint,
+            venue: m.venue,
+            volume_1h: m.volume_1h,
+            volume_24h: m.volume_24h,
+            volume_velocity: m.volume_velocity,
+            volume_acceleration,
+            trade_count_1h: m.trade_count_1h,
+            trade_count_24h: m.trade_count_24h,
+            unique_buyers_1h: m.unique_buyers_1h,
+            unique_buyers_24h: m.unique_buyers_24h,
+            holder_count: m.holder_count,
+            holder_growth_1h: m.holder_growth_1h,
+            holder_growth_24h: m.holder_growth_24h,
+            top_10_concentration: m.top_10_concentration,
+            top_20_concentration: m.top_20_concentration,
+            creator_holdings_percent: m.creator_holdings_percent,
+            price_momentum_1h: m.price_momentum_1h,
+            price_momentum_24h: m.price_momentum_24h,
+            buy_sell_ratio_1h: m.buy_sell_ratio_1h,
+            avg_trade_size_sol: m.avg_trade_size_sol,
+            graduation_progress: m.graduation_progress,
+            market_cap_sol: m.market_cap_sol,
+            liquidity_depth_sol: m.liquidity_depth_sol,
+            holder_quality_score,
+            activity_score,
+            momentum_score,
+            last_updated: m.last_updated.to_rfc3339(),
+        }
+    }
+}
+
+pub async fn get_curve_metrics(
+    State(state): State<AppState>,
+    Path(mint): Path<String>,
+    Query(query): Query<MetricsQuery>,
+) -> AppResult<Json<DetailedMetricsResponse>> {
+    let venue = query.venue.as_deref().unwrap_or("pump_fun");
+    let max_age = query.max_age_seconds.unwrap_or(300);
+
+    let metrics = state
+        .metrics_collector
+        .get_or_calculate_metrics(&mint, venue, max_age)
+        .await?;
+
+    Ok(Json(metrics.into()))
+}
+
+#[derive(Debug, Serialize)]
+pub struct HolderAnalysisResponse {
+    pub mint: String,
+    pub total_holders: u32,
+    pub total_supply: u64,
+    pub circulating_supply: u64,
+    pub top_10_holders: Vec<TopHolderInfo>,
+    pub top_10_concentration: f64,
+    pub top_20_concentration: f64,
+    pub top_50_concentration: f64,
+    pub creator_address: Option<String>,
+    pub creator_holdings_percent: f64,
+    pub gini_coefficient: f64,
+    pub unique_wallets_24h: u32,
+    pub new_holders_24h: i32,
+    pub wash_trade_likelihood: f64,
+    pub is_healthy: bool,
+    pub health_score: f64,
+    pub analyzed_at: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TopHolderInfo {
+    pub address: String,
+    pub balance: u64,
+    pub balance_percent: f64,
+    pub is_creator: bool,
+    pub is_suspicious: bool,
+}
+
+impl From<HolderDistribution> for HolderAnalysisResponse {
+    fn from(h: HolderDistribution) -> Self {
+        let is_healthy = h.is_healthy();
+        let health_score = h.health_score();
+        Self {
+            mint: h.mint,
+            total_holders: h.total_holders,
+            total_supply: h.total_supply,
+            circulating_supply: h.circulating_supply,
+            top_10_holders: h.top_10_holders.into_iter().map(|holder| TopHolderInfo {
+                address: holder.address,
+                balance: holder.balance,
+                balance_percent: holder.balance_percent,
+                is_creator: holder.is_creator,
+                is_suspicious: holder.is_suspicious,
+            }).collect(),
+            top_10_concentration: h.top_10_concentration,
+            top_20_concentration: h.top_20_concentration,
+            top_50_concentration: h.top_50_concentration,
+            creator_address: h.creator_address,
+            creator_holdings_percent: h.creator_holdings_percent,
+            gini_coefficient: h.gini_coefficient,
+            unique_wallets_24h: h.unique_wallets_24h,
+            new_holders_24h: h.new_holders_24h,
+            wash_trade_likelihood: h.wash_trade_likelihood,
+            is_healthy,
+            health_score,
+            analyzed_at: h.analyzed_at.to_rfc3339(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct HolderAnalysisQuery {
+    pub creator: Option<String>,
+    pub max_age_seconds: Option<i64>,
+}
+
+pub async fn get_holder_analysis(
+    State(state): State<AppState>,
+    Path(mint): Path<String>,
+    Query(query): Query<HolderAnalysisQuery>,
+) -> AppResult<Json<HolderAnalysisResponse>> {
+    let max_age = query.max_age_seconds.unwrap_or(600);
+
+    let distribution = state
+        .holder_analyzer
+        .get_or_analyze(&mint, query.creator.as_deref(), max_age)
+        .await?;
+
+    Ok(Json(distribution.into()))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ScoreQuery {
+    pub venue: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct OpportunityScoreResponse {
+    pub mint: String,
+    pub venue: String,
+    pub overall_score: f64,
+    pub graduation_factor: f64,
+    pub volume_factor: f64,
+    pub holder_factor: f64,
+    pub momentum_factor: f64,
+    pub risk_penalty: f64,
+    pub recommendation: String,
+    pub is_actionable: bool,
+    pub risk_warnings: Vec<String>,
+    pub positive_signals: Vec<String>,
+}
+
+impl From<OpportunityScore> for OpportunityScoreResponse {
+    fn from(s: OpportunityScore) -> Self {
+        let recommendation = s.recommendation.as_str().to_string();
+        let is_actionable = s.is_actionable();
+        Self {
+            mint: s.mint,
+            venue: s.venue,
+            overall_score: s.overall,
+            graduation_factor: s.graduation_factor,
+            volume_factor: s.volume_factor,
+            holder_factor: s.holder_factor,
+            momentum_factor: s.momentum_factor,
+            risk_penalty: s.risk_penalty,
+            recommendation,
+            is_actionable,
+            risk_warnings: s.risk_warnings,
+            positive_signals: s.positive_signals,
+        }
+    }
+}
+
+pub async fn get_opportunity_score(
+    State(state): State<AppState>,
+    Path(mint): Path<String>,
+    Query(query): Query<ScoreQuery>,
+) -> AppResult<Json<OpportunityScoreResponse>> {
+    let venue = query.venue.as_deref().unwrap_or("pump_fun");
+
+    let score = state
+        .curve_scorer
+        .score_opportunity(&mint, venue)
+        .await?;
+
+    Ok(Json(score.into()))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TopOpportunitiesQuery {
+    pub venue: Option<String>,
+    pub min_progress: Option<f64>,
+    pub max_progress: Option<f64>,
+    pub min_score: Option<f64>,
+    pub limit: Option<usize>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TopOpportunitiesResponse {
+    pub opportunities: Vec<RankedOpportunity>,
+    pub total: usize,
+    pub scoring_weights: ScoringWeightsInfo,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RankedOpportunity {
+    pub rank: usize,
+    pub mint: String,
+    pub name: String,
+    pub symbol: String,
+    pub venue: String,
+    pub overall_score: f64,
+    pub graduation_progress: f64,
+    pub market_cap_sol: f64,
+    pub volume_1h: f64,
+    pub recommendation: String,
+    pub top_signals: Vec<String>,
+    pub top_warnings: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ScoringWeightsInfo {
+    pub graduation: f64,
+    pub volume: f64,
+    pub holders: f64,
+    pub momentum: f64,
+    pub risk: f64,
+}
+
+pub async fn get_top_opportunities(
+    State(state): State<AppState>,
+    Query(query): Query<TopOpportunitiesQuery>,
+) -> AppResult<Json<TopOpportunitiesResponse>> {
+    let min_progress = query.min_progress.unwrap_or(70.0);
+    let max_progress = query.max_progress.unwrap_or(99.0);
+    let min_score = query.min_score.unwrap_or(0.0);
+    let limit = query.limit.unwrap_or(20);
+    let venue_filter = query.venue.as_deref();
+
+    let mut candidates: Vec<(String, String, String, String)> = Vec::new();
+
+    if venue_filter.is_none() || venue_filter == Some("pump_fun") || venue_filter == Some("pumpfun") {
+        let tokens = state.pump_fun_venue.get_new_tokens(100).await?;
+        for token in tokens {
+            if token.bonding_curve_complete {
+                continue;
+            }
+            let threshold = token.graduation_threshold.unwrap_or(69000.0);
+            let progress = (token.market_cap / threshold) * 100.0;
+            if progress >= min_progress && progress <= max_progress {
+                candidates.push((token.mint, token.name, token.symbol, "pump_fun".to_string()));
+            }
+        }
+    }
+
+    if venue_filter.is_none() || venue_filter == Some("moonshot") {
+        let tokens = state.moonshot_venue.get_new_tokens(100).await?;
+        for token in tokens {
+            if token.is_graduated {
+                continue;
+            }
+            let threshold = token.graduation_market_cap.unwrap_or(500_000.0);
+            let progress = (token.market_cap_usd / threshold) * 100.0;
+            if progress >= min_progress && progress <= max_progress {
+                candidates.push((token.mint, token.name, token.symbol, "moonshot".to_string()));
+            }
+        }
+    }
+
+    let candidate_pairs: Vec<(String, String)> = candidates
+        .iter()
+        .map(|(mint, _, _, venue)| (mint.clone(), venue.clone()))
+        .collect();
+
+    let scores = state
+        .curve_scorer
+        .rank_opportunities(&candidate_pairs, limit * 2)
+        .await;
+
+    let mut opportunities: Vec<RankedOpportunity> = Vec::new();
+
+    for (idx, score) in scores.into_iter().enumerate() {
+        if score.overall < min_score {
+            continue;
+        }
+
+        let (name, symbol) = candidates
+            .iter()
+            .find(|(m, _, _, _)| m == &score.mint)
+            .map(|(_, n, s, _)| (n.clone(), s.clone()))
+            .unwrap_or(("Unknown".to_string(), "???".to_string()));
+
+        let metrics = state
+            .metrics_collector
+            .get_cached_metrics(&score.mint)
+            .await;
+
+        let (graduation_progress, market_cap_sol, volume_1h) = metrics
+            .map(|m| (m.graduation_progress, m.market_cap_sol, m.volume_1h))
+            .unwrap_or((0.0, 0.0, 0.0));
+
+        opportunities.push(RankedOpportunity {
+            rank: idx + 1,
+            mint: score.mint,
+            name,
+            symbol,
+            venue: score.venue,
+            overall_score: score.overall,
+            graduation_progress,
+            market_cap_sol,
+            volume_1h,
+            recommendation: score.recommendation.as_str().to_string(),
+            top_signals: score.positive_signals.into_iter().take(3).collect(),
+            top_warnings: score.risk_warnings.into_iter().take(3).collect(),
+        });
+
+        if opportunities.len() >= limit {
+            break;
+        }
+    }
+
+    let weights = state.curve_scorer.get_weights();
+
+    Ok(Json(TopOpportunitiesResponse {
+        total: opportunities.len(),
+        opportunities,
+        scoring_weights: ScoringWeightsInfo {
+            graduation: weights.graduation,
+            volume: weights.volume,
+            holders: weights.holders,
+            momentum: weights.momentum,
+            risk: weights.risk,
+        },
+    }))
+}
+
+#[derive(Debug, Serialize)]
+pub struct ScoringConfigResponse {
+    pub weights: ScoringWeightsInfo,
+    pub thresholds: ScoringThresholdsInfo,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ScoringThresholdsInfo {
+    pub min_graduation_progress: f64,
+    pub max_graduation_progress: f64,
+    pub min_volume_1h_sol: f64,
+    pub min_holder_count: u32,
+    pub max_top_10_concentration: f64,
+    pub max_creator_holdings: f64,
+    pub max_wash_trade_likelihood: f64,
+    pub min_unique_buyers_1h: u32,
+}
+
+pub async fn get_scoring_config(
+    State(state): State<AppState>,
+) -> AppResult<Json<ScoringConfigResponse>> {
+    let weights = state.curve_scorer.get_weights();
+    let thresholds = state.curve_scorer.get_thresholds();
+
+    Ok(Json(ScoringConfigResponse {
+        weights: ScoringWeightsInfo {
+            graduation: weights.graduation,
+            volume: weights.volume,
+            holders: weights.holders,
+            momentum: weights.momentum,
+            risk: weights.risk,
+        },
+        thresholds: ScoringThresholdsInfo {
+            min_graduation_progress: thresholds.min_graduation_progress,
+            max_graduation_progress: thresholds.max_graduation_progress,
+            min_volume_1h_sol: thresholds.min_volume_1h_sol,
+            min_holder_count: thresholds.min_holder_count,
+            max_top_10_concentration: thresholds.max_top_10_concentration,
+            max_creator_holdings: thresholds.max_creator_holdings,
+            max_wash_trade_likelihood: thresholds.max_wash_trade_likelihood,
+            min_unique_buyers_1h: thresholds.min_unique_buyers_1h,
         },
     }))
 }

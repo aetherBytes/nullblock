@@ -7,6 +7,7 @@ pub struct Config {
     pub database_url: String,
     pub erebus_url: String,
     pub engrams_url: String,
+    pub agents_service_url: String,
 
     // Solana RPC
     pub rpc_url: String,
@@ -19,6 +20,8 @@ pub struct Config {
     pub moonshot_api_url: String,
     pub helius_api_url: String,
     pub helius_api_key: Option<String>,
+    pub helius_sender_url: String,
+    pub helius_laserstream_url: String,
     pub birdeye_api_url: String,
     pub birdeye_api_key: Option<String>,
     pub jito_api_url: String,
@@ -33,7 +36,11 @@ pub struct Config {
     pub openrouter_api_url: String,
     pub openrouter_api_key: Option<String>,
 
-    // Turnkey wallet delegation
+    // Dev wallet (private key for local dev only)
+    pub wallet_address: Option<String>,
+    pub wallet_private_key: Option<String>,
+
+    // Turnkey wallet delegation (production)
     pub turnkey_api_url: String,
     pub turnkey_organization_id: Option<String>,
     pub turnkey_api_public_key: Option<String>,
@@ -64,6 +71,8 @@ impl Config {
                 .unwrap_or_else(|_| "http://localhost:3000".to_string()),
             engrams_url: env::var("ENGRAMS_SERVICE_URL")
                 .unwrap_or_else(|_| "http://localhost:9004".to_string()),
+            agents_service_url: env::var("AGENTS_SERVICE_URL")
+                .unwrap_or_else(|_| "http://localhost:9003".to_string()),
 
             // Solana RPC
             rpc_url: env::var("SOLANA_RPC_URL")
@@ -74,16 +83,20 @@ impl Config {
 
             // External APIs
             jupiter_api_url: env::var("JUPITER_API_URL")
-                .unwrap_or_else(|_| "https://quote-api.jup.ag/v6".to_string()),
+                .unwrap_or_else(|_| "https://lite-api.jup.ag/swap/v1".to_string()),
             raydium_api_url: env::var("RAYDIUM_API_URL")
-                .unwrap_or_else(|_| "https://api-v3.raydium.io".to_string()),
+                .unwrap_or_else(|_| "https://api.raydium.io/v2".to_string()),
             pump_fun_api_url: env::var("PUMP_FUN_API_URL")
-                .unwrap_or_else(|_| "https://pumpportal.fun/api".to_string()),
+                .unwrap_or_else(|_| "https://api.dexscreener.com/latest/dex".to_string()),
             moonshot_api_url: env::var("MOONSHOT_API_URL")
-                .unwrap_or_else(|_| "https://api.moonshot.cc/v1".to_string()),
+                .unwrap_or_else(|_| "https://api.dexscreener.com/latest/dex".to_string()),
             helius_api_url: env::var("HELIUS_API_URL")
                 .unwrap_or_else(|_| "https://mainnet.helius-rpc.com".to_string()),
             helius_api_key: env::var("HELIUS_API_KEY").ok(),
+            helius_sender_url: env::var("HELIUS_SENDER_URL")
+                .unwrap_or_else(|_| "https://mainnet.helius-rpc.com".to_string()),
+            helius_laserstream_url: env::var("HELIUS_LASERSTREAM_URL")
+                .unwrap_or_else(|_| "https://laserstream-mainnet.helius-rpc.com".to_string()),
             birdeye_api_url: env::var("BIRDEYE_API_URL")
                 .unwrap_or_else(|_| "https://public-api.birdeye.so".to_string()),
             birdeye_api_key: env::var("BIRDEYE_API_KEY").ok(),
@@ -105,7 +118,11 @@ impl Config {
                 .unwrap_or_else(|_| "https://openrouter.ai/api/v1".to_string()),
             openrouter_api_key: env::var("OPENROUTER_API_KEY").ok(),
 
-            // Turnkey wallet delegation
+            // Dev wallet (private key for local dev only)
+            wallet_address: env::var("ARB_FARM_WALLET_ADDRESS").ok(),
+            wallet_private_key: env::var("ARB_FARM_WALLET_PRIVATE_KEY").ok(),
+
+            // Turnkey wallet delegation (production)
             turnkey_api_url: env::var("TURNKEY_API_URL")
                 .unwrap_or_else(|_| "https://api.turnkey.com".to_string()),
             turnkey_organization_id: env::var("TURNKEY_ORGANIZATION_ID").ok(),

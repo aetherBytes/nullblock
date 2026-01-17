@@ -78,11 +78,63 @@ pub mod consensus {
     pub const FAILED: &str = "arb.consensus.failed";
 }
 
+pub mod approval {
+    pub const ALL: &str = "arb.approval.*";
+    pub const CREATED: &str = "arb.approval.created";
+    pub const APPROVED: &str = "arb.approval.approved";
+    pub const REJECTED: &str = "arb.approval.rejected";
+    pub const EXPIRED: &str = "arb.approval.expired";
+    pub const AUTO_APPROVED: &str = "arb.approval.auto_approved";
+    pub const CONFIG_UPDATED: &str = "arb.approval.config.updated";
+    pub const EXECUTION_ENABLED: &str = "arb.approval.execution.enabled";
+    pub const EXECUTION_DISABLED: &str = "arb.approval.execution.disabled";
+    pub const HECATE_NOTIFIED: &str = "arb.approval.hecate.notified";
+    pub const HECATE_RECOMMENDED: &str = "arb.approval.hecate.recommended";
+}
+
 pub mod trade {
     pub const ALL: &str = "arb.trade.*";
     pub const SUBMITTED: &str = "arb.trade.submitted";
     pub const CONFIRMED: &str = "arb.trade.confirmed";
     pub const FAILED: &str = "arb.trade.failed";
+}
+
+pub mod helius {
+    pub const ALL: &str = "arb.helius.*";
+
+    pub mod laserstream {
+        pub const ALL: &str = "arb.helius.laserstream.*";
+        pub const CONNECTED: &str = "arb.helius.laserstream.connected";
+        pub const DISCONNECTED: &str = "arb.helius.laserstream.disconnected";
+        pub const ACCOUNT: &str = "arb.helius.laserstream.account";
+        pub const TRANSACTION: &str = "arb.helius.laserstream.transaction";
+        pub const SLOT: &str = "arb.helius.laserstream.slot";
+        pub const BLOCK: &str = "arb.helius.laserstream.block";
+    }
+
+    pub mod priority_fee {
+        pub const ALL: &str = "arb.helius.priority_fee.*";
+        pub const UPDATED: &str = "arb.helius.priority_fee.updated";
+    }
+
+    pub mod sender {
+        pub const ALL: &str = "arb.helius.sender.*";
+        pub const TX_SENT: &str = "arb.helius.sender.tx_sent";
+        pub const TX_CONFIRMED: &str = "arb.helius.sender.tx_confirmed";
+        pub const TX_FAILED: &str = "arb.helius.sender.tx_failed";
+    }
+
+    pub mod das {
+        pub const ALL: &str = "arb.helius.das.*";
+        pub const METADATA_FETCHED: &str = "arb.helius.das.metadata_fetched";
+        pub const CREATOR_FLAGGED: &str = "arb.helius.das.creator_flagged";
+    }
+
+    pub mod webhook {
+        pub const ALL: &str = "arb.helius.webhook.*";
+        pub const RECEIVED: &str = "arb.helius.webhook.received";
+        pub const KOL_TRADE: &str = "arb.helius.webhook.kol_trade";
+    }
 }
 
 pub fn matches_pattern(topic: &str, pattern: &str) -> bool {

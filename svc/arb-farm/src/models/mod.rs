@@ -1,3 +1,4 @@
+mod approval;
 mod edge;
 mod engram;
 mod kol;
@@ -8,6 +9,7 @@ mod threat;
 mod trade;
 mod venue;
 
+pub use approval::*;
 pub use edge::*;
 pub use engram::*;
 pub use kol::*;

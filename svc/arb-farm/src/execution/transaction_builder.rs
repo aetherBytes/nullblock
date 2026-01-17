@@ -1,13 +1,16 @@
 use serde::{Deserialize, Serialize};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::models::Edge;
 use super::blockhash::BlockhashCache;
+use super::position_manager::{BaseCurrency, ExitSignal, OpenPosition, SOL_MINT, USDC_MINT, USDT_MINT};
 
 pub struct TransactionBuilder {
     client: reqwest::Client,
     jupiter_api_url: String,
+    rpc_url: String,
     blockhash_cache: BlockhashCache,
 }
 
@@ -48,6 +51,7 @@ impl TransactionBuilder {
                 .build()
                 .expect("Failed to create HTTP client"),
             jupiter_api_url,
+            rpc_url: rpc_url.clone(),
             blockhash_cache: BlockhashCache::new(rpc_url),
         }
     }
@@ -240,6 +244,213 @@ impl TransactionBuilder {
     pub async fn invalidate_blockhash(&self) {
         self.blockhash_cache.invalidate().await;
     }
+
+    pub async fn build_exit_swap(
+        &self,
+        position: &OpenPosition,
+        exit_signal: &ExitSignal,
+        user_public_key: &str,
+        slippage_bps: u16,
+    ) -> AppResult<ExitBuildResult> {
+        let token_balance = self.get_token_balance(user_public_key, &position.token_mint).await?;
+
+        if token_balance == 0 {
+            return Err(AppError::Execution(format!(
+                "No token balance found for {} in wallet {}",
+                position.token_mint, user_public_key
+            )));
+        }
+
+        let exit_amount = if exit_signal.exit_percent >= 100.0 {
+            token_balance
+        } else {
+            ((token_balance as f64) * (exit_signal.exit_percent / 100.0)) as u64
+        };
+
+        let base_mint = position.exit_config.base_currency.mint().to_string();
+
+        info!(
+            "🔄 Building exit swap: {} {} → {} | Balance: {} | Exit: {:.1}%",
+            exit_amount,
+            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+            position.exit_config.base_currency.symbol(),
+            token_balance,
+            exit_signal.exit_percent
+        );
+
+        let params = SwapParams {
+            input_mint: position.token_mint.clone(),
+            output_mint: base_mint,
+            amount_lamports: exit_amount,
+            slippage_bps,
+            user_public_key: user_public_key.to_string(),
+        };
+
+        let build_result = self.build_jupiter_swap(&params, position.edge_id).await?;
+
+        Ok(ExitBuildResult {
+            position_id: position.id,
+            exit_signal: exit_signal.clone(),
+            transaction_base64: build_result.transaction_base64,
+            last_valid_block_height: build_result.last_valid_block_height,
+            token_amount_in: exit_amount,
+            expected_base_out: build_result.route_info.out_amount,
+            price_impact_bps: build_result.route_info.price_impact_bps,
+            route_info: build_result.route_info,
+        })
+    }
+
+    pub async fn get_token_balance(&self, wallet: &str, token_mint: &str) -> AppResult<u64> {
+        if token_mint == SOL_MINT {
+            return self.get_sol_balance(wallet).await;
+        }
+
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "getTokenAccountsByOwner",
+            "params": [
+                wallet,
+                { "mint": token_mint },
+                { "encoding": "jsonParsed" }
+            ]
+        });
+
+        let response = self
+            .client
+            .post(&self.rpc_url)
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("RPC request failed: {}", e)))?;
+
+        let rpc_response: RpcResponse<TokenAccountsResult> = response
+            .json()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse RPC response: {}", e)))?;
+
+        if let Some(result) = rpc_response.result {
+            for account in result.value {
+                if let Some(parsed) = account.account.data.get("parsed") {
+                    if let Some(info) = parsed.get("info") {
+                        if let Some(token_amount) = info.get("tokenAmount") {
+                            if let Some(amount_str) = token_amount.get("amount").and_then(|v| v.as_str()) {
+                                return amount_str.parse().map_err(|e| {
+                                    AppError::Internal(format!("Failed to parse token amount: {}", e))
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(0)
+    }
+
+    async fn get_sol_balance(&self, wallet: &str) -> AppResult<u64> {
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "getBalance",
+            "params": [wallet]
+        });
+
+        let response = self
+            .client
+            .post(&self.rpc_url)
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("RPC request failed: {}", e)))?;
+
+        let rpc_response: RpcResponse<BalanceResult> = response
+            .json()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse RPC response: {}", e)))?;
+
+        Ok(rpc_response.result.map(|r| r.value).unwrap_or(0))
+    }
+
+    pub async fn get_token_price(&self, token_mint: &str, base: BaseCurrency) -> AppResult<f64> {
+        let url = format!(
+            "{}/price?ids={}&vsToken={}",
+            self.jupiter_api_url,
+            token_mint,
+            base.mint()
+        );
+
+        let response = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Jupiter price request failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ExternalApi(format!(
+                "Jupiter price error: {}",
+                response.status()
+            )));
+        }
+
+        let price_data: JupiterPriceResponse = response
+            .json()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter price: {}", e)))?;
+
+        if let Some(token_price) = price_data.data.get(token_mint) {
+            Ok(token_price.price)
+        } else {
+            Err(AppError::ExternalApi(format!(
+                "No price found for token {}",
+                token_mint
+            )))
+        }
+    }
+
+    pub async fn get_multiple_token_prices(
+        &self,
+        token_mints: &[String],
+        base: BaseCurrency,
+    ) -> AppResult<std::collections::HashMap<String, f64>> {
+        if token_mints.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+
+        let ids = token_mints.join(",");
+        let url = format!(
+            "{}/price?ids={}&vsToken={}",
+            self.jupiter_api_url,
+            ids,
+            base.mint()
+        );
+
+        let response = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Jupiter price request failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(AppError::ExternalApi(format!(
+                "Jupiter price error: {}",
+                response.status()
+            )));
+        }
+
+        let price_data: JupiterPriceResponse = response
+            .json()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter price: {}", e)))?;
+
+        Ok(price_data
+            .data
+            .into_iter()
+            .map(|(k, v)| (k, v.price))
+            .collect())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -327,6 +538,67 @@ pub struct JupiterSwapResponse {
     pub prioritization_type: Option<String>,
     #[serde(default)]
     pub simulation_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExitBuildResult {
+    pub position_id: Uuid,
+    pub exit_signal: ExitSignal,
+    pub transaction_base64: String,
+    pub last_valid_block_height: u64,
+    pub token_amount_in: u64,
+    pub expected_base_out: u64,
+    pub price_impact_bps: i32,
+    pub route_info: RouteInfo,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct RpcResponse<T> {
+    #[allow(dead_code)]
+    jsonrpc: String,
+    result: Option<T>,
+    #[allow(dead_code)]
+    error: Option<RpcError>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct RpcError {
+    #[allow(dead_code)]
+    code: i64,
+    #[allow(dead_code)]
+    message: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct TokenAccountsResult {
+    value: Vec<TokenAccountInfo>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct TokenAccountInfo {
+    account: TokenAccountData,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct TokenAccountData {
+    data: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct BalanceResult {
+    value: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct JupiterPriceResponse {
+    data: std::collections::HashMap<String, JupiterTokenPrice>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct JupiterTokenPrice {
+    #[allow(dead_code)]
+    id: String,
+    price: f64,
 }
 
 #[cfg(test)]

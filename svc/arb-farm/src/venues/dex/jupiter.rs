@@ -139,7 +139,11 @@ impl MevVenue for JupiterVenue {
     }
 
     async fn is_healthy(&self) -> bool {
-        let url = format!("{}/health", self.base_url);
+        // Test with a minimal SOL->USDC quote to verify the API is working
+        let url = format!(
+            "{}/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000",
+            self.base_url
+        );
         self.client
             .get(&url)
             .timeout(std::time::Duration::from_secs(5))

@@ -1,6 +1,7 @@
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -14,6 +15,26 @@ use crate::threat::ThreatDetector;
 
 lazy_static::lazy_static! {
     static ref THREAT_DETECTOR: ThreatDetector = ThreatDetector::default();
+}
+
+#[derive(Debug, Serialize)]
+pub struct ErrorResponse {
+    pub error: String,
+    pub code: u16,
+}
+
+impl IntoResponse for ErrorResponse {
+    fn into_response(self) -> axum::response::Response {
+        let status = StatusCode::from_u16(self.code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        (status, Json(self)).into_response()
+    }
+}
+
+fn json_error(status: StatusCode, message: &str) -> ErrorResponse {
+    ErrorResponse {
+        error: message.to_string(),
+        code: status.as_u16(),
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -100,15 +121,15 @@ pub async fn check_token(
     Path(mint): Path<String>,
     Query(_query): Query<ThreatCheckQuery>,
     State(_config): State<AppState>,
-) -> Result<Json<ThreatCheckResponse>, (StatusCode, String)> {
+) -> Result<Json<ThreatCheckResponse>, ErrorResponse> {
     match THREAT_DETECTOR.check_token(&mint).await {
         Ok(score) => Ok(Json(ThreatCheckResponse {
             success: true,
             score,
         })),
-        Err(e) => Err((
+        Err(e) => Err(json_error(
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to check token: {}", e),
+            &format!("Failed to check token: {}", e),
         )),
     }
 }
@@ -116,15 +137,15 @@ pub async fn check_token(
 pub async fn check_wallet(
     Path(address): Path<String>,
     State(_config): State<AppState>,
-) -> Result<Json<WalletCheckResponse>, (StatusCode, String)> {
+) -> Result<Json<WalletCheckResponse>, ErrorResponse> {
     match THREAT_DETECTOR.check_wallet(&address).await {
         Ok(analysis) => Ok(Json(WalletCheckResponse {
             success: true,
             analysis,
         })),
-        Err(e) => Err((
+        Err(e) => Err(json_error(
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to check wallet: {}", e),
+            &format!("Failed to check wallet: {}", e),
         )),
     }
 }
@@ -141,7 +162,7 @@ pub async fn list_blocked(
 pub async fn report_threat(
     State(_config): State<AppState>,
     Json(request): Json<ReportThreatRequest>,
-) -> Result<Json<BlockResponse>, (StatusCode, String)> {
+) -> Json<BlockResponse> {
     let entity = THREAT_DETECTOR.block_entity(
         request.entity_type,
         request.address,
@@ -150,16 +171,16 @@ pub async fn report_threat(
         "user_report".to_string(),
     );
 
-    Ok(Json(BlockResponse {
+    Json(BlockResponse {
         success: true,
         entity,
-    }))
+    })
 }
 
 pub async fn add_watch(
     State(_config): State<AppState>,
     Json(request): Json<WatchWalletRequest>,
-) -> Result<Json<WatchResponse>, (StatusCode, String)> {
+) -> Json<WatchResponse> {
     let mut watched = WatchedWallet::new(
         request.wallet_address,
         request.watch_reason.unwrap_or_else(|| "User requested watch".to_string()),
@@ -174,16 +195,16 @@ pub async fn add_watch(
 
     let watched = THREAT_DETECTOR.add_watched_wallet(watched);
 
-    Ok(Json(WatchResponse {
+    Json(WatchResponse {
         success: true,
         watched,
-    }))
+    })
 }
 
 pub async fn whitelist_entity(
     State(_config): State<AppState>,
     Json(request): Json<WhitelistRequest>,
-) -> Result<Json<WhitelistResponse>, (StatusCode, String)> {
+) -> Json<WhitelistResponse> {
     let entity = THREAT_DETECTOR.whitelist_entity(
         request.entity_type,
         request.address,
@@ -191,10 +212,10 @@ pub async fn whitelist_entity(
         "user".to_string(),
     );
 
-    Ok(Json(WhitelistResponse {
+    Json(WhitelistResponse {
         success: true,
         entity,
-    }))
+    })
 }
 
 pub async fn list_whitelisted(
@@ -227,9 +248,9 @@ pub async fn get_alerts(
 pub async fn get_score_history(
     Path(mint): Path<String>,
     State(_config): State<AppState>,
-) -> Result<Json<Option<ThreatScore>>, (StatusCode, String)> {
+) -> Json<Option<ThreatScore>> {
     let score = THREAT_DETECTOR.get_score_history(&mint);
-    Ok(Json(score))
+    Json(score)
 }
 
 pub async fn get_stats(
@@ -242,23 +263,23 @@ pub async fn get_stats(
 pub async fn remove_from_blocklist(
     Path(address): Path<String>,
     State(_config): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+) -> Json<serde_json::Value> {
     let removed = THREAT_DETECTOR.remove_from_blocklist(&address);
-    Ok(Json(serde_json::json!({
+    Json(serde_json::json!({
         "success": removed,
         "address": address
-    })))
+    }))
 }
 
 pub async fn remove_from_whitelist(
     Path(address): Path<String>,
     State(_config): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+) -> Json<serde_json::Value> {
     let removed = THREAT_DETECTOR.remove_from_whitelist(&address);
-    Ok(Json(serde_json::json!({
+    Json(serde_json::json!({
         "success": removed,
         "address": address
-    })))
+    }))
 }
 
 pub async fn is_blocked(

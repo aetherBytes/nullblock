@@ -59,6 +59,7 @@ pub enum AgentType {
     ThreatDetector,
     EngramHarvester,
     Overseer,
+    ApprovalManager,
 }
 
 impl std::fmt::Display for AgentType {
@@ -74,6 +75,7 @@ impl std::fmt::Display for AgentType {
             AgentType::ThreatDetector => write!(f, "threat_detector"),
             AgentType::EngramHarvester => write!(f, "engram_harvester"),
             AgentType::Overseer => write!(f, "overseer"),
+            AgentType::ApprovalManager => write!(f, "approval_manager"),
         }
     }
 }
