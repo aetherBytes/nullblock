@@ -69,14 +69,14 @@ const EdgeCard: React.FC<EdgeCardProps> = ({
       <div className={`${styles.edgeCardCompact} ${getPriorityClass()}`}>
         <div className={styles.edgeHeader}>
           <span className={styles.edgeType}>
-            {venueIcon} {edge.edge_type.replace('_', ' ')}
+            {venueIcon} {(edge.edge_type || 'unknown').replace('_', ' ')}
           </span>
           <span className={styles.edgeStatus} style={{ color: statusColor }}>
-            {edge.status.replace('_', ' ')}
+            {(edge.status || 'unknown').replace('_', ' ')}
           </span>
         </div>
         <div className={styles.edgeRoute}>
-          {edge.route_data.input_token.slice(0, 4)}... → {edge.route_data.output_token.slice(0, 4)}
+          {edge.route_data?.input_token?.slice(0, 4) ?? '???'}... → {edge.route_data?.output_token?.slice(0, 4) ?? '???'}
           ...
         </div>
         <div className={styles.edgeProfit}>
@@ -106,21 +106,21 @@ const EdgeCard: React.FC<EdgeCardProps> = ({
       <div className={styles.edgeHeader}>
         <div className={styles.edgeTypeInfo}>
           <span className={styles.edgeIcon}>{venueIcon}</span>
-          <span className={styles.edgeTypeName}>{edge.edge_type.replace('_', ' ')}</span>
-          <span className={styles.venueType}>{edge.venue_type.replace('_', ' ')}</span>
+          <span className={styles.edgeTypeName}>{(edge.edge_type || 'unknown').replace('_', ' ')}</span>
+          <span className={styles.venueType}>{(edge.venue_type || 'unknown').replace('_', ' ')}</span>
         </div>
         <span className={styles.edgeStatus} style={{ backgroundColor: statusColor }}>
-          {edge.status.replace('_', ' ')}
+          {(edge.status || 'unknown').replace('_', ' ')}
         </span>
       </div>
 
       <div className={styles.edgeRoute}>
         <div className={styles.routeTokens}>
-          <span className={styles.token}>{edge.route_data.input_token}</span>
+          <span className={styles.token}>{edge.route_data?.input_token ?? 'Unknown'}</span>
           <span className={styles.routeArrow}>→</span>
-          <span className={styles.token}>{edge.route_data.output_token}</span>
+          <span className={styles.token}>{edge.route_data?.output_token ?? 'Unknown'}</span>
         </div>
-        <div className={styles.routeVenues}>via {edge.route_data.venues.join(' → ')}</div>
+        <div className={styles.routeVenues}>via {edge.route_data?.venues?.join(' → ') ?? 'N/A'}</div>
       </div>
 
       <div className={styles.edgeMetrics}>
@@ -138,11 +138,11 @@ const EdgeCard: React.FC<EdgeCardProps> = ({
         </div>
         <div className={styles.metric}>
           <span className={styles.metricLabel}>Atomicity</span>
-          <span className={styles.metricValue}>{edge.atomicity.replace('_', ' ')}</span>
+          <span className={styles.metricValue}>{(edge.atomicity || 'unknown').replace('_', ' ')}</span>
         </div>
         <div className={styles.metric}>
           <span className={styles.metricLabel}>Mode</span>
-          <span className={styles.metricValue}>{edge.execution_mode.replace('_', ' ')}</span>
+          <span className={styles.metricValue}>{(edge.execution_mode || 'unknown').replace('_', ' ')}</span>
         </div>
       </div>
 

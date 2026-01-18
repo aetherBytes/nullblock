@@ -289,6 +289,14 @@ impl StrategyEngine {
     }
 
     fn create_edge_from_signal(&self, signal: &Signal, strategy: &Strategy) -> Edge {
+        // Merge token_mint into route_data so it persists to database
+        let mut route_data = signal.metadata.clone();
+        if let Some(ref mint) = signal.token_mint {
+            if let serde_json::Value::Object(ref mut map) = route_data {
+                map.insert("token_mint".to_string(), serde_json::Value::String(mint.clone()));
+            }
+        }
+
         Edge {
             id: Uuid::new_v4(),
             strategy_id: Some(strategy.id),
@@ -298,7 +306,7 @@ impl StrategyEngine {
             simulated_profit_guaranteed: false,
             estimated_profit_lamports: Some((signal.estimated_profit_bps as i64) * 10000),
             risk_score: Some(((1.0 - signal.confidence) * 100.0) as i32),
-            route_data: signal.metadata.clone(),
+            route_data,
             signal_data: Some(signal.metadata.clone()),
             status: EdgeStatus::Detected,
             token_mint: signal.token_mint.clone(),

@@ -62,6 +62,39 @@ import type {
   RiskConfig,
   VenueConfig,
   ApiKeyStatus,
+  HeliusStatus,
+  LaserStreamStatus,
+  PriorityFees,
+  SenderStats,
+  TokenMetadata,
+  HeliusConfig,
+  IngestUrlResponse,
+  ExtractedStrategy,
+  DiscoveryListResponse,
+  MonitoredSource,
+  MonitorStats,
+  SocialAlert,
+  CapitalUsageResponse,
+  SyncCapitalResponse,
+  CurvePosition,
+  CurveExitConfig,
+  CurveStrategyParams,
+  CurveStrategyStats,
+  TrackedToken,
+  SnipePosition,
+  SniperStats,
+  GraduationTrackerStats,
+  OnChainCurveState,
+  CurveBuildResult,
+  SimulatedTrade,
+  PnLSummary,
+  LearningInsight,
+  LearningInsightsResponse,
+  RiskLevel,
+  RiskLevelParams,
+  SetRiskLevelResponse,
+  OpenPosition,
+  PositionsResponse,
 } from '../../types/arbfarm';
 
 export interface ArbFarmServiceResponse<T = unknown> {
@@ -374,10 +407,39 @@ class ArbFarmService {
     return this.makeRequest('/scanner/stop', { method: 'POST' });
   }
 
-  async getSignals(limit?: number): Promise<ArbFarmServiceResponse<Signal[]>> {
-    const params = limit ? `?limit=${limit}` : '';
+  async getSignals(options?: {
+    limit?: number;
+    signal_type?: string;
+    venue_type?: string;
+    min_profit_bps?: number;
+    min_confidence?: number;
+  }): Promise<ArbFarmServiceResponse<Signal[]>> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.set('limit', options.limit.toString());
+    if (options?.signal_type) params.set('signal_type', options.signal_type);
+    if (options?.venue_type) params.set('venue_type', options.venue_type);
+    if (options?.min_profit_bps) params.set('min_profit_bps', options.min_profit_bps.toString());
+    if (options?.min_confidence) params.set('min_confidence', options.min_confidence.toString());
+    const queryString = params.toString();
+    return this.makeRequest(`/scanner/signals${queryString ? '?' + queryString : ''}`);
+  }
 
-    return this.makeRequest(`/scanner/signals${params}`);
+  subscribeToSignals(onSignal: (signal: Signal) => void): () => void {
+    const eventSource = new EventSource(`${this.baseUrl}/scanner/stream`);
+    eventSource.addEventListener('signal', (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.payload) {
+          onSignal(data.payload as Signal);
+        }
+      } catch (err) {
+        console.error('Failed to parse signal event:', err);
+      }
+    });
+    eventSource.onerror = () => {
+      console.warn('Scanner SSE connection error, will retry...');
+    };
+    return () => eventSource.close();
   }
 
   // ============================================================================
@@ -624,6 +686,92 @@ class ArbFarmService {
   }
 
   // ============================================================================
+  // KOL Discovery Operations
+  // ============================================================================
+
+  async getKolDiscoveryStatus(): Promise<
+    ArbFarmServiceResponse<{
+      is_running: boolean;
+      total_wallets_analyzed: number;
+      total_kols_discovered: number;
+      last_scan_at?: string;
+      scan_interval_ms: number;
+    }>
+  > {
+    return this.makeRequest('/kol/discovery/status');
+  }
+
+  async startKolDiscovery(): Promise<
+    ArbFarmServiceResponse<{ status: string; message: string }>
+  > {
+    return this.makeRequest('/kol/discovery/start', { method: 'POST' });
+  }
+
+  async stopKolDiscovery(): Promise<
+    ArbFarmServiceResponse<{ status: string; message: string }>
+  > {
+    return this.makeRequest('/kol/discovery/stop', { method: 'POST' });
+  }
+
+  async scanForKols(): Promise<
+    ArbFarmServiceResponse<{
+      discovered: Array<{
+        wallet_address: string;
+        display_name?: string;
+        total_trades: number;
+        winning_trades: number;
+        win_rate: number;
+        avg_profit_pct: number;
+        total_volume_usd: number;
+        consecutive_wins: number;
+        trust_score: number;
+        discovered_at: string;
+        source: string;
+      }>;
+      count: number;
+      message: string;
+    }>
+  > {
+    return this.makeRequest('/kol/discovery/scan', { method: 'POST' });
+  }
+
+  async listDiscoveredKols(options?: {
+    min_trust_score?: number;
+    min_win_rate?: number;
+    source?: string;
+    limit?: number;
+  }): Promise<
+    ArbFarmServiceResponse<{
+      discovered: Array<{
+        wallet_address: string;
+        display_name?: string;
+        total_trades: number;
+        winning_trades: number;
+        win_rate: number;
+        avg_profit_pct: number;
+        total_volume_usd: number;
+        consecutive_wins: number;
+        trust_score: number;
+        discovered_at: string;
+        source: string;
+      }>;
+      total: number;
+    }>
+  > {
+    const params = new URLSearchParams();
+    if (options?.min_trust_score) params.append('min_trust_score', options.min_trust_score.toString());
+    if (options?.min_win_rate) params.append('min_win_rate', options.min_win_rate.toString());
+    if (options?.source) params.append('source', options.source);
+    if (options?.limit) params.append('limit', options.limit.toString());
+    const queryString = params.toString();
+    return this.makeRequest(`/kol/discovery/discovered${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async promoteDiscoveredKol(walletAddress: string): Promise<ArbFarmServiceResponse<KOL>> {
+    return this.makeRequest(`/kol/discovery/promote/${walletAddress}`, { method: 'POST' });
+  }
+
+  // ============================================================================
   // Bonding Curve Operations
   // ============================================================================
 
@@ -708,6 +856,309 @@ class ArbFarmService {
     const params = minDiffPercent ? `?min_diff=${minDiffPercent}` : '';
 
     return this.makeRequest(`/curves/cross-venue-arb${params}`);
+  }
+
+  // ============================================================================
+  // Curve Execution Operations
+  // ============================================================================
+
+  async getCurveOnChainState(mint: string): Promise<ArbFarmServiceResponse<OnChainCurveState>> {
+    return this.makeRequest(`/curves/${mint}/state`);
+  }
+
+  async buyCurveToken(
+    mint: string,
+    solAmount: number,
+    options?: {
+      slippage_bps?: number;
+      simulate_only?: boolean;
+    },
+  ): Promise<ArbFarmServiceResponse<CurveBuildResult>> {
+    return this.makeRequest(`/curves/${mint}/buy`, {
+      method: 'POST',
+      body: JSON.stringify({
+        sol_amount: solAmount,
+        slippage_bps: options?.slippage_bps ?? 300,
+        simulate_only: options?.simulate_only ?? false,
+      }),
+    });
+  }
+
+  async sellCurveToken(
+    mint: string,
+    tokenAmount: number,
+    options?: {
+      slippage_bps?: number;
+      simulate_only?: boolean;
+    },
+  ): Promise<ArbFarmServiceResponse<CurveBuildResult>> {
+    return this.makeRequest(`/curves/${mint}/sell`, {
+      method: 'POST',
+      body: JSON.stringify({
+        token_amount: tokenAmount,
+        slippage_bps: options?.slippage_bps ?? 300,
+        simulate_only: options?.simulate_only ?? false,
+      }),
+    });
+  }
+
+  async simulateCurveBuy(
+    mint: string,
+    solAmount: number,
+  ): Promise<ArbFarmServiceResponse<SimulatedTrade>> {
+    return this.makeRequest(`/curves/${mint}/simulate-buy`, {
+      method: 'POST',
+      body: JSON.stringify({ sol_amount: solAmount }),
+    });
+  }
+
+  async simulateCurveSell(
+    mint: string,
+    tokenAmount: number,
+  ): Promise<ArbFarmServiceResponse<SimulatedTrade>> {
+    return this.makeRequest(`/curves/${mint}/simulate-sell`, {
+      method: 'POST',
+      body: JSON.stringify({ token_amount: tokenAmount }),
+    });
+  }
+
+  async getPostGraduationPool(
+    mint: string,
+  ): Promise<ArbFarmServiceResponse<{ mint: string; raydium_pool?: string; dex_price_sol?: number }>> {
+    return this.makeRequest(`/curves/${mint}/post-graduation-pool`);
+  }
+
+  async getCurveAddresses(
+    mint: string,
+  ): Promise<
+    ArbFarmServiceResponse<{
+      mint: string;
+      bonding_curve: string;
+      associated_bonding_curve: string;
+      global_state: string;
+      fee_recipient: string;
+    }>
+  > {
+    return this.makeRequest(`/curves/${mint}/addresses`);
+  }
+
+  // ============================================================================
+  // Curve Metrics & Scoring Operations
+  // ============================================================================
+
+  async getCurveMetrics(
+    mint: string,
+  ): Promise<ArbFarmServiceResponse<import('../../types/arbfarm').DetailedCurveMetrics>> {
+    return this.makeRequest(`/curves/${mint}/metrics`);
+  }
+
+  async getHolderAnalysis(
+    mint: string,
+  ): Promise<ArbFarmServiceResponse<import('../../types/arbfarm').HolderAnalysis>> {
+    return this.makeRequest(`/curves/${mint}/holder-analysis`);
+  }
+
+  async getOpportunityScore(
+    mint: string,
+  ): Promise<ArbFarmServiceResponse<import('../../types/arbfarm').OpportunityScore>> {
+    return this.makeRequest(`/curves/${mint}/score`);
+  }
+
+  async getTopOpportunities(
+    limit?: number,
+  ): Promise<ArbFarmServiceResponse<import('../../types/arbfarm').TopOpportunitiesResponse>> {
+    const params = limit ? `?limit=${limit}` : '';
+    return this.makeRequest(`/curves/top-opportunities${params}`);
+  }
+
+  async getScoringConfig(): Promise<ArbFarmServiceResponse<import('../../types/arbfarm').ScoringConfig>> {
+    return this.makeRequest('/curves/scoring-config');
+  }
+
+  // ============================================================================
+  // Curve Position Operations
+  // ============================================================================
+
+  async listCurvePositions(): Promise<ArbFarmServiceResponse<CurvePosition[]>> {
+    return this.makeRequest('/curves/positions');
+  }
+
+  async getCurvePosition(positionId: string): Promise<ArbFarmServiceResponse<CurvePosition>> {
+    return this.makeRequest(`/curves/positions/${positionId}`);
+  }
+
+  async closeCurvePosition(
+    positionId: string,
+    percentToClose?: number,
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; tx_signature?: string; pnl_sol?: number }>> {
+    return this.makeRequest(`/curves/positions/${positionId}/close`, {
+      method: 'POST',
+      body: JSON.stringify({ percent: percentToClose ?? 100 }),
+    });
+  }
+
+  async updateCurvePositionExit(
+    positionId: string,
+    exitConfig: Partial<CurveExitConfig>,
+  ): Promise<ArbFarmServiceResponse<CurvePosition>> {
+    return this.makeRequest(`/curves/positions/${positionId}/exit-config`, {
+      method: 'PUT',
+      body: JSON.stringify(exitConfig),
+    });
+  }
+
+  async emergencyExitAllPositions(): Promise<ArbFarmServiceResponse<{
+    positions_exited: number;
+    positions_failed: number;
+    total_positions: number;
+    message: string;
+    results: Array<{
+      position_id: string;
+      token_mint: string;
+      token_symbol?: string;
+      success: boolean;
+      error?: string;
+    }>;
+  }>> {
+    return this.makeRequest('/positions/emergency-close', { method: 'POST' });
+  }
+
+  // ============================================================================
+  // Graduation Tracker Operations
+  // ============================================================================
+
+  async getGraduationTrackerStats(): Promise<ArbFarmServiceResponse<GraduationTrackerStats>> {
+    return this.makeRequest('/graduation/stats');
+  }
+
+  async listTrackedTokens(): Promise<ArbFarmServiceResponse<TrackedToken[]>> {
+    return this.makeRequest('/graduation/tracked');
+  }
+
+  async trackToken(
+    mint: string,
+    strategyId: string,
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    return this.makeRequest('/graduation/track', {
+      method: 'POST',
+      body: JSON.stringify({ mint, strategy_id: strategyId }),
+    });
+  }
+
+  async untrackToken(
+    mint: string,
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    return this.makeRequest(`/graduation/untrack/${mint}`, { method: 'POST' });
+  }
+
+  async startGraduationTracker(): Promise<
+    ArbFarmServiceResponse<{ success: boolean; message: string }>
+  > {
+    return this.makeRequest('/graduation/start', { method: 'POST' });
+  }
+
+  async stopGraduationTracker(): Promise<
+    ArbFarmServiceResponse<{ success: boolean; message: string }>
+  > {
+    return this.makeRequest('/graduation/stop', { method: 'POST' });
+  }
+
+  // ============================================================================
+  // Graduation Sniper Operations
+  // ============================================================================
+
+  async getSniperStats(): Promise<ArbFarmServiceResponse<SniperStats>> {
+    return this.makeRequest('/sniper/stats');
+  }
+
+  async listSnipePositions(): Promise<ArbFarmServiceResponse<SnipePosition[]>> {
+    return this.makeRequest('/sniper/positions');
+  }
+
+  async addSnipePosition(
+    mint: string,
+    symbol: string,
+    strategyId: string,
+    entryTokens: number,
+    entryPriceSol: number,
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    return this.makeRequest('/sniper/positions', {
+      method: 'POST',
+      body: JSON.stringify({
+        mint,
+        symbol,
+        strategy_id: strategyId,
+        entry_tokens: entryTokens,
+        entry_price_sol: entryPriceSol,
+      }),
+    });
+  }
+
+  async removeSnipePosition(
+    mint: string,
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; position?: SnipePosition }>> {
+    return this.makeRequest(`/sniper/positions/${mint}`, { method: 'DELETE' });
+  }
+
+  async manualSell(
+    mint: string,
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    return this.makeRequest(`/sniper/positions/${mint}/sell`, { method: 'POST' });
+  }
+
+  async startSniper(): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    return this.makeRequest('/sniper/start', { method: 'POST' });
+  }
+
+  async stopSniper(): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    return this.makeRequest('/sniper/stop', { method: 'POST' });
+  }
+
+  // ============================================================================
+  // Curve Strategy Operations
+  // ============================================================================
+
+  async createCurveStrategy(
+    name: string,
+    params: CurveStrategyParams,
+    executionMode: 'autonomous' | 'agent_directed' | 'hybrid' = 'agent_directed',
+    riskParams?: Partial<import('../../types/arbfarm').RiskParams>,
+  ): Promise<ArbFarmServiceResponse<Strategy>> {
+    return this.makeRequest('/strategies', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        strategy_type: 'curve_arb',
+        venue_types: ['bonding_curve'],
+        execution_mode: executionMode,
+        curve_params: params,
+        risk_params: riskParams,
+      }),
+    });
+  }
+
+  async getCurveStrategyStats(strategyId: string): Promise<ArbFarmServiceResponse<CurveStrategyStats>> {
+    return this.makeRequest(`/strategies/${strategyId}/curve-stats`);
+  }
+
+  async updateCurveStrategyParams(
+    strategyId: string,
+    params: Partial<CurveStrategyParams>,
+  ): Promise<ArbFarmServiceResponse<Strategy>> {
+    return this.makeRequest(`/strategies/${strategyId}/curve-params`, {
+      method: 'PUT',
+      body: JSON.stringify(params),
+    });
+  }
+
+  async setRiskProfile(
+    strategyId: string,
+    profile: 'conservative' | 'moderate' | 'aggressive',
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; profile: string; strategy: Strategy }>> {
+    return this.makeRequest(`/strategies/${strategyId}/risk-profile`, {
+      method: 'POST',
+      body: JSON.stringify({ profile }),
+    });
   }
 
   // ============================================================================
@@ -806,6 +1257,36 @@ class ArbFarmService {
 
   async deleteStrategy(id: string): Promise<ArbFarmServiceResponse<void>> {
     return this.makeRequest(`/strategies/${id}`, { method: 'DELETE' });
+  }
+
+  async killStrategy(id: string): Promise<
+    ArbFarmServiceResponse<{
+      success: boolean;
+      id: string;
+      strategy_name: string;
+      message: string;
+      action: string;
+    }>
+  > {
+    return this.makeRequest(`/strategies/${id}/kill`, { method: 'POST' });
+  }
+
+  async batchToggleStrategies(
+    ids: string[],
+    enabled: boolean,
+  ): Promise<ArbFarmServiceResponse<{ results: Array<{ id: string; success: boolean; error?: string }>; enabled: boolean }>> {
+    return this.makeRequest('/strategies/batch-toggle', {
+      method: 'POST',
+      body: JSON.stringify({ ids, enabled }),
+    });
+  }
+
+  async saveStrategiesToEngrams(): Promise<ArbFarmServiceResponse<{ success: boolean; message: string; count: number }>> {
+    return this.makeRequest('/strategies/save-to-engrams', { method: 'POST' });
+  }
+
+  async resetStrategyStats(id: string): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    return this.makeRequest(`/strategies/${id}/reset-stats`, { method: 'POST' });
   }
 
   // ============================================================================
@@ -1122,6 +1603,40 @@ class ArbFarmService {
     });
   }
 
+  async getDevMode(): Promise<
+    ArbFarmServiceResponse<{
+      dev_mode_available: boolean;
+      wallet_address: string | null;
+      has_private_key: boolean;
+    }>
+  > {
+    return this.makeRequest('/wallet/dev-mode');
+  }
+
+  async connectDevWallet(): Promise<
+    ArbFarmServiceResponse<{
+      success: boolean;
+      message?: string;
+      wallet_address?: string;
+      status?: WalletStatus;
+      error?: string;
+    }>
+  > {
+    return this.makeRequest('/wallet/dev-connect', { method: 'POST' });
+  }
+
+  // ============================================================================
+  // Capital Management Operations
+  // ============================================================================
+
+  async getCapitalUsage(): Promise<ArbFarmServiceResponse<CapitalUsageResponse>> {
+    return this.makeRequest('/wallet/capital');
+  }
+
+  async syncCapitalBalance(): Promise<ArbFarmServiceResponse<SyncCapitalResponse>> {
+    return this.makeRequest('/wallet/capital/sync', { method: 'POST' });
+  }
+
   // ============================================================================
   // Settings Operations
   // ============================================================================
@@ -1150,6 +1665,124 @@ class ArbFarmService {
 
   async getApiKeyStatus(): Promise<ArbFarmServiceResponse<{ services: ApiKeyStatus[] }>> {
     return this.makeRequest('/settings/api-keys');
+  }
+
+  // ============================================================================
+  // Approval Operations
+  // ============================================================================
+
+  async listApprovals(): Promise<
+    ArbFarmServiceResponse<{
+      approvals: Array<{
+        id: string;
+        edge_id?: string;
+        strategy_id?: string;
+        approval_type: string;
+        status: string;
+        expires_at?: string;
+        hecate_decision?: boolean;
+        hecate_reasoning?: string;
+        user_decision?: boolean;
+        user_decided_at?: string;
+        created_at: string;
+      }>;
+      total: number;
+    }>
+  > {
+    return this.makeRequest('/approvals');
+  }
+
+  async listPendingApprovals(): Promise<
+    ArbFarmServiceResponse<{
+      approvals: Array<{
+        id: string;
+        edge_id?: string;
+        strategy_id?: string;
+        approval_type: string;
+        status: string;
+        expires_at?: string;
+        hecate_decision?: boolean;
+        hecate_reasoning?: string;
+        created_at: string;
+      }>;
+      total: number;
+    }>
+  > {
+    return this.makeRequest('/approvals/pending');
+  }
+
+  async getApproval(id: string): Promise<
+    ArbFarmServiceResponse<{
+      id: string;
+      edge_id?: string;
+      strategy_id?: string;
+      approval_type: string;
+      status: string;
+      expires_at?: string;
+      hecate_decision?: boolean;
+      hecate_reasoning?: string;
+      user_decision?: boolean;
+      user_decided_at?: string;
+      created_at: string;
+    }>
+  > {
+    return this.makeRequest(`/approvals/${id}`);
+  }
+
+  async approveApproval(
+    id: string,
+    notes?: string,
+  ): Promise<ArbFarmServiceResponse<{ id: string; status: string }>> {
+    return this.makeRequest(`/approvals/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+
+  async rejectApproval(
+    id: string,
+    reason: string,
+  ): Promise<ArbFarmServiceResponse<{ id: string; status: string }>> {
+    return this.makeRequest(`/approvals/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async getExecutionConfig(): Promise<
+    ArbFarmServiceResponse<{
+      auto_execution_enabled: boolean;
+      default_approval_timeout_secs: number;
+      notify_hecate_on_pending: boolean;
+    }>
+  > {
+    return this.makeRequest('/execution/config');
+  }
+
+  async updateExecutionConfig(config: {
+    auto_execution_enabled?: boolean;
+    default_approval_timeout_secs?: number;
+    notify_hecate_on_pending?: boolean;
+  }): Promise<
+    ArbFarmServiceResponse<{
+      auto_execution_enabled: boolean;
+      default_approval_timeout_secs: number;
+      notify_hecate_on_pending: boolean;
+    }>
+  > {
+    return this.makeRequest('/execution/config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async toggleExecution(
+    enabled: boolean,
+  ): Promise<ArbFarmServiceResponse<{ enabled: boolean; message: string }>> {
+    return this.makeRequest('/execution/toggle', {
+      method: 'POST',
+      body: JSON.stringify({ enabled }),
+    });
   }
 
   // ============================================================================
@@ -1295,6 +1928,224 @@ class ArbFarmService {
     return `${this.baseUrl}/threat/stream`;
   }
 
+  getHeliusStreamUrl(): string {
+    return `${this.baseUrl}/helius/stream`;
+  }
+
+  // ============================================================================
+  // Helius Integration Operations
+  // ============================================================================
+
+  async getHeliusStatus(): Promise<ArbFarmServiceResponse<HeliusStatus>> {
+    return this.makeRequest('/helius/status');
+  }
+
+  async getLaserStreamStatus(): Promise<ArbFarmServiceResponse<LaserStreamStatus>> {
+    return this.makeRequest('/helius/laserstream');
+  }
+
+  async getPriorityFees(accountKeys?: string[]): Promise<ArbFarmServiceResponse<PriorityFees>> {
+    const params = accountKeys ? `?account_keys=${accountKeys.join(',')}` : '';
+    return this.makeRequest(`/helius/priority-fees${params}`);
+  }
+
+  async getCachedPriorityFees(): Promise<ArbFarmServiceResponse<PriorityFees | null>> {
+    return this.makeRequest('/helius/priority-fees/cached');
+  }
+
+  async getSenderStats(): Promise<ArbFarmServiceResponse<SenderStats>> {
+    return this.makeRequest('/helius/sender/stats');
+  }
+
+  async pingHeliusSender(): Promise<ArbFarmServiceResponse<{ latency_ms: number }>> {
+    return this.makeRequest('/helius/sender/ping', { method: 'POST' });
+  }
+
+  async lookupTokenMetadata(mint: string): Promise<ArbFarmServiceResponse<TokenMetadata>> {
+    return this.makeRequest('/helius/das/lookup', {
+      method: 'POST',
+      body: JSON.stringify({ mint }),
+    });
+  }
+
+  async getAssetsByOwner(
+    owner: string,
+    page?: number,
+    limit?: number,
+  ): Promise<ArbFarmServiceResponse<{ assets: TokenMetadata[]; total: number }>> {
+    const params = new URLSearchParams({ owner });
+    if (page) params.append('page', page.toString());
+    if (limit) params.append('limit', limit.toString());
+    return this.makeRequest(`/helius/das/assets?${params.toString()}`);
+  }
+
+  async getHeliusConfig(): Promise<ArbFarmServiceResponse<HeliusConfig>> {
+    return this.makeRequest('/helius/config');
+  }
+
+  async updateHeliusConfig(
+    config: Partial<HeliusConfig>,
+  ): Promise<ArbFarmServiceResponse<HeliusConfig>> {
+    return this.makeRequest('/helius/config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  }
+
+  // ============================================================================
+  // Research & Discovery Operations
+  // ============================================================================
+
+  async submitResearchUrl(
+    url: string,
+    context?: string,
+    extractStrategy: boolean = true,
+  ): Promise<ArbFarmServiceResponse<IngestUrlResponse>> {
+    return this.makeRequest('/research/ingest', {
+      method: 'POST',
+      body: JSON.stringify({
+        url,
+        context,
+        extract_strategy: extractStrategy,
+      }),
+    });
+  }
+
+  async listDiscoveries(
+    status?: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<ArbFarmServiceResponse<DiscoveryListResponse>> {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    const queryString = params.toString();
+    return this.makeRequest(`/research/discoveries${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getDiscovery(discoveryId: string): Promise<ArbFarmServiceResponse<ExtractedStrategy>> {
+    return this.makeRequest(`/research/discoveries/${discoveryId}`);
+  }
+
+  async approveDiscovery(
+    discoveryId: string,
+    notes?: string,
+  ): Promise<ArbFarmServiceResponse<{ message: string; status: string }>> {
+    return this.makeRequest(`/research/discoveries/${discoveryId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+
+  async rejectDiscovery(
+    discoveryId: string,
+    reason: string,
+  ): Promise<ArbFarmServiceResponse<{ message: string; status: string; reason: string }>> {
+    return this.makeRequest(`/research/discoveries/${discoveryId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async runBacktest(
+    strategyId: string,
+    periodDays?: number,
+    initialCapitalSol?: number,
+    maxPositionSizeSol?: number,
+  ): Promise<ArbFarmServiceResponse<{ message: string; strategy_id: string }>> {
+    return this.makeRequest('/research/backtest', {
+      method: 'POST',
+      body: JSON.stringify({
+        strategy_id: strategyId,
+        period_days: periodDays,
+        initial_capital_sol: initialCapitalSol,
+        max_position_size_sol: maxPositionSizeSol,
+      }),
+    });
+  }
+
+  async getBacktestResult(
+    backtestId: string,
+  ): Promise<ArbFarmServiceResponse<{ status: string; result?: unknown }>> {
+    return this.makeRequest(`/research/backtest/${backtestId}`);
+  }
+
+  async listSources(
+    sourceType?: string,
+    trackType?: string,
+    activeOnly?: boolean,
+  ): Promise<ArbFarmServiceResponse<{ sources: MonitoredSource[]; total: number }>> {
+    const params = new URLSearchParams();
+    if (sourceType) params.append('source_type', sourceType);
+    if (trackType) params.append('track_type', trackType);
+    if (activeOnly !== undefined) params.append('active_only', activeOnly.toString());
+    const queryString = params.toString();
+    return this.makeRequest(`/research/sources${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async addSource(
+    sourceType: string,
+    handle: string,
+    trackType: string,
+    displayName?: string,
+    keywords?: string[],
+  ): Promise<ArbFarmServiceResponse<{ message: string; source: MonitoredSource }>> {
+    return this.makeRequest('/research/sources', {
+      method: 'POST',
+      body: JSON.stringify({
+        source_type: sourceType,
+        handle,
+        track_type: trackType,
+        display_name: displayName,
+        keywords,
+      }),
+    });
+  }
+
+  async deleteSource(sourceId: string): Promise<ArbFarmServiceResponse<{ message: string }>> {
+    return this.makeRequest(`/research/sources/${sourceId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async toggleSource(
+    sourceId: string,
+    active: boolean,
+  ): Promise<ArbFarmServiceResponse<{ message: string; active: boolean }>> {
+    return this.makeRequest(`/research/sources/${sourceId}/toggle`, {
+      method: 'POST',
+      body: JSON.stringify({ active }),
+    });
+  }
+
+  async listResearchAlerts(
+    sourceId?: string,
+    alertType?: string,
+    limit?: number,
+  ): Promise<ArbFarmServiceResponse<{ alerts: SocialAlert[]; total: number }>> {
+    const params = new URLSearchParams();
+    if (sourceId) params.append('source_id', sourceId);
+    if (alertType) params.append('alert_type', alertType);
+    if (limit) params.append('limit', limit.toString());
+    const queryString = params.toString();
+    return this.makeRequest(`/research/alerts${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getMonitorStats(): Promise<ArbFarmServiceResponse<MonitorStats>> {
+    return this.makeRequest('/research/stats');
+  }
+
+  async monitorAccount(
+    handle: string,
+    trackType: string,
+  ): Promise<ArbFarmServiceResponse<{ message: string; source: MonitoredSource }>> {
+    return this.makeRequest('/research/monitor', {
+      method: 'POST',
+      body: JSON.stringify({ handle, track_type: trackType }),
+    });
+  }
+
   // ============================================================================
   // Utility Methods
   // ============================================================================
@@ -1312,7 +2163,7 @@ class ArbFarmService {
     return `${sign}${sol.toFixed(4)} SOL`;
   }
 
-  getRiskLevel(score: number): 'low' | 'medium' | 'high' | 'critical' {
+  getRiskLevelFromScore(score: number): 'low' | 'medium' | 'high' | 'critical' {
     if (score <= 25) {
       return 'low';
     }
@@ -1339,6 +2190,136 @@ class ArbFarmService {
       default:
         return level;
     }
+  }
+
+  // ============================================================================
+  // P&L Summary
+  // ============================================================================
+
+  async getPnLSummary(): Promise<ArbFarmServiceResponse<PnLSummary>> {
+    return this.request<PnLSummary>('/positions/pnl-summary', {
+      method: 'GET',
+    });
+  }
+
+  // ============================================================================
+  // Learning Insights
+  // ============================================================================
+
+  async getLearningInsights(): Promise<ArbFarmServiceResponse<LearningInsightsResponse>> {
+    return this.request<LearningInsightsResponse>('/engram/insights', {
+      method: 'GET',
+    });
+  }
+
+  // ============================================================================
+  // Risk Level Configuration
+  // ============================================================================
+
+  async setRiskLevel(level: RiskLevel): Promise<ArbFarmServiceResponse<SetRiskLevelResponse>> {
+    return this.request<SetRiskLevelResponse>('/config/risk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level }),
+    });
+  }
+
+  async getRiskLevel(): Promise<ArbFarmServiceResponse<RiskLevelParams>> {
+    return this.request<RiskLevelParams>('/config/risk', {
+      method: 'GET',
+    });
+  }
+
+  async setCustomRisk(config: {
+    max_position_sol?: number;
+    max_concurrent_positions?: number;
+    daily_loss_limit_sol?: number;
+    max_drawdown_percent?: number;
+  }): Promise<ArbFarmServiceResponse<{ success: boolean; config?: RiskLevelParams; error?: string }>> {
+    return this.request<{ success: boolean; config?: RiskLevelParams; error?: string }>('/config/risk/custom', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+  }
+
+  // ============================================================================
+  // Position Monitor Control
+  // ============================================================================
+
+  async startPositionMonitor(): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    return this.request<{ success: boolean; message: string }>('/positions/monitor/start', {
+      method: 'POST',
+    });
+  }
+
+  async stopPositionMonitor(): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    return this.request<{ success: boolean; message: string }>('/positions/monitor/stop', {
+      method: 'POST',
+    });
+  }
+
+  // ============================================================================
+  // Position Management
+  // ============================================================================
+
+  async getPositions(): Promise<ArbFarmServiceResponse<PositionsResponse>> {
+    return this.request<PositionsResponse>('/positions', {
+      method: 'GET',
+    });
+  }
+
+  async getPosition(id: string): Promise<ArbFarmServiceResponse<OpenPosition>> {
+    return this.request<OpenPosition>(`/positions/${id}`, {
+      method: 'GET',
+    });
+  }
+
+  async closePosition(id: string, exitPercent?: number): Promise<ArbFarmServiceResponse<{ success: boolean; message: string; position_id: string }>> {
+    return this.request<{ success: boolean; message: string; position_id: string }>(`/positions/${id}/close`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ exit_percent: exitPercent ?? 100 }),
+    });
+  }
+
+  async updatePositionExitConfig(
+    id: string,
+    config: {
+      stop_loss_percent?: number;
+      take_profit_percent?: number;
+      trailing_stop_percent?: number;
+      time_limit_minutes?: number;
+      preset?: string;
+    }
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; position_id: string }>> {
+    return this.request<{ success: boolean; position_id: string }>(`/positions/${id}/exit-config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+  }
+
+  async updateAllPositionsExitConfig(
+    config: {
+      stop_loss_percent?: number;
+      take_profit_percent?: number;
+      trailing_stop_percent?: number;
+      time_limit_minutes?: number;
+      preset?: string;
+    }
+  ): Promise<ArbFarmServiceResponse<{ updated_count: number }>> {
+    return this.request<{ updated_count: number }>('/positions/exit-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+  }
+
+  async sellAllWalletTokens(): Promise<ArbFarmServiceResponse<{ success: boolean; results: Array<{ mint: string; success: boolean; error?: string }> }>> {
+    return this.request<{ success: boolean; results: Array<{ mint: string; success: boolean; error?: string }> }>('/positions/sell-all', {
+      method: 'POST',
+    });
   }
 }
 

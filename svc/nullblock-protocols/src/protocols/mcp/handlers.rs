@@ -150,11 +150,11 @@ pub async fn read_resource(
 }
 
 pub async fn list_tools(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
 ) -> Result<Json<ListToolsResult>, StatusCode> {
     info!("🔧 MCP List Tools request");
 
-    let tools = vec![
+    let mut tools = vec![
         Tool {
             name: "send_agent_message".to_string(),
             title: Some("Send Agent Message".to_string()),
@@ -399,6 +399,59 @@ pub async fn list_tools(
         },
     ];
 
+    // Fetch and aggregate ArbFarm tools with arb_ prefix
+    let arbfarm_tools_url = format!("{}/mcp/manifest", state.arbfarm_url);
+    match state.http_client.get(&arbfarm_tools_url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                if let Ok(manifest) = response.json::<serde_json::Value>().await {
+                    if let Some(arb_tools) = manifest.get("tools").and_then(|t| t.as_array()) {
+                        for tool_value in arb_tools {
+                            if let (Some(name), Some(description), Some(input_schema)) = (
+                                tool_value.get("name").and_then(|n| n.as_str()),
+                                tool_value.get("description").and_then(|d| d.as_str()),
+                                tool_value.get("inputSchema"),
+                            ) {
+                                let prefixed_name = format!("arb_{}", name);
+                                let mut props = HashMap::new();
+                                if let Some(schema_props) = input_schema.get("properties").and_then(|p| p.as_object()) {
+                                    for (key, val) in schema_props {
+                                        props.insert(key.clone(), val.clone());
+                                    }
+                                }
+                                let required: Vec<String> = input_schema
+                                    .get("required")
+                                    .and_then(|r| r.as_array())
+                                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                                    .unwrap_or_default();
+
+                                tools.push(Tool {
+                                    name: prefixed_name,
+                                    title: Some(format!("ArbFarm: {}", name.replace('_', " "))),
+                                    description: Some(format!("[ArbFarm] {}", description)),
+                                    input_schema: InputSchema {
+                                        schema_type: "object".to_string(),
+                                        properties: if props.is_empty() { None } else { Some(props) },
+                                        required: if required.is_empty() { None } else { Some(required) },
+                                    },
+                                    output_schema: None,
+                                    annotations: None,
+                                    meta: None,
+                                });
+                            }
+                        }
+                        info!("✅ Aggregated {} tools from ArbFarm", arb_tools.len());
+                    }
+                }
+            } else {
+                warn!("⚠️ ArbFarm service returned status: {}", response.status());
+            }
+        }
+        Err(e) => {
+            warn!("⚠️ Failed to fetch ArbFarm tools: {}. ArbFarm tools will not be available.", e);
+        }
+    }
+
     info!("✅ Returning {} tools", tools.len());
 
     Ok(Json(ListToolsResult { tools }))
@@ -409,6 +462,88 @@ pub async fn call_tool(
     request: CallToolRequest,
 ) -> Result<Json<CallToolResult>, StatusCode> {
     info!("🔨 MCP Call Tool: {}", request.name);
+
+    // Route arb_* prefixed tools to ArbFarm service
+    if request.name.starts_with("arb_") {
+        let original_name = request.name.strip_prefix("arb_").unwrap();
+        let arbfarm_call_url = format!("{}/mcp/call", state.arbfarm_url);
+
+        let body = json!({
+            "name": original_name,
+            "arguments": request.arguments.clone().unwrap_or_default()
+        });
+
+        info!("🔀 Routing tool '{}' to ArbFarm as '{}'", request.name, original_name);
+
+        match state.http_client.post(&arbfarm_call_url).json(&body).send().await {
+            Ok(response) => {
+                if response.status().is_success() {
+                    match response.json::<serde_json::Value>().await {
+                        Ok(result) => {
+                            // Parse ArbFarm response format
+                            let content = result.get("content")
+                                .and_then(|c| c.as_array())
+                                .map(|arr| {
+                                    arr.iter().filter_map(|item| {
+                                        let text = item.get("text").and_then(|t| t.as_str())?;
+                                        Some(ContentBlock::Text {
+                                            text: text.to_string(),
+                                            annotations: None,
+                                            meta: None,
+                                        })
+                                    }).collect::<Vec<_>>()
+                                })
+                                .unwrap_or_else(|| vec![ContentBlock::Text {
+                                    text: result.to_string(),
+                                    annotations: None,
+                                    meta: None,
+                                }]);
+
+                            let is_error = result.get("isError").and_then(|e| e.as_bool());
+
+                            return Ok(Json(CallToolResult {
+                                content,
+                                structured_content: None,
+                                is_error,
+                            }));
+                        }
+                        Err(e) => {
+                            return Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text {
+                                    text: format!("Failed to parse ArbFarm response: {}", e),
+                                    annotations: None,
+                                    meta: None,
+                                }],
+                                structured_content: None,
+                                is_error: Some(true),
+                            }));
+                        }
+                    }
+                } else {
+                    return Ok(Json(CallToolResult {
+                        content: vec![ContentBlock::Text {
+                            text: format!("ArbFarm service error: {}", response.status()),
+                            annotations: None,
+                            meta: None,
+                        }],
+                        structured_content: None,
+                        is_error: Some(true),
+                    }));
+                }
+            }
+            Err(e) => {
+                return Ok(Json(CallToolResult {
+                    content: vec![ContentBlock::Text {
+                        text: format!("Failed to connect to ArbFarm: {}", e),
+                        annotations: None,
+                        meta: None,
+                    }],
+                    structured_content: None,
+                    is_error: Some(true),
+                }));
+            }
+        }
+    }
 
     match request.name.as_str() {
         "send_agent_message" => {

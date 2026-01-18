@@ -14,6 +14,7 @@ pub struct AppState {
     pub http_client: reqwest::Client,
     pub agents_service_url: String,
     pub erebus_base_url: String,
+    pub arbfarm_url: String,
     pub kafka_bridge: Option<Arc<KafkaSSEBridge>>,
 }
 
@@ -27,9 +28,12 @@ impl Server {
             .unwrap_or_else(|_| "http://localhost:9003".to_string());
         let erebus_base_url = std::env::var("EREBUS_BASE_URL")
             .unwrap_or_else(|_| "http://localhost:3000".to_string());
+        let arbfarm_url = std::env::var("ARBFARM_SERVICE_URL")
+            .unwrap_or_else(|_| "http://localhost:9007".to_string());
 
         info!("🔗 Agents Service URL: {}", agents_service_url);
         info!("🔗 Erebus Base URL: {}", erebus_base_url);
+        info!("🔗 ArbFarm Service URL: {}", arbfarm_url);
 
         let kafka_bridge = if let Ok(bootstrap_servers) = std::env::var("KAFKA_BOOTSTRAP_SERVERS") {
             match KafkaSSEBridge::new(&bootstrap_servers) {
@@ -52,6 +56,7 @@ impl Server {
             http_client: reqwest::Client::new(),
             agents_service_url,
             erebus_base_url,
+            arbfarm_url,
             kafka_bridge,
         };
 

@@ -520,3 +520,253 @@ docs-build:
     @echo "📖 Building internal documentation..."
     cd docs-internal && mdbook build
     @echo "✅ Documentation built to docs-internal/book/"
+
+# ============================================================================
+# ArbFarm Commands
+# ============================================================================
+
+# ArbFarm health check
+arb-health:
+    @echo "🏥 ArbFarm Health Check"
+    @echo "========================"
+    @curl -s --max-time 5 http://localhost:9007/health | jq '.' 2>/dev/null || echo "❌ ArbFarm not responding"
+    @echo ""
+    @echo "📊 Scanner Status:"
+    @curl -s --max-time 5 http://localhost:9007/scanner/status | jq '{is_running: .is_running, venues_active: .venues_active, signals_24h: .signals_detected_24h}' 2>/dev/null || echo "❌ Scanner not available"
+    @echo ""
+    @echo "📈 Curve Venues:"
+    @curl -s --max-time 5 http://localhost:9007/curves/health | jq '.' 2>/dev/null || echo "❌ Curve health not available"
+
+# ArbFarm logs (tail)
+arb-logs:
+    @echo "📋 Tailing ArbFarm logs (Ctrl+C to stop)..."
+    @tail -f svc/arb-farm/logs/*.log 2>/dev/null || echo "No log files found. ArbFarm may output to stdout."
+
+# ArbFarm graduation candidates
+arb-candidates:
+    @echo "🎓 Graduation Candidates"
+    @echo "========================"
+    @curl -s --max-time 10 http://localhost:9007/curves/graduation-candidates?min_progress=50&max_progress=98&limit=10 | jq '.candidates[] | {name: .name, symbol: .symbol, venue: .venue, progress: .progress_percent, volume_24h: .volume_24h}' 2>/dev/null || echo "❌ Could not fetch candidates"
+
+# ArbFarm strategies list
+arb-strategies:
+    @echo "🎯 Active Strategies"
+    @echo "===================="
+    @curl -s --max-time 5 http://localhost:9007/strategies | jq '.[] | {id: .id, name: .name, type: .strategy_type, active: .is_active}' 2>/dev/null || echo "❌ Could not fetch strategies"
+
+# ArbFarm swarm status
+arb-swarm:
+    @echo "🐝 Swarm Status"
+    @echo "==============="
+    @curl -s --max-time 5 http://localhost:9007/swarm/health | jq '.' 2>/dev/null || echo "❌ Swarm not responding"
+
+# Start ArbFarm in dev mode
+arb-dev:
+    @echo "🚀 Starting ArbFarm in dev mode..."
+    cd svc/arb-farm && RUST_LOG=info,arb_farm=debug cargo run
+
+# Build ArbFarm
+arb-build:
+    @echo "🔨 Building ArbFarm..."
+    cd svc/arb-farm && cargo build
+
+# Kill ArbFarm process
+arb-kill:
+    @echo "🛑 Killing ArbFarm process..."
+    @pkill -f "arb-farm" 2>/dev/null || echo "No ArbFarm process found"
+    @lsof -ti:9007 | xargs kill -9 2>/dev/null || echo "Port 9007 already free"
+    @echo "✅ ArbFarm stopped"
+
+# Restart ArbFarm (kill + dev)
+arb-restart:
+    @echo "🔄 Restarting ArbFarm..."
+    @just arb-kill
+    @sleep 1
+    @just arb-dev
+
+# Full ArbFarm reset: kill, rebuild, start service (run arb-start in another terminal)
+arb-full:
+    @echo "🔄 Full ArbFarm reset: kill → build → run"
+    @echo ""
+    @just arb-kill
+    @echo ""
+    @just arb-build
+    @echo ""
+    @echo "🚀 Starting ArbFarm service..."
+    @echo "📋 Run 'just arb-start' in another terminal to start scanner + executor"
+    @echo ""
+    cd svc/arb-farm && RUST_LOG=info,arb_farm=debug cargo run
+
+# Launch ArbFarm with tmuxinator (infra + service + scanner + executor + events)
+arb-tmux:
+    @echo "🖥️ Launching ArbFarm tmuxinator session..."
+    @echo ""
+    @echo "📦 Ensuring infrastructure is running..."
+    @docker ps --filter "name=nullblock-postgres-erebus" --format "{{"{{"}}.Names{{"}}"}}" | grep -q nullblock-postgres-erebus || just start
+    @echo "✅ Infrastructure ready"
+    @echo ""
+    @just arb-kill
+    @just arb-build
+    @mkdir -p ~/.config/tmuxinator
+    @cp tmuxinator-arbfarm.yml ~/.config/tmuxinator/arbfarm.yml
+    @tmuxinator start arbfarm
+
+# ArbFarm active edges
+arb-edges:
+    @echo "⚡ Active Edges"
+    @echo "==============="
+    @curl -s --max-time 5 http://localhost:9007/edges | jq '.[] | {id: .id[0:8], token: .token_mint[0:8], venue: .venue, status: .status, profit: .estimated_profit_sol}' 2>/dev/null || echo "❌ Could not fetch edges"
+
+# ArbFarm auto-executor stats
+arb-executor:
+    @echo "🤖 Auto-Executor Stats"
+    @echo "======================"
+    @curl -s --max-time 5 http://localhost:9007/executor/stats | jq '.' 2>/dev/null || echo "❌ Executor not available"
+    @echo ""
+    @echo "📋 Recent Executions (last 5):"
+    @curl -s --max-time 5 http://localhost:9007/executor/executions | jq '.executions[-5:]' 2>/dev/null || echo "❌ No execution records"
+
+# Start ArbFarm scanner and executor
+arb-start:
+    @echo "🚀 Starting ArbFarm Scanner & Executor..."
+    @echo ""
+    @echo "Starting Scanner..."
+    @curl -s -X POST http://localhost:9007/scanner/start | jq -c '.'
+    @echo ""
+    @echo "Starting Executor..."
+    @curl -s -X POST http://localhost:9007/executor/start | jq -c '.'
+    @echo ""
+    @echo "✅ Scanner and Executor started"
+
+# Stop ArbFarm scanner and executor
+arb-stop:
+    @echo "🛑 Stopping ArbFarm Scanner & Executor..."
+    @curl -s -X POST http://localhost:9007/scanner/stop | jq -c '.'
+    @curl -s -X POST http://localhost:9007/executor/stop | jq -c '.'
+    @echo "✅ Scanner and Executor stopped"
+
+# ArbFarm emergency sell all tracked positions
+arb-emergency-sell:
+    @echo "🚨 EMERGENCY SELL ALL TRACKED POSITIONS"
+    @echo "========================================"
+    @curl -s -X POST http://localhost:9007/positions/emergency-close | jq '.' 2>/dev/null || echo "❌ Service not available"
+
+# ArbFarm sell ALL tokens in wallet (tracked or not) to SOL
+arb-sell-all:
+    @echo "🔥 SELL ALL WALLET TOKENS TO SOL"
+    @echo "================================="
+    @echo "This will sell every token in the wallet (except SOL/USDC) to SOL."
+    @curl -s -X POST http://localhost:9007/positions/sell-all | jq '.' 2>/dev/null || echo "❌ Service not available"
+
+# ArbFarm wipe all position data (fresh start)
+arb-wipe-positions:
+    @echo "🗑️ WIPING ALL POSITION DATA"
+    @echo "============================"
+    @echo "This will delete all positions, edges, and trade history from the database."
+    @read -p "Are you sure? (y/N) " confirm && [ "$$confirm" = "y" ] || exit 1
+    @docker exec nullblock-postgres-agents psql -U postgres -d agents -c "TRUNCATE arb_positions, arb_edges CASCADE;" 2>/dev/null && echo "✅ Position data wiped" || echo "❌ Failed to wipe data"
+
+# ArbFarm wallet/signer status
+arb-wallet:
+    @echo "💰 Wallet Status"
+    @echo "================"
+    @curl -s --max-time 5 http://localhost:9007/wallet/status | jq '.' 2>/dev/null || echo "❌ Wallet not available"
+    @echo ""
+    @echo "📊 Policy:"
+    @curl -s --max-time 5 http://localhost:9007/wallet/policy | jq '{max_tx: .max_transaction_amount_lamports, daily_limit: .daily_volume_limit_lamports, require_sim: .require_simulation}' 2>/dev/null || echo "❌ Policy not available"
+
+# ArbFarm SSE event stream (live)
+arb-events:
+    @echo "📡 Streaming ArbFarm events (Ctrl+C to stop)..."
+    @curl -N http://localhost:9007/events/stream 2>/dev/null || echo "❌ Event stream not available"
+
+# ArbFarm live event stream with pretty formatting
+arb-watch:
+    @echo "👁️ Watching ArbFarm events (Ctrl+C to stop)..."
+    @echo "================================================"
+    @curl -sN http://localhost:9007/events/stream 2>/dev/null | while read line; do \
+        echo "$$line" | grep -v "^$$" | sed 's/^data: //' | jq -c 'select(.topic) | {t: .topic, type: .event_type, ts: .timestamp[11:19]}' 2>/dev/null || echo "$$line"; \
+    done
+
+# ArbFarm comprehensive status
+arb-status:
+    @echo "📊 ArbFarm Comprehensive Status"
+    @echo "================================"
+    @echo ""
+    @just arb-health
+    @echo ""
+    @just arb-executor
+    @echo ""
+    @just arb-wallet
+    @echo ""
+    @just arb-strategies
+    @echo ""
+    @just arb-edges
+
+# Set risk level (low/medium/high)
+arb-set-risk level="medium":
+    @echo "⚙️ Setting risk level to: {{level}}"
+    @curl -s -X POST http://localhost:9007/config/risk \
+      -H "Content-Type: application/json" \
+      -d '{"level": "{{level}}"}' | jq .
+
+# Set custom max position (in SOL)
+arb-set-max-position sol="0.02":
+    @echo "⚙️ Setting max position to: {{sol}} SOL"
+    @curl -s -X POST http://localhost:9007/config/risk/custom \
+      -H "Content-Type: application/json" \
+      -d '{"max_position_sol": {{sol}}}' | jq .
+
+# Get current risk config
+arb-risk:
+    @echo "⚙️ Current Risk Configuration"
+    @echo "=============================="
+    @curl -s http://localhost:9007/config/risk 2>/dev/null | jq '.' || echo "❌ Service not available"
+
+# Watch profit events with position P&L
+arb-watch-profit:
+    @echo "📊 Watching profit events (Ctrl+C to stop)..."
+    @curl -sN http://localhost:9007/events/stream | while read line; do \
+      ts=$$(echo "$$line" | jq -r '.timestamp[11:19]' 2>/dev/null); \
+      evt=$$(echo "$$line" | jq -r '.event_type' 2>/dev/null); \
+      if echo "$$evt" | grep -qE "(position|profit|pnl|exit)"; then \
+        echo "$$ts | $$evt"; \
+        echo "$$line" | jq -c '.payload | {mint: .mint, pnl: .realized_pnl_sol, reason: .exit_reason}' 2>/dev/null; \
+      fi; \
+    done
+
+# Show current positions with P&L
+arb-positions:
+    @echo "📊 Open Positions"
+    @echo "================="
+    @curl -s http://localhost:9007/positions 2>/dev/null | jq -r '.positions[] | "[\(.status)] \(.token_symbol // .token_mint[0:8]) | Entry: \(.entry_amount_base) SOL | P&L: \(.unrealized_pnl_percent | . * 100 | floor / 100)%"' 2>/dev/null || echo "No positions or service unavailable"
+    @echo ""
+    @echo "📈 Summary"
+    @curl -s http://localhost:9007/positions 2>/dev/null | jq -r '"Total: \(.positions | length) | Realized P&L: \(.stats.total_realized_pnl | . * 1000 | floor / 1000) SOL"' 2>/dev/null || echo ""
+
+# Get P&L summary
+arb-pnl:
+    @echo "💰 P&L Summary"
+    @echo "=============="
+    @curl -s http://localhost:9007/positions/pnl-summary 2>/dev/null | jq '.' || echo "❌ Service not available"
+
+# Position monitor status
+arb-monitor:
+    @echo "🔭 Position Monitor Status"
+    @echo "=========================="
+    @curl -s http://localhost:9007/positions/monitor/status 2>/dev/null | jq '.' || echo "❌ Service not available"
+
+# Start position monitor
+arb-monitor-start:
+    @echo "🚀 Starting position monitor..."
+    @curl -s -X POST http://localhost:9007/positions/monitor/start | jq '.'
+
+# Stop position monitor
+arb-monitor-stop:
+    @echo "🛑 Stopping position monitor..."
+    @curl -s -X POST http://localhost:9007/positions/monitor/stop | jq '.'
+
+# Set exit config for all positions (presets: curve, curve_conservative, default)
+arb-exit-config preset="curve":
+    @echo "📝 Setting exit config to: {{preset}}"
+    @curl -s -X PUT http://localhost:9007/positions/exit-config -H "Content-Type: application/json" -d '{"preset":"{{preset}}"}' | jq '.'

@@ -388,11 +388,12 @@ export type ArbFarmView =
 |------|----------|--------|
 | **Dashboard** | P&L metrics, swarm health, top opportunities, recent trades, threat alerts, active strategies | ✅ Complete |
 | **Opportunities** | Filter by status, approve/reject/execute actions, atomicity indicators | ✅ Complete |
-| **Strategies** | Toggle enable/disable, risk params display, performance stats | ✅ Complete |
+| **Strategies** | Strategy list, creation modal, toggle enable/disable, risk params, execution mode | ✅ Complete |
 | **Threats** | Token quick check, recent alerts, blocked entities | ✅ Complete |
-| **KOL Tracker** | Placeholder | ⏳ Placeholder |
-| **Settings** | Placeholder | ⏳ Placeholder |
-| **Research** | Placeholder | ⏳ Placeholder |
+| **KOL Tracker** | Wallet tracking, copy trading config | ⏳ Placeholder |
+| **Settings** | Wallet, risk params, venues, API config, execution settings | ✅ Complete |
+| **Research** | URL injection, discoveries, sources, consensus voting | ✅ Complete |
+| **Signals** | Live signal feed, filtering by type/venue/profit | ✅ Complete |
 
 ---
 
@@ -460,6 +461,163 @@ Shows trade execution details:
   compact={true}
 />
 ```
+
+---
+
+### Research View
+
+The Research view enables alpha discovery through URL injection and strategy extraction.
+
+#### Tabs
+
+| Tab | Description |
+|-----|-------------|
+| **URL Injection** | Submit URLs (Twitter, blogs, whitepapers) for LLM analysis |
+| **Discoveries** | List of extracted strategies ready for review/activation |
+| **Sources** | Tracked alpha sources and their success rates |
+| **Consensus** | Multi-LLM consensus voting on strategy validity |
+
+#### URL Injection Flow
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Paste URL  │ ──▶ │ LLM Analyze │ ──▶ │  Extracted  │
+│  + Analyze  │     │   Content   │     │  Strategy   │
+└─────────────┘     └─────────────┘     └─────────────┘
+                                              │
+                    ┌─────────────────────────┼─────────────────────────┐
+                    │                         │                         │
+                    ▼                         ▼                         ▼
+             ┌─────────────┐           ┌─────────────┐           ┌─────────────┐
+             │   Create    │           │  Backtest   │           │   Reject    │
+             │  Strategy   │           │    First    │           │             │
+             └─────────────┘           └─────────────┘           └─────────────┘
+```
+
+#### Extracted Strategy Display
+
+When a URL is analyzed, the following parameters are extracted:
+
+| Parameter | Description |
+|-----------|-------------|
+| Strategy Type | `dex_arb`, `curve_graduation`, `liquidation`, `kol_copy`, `momentum` |
+| Entry Conditions | Rules that trigger trade entry |
+| Exit Conditions | Rules that trigger trade exit |
+| Risk Parameters | Position size, slippage limits, loss limits |
+| Confidence Score | LLM confidence in the extraction (0-1) |
+
+---
+
+### Signals View
+
+Real-time signal monitoring with filtering capabilities.
+
+#### Signal Card
+
+```tsx
+<div className={styles.signalCard}>
+  <div className={styles.signalHeader}>
+    <span className={styles.signalType}>{signal.signal_type}</span>
+    <span className={styles.signalVenue}>{signal.venue_type}</span>
+    <span className={styles.signalTime}>{formatTime(signal.detected_at)}</span>
+  </div>
+  <div className={styles.signalMetrics}>
+    <div>Est. Profit: {signal.estimated_profit_bps} bps</div>
+    <div>Confidence: {signal.confidence * 100}%</div>
+  </div>
+</div>
+```
+
+#### Signal Types
+
+| Type | Source | Description |
+|------|--------|-------------|
+| `price_discrepancy` | DEX AMMs | Price difference between venues |
+| `volume_spike` | All venues | Unusual volume activity |
+| `dex_arb` | Jupiter/Raydium | Cross-DEX arbitrage opportunity |
+| `liquidation` | Lending protocols | Liquidatable positions |
+| `curve_graduation` | pump.fun/moonshot | Bonding curve graduation imminent |
+| `kol_signal` | Wallet tracking | KOL wallet activity |
+
+#### Filtering Options
+
+- **Signal Type**: Filter by specific signal types
+- **Venue Type**: Filter by DEX, lending protocol, etc.
+- **Min Profit (bps)**: Minimum profit threshold
+- **Min Confidence**: Minimum confidence threshold
+
+---
+
+### Strategy Creation Modal
+
+Full strategy configuration form accessible from the Strategies view.
+
+#### Form Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| Name | text | Strategy display name |
+| Strategy Type | select | `dex_arb`, `curve_graduation`, `liquidation`, `kol_copy` |
+| Venue Types | multiselect | `dex_amm`, `bonding_curve`, `lending` |
+| Execution Mode | select | `autonomous`, `hybrid`, `agent_directed` |
+
+#### Risk Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| Max Position (SOL) | Maximum position size | 0.5 |
+| Daily Loss Limit (SOL) | Max daily loss before pausing | 2.0 |
+| Min Profit (bps) | Minimum profit to execute | 50 |
+| Max Slippage (bps) | Maximum allowed slippage | 100 |
+
+#### Execution Modes
+
+| Mode | Behavior |
+|------|----------|
+| **Autonomous** | Auto-execute all qualifying opportunities |
+| **Hybrid** | Auto below threshold, consensus above |
+| **Agent Directed** | Multi-LLM consensus required for every trade |
+
+---
+
+### Settings View
+
+Configuration tabs for all ArbFarm settings.
+
+#### Tabs
+
+| Tab | Settings |
+|-----|----------|
+| **Wallet** | Connected wallet address, SOL balance display |
+| **Risk** | Global risk parameters |
+| **Venues** | Enable/disable specific venues |
+| **API** | API keys, RPC endpoints |
+| **Execution** | Auto-execute toggle, thresholds |
+
+#### Execution Settings
+
+The execution tab provides fine-grained control over autonomous trading:
+
+```tsx
+// Master toggle
+<div className={styles.masterToggle}>
+  <span>Auto-Execute Mode</span>
+  <input
+    type="checkbox"
+    checked={autoExecuteEnabled}
+    onChange={handleToggle}
+  />
+</div>
+
+// Thresholds
+<div className={styles.thresholds}>
+  <div>Min Confidence for Auto: {autoMinConfidence}%</div>
+  <div>Max Position for Auto: {autoMaxPosition} SOL</div>
+  <div>Require Simulation: {requireSimulation ? 'Yes' : 'No'}</div>
+</div>
+```
+
+**Warning**: When auto-execute is enabled, the agent will execute trades without manual approval for opportunities meeting the threshold criteria.
 
 ---
 

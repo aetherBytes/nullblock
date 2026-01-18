@@ -703,6 +703,249 @@ pub async fn threat_stream() -> Result<Response, StatusCode> {
     proxy_sse("threat/stream").await
 }
 
+// Positions
+pub async fn list_positions() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 List positions requested");
+    proxy_request("GET", "positions", None).await
+}
+
+pub async fn positions_history() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Positions history requested");
+    proxy_request("GET", "positions/history", None).await
+}
+
+pub async fn positions_exposure() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Positions exposure requested");
+    proxy_request("GET", "positions/exposure", None).await
+}
+
+pub async fn positions_pnl_summary() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Positions PnL summary requested");
+    proxy_request("GET", "positions/pnl-summary", None).await
+}
+
+pub async fn positions_reconcile() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🔄 Positions reconcile requested");
+    proxy_request("POST", "positions/reconcile", None).await
+}
+
+pub async fn positions_monitor_status() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Positions monitor status requested");
+    proxy_request("GET", "positions/monitor/status", None).await
+}
+
+pub async fn positions_monitor_start() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("▶️ Positions monitor start requested");
+    proxy_request("POST", "positions/monitor/start", None).await
+}
+
+pub async fn positions_monitor_stop() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⏹️ Positions monitor stop requested");
+    proxy_request("POST", "positions/monitor/stop", None).await
+}
+
+pub async fn positions_emergency_close() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🚨 Positions emergency close requested");
+    proxy_request("POST", "positions/emergency-close", None).await
+}
+
+pub async fn positions_sell_all() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("💰 Positions sell all requested");
+    proxy_request("POST", "positions/sell-all", None).await
+}
+
+pub async fn get_position(
+    Path(id): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📖 Get position {} requested", id);
+    proxy_request("GET", &format!("positions/{}", id), None).await
+}
+
+pub async fn close_position(
+    Path(id): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("✖️ Close position {} requested", id);
+    proxy_request("POST", &format!("positions/{}/close", id), None).await
+}
+
+// Curves
+pub async fn curves_tokens() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Curves tokens requested");
+    proxy_request("GET", "curves/tokens", None).await
+}
+
+pub async fn curves_health() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🏥 Curves health requested");
+    proxy_request("GET", "curves/health", None).await
+}
+
+pub async fn curves_graduation_candidates() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🎓 Curves graduation candidates requested");
+    proxy_request("GET", "curves/graduation-candidates", None).await
+}
+
+pub async fn curves_top_opportunities() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🔝 Curves top opportunities requested");
+    proxy_request("GET", "curves/top-opportunities", None).await
+}
+
+pub async fn curves_progress(
+    Path(mint): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📈 Curves progress for {} requested", mint);
+    proxy_request("GET", &format!("curves/{}/progress", mint), None).await
+}
+
+pub async fn curves_metrics(
+    Path(mint): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Curves metrics for {} requested", mint);
+    proxy_request("GET", &format!("curves/{}/metrics", mint), None).await
+}
+
+pub async fn curves_state(
+    Path(mint): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Curves state for {} requested", mint);
+    proxy_request("GET", &format!("curves/{}/state", mint), None).await
+}
+
+pub async fn curves_quote(
+    Path(mint): Path<String>,
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("💱 Curves quote for {} requested", mint);
+    proxy_request("POST", &format!("curves/{}/quote", mint), Some(request)).await
+}
+
+pub async fn curves_buy(
+    Path(mint): Path<String>,
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("💰 Curves buy for {} requested", mint);
+    proxy_request("POST", &format!("curves/{}/buy", mint), Some(request)).await
+}
+
+pub async fn curves_sell(
+    Path(mint): Path<String>,
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("💸 Curves sell for {} requested", mint);
+    proxy_request("POST", &format!("curves/{}/sell", mint), Some(request)).await
+}
+
+pub async fn curves_score(
+    Path(mint): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Curves score for {} requested", mint);
+    proxy_request("GET", &format!("curves/{}/score", mint), None).await
+}
+
+// Config
+pub async fn config_risk_get() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Get risk config requested");
+    proxy_request("GET", "config/risk", None).await
+}
+
+pub async fn config_risk_set(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Set risk config requested");
+    proxy_request("POST", "config/risk", Some(request)).await
+}
+
+pub async fn config_risk_custom(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Set custom risk config requested");
+    proxy_request("POST", "config/risk/custom", Some(request)).await
+}
+
+// Executor
+pub async fn executor_stats() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Executor stats requested");
+    proxy_request("GET", "executor/stats", None).await
+}
+
+pub async fn executor_start() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("▶️ Executor start requested");
+    proxy_request("POST", "executor/start", None).await
+}
+
+pub async fn executor_stop() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⏹️ Executor stop requested");
+    proxy_request("POST", "executor/stop", None).await
+}
+
+// Helius
+pub async fn helius_status() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Helius status requested");
+    proxy_request("GET", "helius/status", None).await
+}
+
+pub async fn helius_laserstream() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Helius laserstream status requested");
+    proxy_request("GET", "helius/laserstream", None).await
+}
+
+pub async fn helius_priority_fees() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("💰 Helius priority fees requested");
+    proxy_request("GET", "helius/priority-fees", None).await
+}
+
+pub async fn helius_config() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Helius config requested");
+    proxy_request("GET", "helius/config", None).await
+}
+
+pub async fn helius_das_lookup(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🔍 Helius DAS lookup requested");
+    proxy_request("POST", "helius/das/lookup", Some(request)).await
+}
+
+// Approvals
+pub async fn list_approvals() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📋 List approvals requested");
+    proxy_request("GET", "approvals", None).await
+}
+
+pub async fn list_pending_approvals() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📋 List pending approvals requested");
+    proxy_request("GET", "approvals/pending", None).await
+}
+
+pub async fn execution_config() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Execution config requested");
+    proxy_request("GET", "execution/config", None).await
+}
+
+pub async fn execution_toggle(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🔄 Execution toggle requested");
+    proxy_request("POST", "execution/toggle", Some(request)).await
+}
+
+// Engrams
+pub async fn engram_search(
+    Query(query): Query<ListQuery>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🔍 Engram search requested");
+    let endpoint = format!(
+        "engram/search?limit={}&offset={}",
+        query.limit.unwrap_or(50),
+        query.offset.unwrap_or(0)
+    );
+    proxy_request("GET", &endpoint, None).await
+}
+
+pub async fn engram_insights() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("💡 Engram insights requested");
+    proxy_request("GET", "engram/insights", None).await
+}
+
 pub fn create_arb_routes<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -807,4 +1050,58 @@ where
         // Event Streams
         .route("/api/arb/events/stream", get(events_stream))
         .route("/api/arb/threat/stream", get(threat_stream))
+
+        // Positions
+        .route("/api/arb/positions", get(list_positions))
+        .route("/api/arb/positions/history", get(positions_history))
+        .route("/api/arb/positions/exposure", get(positions_exposure))
+        .route("/api/arb/positions/pnl-summary", get(positions_pnl_summary))
+        .route("/api/arb/positions/reconcile", post(positions_reconcile))
+        .route("/api/arb/positions/monitor/status", get(positions_monitor_status))
+        .route("/api/arb/positions/monitor/start", post(positions_monitor_start))
+        .route("/api/arb/positions/monitor/stop", post(positions_monitor_stop))
+        .route("/api/arb/positions/emergency-close", post(positions_emergency_close))
+        .route("/api/arb/positions/sell-all", post(positions_sell_all))
+        .route("/api/arb/positions/:id", get(get_position))
+        .route("/api/arb/positions/:id/close", post(close_position))
+
+        // Curves
+        .route("/api/arb/curves/tokens", get(curves_tokens))
+        .route("/api/arb/curves/health", get(curves_health))
+        .route("/api/arb/curves/graduation-candidates", get(curves_graduation_candidates))
+        .route("/api/arb/curves/top-opportunities", get(curves_top_opportunities))
+        .route("/api/arb/curves/:mint/progress", get(curves_progress))
+        .route("/api/arb/curves/:mint/metrics", get(curves_metrics))
+        .route("/api/arb/curves/:mint/state", get(curves_state))
+        .route("/api/arb/curves/:mint/quote", post(curves_quote))
+        .route("/api/arb/curves/:mint/buy", post(curves_buy))
+        .route("/api/arb/curves/:mint/sell", post(curves_sell))
+        .route("/api/arb/curves/:mint/score", get(curves_score))
+
+        // Config
+        .route("/api/arb/config/risk", get(config_risk_get))
+        .route("/api/arb/config/risk", post(config_risk_set))
+        .route("/api/arb/config/risk/custom", post(config_risk_custom))
+
+        // Executor
+        .route("/api/arb/executor/stats", get(executor_stats))
+        .route("/api/arb/executor/start", post(executor_start))
+        .route("/api/arb/executor/stop", post(executor_stop))
+
+        // Helius
+        .route("/api/arb/helius/status", get(helius_status))
+        .route("/api/arb/helius/laserstream", get(helius_laserstream))
+        .route("/api/arb/helius/priority-fees", get(helius_priority_fees))
+        .route("/api/arb/helius/config", get(helius_config))
+        .route("/api/arb/helius/das/lookup", post(helius_das_lookup))
+
+        // Approvals
+        .route("/api/arb/approvals", get(list_approvals))
+        .route("/api/arb/approvals/pending", get(list_pending_approvals))
+        .route("/api/arb/execution/config", get(execution_config))
+        .route("/api/arb/execution/toggle", post(execution_toggle))
+
+        // Engrams
+        .route("/api/arb/engram/search", get(engram_search))
+        .route("/api/arb/engram/insights", get(engram_insights))
 }

@@ -33,11 +33,35 @@ just dev-mac  # or just dev-linux
 
 ## Step 2: Configure Wallet
 
-ArbFarm uses Turnkey for secure wallet delegation - your private keys are never stored in NullBlock.
+### Development Mode (Private Key)
 
-1. Go to **Settings** view (gear icon)
-2. In the **Wallet Setup** section, click **Connect Wallet**
-3. Approve the Phantom popup
+For local development, ArbFarm uses a private key stored in the environment file:
+
+1. Open `svc/arb-farm/.env.dev`
+2. Set your dev wallet credentials:
+```bash
+ARB_FARM_WALLET_ADDRESS=<your-wallet-public-key>
+ARB_FARM_WALLET_PRIVATE_KEY=<your-wallet-private-key>
+```
+
+3. The Settings → Wallet tab will display your configured wallet address and balance
+
+> **Security Note**: Never commit private keys to git. The `.env.dev` file is gitignored. For production, use Turnkey wallet delegation (see below).
+
+### Production Mode (Turnkey Delegation)
+
+For production deployments, ArbFarm supports Turnkey for secure wallet delegation - your private keys are never stored in NullBlock:
+
+1. Configure Turnkey credentials in `.env.dev`:
+```bash
+TURNKEY_API_URL=https://api.turnkey.com
+TURNKEY_ORGANIZATION_ID=your-org-id
+TURNKEY_API_PUBLIC_KEY=your-public-key
+TURNKEY_API_PRIVATE_KEY=your-private-key
+```
+
+2. Go to **Settings** → **Wallet** tab
+3. Click **Connect Wallet** and approve the Phantom popup
 4. Turnkey creates a delegated wallet with policy controls
 
 ### Default Policy Limits (Dev Testing)
@@ -160,16 +184,103 @@ Track and copy-trade successful wallets:
    - Min trust score: 60
 3. Toggle **Enable Copy Trading**
 
-## Step 9: Test Consensus (Optional)
+## Step 9: Inject Alpha (Research Flow)
+
+Turn URLs into active strategies using the Research view:
+
+1. Go to **Research** view
+2. Click the **URL Injection** tab
+3. Paste a URL (Twitter thread, blog post, whitepaper)
+4. Click **Analyze**
+5. Review the extracted strategy:
+   - Strategy type, entry/exit conditions
+   - Risk parameters
+   - Confidence score
+6. Choose an action:
+   - **Create Strategy** - Add directly to active strategies
+   - **Backtest First** - Validate against historical data
+   - **Reject** - Discard if not viable
+
+See [Strategy Flow](./strategy-flow.md) for the complete lifecycle.
+
+## Step 10: Configure Execution Mode
+
+Control how aggressively ArbFarm trades:
+
+1. Go to **Settings** → **Execution** tab
+2. Configure execution mode:
+
+| Mode | Behavior | Risk Level |
+|------|----------|------------|
+| **Agent Directed** | Multi-LLM consensus for every trade | Lowest |
+| **Hybrid** | Auto below threshold, consensus above | Medium |
+| **Autonomous** | Full auto-execution | Highest |
+
+3. Configure auto-execution toggle:
+   - Toggle **Auto-Execute Mode** ON or OFF
+   - When OFF: All trades require manual approval
+   - When ON: Trades execute automatically based on strategy rules
+
+4. If enabling auto-execute:
+   - Set **Min Confidence for Auto**: 80% (recommended)
+   - Set **Max Position for Auto**: 0.5 SOL (start small)
+   - Keep **Require Simulation** ON
+
+**Warning**: Autonomous mode executes trades without manual approval.
+
+### Approval Workflow
+
+When auto-execution is OFF, opportunities require manual approval:
+
+1. Detected opportunities appear in **Pending Approvals** panel on Dashboard
+2. If Hecate agent integration is enabled, you'll see AI recommendations
+3. Review and click **Approve** or **Reject**
+4. Approved trades are queued for execution
+5. Approvals expire after the configured timeout (default: 5 minutes)
+
+Check the Pending Approvals panel on the Dashboard for:
+- Number of pending items
+- Hecate AI recommendations with reasoning
+- Expiration countdowns
+- Quick approve/reject buttons
+
+## Step 11: Monitor Signals
+
+View real-time market signals:
+
+1. Go to **Signals** view
+2. Signals appear as they're detected:
+   - `price_discrepancy` - Cross-venue price gaps
+   - `volume_spike` - Unusual activity
+   - `curve_graduation` - Bonding curve migrations
+   - `kol_signal` - Tracked wallet activity
+3. Use filters to focus on relevant signals
+4. Click a signal to investigate the opportunity
+
+## Step 12: Test Consensus (Optional)
 
 The Research view lets you test multi-LLM consensus:
 
-1. Go to **Research** view
+1. Go to **Research** view → **Consensus** tab
 2. Click **Request Test Consensus**
 3. View votes from multiple LLMs (Claude, GPT-4, Llama)
 4. See agreement scores and reasoning
 
 Consensus is automatically used for agent-directed strategies.
+
+## Step 13: View Engrams
+
+ArbFarm automatically saves patterns and trade results as engrams:
+
+1. Go to **MemCache** → **Engrams** in the main sidebar
+2. Filter by key prefix: `arb.`
+3. View saved patterns:
+   - `arb.trade.*` - Trade execution results
+   - `arb.pattern.*` - Winning trade patterns
+   - `arb.avoid.*` - Entities to avoid
+   - `arb.state.*` - Agent state snapshots
+
+Engrams help the agent learn from past trades and improve over time.
 
 ## Monitoring
 
@@ -271,6 +382,22 @@ curl http://localhost:9007/edges
 
 # Scanner status
 curl http://localhost:9007/scanner/status
+
+# Pending approvals
+curl http://localhost:9007/approvals/pending
+
+# Execution config (auto-execution status)
+curl http://localhost:9007/execution/config
+
+# Toggle auto-execution ON
+curl -X POST http://localhost:9007/execution/toggle \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true}'
+
+# Toggle auto-execution OFF
+curl -X POST http://localhost:9007/execution/toggle \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}'
 
 # KOL list
 curl http://localhost:9007/kol

@@ -42,6 +42,20 @@ impl Default for RiskConfig {
 }
 
 impl RiskConfig {
+    /// LOW risk profile - default for safety
+    pub fn low() -> Self {
+        Self {
+            max_position_sol: 0.02,
+            daily_loss_limit_sol: 0.1,
+            max_drawdown_percent: 10.0,
+            max_concurrent_positions: 2,
+            max_position_per_token_sol: 0.02,
+            cooldown_after_loss_ms: 10000,
+            volatility_scaling_enabled: true,
+            auto_pause_on_drawdown: true,
+        }
+    }
+
     pub fn dev_testing() -> Self {
         Self {
             max_position_sol: 5.0,
@@ -63,6 +77,19 @@ impl RiskConfig {
             max_concurrent_positions: 3,
             max_position_per_token_sol: 0.5,
             cooldown_after_loss_ms: 10000,
+            volatility_scaling_enabled: true,
+            auto_pause_on_drawdown: true,
+        }
+    }
+
+    pub fn medium() -> Self {
+        Self {
+            max_position_sol: 0.25,
+            daily_loss_limit_sol: 1.0,
+            max_drawdown_percent: 25.0,
+            max_concurrent_positions: 10,
+            max_position_per_token_sol: 0.25,
+            cooldown_after_loss_ms: 3000,
             volatility_scaling_enabled: true,
             auto_pause_on_drawdown: true,
         }

@@ -37,16 +37,17 @@ Building ArbFarm - autonomous multi-agent system for capturing MEV opportunities
 | Phase | Status |
 |-------|--------|
 | 1. Service Scaffold + Core Models | ✅ Complete |
-| 2. Venue Scanner + Strategy Engine | ✅ Complete |
-| 3. Execution Engine + Risk Management | ⏳ Next |
-| 4. Bonding Curve Integration | ✅ Complete (in Phase 2) |
-| 5. MEV Detection | ⏳ Pending |
-| 6. Research/DD Agent | ⏳ Pending |
-| 7. KOL Tracking + Copy Trading | ⏳ Pending |
-| 8. Threat Detection | ⏳ Pending |
-| 9. Engram Integration | ⏳ Pending |
-| 10. Swarm Orchestration | ⏳ Pending |
-| 11. Frontend Dashboard | ⏳ Pending |
+| 2. Venue Scanner + Strategy Engine | ⚠️ Partial (curves work, DEX stubbed) |
+| 3. Execution Engine + Risk Management | ✅ Complete |
+| 4. Bonding Curve Integration | ✅ Complete |
+| 5. MEV Detection | ⚠️ Partial (liquidations work, DEX arb stubbed) |
+| 6. Research/DD Agent | ❌ Not Started |
+| 7. KOL Tracking + Copy Trading | ⚠️ Partial (discovery works, copy stubbed) |
+| 8. Threat Detection | ❌ Not Started |
+| 9. Engram Integration | ✅ Complete |
+| 10. Swarm Orchestration | ✅ Complete |
+| 11. Frontend Dashboard | ✅ Complete |
+| 12. Crossroads Integration | ⏳ Next |
 
 **Also Planned**: Poly Mev (Polymarket) - [plan](docs-internal/src/poly-mev/plan.md)
 

@@ -10,6 +10,58 @@ use crate::events::{topics, ArbEvent, EventBus, EventSource};
 use super::client::HeliusClient;
 use super::types::{Collection, Creator, TokenMetadata};
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenAccountInfo {
+    pub mint: String,
+    pub owner: String,
+    pub amount: u64,
+    pub decimals: u8,
+    pub ui_amount: f64,
+}
+
+#[derive(Debug, Deserialize)]
+struct TokenAccountsResponse {
+    value: Vec<TokenAccountValue>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TokenAccountValue {
+    pubkey: String,
+    account: TokenAccountData,
+}
+
+#[derive(Debug, Deserialize)]
+struct TokenAccountData {
+    data: TokenAccountParsedData,
+}
+
+#[derive(Debug, Deserialize)]
+struct TokenAccountParsedData {
+    parsed: TokenAccountParsed,
+}
+
+#[derive(Debug, Deserialize)]
+struct TokenAccountParsed {
+    info: TokenAccountParsedInfo,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TokenAccountParsedInfo {
+    mint: String,
+    owner: String,
+    token_amount: TokenAmount,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TokenAmount {
+    amount: String,
+    decimals: u8,
+    ui_amount: Option<f64>,
+    ui_amount_string: String,
+}
+
 pub struct DasClient {
     client: Arc<HeliusClient>,
     event_bus: Arc<EventBus>,
@@ -327,6 +379,71 @@ impl DasClient {
         if let Err(e) = self.event_bus.publish(event).await {
             warn!("Failed to publish creator flagged event: {}", e);
         }
+    }
+
+    pub async fn get_token_accounts_by_owner(&self, owner: &str) -> AppResult<Vec<TokenAccountInfo>> {
+        let mut all_accounts = Vec::new();
+
+        // Query standard SPL Token program
+        let spl_response: TokenAccountsResponse = self
+            .client
+            .rpc_call(
+                "getTokenAccountsByOwner",
+                json!([
+                    owner,
+                    {"programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"},
+                    {"encoding": "jsonParsed"}
+                ]),
+            )
+            .await?;
+
+        all_accounts.extend(self.parse_token_accounts(spl_response));
+
+        // Query Token-2022 program (many pump.fun tokens use this)
+        match self
+            .client
+            .rpc_call::<TokenAccountsResponse>(
+                "getTokenAccountsByOwner",
+                json!([
+                    owner,
+                    {"programId": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"},
+                    {"encoding": "jsonParsed"}
+                ]),
+            )
+            .await
+        {
+            Ok(token2022_response) => {
+                let token2022_accounts = self.parse_token_accounts(token2022_response);
+                info!("Found {} Token-2022 accounts with balance", token2022_accounts.len());
+                all_accounts.extend(token2022_accounts);
+            }
+            Err(e) => {
+                warn!("Failed to fetch Token-2022 accounts: {}", e);
+            }
+        }
+
+        Ok(all_accounts)
+    }
+
+    fn parse_token_accounts(&self, response: TokenAccountsResponse) -> Vec<TokenAccountInfo> {
+        response
+            .value
+            .into_iter()
+            .filter_map(|v| {
+                let info = &v.account.data.parsed.info;
+                let amount = info.token_amount.amount.parse::<u64>().ok()?;
+                if amount == 0 {
+                    return None;
+                }
+                Some(TokenAccountInfo {
+                    mint: info.mint.clone(),
+                    owner: info.owner.clone(),
+                    amount,
+                    decimals: info.token_amount.decimals,
+                    ui_amount: info.token_amount.ui_amount.unwrap_or(0.0),
+                })
+            })
+            .collect()
     }
 }
 

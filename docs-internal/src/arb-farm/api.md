@@ -112,6 +112,395 @@ Trade execution history and statistics.
 }
 ```
 
+## Signals
+
+Real-time market signals detected by the scanner.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/signals` | List recent signals |
+| GET | `/signals/stream` | SSE stream of live signals |
+| GET | `/signals/:id` | Get signal details |
+
+### Query Parameters
+
+```
+?signal_type=price_discrepancy|volume_spike|dex_arb|liquidation|curve_graduation|kol_signal
+?venue_type=jupiter|raydium|pumpfun|moonshot|kamino|marginfi
+?min_profit_bps=50
+?min_confidence=0.8
+?limit=50&offset=0
+```
+
+### Signal Response
+
+```json
+{
+  "id": "uuid",
+  "signal_type": "dex_arb",
+  "venue_type": "jupiter",
+  "estimated_profit_bps": 75,
+  "confidence": 0.85,
+  "token_pair": ["SOL", "BONK"],
+  "detected_at": "2024-01-15T10:30:00Z",
+  "expires_at": "2024-01-15T10:31:00Z",
+  "metadata": {
+    "price_a": 0.000025,
+    "price_b": 0.0000255,
+    "spread_bps": 200
+  }
+}
+```
+
+## Strategies
+
+Strategy management for automated trading.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/strategies` | List all strategies |
+| POST | `/strategies` | Create new strategy |
+| GET | `/strategies/:id` | Get strategy details |
+| PUT | `/strategies/:id` | Update strategy |
+| DELETE | `/strategies/:id` | Permanently delete strategy and data |
+| POST | `/strategies/:id/toggle` | Enable/disable strategy (pause/resume) |
+| POST | `/strategies/:id/kill` | Emergency stop - halt all running operations |
+| GET | `/strategies/:id/stats` | Strategy performance stats |
+
+### Kill Strategy Response
+
+Immediately stops all running operations for a strategy (cancels pending approvals, halts executions) but keeps the strategy in your list for later use.
+
+```json
+{
+  "success": true,
+  "id": "uuid",
+  "strategy_name": "Jupiter-Raydium Arb",
+  "message": "Strategy killed - all operations halted",
+  "action": "emergency_stop"
+}
+```
+
+### Create Strategy Request
+
+```json
+{
+  "name": "DEX Arbitrage - Jupiter/Raydium",
+  "strategy_type": "dex_arb",
+  "venue_types": ["dex_amm"],
+  "execution_mode": "hybrid",
+  "risk_params": {
+    "max_position_sol": 0.5,
+    "daily_loss_limit_sol": 2.0,
+    "min_profit_bps": 50,
+    "max_slippage_bps": 100
+  }
+}
+```
+
+### Strategy Response
+
+```json
+{
+  "id": "uuid",
+  "wallet_address": "5wrmi85pTPmB4NDv7rUYncEMi1KqVo93bZn3XtXSbjYT",
+  "name": "DEX Arbitrage - Jupiter/Raydium",
+  "strategy_type": "dex_arb",
+  "venue_types": ["dex_amm"],
+  "execution_mode": "hybrid",
+  "risk_params": {
+    "max_position_sol": 0.5,
+    "daily_loss_limit_sol": 2.0,
+    "min_profit_bps": 50,
+    "max_slippage_bps": 100
+  },
+  "is_active": true,
+  "stats": {
+    "total_trades": 45,
+    "win_rate": 0.78,
+    "total_profit_sol": 1.25
+  },
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T12:30:00Z"
+}
+```
+
+## Approvals
+
+Pending approval workflow for trades requiring manual confirmation.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/approvals` | List all approvals |
+| GET | `/approvals/pending` | List pending approvals only |
+| GET | `/approvals/:id` | Get approval details |
+| POST | `/approvals/:id/approve` | Approve for execution |
+| POST | `/approvals/:id/reject` | Reject with reason |
+| POST | `/approvals/cleanup` | Clean up expired approvals |
+| POST | `/approvals/hecate-recommendation` | Add Hecate AI recommendation |
+
+### Pending Approvals Response
+
+```json
+{
+  "approvals": [
+    {
+      "id": "uuid",
+      "edge_id": "uuid",
+      "strategy_id": "uuid",
+      "approval_type": "entry",
+      "status": "pending",
+      "expires_at": "2024-01-15T10:35:00Z",
+      "hecate_decision": true,
+      "hecate_reasoning": "High confidence opportunity with low risk score",
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+### Approve Request
+
+```json
+{
+  "notes": "Optional notes about approval decision"
+}
+```
+
+### Reject Request
+
+```json
+{
+  "reason": "Risk too high for current market conditions"
+}
+```
+
+### Hecate Recommendation Request
+
+```json
+{
+  "approval_id": "uuid",
+  "decision": true,
+  "reasoning": "Analysis indicates high probability of profit"
+}
+```
+
+## Execution Config
+
+Global execution toggle and configuration.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/execution/config` | Get execution config |
+| PUT | `/execution/config` | Update execution config |
+| POST | `/execution/toggle` | Toggle auto-execution on/off |
+
+### Execution Config Response
+
+```json
+{
+  "auto_execution_enabled": false,
+  "default_approval_timeout_secs": 300,
+  "notify_hecate_on_pending": true
+}
+```
+
+### Toggle Execution Request
+
+```json
+{
+  "enabled": true
+}
+```
+
+### Toggle Execution Response
+
+```json
+{
+  "enabled": true,
+  "message": "Auto-execution enabled"
+}
+```
+
+## Settings
+
+Global settings and configuration.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/settings` | Get all settings |
+| GET | `/settings/risk` | Get global risk config |
+| POST | `/settings/risk` | Update global risk config |
+| GET | `/settings/venues` | Get venue settings |
+| GET | `/settings/api-keys` | Get API key status |
+
+### Execution Settings Response
+
+```json
+{
+  "auto_execute_enabled": false,
+  "auto_min_confidence": 0.8,
+  "auto_max_position_sol": 0.5,
+  "require_simulation": true,
+  "default_execution_mode": "agent_directed"
+}
+```
+
+### Update Execution Settings Request
+
+```json
+{
+  "auto_execute_enabled": true,
+  "auto_min_confidence": 0.85,
+  "auto_max_position_sol": 0.3,
+  "require_simulation": true
+}
+```
+
+### Risk Config Response
+
+```json
+{
+  "max_position_sol": 5.0,
+  "daily_loss_limit_sol": 2.0,
+  "min_profit_bps": 50,
+  "max_slippage_bps": 100,
+  "max_concurrent_positions": 10,
+  "cooldown_after_loss_ms": 5000
+}
+```
+
+## Risk Levels
+
+Quick risk profile configuration with presets.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/config/risk` | Get current risk level and config |
+| POST | `/config/risk` | Set risk level preset (low/medium/high) |
+| POST | `/config/risk/custom` | Set custom risk parameters |
+
+### Risk Level Presets
+
+| Level | max_position_sol | max_concurrent | daily_loss_limit |
+|-------|------------------|----------------|------------------|
+| low | 0.02 SOL | 2 | 0.1 SOL |
+| medium | 0.25 SOL | 10 | 1.0 SOL |
+| high | 1.0 SOL | 20 | 5.0 SOL |
+
+### Get Risk Level Response
+
+```json
+{
+  "level": "medium",
+  "max_position_sol": 0.25,
+  "max_concurrent_positions": 10,
+  "daily_loss_limit_sol": 1.0,
+  "max_drawdown_percent": 25.0,
+  "max_position_per_token_sol": 0.25,
+  "cooldown_after_loss_ms": 3000,
+  "volatility_scaling_enabled": true,
+  "auto_pause_on_drawdown": true
+}
+```
+
+### Set Risk Level Request
+
+```json
+{
+  "level": "medium"
+}
+```
+
+### Set Custom Risk Request
+
+```json
+{
+  "max_position_sol": 0.5,
+  "max_concurrent_positions": 5,
+  "daily_loss_limit_sol": 2.0,
+  "max_drawdown_percent": 30.0
+}
+```
+
+## Positions
+
+Active position tracking and management.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/positions` | List all positions with stats |
+| GET | `/positions/:id` | Get position details |
+| POST | `/positions/:id/close` | Close a position |
+| GET | `/positions/history` | Closed position history |
+| GET | `/positions/exposure` | Current exposure breakdown |
+| GET | `/positions/pnl-summary` | P&L summary |
+| POST | `/positions/reconcile` | Reconcile with wallet |
+| GET | `/positions/monitor/status` | Position monitor status |
+| POST | `/positions/monitor/start` | Start position monitor |
+| POST | `/positions/monitor/stop` | Stop position monitor |
+| POST | `/positions/emergency-close` | Emergency close all positions |
+| POST | `/positions/sell-all` | Sell all wallet tokens |
+
+### Positions Response
+
+```json
+{
+  "positions": [
+    {
+      "id": "uuid",
+      "edge_id": "uuid",
+      "strategy_id": "uuid",
+      "token_mint": "ABC123...",
+      "token_symbol": "MOON",
+      "entry_amount_base": 0.25,
+      "entry_token_amount": 1000000,
+      "entry_price": 0.00025,
+      "entry_time": "2024-01-15T10:30:00Z",
+      "entry_tx_signature": "sig...",
+      "current_price": 0.00030,
+      "current_value_base": 0.30,
+      "unrealized_pnl": 0.05,
+      "unrealized_pnl_percent": 20.0,
+      "high_water_mark": 0.00032,
+      "exit_config": {
+        "stop_loss_percent": 15.0,
+        "take_profit_percent": 50.0,
+        "trailing_stop_percent": 10.0,
+        "time_limit_minutes": 30
+      },
+      "partial_exits": [],
+      "status": "open",
+      "momentum": {
+        "velocity": 1.5,
+        "momentum_score": 25.0,
+        "momentum_decay_count": 0
+      },
+      "remaining_amount_base": 0.25,
+      "remaining_token_amount": 1000000
+    }
+  ],
+  "stats": {
+    "total_positions_opened": 50,
+    "total_positions_closed": 45,
+    "active_positions": 5,
+    "total_realized_pnl": 0.15,
+    "total_unrealized_pnl": 0.05,
+    "stop_losses_triggered": 10,
+    "take_profits_triggered": 8
+  }
+}
+```
+
+### Close Position Request
+
+```json
+{
+  "slippage_bps": 100
+}
+```
+
 ## Bonding Curves
 
 pump.fun, moonshot, and other bonding curve operations.
@@ -500,6 +889,28 @@ ArbFarm exposes MCP tools for agent integration.
 - `curve_holders` - Get holder stats
 - `curve_quote` - Get buy/sell quote
 - `curve_graduation_candidates` - Find graduation opportunities
+
+**Strategy Tools:**
+- `strategy_list` - List all strategies
+- `strategy_create` - Create new strategy
+- `strategy_details` - Get strategy details
+- `strategy_update` - Update strategy parameters
+- `strategy_toggle` - Enable/disable strategy (pause/resume)
+- `strategy_kill` - Emergency stop all running operations
+- `strategy_delete` - Permanently delete strategy and data
+- `strategy_batch_toggle` - Batch enable/disable
+- `strategy_save_to_engrams` - Persist to memory layer
+
+**Approval Tools:**
+- `approval_list` - List all approvals
+- `approval_pending` - List pending approvals
+- `approval_details` - Get approval details
+- `approval_approve` - Approve for execution
+- `approval_reject` - Reject with reason
+
+**Execution Tools:**
+- `execution_config_get` - Get execution config
+- `execution_toggle` - Toggle auto-execution
 
 **Research Tools:**
 - `research_ingest_url` - Analyze URL

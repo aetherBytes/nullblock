@@ -87,5 +87,9 @@ scraper = "0.21"
 lazy_static = "1.4"
 spl-token-2022 = "10.0.0"
 
+# WebSocket client (for Helius real-time streaming)
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+futures-util = "0.3"
+
 [dev-dependencies]
 tokio-test = "0.4"
