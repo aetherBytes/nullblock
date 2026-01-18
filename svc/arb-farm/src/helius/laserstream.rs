@@ -1,8 +1,10 @@
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::collections::HashSet;
-use tokio::sync::RwLock;
+use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info, warn};
+use tokio::sync::{broadcast, mpsc, RwLock};
+use tokio_tungstenite::{connect_async, tungstenite::Message};
+use tracing::{debug, error, info, warn};
 
 use crate::events::{ArbEvent, EventBus, EventSource};
 
@@ -44,22 +46,80 @@ pub enum LaserStreamStatus {
     Reconnecting,
 }
 
+// Helius WebSocket JSON-RPC message types
+#[derive(Debug, Serialize)]
+struct HeliusSubscribeRequest {
+    jsonrpc: &'static str,
+    id: u64,
+    method: &'static str,
+    params: Vec<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+struct HeliusNotification {
+    #[serde(default)]
+    method: Option<String>,
+    #[serde(default)]
+    params: Option<HeliusNotificationParams>,
+}
+
+#[derive(Debug, Deserialize)]
+struct HeliusNotificationParams {
+    result: HeliusAccountResult,
+    subscription: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct HeliusAccountResult {
+    context: HeliusContext,
+    value: HeliusAccountValue,
+}
+
+#[derive(Debug, Deserialize)]
+struct HeliusContext {
+    slot: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct HeliusAccountValue {
+    lamports: u64,
+    data: Vec<String>,
+    owner: String,
+    executable: bool,
+    #[serde(rename = "rentEpoch")]
+    rent_epoch: u64,
+}
+
 pub struct LaserStreamClient {
     endpoint: String,
     api_key: Option<String>,
     event_bus: Arc<EventBus>,
     status: Arc<RwLock<LaserStreamStatus>>,
     subscribed_accounts: Arc<RwLock<HashSet<String>>>,
+    subscription_ids: Arc<RwLock<HashMap<String, u64>>>,
+    command_tx: Arc<RwLock<Option<mpsc::Sender<WebSocketCommand>>>>,
+    account_update_tx: broadcast::Sender<AccountUpdate>,
+}
+
+#[derive(Debug)]
+enum WebSocketCommand {
+    Subscribe(Vec<String>),
+    Unsubscribe(Vec<String>),
+    Disconnect,
 }
 
 impl LaserStreamClient {
     pub fn new(endpoint: String, api_key: Option<String>, event_bus: Arc<EventBus>) -> Self {
+        let (account_update_tx, _) = broadcast::channel(1000);
         Self {
             endpoint,
             api_key,
             event_bus,
             status: Arc::new(RwLock::new(LaserStreamStatus::Disconnected)),
             subscribed_accounts: Arc::new(RwLock::new(HashSet::new())),
+            subscription_ids: Arc::new(RwLock::new(HashMap::new())),
+            command_tx: Arc::new(RwLock::new(None)),
+            account_update_tx,
         }
     }
 
@@ -71,6 +131,10 @@ impl LaserStreamClient {
         *self.status.read().await
     }
 
+    pub fn subscribe_account_updates(&self) -> broadcast::Receiver<AccountUpdate> {
+        self.account_update_tx.subscribe()
+    }
+
     pub async fn connect(&self) -> Result<(), String> {
         if !self.is_configured() {
             return Err("LaserStream not configured - missing endpoint or API key".to_string());
@@ -78,97 +142,250 @@ impl LaserStreamClient {
 
         {
             let mut status = self.status.write().await;
+            if *status == LaserStreamStatus::Connected || *status == LaserStreamStatus::Connecting {
+                return Ok(());
+            }
             *status = LaserStreamStatus::Connecting;
         }
 
-        info!("🔌 Connecting to LaserStream: {}", self.endpoint);
+        let ws_url = format!("{}/?api-key={}", self.endpoint.trim_end_matches('/'), self.api_key.as_ref().unwrap());
+        info!("🔌 Connecting to Helius WebSocket: {}...", &ws_url[..ws_url.len().min(50)]);
 
-        // NOTE: Full WebSocket implementation requires additional dependencies
-        // For now, we'll log and set status to indicate this is a stub
-        warn!("⚠️ LaserStream WebSocket connection not yet implemented");
-        warn!("⚠️ Full implementation requires: tokio-tungstenite or similar WS client");
+        let (ws_stream, _) = connect_async(&ws_url)
+            .await
+            .map_err(|e| format!("WebSocket connection failed: {}", e))?;
 
-        // In production, this would:
-        // 1. Establish WebSocket connection to endpoint
-        // 2. Send authentication with API key
-        // 3. Start receiving stream of events
-        // 4. Emit events to event_bus
+        info!("✅ Connected to Helius WebSocket");
 
         {
             let mut status = self.status.write().await;
-            *status = LaserStreamStatus::Disconnected;
+            *status = LaserStreamStatus::Connected;
         }
+
+        let (mut write, mut read) = ws_stream.split();
+        let (cmd_tx, mut cmd_rx) = mpsc::channel::<WebSocketCommand>(100);
+
+        {
+            let mut command_tx = self.command_tx.write().await;
+            *command_tx = Some(cmd_tx);
+        }
+
+        let status = self.status.clone();
+        let subscribed_accounts = self.subscribed_accounts.clone();
+        let subscription_ids = self.subscription_ids.clone();
+        let account_update_tx = self.account_update_tx.clone();
+        let event_bus = self.event_bus.clone();
+
+        // Spawn message handler
+        tokio::spawn(async move {
+            let mut request_id: u64 = 1;
+            let mut pending_subscriptions: HashMap<u64, String> = HashMap::new();
+
+            loop {
+                tokio::select! {
+                    // Handle incoming messages
+                    msg = read.next() => {
+                        match msg {
+                            Some(Ok(Message::Text(text))) => {
+                                debug!("📨 WS message received: {}", &text[..text.len().min(200)]);
+
+                                // Parse as generic JSON first to route correctly
+                                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+                                    // Check if this is a subscription confirmation (has "id" and "result" as integer)
+                                    if let (Some(id), Some(result)) = (
+                                        json.get("id").and_then(|v| v.as_u64()),
+                                        json.get("result").and_then(|v| v.as_u64()),
+                                    ) {
+                                        debug!("📥 Subscription response: id={}, result={}, pending={:?}", id, result, pending_subscriptions.keys().collect::<Vec<_>>());
+                                        if let Some(pubkey) = pending_subscriptions.remove(&id) {
+                                            let mut sub_ids = subscription_ids.write().await;
+                                            sub_ids.insert(pubkey.clone(), result);
+                                            info!(pubkey = %pubkey, subscription_id = result, "✅ Subscribed to account");
+                                        } else {
+                                            debug!("⚠️ No pending subscription for id={}", id);
+                                        }
+                                    }
+                                    // Check if this is an account notification
+                                    else if json.get("method").and_then(|v| v.as_str()) == Some("accountNotification") {
+                                        if let Ok(notification) = serde_json::from_str::<HeliusNotification>(&text) {
+                                            if let Some(params) = notification.params {
+                                                // Find which account this is for
+                                                let sub_ids = subscription_ids.read().await;
+                                                debug!("📡 accountNotification for subscription={}, known subs={:?}", params.subscription, sub_ids.values().collect::<Vec<_>>());
+                                                if let Some((pubkey, _)) = sub_ids.iter().find(|(_, &id)| id == params.subscription) {
+                                                    let update = AccountUpdate {
+                                                        pubkey: pubkey.clone(),
+                                                        slot: params.result.context.slot,
+                                                        lamports: params.result.value.lamports,
+                                                        owner: params.result.value.owner,
+                                                        executable: params.result.value.executable,
+                                                        rent_epoch: params.result.value.rent_epoch,
+                                                        data: params.result.value.data.first().cloned().unwrap_or_default(),
+                                                    };
+
+                                                    debug!(
+                                                        pubkey = %update.pubkey,
+                                                        slot = update.slot,
+                                                        "📡 Account update received"
+                                                    );
+
+                                                    // Broadcast to subscribers
+                                                    let _ = account_update_tx.send(update.clone());
+
+                                                    // Also emit to event bus
+                                                    let event_data = serde_json::to_value(&update).unwrap_or_default();
+                                                    let event = ArbEvent::new(
+                                                        "account_update",
+                                                        EventSource::External("helius_ws".to_string()),
+                                                        "arb.helius.account.update",
+                                                        event_data,
+                                                    );
+                                                    let _ = event_bus.publish(event).await;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Some(Ok(Message::Ping(data))) => {
+                                if let Err(e) = write.send(Message::Pong(data)).await {
+                                    error!("Failed to send pong: {}", e);
+                                }
+                            }
+                            Some(Ok(Message::Close(_))) => {
+                                warn!("WebSocket closed by server");
+                                break;
+                            }
+                            Some(Err(e)) => {
+                                error!("WebSocket error: {}", e);
+                                break;
+                            }
+                            None => {
+                                warn!("WebSocket stream ended");
+                                break;
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    // Handle commands
+                    Some(cmd) = cmd_rx.recv() => {
+                        match cmd {
+                            WebSocketCommand::Subscribe(accounts) => {
+                                for pubkey in accounts {
+                                    let request = HeliusSubscribeRequest {
+                                        jsonrpc: "2.0",
+                                        id: request_id,
+                                        method: "accountSubscribe",
+                                        params: vec![
+                                            serde_json::Value::String(pubkey.clone()),
+                                            serde_json::json!({
+                                                "encoding": "base64",
+                                                "commitment": "confirmed"
+                                            }),
+                                        ],
+                                    };
+
+                                    if let Ok(msg) = serde_json::to_string(&request) {
+                                        if let Err(e) = write.send(Message::Text(msg)).await {
+                                            error!("Failed to send subscribe: {}", e);
+                                        } else {
+                                            pending_subscriptions.insert(request_id, pubkey.clone());
+                                            let mut subs = subscribed_accounts.write().await;
+                                            subs.insert(pubkey);
+                                        }
+                                    }
+                                    request_id += 1;
+                                }
+                            }
+                            WebSocketCommand::Unsubscribe(accounts) => {
+                                let sub_ids = subscription_ids.read().await;
+                                for pubkey in &accounts {
+                                    if let Some(&sub_id) = sub_ids.get(pubkey) {
+                                        let request = serde_json::json!({
+                                            "jsonrpc": "2.0",
+                                            "id": request_id,
+                                            "method": "accountUnsubscribe",
+                                            "params": [sub_id]
+                                        });
+
+                                        if let Ok(msg) = serde_json::to_string(&request) {
+                                            let _ = write.send(Message::Text(msg)).await;
+                                        }
+                                        request_id += 1;
+                                    }
+                                }
+                                drop(sub_ids);
+
+                                let mut sub_ids = subscription_ids.write().await;
+                                let mut subs = subscribed_accounts.write().await;
+                                for pubkey in accounts {
+                                    sub_ids.remove(&pubkey);
+                                    subs.remove(&pubkey);
+                                }
+                            }
+                            WebSocketCommand::Disconnect => {
+                                info!("🔌 Disconnecting WebSocket...");
+                                let _ = write.close().await;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Update status on disconnect
+            let mut s = status.write().await;
+            *s = LaserStreamStatus::Disconnected;
+            info!("🔌 WebSocket disconnected");
+        });
 
         Ok(())
     }
 
     pub async fn disconnect(&self) {
-        info!("🔌 Disconnecting from LaserStream");
-        let mut status = self.status.write().await;
-        *status = LaserStreamStatus::Disconnected;
+        if let Some(tx) = self.command_tx.read().await.as_ref() {
+            let _ = tx.send(WebSocketCommand::Disconnect).await;
+        }
     }
 
     pub async fn subscribe_accounts(&self, addresses: Vec<String>) -> Result<(), String> {
-        if !self.is_configured() {
-            return Err("LaserStream not configured".to_string());
+        if addresses.is_empty() {
+            return Ok(());
         }
 
-        info!("📡 Subscribing to {} accounts via LaserStream", addresses.len());
-
-        let mut subscribed = self.subscribed_accounts.write().await;
-        for addr in addresses {
-            subscribed.insert(addr);
+        let status = self.get_status().await;
+        if status != LaserStreamStatus::Connected {
+            return Err("WebSocket not connected".to_string());
         }
 
-        // In production, this would send subscription message to WebSocket
-        debug!("Total subscribed accounts: {}", subscribed.len());
+        info!("📡 Subscribing to {} accounts via WebSocket", addresses.len());
+
+        if let Some(tx) = self.command_tx.read().await.as_ref() {
+            tx.send(WebSocketCommand::Subscribe(addresses))
+                .await
+                .map_err(|e| format!("Failed to send subscribe command: {}", e))?;
+        }
 
         Ok(())
     }
 
     pub async fn unsubscribe_accounts(&self, addresses: Vec<String>) -> Result<(), String> {
-        let count = addresses.len();
-        let mut subscribed = self.subscribed_accounts.write().await;
-        for addr in addresses {
-            subscribed.remove(&addr);
+        if addresses.is_empty() {
+            return Ok(());
         }
 
-        debug!("Removed {} accounts from subscription", count);
+        if let Some(tx) = self.command_tx.read().await.as_ref() {
+            tx.send(WebSocketCommand::Unsubscribe(addresses))
+                .await
+                .map_err(|e| format!("Failed to send unsubscribe command: {}", e))?;
+        }
 
         Ok(())
     }
 
     pub async fn get_subscribed_accounts(&self) -> Vec<String> {
-        let subscribed = self.subscribed_accounts.read().await;
-        subscribed.iter().cloned().collect()
-    }
-
-    #[allow(dead_code)]
-    async fn emit_account_update(&self, update: AccountUpdate) {
-        let event_data = serde_json::to_value(&update).unwrap_or_default();
-        let event = ArbEvent::new(
-            "account_update",
-            EventSource::External("laserstream".to_string()),
-            "arb.helius.laserstream.account",
-            event_data,
-        );
-        if let Err(e) = self.event_bus.publish(event).await {
-            warn!("Failed to publish account update: {}", e);
-        }
-    }
-
-    #[allow(dead_code)]
-    async fn emit_transaction_update(&self, update: TransactionUpdate) {
-        let event_data = serde_json::to_value(&update).unwrap_or_default();
-        let event = ArbEvent::new(
-            "transaction_update",
-            EventSource::External("laserstream".to_string()),
-            "arb.helius.laserstream.transaction",
-            event_data,
-        );
-        if let Err(e) = self.event_bus.publish(event).await {
-            warn!("Failed to publish transaction update: {}", e);
-        }
+        self.subscribed_accounts.read().await.iter().cloned().collect()
     }
 }
 

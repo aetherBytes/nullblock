@@ -27,7 +27,7 @@ mod webhooks;
 
 use axum::Json;
 use crate::config::Config;
-use crate::handlers::{approvals as approval_handlers, autonomous as autonomous_handlers, consensus as consensus_handlers, curves, edges, engram as engram_handlers, health, helius as helius_handlers, kol, positions as position_handlers, research as research_handlers, scanner, settings, sse, strategies, swarm, threat as threat_handlers, trades, wallet as wallet_handlers, webhooks as webhook_handlers};
+use crate::handlers::{approvals as approval_handlers, autonomous as autonomous_handlers, config_handlers, consensus as consensus_handlers, curves, edges, engram as engram_handlers, health, helius as helius_handlers, kol, positions as position_handlers, research as research_handlers, scanner, settings, sse, strategies, swarm, threat as threat_handlers, trades, wallet as wallet_handlers, webhooks as webhook_handlers};
 use crate::mcp::{get_manifest, get_all_tools, handlers as mcp_handlers};
 
 async fn print_startup_summary(state: &server::AppState) {
@@ -110,6 +110,13 @@ async fn print_startup_summary(state: &server::AppState) {
     println!("   Venues:   {}/{} healthy", scanner_status.stats.healthy_venues, scanner_status.stats.total_venues);
     println!("   Signals:  {} detected", scanner_status.stats.total_signals_detected);
 
+    // Real-time Monitor Status
+    println!("\n📡 REAL-TIME MONITOR:");
+    let laserstream_configured = state.laserstream_client.is_configured();
+    println!("   LaserStream: {}", if laserstream_configured { "✅ Configured" } else { "⚠️ Not configured" });
+    let subscribed = state.realtime_monitor.get_subscribed_count().await;
+    println!("   Subscriptions: {} bonding curves", subscribed);
+
     // API Key Status
     println!("\n🔑 API KEYS:");
     println!("   Helius:     {}", if state.config.helius_api_key.is_some() { "✅" } else { "❌" });
@@ -149,6 +156,17 @@ async fn main() -> anyhow::Result<()> {
     // Print comprehensive startup summary for tmuxinator pane
     print_startup_summary(&state).await;
 
+    // Clone state components for auto-start task BEFORE passing state to router
+    let scanner_for_autostart = state.scanner.clone();
+    let executor_for_autostart = state.autonomous_executor.clone();
+    let position_monitor_for_autostart = state.position_monitor.clone();
+    let realtime_monitor_for_autostart = state.realtime_monitor.clone();
+    let dev_signer_for_autostart = state.dev_signer.clone();
+    let helius_das_for_autostart = state.helius_das.clone();
+    let position_manager_for_autostart = state.position_manager.clone();
+    let on_chain_fetcher_for_autostart = state.on_chain_fetcher.clone();
+    let metrics_collector_for_autostart = state.metrics_collector.clone();
+
     let app = create_router(state);
 
     let port = env::var("ARB_FARM_PORT")
@@ -182,6 +200,139 @@ async fn main() -> anyhow::Result<()> {
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("✅ Server listening on {}", addr);
+
+    // Auto-start workers after server is ready
+    tokio::spawn(async move {
+        // Wait for server to be fully ready
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
+        info!("🚀 Auto-starting workers...");
+
+        // Start scanner
+        scanner_for_autostart.start().await;
+        info!("✅ Scanner started");
+
+        // Start autonomous executor
+        executor_for_autostart.start().await;
+        info!("✅ Autonomous executor started");
+
+        // Start position monitor
+        let monitor = position_monitor_for_autostart.clone();
+        let signer = dev_signer_for_autostart.clone();
+        tokio::spawn(async move {
+            monitor.start_monitoring(signer).await;
+        });
+        info!("✅ Position monitor started");
+
+        // Start real-time position monitor (websocket price updates)
+        let realtime = realtime_monitor_for_autostart.clone();
+        tokio::spawn(async move {
+            if let Err(e) = realtime.start().await {
+                tracing::error!("❌ Failed to start real-time monitor: {}", e);
+            } else {
+                info!("✅ Real-time position monitor started (websocket)");
+            }
+        });
+
+        // Run wallet reconciliation to pick up orphaned positions
+        if let Some(wallet_address) = dev_signer_for_autostart.get_address() {
+            info!("🔄 Running wallet position reconciliation...");
+            match helius_das_for_autostart.get_token_accounts_by_owner(&wallet_address).await {
+                Ok(token_accounts) => {
+                    let wallet_tokens: Vec<crate::execution::WalletTokenHolding> = token_accounts
+                        .into_iter()
+                        .map(|account| crate::execution::WalletTokenHolding {
+                            mint: account.mint,
+                            symbol: None,
+                            balance: account.ui_amount,
+                            decimals: account.decimals,
+                        })
+                        .collect();
+
+                    info!("📊 Found {} tokens with balance in wallet", wallet_tokens.len());
+
+                    let result = position_manager_for_autostart.reconcile_wallet_tokens(&wallet_tokens).await;
+
+                    for position_id in &result.orphaned_positions {
+                        if let Err(e) = position_manager_for_autostart.mark_position_orphaned(*position_id).await {
+                            warn!("Failed to mark position {} as orphaned: {}", position_id, e);
+                        }
+                    }
+
+                    if !result.discovered_tokens.is_empty() {
+                        info!("🔍 Discovered {} untracked tokens in wallet - auto-creating exit strategies:", result.discovered_tokens.len());
+                        for token in &result.discovered_tokens {
+                            if crate::execution::BaseCurrency::is_base_currency(&token.mint) {
+                                continue;
+                            }
+
+                            let estimated_price = match on_chain_fetcher_for_autostart.get_bonding_curve_state(&token.mint).await {
+                                Ok(curve_state) => {
+                                    if curve_state.virtual_token_reserves > 0 {
+                                        curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64
+                                    } else {
+                                        0.0000001
+                                    }
+                                }
+                                Err(_) => 0.0000001,
+                            };
+
+                            let exit_config = match metrics_collector_for_autostart.calculate_metrics(&token.mint, "pump_fun").await {
+                                Ok(metrics) => {
+                                    crate::execution::ExitConfig::for_discovered_with_metrics(metrics.volume_24h, metrics.holder_count)
+                                }
+                                Err(_) => crate::execution::ExitConfig::for_discovered_token(),
+                            };
+
+                            // Cap estimated entry to reasonable maximum for discovered positions
+                            const MAX_DISCOVERED_ENTRY_SOL: f64 = 0.1;
+                            const DEFAULT_DISCOVERED_ENTRY_SOL: f64 = 0.02;
+                            let raw_estimated_entry = token.balance * estimated_price;
+                            let estimated_entry_sol = if raw_estimated_entry > MAX_DISCOVERED_ENTRY_SOL {
+                                DEFAULT_DISCOVERED_ENTRY_SOL
+                            } else if raw_estimated_entry < 0.001 {
+                                DEFAULT_DISCOVERED_ENTRY_SOL
+                            } else {
+                                raw_estimated_entry
+                            };
+
+                            match position_manager_for_autostart.create_discovered_position_with_config(
+                                token,
+                                estimated_price,
+                                estimated_entry_sol,
+                                exit_config,
+                            ).await {
+                                Ok(position) => {
+                                    info!(
+                                        "   ✅ {} ({:.6}) - created position {} with SL:{:?}%/TP:{:?}%",
+                                        &token.mint[..12],
+                                        token.balance,
+                                        position.id,
+                                        position.exit_config.stop_loss_percent,
+                                        position.exit_config.take_profit_percent
+                                    );
+                                }
+                                Err(e) => {
+                                    warn!("   ❌ {} - failed to create position: {}", &token.mint[..12], e);
+                                }
+                            }
+                        }
+                    }
+
+                    if !result.orphaned_positions.is_empty() {
+                        info!("⚠️ Found {} orphaned positions (no longer in wallet)", result.orphaned_positions.len());
+                    }
+
+                    info!("✅ Wallet reconciliation complete: {} tracked positions", result.tracked_positions);
+                }
+                Err(e) => {
+                    warn!("⚠️ Failed to reconcile wallet positions: {}", e);
+                }
+            }
+        }
+
+        info!("🎯 All workers auto-started");
+    });
 
     axum::serve(listener, app).await?;
 
@@ -324,6 +475,7 @@ fn create_router(state: server::AppState) -> Router {
         .route("/engram/avoidance/:entity_type/:address", get(engram_handlers::check_avoidance))
         .route("/engram/pattern", post(engram_handlers::create_pattern))
         .route("/engram/stats", get(engram_handlers::get_harvester_stats))
+        .route("/engram/insights", get(engram_handlers::get_learning_insights))
         .route("/engram/:key", get(engram_handlers::get_engram))
         .route("/engram/:key", axum::routing::delete(engram_handlers::delete_engram))
         // Swarm Management
@@ -357,6 +509,10 @@ fn create_router(state: server::AppState) -> Router {
         .route("/settings/risk", post(settings::update_risk_settings))
         .route("/settings/venues", get(settings::get_venue_settings))
         .route("/settings/api-keys", get(settings::get_api_key_status))
+        // Config (Risk Level Presets)
+        .route("/config/risk", get(config_handlers::get_risk_level))
+        .route("/config/risk", post(config_handlers::set_risk_level))
+        .route("/config/risk/custom", post(config_handlers::set_custom_risk))
         // Webhooks (Helius)
         .route("/webhooks/status", get(webhook_handlers::get_webhook_status))
         .route("/webhooks/register", post(webhook_handlers::register_webhook))
@@ -378,12 +534,19 @@ fn create_router(state: server::AppState) -> Router {
         .route("/helius/config", axum::routing::put(helius_handlers::update_helius_config))
         // Positions (Exit Management)
         .route("/positions", get(position_handlers::get_positions))
+        .route("/positions/history", get(position_handlers::get_position_history))
         .route("/positions/exposure", get(position_handlers::get_exposure))
+        .route("/positions/pnl-summary", get(position_handlers::get_pnl_summary))
+        .route("/positions/reconcile", post(position_handlers::reconcile_wallet))
         .route("/positions/monitor/status", get(position_handlers::get_monitor_status))
         .route("/positions/monitor/start", post(position_handlers::start_monitor))
+        .route("/positions/monitor/stop", post(position_handlers::stop_monitor))
         .route("/positions/emergency-close", post(position_handlers::emergency_close_all))
+        .route("/positions/sell-all", post(position_handlers::sell_all_wallet_tokens))
+        .route("/positions/exit-config", axum::routing::put(position_handlers::update_all_positions_exit_config))
         .route("/positions/:id", get(position_handlers::get_position))
         .route("/positions/:id/close", post(position_handlers::close_position))
+        .route("/positions/:id/exit-config", axum::routing::put(position_handlers::update_position_exit_config))
         // Approvals (Execution Controls)
         .route("/approvals", get(approval_handlers::list_approvals))
         .route("/approvals/pending", get(approval_handlers::list_pending_approvals))

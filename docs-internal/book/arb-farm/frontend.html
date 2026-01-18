@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-2234a273.js";
+            window.path_to_searchindex_js = "../searchindex-1bc75e06.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b011f5da.js"></script>
+        <script src="../toc-1cee2a9d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -536,11 +536,12 @@ const {
 <tbody>
 <tr><td><strong>Dashboard</strong></td><td>P&amp;L metrics, swarm health, top opportunities, recent trades, threat alerts, active strategies</td><td>✅ Complete</td></tr>
 <tr><td><strong>Opportunities</strong></td><td>Filter by status, approve/reject/execute actions, atomicity indicators</td><td>✅ Complete</td></tr>
-<tr><td><strong>Strategies</strong></td><td>Toggle enable/disable, risk params display, performance stats</td><td>✅ Complete</td></tr>
+<tr><td><strong>Strategies</strong></td><td>Strategy list, creation modal, toggle enable/disable, risk params, execution mode</td><td>✅ Complete</td></tr>
 <tr><td><strong>Threats</strong></td><td>Token quick check, recent alerts, blocked entities</td><td>✅ Complete</td></tr>
-<tr><td><strong>KOL Tracker</strong></td><td>Placeholder</td><td>⏳ Placeholder</td></tr>
-<tr><td><strong>Settings</strong></td><td>Placeholder</td><td>⏳ Placeholder</td></tr>
-<tr><td><strong>Research</strong></td><td>Placeholder</td><td>⏳ Placeholder</td></tr>
+<tr><td><strong>KOL Tracker</strong></td><td>Wallet tracking, copy trading config</td><td>⏳ Placeholder</td></tr>
+<tr><td><strong>Settings</strong></td><td>Wallet, risk params, venues, API config, execution settings</td><td>✅ Complete</td></tr>
+<tr><td><strong>Research</strong></td><td>URL injection, discoveries, sources, consensus voting</td><td>✅ Complete</td></tr>
+<tr><td><strong>Signals</strong></td><td>Live signal feed, filtering by type/venue/profit</td><td>✅ Complete</td></tr>
 </tbody>
 </table>
 </div>
@@ -589,6 +590,174 @@ const {
   compact={true}
 /&gt;
 </code></pre>
+<hr>
+<h3 id="research-view"><a class="header" href="#research-view">Research View</a></h3>
+<p>The Research view enables alpha discovery through URL injection and strategy extraction.</p>
+<h4 id="tabs"><a class="header" href="#tabs">Tabs</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tab</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>URL Injection</strong></td><td>Submit URLs (Twitter, blogs, whitepapers) for LLM analysis</td></tr>
+<tr><td><strong>Discoveries</strong></td><td>List of extracted strategies ready for review/activation</td></tr>
+<tr><td><strong>Sources</strong></td><td>Tracked alpha sources and their success rates</td></tr>
+<tr><td><strong>Consensus</strong></td><td>Multi-LLM consensus voting on strategy validity</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="url-injection-flow"><a class="header" href="#url-injection-flow">URL Injection Flow</a></h4>
+<pre><code>┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Paste URL  │ ──▶ │ LLM Analyze │ ──▶ │  Extracted  │
+│  + Analyze  │     │   Content   │     │  Strategy   │
+└─────────────┘     └─────────────┘     └─────────────┘
+                                              │
+                    ┌─────────────────────────┼─────────────────────────┐
+                    │                         │                         │
+                    ▼                         ▼                         ▼
+             ┌─────────────┐           ┌─────────────┐           ┌─────────────┐
+             │   Create    │           │  Backtest   │           │   Reject    │
+             │  Strategy   │           │    First    │           │             │
+             └─────────────┘           └─────────────┘           └─────────────┘
+</code></pre>
+<h4 id="extracted-strategy-display"><a class="header" href="#extracted-strategy-display">Extracted Strategy Display</a></h4>
+<p>When a URL is analyzed, the following parameters are extracted:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Strategy Type</td><td><code>dex_arb</code>, <code>curve_graduation</code>, <code>liquidation</code>, <code>kol_copy</code>, <code>momentum</code></td></tr>
+<tr><td>Entry Conditions</td><td>Rules that trigger trade entry</td></tr>
+<tr><td>Exit Conditions</td><td>Rules that trigger trade exit</td></tr>
+<tr><td>Risk Parameters</td><td>Position size, slippage limits, loss limits</td></tr>
+<tr><td>Confidence Score</td><td>LLM confidence in the extraction (0-1)</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="signals-view"><a class="header" href="#signals-view">Signals View</a></h3>
+<p>Real-time signal monitoring with filtering capabilities.</p>
+<h4 id="signal-card"><a class="header" href="#signal-card">Signal Card</a></h4>
+<pre><code class="language-tsx">&lt;div className={styles.signalCard}&gt;
+  &lt;div className={styles.signalHeader}&gt;
+    &lt;span className={styles.signalType}&gt;{signal.signal_type}&lt;/span&gt;
+    &lt;span className={styles.signalVenue}&gt;{signal.venue_type}&lt;/span&gt;
+    &lt;span className={styles.signalTime}&gt;{formatTime(signal.detected_at)}&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div className={styles.signalMetrics}&gt;
+    &lt;div&gt;Est. Profit: {signal.estimated_profit_bps} bps&lt;/div&gt;
+    &lt;div&gt;Confidence: {signal.confidence * 100}%&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+<h4 id="signal-types"><a class="header" href="#signal-types">Signal Types</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Type</th><th>Source</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>price_discrepancy</code></td><td>DEX AMMs</td><td>Price difference between venues</td></tr>
+<tr><td><code>volume_spike</code></td><td>All venues</td><td>Unusual volume activity</td></tr>
+<tr><td><code>dex_arb</code></td><td>Jupiter/Raydium</td><td>Cross-DEX arbitrage opportunity</td></tr>
+<tr><td><code>liquidation</code></td><td>Lending protocols</td><td>Liquidatable positions</td></tr>
+<tr><td><code>curve_graduation</code></td><td>pump.fun/moonshot</td><td>Bonding curve graduation imminent</td></tr>
+<tr><td><code>kol_signal</code></td><td>Wallet tracking</td><td>KOL wallet activity</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="filtering-options"><a class="header" href="#filtering-options">Filtering Options</a></h4>
+<ul>
+<li><strong>Signal Type</strong>: Filter by specific signal types</li>
+<li><strong>Venue Type</strong>: Filter by DEX, lending protocol, etc.</li>
+<li><strong>Min Profit (bps)</strong>: Minimum profit threshold</li>
+<li><strong>Min Confidence</strong>: Minimum confidence threshold</li>
+</ul>
+<hr>
+<h3 id="strategy-creation-modal"><a class="header" href="#strategy-creation-modal">Strategy Creation Modal</a></h3>
+<p>Full strategy configuration form accessible from the Strategies view.</p>
+<h4 id="form-fields"><a class="header" href="#form-fields">Form Fields</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Name</td><td>text</td><td>Strategy display name</td></tr>
+<tr><td>Strategy Type</td><td>select</td><td><code>dex_arb</code>, <code>curve_graduation</code>, <code>liquidation</code>, <code>kol_copy</code></td></tr>
+<tr><td>Venue Types</td><td>multiselect</td><td><code>dex_amm</code>, <code>bonding_curve</code>, <code>lending</code></td></tr>
+<tr><td>Execution Mode</td><td>select</td><td><code>autonomous</code>, <code>hybrid</code>, <code>agent_directed</code></td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="risk-parameters"><a class="header" href="#risk-parameters">Risk Parameters</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td>Max Position (SOL)</td><td>Maximum position size</td><td>0.5</td></tr>
+<tr><td>Daily Loss Limit (SOL)</td><td>Max daily loss before pausing</td><td>2.0</td></tr>
+<tr><td>Min Profit (bps)</td><td>Minimum profit to execute</td><td>50</td></tr>
+<tr><td>Max Slippage (bps)</td><td>Maximum allowed slippage</td><td>100</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="execution-modes"><a class="header" href="#execution-modes">Execution Modes</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Behavior</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Autonomous</strong></td><td>Auto-execute all qualifying opportunities</td></tr>
+<tr><td><strong>Hybrid</strong></td><td>Auto below threshold, consensus above</td></tr>
+<tr><td><strong>Agent Directed</strong></td><td>Multi-LLM consensus required for every trade</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h3 id="settings-view"><a class="header" href="#settings-view">Settings View</a></h3>
+<p>Configuration tabs for all ArbFarm settings.</p>
+<h4 id="tabs-1"><a class="header" href="#tabs-1">Tabs</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tab</th><th>Settings</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Wallet</strong></td><td>Connected wallet address, SOL balance display</td></tr>
+<tr><td><strong>Risk</strong></td><td>Global risk parameters</td></tr>
+<tr><td><strong>Venues</strong></td><td>Enable/disable specific venues</td></tr>
+<tr><td><strong>API</strong></td><td>API keys, RPC endpoints</td></tr>
+<tr><td><strong>Execution</strong></td><td>Auto-execute toggle, thresholds</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="execution-settings"><a class="header" href="#execution-settings">Execution Settings</a></h4>
+<p>The execution tab provides fine-grained control over autonomous trading:</p>
+<pre><code class="language-tsx">// Master toggle
+&lt;div className={styles.masterToggle}&gt;
+  &lt;span&gt;Auto-Execute Mode&lt;/span&gt;
+  &lt;input
+    type="checkbox"
+    checked={autoExecuteEnabled}
+    onChange={handleToggle}
+  /&gt;
+&lt;/div&gt;
+
+// Thresholds
+&lt;div className={styles.thresholds}&gt;
+  &lt;div&gt;Min Confidence for Auto: {autoMinConfidence}%&lt;/div&gt;
+  &lt;div&gt;Max Position for Auto: {autoMaxPosition} SOL&lt;/div&gt;
+  &lt;div&gt;Require Simulation: {requireSimulation ? 'Yes' : 'No'}&lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+<p><strong>Warning</strong>: When auto-execute is enabled, the agent will execute trades without manual approval for opportunities meeting the threshold criteria.</p>
 <hr>
 <h3 id="styling-arbfarmmodulescss"><a class="header" href="#styling-arbfarmmodulescss">Styling (<code>arbfarm.module.scss</code>)</a></h3>
 <p>SCSS modules (~1200 lines) with consistent color scheme:</p>
@@ -722,6 +891,22 @@ npm run lint:format
         <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
         <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
 
 
         <script>

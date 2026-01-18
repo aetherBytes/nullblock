@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-2234a273.js";
+            window.path_to_searchindex_js = "../searchindex-1bc75e06.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b011f5da.js"></script>
+        <script src="../toc-1cee2a9d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -285,6 +285,239 @@
   "net_profit_lamports": 2350000,
   "avg_profit_bps": 35,
   "best_trade_lamports": 500000
+}
+</code></pre>
+<h2 id="signals"><a class="header" href="#signals">Signals</a></h2>
+<p>Real-time market signals detected by the scanner.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/signals</code></td><td>List recent signals</td></tr>
+<tr><td>GET</td><td><code>/signals/stream</code></td><td>SSE stream of live signals</td></tr>
+<tr><td>GET</td><td><code>/signals/:id</code></td><td>Get signal details</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="query-parameters-1"><a class="header" href="#query-parameters-1">Query Parameters</a></h3>
+<pre><code>?signal_type=price_discrepancy|volume_spike|dex_arb|liquidation|curve_graduation|kol_signal
+?venue_type=jupiter|raydium|pumpfun|moonshot|kamino|marginfi
+?min_profit_bps=50
+?min_confidence=0.8
+?limit=50&amp;offset=0
+</code></pre>
+<h3 id="signal-response"><a class="header" href="#signal-response">Signal Response</a></h3>
+<pre><code class="language-json">{
+  "id": "uuid",
+  "signal_type": "dex_arb",
+  "venue_type": "jupiter",
+  "estimated_profit_bps": 75,
+  "confidence": 0.85,
+  "token_pair": ["SOL", "BONK"],
+  "detected_at": "2024-01-15T10:30:00Z",
+  "expires_at": "2024-01-15T10:31:00Z",
+  "metadata": {
+    "price_a": 0.000025,
+    "price_b": 0.0000255,
+    "spread_bps": 200
+  }
+}
+</code></pre>
+<h2 id="strategies"><a class="header" href="#strategies">Strategies</a></h2>
+<p>Strategy management for automated trading.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/strategies</code></td><td>List all strategies</td></tr>
+<tr><td>POST</td><td><code>/strategies</code></td><td>Create new strategy</td></tr>
+<tr><td>GET</td><td><code>/strategies/:id</code></td><td>Get strategy details</td></tr>
+<tr><td>PUT</td><td><code>/strategies/:id</code></td><td>Update strategy</td></tr>
+<tr><td>DELETE</td><td><code>/strategies/:id</code></td><td>Permanently delete strategy and data</td></tr>
+<tr><td>POST</td><td><code>/strategies/:id/toggle</code></td><td>Enable/disable strategy (pause/resume)</td></tr>
+<tr><td>POST</td><td><code>/strategies/:id/kill</code></td><td>Emergency stop - halt all running operations</td></tr>
+<tr><td>GET</td><td><code>/strategies/:id/stats</code></td><td>Strategy performance stats</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="kill-strategy-response"><a class="header" href="#kill-strategy-response">Kill Strategy Response</a></h3>
+<p>Immediately stops all running operations for a strategy (cancels pending approvals, halts executions) but keeps the strategy in your list for later use.</p>
+<pre><code class="language-json">{
+  "success": true,
+  "id": "uuid",
+  "strategy_name": "Jupiter-Raydium Arb",
+  "message": "Strategy killed - all operations halted",
+  "action": "emergency_stop"
+}
+</code></pre>
+<h3 id="create-strategy-request"><a class="header" href="#create-strategy-request">Create Strategy Request</a></h3>
+<pre><code class="language-json">{
+  "name": "DEX Arbitrage - Jupiter/Raydium",
+  "strategy_type": "dex_arb",
+  "venue_types": ["dex_amm"],
+  "execution_mode": "hybrid",
+  "risk_params": {
+    "max_position_sol": 0.5,
+    "daily_loss_limit_sol": 2.0,
+    "min_profit_bps": 50,
+    "max_slippage_bps": 100
+  }
+}
+</code></pre>
+<h3 id="strategy-response"><a class="header" href="#strategy-response">Strategy Response</a></h3>
+<pre><code class="language-json">{
+  "id": "uuid",
+  "wallet_address": "5wrmi85pTPmB4NDv7rUYncEMi1KqVo93bZn3XtXSbjYT",
+  "name": "DEX Arbitrage - Jupiter/Raydium",
+  "strategy_type": "dex_arb",
+  "venue_types": ["dex_amm"],
+  "execution_mode": "hybrid",
+  "risk_params": {
+    "max_position_sol": 0.5,
+    "daily_loss_limit_sol": 2.0,
+    "min_profit_bps": 50,
+    "max_slippage_bps": 100
+  },
+  "is_active": true,
+  "stats": {
+    "total_trades": 45,
+    "win_rate": 0.78,
+    "total_profit_sol": 1.25
+  },
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T12:30:00Z"
+}
+</code></pre>
+<h2 id="approvals"><a class="header" href="#approvals">Approvals</a></h2>
+<p>Pending approval workflow for trades requiring manual confirmation.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/approvals</code></td><td>List all approvals</td></tr>
+<tr><td>GET</td><td><code>/approvals/pending</code></td><td>List pending approvals only</td></tr>
+<tr><td>GET</td><td><code>/approvals/:id</code></td><td>Get approval details</td></tr>
+<tr><td>POST</td><td><code>/approvals/:id/approve</code></td><td>Approve for execution</td></tr>
+<tr><td>POST</td><td><code>/approvals/:id/reject</code></td><td>Reject with reason</td></tr>
+<tr><td>POST</td><td><code>/approvals/cleanup</code></td><td>Clean up expired approvals</td></tr>
+<tr><td>POST</td><td><code>/approvals/hecate-recommendation</code></td><td>Add Hecate AI recommendation</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="pending-approvals-response"><a class="header" href="#pending-approvals-response">Pending Approvals Response</a></h3>
+<pre><code class="language-json">{
+  "approvals": [
+    {
+      "id": "uuid",
+      "edge_id": "uuid",
+      "strategy_id": "uuid",
+      "approval_type": "entry",
+      "status": "pending",
+      "expires_at": "2024-01-15T10:35:00Z",
+      "hecate_decision": true,
+      "hecate_reasoning": "High confidence opportunity with low risk score",
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "total": 1
+}
+</code></pre>
+<h3 id="approve-request"><a class="header" href="#approve-request">Approve Request</a></h3>
+<pre><code class="language-json">{
+  "notes": "Optional notes about approval decision"
+}
+</code></pre>
+<h3 id="reject-request"><a class="header" href="#reject-request">Reject Request</a></h3>
+<pre><code class="language-json">{
+  "reason": "Risk too high for current market conditions"
+}
+</code></pre>
+<h3 id="hecate-recommendation-request"><a class="header" href="#hecate-recommendation-request">Hecate Recommendation Request</a></h3>
+<pre><code class="language-json">{
+  "approval_id": "uuid",
+  "decision": true,
+  "reasoning": "Analysis indicates high probability of profit"
+}
+</code></pre>
+<h2 id="execution-config"><a class="header" href="#execution-config">Execution Config</a></h2>
+<p>Global execution toggle and configuration.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/execution/config</code></td><td>Get execution config</td></tr>
+<tr><td>PUT</td><td><code>/execution/config</code></td><td>Update execution config</td></tr>
+<tr><td>POST</td><td><code>/execution/toggle</code></td><td>Toggle auto-execution on/off</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="execution-config-response"><a class="header" href="#execution-config-response">Execution Config Response</a></h3>
+<pre><code class="language-json">{
+  "auto_execution_enabled": false,
+  "default_approval_timeout_secs": 300,
+  "notify_hecate_on_pending": true
+}
+</code></pre>
+<h3 id="toggle-execution-request"><a class="header" href="#toggle-execution-request">Toggle Execution Request</a></h3>
+<pre><code class="language-json">{
+  "enabled": true
+}
+</code></pre>
+<h3 id="toggle-execution-response"><a class="header" href="#toggle-execution-response">Toggle Execution Response</a></h3>
+<pre><code class="language-json">{
+  "enabled": true,
+  "message": "Auto-execution enabled"
+}
+</code></pre>
+<h2 id="settings"><a class="header" href="#settings">Settings</a></h2>
+<p>Global settings and configuration.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/settings</code></td><td>Get all settings</td></tr>
+<tr><td>GET</td><td><code>/settings/risk</code></td><td>Get global risk config</td></tr>
+<tr><td>POST</td><td><code>/settings/risk</code></td><td>Update global risk config</td></tr>
+<tr><td>GET</td><td><code>/settings/venues</code></td><td>Get venue settings</td></tr>
+<tr><td>GET</td><td><code>/settings/api-keys</code></td><td>Get API key status</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="execution-settings-response"><a class="header" href="#execution-settings-response">Execution Settings Response</a></h3>
+<pre><code class="language-json">{
+  "auto_execute_enabled": false,
+  "auto_min_confidence": 0.8,
+  "auto_max_position_sol": 0.5,
+  "require_simulation": true,
+  "default_execution_mode": "agent_directed"
+}
+</code></pre>
+<h3 id="update-execution-settings-request"><a class="header" href="#update-execution-settings-request">Update Execution Settings Request</a></h3>
+<pre><code class="language-json">{
+  "auto_execute_enabled": true,
+  "auto_min_confidence": 0.85,
+  "auto_max_position_sol": 0.3,
+  "require_simulation": true
+}
+</code></pre>
+<h3 id="risk-config-response"><a class="header" href="#risk-config-response">Risk Config Response</a></h3>
+<pre><code class="language-json">{
+  "max_position_sol": 5.0,
+  "daily_loss_limit_sol": 2.0,
+  "min_profit_bps": 50,
+  "max_slippage_bps": 100,
+  "max_concurrent_positions": 10,
+  "cooldown_after_loss_ms": 5000
 }
 </code></pre>
 <h2 id="bonding-curves"><a class="header" href="#bonding-curves">Bonding Curves</a></h2>
@@ -648,6 +881,31 @@
 <li><code>curve_quote</code> - Get buy/sell quote</li>
 <li><code>curve_graduation_candidates</code> - Find graduation opportunities</li>
 </ul>
+<p><strong>Strategy Tools:</strong></p>
+<ul>
+<li><code>strategy_list</code> - List all strategies</li>
+<li><code>strategy_create</code> - Create new strategy</li>
+<li><code>strategy_details</code> - Get strategy details</li>
+<li><code>strategy_update</code> - Update strategy parameters</li>
+<li><code>strategy_toggle</code> - Enable/disable strategy (pause/resume)</li>
+<li><code>strategy_kill</code> - Emergency stop all running operations</li>
+<li><code>strategy_delete</code> - Permanently delete strategy and data</li>
+<li><code>strategy_batch_toggle</code> - Batch enable/disable</li>
+<li><code>strategy_save_to_engrams</code> - Persist to memory layer</li>
+</ul>
+<p><strong>Approval Tools:</strong></p>
+<ul>
+<li><code>approval_list</code> - List all approvals</li>
+<li><code>approval_pending</code> - List pending approvals</li>
+<li><code>approval_details</code> - Get approval details</li>
+<li><code>approval_approve</code> - Approve for execution</li>
+<li><code>approval_reject</code> - Reject with reason</li>
+</ul>
+<p><strong>Execution Tools:</strong></p>
+<ul>
+<li><code>execution_config_get</code> - Get execution config</li>
+<li><code>execution_toggle</code> - Toggle auto-execution</li>
+</ul>
 <p><strong>Research Tools:</strong></p>
 <ul>
 <li><code>research_ingest_url</code> - Analyze URL</li>
@@ -761,6 +1019,22 @@
         <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
         <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
 
 
         <script>

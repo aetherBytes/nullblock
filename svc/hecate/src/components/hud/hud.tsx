@@ -95,7 +95,7 @@ const HUD: React.FC<HUDProps> = ({
   const [showCrossroadsMarketplace, setShowCrossroadsMarketplace] = useState(false);
   const [resetCrossroadsToLanding, setResetCrossroadsToLanding] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
-  const [memcacheSection, setMemcacheSection] = useState<MemCacheSection>('engrams');
+  const [memcacheSection, setMemcacheSection] = useState<MemCacheSection>('arbfarm');
 
   // Void mode state
   const [hasSeenVoidWelcome, setHasSeenVoidWelcome] = useState(() => {

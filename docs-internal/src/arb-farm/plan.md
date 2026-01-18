@@ -1847,6 +1847,62 @@ const useOpportunities = () => {
 
 ---
 
+## Current Capabilities vs Known Gaps
+
+### ✅ What Actually Works Today
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **Curve Graduation Detection** | ✅ Working | pump.fun + moonshot via DexScreener API |
+| **Lending Liquidations** | ✅ Working | Marginfi + Kamino real API calls |
+| **MEV Hunter Agent** | ✅ Working | Scanning logic for arb/JIT/backrun/liquidation |
+| **Helius Webhooks** | ✅ Working | Webhook registration + event processing |
+| **Helius RPC/Sender** | ✅ Working | Full transaction submission |
+| **Multi-LLM Consensus** | ✅ Working | OpenRouter integration, weighted voting |
+| **Engram Integration** | ✅ Working | Storage, retrieval, pattern matching |
+| **Capital Management** | ✅ Working | Per-strategy allocation, reservation |
+| **Position Monitoring** | ✅ Working | Stop-loss, take-profit, trailing stops |
+| **Frontend Dashboard** | ✅ Working | SSE, metrics, strategy management |
+
+### ⚠️ Partially Implemented
+
+| Component | Status | What's Missing |
+|-----------|--------|----------------|
+| **KOL Discovery** | ⚠️ Partial | Real pump.fun API + mock fallback |
+| **KOL Copy Trading** | ⚠️ Partial | Helius webhook wired but no auto-copy execution |
+| **Helius LaserStream** | ⚠️ Stub | WebSocket skeleton, needs tokio-tungstenite |
+
+### ❌ Not Implemented (Stubbed)
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| **DEX Arbitrage Scanning** | ❌ Stubbed | `scan_for_signals()` returns `vec![]` for Jupiter/Raydium |
+| **Cross-DEX Price Comparison** | ❌ Missing | No inter-venue comparison logic exists |
+| **JIT Liquidity Detection** | ❌ Stubbed | Signal type defined but not generated |
+| **Backrun Detection** | ❌ Stubbed | Signal type defined but not generated |
+| **Threat Detection Agent** | ❌ Not Started | Directory structure only |
+| **Research/DD Agent** | ❌ Not Started | Directory structure only |
+| **Meme Coin Creation** | ❌ Not Started | Strategy type not implemented |
+| **MCP Tool Aggregation** | ❌ Not Started | Protocols service doesn't aggregate ArbFarm tools |
+
+### Signal Types Status
+
+| Signal Type | Status | Used By |
+|-------------|--------|---------|
+| `CurveGraduation` | ✅ Active | pump_fun, moonshot |
+| `Liquidation` | ✅ Active | kamino, marginfi |
+| `DexArb` | ❌ Defined but unused | - |
+| `JitLiquidity` | ❌ Defined but unused | - |
+| `Backrun` | ❌ Defined but unused | - |
+| `PriceDiscrepancy` | ❌ Unused | - |
+| `VolumeSpike` | ❌ Unused | - |
+| `LiquidityChange` | ❌ Unused | - |
+| `NewToken` | ❌ Unused | - |
+| `LargeOrder` | ❌ Unused | - |
+| `PoolImbalance` | ❌ Unused | - |
+
+---
+
 ## External API Dependencies
 
 | API | Purpose | Rate Limits | Fallback |
@@ -1885,14 +1941,17 @@ curl http://localhost:9007/health
 # Should return: {"status": "ok", "service": "arb-farm"}
 ```
 
-### Phase 2: Venue Scanner + Strategy Engine ✅
+### Phase 2: Venue Scanner + Strategy Engine ⚠️ Partial
 - [x] Implement MevVenue trait
-- [x] Jupiter DEX scanner
-- [x] Raydium AMM scanner
-- [x] Signal detection engine
+- [x] Jupiter DEX scanner (quotes work)
+- [x] Raydium AMM scanner (quotes work)
+- [ ] DEX `scan_for_signals()` - **STUBBED** (returns empty vec)
+- [x] Signal detection engine (curves + lending work)
 - [x] Strategy matching logic
 - [x] SSE streaming for edges
 - [x] MCP tools: scanner_status, scanner_signals
+
+> **Note**: DEX venue scanners can fetch quotes but `scan_for_signals()` returns empty. Curve graduation and lending liquidation scanning fully work.
 
 **Verification**:
 ```bash
@@ -1939,79 +1998,83 @@ curl http://localhost:9007/curves/{token}/progress
 curl http://localhost:9007/edges?venue_type=bonding_curve
 ```
 
-### Phase 5: MEV Detection (DEX Arb, Liquidations, JIT) ✅
-- [x] DEX arbitrage detection
-- [x] Lending liquidation scanner (Marginfi, Kamino)
-- [x] JIT liquidity opportunity detection
-- [x] Backrun opportunity detection
+### Phase 5: MEV Detection (DEX Arb, Liquidations, JIT) ⚠️ Partial
+- [ ] DEX arbitrage detection - **STUBBED** (scanner returns empty)
+- [x] Lending liquidation scanner (Marginfi, Kamino) - **WORKING**
+- [ ] JIT liquidity opportunity detection - **STUBBED**
+- [ ] Backrun opportunity detection - **STUBBED**
 - [x] Priority queue for time-sensitive edges
+- [x] MEV Hunter agent exists (scanning logic defined, venues stubbed)
+
+> **Note**: Liquidation detection via Marginfi/Kamino APIs works. DEX arbitrage, JIT, and backrun detection are defined in the MEV Hunter agent but underlying venue `scan_for_signals()` returns empty.
 
 **Verification**:
 ```bash
-# Get MEV opportunities by type
+# Get MEV opportunities by type (liquidations work)
 curl "http://localhost:9007/edges?edge_type=liquidation"
+
+# These return empty (stubbed):
 curl "http://localhost:9007/edges?edge_type=jit"
+curl "http://localhost:9007/edges?edge_type=dex_arb"
 ```
 
-### Phase 6: Research/DD Agent + URL Ingestion ✅
-- [x] URL ingestion pipeline (WebFetch-style)
-- [x] LLM strategy extraction
-- [x] Backtest engine (simulated historical)
-- [x] X/Twitter monitoring integration
-- [x] MCP tools: research_ingest_url, research_backtest_strategy
+### Phase 6: Research/DD Agent + URL Ingestion ❌ Not Started
+- [ ] URL ingestion pipeline (WebFetch-style)
+- [ ] LLM strategy extraction
+- [ ] Backtest engine (simulated historical)
+- [ ] X/Twitter monitoring integration
+- [ ] MCP tools: research_ingest_url, research_backtest_strategy
+
+> **Note**: Research/DD agent is not implemented. The `research/` directory has stub files but no functional implementation.
 
 **Verification**:
 ```bash
-# Ingest a URL
+# Not implemented - endpoints will return 404 or stub responses
 curl -X POST http://localhost:9007/research/ingest \
   -H "Content-Type: application/json" \
   -d '{"url": "https://twitter.com/trader/status/123"}'
-
-# List discoveries
-curl http://localhost:9007/research/discoveries
 ```
 
-### Phase 7: KOL Tracking + Copy Trading ✅
-- [x] Helius webhook integration for wallet monitoring
+### Phase 7: KOL Tracking + Copy Trading ⚠️ Partial
+- [x] KOL discovery via pump.fun API - **WORKING**
+- [x] Helius webhook integration for wallet monitoring - **WORKING**
 - [x] Trust score calculation
-- [x] Copy trade execution (with delay)
-- [x] Auto-disable on poor performance
-- [x] MCP tools: kol_track, copy_enable, copy_disable
+- [ ] Copy trade auto-execution - **STUBBED** (webhook wired, no execution logic)
+- [ ] Auto-disable on poor performance
+- [x] MCP tools: kol_track, copy_enable, copy_disable (API exists)
+
+> **Note**: KOL discovery and wallet tracking via Helius webhooks work. Copy trade auto-execution logic is not implemented - webhooks are received but trades are not automatically copied.
 
 **Verification**:
 ```bash
-# Track a KOL
+# Track a KOL (works)
 curl -X POST http://localhost:9007/kol \
   -H "Content-Type: application/json" \
   -d '{"wallet_address": "7Vk3...", "name": "WhaleWallet"}'
 
-# Enable copy trading
+# Enable copy trading (config saved, but auto-copy not implemented)
 curl -X POST http://localhost:9007/kol/{id}/copy/enable \
   -H "Content-Type: application/json" \
   -d '{"max_position_sol": 0.5, "min_delay_ms": 500}'
 ```
 
-### Phase 8: Threat Detection + Safety ✅
-- [x] RugCheck API integration
-- [x] GoPlus Security API integration
-- [x] In-house threat scoring system
-- [x] Holder concentration analysis
-- [x] Creator wallet monitoring (Helius webhooks)
-- [x] Honeypot simulation detection
-- [x] Blocklist/whitelist management
-- [x] Real-time threat alerts
-- [x] MCP tools: threat_check_token, threat_check_wallet, threat_report
+### Phase 8: Threat Detection + Safety ❌ Not Started
+- [ ] RugCheck API integration
+- [ ] GoPlus Security API integration
+- [ ] In-house threat scoring system
+- [ ] Holder concentration analysis
+- [ ] Creator wallet monitoring (Helius webhooks)
+- [ ] Honeypot simulation detection
+- [ ] Blocklist/whitelist management
+- [ ] Real-time threat alerts
+- [ ] MCP tools: threat_check_token, threat_check_wallet, threat_report
+
+> **Note**: Threat detection agent is not implemented. The `threat/` directory structure is defined but no functional implementation exists.
 
 **Verification**:
 ```bash
-# Check token threat score
+# Not implemented - endpoints will return 404 or stub responses
 curl http://localhost:9007/threat/check/TokenMintHere
-
-# Check wallet for scam history
-curl http://localhost:9007/threat/wallet/WalletAddressHere
-
-# List blocked entities
-curl http://localhost:9007/threat/blocked
 ```
 
 ### Phase 9: Engram Integration + Learning ✅

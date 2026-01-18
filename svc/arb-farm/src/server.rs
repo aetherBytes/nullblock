@@ -13,10 +13,10 @@ use crate::handlers::swarm::{init_overseer, init_circuit_breakers};
 use crate::resilience::CircuitBreakerRegistry;
 use crate::config::Config;
 use crate::consensus::ConsensusEngine;
-use crate::database::{EdgeRepository, StrategyRepository, TradeRepository};
+use crate::database::{EdgeRepository, PositionRepository, StrategyRepository, TradeRepository};
 use crate::engrams::EngramsClient;
 use crate::events::{ArbEvent, EventBus};
-use crate::execution::{ApprovalManager, CapitalManager, CurveTransactionBuilder, ExecutorAgent, TransactionSimulator, TransactionBuilder, PositionMonitor, MonitorConfig, JitoClient};
+use crate::execution::{ApprovalManager, CapitalManager, CurveTransactionBuilder, ExecutorAgent, TransactionSimulator, TransactionBuilder, PositionMonitor, MonitorConfig, JitoClient, RealtimePositionMonitor};
 use crate::venues::curves::{HolderAnalyzer, OnChainFetcher};
 use crate::execution::risk::RiskConfig;
 use crate::helius::{HeliusClient, DasClient, HeliusSender, LaserStreamClient, priority_fee::PriorityFeeMonitor};
@@ -72,6 +72,7 @@ pub struct AppState {
     pub holder_analyzer: Arc<HolderAnalyzer>,
     pub curve_scorer: Arc<CurveOpportunityScorer>,
     pub autonomous_executor: Arc<AutonomousExecutor>,
+    pub realtime_monitor: Arc<RealtimePositionMonitor>,
 }
 
 impl AppState {
@@ -176,10 +177,9 @@ impl AppState {
             tracing::warn!("⚠️ No wallet signing configured - transactions will fail");
         }
 
-        // Initialize risk config with dev_testing profile
-        let risk_config = Arc::new(RwLock::new(RiskConfig::dev_testing()));
-        tracing::info!("✅ Risk config initialized (dev_testing profile: {} SOL max position)",
-            config.default_max_position_sol);
+        // Initialize risk config with MEDIUM profile - balanced risk/reward
+        let risk_config = Arc::new(RwLock::new(RiskConfig::medium()));
+        tracing::info!("✅ Risk config initialized (MEDIUM profile: 0.25 SOL max position, 10 concurrent)");
 
         // Initialize Helius clients (webhook + RPC + sender + DAS)
         let helius_webhook_client = Arc::new(HeliusWebhookClient::new(
@@ -303,26 +303,26 @@ impl AppState {
             &default_wallet,
             "curve_arb",
             vec!["bondingcurve".to_string(), "BondingCurve".to_string()],
-            "agent_directed",  // Manual approval required by default
+            "autonomous",  // Autonomous execution enabled
             RiskParams {
-                // Moderate risk profile by default
-                max_position_sol: config.default_max_position_sol.min(0.01), // Cap at 0.01 SOL for testing
-                daily_loss_limit_sol: 1.0,              // Max 1 SOL loss per day
+                // LOW risk profile - autonomous but conservative
+                max_position_sol: 0.02,                 // Cap at 0.02 SOL (LOW risk)
+                daily_loss_limit_sol: 0.1,              // Max 0.1 SOL loss per day
                 min_profit_bps: 50,                     // Require 0.5% min profit
                 max_slippage_bps: 150,                  // 1.5% max slippage
-                max_risk_score: 60,                     // Moderate risk tolerance
+                max_risk_score: 40,                     // Conservative risk tolerance
                 require_simulation: true,               // Always simulate first
-                auto_execute_atomic: false,             // No auto-execute
-                auto_execute_enabled: false,            // Disabled by default
-                require_confirmation: true,             // Always require confirmation
+                auto_execute_atomic: true,              // Auto-execute atomic ops
+                auto_execute_enabled: true,             // ENABLED for autonomous trading
+                require_confirmation: false,            // NO confirmation needed
                 staleness_threshold_hours: 24,
                 stop_loss_percent: Some(10.0),          // 10% stop loss
-                take_profit_percent: Some(30.0),        // 30% take profit
-                trailing_stop_percent: None,
+                take_profit_percent: Some(20.0),        // 20% take profit
+                trailing_stop_percent: Some(5.0),       // 5% trailing stop
                 time_limit_minutes: Some(60),           // 1 hour max hold
                 base_currency: "sol".to_string(),
-                max_capital_allocation_percent: 15.0,   // Conservative 15% allocation
-                concurrent_positions: Some(1),          // One position at a time
+                max_capital_allocation_percent: 10.0,   // Conservative 10% allocation
+                concurrent_positions: Some(2),          // Max 2 positions at a time
             },
         ).await {
             strategy_engine.add_strategy(curve_strategy).await;
@@ -504,23 +504,39 @@ impl AppState {
             );
         }
 
-        // Initialize Position Manager for tracking open positions and exit conditions
-        let position_manager = Arc::new(crate::execution::PositionManager::new());
-        tracing::info!("✅ Position Manager initialized (exit tracking: SL/TP/trailing/time)");
+        // Initialize Position Repository and Manager for tracking open positions and exit conditions
+        let position_repo = Arc::new(PositionRepository::new(db_pool.clone()));
+        let position_manager = Arc::new(
+            crate::execution::PositionManager::with_repository(position_repo)
+        );
+
+        // Restore any open positions from database
+        match position_manager.load_positions_from_db().await {
+            Ok(count) => {
+                if count > 0 {
+                    tracing::info!("✅ Position Manager initialized with {} restored positions", count);
+                } else {
+                    tracing::info!("✅ Position Manager initialized (no prior positions to restore)");
+                }
+            }
+            Err(e) => {
+                tracing::warn!("⚠️ Position Manager initialized but failed to load prior positions: {}", e);
+            }
+        }
 
         // Initialize Jito client for bundle submission (shared by executor and position monitor)
         let jito_client = Arc::new(JitoClient::new(config.jito_block_engine_url.clone(), None));
         tracing::info!("✅ Jito client initialized (block engine: {})", config.jito_block_engine_url);
 
-        // Initialize Position Monitor for automated exit management
-        let position_monitor = Arc::new(PositionMonitor::new(
+        // Initialize Position Monitor for automated exit management (curve support added later)
+        let position_monitor_base = PositionMonitor::new(
             position_manager.clone(),
             tx_builder.clone(),
             jito_client.clone(),
             event_tx.clone(),
             MonitorConfig::default(),
-        ));
-        tracing::info!("✅ Position Monitor initialized (auto-exit: SL/TP/trailing/time-based)");
+        );
+        tracing::info!("✅ Position Monitor base initialized (curve support added after curve_builder)");
 
         // Initialize Approval Manager for execution controls
         let approval_manager = Arc::new(ApprovalManager::new(event_tx.clone()));
@@ -553,6 +569,12 @@ impl AppState {
         );
         tracing::info!("✅ Curve execution engine initialized (on-chain state + tx builder)");
 
+        // Add curve support to position monitor and wrap in Arc
+        let position_monitor = Arc::new(
+            position_monitor_base.with_curve_support(curve_builder.clone(), helius_sender.clone())
+        );
+        tracing::info!("✅ Position Monitor initialized with curve support (auto-exit: SL/TP/trailing/time-based + curve sell)");
+
         // Initialize curve metrics collector, holder analyzer, and opportunity scorer
         let metrics_collector = Arc::new(CurveMetricsCollector::new(on_chain_fetcher.clone()));
         let holder_analyzer = Arc::new(HolderAnalyzer::new(helius_rpc_client.clone()));
@@ -571,10 +593,21 @@ impl AppState {
             dev_signer.clone(),
             helius_sender.clone(),
             position_manager.clone(),
+            risk_config.clone(),
             event_tx.clone(),
             default_wallet_for_executor,
         );
         tracing::info!("✅ Autonomous Executor spawned (auto-execution for autonomous strategies)");
+
+        // Initialize Real-time Position Monitor for websocket-based price updates
+        let realtime_monitor = Arc::new(RealtimePositionMonitor::new(
+            laserstream_client.clone(),
+            position_manager.clone(),
+            position_monitor.clone(),
+            dev_signer.clone(),
+            event_tx.clone(),
+        ));
+        tracing::info!("✅ Real-time Position Monitor initialized (websocket price updates)");
 
         Ok(Self {
             config,
@@ -617,6 +650,7 @@ impl AppState {
             holder_analyzer,
             curve_scorer,
             autonomous_executor,
+            realtime_monitor,
         })
     }
 
@@ -629,6 +663,18 @@ impl AppState {
         });
 
         tracing::info!("🔭 Position monitor background task started");
+    }
+
+    pub fn start_realtime_monitor(&self) {
+        let realtime = self.realtime_monitor.clone();
+
+        tokio::spawn(async move {
+            if let Err(e) = realtime.start().await {
+                tracing::error!("Failed to start real-time monitor: {}", e);
+            }
+        });
+
+        tracing::info!("📡 Real-time position monitor background task started");
     }
 
     pub fn subscribe_events(&self) -> broadcast::Receiver<ArbEvent> {

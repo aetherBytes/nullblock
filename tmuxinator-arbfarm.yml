@@ -1,0 +1,10 @@
+name: arbfarm
+root: ~/nullblock/svc/arb-farm
+
+windows:
+  - main:
+      layout: main-horizontal
+      panes:
+        - echo "Starting ArbFarm..." && export $(cat .env.dev | xargs 2>/dev/null) && RUST_LOG=info,arb_farm=debug cargo run
+        - sleep 8 && curl -sX POST http://localhost:9007/scanner/start && curl -sX POST http://localhost:9007/executor/start && echo "Scanner & Executor started" && bash
+        - sleep 10 && curl -sN http://localhost:9007/events/stream

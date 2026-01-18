@@ -145,6 +145,44 @@ while true; do
   fi
   echo ""
 
+  # COWs (Constellations of Work)
+  echo -e "${CYAN}━━━ COWs (Constellations of Work) ━━━${NC}"
+
+  # COW #1: ArbFarm - Solana MEV Agent Swarm
+  if curl -s --max-time 2 "http://localhost:9007/health" > /dev/null 2>&1; then
+    arb_health=$(curl -s --max-time 2 "http://localhost:9007/health" 2>/dev/null)
+    arb_status=$(echo "$arb_health" | jq -r '.status // "unknown"' 2>/dev/null)
+
+    # Get scanner status
+    scanner=$(curl -s --max-time 2 "http://localhost:9007/scanner/status" 2>/dev/null)
+    scanner_running=$(echo "$scanner" | jq -r '.is_running // false' 2>/dev/null)
+
+    # Get executor status
+    executor=$(curl -s --max-time 2 "http://localhost:9007/executor/stats" 2>/dev/null)
+    executor_running=$(echo "$executor" | jq -r '.is_running // false' 2>/dev/null)
+    executions=$(echo "$executor" | jq -r '.executions_succeeded // 0' 2>/dev/null)
+
+    # Get positions
+    positions=$(curl -s --max-time 2 "http://localhost:9007/positions" 2>/dev/null)
+    pos_count=$(echo "$positions" | jq -r '.positions | length // 0' 2>/dev/null)
+
+    # Get wallet balance
+    wallet=$(curl -s --max-time 2 "http://localhost:9007/wallet/balance" 2>/dev/null)
+    balance=$(echo "$wallet" | jq -r '.balance_sol // "?"' 2>/dev/null)
+
+    # Get risk config
+    risk=$(curl -s --max-time 2 "http://localhost:9007/config/risk" 2>/dev/null)
+    max_pos=$(echo "$risk" | jq -r '.max_position_sol // "?"' 2>/dev/null)
+
+    echo -e "${GREEN}✅${NC} ArbFarm (port 9007) - ${GREEN}$arb_status${NC}"
+    echo -e "   Scanner: $([ "$scanner_running" = "true" ] && echo -e "${GREEN}ON${NC}" || echo -e "${RED}OFF${NC}") | Executor: $([ "$executor_running" = "true" ] && echo -e "${GREEN}ON${NC}" || echo -e "${RED}OFF${NC}") | Trades: $executions"
+    echo -e "   Positions: $pos_count | Wallet: ${balance} SOL | Max: ${max_pos} SOL"
+  else
+    echo -e "${RED}❌${NC} ArbFarm (port 9007) - ${RED}NOT RESPONDING${NC}"
+    echo -e "${YELLOW}   → Start: cd ~/nullblock/svc/arb-farm && cargo run${NC}"
+  fi
+  echo ""
+
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "Press Ctrl+C to exit | Refreshing in 30s..."
   sleep 30

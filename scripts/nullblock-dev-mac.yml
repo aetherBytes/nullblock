@@ -75,17 +75,10 @@ windows:
           set +a
         fi
       panes:
-        - cd ~/nullblock/svc/arb-farm && mkdir -p logs && cargo run 2>&1 | tee -a logs/arb-farm.log
-        - |
-          echo "⚡ ArbFarm Health Monitor"
-          while true; do
-            clear
-            echo "⚡ ArbFarm Health - $(date '+%H:%M:%S')"
-            echo "================================"
-            curl -s http://localhost:9007/health | jq . 2>/dev/null || echo "❌ Not responding"
-            sleep 5
-          done
-        - tail -f ~/nullblock/svc/arb-farm/logs/arb-farm.log 2>/dev/null || (echo "⏳ Waiting for logs..." && sleep 5 && tail -f ~/nullblock/svc/arb-farm/logs/arb-farm.log)
+        - ~/nullblock/scripts/start-arb-farm.sh
+        - ~/nullblock/scripts/arb-monitor-health.sh
+        - ~/nullblock/scripts/arb-monitor-events.sh
+        - ~/nullblock/scripts/arb-monitor-positions.sh
 
   - task-management:
       layout: tiled

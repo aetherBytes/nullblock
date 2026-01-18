@@ -287,7 +287,11 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
       const response = await arbFarmService.listEdges(edgeFilter);
 
       if (response.success && response.data) {
-        setEdges(response.data);
+        // Handle both array format and { edges: [], total: N } format from backend
+        const edgesData = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { edges?: Edge[] }).edges || [];
+        setEdges(edgesData);
       } else {
         setEdgesError(response.error || 'Failed to fetch edges');
       }
@@ -418,7 +422,11 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
       const response = await arbFarmService.listTrades();
 
       if (response.success && response.data) {
-        setTrades(response.data);
+        // Handle both array format and { trades: [], total: N } format from backend
+        const tradesData = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { trades?: Trade[] }).trades || [];
+        setTrades(tradesData);
       } else {
         setTradesError(response.error || 'Failed to fetch trades');
       }
@@ -556,7 +564,11 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
       const response = await arbFarmService.listStrategies();
 
       if (response.success && response.data) {
-        setStrategies(response.data);
+        // Handle both array format and { strategies: [], total: N } format from backend
+        const strategiesData = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { strategies?: Strategy[] }).strategies || [];
+        setStrategies(strategiesData);
       } else {
         setStrategiesError(response.error || 'Failed to fetch strategies');
       }
@@ -747,7 +759,11 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
       const response = await arbFarmService.listKOLs();
 
       if (response.success && response.data) {
-        setKols(response.data);
+        // Handle both array format and { kols: [], total: N } format from backend
+        const kolsData = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { kols?: KOL[] }).kols || [];
+        setKols(kolsData);
       } else {
         setKolsError(response.error || 'Failed to fetch KOLs');
       }
@@ -870,7 +886,11 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
       const response = await arbFarmService.listCurveTokens();
 
       if (response.success && response.data) {
-        setCurveTokens(response.data);
+        // Handle both array format and { tokens: [], total: N } format from backend
+        const tokensData = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { tokens?: CurveToken[] }).tokens || [];
+        setCurveTokens(tokensData);
       } else {
         setCurvesError(response.error || 'Failed to fetch curve tokens');
       }
@@ -932,7 +952,11 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
       const response = await arbFarmService.listCows(50, 0, true);
 
       if (response.success && response.data) {
-        setCowsList(response.data);
+        // Handle both array format and { cows: [], total_count: N } format from backend
+        const cowsData = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { cows?: ArbFarmCowSummary[] }).cows || [];
+        setCowsList(cowsData);
       } else {
         setCowsError(response.error || 'Failed to fetch COWs');
       }

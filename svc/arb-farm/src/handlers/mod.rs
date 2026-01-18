@@ -1,5 +1,6 @@
 pub mod approvals;
 pub mod autonomous;
+pub mod config_handlers;
 pub mod consensus;
 pub mod curves;
 pub mod edges;

@@ -1,7 +1,7 @@
 pub mod repositories;
 
 pub use repositories::{
-    EdgeRepository, StrategyRepository, TradeRepository,
+    EdgeRepository, PositionRepository, StrategyRepository, TradeRepository,
 };
 
 use sqlx::postgres::PgPoolOptions;

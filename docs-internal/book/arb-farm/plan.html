@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-2234a273.js";
+            window.path_to_searchindex_js = "../searchindex-1bc75e06.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b011f5da.js"></script>
+        <script src="../toc-1cee2a9d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1991,6 +1991,80 @@ const useOpportunities = () =&gt; {
 <li><strong>Responsive</strong> for different screen sizes</li>
 </ul>
 <hr>
+<h2 id="current-capabilities-vs-known-gaps"><a class="header" href="#current-capabilities-vs-known-gaps">Current Capabilities vs Known Gaps</a></h2>
+<h3 id="-what-actually-works-today"><a class="header" href="#-what-actually-works-today">✅ What Actually Works Today</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Status</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Curve Graduation Detection</strong></td><td>✅ Working</td><td>pump.fun + moonshot via DexScreener API</td></tr>
+<tr><td><strong>Lending Liquidations</strong></td><td>✅ Working</td><td>Marginfi + Kamino real API calls</td></tr>
+<tr><td><strong>MEV Hunter Agent</strong></td><td>✅ Working</td><td>Scanning logic for arb/JIT/backrun/liquidation</td></tr>
+<tr><td><strong>Helius Webhooks</strong></td><td>✅ Working</td><td>Webhook registration + event processing</td></tr>
+<tr><td><strong>Helius RPC/Sender</strong></td><td>✅ Working</td><td>Full transaction submission</td></tr>
+<tr><td><strong>Multi-LLM Consensus</strong></td><td>✅ Working</td><td>OpenRouter integration, weighted voting</td></tr>
+<tr><td><strong>Engram Integration</strong></td><td>✅ Working</td><td>Storage, retrieval, pattern matching</td></tr>
+<tr><td><strong>Capital Management</strong></td><td>✅ Working</td><td>Per-strategy allocation, reservation</td></tr>
+<tr><td><strong>Position Monitoring</strong></td><td>✅ Working</td><td>Stop-loss, take-profit, trailing stops</td></tr>
+<tr><td><strong>Frontend Dashboard</strong></td><td>✅ Working</td><td>SSE, metrics, strategy management</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="-partially-implemented"><a class="header" href="#-partially-implemented">⚠️ Partially Implemented</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Status</th><th>What’s Missing</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>KOL Discovery</strong></td><td>⚠️ Partial</td><td>Real pump.fun API + mock fallback</td></tr>
+<tr><td><strong>KOL Copy Trading</strong></td><td>⚠️ Partial</td><td>Helius webhook wired but no auto-copy execution</td></tr>
+<tr><td><strong>Helius LaserStream</strong></td><td>⚠️ Stub</td><td>WebSocket skeleton, needs tokio-tungstenite</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="-not-implemented-stubbed"><a class="header" href="#-not-implemented-stubbed">❌ Not Implemented (Stubbed)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Status</th><th>Details</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>DEX Arbitrage Scanning</strong></td><td>❌ Stubbed</td><td><code>scan_for_signals()</code> returns <code>vec![]</code> for Jupiter/Raydium</td></tr>
+<tr><td><strong>Cross-DEX Price Comparison</strong></td><td>❌ Missing</td><td>No inter-venue comparison logic exists</td></tr>
+<tr><td><strong>JIT Liquidity Detection</strong></td><td>❌ Stubbed</td><td>Signal type defined but not generated</td></tr>
+<tr><td><strong>Backrun Detection</strong></td><td>❌ Stubbed</td><td>Signal type defined but not generated</td></tr>
+<tr><td><strong>Threat Detection Agent</strong></td><td>❌ Not Started</td><td>Directory structure only</td></tr>
+<tr><td><strong>Research/DD Agent</strong></td><td>❌ Not Started</td><td>Directory structure only</td></tr>
+<tr><td><strong>Meme Coin Creation</strong></td><td>❌ Not Started</td><td>Strategy type not implemented</td></tr>
+<tr><td><strong>MCP Tool Aggregation</strong></td><td>❌ Not Started</td><td>Protocols service doesn’t aggregate ArbFarm tools</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="signal-types-status"><a class="header" href="#signal-types-status">Signal Types Status</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Signal Type</th><th>Status</th><th>Used By</th></tr>
+</thead>
+<tbody>
+<tr><td><code>CurveGraduation</code></td><td>✅ Active</td><td>pump_fun, moonshot</td></tr>
+<tr><td><code>Liquidation</code></td><td>✅ Active</td><td>kamino, marginfi</td></tr>
+<tr><td><code>DexArb</code></td><td>❌ Defined but unused</td><td>-</td></tr>
+<tr><td><code>JitLiquidity</code></td><td>❌ Defined but unused</td><td>-</td></tr>
+<tr><td><code>Backrun</code></td><td>❌ Defined but unused</td><td>-</td></tr>
+<tr><td><code>PriceDiscrepancy</code></td><td>❌ Unused</td><td>-</td></tr>
+<tr><td><code>VolumeSpike</code></td><td>❌ Unused</td><td>-</td></tr>
+<tr><td><code>LiquidityChange</code></td><td>❌ Unused</td><td>-</td></tr>
+<tr><td><code>NewToken</code></td><td>❌ Unused</td><td>-</td></tr>
+<tr><td><code>LargeOrder</code></td><td>❌ Unused</td><td>-</td></tr>
+<tr><td><code>PoolImbalance</code></td><td>❌ Unused</td><td>-</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
 <h2 id="external-api-dependencies"><a class="header" href="#external-api-dependencies">External API Dependencies</a></h2>
 <div class="table-wrapper">
 <table>
@@ -2031,16 +2105,20 @@ const useOpportunities = () =&gt; {
 <pre><code class="language-bash">curl http://localhost:9007/health
 # Should return: {"status": "ok", "service": "arb-farm"}
 </code></pre>
-<h3 id="phase-2-venue-scanner--strategy-engine-"><a class="header" href="#phase-2-venue-scanner--strategy-engine-">Phase 2: Venue Scanner + Strategy Engine ✅</a></h3>
+<h3 id="phase-2-venue-scanner--strategy-engine--partial"><a class="header" href="#phase-2-venue-scanner--strategy-engine--partial">Phase 2: Venue Scanner + Strategy Engine ⚠️ Partial</a></h3>
 <ul>
 <li><input disabled="" type="checkbox" checked=""> Implement MevVenue trait</li>
-<li><input disabled="" type="checkbox" checked=""> Jupiter DEX scanner</li>
-<li><input disabled="" type="checkbox" checked=""> Raydium AMM scanner</li>
-<li><input disabled="" type="checkbox" checked=""> Signal detection engine</li>
+<li><input disabled="" type="checkbox" checked=""> Jupiter DEX scanner (quotes work)</li>
+<li><input disabled="" type="checkbox" checked=""> Raydium AMM scanner (quotes work)</li>
+<li><input disabled="" type="checkbox"> DEX <code>scan_for_signals()</code> - <strong>STUBBED</strong> (returns empty vec)</li>
+<li><input disabled="" type="checkbox" checked=""> Signal detection engine (curves + lending work)</li>
 <li><input disabled="" type="checkbox" checked=""> Strategy matching logic</li>
 <li><input disabled="" type="checkbox" checked=""> SSE streaming for edges</li>
 <li><input disabled="" type="checkbox" checked=""> MCP tools: scanner_status, scanner_signals</li>
 </ul>
+<blockquote>
+<p><strong>Note</strong>: DEX venue scanners can fetch quotes but <code>scan_for_signals()</code> returns empty. Curve graduation and lending liquidation scanning fully work.</p>
+</blockquote>
 <p><strong>Verification</strong>:</p>
 <pre><code class="language-bash"># Start SSE stream
 curl -N http://localhost:3000/api/arb/scanner/stream
@@ -2082,76 +2160,84 @@ curl http://localhost:9007/curves/{token}/progress
 # Get curve opportunity
 curl http://localhost:9007/edges?venue_type=bonding_curve
 </code></pre>
-<h3 id="phase-5-mev-detection-dex-arb-liquidations-jit-"><a class="header" href="#phase-5-mev-detection-dex-arb-liquidations-jit-">Phase 5: MEV Detection (DEX Arb, Liquidations, JIT) ✅</a></h3>
+<h3 id="phase-5-mev-detection-dex-arb-liquidations-jit--partial"><a class="header" href="#phase-5-mev-detection-dex-arb-liquidations-jit--partial">Phase 5: MEV Detection (DEX Arb, Liquidations, JIT) ⚠️ Partial</a></h3>
 <ul>
-<li><input disabled="" type="checkbox" checked=""> DEX arbitrage detection</li>
-<li><input disabled="" type="checkbox" checked=""> Lending liquidation scanner (Marginfi, Kamino)</li>
-<li><input disabled="" type="checkbox" checked=""> JIT liquidity opportunity detection</li>
-<li><input disabled="" type="checkbox" checked=""> Backrun opportunity detection</li>
+<li><input disabled="" type="checkbox"> DEX arbitrage detection - <strong>STUBBED</strong> (scanner returns empty)</li>
+<li><input disabled="" type="checkbox" checked=""> Lending liquidation scanner (Marginfi, Kamino) - <strong>WORKING</strong></li>
+<li><input disabled="" type="checkbox"> JIT liquidity opportunity detection - <strong>STUBBED</strong></li>
+<li><input disabled="" type="checkbox"> Backrun opportunity detection - <strong>STUBBED</strong></li>
 <li><input disabled="" type="checkbox" checked=""> Priority queue for time-sensitive edges</li>
+<li><input disabled="" type="checkbox" checked=""> MEV Hunter agent exists (scanning logic defined, venues stubbed)</li>
 </ul>
+<blockquote>
+<p><strong>Note</strong>: Liquidation detection via Marginfi/Kamino APIs works. DEX arbitrage, JIT, and backrun detection are defined in the MEV Hunter agent but underlying venue <code>scan_for_signals()</code> returns empty.</p>
+</blockquote>
 <p><strong>Verification</strong>:</p>
-<pre><code class="language-bash"># Get MEV opportunities by type
+<pre><code class="language-bash"># Get MEV opportunities by type (liquidations work)
 curl "http://localhost:9007/edges?edge_type=liquidation"
+
+# These return empty (stubbed):
 curl "http://localhost:9007/edges?edge_type=jit"
+curl "http://localhost:9007/edges?edge_type=dex_arb"
 </code></pre>
-<h3 id="phase-6-researchdd-agent--url-ingestion-"><a class="header" href="#phase-6-researchdd-agent--url-ingestion-">Phase 6: Research/DD Agent + URL Ingestion ✅</a></h3>
+<h3 id="phase-6-researchdd-agent--url-ingestion--not-started"><a class="header" href="#phase-6-researchdd-agent--url-ingestion--not-started">Phase 6: Research/DD Agent + URL Ingestion ❌ Not Started</a></h3>
 <ul>
-<li><input disabled="" type="checkbox" checked=""> URL ingestion pipeline (WebFetch-style)</li>
-<li><input disabled="" type="checkbox" checked=""> LLM strategy extraction</li>
-<li><input disabled="" type="checkbox" checked=""> Backtest engine (simulated historical)</li>
-<li><input disabled="" type="checkbox" checked=""> X/Twitter monitoring integration</li>
-<li><input disabled="" type="checkbox" checked=""> MCP tools: research_ingest_url, research_backtest_strategy</li>
+<li><input disabled="" type="checkbox"> URL ingestion pipeline (WebFetch-style)</li>
+<li><input disabled="" type="checkbox"> LLM strategy extraction</li>
+<li><input disabled="" type="checkbox"> Backtest engine (simulated historical)</li>
+<li><input disabled="" type="checkbox"> X/Twitter monitoring integration</li>
+<li><input disabled="" type="checkbox"> MCP tools: research_ingest_url, research_backtest_strategy</li>
 </ul>
+<blockquote>
+<p><strong>Note</strong>: Research/DD agent is not implemented. The <code>research/</code> directory has stub files but no functional implementation.</p>
+</blockquote>
 <p><strong>Verification</strong>:</p>
-<pre><code class="language-bash"># Ingest a URL
+<pre><code class="language-bash"># Not implemented - endpoints will return 404 or stub responses
 curl -X POST http://localhost:9007/research/ingest \
   -H "Content-Type: application/json" \
   -d '{"url": "https://twitter.com/trader/status/123"}'
-
-# List discoveries
-curl http://localhost:9007/research/discoveries
 </code></pre>
-<h3 id="phase-7-kol-tracking--copy-trading-"><a class="header" href="#phase-7-kol-tracking--copy-trading-">Phase 7: KOL Tracking + Copy Trading ✅</a></h3>
+<h3 id="phase-7-kol-tracking--copy-trading--partial"><a class="header" href="#phase-7-kol-tracking--copy-trading--partial">Phase 7: KOL Tracking + Copy Trading ⚠️ Partial</a></h3>
 <ul>
-<li><input disabled="" type="checkbox" checked=""> Helius webhook integration for wallet monitoring</li>
+<li><input disabled="" type="checkbox" checked=""> KOL discovery via pump.fun API - <strong>WORKING</strong></li>
+<li><input disabled="" type="checkbox" checked=""> Helius webhook integration for wallet monitoring - <strong>WORKING</strong></li>
 <li><input disabled="" type="checkbox" checked=""> Trust score calculation</li>
-<li><input disabled="" type="checkbox" checked=""> Copy trade execution (with delay)</li>
-<li><input disabled="" type="checkbox" checked=""> Auto-disable on poor performance</li>
-<li><input disabled="" type="checkbox" checked=""> MCP tools: kol_track, copy_enable, copy_disable</li>
+<li><input disabled="" type="checkbox"> Copy trade auto-execution - <strong>STUBBED</strong> (webhook wired, no execution logic)</li>
+<li><input disabled="" type="checkbox"> Auto-disable on poor performance</li>
+<li><input disabled="" type="checkbox" checked=""> MCP tools: kol_track, copy_enable, copy_disable (API exists)</li>
 </ul>
+<blockquote>
+<p><strong>Note</strong>: KOL discovery and wallet tracking via Helius webhooks work. Copy trade auto-execution logic is not implemented - webhooks are received but trades are not automatically copied.</p>
+</blockquote>
 <p><strong>Verification</strong>:</p>
-<pre><code class="language-bash"># Track a KOL
+<pre><code class="language-bash"># Track a KOL (works)
 curl -X POST http://localhost:9007/kol \
   -H "Content-Type: application/json" \
   -d '{"wallet_address": "7Vk3...", "name": "WhaleWallet"}'
 
-# Enable copy trading
+# Enable copy trading (config saved, but auto-copy not implemented)
 curl -X POST http://localhost:9007/kol/{id}/copy/enable \
   -H "Content-Type: application/json" \
   -d '{"max_position_sol": 0.5, "min_delay_ms": 500}'
 </code></pre>
-<h3 id="phase-8-threat-detection--safety-"><a class="header" href="#phase-8-threat-detection--safety-">Phase 8: Threat Detection + Safety ✅</a></h3>
+<h3 id="phase-8-threat-detection--safety--not-started"><a class="header" href="#phase-8-threat-detection--safety--not-started">Phase 8: Threat Detection + Safety ❌ Not Started</a></h3>
 <ul>
-<li><input disabled="" type="checkbox" checked=""> RugCheck API integration</li>
-<li><input disabled="" type="checkbox" checked=""> GoPlus Security API integration</li>
-<li><input disabled="" type="checkbox" checked=""> In-house threat scoring system</li>
-<li><input disabled="" type="checkbox" checked=""> Holder concentration analysis</li>
-<li><input disabled="" type="checkbox" checked=""> Creator wallet monitoring (Helius webhooks)</li>
-<li><input disabled="" type="checkbox" checked=""> Honeypot simulation detection</li>
-<li><input disabled="" type="checkbox" checked=""> Blocklist/whitelist management</li>
-<li><input disabled="" type="checkbox" checked=""> Real-time threat alerts</li>
-<li><input disabled="" type="checkbox" checked=""> MCP tools: threat_check_token, threat_check_wallet, threat_report</li>
+<li><input disabled="" type="checkbox"> RugCheck API integration</li>
+<li><input disabled="" type="checkbox"> GoPlus Security API integration</li>
+<li><input disabled="" type="checkbox"> In-house threat scoring system</li>
+<li><input disabled="" type="checkbox"> Holder concentration analysis</li>
+<li><input disabled="" type="checkbox"> Creator wallet monitoring (Helius webhooks)</li>
+<li><input disabled="" type="checkbox"> Honeypot simulation detection</li>
+<li><input disabled="" type="checkbox"> Blocklist/whitelist management</li>
+<li><input disabled="" type="checkbox"> Real-time threat alerts</li>
+<li><input disabled="" type="checkbox"> MCP tools: threat_check_token, threat_check_wallet, threat_report</li>
 </ul>
+<blockquote>
+<p><strong>Note</strong>: Threat detection agent is not implemented. The <code>threat/</code> directory structure is defined but no functional implementation exists.</p>
+</blockquote>
 <p><strong>Verification</strong>:</p>
-<pre><code class="language-bash"># Check token threat score
+<pre><code class="language-bash"># Not implemented - endpoints will return 404 or stub responses
 curl http://localhost:9007/threat/check/TokenMintHere
-
-# Check wallet for scam history
-curl http://localhost:9007/threat/wallet/WalletAddressHere
-
-# List blocked entities
-curl http://localhost:9007/threat/blocked
 </code></pre>
 <h3 id="phase-9-engram-integration--learning-"><a class="header" href="#phase-9-engram-integration--learning-">Phase 9: Engram Integration + Learning ✅</a></h3>
 <ul>
@@ -2469,7 +2555,7 @@ curl http://localhost:9007/swarm/circuit-breakers
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../arb-farm/quickstart.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../arb-farm/strategy-flow.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -2483,7 +2569,7 @@ curl http://localhost:9007/swarm/circuit-breakers
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../arb-farm/quickstart.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../arb-farm/strategy-flow.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
@@ -2500,6 +2586,22 @@ curl http://localhost:9007/swarm/circuit-breakers
         <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
         <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
 
 
         <script>

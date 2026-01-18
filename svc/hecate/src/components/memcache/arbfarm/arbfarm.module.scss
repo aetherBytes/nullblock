@@ -27,16 +27,594 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 // Layout & Containers
 // ============================================
 
+.viewContainer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: $color-bg;
+}
+
+.mainNavTabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.75rem 1.5rem;
+  background: $color-bg-elevated;
+  border-bottom: 1px solid $color-border;
+  flex-wrap: wrap;
+}
+
+.navTab {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: $font-mono;
+
+  &:hover {
+    color: $color-text;
+    background: $color-bg-card;
+  }
+
+  &.active {
+    background: $color-info-dim;
+    border-color: $color-info;
+    color: $color-text;
+  }
+}
+
 .dashboardView,
 .opportunitiesView,
+.signalsView,
 .strategiesView,
 .threatsView,
 .kolView,
 .settingsView,
-.researchView {
+.researchView,
+.heliusView,
+.cowsView {
   padding: 1.5rem;
   min-height: 100%;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
   background: $color-bg;
+}
+
+// ============================================
+// Settings View Styles
+// ============================================
+
+.settingsTabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.settingsTab {
+  padding: 0.6rem 1rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: $color-text;
+    background: $color-bg-elevated;
+  }
+
+  &.active {
+    background: $color-info-dim;
+    border-color: $color-info;
+    color: $color-info;
+  }
+}
+
+.settingsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.settingsSection {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1.5rem;
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+}
+
+.sectionDescription {
+  margin: 0 0 1.5rem 0;
+  font-size: 0.9rem;
+  color: $color-text-muted;
+  line-height: 1.5;
+}
+
+// Wallet Tab Styles
+.walletSetup {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.setupForm {
+  display: flex;
+  gap: 0.75rem;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+  }
+}
+
+.walletInput {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text;
+  font-family: $font-mono;
+  font-size: 0.9rem;
+
+  &:focus {
+    outline: none;
+    border-color: $color-info;
+  }
+
+  &::placeholder {
+    color: $color-text-dim;
+  }
+}
+
+.connectButton {
+  padding: 0.75rem 1.5rem;
+  background: $color-info;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: lighten($color-info, 10%);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.setupInfo {
+  background: $color-bg-elevated;
+  border-radius: 6px;
+  padding: 1rem;
+
+  h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.9rem;
+    color: $color-text;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: $color-text-muted;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+}
+
+// Dev Wallet Section
+.devWalletSection {
+  background: $color-bg-elevated;
+  border: 1px solid $color-success;
+  border-radius: 8px;
+  padding: 1.25rem;
+  text-align: center;
+
+  h4 {
+    margin: 0 0 0.75rem 0;
+    color: $color-success;
+    font-size: 1rem;
+  }
+}
+
+.devWalletInfo {
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+}
+
+.devWalletAddress {
+  font-family: $font-mono;
+  font-size: 0.95rem;
+  color: $color-text;
+  background: $color-bg;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+
+.connectDevButton {
+  padding: 0.75rem 2rem;
+  background: $color-success;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: lighten($color-success, 10%);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.walletConnected {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.walletStatusCard {
+  background: $color-bg-elevated;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.walletHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba($color-success, 0.1);
+  border-bottom: 1px solid $color-border;
+}
+
+.statusIndicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.statusLabel {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: $color-text;
+}
+
+.walletInfo {
+  padding: 1rem;
+}
+
+.policySection {
+  padding: 1rem;
+  border-top: 1px solid $color-border;
+  background: $color-bg;
+
+  h4 {
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: $color-text;
+  }
+}
+
+.policyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.policyItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.policyLabel {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.policyValue {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: $color-text;
+  font-family: $font-mono;
+}
+
+.disconnectButton {
+  margin: 1rem;
+  padding: 0.6rem 1rem;
+  background: $color-danger-dim;
+  border: 1px solid $color-danger;
+  border-radius: 6px;
+  color: $color-danger;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-danger;
+    color: white;
+  }
+}
+
+// Risk Tab Styles
+.presetSelector {
+  margin-bottom: 1.5rem;
+
+  h4 {
+    margin: 0 0 1rem 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: $color-text;
+  }
+}
+
+.presetGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.presetCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+
+  &.active {
+    border-color: $color-info;
+    background: $color-info-dim;
+  }
+}
+
+.presetName {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.presetDescription {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.presetStats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  font-family: $font-mono;
+}
+
+.currentConfig {
+  h4 {
+    margin: 0 0 1rem 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: $color-text;
+  }
+}
+
+.configGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.configItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: $color-bg;
+  border-radius: 6px;
+}
+
+.configLabel {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.configValue {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: $color-text;
+  font-family: $font-mono;
+}
+
+// Venues Tab Styles
+.venuesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.venueCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+}
+
+.venueName {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: $color-text;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.venueType {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+  margin-left: 1.5rem;
+}
+
+.venueToggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: 24px;
+    transition: 0.3s;
+
+    &:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: $color-text-muted;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+  }
+
+  input:checked + .slider {
+    background-color: $color-success-dim;
+    border-color: $color-success;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(20px);
+    background-color: $color-success;
+  }
+}
+
+// API Keys Tab Styles
+.apiKeysList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.apiKeyItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+}
+
+.keyService {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: $color-text;
+  text-transform: capitalize;
+}
+
+.keyStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.validIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: $color-success;
+
+  &::before {
+    content: "●";
+    font-size: 0.6rem;
+  }
+}
+
+.invalidIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: $color-danger;
+
+  &::before {
+    content: "●";
+    font-size: 0.6rem;
+  }
 }
 
 .dashboardHeader,
@@ -999,6 +1577,177 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 }
 
 // ============================================
+// Capital Overview
+// ============================================
+
+.capitalOverview {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.syncButton {
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  color: $color-text;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: $color-info;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.capitalContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.capitalSummary {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.capitalStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.capitalValue {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: $color-text;
+  font-family: monospace;
+}
+
+.capitalLabel {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  text-transform: uppercase;
+}
+
+.allocationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-top: 1px solid $color-border;
+  padding-top: 1rem;
+}
+
+.allocationsHeader {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: $color-text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.allocationItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+
+.allocationInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.allocationName {
+  font-size: 0.85rem;
+  color: $color-text;
+  font-weight: 500;
+}
+
+.allocationPercent {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
+.allocationBar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.allocationUsed {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #f59e0b);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.allocationDetails {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: $color-text-dim;
+  font-family: monospace;
+}
+
+.positionCount {
+  color: $color-info;
+}
+
+.reservationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-top: 1px solid $color-border;
+  padding-top: 1rem;
+}
+
+.reservationsHeader {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: $color-text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.reservationItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: 4px;
+  border-left: 2px solid #f59e0b;
+}
+
+.reservationAmount {
+  font-size: 0.85rem;
+  color: #f59e0b;
+  font-weight: 500;
+  font-family: monospace;
+}
+
+.reservationId {
+  font-size: 0.7rem;
+  color: $color-text-dim;
+  font-family: monospace;
+}
+
+// ============================================
 // Strategies Overview
 // ============================================
 
@@ -1149,6 +1898,286 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 .strategyStats {
   padding-top: 0.5rem;
   border-top: 1px solid $color-border;
+}
+
+.strategyCard.selected {
+  border-color: $color-info;
+  background: rgba($color-info, 0.05);
+}
+
+.strategyCheckbox {
+  margin-right: 0.5rem;
+
+  input[type="checkbox"] {
+    cursor: pointer;
+  }
+}
+
+.strategyActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.editButton {
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-bg-elevated;
+    border-color: $color-info;
+  }
+}
+
+.deleteButton {
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-danger-dim;
+    border-color: $color-danger;
+  }
+}
+
+.killButton {
+  background: $color-danger-dim;
+  border: 1px solid $color-danger;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+  animation: pulse 2s ease-in-out infinite;
+
+  &:hover {
+    background: $color-danger;
+    transform: scale(1.1);
+  }
+}
+
+.positionControls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.emergencyExitButton {
+  background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%);
+  border: 2px solid #ff4444;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+  transition: all 0.2s;
+  animation: emergencyPulse 1.5s ease-in-out infinite;
+
+  &:hover {
+    background: linear-gradient(180deg, #aa0000 0%, #770000 100%);
+    border-color: #ff6666;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+@keyframes emergencyPulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.resetStatsButton {
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: $color-warning-dim;
+    border-color: $color-warning;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.strategyType {
+  background: $color-purple-dim !important;
+  color: $color-purple !important;
+  font-weight: 500;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.saveEngramsButton {
+  padding: 0.5rem 1rem;
+  background: $color-purple-dim;
+  border: 1px solid $color-purple;
+  border-radius: 6px;
+  color: $color-purple;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: $color-purple;
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.batchActionBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-info;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.selectedCount {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+  margin-right: auto;
+}
+
+.batchEnableButton,
+.batchDisableButton,
+.clearSelectionButton {
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.batchEnableButton {
+  background: $color-success-dim;
+  border: 1px solid $color-success;
+  color: $color-success;
+
+  &:hover {
+    background: $color-success;
+    color: white;
+  }
+}
+
+.batchDisableButton {
+  background: $color-danger-dim;
+  border: 1px solid $color-danger;
+  color: $color-danger;
+
+  &:hover {
+    background: $color-danger;
+    color: white;
+  }
+}
+
+.clearSelectionButton {
+  background: transparent;
+  border: 1px solid $color-border;
+  color: $color-text-muted;
+
+  &:hover {
+    border-color: $color-text-muted;
+    color: $color-text;
+  }
+}
+
+.selectAllRow {
+  grid-column: 1 / -1;
+  padding: 0.5rem;
+  background: $color-bg-elevated;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.devSection {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed $color-warning;
+
+  h4 {
+    color: $color-warning;
+    font-size: 0.9rem;
+    margin: 0 0 0.75rem 0;
+  }
+}
+
+.jsonView {
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  padding: 0.5rem;
+
+  summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: $color-text-muted;
+    padding: 0.25rem;
+
+    &:hover {
+      color: $color-text;
+    }
+  }
+
+  pre {
+    margin: 0.5rem 0 0 0;
+    padding: 0.75rem;
+    background: $color-bg-elevated;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: $color-text-muted;
+    overflow-x: auto;
+    max-height: 200px;
+    overflow-y: auto;
+  }
 }
 
 // ============================================
@@ -1382,6 +2411,8 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 .cowsView {
   padding: 1.5rem;
   min-height: 100%;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
   background: $color-bg;
 }
 
@@ -2095,6 +3126,268 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   font-size: 0.9rem;
 }
 
+// ============================================
+// KOL Discovery Tab Styles
+// ============================================
+
+.kolTabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}
+
+.kolTab {
+  padding: 0.6rem 1.2rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: $color-text;
+    background: $color-bg-elevated;
+  }
+
+  &.active {
+    background: $color-purple-dim;
+    border-color: $color-purple;
+    color: $color-purple;
+  }
+}
+
+.discoveryView {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.discoveryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.discoveryStatus {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: $color-text;
+}
+
+.statusDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: $color-text-dim;
+
+  &.running {
+    background: $color-success;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.statusStat {
+  padding: 0.3rem 0.6rem;
+  background: $color-bg-elevated;
+  border-radius: 4px;
+  font-family: $font-mono;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.discoveryActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.startButton {
+  padding: 0.6rem 1rem;
+  background: $color-success-dim;
+  border: 1px solid $color-success;
+  border-radius: 6px;
+  color: $color-success;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-success;
+    color: white;
+  }
+}
+
+.stopButton {
+  padding: 0.6rem 1rem;
+  background: $color-danger-dim;
+  border: 1px solid $color-danger;
+  border-radius: 6px;
+  color: $color-danger;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-danger;
+    color: white;
+  }
+}
+
+.scanButton {
+  padding: 0.6rem 1rem;
+  background: $color-info-dim;
+  border: 1px solid $color-info;
+  border-radius: 6px;
+  color: $color-info;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: $color-info;
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.discoveryInfo {
+  padding: 1rem;
+  background: $color-bg-elevated;
+  border-radius: 6px;
+
+  p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: $color-text-muted;
+    line-height: 1.5;
+  }
+}
+
+.discoveredKolsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.discoveredKolCard {
+  padding: 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+}
+
+.discoveredKolHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.kolSource {
+  padding: 0.2rem 0.5rem;
+  background: $color-bg-elevated;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: $color-text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.discoveredKolStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: $color-bg;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  color: $color-text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statValue {
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: $font-mono;
+  color: $color-text;
+}
+
+.discoveredKolActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.promoteButton {
+  padding: 0.5rem 1rem;
+  background: $color-purple-dim;
+  border: 1px solid $color-purple;
+  border-radius: 6px;
+  color: $color-purple;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: $color-purple;
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.discoveredAt {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
 .formGroup {
   margin-bottom: 1rem;
 
@@ -2132,6 +3425,886 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   padding: 0.75rem;
   border-radius: 4px;
   margin-top: 0.5rem;
+}
+
+// ============================================
+// Signals View
+// ============================================
+
+.signalsHeaderActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.liveModeButton {
+  padding: 0.5rem 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+
+  &.active {
+    background: $color-danger-dim;
+    border-color: $color-danger;
+    color: $color-danger;
+  }
+}
+
+.signalFilters {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 150px;
+
+  label {
+    font-size: 0.75rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  select,
+  input {
+    padding: 0.5rem 0.75rem;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    color: $color-text;
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+}
+
+.signalsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.signalCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+
+  &.low { border-left: 3px solid $color-text-dim; }
+  &.medium { border-left: 3px solid $color-info; }
+  &.high { border-left: 3px solid $color-warning; }
+  &.critical { border-left: 3px solid $color-danger; }
+}
+
+.signalCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  .signalIcon {
+    font-size: 1.25rem;
+  }
+
+  .signalType {
+    font-weight: 600;
+    color: $color-text;
+  }
+
+  .signalTime {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: $color-text-dim;
+    font-family: $font-mono;
+  }
+}
+
+.significanceBadge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &.low {
+    background: $color-bg-elevated;
+    color: $color-text-dim;
+  }
+
+  &.medium {
+    background: $color-info-dim;
+    color: $color-info;
+  }
+
+  &.high {
+    background: $color-warning-dim;
+    color: $color-warning;
+  }
+
+  &.critical {
+    background: $color-danger-dim;
+    color: $color-danger;
+  }
+}
+
+.signalCardBody {
+  margin-bottom: 0.75rem;
+}
+
+.signalMetrics {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.signalMetric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+
+  .metricLabel {
+    font-size: 0.7rem;
+    color: $color-text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .metricValue {
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: $font-mono;
+    color: $color-text;
+
+    &.positive {
+      color: $color-success;
+    }
+  }
+}
+
+.signalToken {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid $color-border;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .tokenLabel {
+    font-size: 0.8rem;
+    color: $color-text-dim;
+  }
+
+  .tokenMint {
+    font-size: 0.85rem;
+    font-family: $font-mono;
+    color: $color-info;
+  }
+}
+
+.signalCardActions {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid $color-border;
+}
+
+.investigateButton,
+.createEdgeButton {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.investigateButton {
+  background: transparent;
+  border: 1px solid $color-border;
+  color: $color-text;
+
+  &:hover {
+    border-color: $color-info;
+    color: $color-info;
+  }
+}
+
+.createEdgeButton {
+  background: $color-info;
+  border: 1px solid $color-info;
+  color: white;
+
+  &:hover {
+    background: lighten($color-info, 5%);
+  }
+}
+
+.signalFlowDiagram {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+
+  h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: $color-text;
+  }
+}
+
+.flowSteps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.flowStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  min-width: 100px;
+
+  &.active {
+    background: $color-info-dim;
+    border-color: $color-info;
+
+    .flowIcon {
+      color: $color-info;
+    }
+
+    .flowLabel {
+      color: $color-info;
+    }
+  }
+
+  .flowIcon {
+    font-size: 1.5rem;
+  }
+
+  .flowLabel {
+    font-size: 0.75rem;
+    color: $color-text-muted;
+    text-align: center;
+  }
+}
+
+.flowArrow {
+  font-size: 1.25rem;
+  color: $color-text-dim;
+  flex-shrink: 0;
+}
+
+.signalsPreview {
+  padding: 1rem;
+  background: $color-bg-elevated;
+  border-radius: 6px;
+}
+
+.signalsSummary {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.signalStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  .signalStatValue {
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-family: $font-mono;
+    color: $color-text;
+  }
+
+  .signalStatLabel {
+    font-size: 0.75rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.signalsHint {
+  font-size: 0.85rem;
+  color: $color-text-dim;
+  margin: 0;
+}
+
+// ============================================
+// Research Tabs & URL Injection UI
+// ============================================
+
+.researchTabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid $color-border;
+  padding-bottom: 0.75rem;
+}
+
+.tabButton {
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px 6px 0 0;
+  color: $color-text-muted;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: $color-text;
+    background: $color-bg-elevated;
+  }
+
+  &.active {
+    color: $color-info;
+    background: $color-bg-card;
+    border-color: $color-border;
+    border-bottom-color: $color-bg;
+    margin-bottom: -1px;
+  }
+}
+
+.researchTabContent {
+  min-height: 400px;
+}
+
+.injectTab,
+.discoveriesTab,
+.sourcesTab,
+.consensusTab {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.urlSubmitSection {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: $color-text;
+  }
+}
+
+.urlInputRow {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.urlInput {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text;
+  font-size: 0.9rem;
+
+  &::placeholder {
+    color: $color-text-dim;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $color-info;
+  }
+}
+
+.analyzeButton {
+  padding: 0.75rem 1.5rem;
+  background: $color-info;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: lighten($color-info, 5%);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.extractedStrategySection {
+  h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    color: $color-text;
+  }
+}
+
+.ingestResultCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+
+  .ingestHeader {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .sourceUrl {
+    font-size: 0.85rem;
+    color: $color-text-muted;
+    font-family: $font-mono;
+  }
+
+  .contentPreview {
+    font-size: 0.85rem;
+    color: $color-text-dim;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+.strategyCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1.25rem;
+
+  .strategyHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+
+    h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: $color-text;
+    }
+  }
+
+  .strategyBadges {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .strategyDescription {
+    font-size: 0.9rem;
+    color: $color-text-muted;
+    margin: 0 0 1rem 0;
+    line-height: 1.5;
+  }
+}
+
+.typeBadge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  background: $color-purple-dim;
+  color: $color-purple;
+
+  &.dex_arb { background: $color-info-dim; color: $color-info; }
+  &.curve_graduation { background: $color-success-dim; color: $color-success; }
+  &.kol_copy { background: $color-warning-dim; color: $color-warning; }
+  &.liquidation { background: $color-danger-dim; color: $color-danger; }
+}
+
+.confidenceBadge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+
+  &.high { background: $color-success-dim; color: $color-success; }
+  &.medium { background: $color-warning-dim; color: $color-warning; }
+  &.low { background: $color-danger-dim; color: $color-danger; }
+}
+
+.conditionsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.conditionSection {
+  h5 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.85rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.conditionList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: $color-bg-elevated;
+    border-radius: 4px;
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+    font-family: $font-mono;
+  }
+
+  .conditionField {
+    color: $color-info;
+  }
+
+  .conditionOp {
+    color: $color-text-muted;
+  }
+
+  .conditionValue {
+    color: $color-text;
+  }
+}
+
+.riskParamsSection {
+  margin-bottom: 1rem;
+
+  h5 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.85rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.riskParamsGrid {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.riskParam {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  .paramLabel {
+    font-size: 0.75rem;
+    color: $color-text-dim;
+  }
+
+  .paramValue {
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: $font-mono;
+    color: $color-text;
+  }
+}
+
+.tokensMentioned {
+  margin-bottom: 1rem;
+
+  h5 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.85rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.tokenChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tokenChip {
+  padding: 0.25rem 0.75rem;
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  color: $color-text;
+  font-family: $font-mono;
+}
+
+.strategyActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid $color-border;
+}
+
+.createStrategyButton {
+  padding: 0.75rem 1.5rem;
+  background: $color-success;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: lighten($color-success, 5%);
+  }
+}
+
+.backtestButton {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-info;
+    color: $color-info;
+  }
+}
+
+.discoveriesHeader,
+.sourcesHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: $color-text;
+  }
+}
+
+.discoveriesList,
+.sourcesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.discoveryCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+
+  .discoveryHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+
+    h4 {
+      margin: 0;
+      font-size: 1rem;
+      color: $color-text;
+    }
+  }
+
+  .discoveryDescription {
+    font-size: 0.85rem;
+    color: $color-text-muted;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.5;
+  }
+
+  .discoveryMeta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: $color-text-dim;
+    margin-bottom: 0.75rem;
+
+    .strategyType {
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+  }
+
+  .discoveryActions {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+.approveButton {
+  padding: 0.5rem 1rem;
+  background: $color-success-dim;
+  border: 1px solid $color-success;
+  border-radius: 4px;
+  color: $color-success;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-success;
+    color: white;
+  }
+}
+
+.rejectButton {
+  padding: 0.5rem 1rem;
+  background: $color-danger-dim;
+  border: 1px solid $color-danger;
+  border-radius: 4px;
+  color: $color-danger;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-danger;
+    color: white;
+  }
+}
+
+.monitorStatsBar {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+
+  .statItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    .statLabel {
+      font-size: 0.75rem;
+      color: $color-text-muted;
+      text-transform: uppercase;
+    }
+
+    .statValue {
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: $font-mono;
+      color: $color-text;
+    }
+  }
+}
+
+.sourceCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+
+  .sourceHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+
+    .sourceIcon {
+      font-size: 1.25rem;
+    }
+
+    .sourceName {
+      flex: 1;
+      font-weight: 500;
+      color: $color-text;
+    }
+
+    .statusDot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+
+      &.active { background: $color-success; }
+      &.inactive { background: $color-text-dim; }
+    }
+  }
+
+  .sourceMeta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: $color-text-dim;
+
+    .trackType {
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+  }
 }
 
 // ============================================
@@ -2531,4 +4704,3881 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   white-space: pre-wrap;
   word-break: break-word;
   margin: 0;
+}
+
+// ============================================================================
+// Helius View
+// ============================================================================
+
+.heliusView {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  min-height: 100%;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  background: $color-bg;
+}
+
+.heliusSections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.heliusSection {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1.25rem;
+
+  h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: $color-text;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+.apiKeyStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: $color-text-muted;
+  padding: 0.5rem 0.75rem;
+  background: $color-bg;
+  border-radius: 6px;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.statusLabel {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+  min-width: 140px;
+}
+
+.statusConnected {
+  color: $color-success;
+  font-weight: 500;
+}
+
+.statusDisconnected {
+  color: $color-danger;
+  font-weight: 500;
+}
+
+.metricsRow {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  background: $color-bg;
+  border-radius: 6px;
+  min-width: 120px;
+}
+
+.metricLabel {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metricValue {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: $color-text;
+  font-family: $font-mono;
+}
+
+.subscriptionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+
+  h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: $color-text-muted;
+  }
+}
+
+.subscriptionItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: $color-bg;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.subType {
+  color: $color-info;
+  font-weight: 500;
+  min-width: 100px;
+}
+
+.subAddress {
+  font-family: $font-mono;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subEvents {
+  color: $color-text-dim;
+  font-size: 0.8rem;
+}
+
+.priorityFeeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.feeLevel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  background: $color-bg;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: border-color 0.2s ease;
+
+  &.recommended {
+    border-color: $color-info;
+    background: rgba($color-info, 0.1);
+  }
+}
+
+.levelName {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.feeAmount {
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: $font-mono;
+  color: $color-text;
+}
+
+.recommendedFee {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba($color-info, 0.1);
+  border: 1px solid $color-info;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .metricLabel {
+    color: $color-info;
+  }
+
+  .metricValue {
+    color: $color-info;
+  }
+}
+
+.senderMetrics {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pingSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid $color-border;
+}
+
+.pingButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: $color-info;
+  color: $color-bg;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.pingResult {
+  font-size: 0.9rem;
+  color: $color-success;
+  font-family: $font-mono;
+}
+
+.dasLookup {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.dasInput {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text;
+  font-size: 0.9rem;
+  font-family: $font-mono;
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $color-info;
+  }
+}
+
+.dasButton {
+  padding: 0.5rem 1rem;
+  background: $color-info;
+  color: $color-bg;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.tokenMetadata {
+  background: $color-bg;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.tokenHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tokenImage {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: $color-bg-card;
+}
+
+.tokenInfo {
+  flex: 1;
+
+  h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+}
+
+.mintAddress {
+  font-size: 0.8rem;
+  font-family: $font-mono;
+  color: $color-text-muted;
+  word-break: break-all;
+}
+
+.tokenDetails {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.detailRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  span:first-child {
+    font-size: 0.75rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  span:last-child {
+    font-size: 0.9rem;
+    color: $color-text;
+    font-family: $font-mono;
+  }
+}
+
+.configOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.configRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  label {
+    font-size: 0.9rem;
+    color: $color-text;
+    min-width: 180px;
+  }
+
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: $color-info;
+    cursor: pointer;
+  }
+}
+
+.configSelect {
+  padding: 0.5rem 0.75rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text;
+  font-size: 0.9rem;
+  min-width: 150px;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: $color-info;
+  }
+}
+
+// Helius Dashboard Overview
+.heliusOverview {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.heliusSummary {
+  margin-top: 0.75rem;
+}
+
+.heliusStats {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.heliusStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 80px;
+}
+
+.heliusStatValue {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-family: $font-mono;
+  color: $color-text;
+
+  &.connected {
+    color: $color-success;
+  }
+
+  &.disconnected {
+    color: $color-text-muted;
+  }
+}
+
+.heliusStatLabel {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// ============================================
+// Strategy Creation Modal
+// ============================================
+
+.createStrategyModal {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.formGroup {
+  margin-bottom: 1.25rem;
+
+  > label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: $color-text;
+    margin-bottom: 0.5rem;
+  }
+
+  input[type="text"],
+  select {
+    width: 100%;
+    padding: 0.75rem;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    color: $color-text;
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+
+    &::placeholder {
+      color: $color-text-dim;
+    }
+  }
+}
+
+.venueCheckboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: $color-info;
+  }
+
+  &:hover {
+    color: $color-text;
+  }
+}
+
+.executionModeOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modeOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  input[type="radio"] {
+    margin-top: 0.25rem;
+    accent-color: $color-info;
+  }
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+
+  &.selected {
+    border-color: $color-info;
+    background: $color-info-dim;
+  }
+}
+
+.modeContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.modeLabel {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: $color-text;
+}
+
+.modeDesc {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.formSection {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid $color-border;
+
+  h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: $color-text;
+    margin: 0 0 1rem 0;
+  }
+}
+
+.riskParamsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.paramGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  label {
+    font-size: 0.8rem;
+    color: $color-text-muted;
+  }
+
+  input[type="number"] {
+    padding: 0.5rem 0.75rem;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    color: $color-text;
+    font-family: $font-mono;
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+}
+
+.riskToggles {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.toggleLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: $color-info;
+  }
+
+  &:hover {
+    color: $color-text;
+  }
+}
+
+.modalFooter {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid $color-border;
+  background: $color-bg-elevated;
+}
+
+.submitButton {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: $color-info;
+  color: white;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: lighten($color-info, 10%);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ============================================
+// Execution Settings Tab
+// ============================================
+
+.executionSettingsCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.masterToggle {
+  padding: 1.25rem;
+  background: $color-bg-elevated;
+  border-bottom: 1px solid $color-border;
+}
+
+.toggleHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.toggleSwitch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 28px;
+    transition: 0.3s;
+
+    &:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: $color-text-muted;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+  }
+
+  input:checked + .slider {
+    background-color: $color-success-dim;
+    border-color: $color-success;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(24px);
+    background-color: $color-success;
+  }
+}
+
+.toggleInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.toggleLabel {
+  font-size: 1rem;
+  font-weight: 500;
+  color: $color-text;
+}
+
+.toggleStatus {
+  font-size: 0.85rem;
+
+  .enabled {
+    color: $color-success;
+    font-weight: 600;
+  }
+
+  .disabled {
+    color: $color-text-muted;
+  }
+}
+
+.warningText {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: $color-warning;
+  line-height: 1.4;
+}
+
+.thresholdSettings {
+  padding: 1.25rem;
+  border-bottom: 1px solid $color-border;
+
+  h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: $color-text;
+    margin: 0 0 0.5rem 0;
+  }
+}
+
+.thresholdDescription {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+  margin: 0 0 1rem 0;
+}
+
+.thresholdGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.thresholdItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  > label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: $color-text;
+  }
+
+  .hint {
+    font-size: 0.75rem;
+    color: $color-text-dim;
+    line-height: 1.4;
+  }
+}
+
+.inputWithUnit {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  input[type="number"] {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    color: $color-text;
+    font-family: $font-mono;
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+
+  .unit,
+  .percentage {
+    font-size: 0.85rem;
+    color: $color-text-muted;
+    font-family: $font-mono;
+  }
+}
+
+.safetySettings {
+  padding: 1.25rem;
+  border-bottom: 1px solid $color-border;
+
+  h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: $color-text;
+    margin: 0 0 1rem 0;
+  }
+}
+
+.safetyToggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.safetyToggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 0.1rem;
+    accent-color: $color-info;
+  }
+}
+
+.safetyInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.safetyLabel {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: $color-text;
+}
+
+.safetyDesc {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.executionModeInfo {
+  padding: 1.25rem;
+
+  h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: $color-text;
+    margin: 0 0 1rem 0;
+  }
+}
+
+.modeInfoGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modeInfoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: $color-bg;
+  border-radius: 6px;
+
+  .modeName {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: $color-text;
+  }
+
+  .modeDescription {
+    font-size: 0.8rem;
+    color: $color-text-muted;
+  }
+}
+
+// ============================================
+// Pending Approvals Panel Styles
+// ============================================
+
+.headerBadges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.executionBadge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: $font-mono;
+
+  &.enabled {
+    background: $color-success-dim;
+    color: $color-success;
+  }
+
+  &.disabled {
+    background: $color-warning-dim;
+    color: $color-warning;
+  }
+}
+
+.pendingApprovalsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.approvalCard {
+  padding: 0.75rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+}
+
+.approvalHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.approvalType {
+  padding: 0.2rem 0.4rem;
+  background: $color-info-dim;
+  color: $color-info;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.approvalStatus {
+  color: $color-text-muted;
+  font-size: 0.75rem;
+}
+
+.expiresAt {
+  margin-left: auto;
+  color: $color-warning;
+  font-size: 0.7rem;
+  font-family: $font-mono;
+}
+
+.hecateRecommendation {
+  padding: 0.5rem;
+  background: $color-bg-elevated;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hecateLabel {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+}
+
+.recommend {
+  color: $color-success;
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+.reject {
+  color: $color-danger;
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+.hecateReasoning {
+  margin: 0;
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  line-height: 1.4;
+}
+
+.approvalActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.approveButton {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  background: $color-success-dim;
+  border: 1px solid $color-success;
+  border-radius: 4px;
+  color: $color-success;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: $color-success;
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.rejectButton {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  color: $color-text-muted;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: $color-danger-dim;
+    border-color: $color-danger;
+    color: $color-danger;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.configInfo {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid $color-border;
+  font-size: 0.75rem;
+  color: $color-text-muted;
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+}
+
+.loading {
+  color: $color-info;
+}
+
+// ============================================
+// Curve Panel Styles
+// ============================================
+
+.curvePanel {
+  padding: 1.5rem;
+  min-height: 100%;
+  background: $color-bg;
+}
+
+.curvePanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: $color-text;
+  }
+}
+
+.curveTabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.curveTab {
+  padding: 0.6rem 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-bg-elevated;
+    color: $color-text;
+  }
+
+  &.active {
+    background: $color-info-dim;
+    border-color: $color-info;
+    color: $color-info;
+  }
+}
+
+.loadingOverlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1rem 2rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  color: $color-info;
+  font-weight: 500;
+  z-index: 100;
+}
+
+// Candidates View
+.candidatesView {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.candidatesFilters {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: $color-text-muted;
+    font-size: 0.85rem;
+
+    input {
+      width: 60px;
+      padding: 0.4rem 0.6rem;
+      background: $color-bg;
+      border: 1px solid $color-border;
+      border-radius: 4px;
+      color: $color-text;
+      font-size: 0.85rem;
+
+      &:focus {
+        outline: none;
+        border-color: $color-info;
+      }
+    }
+  }
+
+  button {
+    padding: 0.5rem 1rem;
+    background: $color-info;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+
+    &:hover {
+      background: lighten($color-info, 10%);
+    }
+  }
+}
+
+.candidatesGrid,
+.positionsGrid,
+.trackedGrid,
+.snipePositionsGrid,
+.strategiesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.emptyState {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem;
+  color: $color-text-muted;
+  font-size: 1rem;
+}
+
+// Candidate Card
+.curveCandidateCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      border-color: $color-info;
+      box-shadow: 0 4px 12px rgba($color-info, 0.15);
+      transform: translateY(-2px);
+    }
+  }
+}
+
+.candidateHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.candidateToken {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.venueIcon {
+  font-size: 1.5rem;
+}
+
+.tokenInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.tokenSymbol {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.tokenName {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidateScores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.scoreBadge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+
+  &.momentumHigh {
+    background: $color-success-dim;
+    color: $color-success;
+  }
+
+  &.momentumMedium {
+    background: $color-warning-dim;
+    color: $color-warning;
+  }
+
+  &.momentumLow {
+    background: rgba($color-text-muted, 0.2);
+    color: $color-text-muted;
+  }
+
+  &.riskLow {
+    background: $color-success-dim;
+    color: $color-success;
+  }
+
+  &.riskMedium {
+    background: $color-warning-dim;
+    color: $color-warning;
+  }
+
+  &.riskHigh {
+    background: $color-danger-dim;
+    color: $color-danger;
+  }
+}
+
+.candidateMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.candidateMetric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .metricLabel {
+    font-size: 0.7rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+  }
+
+  .metricValue {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+}
+
+.candidateActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.actionButtonsRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.trackButton {
+  padding: 0.5rem 1rem;
+  background: $color-purple-dim;
+  border: 1px solid $color-purple;
+  border-radius: 4px;
+  color: $color-purple;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: $color-purple;
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.metricsButton {
+  padding: 0.5rem 1rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  color: #3b82f6;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #3b82f6;
+    color: white;
+  }
+}
+
+.quickBuyButtons {
+  display: flex;
+  gap: 0.25rem;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.quickBuyButton {
+  padding: 0.4rem 0.6rem;
+  background: $color-success-dim;
+  border: 1px solid $color-success;
+  border-radius: 4px;
+  color: $color-success;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-success;
+    color: white;
+  }
+}
+
+.candidateFooter {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+  border-top: 1px solid $color-border;
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
+.mintAddress {
+  font-family: $font-mono;
+}
+
+.candidateVenue {
+  text-transform: capitalize;
+}
+
+// Graduation Progress Bar
+.graduationProgress {
+  width: 100%;
+
+  &.progressSmall {
+    .progressTrack {
+      height: 4px;
+    }
+  }
+
+  &.progressMedium {
+    .progressTrack {
+      height: 8px;
+    }
+  }
+
+  &.progressLarge {
+    .progressTrack {
+      height: 12px;
+    }
+  }
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.progressLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.progressStatus {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.progressTrack {
+  position: relative;
+  width: 100%;
+  background: $color-bg;
+  border-radius: 4px;
+  overflow: visible;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progressMarkers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.marker {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: rgba($color-text, 0.3);
+}
+
+.progressVelocity {
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  color: $color-success;
+  text-align: right;
+}
+
+// Position Card
+.curvePositionCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.positionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.positionToken {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.statusBadge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+
+  &.statusOpen {
+    background: $color-info-dim;
+    color: $color-info;
+  }
+
+  &.statusPending {
+    background: $color-warning-dim;
+    color: $color-warning;
+  }
+
+  &.statusClosed {
+    background: rgba($color-text-muted, 0.2);
+    color: $color-text-muted;
+  }
+}
+
+.positionPnl {
+  font-size: 1.1rem;
+  font-weight: 700;
+
+  &.pnlPositive {
+    color: $color-success;
+  }
+
+  &.pnlNegative {
+    color: $color-danger;
+  }
+
+  &.pnlNeutral {
+    color: $color-text-muted;
+  }
+}
+
+.positionProgress {
+  .progressLabels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: $color-text-muted;
+    margin-bottom: 0.25rem;
+  }
+}
+
+.positionMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.positionMetric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  .metricLabel {
+    font-size: 0.7rem;
+    color: $color-text-muted;
+  }
+
+  .metricValue {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: $color-text;
+  }
+}
+
+.exitConfigDisplay {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.5rem;
+  background: $color-bg-elevated;
+  border-radius: 4px;
+}
+
+.exitLabel {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+}
+
+.exitBadge {
+  padding: 0.2rem 0.4rem;
+  background: $color-bg;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  color: $color-text;
+}
+
+.editExitButton {
+  margin-left: auto;
+  padding: 0.2rem 0.5rem;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 3px;
+  color: $color-text-muted;
+  font-size: 0.7rem;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color-info;
+    color: $color-info;
+  }
+}
+
+.exitConfigEditor {
+  padding: 1rem;
+  background: $color-bg-elevated;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.configRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  label {
+    flex: 1;
+    font-size: 0.85rem;
+    color: $color-text-muted;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  input[type='number'] {
+    width: 80px;
+    padding: 0.4rem;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    color: $color-text;
+    font-size: 0.85rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+
+  input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.configActions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.saveButton {
+  padding: 0.4rem 0.8rem;
+  background: $color-success;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover {
+    background: lighten($color-success, 10%);
+  }
+}
+
+.cancelButton {
+  padding: 0.4rem 0.8rem;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color-text;
+    color: $color-text;
+  }
+}
+
+.positionActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sellPartialButton {
+  flex: 1;
+  padding: 0.5rem;
+  background: $color-warning-dim;
+  border: 1px solid $color-warning;
+  border-radius: 4px;
+  color: $color-warning;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-warning;
+    color: white;
+  }
+}
+
+.sellAllButton {
+  flex: 1;
+  padding: 0.5rem;
+  background: $color-danger-dim;
+  border: 1px solid $color-danger;
+  border-radius: 4px;
+  color: $color-danger;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-danger;
+    color: white;
+  }
+}
+
+.positionFooter {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+  border-top: 1px solid $color-border;
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
+.positionTime {
+  color: $color-text-muted;
+}
+
+// View Headers
+.viewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: $color-text;
+  }
+
+  button {
+    padding: 0.5rem 1rem;
+    background: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    color: $color-text-muted;
+    font-size: 0.85rem;
+    cursor: pointer;
+
+    &:hover {
+      border-color: $color-info;
+      color: $color-info;
+    }
+  }
+}
+
+// Tracker & Sniper Stats Bar
+.trackerStatsBar,
+.sniperStatsBar {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: $color-text-muted;
+
+  .positive {
+    color: $color-success;
+  }
+
+  .negative {
+    color: $color-danger;
+  }
+}
+
+.trackerControls,
+.sniperControls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.trackerStatus,
+.sniperStatus {
+  padding: 0.25rem 0.5rem;
+  background: $color-bg;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+// Tracked Token Card
+.trackedTokenCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.trackedHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.trackedState {
+  padding: 0.2rem 0.5rem;
+  background: $color-bg;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.trackedInfo {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+// Snipe Position Card
+.snipePositionCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.snipeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.snipeStatus {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+
+  &.waiting {
+    background: $color-warning-dim;
+    color: $color-warning;
+  }
+
+  &.selling {
+    background: $color-purple-dim;
+    color: $color-purple;
+  }
+
+  &.sold {
+    background: $color-success-dim;
+    color: $color-success;
+  }
+
+  &.failed {
+    background: $color-danger-dim;
+    color: $color-danger;
+  }
+}
+
+.snipeInfo {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  .positive {
+    color: $color-success;
+    font-weight: 600;
+  }
+
+  .negative {
+    color: $color-danger;
+    font-weight: 600;
+  }
+}
+
+.manualSellButton {
+  padding: 0.5rem;
+  background: $color-danger-dim;
+  border: 1px solid $color-danger;
+  border-radius: 4px;
+  color: $color-danger;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-danger;
+    color: white;
+  }
+}
+
+// Strategy Card
+.curveStrategyCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.strategyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.strategyInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.strategyName {
+  font-size: 1rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.strategyMode {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.strategyStatus {
+  .statusIndicator {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+  }
+}
+
+.strategyParams {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: $color-bg-elevated;
+  border-radius: 6px;
+}
+
+.paramRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+
+  .paramLabel {
+    color: $color-text-muted;
+  }
+
+  .paramValue {
+    color: $color-text;
+    font-weight: 500;
+  }
+}
+
+.strategyStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+  background: $color-bg;
+  border-radius: 4px;
+
+  .statLabel {
+    font-size: 0.7rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+  }
+
+  .statValue {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: $color-text;
+
+    &.positive {
+      color: $color-success;
+    }
+
+    &.negative {
+      color: $color-danger;
+    }
+  }
+}
+
+.strategyActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.executionModeBadge {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.toggleButton {
+  flex: 1;
+  padding: 0.5rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color-info;
+    color: $color-info;
+  }
+
+  &.active {
+    background: $color-danger-dim;
+    border-color: $color-danger;
+    color: $color-danger;
+  }
+}
+
+.autoModeButton {
+  flex: 1;
+  padding: 0.5rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-success;
+    color: $color-success;
+    background: rgba($color-success, 0.1);
+  }
+
+  &.autoActive {
+    background: rgba($color-success, 0.15);
+    border-color: $color-success;
+    color: $color-success;
+
+    &:hover {
+      border-color: $color-warning;
+      color: $color-warning;
+      background: rgba($color-warning, 0.1);
+    }
+  }
+}
+
+.riskProfileSection {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid $color-border;
+  flex-wrap: wrap;
+}
+
+.riskProfileLabel {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+  font-weight: 500;
+}
+
+.riskProfileSelect {
+  padding: 0.25rem 0.5rem;
+  background: $color-bg;
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  min-width: 140px;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba($color-info, 0.3);
+  }
+
+  option {
+    background: $color-bg;
+    color: $color-text;
+  }
+}
+
+.riskProfileBadge {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.riskDetails {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  margin-left: auto;
+}
+
+.configureButton,
+.statsButton {
+  flex: 1;
+  padding: 0.5rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color-info;
+    color: $color-info;
+  }
+}
+
+.strategyFooter {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+  border-top: 1px solid $color-border;
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
+.strategyId {
+  font-family: $font-mono;
+}
+
+.strategyUpdated {
+  color: $color-text-muted;
+}
+
+// Create Strategy Form
+.createButton {
+  padding: 0.5rem 1rem;
+  background: $color-success;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: lighten($color-success, 10%);
+  }
+}
+
+.createStrategyForm {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+
+  h4 {
+    margin: 0 0 1rem 0;
+    color: $color-text;
+  }
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  label {
+    font-size: 0.85rem;
+    color: $color-text-muted;
+  }
+
+  input,
+  select {
+    padding: 0.5rem;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    color: $color-text;
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+}
+
+.formFieldCheckbox {
+  display: flex;
+  align-items: center;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: $color-text-muted;
+    cursor: pointer;
+  }
+
+  input[type='checkbox'] {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.formActions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+// ============================================
+// Metrics Panel Styles
+// ============================================
+
+.metricsPanel {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.metricsPanelHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: $color-bg-elevated;
+  border-bottom: 1px solid $color-border;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: $color-text;
+    flex: 1;
+  }
+
+  .venueBadge {
+    padding: 0.25rem 0.5rem;
+    background: $color-purple-dim;
+    border: 1px solid $color-purple;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: $color-purple;
+    font-weight: 500;
+  }
+
+  .closeButton {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    color: $color-text-muted;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: $color-bg;
+      color: $color-text;
+      border-color: $color-text-muted;
+    }
+  }
+}
+
+.metricsTabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid $color-border;
+}
+
+.metricsTab {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: $color-text;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  &.active {
+    color: $color-info;
+    border-bottom-color: $color-info;
+    background: $color-info-dim;
+  }
+}
+
+.metricsContent {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.metricBox {
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .metricBoxLabel {
+    font-size: 0.75rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .metricBoxValue {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: $color-text;
+    font-family: $font-mono;
+  }
+
+  .progressBar {
+    height: 4px;
+    background: $color-bg;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.25rem;
+  }
+
+  .progressFill {
+    height: 100%;
+    transition: width 0.3s;
+  }
+}
+
+.qualityScores {
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  padding: 1rem;
+
+  h4 {
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+
+  .scoreRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    span:first-child {
+      width: 100px;
+      font-size: 0.8rem;
+      color: $color-text-muted;
+    }
+
+    span:last-child {
+      width: 60px;
+      text-align: right;
+      font-size: 0.8rem;
+      font-family: $font-mono;
+      color: $color-text;
+    }
+  }
+
+  .scoreBar {
+    flex: 1;
+    height: 6px;
+    background: $color-bg;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .scoreFill {
+    height: 100%;
+    transition: width 0.3s;
+  }
+}
+
+// ============================================
+// Opportunity Score Card Styles
+// ============================================
+
+.opportunityScoreCard {
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1.25rem;
+
+  .scoreHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    h4 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: $color-text;
+    }
+  }
+
+  .recommendationBadge {
+    padding: 0.35rem 0.75rem;
+    border: 1px solid;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .scoreGauge {
+    position: relative;
+    width: 160px;
+    height: 90px;
+    margin: 0 auto 1rem;
+
+    .gaugeSvg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .gaugeCenter {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+
+    .gaugeValue {
+      font-size: 2rem;
+      font-weight: 700;
+      font-family: $font-mono;
+    }
+
+    .gaugeMax {
+      font-size: 0.9rem;
+      color: $color-text-muted;
+      margin-left: 2px;
+    }
+  }
+
+  .factorBreakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .factorRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    .factorLabel {
+      width: 90px;
+      font-size: 0.8rem;
+      color: $color-text-muted;
+    }
+
+    .factorBar {
+      flex: 1;
+      height: 6px;
+      background: $color-bg;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .factorFill {
+      height: 100%;
+      transition: width 0.3s;
+    }
+
+    .factorValue {
+      width: 45px;
+      text-align: right;
+      font-size: 0.8rem;
+      font-family: $font-mono;
+      color: $color-text;
+    }
+  }
+
+  .warningsSection,
+  .signalsSection {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid $color-border;
+
+    h5 {
+      margin: 0 0 0.75rem 0;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: $color-text-muted;
+    }
+  }
+
+  .warningsList,
+  .signalsList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .warningItem,
+  .signalItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    font-size: 0.8rem;
+    color: $color-text;
+  }
+
+  .warningIcon,
+  .signalIcon {
+    flex-shrink: 0;
+  }
+
+  .viewDetailsButton {
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.6rem;
+    background: $color-info-dim;
+    border: 1px solid $color-info;
+    border-radius: 4px;
+    color: $color-info;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: $color-info;
+      color: white;
+    }
+  }
+}
+
+.scoreCardCompact {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  .scoreGaugeCompact {
+    text-align: center;
+
+    .scoreValue {
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-family: $font-mono;
+    }
+
+    .scoreLabel {
+      font-size: 0.7rem;
+      color: $color-text-muted;
+      text-transform: uppercase;
+    }
+  }
+
+  .recommendationBadge {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+}
+
+// ============================================
+// Holders Section Styles
+// ============================================
+
+.holdersSummary {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-around;
+  padding: 1rem;
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+}
+
+.holdersStat {
+  text-align: center;
+
+  .holdersStatValue {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: $font-mono;
+    color: $color-text;
+  }
+
+  .holdersStatLabel {
+    font-size: 0.75rem;
+    color: $color-text-muted;
+  }
+}
+
+.concentrationSection {
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  padding: 1rem;
+
+  h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+
+  .concentrationRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid $color-border;
+    font-size: 0.85rem;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    span:first-child {
+      color: $color-text-muted;
+    }
+
+    span:last-child {
+      font-family: $font-mono;
+      font-weight: 500;
+    }
+  }
+}
+
+.topHoldersSection {
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  padding: 1rem;
+
+  h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+}
+
+.holdersList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.holderRow {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  background: $color-bg;
+  border-radius: 4px;
+  font-size: 0.8rem;
+
+  .holderRank {
+    width: 30px;
+    color: $color-text-muted;
+    font-weight: 500;
+  }
+
+  .holderAddress {
+    flex: 1;
+    font-family: $font-mono;
+    color: $color-text;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .holderPercent {
+    width: 60px;
+    text-align: right;
+    font-family: $font-mono;
+    font-weight: 500;
+    color: $color-text;
+  }
+
+  .creatorBadge {
+    padding: 0.15rem 0.4rem;
+    background: $color-purple-dim;
+    border: 1px solid $color-purple;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    color: $color-purple;
+    font-weight: 500;
+  }
+
+  .suspiciousBadge {
+    font-size: 0.75rem;
+  }
+}
+
+// ============================================
+// Activity Section Styles
+// ============================================
+
+.activityGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.activitySection {
+  background: $color-bg-elevated;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  padding: 1rem;
+
+  h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+
+  .activityRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    font-size: 0.8rem;
+
+    span:first-child {
+      color: $color-text-muted;
+    }
+
+    span:last-child {
+      font-family: $font-mono;
+      font-weight: 500;
+    }
+  }
+}
+
+.lastUpdated {
+  text-align: center;
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
+.metricsPanelFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: $color-bg-elevated;
+  border-top: 1px solid $color-border;
+
+  .mintAddress {
+    font-family: $font-mono;
+    font-size: 0.75rem;
+    color: $color-text-dim;
+  }
+
+  .refreshButton {
+    padding: 0.4rem 0.75rem;
+    background: transparent;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    color: $color-text-muted;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: $color-bg;
+      border-color: $color-text-muted;
+      color: $color-text;
+    }
+  }
+}
+
+.loadingState,
+.errorState {
+  padding: 3rem;
+  text-align: center;
+  color: $color-text-muted;
+  font-size: 0.9rem;
+}
+
+.errorState {
+  color: $color-danger;
+}
+
+// Metrics Overlay & Drawer
+.metricsOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.metricsDrawer {
+  width: 480px;
+  max-width: 90vw;
+  height: 100%;
+  background: $color-bg-card;
+  border-left: 1px solid $color-border;
+  overflow-y: auto;
+  animation: slideIn 0.3s ease-out;
+
+  .metricsPanel {
+    height: 100%;
+    border-radius: 0;
+    border: none;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+// Opportunity Detail Modal
+.opportunityModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.opportunityModalContent {
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  max-width: 700px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+  position: relative;
+  animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.closeButton {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: $color-text-muted;
+  cursor: pointer;
+  padding: 0.5rem;
+  line-height: 1;
+
+  &:hover {
+    color: $color-text;
+  }
+}
+
+.opportunityHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.tokenIdentity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: $color-text;
+  }
+}
+
+.venueIconLarge {
+  font-size: 2.5rem;
+}
+
+.tokenFullName {
+  font-size: 0.9rem;
+  color: $color-text-muted;
+}
+
+.recommendationBadge {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.progressSection {
+  margin-bottom: 1.5rem;
+}
+
+.progressDetails {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: $color-text-muted;
+}
+
+.eta {
+  color: $color-warning;
+  font-weight: 500;
+}
+
+.scoreGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.scoreCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.scoreLabel {
+  display: block;
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.scoreValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: $color-text;
+}
+
+.metricsSection {
+  margin-bottom: 1.5rem;
+
+  h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.metricItem {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  .metricLabel {
+    font-size: 0.7rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+  }
+
+  .metricValue {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+}
+
+.addressSection {
+  margin-bottom: 1.5rem;
+}
+
+.addressLabel {
+  display: block;
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.addressRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  code {
+    flex: 1;
+    padding: 0.5rem;
+    background: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    font-family: $font-mono;
+    font-size: 0.8rem;
+    color: $color-text-muted;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.copyButton {
+  padding: 0.5rem 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color-info;
+    color: $color-info;
+  }
+}
+
+.linksSection {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.linkButton {
+  padding: 0.5rem 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text;
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-info;
+    color: $color-info;
+    background: rgba($color-info, 0.1);
+  }
+}
+
+.actionsSection {
+  border-top: 1px solid $color-border;
+  padding-top: 1.5rem;
+}
+
+.buySection {
+  margin-bottom: 1rem;
+
+  h4 {
+    font-size: 0.9rem;
+    color: $color-text-muted;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.quickBuyRow {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.quickBuyBtn {
+  flex: 1;
+  padding: 0.6rem;
+  background: $color-success-dim;
+  border: 1px solid $color-success;
+  border-radius: 6px;
+  color: $color-success;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-success;
+    color: white;
+  }
+}
+
+.customBuyRow {
+  display: flex;
+  gap: 0.5rem;
+
+  input {
+    flex: 1;
+    padding: 0.6rem;
+    background: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    color: $color-text;
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+}
+
+.buyButton {
+  padding: 0.6rem 1.5rem;
+  background: $color-success;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: lighten($color-success, 10%);
+  }
+}
+
+.otherActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.trackButton {
+  flex: 1;
+  padding: 0.6rem;
+  background: $color-purple-dim;
+  border: 1px solid $color-purple;
+  border-radius: 6px;
+  color: $color-purple;
+  font-weight: 500;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-purple;
+    color: white;
+  }
+}
+
+// ============================================
+// Home Tab Styles
+// ============================================
+
+.homeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.homeCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.cardTitle {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.pnlGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.pnlItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pnlLabel {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+}
+
+.pnlValue {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-family: $font-mono;
+}
+
+.pnlStats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: $color-text-muted;
+  flex-wrap: wrap;
+}
+
+.profit {
+  color: $color-success;
+}
+
+.loss {
+  color: $color-danger;
+}
+
+.positionsList,
+.insightsList,
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.positionItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid $color-border;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.positionSymbol {
+  font-family: $font-mono;
+  font-weight: 500;
+}
+
+.positionPnl {
+  font-family: $font-mono;
+  font-weight: 600;
+}
+
+.insightItem {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.insightBullet {
+  color: $color-info;
+  font-weight: bold;
+}
+
+.insightText {
+  font-size: 0.9rem;
+  color: $color-text;
+}
+
+.activityItem {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  font-size: 0.85rem;
+}
+
+.activityTime {
+  color: $color-text-muted;
+  font-family: $font-mono;
+  min-width: 50px;
+}
+
+.activityText {
+  color: $color-text;
+}
+
+.emptyState {
+  color: $color-text-muted;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
+}
+
+.wideCard {
+  grid-column: 1 / -1;
+}
+
+.balanceDisplay {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.balanceAmount {
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: $font-mono;
+  color: $color-text;
+}
+
+.quickActions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.actionButton {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+
+  &.danger {
+    background: transparent;
+    border-color: $color-danger;
+    color: $color-danger;
+
+    &:hover:not(:disabled) {
+      background: $color-danger;
+      color: white;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+}
+
+.statValue {
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: $font-mono;
+}
+
+.tradeHighlight {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  font-family: $font-mono;
+}
+
+.positionCard {
+  background: rgba($color-bg-card, 0.5);
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.positionHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.positionVenue {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  background: $color-bg-elevated;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+}
+
+.positionDetails {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.positionActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.editButton,
+.partialSellButton,
+.sellButton {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.editButton {
+  background: transparent;
+  border-color: $color-info;
+  color: $color-info;
+
+  &:hover:not(:disabled) {
+    background: $color-info;
+    color: white;
+  }
+}
+
+.partialSellButton {
+  background: transparent;
+  border-color: $color-warning;
+  color: $color-warning;
+
+  &:hover:not(:disabled) {
+    background: $color-warning;
+    color: $color-bg;
+  }
+}
+
+.sellButton {
+  background: transparent;
+  border-color: $color-danger;
+  color: $color-danger;
+
+  &:hover:not(:disabled) {
+    background: $color-danger;
+    color: white;
+  }
+}
+
+.exitConfigForm {
+  background: $color-bg-elevated;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-top: 0.75rem;
+}
+
+.formRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+
+  label {
+    flex: 0 0 120px;
+    font-size: 0.8rem;
+    color: $color-text-muted;
+  }
+
+  input {
+    flex: 1;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    background: $color-bg-card;
+    color: $color-text;
+    font-family: $font-mono;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+}
+
+.formActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+
+  button {
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+
+    &:first-child {
+      background: $color-info;
+      color: white;
+
+      &:hover {
+        background: darken($color-info, 10%);
+      }
+    }
+
+    &:last-child {
+      background: $color-bg-card;
+      color: $color-text-muted;
+      border: 1px solid $color-border;
+
+      &:hover {
+        background: $color-bg-elevated;
+      }
+    }
+  }
+}
+
+.recentTradesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.recentTradeItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid $color-border;
+  font-size: 0.85rem;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.tradeSymbol {
+  font-family: $font-mono;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.tradePnl {
+  font-family: $font-mono;
+  font-weight: 600;
+  min-width: 140px;
+}
+
+.tradeExit {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  background: $color-bg-elevated;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+}
+
+.tradeTime {
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  margin-left: auto;
+}
+
+// ============================================
+// WIP Tab Styles
+// ============================================
+
+.wipContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  padding: 2rem;
+}
+
+.wipBadge {
+  background: $color-warning-dim;
+  color: $color-warning;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.wipIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.wipTitle {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.wipDescription {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: $color-text-muted;
+  max-width: 400px;
+}
+
+.wipNote {
+  margin: 0;
+  font-size: 0.85rem;
+  color: $color-text-dim;
+  max-width: 400px;
+}
+
+.loadingSpinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: $color-text-muted;
+  font-style: italic;
+}
+
+// Custom Risk Configuration
+.customRiskSection {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid $color-border;
+
+  h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    color: $color-text;
+  }
+}
+
+.customRiskForm {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  label {
+    font-size: 0.75rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  input {
+    padding: 0.5rem 0.75rem;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    color: $color-text;
+    font-family: $font-mono;
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+
+    &::placeholder {
+      color: $color-text-dim;
+    }
+  }
 }

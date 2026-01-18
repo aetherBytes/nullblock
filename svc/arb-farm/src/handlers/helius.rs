@@ -5,7 +5,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::error::AppResult;
-use crate::helius::types::{HeliusConfig, HeliusStatus, LaserStreamStatus, SenderStats, TokenMetadata};
+use crate::helius::types::{HeliusConfig, HeliusStatus, SenderStats, TokenMetadata};
+use crate::helius::laserstream::LaserStreamStatus;
 use crate::helius::priority_fee::PriorityFeeResponse;
 use crate::server::AppState;
 
@@ -53,9 +54,24 @@ pub struct LaserStreamSubscription {
 pub async fn get_laserstream_status(
     State(state): State<AppState>,
 ) -> AppResult<Json<LaserStreamStatusResponse>> {
+    let status = state.laserstream_client.get_status().await;
+    let connected = status == LaserStreamStatus::Connected;
+    let subscribed_accounts = state.laserstream_client.get_subscribed_accounts().await;
+
+    let subscriptions: Vec<LaserStreamSubscription> = subscribed_accounts
+        .into_iter()
+        .enumerate()
+        .map(|(i, addr)| LaserStreamSubscription {
+            id: format!("sub_{}", i),
+            subscription_type: "account".to_string(),
+            address: Some(addr),
+            events_received: 0,
+        })
+        .collect();
+
     Ok(Json(LaserStreamStatusResponse {
-        connected: false,
-        subscriptions: vec![],
+        connected,
+        subscriptions,
         avg_latency_ms: 0.0,
         events_per_second: 0.0,
     }))

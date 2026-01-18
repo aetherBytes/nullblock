@@ -29,6 +29,9 @@ pub struct EdgeResponse {
     pub estimated_profit_lamports: Option<i64>,
     pub risk_score: Option<i32>,
     pub status: String,
+    pub token_mint: Option<String>,
+    pub token_symbol: Option<String>,
+    pub opportunity_score: Option<f64>,
     pub created_at: String,
     pub expires_at: Option<String>,
 }
@@ -58,18 +61,32 @@ pub async fn list_edges(
 
     let edges: Vec<EdgeResponse> = records
         .iter()
-        .map(|r| EdgeResponse {
-            id: r.id,
-            strategy_id: r.strategy_id,
-            edge_type: r.edge_type.clone(),
-            execution_mode: r.execution_mode.clone(),
-            atomicity: r.atomicity.clone(),
-            simulated_profit_guaranteed: r.simulated_profit_guaranteed,
-            estimated_profit_lamports: r.estimated_profit_lamports,
-            risk_score: r.risk_score,
-            status: r.status.clone(),
-            created_at: r.created_at.to_rfc3339(),
-            expires_at: r.expires_at.map(|t| t.to_rfc3339()),
+        .map(|r| {
+            let token_mint = r.route_data.get("token_mint")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            let token_symbol = r.route_data.get("token_symbol")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            let opportunity_score = r.route_data.get("opportunity_score")
+                .and_then(|v| v.as_f64());
+
+            EdgeResponse {
+                id: r.id,
+                strategy_id: r.strategy_id,
+                edge_type: r.edge_type.clone(),
+                execution_mode: r.execution_mode.clone(),
+                atomicity: r.atomicity.clone(),
+                simulated_profit_guaranteed: r.simulated_profit_guaranteed,
+                estimated_profit_lamports: r.estimated_profit_lamports,
+                risk_score: r.risk_score,
+                status: r.status.clone(),
+                token_mint,
+                token_symbol,
+                opportunity_score,
+                created_at: r.created_at.to_rfc3339(),
+                expires_at: r.expires_at.map(|t| t.to_rfc3339()),
+            }
         })
         .collect();
 
@@ -90,6 +107,15 @@ pub async fn get_edge(
 
     let trade = state.trade_repo.get_by_edge_id(edge_id).await?;
 
+    let token_mint = record.route_data.get("token_mint")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+    let token_symbol = record.route_data.get("token_symbol")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+    let opportunity_score = record.route_data.get("opportunity_score")
+        .and_then(|v| v.as_f64());
+
     Ok(Json(EdgeDetailResponse {
         edge: EdgeResponse {
             id: record.id,
@@ -101,10 +127,13 @@ pub async fn get_edge(
             estimated_profit_lamports: record.estimated_profit_lamports,
             risk_score: record.risk_score,
             status: record.status.clone(),
+            token_mint,
+            token_symbol,
+            opportunity_score,
             created_at: record.created_at.to_rfc3339(),
             expires_at: record.expires_at.map(|t| t.to_rfc3339()),
         },
-        route_data: record.route_data,
+        route_data: record.route_data.clone(),
         rejection_reason: record.rejection_reason,
         executed_at: record.executed_at.map(|t| t.to_rfc3339()),
         actual_profit_lamports: record.actual_profit_lamports,
@@ -435,18 +464,32 @@ pub async fn list_atomic_edges(
 
     let edges: Vec<EdgeResponse> = records
         .iter()
-        .map(|r| EdgeResponse {
-            id: r.id,
-            strategy_id: r.strategy_id,
-            edge_type: r.edge_type.clone(),
-            execution_mode: r.execution_mode.clone(),
-            atomicity: r.atomicity.clone(),
-            simulated_profit_guaranteed: r.simulated_profit_guaranteed,
-            estimated_profit_lamports: r.estimated_profit_lamports,
-            risk_score: r.risk_score,
-            status: r.status.clone(),
-            created_at: r.created_at.to_rfc3339(),
-            expires_at: r.expires_at.map(|t| t.to_rfc3339()),
+        .map(|r| {
+            let token_mint = r.route_data.get("token_mint")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            let token_symbol = r.route_data.get("token_symbol")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            let opportunity_score = r.route_data.get("opportunity_score")
+                .and_then(|v| v.as_f64());
+
+            EdgeResponse {
+                id: r.id,
+                strategy_id: r.strategy_id,
+                edge_type: r.edge_type.clone(),
+                execution_mode: r.execution_mode.clone(),
+                atomicity: r.atomicity.clone(),
+                simulated_profit_guaranteed: r.simulated_profit_guaranteed,
+                estimated_profit_lamports: r.estimated_profit_lamports,
+                risk_score: r.risk_score,
+                status: r.status.clone(),
+                token_mint,
+                token_symbol,
+                opportunity_score,
+                created_at: r.created_at.to_rfc3339(),
+                expires_at: r.expires_at.map(|t| t.to_rfc3339()),
+            }
         })
         .collect();
 
@@ -688,6 +731,10 @@ fn record_to_edge(
         _ => crate::models::EdgeStatus::Detected,
     };
 
+    let token_mint = record.route_data.get("token_mint")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+
     Ok(crate::models::Edge {
         id: record.id,
         strategy_id: record.strategy_id,
@@ -700,7 +747,7 @@ fn record_to_edge(
         route_data: record.route_data.clone(),
         signal_data: Some(record.route_data.clone()),
         status,
-        token_mint: None,
+        token_mint,
         created_at: record.created_at,
         expires_at: record.expires_at,
     })

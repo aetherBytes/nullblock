@@ -98,14 +98,14 @@ impl TransactionBuilder {
             edge_id,
             transaction_base64: swap_response.swap_transaction,
             last_valid_block_height: blockhash.last_valid_block_height,
-            priority_fee_lamports: swap_response.priority_fee_lamports.unwrap_or(0),
+            priority_fee_lamports: swap_response.prioritization_fee_lamports.unwrap_or(0),
             estimated_compute_units: swap_response.compute_unit_limit.unwrap_or(200_000),
             route_info: RouteInfo {
                 input_mint: quote.input_mint.clone(),
                 output_mint: quote.output_mint.clone(),
                 in_amount,
                 out_amount,
-                price_impact_bps: (quote.price_impact_pct * 10000.0) as i32,
+                price_impact_bps: (quote.price_impact_pct.unwrap_or(0.0) * 10000.0) as i32,
                 route_plan: serde_json::to_value(&quote.route_plan).unwrap_or_default(),
             },
         })
@@ -153,7 +153,7 @@ impl TransactionBuilder {
             user_public_key: user_public_key.to_string(),
             quote_response: quote.clone(),
             wrap_and_unwrap_sol: true,
-            use_shared_accounts: true,
+            use_shared_accounts: false, // Must be false for graduated pump.fun tokens (simple AMMs)
             fee_account: None,
             tracking_account: None,
             compute_unit_price_micro_lamports: Some(100_000), // 0.1 lamports per CU
@@ -185,10 +185,11 @@ impl TransactionBuilder {
             )));
         }
 
-        response
-            .json::<JupiterSwapResponse>()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter swap: {}", e)))
+        let response_text = response.text().await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to read Jupiter swap response: {}", e)))?;
+
+        serde_json::from_str::<JupiterSwapResponse>(&response_text)
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter swap: {} | Response: {}", e, &response_text[..response_text.len().min(500)])))
     }
 
     fn extract_swap_mints(&self, edge: &Edge) -> AppResult<(String, String)> {
@@ -463,12 +464,77 @@ pub struct JupiterQuoteResponse {
     pub other_amount_threshold: String,
     pub swap_mode: String,
     pub slippage_bps: u16,
-    pub price_impact_pct: f64,
+    #[serde(default, deserialize_with = "deserialize_price_impact_opt", skip_serializing_if = "Option::is_none")]
+    pub price_impact_pct: Option<f64>,
     pub route_plan: Vec<JupiterRoutePlan>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub context_slot: Option<u64>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub time_taken: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub platform_fee: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub swap_usd_value: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub simpler_route_used: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub most_reliable_amms_quote_report: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_incurred_slippage_for_quoting: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub other_route_plans: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub loaded_longtail_token: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub instruction_version: Option<serde_json::Value>,
+}
+
+/// Deserialize price_impact_pct from either string, number, or null
+fn deserialize_price_impact_opt<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::{self, Visitor};
+    struct PriceImpactVisitor;
+
+    impl<'de> Visitor<'de> for PriceImpactVisitor {
+        type Value = Option<f64>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a string, number, or null representing price impact")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+
+        fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E> {
+            Ok(Some(v))
+        }
+
+        fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E> {
+            Ok(Some(v as f64))
+        }
+
+        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E> {
+            Ok(Some(v as f64))
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            v.parse::<f64>()
+                .map(Some)
+                .map_err(|_| de::Error::custom(format!("invalid price impact: {}", v)))
+        }
+    }
+
+    deserializer.deserialize_any(PriceImpactVisitor)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -476,6 +542,8 @@ pub struct JupiterQuoteResponse {
 pub struct JupiterRoutePlan {
     pub swap_info: JupiterSwapInfo,
     pub percent: u8,
+    #[serde(default)]
+    pub bps: Option<u16>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -487,8 +555,12 @@ pub struct JupiterSwapInfo {
     pub output_mint: String,
     pub in_amount: String,
     pub out_amount: String,
-    pub fee_amount: String,
-    pub fee_mint: String,
+    #[serde(default)]
+    pub fee_amount: Option<String>,
+    #[serde(default)]
+    pub fee_mint: Option<String>,
+    #[serde(default)]
+    pub out_amount_after_slippage: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -531,13 +603,26 @@ pub struct JupiterSwapResponse {
     #[serde(default)]
     pub last_valid_block_height: Option<u64>,
     #[serde(default)]
-    pub priority_fee_lamports: Option<u64>,
+    pub prioritization_fee_lamports: Option<u64>,
     #[serde(default)]
     pub compute_unit_limit: Option<u64>,
     #[serde(default)]
-    pub prioritization_type: Option<String>,
+    pub prioritization_type: Option<serde_json::Value>,
     #[serde(default)]
-    pub simulation_error: Option<String>,
+    pub simulation_slot: Option<u64>,
+    #[serde(default)]
+    pub dynamic_slippage_report: Option<serde_json::Value>,
+    #[serde(default)]
+    pub simulation_error: Option<JupiterSimulationError>,
+    #[serde(default)]
+    pub addresses_by_lookup_table_address: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JupiterSimulationError {
+    pub error_code: String,
+    pub error: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

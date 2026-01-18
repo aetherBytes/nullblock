@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-2234a273.js";
+            window.path_to_searchindex_js = "../searchindex-1bc75e06.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b011f5da.js"></script>
+        <script src="../toc-1cee2a9d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -218,11 +218,34 @@
 <li>You’ll see the ArbFarm dashboard</li>
 </ol>
 <h2 id="step-2-configure-wallet"><a class="header" href="#step-2-configure-wallet">Step 2: Configure Wallet</a></h2>
-<p>ArbFarm uses Turnkey for secure wallet delegation - your private keys are never stored in NullBlock.</p>
+<h3 id="development-mode-private-key"><a class="header" href="#development-mode-private-key">Development Mode (Private Key)</a></h3>
+<p>For local development, ArbFarm uses a private key stored in the environment file:</p>
 <ol>
-<li>Go to <strong>Settings</strong> view (gear icon)</li>
-<li>In the <strong>Wallet Setup</strong> section, click <strong>Connect Wallet</strong></li>
-<li>Approve the Phantom popup</li>
+<li>Open <code>svc/arb-farm/.env.dev</code></li>
+<li>Set your dev wallet credentials:</li>
+</ol>
+<pre><code class="language-bash">ARB_FARM_WALLET_ADDRESS=&lt;your-wallet-public-key&gt;
+ARB_FARM_WALLET_PRIVATE_KEY=&lt;your-wallet-private-key&gt;
+</code></pre>
+<ol start="3">
+<li>The Settings → Wallet tab will display your configured wallet address and balance</li>
+</ol>
+<blockquote>
+<p><strong>Security Note</strong>: Never commit private keys to git. The <code>.env.dev</code> file is gitignored. For production, use Turnkey wallet delegation (see below).</p>
+</blockquote>
+<h3 id="production-mode-turnkey-delegation"><a class="header" href="#production-mode-turnkey-delegation">Production Mode (Turnkey Delegation)</a></h3>
+<p>For production deployments, ArbFarm supports Turnkey for secure wallet delegation - your private keys are never stored in NullBlock:</p>
+<ol>
+<li>Configure Turnkey credentials in <code>.env.dev</code>:</li>
+</ol>
+<pre><code class="language-bash">TURNKEY_API_URL=https://api.turnkey.com
+TURNKEY_ORGANIZATION_ID=your-org-id
+TURNKEY_API_PUBLIC_KEY=your-public-key
+TURNKEY_API_PRIVATE_KEY=your-private-key
+</code></pre>
+<ol start="2">
+<li>Go to <strong>Settings</strong> → <strong>Wallet</strong> tab</li>
+<li>Click <strong>Connect Wallet</strong> and approve the Phantom popup</li>
 <li>Turnkey creates a delegated wallet with policy controls</li>
 </ol>
 <h3 id="default-policy-limits-dev-testing"><a class="header" href="#default-policy-limits-dev-testing">Default Policy Limits (Dev Testing)</a></h3>
@@ -363,15 +386,121 @@ Require Simulation: ON
 </li>
 <li>Toggle <strong>Enable Copy Trading</strong></li>
 </ol>
-<h2 id="step-9-test-consensus-optional"><a class="header" href="#step-9-test-consensus-optional">Step 9: Test Consensus (Optional)</a></h2>
-<p>The Research view lets you test multi-LLM consensus:</p>
+<h2 id="step-9-inject-alpha-research-flow"><a class="header" href="#step-9-inject-alpha-research-flow">Step 9: Inject Alpha (Research Flow)</a></h2>
+<p>Turn URLs into active strategies using the Research view:</p>
 <ol>
 <li>Go to <strong>Research</strong> view</li>
+<li>Click the <strong>URL Injection</strong> tab</li>
+<li>Paste a URL (Twitter thread, blog post, whitepaper)</li>
+<li>Click <strong>Analyze</strong></li>
+<li>Review the extracted strategy:
+<ul>
+<li>Strategy type, entry/exit conditions</li>
+<li>Risk parameters</li>
+<li>Confidence score</li>
+</ul>
+</li>
+<li>Choose an action:
+<ul>
+<li><strong>Create Strategy</strong> - Add directly to active strategies</li>
+<li><strong>Backtest First</strong> - Validate against historical data</li>
+<li><strong>Reject</strong> - Discard if not viable</li>
+</ul>
+</li>
+</ol>
+<p>See <a href="./strategy-flow.html">Strategy Flow</a> for the complete lifecycle.</p>
+<h2 id="step-10-configure-execution-mode"><a class="header" href="#step-10-configure-execution-mode">Step 10: Configure Execution Mode</a></h2>
+<p>Control how aggressively ArbFarm trades:</p>
+<ol>
+<li>Go to <strong>Settings</strong> → <strong>Execution</strong> tab</li>
+<li>Configure execution mode:</li>
+</ol>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mode</th><th>Behavior</th><th>Risk Level</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Agent Directed</strong></td><td>Multi-LLM consensus for every trade</td><td>Lowest</td></tr>
+<tr><td><strong>Hybrid</strong></td><td>Auto below threshold, consensus above</td><td>Medium</td></tr>
+<tr><td><strong>Autonomous</strong></td><td>Full auto-execution</td><td>Highest</td></tr>
+</tbody>
+</table>
+</div>
+<ol start="3">
+<li>
+<p>Configure auto-execution toggle:</p>
+<ul>
+<li>Toggle <strong>Auto-Execute Mode</strong> ON or OFF</li>
+<li>When OFF: All trades require manual approval</li>
+<li>When ON: Trades execute automatically based on strategy rules</li>
+</ul>
+</li>
+<li>
+<p>If enabling auto-execute:</p>
+<ul>
+<li>Set <strong>Min Confidence for Auto</strong>: 80% (recommended)</li>
+<li>Set <strong>Max Position for Auto</strong>: 0.5 SOL (start small)</li>
+<li>Keep <strong>Require Simulation</strong> ON</li>
+</ul>
+</li>
+</ol>
+<p><strong>Warning</strong>: Autonomous mode executes trades without manual approval.</p>
+<h3 id="approval-workflow"><a class="header" href="#approval-workflow">Approval Workflow</a></h3>
+<p>When auto-execution is OFF, opportunities require manual approval:</p>
+<ol>
+<li>Detected opportunities appear in <strong>Pending Approvals</strong> panel on Dashboard</li>
+<li>If Hecate agent integration is enabled, you’ll see AI recommendations</li>
+<li>Review and click <strong>Approve</strong> or <strong>Reject</strong></li>
+<li>Approved trades are queued for execution</li>
+<li>Approvals expire after the configured timeout (default: 5 minutes)</li>
+</ol>
+<p>Check the Pending Approvals panel on the Dashboard for:</p>
+<ul>
+<li>Number of pending items</li>
+<li>Hecate AI recommendations with reasoning</li>
+<li>Expiration countdowns</li>
+<li>Quick approve/reject buttons</li>
+</ul>
+<h2 id="step-11-monitor-signals"><a class="header" href="#step-11-monitor-signals">Step 11: Monitor Signals</a></h2>
+<p>View real-time market signals:</p>
+<ol>
+<li>Go to <strong>Signals</strong> view</li>
+<li>Signals appear as they’re detected:
+<ul>
+<li><code>price_discrepancy</code> - Cross-venue price gaps</li>
+<li><code>volume_spike</code> - Unusual activity</li>
+<li><code>curve_graduation</code> - Bonding curve migrations</li>
+<li><code>kol_signal</code> - Tracked wallet activity</li>
+</ul>
+</li>
+<li>Use filters to focus on relevant signals</li>
+<li>Click a signal to investigate the opportunity</li>
+</ol>
+<h2 id="step-12-test-consensus-optional"><a class="header" href="#step-12-test-consensus-optional">Step 12: Test Consensus (Optional)</a></h2>
+<p>The Research view lets you test multi-LLM consensus:</p>
+<ol>
+<li>Go to <strong>Research</strong> view → <strong>Consensus</strong> tab</li>
 <li>Click <strong>Request Test Consensus</strong></li>
 <li>View votes from multiple LLMs (Claude, GPT-4, Llama)</li>
 <li>See agreement scores and reasoning</li>
 </ol>
 <p>Consensus is automatically used for agent-directed strategies.</p>
+<h2 id="step-13-view-engrams"><a class="header" href="#step-13-view-engrams">Step 13: View Engrams</a></h2>
+<p>ArbFarm automatically saves patterns and trade results as engrams:</p>
+<ol>
+<li>Go to <strong>MemCache</strong> → <strong>Engrams</strong> in the main sidebar</li>
+<li>Filter by key prefix: <code>arb.</code></li>
+<li>View saved patterns:
+<ul>
+<li><code>arb.trade.*</code> - Trade execution results</li>
+<li><code>arb.pattern.*</code> - Winning trade patterns</li>
+<li><code>arb.avoid.*</code> - Entities to avoid</li>
+<li><code>arb.state.*</code> - Agent state snapshots</li>
+</ul>
+</li>
+</ol>
+<p>Engrams help the agent learn from past trades and improve over time.</p>
 <h2 id="monitoring"><a class="header" href="#monitoring">Monitoring</a></h2>
 <h3 id="real-time-events"><a class="header" href="#real-time-events">Real-time Events</a></h3>
 <p>Events stream in real-time via SSE:</p>
@@ -477,6 +606,22 @@ curl http://localhost:9007/edges
 # Scanner status
 curl http://localhost:9007/scanner/status
 
+# Pending approvals
+curl http://localhost:9007/approvals/pending
+
+# Execution config (auto-execution status)
+curl http://localhost:9007/execution/config
+
+# Toggle auto-execution ON
+curl -X POST http://localhost:9007/execution/toggle \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true}'
+
+# Toggle auto-execution OFF
+curl -X POST http://localhost:9007/execution/toggle \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}'
+
 # KOL list
 curl http://localhost:9007/kol
 
@@ -492,7 +637,7 @@ curl http://localhost:9007/consensus/stats
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../arb-farm/plan.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../arb-farm/strategy-flow.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -506,7 +651,7 @@ curl http://localhost:9007/consensus/stats
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../arb-farm/plan.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../arb-farm/strategy-flow.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
@@ -519,6 +664,22 @@ curl http://localhost:9007/consensus/stats
         <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
         <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
 
 
         <script>

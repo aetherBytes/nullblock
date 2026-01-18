@@ -9,6 +9,7 @@ use crate::agents::StrategyEngine;
 use crate::error::{AppError, AppResult};
 use crate::events::{edge as edge_topics, ArbEvent, AgentType, EventSource};
 use crate::execution::{CurveBuyParams, CurveTransactionBuilder, ExitConfig, PositionManager};
+use crate::execution::risk::RiskConfig;
 use crate::helius::HeliusSender;
 use crate::models::{Edge, EdgeStatus, Strategy};
 use crate::wallet::DevWalletSigner;
@@ -60,6 +61,7 @@ pub struct AutonomousExecutor {
     dev_signer: Arc<DevWalletSigner>,
     helius_sender: Arc<HeliusSender>,
     position_manager: Arc<PositionManager>,
+    risk_config: Arc<RwLock<RiskConfig>>,
     event_tx: broadcast::Sender<ArbEvent>,
     executions: Arc<RwLock<HashMap<Uuid, AutoExecutionRecord>>>,
     recent_mints: Arc<RwLock<HashMap<String, DateTime<Utc>>>>,
@@ -76,6 +78,7 @@ impl AutonomousExecutor {
         dev_signer: Arc<DevWalletSigner>,
         helius_sender: Arc<HeliusSender>,
         position_manager: Arc<PositionManager>,
+        risk_config: Arc<RwLock<RiskConfig>>,
         event_tx: broadcast::Sender<ArbEvent>,
         default_wallet: String,
     ) -> Self {
@@ -85,6 +88,7 @@ impl AutonomousExecutor {
             dev_signer,
             helius_sender,
             position_manager,
+            risk_config,
             event_tx,
             executions: Arc::new(RwLock::new(HashMap::new())),
             recent_mints: Arc::new(RwLock::new(HashMap::new())),
@@ -123,6 +127,7 @@ impl AutonomousExecutor {
         let dev_signer = self.dev_signer.clone();
         let helius_sender = self.helius_sender.clone();
         let position_manager = self.position_manager.clone();
+        let risk_config = self.risk_config.clone();
         let event_tx = self.event_tx.clone();
         let executions = self.executions.clone();
         let recent_mints = self.recent_mints.clone();
@@ -158,6 +163,7 @@ impl AutonomousExecutor {
                                 &dev_signer,
                                 &helius_sender,
                                 &position_manager,
+                                &risk_config,
                                 &event_tx,
                                 &executions,
                                 &recent_mints,
@@ -202,6 +208,7 @@ impl AutonomousExecutor {
         dev_signer: &Arc<DevWalletSigner>,
         helius_sender: &Arc<HeliusSender>,
         position_manager: &Arc<PositionManager>,
+        risk_config: &Arc<RwLock<RiskConfig>>,
         event_tx: &broadcast::Sender<ArbEvent>,
         executions: &Arc<RwLock<HashMap<Uuid, AutoExecutionRecord>>>,
         recent_mints: &Arc<RwLock<HashMap<String, DateTime<Utc>>>>,
@@ -307,7 +314,20 @@ impl AutonomousExecutor {
             }
         }
 
-        let sol_amount_lamports = (strategy.risk_params.max_position_sol * 1_000_000_000.0) as u64;
+        let global_max_sol = risk_config.read().await.max_position_sol;
+        let strategy_max_sol = strategy.risk_params.max_position_sol;
+        let capped_sol = strategy_max_sol.min(global_max_sol);
+
+        tracing::info!(
+            edge_id = %edge_id,
+            strategy_max = strategy_max_sol,
+            global_max = global_max_sol,
+            capped = capped_sol,
+            "💰 Position size: strategy wants {} SOL, global cap {} SOL → using {} SOL",
+            strategy_max_sol, global_max_sol, capped_sol
+        );
+
+        let sol_amount_lamports = (capped_sol * 1_000_000_000.0) as u64;
 
         let curve_state = match curve_builder.get_curve_state(&mint).await {
             Ok(state) => state,
@@ -359,6 +379,47 @@ impl AutonomousExecutor {
                 "⏭️ Skipping: pool has only {:.2} SOL (min {:.0} SOL required)",
                 pool_sol,
                 min_pool_sol
+            );
+            return Ok(());
+        }
+
+        // Entry quality check: calculate price velocity from recent curve state changes
+        // We check if the price momentum is favorable for entry
+        let current_price = curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64;
+
+        // Check recent price change from event payload (if available)
+        let price_change_1m = event.payload.get("price_change_1m")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+
+        let velocity = event.payload.get("velocity")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+
+        // Don't enter if momentum is strongly negative (price declining)
+        if velocity < -1.0 {
+            tracing::info!(
+                edge_id = %edge_id,
+                mint = %mint,
+                velocity = velocity,
+                "⏭️ Skipping: negative momentum at entry (velocity: {:.2}%/min)",
+                velocity
+            );
+            return Ok(());
+        }
+
+        // Don't enter if already pumped significantly (buying the top)
+        // This prevents FOMO entries after a big spike
+        let max_recent_pump = 25.0;
+        if price_change_1m > max_recent_pump {
+            tracing::info!(
+                edge_id = %edge_id,
+                mint = %mint,
+                price_change_1m = price_change_1m,
+                max_allowed = max_recent_pump,
+                "⏭️ Skipping: already pumped {:.1}% in last minute (max {:.0}%)",
+                price_change_1m,
+                max_recent_pump
             );
             return Ok(());
         }
@@ -468,7 +529,8 @@ impl AutonomousExecutor {
                 let tokens_received = tokens_out.unwrap_or(0);
                 if tokens_received > 0 {
                     let entry_price = sol_amount_lamports as f64 / tokens_received as f64;
-                    let exit_config = ExitConfig::default();
+                    // Use curve-specific exit config with trailing stops
+                    let exit_config = ExitConfig::for_curve_bonding();
 
                     if let Err(e) = position_manager.open_position(
                         edge_id,
@@ -479,6 +541,7 @@ impl AutonomousExecutor {
                         tokens_received as f64,
                         entry_price,
                         exit_config,
+                        Some(signature.clone()),
                     ).await {
                         tracing::warn!(
                             edge_id = %edge_id,
@@ -596,6 +659,7 @@ pub fn spawn_autonomous_executor(
     dev_signer: Arc<DevWalletSigner>,
     helius_sender: Arc<HeliusSender>,
     position_manager: Arc<PositionManager>,
+    risk_config: Arc<RwLock<RiskConfig>>,
     event_tx: broadcast::Sender<ArbEvent>,
     default_wallet: String,
 ) -> Arc<AutonomousExecutor> {
@@ -605,6 +669,7 @@ pub fn spawn_autonomous_executor(
         dev_signer,
         helius_sender,
         position_manager,
+        risk_config,
         event_tx,
         default_wallet,
     ));
