@@ -18,6 +18,7 @@ import CurveStrategyCard from './CurveStrategyCard';
 import CurveMetricsPanel from './CurveMetricsPanel';
 import GraduationProgressBar from './GraduationProgressBar';
 import OpportunityDetailModal from './OpportunityDetailModal';
+import CurveStrategyConfigModal from './CurveStrategyConfigModal';
 import styles from '../arbfarm.module.scss';
 
 type CurveTab = 'candidates' | 'positions' | 'tracked' | 'strategies' | 'sniper';
@@ -75,6 +76,9 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
   } | null>(null);
 
   const [selectedCandidate, setSelectedCandidate] = useState<GraduationCandidate | null>(null);
+
+  const [configStrategy, setConfigStrategy] = useState<Strategy | null>(null);
+  const [strategyCurveParams, setStrategyCurveParams] = useState<Record<string, CurveStrategyParams>>({});
 
   const fetchCandidates = useCallback(async () => {
     setLoading(true);
@@ -309,6 +313,35 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
     } catch (e) {
       onError('Failed to update risk profile');
     }
+  };
+
+  const getDefaultCurveParams = (strategyId: string): CurveStrategyParams => {
+    if (strategyCurveParams[strategyId]) {
+      return strategyCurveParams[strategyId];
+    }
+    return {
+      mode: 'graduation_sniper',
+      min_graduation_progress: 70,
+      max_graduation_progress: 98,
+      min_volume_24h_sol: 10,
+      max_holder_concentration: 50,
+      min_holder_count: 50,
+      entry_sol_amount: 0.1,
+      exit_on_graduation: true,
+      graduation_sell_delay_ms: 500,
+    };
+  };
+
+  const handleConfigureStrategy = (strategy: Strategy) => {
+    setConfigStrategy(strategy);
+  };
+
+  const handleCloseConfigModal = () => {
+    setConfigStrategy(null);
+  };
+
+  const handleConfigUpdate = () => {
+    fetchStrategies();
   };
 
   const handleCreateStrategy = async () => {
@@ -789,11 +822,12 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
               <CurveStrategyCard
                 key={strategy.id}
                 strategy={strategy}
+                curveParams={getDefaultCurveParams(strategy.id)}
                 stats={strategyStats[strategy.id]}
                 onToggle={handleToggleStrategy}
                 onChangeExecutionMode={handleChangeExecutionMode}
                 onChangeRiskProfile={handleChangeRiskProfile}
-                onConfigure={() => {}}
+                onConfigure={handleConfigureStrategy}
                 onViewStats={async (id) => {
                   const res = await arbFarmService.getCurveStrategyStats(id);
                   if (res.success && res.data) {
@@ -836,6 +870,17 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
           }}
           onSuccess={onSuccess}
           onError={onError}
+        />
+      )}
+
+      {configStrategy && (
+        <CurveStrategyConfigModal
+          strategy={configStrategy}
+          curveParams={getDefaultCurveParams(configStrategy.id)}
+          onClose={handleCloseConfigModal}
+          onSuccess={onSuccess}
+          onError={onError}
+          onUpdate={handleConfigUpdate}
         />
       )}
     </div>

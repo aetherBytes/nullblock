@@ -114,6 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let agent_keys = vec![
         ("hecate", "openrouter", "REDACTED_OPENROUTER_KEY_1", "HECATE Primary Key"),
         ("siren", "openrouter", "REDACTED_OPENROUTER_KEY_2", "Siren Primary Key"),
+        ("arb-farm", "openrouter", "REDACTED_OPENROUTER_KEY_3", "ArbFarm Consensus Key"),
     ];
 
     for (agent_name, provider, api_key, key_name) in agent_keys {

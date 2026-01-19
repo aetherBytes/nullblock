@@ -1621,12 +1621,14 @@ export interface ExitConfig {
 
 export interface OpenPosition {
   id: string;
+  edge_id?: string;
   token_mint: string;
   token_symbol?: string;
   venue: string;
   strategy_id?: string;
   entry_price: number;
   entry_amount_sol: number;
+  entry_tx_signature?: string;
   current_price?: number;
   unrealized_pnl?: number;
   unrealized_pnl_percent?: number;
@@ -1720,3 +1722,100 @@ export const TAB_ICONS: Record<ArbFarmView, string> = {
   'kol-tracker': '👥',
   settings: '⚙️',
 };
+
+// ============================================================================
+// Position Exposure & Monitor Types
+// ============================================================================
+
+export interface PositionExposure {
+  sol_exposure: number;
+  usdc_exposure: number;
+  usdt_exposure: number;
+  total_exposure_sol: number;
+}
+
+export interface PositionHistoryItem {
+  id: string;
+  token_mint: string;
+  token_symbol?: string;
+  venue: string;
+  entry_price: number;
+  exit_price: number;
+  entry_amount_sol: number;
+  realized_pnl: number;
+  realized_pnl_percent: number;
+  exit_type: string;
+  hold_duration_minutes: number;
+  opened_at: string;
+  closed_at: string;
+}
+
+export interface PositionHistoryResponse {
+  positions: PositionHistoryItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface MonitorStatus {
+  monitoring_active: boolean;
+  price_check_interval_secs: number;
+  exit_slippage_bps: number;
+  active_positions: number;
+  pending_exit_signals: number;
+}
+
+export interface WalletTokenHolding {
+  mint: string;
+  balance: number;
+  decimals: number;
+  symbol?: string;
+}
+
+export interface ReconcileResult {
+  tracked_positions: number;
+  discovered_tokens: WalletTokenHolding[];
+  orphaned_positions: string[];
+  message: string;
+}
+
+// ============================================================================
+// Threat Management Types
+// ============================================================================
+
+export interface WhitelistedEntity {
+  id: string;
+  entity_type: string;
+  address: string;
+  reason: string;
+  added_by: string;
+  added_at: string;
+}
+
+export interface WatchedEntity {
+  id: string;
+  entity_type: string;
+  address: string;
+  reason?: string;
+  added_at: string;
+  last_score?: number;
+  last_checked_at?: string;
+}
+
+export interface ThreatHistoryItem {
+  id: string;
+  mint: string;
+  score: number;
+  factors: ThreatFactors;
+  checked_at: string;
+}
+
+export interface ThreatStats {
+  total_checks: number;
+  checks_last_24h: number;
+  blocked_count: number;
+  whitelisted_count: number;
+  watched_count: number;
+  avg_score: number;
+  high_risk_detected: number;
+}

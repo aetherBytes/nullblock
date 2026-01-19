@@ -99,6 +99,21 @@ pub mod trade {
     pub const FAILED: &str = "arb.trade.failed";
 }
 
+pub mod position {
+    pub const ALL: &str = "arb.position.*";
+    pub const OPENED: &str = "arb.position.opened";
+    pub const UPDATED: &str = "arb.position.updated";
+    pub const CLOSED: &str = "arb.position.closed";
+    pub const EXIT_PENDING: &str = "arb.position.exit_pending";
+    pub const EXIT_FAILED: &str = "arb.position.exit_failed";
+    pub const STOP_LOSS_TRIGGERED: &str = "arb.position.sl_triggered";
+    pub const TAKE_PROFIT_TRIGGERED: &str = "arb.position.tp_triggered";
+    pub const TRAILING_STOP_TRIGGERED: &str = "arb.position.trailing_triggered";
+    pub const MOMENTUM_EXIT: &str = "arb.position.momentum_exit";
+    pub const EMERGENCY_EXIT: &str = "arb.position.emergency_exit";
+    pub const BULK_CLEARED: &str = "arb.position.bulk_cleared";
+}
+
 pub mod helius {
     pub const ALL: &str = "arb.helius.*";
 

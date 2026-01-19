@@ -3,10 +3,11 @@ import styles from '../arbfarm.module.scss';
 import { arbFarmService } from '../../../../common/services/arbfarm-service';
 import type {
   PnLSummary,
-  LearningInsight,
   OpenPosition,
   PositionStats,
   WalletBalanceResponse,
+  PositionExposure,
+  MonitorStatus,
 } from '../../../../types/arbfarm';
 
 interface HomeTabProps {
@@ -24,14 +25,22 @@ interface HomeTabProps {
     timestamp: string;
     payload?: Record<string, unknown>;
   }>;
+  liveTrades?: Array<{
+    id: string;
+    edge_id: string;
+    tx_signature?: string;
+    entry_price: number;
+    executed_at: string;
+  }>;
 }
 
-const HomeTab: React.FC<HomeTabProps> = ({ recentEvents }) => {
+const HomeTab: React.FC<HomeTabProps> = ({ recentEvents, liveTrades }) => {
   const [pnlSummary, setPnlSummary] = useState<PnLSummary | null>(null);
-  const [insights, setInsights] = useState<LearningInsight[]>([]);
   const [realPositions, setRealPositions] = useState<OpenPosition[]>([]);
   const [positionStats, setPositionStats] = useState<PositionStats | null>(null);
   const [walletBalance, setWalletBalance] = useState<WalletBalanceResponse | null>(null);
+  const [exposure, setExposure] = useState<PositionExposure | null>(null);
+  const [monitorStatus, setMonitorStatus] = useState<MonitorStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [closingPosition, setClosingPosition] = useState<string | null>(null);
   const [editingExitConfig, setEditingExitConfig] = useState<string | null>(null);
@@ -41,21 +50,21 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents }) => {
     trailing_stop_percent: 0,
   });
   const [sellingAll, setSellingAll] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+  const [lastPositionRefresh, setLastPositionRefresh] = useState<number>(0);
 
   const fetchData = useCallback(async () => {
     try {
-      const [pnlRes, insightsRes, positionsRes, balanceRes] = await Promise.all([
+      const [pnlRes, positionsRes, balanceRes, exposureRes, monitorRes] = await Promise.all([
         arbFarmService.getPnLSummary(),
-        arbFarmService.getLearningInsights(),
         arbFarmService.getPositions(),
         arbFarmService.getWalletBalance(),
+        arbFarmService.getPositionExposure(),
+        arbFarmService.getMonitorStatus(),
       ]);
 
       if (pnlRes.success && pnlRes.data) {
         setPnlSummary(pnlRes.data);
-      }
-      if (insightsRes.success && insightsRes.data) {
-        setInsights(insightsRes.data.insights || []);
       }
       if (positionsRes.success && positionsRes.data) {
         setRealPositions(positionsRes.data.positions || []);
@@ -63,6 +72,12 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents }) => {
       }
       if (balanceRes.success && balanceRes.data) {
         setWalletBalance(balanceRes.data);
+      }
+      if (exposureRes.success && exposureRes.data) {
+        setExposure(exposureRes.data);
+      }
+      if (monitorRes.success && monitorRes.data) {
+        setMonitorStatus(monitorRes.data);
       }
     } catch (error) {
       console.error('Failed to fetch home tab data:', error);
@@ -77,6 +92,21 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents }) => {
     const interval = setInterval(fetchData, 15000);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  useEffect(() => {
+    const positionEvents = recentEvents.filter(e =>
+      e.event_type.includes('position') ||
+      e.event_type.includes('edge_executed') ||
+      e.event_type.includes('auto_execution')
+    );
+    if (positionEvents.length > 0) {
+      const latestEventTime = Math.max(...positionEvents.map(e => new Date(e.timestamp).getTime()));
+      if (latestEventTime > lastPositionRefresh) {
+        setLastPositionRefresh(latestEventTime);
+        fetchData();
+      }
+    }
+  }, [recentEvents, fetchData, lastPositionRefresh]);
 
   const handleClosePosition = async (positionId: string, exitPercent: number = 100) => {
     setClosingPosition(positionId);
@@ -119,8 +149,40 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents }) => {
     }
   };
 
-  const formatPnL = (value: number): string => {
-    const formatted = value >= 0 ? `+${value.toFixed(4)}` : value.toFixed(4);
+  const handleReconcile = async () => {
+    setReconciling(true);
+    try {
+      const res = await arbFarmService.reconcilePositions();
+      if (res.success && res.data) {
+        console.log('Reconciliation result:', res.data);
+      }
+      await fetchData();
+    } catch (error) {
+      console.error('Failed to reconcile:', error);
+    } finally {
+      setReconciling(false);
+    }
+  };
+
+  const handleToggleMonitor = async () => {
+    try {
+      if (monitorStatus?.monitoring_active) {
+        await arbFarmService.stopPositionMonitor();
+      } else {
+        await arbFarmService.startPositionMonitor();
+      }
+      const res = await arbFarmService.getMonitorStatus();
+      if (res.success && res.data) {
+        setMonitorStatus(res.data);
+      }
+    } catch (error) {
+      console.error('Failed to toggle monitor:', error);
+    }
+  };
+
+  const formatPnL = (value: number | null | undefined): string => {
+    const safeValue = value ?? 0;
+    const formatted = safeValue >= 0 ? `+${safeValue.toFixed(4)}` : safeValue.toFixed(4);
     return `${formatted} SOL`;
   };
 
@@ -149,7 +211,12 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents }) => {
   if (loading) {
     return (
       <div className={styles.dashboardView}>
-        <div className={styles.loadingSpinner}>Loading...</div>
+        <div className={styles.loadingContainer}>
+          <div className={styles.loadingSpinner}>
+            <div className={styles.spinnerRing}></div>
+          </div>
+          <span className={styles.loadingText}>Loading dashboard data...</span>
+        </div>
       </div>
     );
   }
@@ -162,7 +229,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents }) => {
           <h3 className={styles.cardTitle}>Wallet Balance</h3>
           <div className={styles.balanceDisplay}>
             <span className={styles.balanceAmount}>
-              {walletBalance ? walletBalance.balance_sol.toFixed(4) : '0.0000'} SOL
+              {(walletBalance?.balance_sol ?? 0).toFixed(4)} SOL
             </span>
           </div>
           <div className={styles.quickActions}>
@@ -176,97 +243,159 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents }) => {
           </div>
         </div>
 
-        {/* P&L Summary Card */}
+        {/* Capital Exposure Card */}
         <div className={styles.homeCard}>
-          <h3 className={styles.cardTitle}>P&L Summary</h3>
-          <div className={styles.pnlGrid}>
-            <div className={styles.pnlItem}>
-              <span className={styles.pnlLabel}>Today</span>
-              <span
-                className={`${styles.pnlValue} ${
-                  (pnlSummary?.today_sol ?? 0) >= 0 ? styles.profit : styles.loss
-                }`}
-              >
-                {formatPnL(pnlSummary?.today_sol ?? 0)}
-              </span>
-            </div>
-            <div className={styles.pnlItem}>
-              <span className={styles.pnlLabel}>Week</span>
-              <span
-                className={`${styles.pnlValue} ${
-                  (pnlSummary?.week_sol ?? 0) >= 0 ? styles.profit : styles.loss
-                }`}
-              >
-                {formatPnL(pnlSummary?.week_sol ?? 0)}
-              </span>
-            </div>
-            <div className={styles.pnlItem}>
-              <span className={styles.pnlLabel}>Total</span>
-              <span
-                className={`${styles.pnlValue} ${
-                  (pnlSummary?.total_sol ?? 0) >= 0 ? styles.profit : styles.loss
-                }`}
-              >
-                {formatPnL(pnlSummary?.total_sol ?? 0)}
-              </span>
-            </div>
-          </div>
-          <div className={styles.pnlStats}>
-            <span>
-              Win Rate: {(pnlSummary?.win_rate ?? 0).toFixed(0)}% ({pnlSummary?.wins ?? 0}/
-              {pnlSummary?.total_trades ?? 0})
-            </span>
-            {pnlSummary?.avg_hold_minutes ? (
-              <span>Avg Hold: {pnlSummary.avg_hold_minutes.toFixed(0)}min</span>
-            ) : null}
-          </div>
-          {pnlSummary?.best_trade && (
-            <div className={styles.tradeHighlight}>
-              <span className={styles.profit}>Best: {pnlSummary.best_trade.symbol} +{pnlSummary.best_trade.pnl.toFixed(4)} SOL</span>
-            </div>
-          )}
-          {pnlSummary?.worst_trade && (
-            <div className={styles.tradeHighlight}>
-              <span className={styles.loss}>Worst: {pnlSummary.worst_trade.symbol} {pnlSummary.worst_trade.pnl.toFixed(4)} SOL</span>
-            </div>
+          <h3 className={styles.cardTitle}>Capital Exposure</h3>
+          {exposure ? (
+            <>
+              <div className={styles.exposureGrid}>
+                <div className={styles.exposureItem}>
+                  <span className={styles.exposureLabel}>SOL</span>
+                  <span className={styles.exposureValue}>{(exposure.sol_exposure ?? 0).toFixed(4)}</span>
+                </div>
+                <div className={styles.exposureItem}>
+                  <span className={styles.exposureLabel}>USDC</span>
+                  <span className={styles.exposureValue}>{(exposure.usdc_exposure ?? 0).toFixed(2)}</span>
+                </div>
+                <div className={styles.exposureItem}>
+                  <span className={styles.exposureLabel}>USDT</span>
+                  <span className={styles.exposureValue}>{(exposure.usdt_exposure ?? 0).toFixed(2)}</span>
+                </div>
+              </div>
+              <div className={styles.exposureBreakdown}>
+                <span className={styles.breakdownTitle}>Total Exposure (in SOL):</span>
+                <div className={styles.breakdownRow}>
+                  <span>Combined</span>
+                  <span>{(exposure.total_exposure_sol ?? 0).toFixed(4)} SOL</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className={styles.emptyState}>No exposure data</div>
           )}
         </div>
 
-        {/* Position Stats Card */}
+        {/* Monitor Status Card */}
         <div className={styles.homeCard}>
-          <h3 className={styles.cardTitle}>Position Stats</h3>
-          {positionStats ? (
-            <div className={styles.statsGrid}>
-              <div className={styles.statItem}>
-                <span className={styles.statLabel}>Active</span>
-                <span className={styles.statValue}>{positionStats.active_positions}</span>
+          <h3 className={styles.cardTitle}>Position Monitor</h3>
+          <div className={styles.monitorStatus}>
+            <span className={`${styles.statusIndicator} ${monitorStatus?.monitoring_active ? styles.running : styles.stopped}`}>
+              {monitorStatus?.monitoring_active ? '● Running' : '○ Stopped'}
+            </span>
+            <button
+              className={`${styles.actionButton} ${monitorStatus?.monitoring_active ? styles.warning : styles.primary}`}
+              onClick={handleToggleMonitor}
+            >
+              {monitorStatus?.monitoring_active ? 'Stop' : 'Start'}
+            </button>
+          </div>
+          {monitorStatus && (
+            <div className={styles.monitorStats}>
+              <div className={styles.monitorStatItem}>
+                <span className={styles.monitorStatLabel}>Active Positions</span>
+                <span className={styles.monitorStatValue}>{monitorStatus.active_positions}</span>
               </div>
-              <div className={styles.statItem}>
-                <span className={styles.statLabel}>Opened</span>
-                <span className={styles.statValue}>{positionStats.total_positions_opened}</span>
+              <div className={styles.monitorStatItem}>
+                <span className={styles.monitorStatLabel}>Pending Exits</span>
+                <span className={styles.monitorStatValue}>{monitorStatus.pending_exit_signals}</span>
               </div>
-              <div className={styles.statItem}>
-                <span className={styles.statLabel}>Closed</span>
-                <span className={styles.statValue}>{positionStats.total_positions_closed}</span>
+              <div className={styles.monitorStatItem}>
+                <span className={styles.monitorStatLabel}>Check Interval</span>
+                <span className={styles.monitorStatValue}>{monitorStatus.price_check_interval_secs}s</span>
               </div>
-              <div className={styles.statItem}>
-                <span className={styles.statLabel}>Stop Losses</span>
-                <span className={styles.statValue}>{positionStats.stop_losses_triggered}</span>
-              </div>
-              <div className={styles.statItem}>
-                <span className={styles.statLabel}>Take Profits</span>
-                <span className={styles.statValue}>{positionStats.take_profits_triggered}</span>
-              </div>
-              <div className={styles.statItem}>
-                <span className={styles.statLabel}>Unrealized</span>
-                <span className={`${styles.statValue} ${positionStats.total_unrealized_pnl >= 0 ? styles.profit : styles.loss}`}>
-                  {formatPnL(positionStats.total_unrealized_pnl)}
-                </span>
+              <div className={styles.monitorStatItem}>
+                <span className={styles.monitorStatLabel}>Exit Slippage</span>
+                <span className={styles.monitorStatValue}>{monitorStatus.exit_slippage_bps} bps</span>
               </div>
             </div>
-          ) : (
-            <div className={styles.emptyState}>No stats available</div>
           )}
+          <div className={styles.quickActions}>
+            <button
+              className={styles.actionButton}
+              onClick={handleReconcile}
+              disabled={reconciling}
+            >
+              {reconciling ? 'Syncing...' : 'Sync Wallet'}
+            </button>
+          </div>
+        </div>
+
+        {/* Performance Card (merged P&L + Position Stats) */}
+        <div className={`${styles.homeCard} ${styles.wideCard}`}>
+          <h3 className={styles.cardTitle}>Performance</h3>
+          <div className={styles.performanceGrid}>
+            <div className={styles.pnlSection}>
+              <div className={styles.pnlGrid}>
+                <div className={styles.pnlItem}>
+                  <span className={styles.pnlLabel}>Today</span>
+                  <span
+                    className={`${styles.pnlValue} ${
+                      (pnlSummary?.today_sol ?? 0) >= 0 ? styles.profit : styles.loss
+                    }`}
+                  >
+                    {formatPnL(pnlSummary?.today_sol ?? 0)}
+                  </span>
+                </div>
+                <div className={styles.pnlItem}>
+                  <span className={styles.pnlLabel}>Week</span>
+                  <span
+                    className={`${styles.pnlValue} ${
+                      (pnlSummary?.week_sol ?? 0) >= 0 ? styles.profit : styles.loss
+                    }`}
+                  >
+                    {formatPnL(pnlSummary?.week_sol ?? 0)}
+                  </span>
+                </div>
+                <div className={styles.pnlItem}>
+                  <span className={styles.pnlLabel}>Total</span>
+                  <span
+                    className={`${styles.pnlValue} ${
+                      (pnlSummary?.total_sol ?? 0) >= 0 ? styles.profit : styles.loss
+                    }`}
+                  >
+                    {formatPnL(pnlSummary?.total_sol ?? 0)}
+                  </span>
+                </div>
+                {positionStats && (
+                  <div className={styles.pnlItem}>
+                    <span className={styles.pnlLabel}>Unrealized</span>
+                    <span className={`${styles.pnlValue} ${positionStats.total_unrealized_pnl >= 0 ? styles.profit : styles.loss}`}>
+                      {formatPnL(positionStats.total_unrealized_pnl)}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className={styles.pnlStats}>
+                <span>
+                  Win Rate: {(pnlSummary?.win_rate ?? 0).toFixed(0)}% ({pnlSummary?.wins ?? 0}/{pnlSummary?.total_trades ?? 0})
+                </span>
+                {pnlSummary?.avg_hold_minutes != null && (
+                  <span>Avg Hold: {(pnlSummary.avg_hold_minutes ?? 0).toFixed(0)}min</span>
+                )}
+                {positionStats && (
+                  <>
+                    <span>SL: {positionStats.stop_losses_triggered}</span>
+                    <span>TP: {positionStats.take_profits_triggered}</span>
+                  </>
+                )}
+              </div>
+            </div>
+            {positionStats && (
+              <div className={styles.positionStatsSection}>
+                <div className={styles.miniStatsRow}>
+                  <span className={styles.miniStat}>
+                    <strong>{positionStats.active_positions}</strong> Active
+                  </span>
+                  <span className={styles.miniStat}>
+                    <strong>{positionStats.total_positions_opened}</strong> Opened
+                  </span>
+                  <span className={styles.miniStat}>
+                    <strong>{positionStats.total_positions_closed}</strong> Closed
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Active Positions Card */}
@@ -295,11 +424,34 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents }) => {
                         {pnlPct.toFixed(1)}%
                       </span>
                     </div>
+                    <div className={styles.positionFlow}>
+                      <span className={styles.flowItem} title={position.strategy_id}>
+                        Strategy: {position.strategy_id?.slice(0, 6) || 'N/A'}
+                      </span>
+                      <span className={styles.flowArrow}>→</span>
+                      <span className={styles.flowItem} title={position.edge_id}>
+                        Edge: {position.edge_id?.slice(0, 6) || 'N/A'}
+                      </span>
+                      {position.entry_tx_signature && (
+                        <>
+                          <span className={styles.flowArrow}>→</span>
+                          <a
+                            href={`https://solscan.io/tx/${position.entry_tx_signature}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.flowLink}
+                            title={position.entry_tx_signature}
+                          >
+                            TX: {position.entry_tx_signature.slice(0, 6)}...
+                          </a>
+                        </>
+                      )}
+                    </div>
                     <div className={styles.positionDetails}>
-                      <span>Entry: {position.entry_amount_sol.toFixed(4)} SOL</span>
-                      <span>SL: {position.exit_config.stop_loss_percent}%</span>
-                      <span>TP: {position.exit_config.take_profit_percent}%</span>
-                      {position.exit_config.trailing_stop_percent && (
+                      <span>Entry: {(position.entry_amount_sol ?? 0).toFixed(4)} SOL</span>
+                      <span>SL: {position.exit_config?.stop_loss_percent ?? 10}%</span>
+                      <span>TP: {position.exit_config?.take_profit_percent ?? 50}%</span>
+                      {position.exit_config?.trailing_stop_percent && (
                         <span>Trail: {position.exit_config.trailing_stop_percent}%</span>
                       )}
                     </div>
@@ -349,9 +501,9 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents }) => {
                           className={styles.editButton}
                           onClick={() => {
                             setExitConfigForm({
-                              stop_loss_percent: position.exit_config.stop_loss_percent,
-                              take_profit_percent: position.exit_config.take_profit_percent,
-                              trailing_stop_percent: position.exit_config.trailing_stop_percent || 0,
+                              stop_loss_percent: position.exit_config?.stop_loss_percent ?? 10,
+                              take_profit_percent: position.exit_config?.take_profit_percent ?? 50,
+                              trailing_stop_percent: position.exit_config?.trailing_stop_percent ?? 0,
                             });
                             setEditingExitConfig(position.id);
                           }}
@@ -381,40 +533,67 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents }) => {
           </div>
         </div>
 
-        {/* Recent Trades Card */}
-        {pnlSummary?.recent_trades && pnlSummary.recent_trades.length > 0 && (
-          <div className={styles.homeCard}>
-            <h3 className={styles.cardTitle}>Recent Trades</h3>
-            <div className={styles.recentTradesList}>
-              {pnlSummary.recent_trades.map((trade) => (
-                <div key={trade.id} className={styles.recentTradeItem}>
-                  <span className={styles.tradeSymbol}>{trade.symbol}</span>
-                  <span className={`${styles.tradePnl} ${trade.pnl >= 0 ? styles.profit : styles.loss}`}>
-                    {trade.pnl >= 0 ? '+' : ''}{trade.pnl.toFixed(4)} ({trade.pnl_percent.toFixed(1)}%)
-                  </span>
-                  <span className={styles.tradeExit}>{trade.exit_type}</span>
-                  <span className={styles.tradeTime}>{trade.time_ago}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Learning Insights Card */}
+        {/* Trade Activity Card (merged Recent Trades + Live Feed) */}
         <div className={styles.homeCard}>
-          <h3 className={styles.cardTitle}>Learning Insights</h3>
-          <div className={styles.insightsList}>
-            {insights.length === 0 ? (
-              <div className={styles.emptyState}>No insights yet</div>
-            ) : (
-              insights.slice(0, 5).map((insight, i) => (
-                <div key={i} className={styles.insightItem}>
-                  <span className={styles.insightBullet}>
-                    {insight.insight_type === 'risk' ? '!' : insight.insight_type === 'performance' ? '*' : '-'}
-                  </span>
-                  <span className={styles.insightText}>{insight.text}</span>
+          <h3 className={styles.cardTitle}>
+            {liveTrades && liveTrades.length > 0 && (
+              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', marginRight: '8px', animation: 'pulse 2s infinite' }} />
+            )}
+            Trade Activity
+          </h3>
+          <div className={styles.tradeActivityList}>
+            {liveTrades && liveTrades.length > 0 && (
+              <div className={styles.liveTradesSection}>
+                <span className={styles.sectionLabel}>Live</span>
+                {liveTrades.slice(0, 3).map((trade, i) => (
+                  <div key={trade.id || `live-${i}`} className={styles.activityItem}>
+                    <span className={styles.activityTime}>
+                      {formatTime(trade.executed_at)}
+                    </span>
+                    <span className={styles.activityText}>
+                      {trade.tx_signature ? (
+                        <a
+                          href={`https://solscan.io/tx/${trade.tx_signature}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#8b5cf6' }}
+                        >
+                          {trade.tx_signature.slice(0, 12)}...
+                        </a>
+                      ) : (
+                        trade.edge_id.slice(0, 8)
+                      )}
+                      {' - '}
+                      {trade.entry_price > 0 ? `${trade.entry_price.toFixed(4)} SOL` : 'Pending'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {pnlSummary?.recent_trades && pnlSummary.recent_trades
+              .filter(trade => trade.exit_type !== 'Emergency')
+              .length > 0 && (
+              <div className={styles.recentTradesSection}>
+                <span className={styles.sectionLabel}>Recent</span>
+                <div className={styles.recentTradesList}>
+                  {pnlSummary.recent_trades
+                    .filter(trade => trade.exit_type !== 'Emergency')
+                    .slice(0, 5)
+                    .map((trade, idx) => (
+                    <div key={trade.id || `trade-${idx}`} className={styles.recentTradeItem}>
+                      <span className={styles.tradeSymbol}>{trade.symbol}</span>
+                      <span className={`${styles.tradePnl} ${(trade.pnl ?? 0) >= 0 ? styles.profit : styles.loss}`}>
+                        {(trade.pnl ?? 0) >= 0 ? '+' : ''}{(trade.pnl ?? 0).toFixed(4)} ({(trade.pnl_percent ?? 0).toFixed(1)}%)
+                      </span>
+                      <span className={styles.tradeExit}>{trade.exit_type}</span>
+                    </div>
+                  ))}
                 </div>
-              ))
+              </div>
+            )}
+            {(!liveTrades || liveTrades.length === 0) &&
+             (!pnlSummary?.recent_trades || pnlSummary.recent_trades.filter(t => t.exit_type !== 'Emergency').length === 0) && (
+              <div className={styles.emptyState}>No trade activity yet</div>
             )}
           </div>
         </div>

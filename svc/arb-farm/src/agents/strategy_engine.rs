@@ -111,6 +111,26 @@ impl StrategyEngine {
         }
     }
 
+    pub async fn set_execution_mode(&self, strategy_id: Uuid, execution_mode: String) -> AppResult<Strategy> {
+        let mut strategies = self.strategies.write().await;
+        if let Some(strategy) = strategies.get_mut(&strategy_id) {
+            strategy.execution_mode = execution_mode.clone();
+            strategy.updated_at = chrono::Utc::now();
+            let _ = self.event_tx.send(ArbEvent::new(
+                "strategy_execution_mode_updated",
+                EventSource::Agent(AgentType::StrategyEngine),
+                strategy_topics::UPDATED,
+                serde_json::json!({
+                    "strategy_id": strategy_id,
+                    "execution_mode": execution_mode,
+                }),
+            ));
+            Ok(strategy.clone())
+        } else {
+            Err(crate::error::AppError::NotFound(format!("Strategy {} not found", strategy_id)))
+        }
+    }
+
     pub async fn get_strategy(&self, strategy_id: Uuid) -> Option<Strategy> {
         let strategies = self.strategies.read().await;
         strategies.get(&strategy_id).cloned()

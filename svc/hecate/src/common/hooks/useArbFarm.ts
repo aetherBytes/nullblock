@@ -1087,6 +1087,28 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
           setLastSseEvent({ topic: data.topic, payload: data.payload });
 
           if (data.topic?.startsWith('arb.edge')) {
+            const payload = data.payload as Record<string, unknown>;
+
+            if (data.topic === 'arb.edge.executed' || data.topic === 'arb.edge.failed') {
+              const solSpent = (payload.sol_spent as number) || 0;
+              const newTrade: Trade = {
+                id: payload.edge_id as string || `trade-${Date.now()}`,
+                edge_id: payload.edge_id as string,
+                strategy_id: payload.strategy_id as string,
+                tx_signature: payload.signature as string,
+                bundle_id: undefined,
+                entry_price: solSpent,
+                exit_price: undefined,
+                profit_lamports: 0,
+                profit_sol: 0,
+                gas_cost_lamports: 0,
+                slippage_bps: 0,
+                executed_at: new Date().toISOString(),
+              };
+              setTrades((prev) => [newTrade, ...prev.filter(t => t.edge_id !== payload.edge_id)].slice(0, 100));
+              fetchTradeStats();
+            }
+
             fetchEdges();
           } else if (data.topic?.startsWith('arb.trade')) {
             fetchTrades();
@@ -1097,6 +1119,15 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
             fetchSwarmStatus();
           } else if (data.topic?.startsWith('arb.threat')) {
             fetchThreats();
+          } else if (data.topic?.startsWith('arb.position')) {
+            fetchDashboard();
+            fetchTrades();
+            fetchTradeStats();
+          } else if (data.topic?.startsWith('arb.approval')) {
+            fetchDashboard();
+            fetchEdges();
+          } else if (data.topic?.startsWith('arb.kol')) {
+            fetchKOLs();
           }
         } catch (err) {
           console.error('Failed to parse SSE event:', err);
@@ -1114,7 +1145,7 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
 
       eventSourceRef.current = eventSource;
     },
-    [fetchEdges, fetchTrades, fetchTradeStats, fetchScannerStatus, fetchSwarmStatus, fetchThreats],
+    [fetchDashboard, fetchEdges, fetchTrades, fetchTradeStats, fetchScannerStatus, fetchSwarmStatus, fetchThreats, fetchKOLs],
   );
 
   const disconnectSSE = useCallback(() => {

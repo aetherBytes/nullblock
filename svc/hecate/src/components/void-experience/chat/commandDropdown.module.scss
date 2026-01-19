@@ -1,0 +1,181 @@
+// Color palette - matches Hecate's void theme
+$void-blue: #00a8ff;
+$void-green: #00ff9d;
+$void-silver: #e8e8e8;
+$void-gold: #e6c200;
+$void-purple: #b967ff;
+$void-bg: rgba(10, 10, 20, 0.95);
+
+.commandDropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: $void-bg;
+  border: 1px solid rgba($void-blue, 0.3);
+  border-radius: 12px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 40px rgba($void-blue, 0.1);
+  overflow: hidden;
+  z-index: 10010;
+  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+
+  // Subtle glow effect
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba($void-blue, 0.5), transparent);
+  }
+}
+
+.dropdownHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba($void-silver, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.headerIcon {
+  font-size: 14px;
+  color: $void-blue;
+}
+
+.headerText {
+  font-size: 12px;
+  font-weight: 600;
+  color: $void-silver;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.headerHint {
+  margin-left: auto;
+  font-size: 10px;
+  color: rgba($void-silver, 0.4);
+  font-family: monospace;
+}
+
+.commandList {
+  overflow-y: auto;
+  max-height: 260px;
+  padding: 4px;
+
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba($void-blue, 0.3);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba($void-blue, 0.5);
+    }
+  }
+}
+
+.commandItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba($void-blue, 0.1);
+  }
+
+  &.selected {
+    background: rgba($void-blue, 0.2);
+    border: 1px solid rgba($void-blue, 0.3);
+
+    .commandName {
+      color: $void-blue;
+    }
+  }
+}
+
+.categoryIcon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.commandContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.commandName {
+  font-size: 14px;
+  font-weight: 500;
+  color: $void-silver;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.commandDescription {
+  font-size: 12px;
+  color: rgba($void-silver, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.commandCategory {
+  font-size: 10px;
+  color: rgba($void-silver, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  background: rgba($void-silver, 0.05);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.highlight {
+  color: $void-blue;
+  font-weight: 600;
+}
+
+.noResults {
+  padding: 20px;
+  text-align: center;
+  color: rgba($void-silver, 0.4);
+  font-size: 13px;
+}
+
+// Animation for dropdown appearance
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.commandDropdown {
+  animation: dropdownSlide 0.15s ease-out;
+}

@@ -3,9 +3,12 @@ use std::time::Duration;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
+use chrono::Utc;
 
+use crate::engrams::EngramsClient;
+use crate::engrams::schemas::{TransactionAction, TransactionMetadata, TransactionSummary};
 use crate::error::{AppError, AppResult};
-use crate::events::{AgentType, ArbEvent, EventSource};
+use crate::events::{AgentType, ArbEvent, EventSource, topics};
 use crate::helius::HeliusSender;
 use crate::wallet::turnkey::SignRequest;
 use crate::wallet::DevWalletSigner;
@@ -28,6 +31,7 @@ pub struct PositionMonitor {
     config: MonitorConfig,
     curve_builder: Option<Arc<CurveTransactionBuilder>>,
     helius_sender: Option<Arc<HeliusSender>>,
+    engrams_client: Option<Arc<EngramsClient>>,
 }
 
 #[derive(Debug, Clone)]
@@ -42,10 +46,10 @@ pub struct MonitorConfig {
 impl Default for MonitorConfig {
     fn default() -> Self {
         Self {
-            price_check_interval_secs: 30,
-            exit_slippage_bps: 500,       // 5% - curves are volatile
+            price_check_interval_secs: 3, // Fast backup when real-time fails
+            exit_slippage_bps: 1000,      // 10% - curves are highly volatile, price moves fast
             max_exit_retries: 3,
-            emergency_slippage_bps: 1500, // 15% - aggressive for emergencies
+            emergency_slippage_bps: 1500, // 15% - reduced from 25% for better profit retention
             bundle_timeout_secs: 60,
         }
     }
@@ -67,6 +71,7 @@ impl PositionMonitor {
             config,
             curve_builder: None,
             helius_sender: None,
+            engrams_client: None,
         }
     }
 
@@ -80,6 +85,106 @@ impl PositionMonitor {
         self
     }
 
+    pub fn with_engrams(mut self, engrams_client: Arc<EngramsClient>) -> Self {
+        self.engrams_client = Some(engrams_client);
+        self
+    }
+
+    fn calculate_profit_aware_slippage(&self, position: &OpenPosition, signal: &ExitSignal) -> u16 {
+        const MIN_SLIPPAGE_BPS: u16 = 300;  // 3% floor - covers network costs
+        const MAX_SLIPPAGE_BPS: u16 = 1500; // 15% cap - reduced from 25% for better profit retention
+        const PROFIT_SACRIFICE_RATIO: f64 = 0.20; // Willing to give up 20% of profits (reduced from 30%)
+
+        let pnl_percent = if position.entry_price > 0.0 {
+            ((signal.current_price - position.entry_price) / position.entry_price) * 100.0
+        } else {
+            0.0
+        };
+
+        let calculated_slippage = if pnl_percent > 0.0 {
+            // Profitable: slippage = 30% of profit (e.g., 50% profit -> 15% slippage)
+            let profit_based = (pnl_percent * PROFIT_SACRIFICE_RATIO * 100.0) as u16;
+            profit_based.max(MIN_SLIPPAGE_BPS)
+        } else {
+            // Losing or break-even: use minimum slippage
+            MIN_SLIPPAGE_BPS
+        };
+
+        // Apply urgency multiplier for critical exits
+        let urgency_multiplier = match signal.urgency {
+            ExitUrgency::Critical => 2.0,
+            ExitUrgency::High => 1.5,
+            _ => 1.0,
+        };
+
+        let final_slippage = ((calculated_slippage as f64) * urgency_multiplier) as u16;
+
+        info!(
+            "📊 Slippage calc: PnL={:.2}% | base={}bps | urgency={:.1}x | final={}bps",
+            pnl_percent, calculated_slippage, urgency_multiplier, final_slippage.min(MAX_SLIPPAGE_BPS)
+        );
+
+        final_slippage.min(MAX_SLIPPAGE_BPS)
+    }
+
+    async fn save_exit_to_engrams(
+        &self,
+        position: &OpenPosition,
+        signal: &ExitSignal,
+        realized_pnl_sol: f64,
+        tx_signature: Option<&str>,
+        wallet_address: &str,
+    ) {
+        let Some(engrams_client) = &self.engrams_client else {
+            return;
+        };
+
+        let pnl_percent = if position.entry_amount_base > 0.0 {
+            Some((realized_pnl_sol / position.entry_amount_base) * 100.0)
+        } else {
+            None
+        };
+
+        let venue = if self.curve_builder.is_some() {
+            "pump_fun".to_string()
+        } else {
+            "jupiter".to_string()
+        };
+
+        let tx_summary = TransactionSummary {
+            tx_signature: tx_signature.unwrap_or("unknown").to_string(),
+            action: TransactionAction::Sell,
+            token_mint: position.token_mint.clone(),
+            token_symbol: position.token_symbol.clone(),
+            venue,
+            entry_sol: position.entry_amount_base,
+            exit_sol: Some(position.entry_amount_base + realized_pnl_sol),
+            pnl_sol: Some(realized_pnl_sol),
+            pnl_percent,
+            slippage_bps: self.config.exit_slippage_bps as i32,
+            execution_time_ms: 0,
+            strategy_id: Some(position.strategy_id),
+            timestamp: Utc::now(),
+            metadata: TransactionMetadata {
+                graduation_progress: None,
+                holder_count: None,
+                volume_24h_sol: None,
+                market_cap_sol: None,
+                bonding_curve_percent: None,
+            },
+        };
+
+        if let Err(e) = engrams_client.save_transaction_summary(wallet_address, &tx_summary).await {
+            warn!("Failed to save exit transaction summary engram: {}", e);
+        } else {
+            info!(
+                "📝 Saved exit transaction summary engram for {} (PnL: {:.6} SOL)",
+                &tx_signature.unwrap_or("unknown")[..12.min(tx_signature.unwrap_or("unknown").len())],
+                realized_pnl_sol
+            );
+        }
+    }
+
     pub async fn start_monitoring(&self, signer: Arc<DevWalletSigner>) {
         info!(
             "🔭 Position monitor started (checking every {}s)",
@@ -87,12 +192,76 @@ impl PositionMonitor {
         );
 
         loop {
+            // Process HIGH PRIORITY exits first (failed sells that need immediate retry)
+            if let Err(e) = self.process_priority_exits(&signer).await {
+                error!("Priority exit processing error: {}", e);
+            }
+
+            // Then check regular exit conditions
             if let Err(e) = self.check_and_process_exits(&signer).await {
                 error!("Position monitor error: {}", e);
             }
 
             tokio::time::sleep(Duration::from_secs(self.config.price_check_interval_secs)).await;
         }
+    }
+
+    async fn process_priority_exits(&self, signer: &DevWalletSigner) -> AppResult<()> {
+        let priority_ids = self.position_manager.drain_priority_exits().await;
+        if priority_ids.is_empty() {
+            return Ok(());
+        }
+
+        info!("🔥🔥🔥 Processing {} HIGH PRIORITY exit retries with maximum slippage", priority_ids.len());
+
+        for position_id in priority_ids {
+            let position = match self.position_manager.get_position(position_id).await {
+                Some(p) => p,
+                None => {
+                    warn!("Priority exit position {} no longer exists", position_id);
+                    continue;
+                }
+            };
+
+            // Fetch current price for the position
+            let current_price = if let Some(curve_builder) = &self.curve_builder {
+                match curve_builder.get_curve_state(&position.token_mint).await {
+                    Ok(state) if state.virtual_token_reserves > 0 => {
+                        state.virtual_sol_reserves as f64 / state.virtual_token_reserves as f64
+                    }
+                    _ => position.current_price,
+                }
+            } else {
+                position.current_price
+            };
+
+            // Create a CRITICAL urgency signal for priority exits
+            let signal = ExitSignal {
+                position_id,
+                reason: ExitReason::Emergency,
+                exit_percent: 100.0,
+                current_price,
+                triggered_at: chrono::Utc::now(),
+                urgency: ExitUrgency::Critical,
+            };
+
+            info!(
+                "🔥 PRIORITY RETRY: {} | Using EMERGENCY slippage ({}bps)",
+                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                self.config.emergency_slippage_bps
+            );
+
+            if let Err(e) = self.process_exit_signal(&signal, signer).await {
+                error!(
+                    "🔴 Priority exit retry failed for {}: {}",
+                    position_id, e
+                );
+                // Re-queue for another attempt
+                self.position_manager.queue_priority_exit(position_id).await;
+            }
+        }
+
+        Ok(())
     }
 
     async fn check_and_process_exits(&self, signer: &DevWalletSigner) -> AppResult<()> {
@@ -210,11 +379,7 @@ impl PositionMonitor {
             }
         };
 
-        let slippage = match signal.urgency {
-            ExitUrgency::Critical => self.config.emergency_slippage_bps,
-            ExitUrgency::High => self.config.exit_slippage_bps + 50,
-            _ => self.config.exit_slippage_bps,
-        };
+        let slippage = self.calculate_profit_aware_slippage(&position, signal);
 
         info!(
             "📤 Processing {} exit for {} | {}% @ {} | slippage: {} bps",
@@ -370,6 +535,15 @@ impl PositionMonitor {
                         pnl_percent * 100.0,
                         signal.reason
                     );
+
+                    self.save_exit_to_engrams(
+                        &position,
+                        signal,
+                        realized_pnl_sol,
+                        sign_result.signature.as_deref(),
+                        &user_wallet,
+                    )
+                    .await;
                 } else {
                     let realized_pnl_sol = effective_base * pnl_percent;
 
@@ -402,19 +576,46 @@ impl PositionMonitor {
                         pnl_percent * 100.0,
                         signal.reason
                     );
+
+                    self.save_exit_to_engrams(
+                        &position,
+                        signal,
+                        realized_pnl_sol,
+                        sign_result.signature.as_deref(),
+                        &user_wallet,
+                    )
+                    .await;
                 }
             }
             BundleState::Failed | BundleState::Dropped => {
                 warn!(
-                    "Exit bundle {} failed: {:?}",
+                    "🔴 Exit bundle {} failed: {:?} - IMMEDIATE RETRY QUEUED",
                     bundle_id, status.status
                 );
 
                 self.emit_exit_failed_event(&position, signal, &format!("{:?}", status.status))
                     .await;
+
+                // Reset position and mark for high-priority retry
+                if let Err(e) = self.position_manager.reset_position_status(signal.position_id).await {
+                    error!("Failed to reset position status for retry: {}", e);
+                } else {
+                    // Queue immediate high-priority retry with higher slippage
+                    self.position_manager.queue_priority_exit(signal.position_id).await;
+                    info!("🔥 Position {} queued for HIGH PRIORITY immediate retry", signal.position_id);
+                }
             }
             BundleState::Pending => {
-                warn!("Exit bundle {} timed out", bundle_id);
+                warn!("🔴 Exit bundle {} timed out - IMMEDIATE RETRY QUEUED", bundle_id);
+
+                // Reset position and mark for high-priority retry
+                if let Err(e) = self.position_manager.reset_position_status(signal.position_id).await {
+                    error!("Failed to reset position status for retry: {}", e);
+                } else {
+                    // Queue immediate high-priority retry with higher slippage
+                    self.position_manager.queue_priority_exit(signal.position_id).await;
+                    info!("🔥 Position {} queued for HIGH PRIORITY immediate retry after timeout", signal.position_id);
+                }
             }
         }
 
@@ -434,29 +635,61 @@ impl PositionMonitor {
         let helius_sender = self.helius_sender.as_ref()
             .ok_or_else(|| AppError::Internal("Helius sender not configured".into()))?;
 
-        // Use remaining_token_amount if available (after partial exits), otherwise entry_token_amount
-        let effective_token_amount = if position.remaining_token_amount > 0.0 {
-            position.remaining_token_amount
-        } else {
-            position.entry_token_amount
-        };
-        let token_amount = (effective_token_amount * (signal.exit_percent / 100.0)) as u64;
-        let max_retries = self.config.max_exit_retries;
-        let max_slippage: u16 = 2500; // Cap at 25%
+        // CRITICAL: Fetch ACTUAL on-chain balance instead of using tracked amount (which can be stale)
+        let actual_balance = curve_builder
+            .get_actual_token_balance(user_wallet, &position.token_mint)
+            .await
+            .unwrap_or(0);
 
+        if actual_balance == 0 {
+            warn!(
+                "⚠️ Token {} has zero on-chain balance - already sold or transferred. Closing position.",
+                &position.token_mint[..8]
+            );
+            // Close the position with zero PnL since we don't know the actual exit price
+            self.position_manager
+                .close_position(
+                    position.id,
+                    position.current_price,
+                    0.0,
+                    "AlreadySold",
+                    None,
+                )
+                .await?;
+            return Ok(());
+        }
+
+        // Use actual on-chain balance, applying exit percent
+        let token_amount = (actual_balance as f64 * (signal.exit_percent / 100.0)) as u64;
+
+        info!(
+            "📊 Actual on-chain balance: {} tokens (tracked: {:.0})",
+            actual_balance,
+            if position.remaining_token_amount > 0.0 {
+                position.remaining_token_amount
+            } else {
+                position.entry_token_amount
+            }
+        );
+        let max_retries = self.config.max_exit_retries;
         let mut current_slippage = initial_slippage;
         let mut last_error = String::new();
+        let mut used_emergency = false;
 
         for attempt in 0..=max_retries {
             if attempt > 0 {
-                // Increase slippage by 50% each retry, cap at max
-                current_slippage = (current_slippage as u32 * 150 / 100).min(max_slippage as u32) as u16;
-                info!(
-                    "🔄 Retry {} with increased slippage: {} bps",
-                    attempt, current_slippage
-                );
-                // Small delay before retry
-                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                // On ANY retry, immediately jump to emergency slippage
+                // No gradual increase - if profit-aware failed, we need max tolerance
+                if !used_emergency {
+                    current_slippage = self.config.emergency_slippage_bps;
+                    used_emergency = true;
+                    warn!(
+                        "🚨 EMERGENCY SLIPPAGE: Jumping to {}bps after failure (was {}bps)",
+                        current_slippage, initial_slippage
+                    );
+                }
+                // Brief delay before retry to let mempool clear
+                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
             }
 
             info!(
@@ -525,9 +758,11 @@ impl PositionMonitor {
                 }
             };
 
-            info!("📤 Sending curve sell via Helius (attempt {})...", attempt + 1);
+            info!("📤 Sending curve sell via Helius (attempt {}) - waiting for confirmation...", attempt + 1);
 
-            match helius_sender.send_transaction(&signed_tx, true).await {
+            // Use send_and_confirm to wait for transaction to land before closing position
+            let confirmation_timeout = Duration::from_secs(30);
+            match helius_sender.send_and_confirm(&signed_tx, confirmation_timeout).await {
                 Ok(signature) => {
                     let exit_price = signal.current_price;
                     let pnl_percent = (exit_price - position.entry_price) / position.entry_price;
@@ -577,6 +812,15 @@ impl PositionMonitor {
                             signal.reason,
                             &signature[..16]
                         );
+
+                        self.save_exit_to_engrams(
+                            position,
+                            signal,
+                            realized_pnl_sol,
+                            Some(&signature),
+                            user_wallet,
+                        )
+                        .await;
                     } else {
                         // Full exit - use remaining base for P&L if available
                         let effective_base = if position.remaining_amount_base > 0.0 {
@@ -615,6 +859,15 @@ impl PositionMonitor {
                             signal.reason,
                             &signature[..16]
                         );
+
+                        self.save_exit_to_engrams(
+                            position,
+                            signal,
+                            realized_pnl_sol,
+                            Some(&signature),
+                            user_wallet,
+                        )
+                        .await;
                     }
                     return Ok(());
                 }
@@ -637,12 +890,21 @@ impl PositionMonitor {
             }
         }
 
-        // All retries exhausted
+        // All retries exhausted - queue for high priority retry
         error!(
-            "❌ Curve exit failed after {} attempts: {}",
+            "❌ Curve exit failed after {} attempts: {} - QUEUING HIGH PRIORITY RETRY",
             max_retries + 1, last_error
         );
         self.emit_exit_failed_event(position, signal, &last_error).await;
+
+        // Reset position and queue for high-priority retry
+        if let Err(e) = self.position_manager.reset_position_status(signal.position_id).await {
+            error!("Failed to reset position status for retry: {}", e);
+        } else {
+            self.position_manager.queue_priority_exit(signal.position_id).await;
+            info!("🔥 Position {} queued for HIGH PRIORITY retry after curve exit failure", signal.position_id);
+        }
+
         Ok(())
     }
 
@@ -650,7 +912,7 @@ impl PositionMonitor {
         let event = ArbEvent::new(
             "position.exit_signal",
             EventSource::Agent(AgentType::Executor),
-            "arb.position.exit_signal",
+            topics::position::EXIT_PENDING,
             serde_json::json!({
                 "position_id": signal.position_id,
                 "reason": format!("{:?}", signal.reason),
@@ -680,7 +942,7 @@ impl PositionMonitor {
         let event = ArbEvent::new(
             "position.exit_completed",
             EventSource::Agent(AgentType::Executor),
-            "arb.position.exit_completed",
+            topics::position::CLOSED,
             serde_json::json!({
                 "position_id": position.id,
                 "edge_id": position.edge_id,
@@ -710,7 +972,7 @@ impl PositionMonitor {
         let event = ArbEvent::new(
             "position.exit_failed",
             EventSource::Agent(AgentType::Executor),
-            "arb.position.exit_failed",
+            topics::position::EXIT_FAILED,
             serde_json::json!({
                 "position_id": position.id,
                 "edge_id": position.edge_id,

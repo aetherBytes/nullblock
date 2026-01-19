@@ -193,6 +193,12 @@ impl ScannerAgent {
                                 }
                             }
                             Err(e) => {
+                                tracing::warn!(
+                                    venue_id = %venue.venue_id(),
+                                    venue_name = %venue.name(),
+                                    error = %e,
+                                    "⚠️ Scanner error for venue"
+                                );
                                 let _ = event_tx.send(ArbEvent::new(
                                     "scan_error",
                                     EventSource::Agent(AgentType::Scanner),

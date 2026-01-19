@@ -95,6 +95,14 @@ import type {
   SetRiskLevelResponse,
   OpenPosition,
   PositionsResponse,
+  PositionExposure,
+  PositionHistoryResponse,
+  MonitorStatus,
+  ReconcileResult,
+  WhitelistedEntity,
+  WatchedEntity,
+  ThreatHistoryItem,
+  ThreatStats,
 } from '../../types/arbfarm';
 
 export interface ArbFarmServiceResponse<T = unknown> {
@@ -156,16 +164,27 @@ class ArbFarmService {
         ...options,
       });
 
-      const responseJson = await response.json();
+      // Handle responses - always try parsing as JSON
+      const text = await response.text();
+      let responseJson: Record<string, unknown> | null = null;
+
+      if (text.length > 0) {
+        try {
+          responseJson = JSON.parse(text);
+        } catch {
+          // Response wasn't valid JSON, treat as empty
+        }
+      }
+
       const actualData =
-        response.ok && responseJson.data !== undefined ? responseJson.data : responseJson;
+        response.ok && responseJson?.data !== undefined ? responseJson.data : responseJson;
 
       return {
         success: response.ok,
         data: response.ok ? actualData : undefined,
         error: response.ok
           ? undefined
-          : responseJson.message || responseJson.error || 'Request failed',
+          : (responseJson?.message as string) || (responseJson?.error as string) || 'Request failed',
         timestamp: new Date(),
       };
     } catch (error) {
@@ -177,6 +196,13 @@ class ArbFarmService {
         timestamp: new Date(),
       };
     }
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+  ): Promise<ArbFarmServiceResponse<T>> {
+    return this.makeRequest<T>(endpoint, options);
   }
 
   // ============================================================================
@@ -1785,6 +1811,23 @@ class ArbFarmService {
     });
   }
 
+  async saveExecutionSettings(settings: {
+    auto_execution_enabled?: boolean;
+    auto_min_confidence?: number;
+    auto_max_position_sol?: number;
+    require_simulation?: boolean;
+  }): Promise<ArbFarmServiceResponse<{
+    auto_execution_enabled: boolean;
+    auto_min_confidence: number;
+    auto_max_position_sol: number;
+    require_simulation: boolean;
+  }>> {
+    return this.makeRequest('/execution/config', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
   // ============================================================================
   // Consensus Operations
   // ============================================================================
@@ -2319,6 +2362,279 @@ class ArbFarmService {
   async sellAllWalletTokens(): Promise<ArbFarmServiceResponse<{ success: boolean; results: Array<{ mint: string; success: boolean; error?: string }> }>> {
     return this.request<{ success: boolean; results: Array<{ mint: string; success: boolean; error?: string }> }>('/positions/sell-all', {
       method: 'POST',
+    });
+  }
+
+  // ============================================================================
+  // Position Exposure & History
+  // ============================================================================
+
+  async getPositionExposure(): Promise<ArbFarmServiceResponse<PositionExposure>> {
+    return this.request<PositionExposure>('/positions/exposure', {
+      method: 'GET',
+    });
+  }
+
+  async getPositionHistory(
+    page: number = 0,
+    pageSize: number = 20
+  ): Promise<ArbFarmServiceResponse<PositionHistoryResponse>> {
+    return this.request<PositionHistoryResponse>(`/positions/history?page=${page}&page_size=${pageSize}`, {
+      method: 'GET',
+    });
+  }
+
+  async getMonitorStatus(): Promise<ArbFarmServiceResponse<MonitorStatus>> {
+    return this.request<MonitorStatus>('/positions/monitor/status', {
+      method: 'GET',
+    });
+  }
+
+  async reconcilePositions(): Promise<ArbFarmServiceResponse<ReconcileResult>> {
+    return this.request<ReconcileResult>('/positions/reconcile', {
+      method: 'POST',
+    });
+  }
+
+  // ============================================================================
+  // Extended Threat Management
+  // ============================================================================
+
+  async listWhitelisted(): Promise<ArbFarmServiceResponse<WhitelistedEntity[]>> {
+    return this.request<WhitelistedEntity[]>('/threat/whitelist', {
+      method: 'GET',
+    });
+  }
+
+  async removeFromBlocklist(address: string): Promise<ArbFarmServiceResponse<{ success: boolean }>> {
+    return this.request<{ success: boolean }>(`/threat/blocked/${address}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async removeFromWhitelist(address: string): Promise<ArbFarmServiceResponse<{ success: boolean }>> {
+    return this.request<{ success: boolean }>(`/threat/whitelist/${address}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async listWatched(): Promise<ArbFarmServiceResponse<WatchedEntity[]>> {
+    return this.request<WatchedEntity[]>('/threat/watch', {
+      method: 'GET',
+    });
+  }
+
+  async addWatch(mint: string, reason?: string): Promise<ArbFarmServiceResponse<WatchedEntity>> {
+    return this.request<WatchedEntity>('/threat/watch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mint, reason }),
+    });
+  }
+
+  async removeWatch(mint: string): Promise<ArbFarmServiceResponse<{ success: boolean }>> {
+    return this.request<{ success: boolean }>(`/threat/watch/${mint}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getThreatHistory(mint: string): Promise<ArbFarmServiceResponse<ThreatHistoryItem[]>> {
+    return this.request<ThreatHistoryItem[]>(`/threat/score/${mint}/history`, {
+      method: 'GET',
+    });
+  }
+
+  async getThreatStats(): Promise<ArbFarmServiceResponse<ThreatStats>> {
+    return this.request<ThreatStats>('/threat/stats', {
+      method: 'GET',
+    });
+  }
+
+  // ============================================================================
+  // Additional Curve Methods
+  // ============================================================================
+
+  async getCurveParameters(mint: string): Promise<ArbFarmServiceResponse<Record<string, unknown>>> {
+    return this.request<Record<string, unknown>>(`/curves/${mint}/parameters`, {
+      method: 'GET',
+    });
+  }
+
+  // ============================================================================
+  // Position Emergency Methods
+  // ============================================================================
+
+  async emergencyCloseAll(): Promise<ArbFarmServiceResponse<{ success: boolean; closed_count: number; errors: string[] }>> {
+    return this.request<{ success: boolean; closed_count: number; errors: string[] }>('/positions/emergency-close', {
+      method: 'POST',
+    });
+  }
+
+  async cleanupExpiredApprovals(): Promise<ArbFarmServiceResponse<{ removed_count: number }>> {
+    return this.request<{ removed_count: number }>('/approvals/cleanup', {
+      method: 'POST',
+    });
+  }
+
+  // ============================================================================
+  // Autonomous Executor Methods
+  // ============================================================================
+
+  async getAutonomousExecutorStats(): Promise<ArbFarmServiceResponse<{
+    is_running: boolean;
+    total_executions: number;
+    successful_executions: number;
+    failed_executions: number;
+    total_profit_sol: number;
+    last_execution_at?: string;
+  }>> {
+    return this.request('/executor/stats', { method: 'GET' });
+  }
+
+  async listAutonomousExecutions(limit?: number): Promise<ArbFarmServiceResponse<Array<{
+    id: string;
+    edge_id: string;
+    status: string;
+    profit_sol?: number;
+    executed_at: string;
+  }>>> {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request(`/executor/executions${query}`, { method: 'GET' });
+  }
+
+  async startAutonomousExecutor(): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    return this.request('/executor/start', { method: 'POST' });
+  }
+
+  async stopAutonomousExecutor(): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    return this.request('/executor/stop', { method: 'POST' });
+  }
+
+  async listBlocked(): Promise<ArbFarmServiceResponse<import('../../types/arbfarm').BlockedEntity[]>> {
+    return this.request<import('../../types/arbfarm').BlockedEntity[]>('/threat/blocked', {
+      method: 'GET',
+    });
+  }
+
+  async isBlocked(address: string): Promise<ArbFarmServiceResponse<{ blocked: boolean }>> {
+    return this.request<{ blocked: boolean }>(`/threat/blocked/${address}/status`, {
+      method: 'GET',
+    });
+  }
+
+  async isWhitelisted(address: string): Promise<ArbFarmServiceResponse<{ whitelisted: boolean }>> {
+    return this.request<{ whitelisted: boolean }>(`/threat/whitelist/${address}/status`, {
+      method: 'GET',
+    });
+  }
+
+  async processSignals(signalIds: string[]): Promise<ArbFarmServiceResponse<{ processed: number; edges_created: number }>> {
+    return this.request<{ processed: number; edges_created: number }>('/scanner/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signal_ids: signalIds }),
+    });
+  }
+
+  async setStrategyRiskProfile(id: string, profile: import('../../types/arbfarm').RiskParams): Promise<ArbFarmServiceResponse<import('../../types/arbfarm').Strategy>> {
+    return this.request<import('../../types/arbfarm').Strategy>(`/strategies/${id}/risk-profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profile),
+    });
+  }
+
+  // ============================================================================
+  // Consensus Config & Learning Methods
+  // ============================================================================
+
+  async getConsensusConfig(): Promise<ArbFarmServiceResponse<import('../../types/consensus').ConsensusConfigResponse>> {
+    return this.request<import('../../types/consensus').ConsensusConfigResponse>('/consensus/config', {
+      method: 'GET',
+    });
+  }
+
+  async updateConsensusConfig(config: import('../../types/consensus').UpdateConsensusConfigRequest): Promise<ArbFarmServiceResponse<import('../../types/consensus').ConsensusConfigResponse>> {
+    return this.request<import('../../types/consensus').ConsensusConfigResponse>('/consensus/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+  }
+
+  async resetConsensusConfig(): Promise<ArbFarmServiceResponse<import('../../types/consensus').ConsensusConfigResponse>> {
+    return this.request<import('../../types/consensus').ConsensusConfigResponse>('/consensus/config/reset', {
+      method: 'POST',
+    });
+  }
+
+  async listConversations(limit?: number, topic?: string): Promise<ArbFarmServiceResponse<import('../../types/consensus').ConversationListResponse>> {
+    const params = new URLSearchParams();
+    if (limit) params.set('limit', limit.toString());
+    if (topic) params.set('topic', topic);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request<import('../../types/consensus').ConversationListResponse>(`/consensus/conversations${query}`, {
+      method: 'GET',
+    });
+  }
+
+  async getConversation(sessionId: string): Promise<ArbFarmServiceResponse<import('../../types/consensus').ConversationLog>> {
+    return this.request<import('../../types/consensus').ConversationLog>(`/consensus/conversations/${sessionId}`, {
+      method: 'GET',
+    });
+  }
+
+  async listRecommendations(status?: string, limit?: number): Promise<ArbFarmServiceResponse<import('../../types/consensus').RecommendationListResponse>> {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (limit) params.set('limit', limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request<import('../../types/consensus').RecommendationListResponse>(`/consensus/recommendations${query}`, {
+      method: 'GET',
+    });
+  }
+
+  async updateRecommendationStatus(recommendationId: string, status: string): Promise<ArbFarmServiceResponse<{ success: boolean }>> {
+    return this.request<{ success: boolean }>(`/consensus/recommendations/${recommendationId}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async getLearningSummary(): Promise<ArbFarmServiceResponse<import('../../types/consensus').LearningSummary>> {
+    return this.request<import('../../types/consensus').LearningSummary>('/consensus/learning', {
+      method: 'GET',
+    });
+  }
+
+  // ============================================================================
+  // Engram Browser Methods
+  // ============================================================================
+
+  async listEngrams(filter?: import('../../types/engram').EngramBrowserFilter): Promise<ArbFarmServiceResponse<import('../../types/engram').EngramListResponse>> {
+    const params = new URLSearchParams();
+    if (filter?.engram_type) params.set('engram_type', filter.engram_type);
+    if (filter?.tags && filter.tags.length > 0) params.set('tags', filter.tags.join(','));
+    if (filter?.query) params.set('query', filter.query);
+    if (filter?.limit) params.set('limit', filter.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request<import('../../types/engram').EngramListResponse>(`/consensus/engrams${query}`, {
+      method: 'GET',
+    });
+  }
+
+  async getEngramByKey(key: string): Promise<ArbFarmServiceResponse<import('../../types/engram').Engram>> {
+    return this.request<import('../../types/engram').Engram>(`/consensus/engrams/${encodeURIComponent(key)}`, {
+      method: 'GET',
+    });
+  }
+
+  async getAvailableModels(): Promise<ArbFarmServiceResponse<import('../../types/consensus').AvailableModelsResponse>> {
+    return this.request<import('../../types/consensus').AvailableModelsResponse>('/consensus/models', {
+      method: 'GET',
     });
   }
 }

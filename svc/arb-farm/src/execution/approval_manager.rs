@@ -60,6 +60,15 @@ impl ApprovalManager {
         if let Some(v) = request.emergency_exit_enabled {
             config.emergency_exit_enabled = v;
         }
+        if let Some(v) = request.auto_min_confidence {
+            config.auto_min_confidence = v;
+        }
+        if let Some(v) = request.auto_max_position_sol {
+            config.auto_max_position_sol = v;
+        }
+        if let Some(v) = request.require_simulation {
+            config.require_simulation = v;
+        }
 
         config.updated_at = Utc::now();
 
@@ -70,6 +79,9 @@ impl ApprovalManager {
             serde_json::json!({
                 "auto_execution_enabled": config.auto_execution_enabled,
                 "notify_hecate": config.notify_hecate_on_pending,
+                "auto_min_confidence": config.auto_min_confidence,
+                "auto_max_position_sol": config.auto_max_position_sol,
+                "require_simulation": config.require_simulation,
             }),
         ));
 

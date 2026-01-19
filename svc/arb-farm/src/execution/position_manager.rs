@@ -165,11 +165,11 @@ impl ExitConfig {
 
     pub fn for_discovered_with_metrics(volume_24h_sol: f64, holder_count: u32) -> Self {
         let (sl, tp, trailing, time_limit) = if volume_24h_sol > 100.0 && holder_count > 100 {
-            (20.0, 40.0, Some(10.0), 180u32)
+            (20.0, 40.0, Some(10.0), 360u32) // Extended from 180 to 360 min for high-metrics tokens
         } else if volume_24h_sol > 10.0 {
-            (25.0, 50.0, Some(15.0), 120u32)
+            (25.0, 50.0, Some(15.0), 180u32) // Extended from 120 to 180 min
         } else {
-            (30.0, 75.0, Some(20.0), 60u32)
+            (30.0, 75.0, Some(20.0), 90u32)  // Extended from 60 to 90 min
         };
 
         Self {
@@ -197,24 +197,24 @@ impl ExitConfig {
     }
 
     /// Exit config optimized for bonding curve (pump.fun/moonshot) trading
-    /// OPTIMIZED based on 50-trade performance review:
-    /// - Tighter stop loss (15%) limits drawdown vs old 20%
-    /// - Lower take profit (50%) is more achievable - 0% hit rate at 75%
-    /// - Lower partial TP (15%) takes profit sooner before momentum dies
-    /// - Tighter trailing stop (10%) locks in gains faster
-    /// - Shorter time limit (30 min) forces exit before curve goes cold
+    /// OPTIMIZED for faster profit capture:
+    /// - 10% stop loss limits drawdown
+    /// - 25% take profit is achievable target (coins often hit 5-8% then reverse)
+    /// - 5% trailing stop locks in gains quickly
+    /// - 30 min time limit forces exit before curve goes cold
+    /// - Tighter momentum thresholds protect profitable positions
     pub fn for_curve_bonding() -> Self {
         Self {
             base_currency: BaseCurrency::Sol,
             exit_mode: ExitMode::Default,
-            stop_loss_percent: Some(15.0),      // -15% stop loss (tighter than old 20%)
-            take_profit_percent: Some(50.0),    // +50% take profit (was 75% - never hit)
-            trailing_stop_percent: Some(10.0),  // 10% trailing stop (tighter than old 15%)
-            time_limit_minutes: Some(30),       // 30 min max hold (was 45)
+            stop_loss_percent: Some(10.0),      // -10% stop loss
+            take_profit_percent: Some(25.0),    // +25% take profit (achievable)
+            trailing_stop_percent: Some(5.0),   // 5% trailing stop (tight)
+            time_limit_minutes: Some(30),       // 30 min max hold
             partial_take_profit: Some(PartialTakeProfit {
-                first_target_percent: 15.0,     // Sell 50% at +15% (was 30%)
+                first_target_percent: 10.0,     // Sell 50% at +10%
                 first_exit_percent: 50.0,
-                second_target_percent: 50.0,    // Sell remaining at +50% (was 75%)
+                second_target_percent: 25.0,    // Sell remaining at +25%
                 second_exit_percent: 100.0,
             }),
             custom_exit_instructions: None,
@@ -507,6 +507,7 @@ pub struct PositionManager {
     positions_by_edge: Arc<RwLock<HashMap<Uuid, Uuid>>>,
     positions_by_token: Arc<RwLock<HashMap<String, Vec<Uuid>>>>,
     exit_signals: Arc<RwLock<Vec<ExitSignal>>>,
+    priority_exits: Arc<RwLock<Vec<Uuid>>>,
     stats: Arc<RwLock<PositionManagerStats>>,
     position_repo: Option<Arc<PositionRepository>>,
 }
@@ -530,6 +531,7 @@ impl PositionManager {
             positions_by_edge: Arc::new(RwLock::new(HashMap::new())),
             positions_by_token: Arc::new(RwLock::new(HashMap::new())),
             exit_signals: Arc::new(RwLock::new(Vec::new())),
+            priority_exits: Arc::new(RwLock::new(Vec::new())),
             stats: Arc::new(RwLock::new(PositionManagerStats::default())),
             position_repo: None,
         }
@@ -541,6 +543,7 @@ impl PositionManager {
             positions_by_edge: Arc::new(RwLock::new(HashMap::new())),
             positions_by_token: Arc::new(RwLock::new(HashMap::new())),
             exit_signals: Arc::new(RwLock::new(Vec::new())),
+            priority_exits: Arc::new(RwLock::new(Vec::new())),
             stats: Arc::new(RwLock::new(PositionManagerStats::default())),
             position_repo: Some(position_repo),
         }
@@ -874,6 +877,53 @@ impl PositionManager {
             }
         }
 
+        // Tighter exit thresholds when in profit - protect gains aggressively
+        if position.unrealized_pnl_percent > 5.0 {
+            // Exit if velocity turns negative while profitable (momentum reversal)
+            if position.momentum.velocity < 0.0 && position.momentum.momentum_decay_count >= 2 {
+                tracing::info!(
+                    position_id = %position_id,
+                    pnl_pct = position.unrealized_pnl_percent,
+                    velocity = position.momentum.velocity,
+                    decay_count = position.momentum.momentum_decay_count,
+                    "📉 Profitable position losing momentum - exiting to protect gains"
+                );
+                position.status = PositionStatus::PendingExit;
+                return Some(ExitSignal {
+                    position_id,
+                    reason: ExitReason::MomentumDecay,
+                    exit_percent: 100.0,
+                    current_price,
+                    triggered_at: now,
+                    urgency: ExitUrgency::High,
+                });
+            }
+
+            // Calculate peak PnL from high water mark
+            let peak_pnl_percent = ((position.high_water_mark - position.entry_price) / position.entry_price) * 100.0;
+            let pnl_drop_from_peak = peak_pnl_percent - position.unrealized_pnl_percent;
+
+            // Exit if dropped 3% from peak while profitable
+            if pnl_drop_from_peak > 3.0 {
+                tracing::info!(
+                    position_id = %position_id,
+                    current_pnl = position.unrealized_pnl_percent,
+                    peak_pnl = peak_pnl_percent,
+                    drop = pnl_drop_from_peak,
+                    "📉 Dropped 3%+ from peak profit - exiting to protect gains"
+                );
+                position.status = PositionStatus::PendingExit;
+                return Some(ExitSignal {
+                    position_id,
+                    reason: ExitReason::TrailingStop,
+                    exit_percent: 100.0,
+                    current_price,
+                    triggered_at: now,
+                    urgency: ExitUrgency::High,
+                });
+            }
+        }
+
         // Check momentum decay - exit if momentum has stalled or reversed
         // Only check if we're not already profitable (don't exit winners early)
         if position.unrealized_pnl_percent < 10.0 {
@@ -1087,17 +1137,69 @@ impl PositionManager {
         Ok(closed_position)
     }
 
+    pub async fn reset_position_status(&self, position_id: Uuid) -> AppResult<()> {
+        let mut positions = self.positions.write().await;
+        let position = positions
+            .get_mut(&position_id)
+            .ok_or_else(|| AppError::NotFound(format!("Position {} not found", position_id)))?;
+
+        if position.status == PositionStatus::PendingExit {
+            position.status = PositionStatus::Open;
+            info!(
+                "🔄 Position {} reset from PendingExit to Open for retry",
+                position_id
+            );
+        }
+
+        self.clear_exit_signal(position_id).await;
+
+        Ok(())
+    }
+
+    pub async fn queue_priority_exit(&self, position_id: Uuid) {
+        let mut priority_exits = self.priority_exits.write().await;
+        if !priority_exits.contains(&position_id) {
+            priority_exits.push(position_id);
+            info!(
+                "🔥 Position {} added to HIGH PRIORITY exit queue (queue size: {})",
+                position_id,
+                priority_exits.len()
+            );
+        }
+    }
+
+    pub async fn drain_priority_exits(&self) -> Vec<Uuid> {
+        let mut priority_exits = self.priority_exits.write().await;
+        let exits: Vec<Uuid> = priority_exits.drain(..).collect();
+        if !exits.is_empty() {
+            info!("🔥 Draining {} positions from HIGH PRIORITY exit queue", exits.len());
+        }
+        exits
+    }
+
+    pub async fn has_priority_exits(&self) -> bool {
+        let priority_exits = self.priority_exits.read().await;
+        !priority_exits.is_empty()
+    }
+
     pub async fn get_stats(&self) -> PositionManagerStats {
         let stats = self.stats.read().await;
         let positions = self.positions.read().await;
 
         let mut current_stats = stats.clone();
 
-        // Dynamically count only truly open positions (not orphaned, closed, etc.)
+        // Dynamically count all stats from actual position state to stay in sync
         current_stats.active_positions = positions
             .values()
             .filter(|p| p.status == PositionStatus::Open || p.status == PositionStatus::PendingExit)
             .count() as u32;
+
+        current_stats.total_positions_opened = positions.len() as u64;
+
+        current_stats.total_positions_closed = positions
+            .values()
+            .filter(|p| p.status == PositionStatus::Closed)
+            .count() as u64;
 
         current_stats.total_unrealized_pnl = positions
             .values()
@@ -1220,6 +1322,7 @@ impl Clone for PositionManager {
             positions_by_edge: self.positions_by_edge.clone(),
             positions_by_token: self.positions_by_token.clone(),
             exit_signals: self.exit_signals.clone(),
+            priority_exits: self.priority_exits.clone(),
             stats: self.stats.clone(),
             position_repo: self.position_repo.clone(),
         }
@@ -1261,7 +1364,9 @@ impl PositionManager {
                 continue;
             }
 
-            if holding.balance < 1.0 {
+            // Lower threshold to capture tokens with fractional balances
+            // 0.0001 filters dust while allowing small positions
+            if holding.balance < 0.0001 {
                 continue;
             }
 
@@ -1280,7 +1385,7 @@ impl PositionManager {
             if position.status == PositionStatus::Open {
                 let wallet_has_token = wallet_tokens
                     .iter()
-                    .any(|t| t.mint == position.token_mint && t.balance >= 1.0);
+                    .any(|t| t.mint == position.token_mint && t.balance >= 0.0001);
 
                 if !wallet_has_token {
                     warn!(

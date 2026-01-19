@@ -25,6 +25,8 @@ pub struct OnChainCurveState {
     pub is_complete: bool,
     pub creator: String,
     pub created_slot: u64,
+    #[serde(default)]
+    pub is_mayhem_mode: bool,
 }
 
 impl OnChainCurveState {
@@ -123,6 +125,23 @@ impl OnChainFetcher {
         self
     }
 
+    /// Detect which token program a mint uses by checking the mint account's owner
+    /// Returns true if Token-2022, false if standard SPL Token
+    pub async fn is_token_2022(&self, mint: &str) -> AppResult<bool> {
+        let mint_pubkey = Pubkey::from_str(mint)
+            .map_err(|e| AppError::Validation(format!("Invalid mint address: {}", e)))?;
+
+        let account = self.rpc_client
+            .get_account(&mint_pubkey)
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to fetch mint account: {}", e)))?;
+
+        let token_2022_program = Pubkey::from_str(TOKEN_2022_PROGRAM_ID)
+            .map_err(|e| AppError::Internal(format!("Invalid token-2022 program: {}", e)))?;
+
+        Ok(account.owner == token_2022_program)
+    }
+
     pub async fn get_bonding_curve_state(&self, mint: &str) -> AppResult<OnChainCurveState> {
         self.get_pump_fun_bonding_curve(mint).await
     }
@@ -173,13 +192,41 @@ impl OnChainFetcher {
         let token_total_supply = u64::from_le_bytes(account_data[40..48].try_into().unwrap());
         let is_complete = account_data[48] != 0;
 
-        let creator = if account_data.len() >= 80 {
-            Pubkey::try_from(&account_data[49..81])
-                .map(|p| p.to_string())
-                .unwrap_or_default()
+        // Creator pubkey is at bytes 49-80 (32 bytes), need at least 81 bytes
+        let creator = if account_data.len() >= 81 {
+            match Pubkey::try_from(&account_data[49..81]) {
+                Ok(p) if p != Pubkey::default() => p.to_string(),
+                _ => {
+                    tracing::warn!(
+                        mint = %mint,
+                        data_len = account_data.len(),
+                        "Bonding curve has invalid or zero creator address"
+                    );
+                    String::new()
+                }
+            }
         } else {
+            tracing::warn!(
+                mint = %mint,
+                data_len = account_data.len(),
+                "Bonding curve data too short to contain creator address"
+            );
             String::new()
         };
+
+        // Mayhem mode flag is at byte 81 (after creator pubkey)
+        let is_mayhem_mode = if account_data.len() >= 82 {
+            account_data[81] != 0
+        } else {
+            false
+        };
+
+        if is_mayhem_mode {
+            tracing::info!(
+                mint = %mint,
+                "🎲 Token has mayhem mode enabled - requires special fee recipient"
+            );
+        }
 
         Ok(OnChainCurveState {
             mint: mint.to_string(),
@@ -193,6 +240,7 @@ impl OnChainFetcher {
             is_complete,
             creator,
             created_slot: 0,
+            is_mayhem_mode,
         })
     }
 
@@ -262,12 +310,30 @@ impl OnChainFetcher {
         let mint_pubkey = Pubkey::from_str(mint)
             .map_err(|e| AppError::Validation(format!("Invalid mint address: {}", e)))?;
 
-        let ata = spl_associated_token_account::get_associated_token_address(
+        // Try standard SPL Token ATA first
+        let spl_ata = spl_associated_token_account::get_associated_token_address(
             &owner_pubkey,
             &mint_pubkey,
         );
 
-        match self.rpc_client.get_token_account_balance(&ata).await {
+        if let Ok(balance) = self.rpc_client.get_token_account_balance(&spl_ata).await {
+            if let Ok(amount) = balance.amount.parse::<u64>() {
+                if amount > 0 {
+                    return Ok(amount);
+                }
+            }
+        }
+
+        // Try Token-2022 ATA (used by pump.fun)
+        let token_2022_program = Pubkey::from_str(TOKEN_2022_PROGRAM_ID)
+            .map_err(|e| AppError::Internal(format!("Invalid token-2022 program: {}", e)))?;
+        let token_2022_ata = spl_associated_token_account::get_associated_token_address_with_program_id(
+            &owner_pubkey,
+            &mint_pubkey,
+            &token_2022_program,
+        );
+
+        match self.rpc_client.get_token_account_balance(&token_2022_ata).await {
             Ok(balance) => {
                 let amount = balance
                     .amount

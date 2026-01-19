@@ -47,6 +47,23 @@ impl ConsensusEngine {
         self
     }
 
+    pub async fn is_ready(&self) -> bool {
+        !self.default_models.is_empty()
+    }
+
+    pub async fn request_analysis(
+        &self,
+        topic: crate::engrams::schemas::ConversationTopic,
+        time_period: String,
+    ) -> AppResult<()> {
+        tracing::info!(
+            topic = ?topic,
+            time_period = %time_period,
+            "Analysis request queued (not yet fully implemented)"
+        );
+        Ok(())
+    }
+
     pub async fn request_consensus(
         &self,
         edge_id: Uuid,

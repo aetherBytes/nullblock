@@ -13,7 +13,7 @@ pub mod strategy_engine;
 
 pub use autonomous_executor::{
     AutoExecutionRecord, AutoExecutionStatus, AutoExecutorStats, AutonomousExecutor,
-    spawn_autonomous_executor,
+    spawn_autonomous_executor, start_autonomous_executor,
 };
 pub use curve_metrics::{CurveMetricsCollector, DetailedCurveMetrics, MetricsSample};
 pub use curve_scorer::{

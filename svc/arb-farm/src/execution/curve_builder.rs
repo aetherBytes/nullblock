@@ -283,12 +283,27 @@ impl CurveTransactionBuilder {
         let simulation = self.simulate_sell(params).await?;
         let min_sol = simulation.min_output;
 
+        // Detect which token program this mint uses (Token-2022 or standard SPL Token)
+        let is_token_2022 = self.on_chain_fetcher.is_token_2022(&params.mint).await?;
+        let token_program = if is_token_2022 {
+            Pubkey::from_str(TOKEN_2022_PROGRAM_ID)
+                .map_err(|e| AppError::Internal(format!("Invalid token-2022 program: {}", e)))?
+        } else {
+            spl_token::id()
+        };
+        tracing::info!(
+            mint = &params.mint[..12.min(params.mint.len())],
+            is_token_2022 = is_token_2022,
+            "Detected token program for sell"
+        );
+
         let instructions = self.create_pump_fun_sell_instructions(
             &params.mint,
             &params.user_wallet,
             &curve_state,
             params.token_amount,
             min_sol,
+            token_program,
         )?;
 
         let user_pubkey = Pubkey::from_str(&params.user_wallet)
@@ -360,8 +375,22 @@ impl CurveTransactionBuilder {
             .map_err(|e| AppError::Internal(format!("Invalid bonding curve: {}", e)))?;
         let associated_bonding_curve = Pubkey::from_str(&curve_state.associated_bonding_curve)
             .map_err(|e| AppError::Internal(format!("Invalid associated bonding curve: {}", e)))?;
+
+        // Validate creator address - required for pump.fun trades
+        if curve_state.creator.is_empty() || curve_state.creator == Pubkey::default().to_string() {
+            return Err(AppError::Internal(
+                "Cannot trade: bonding curve has no valid creator address. The curve data may be malformed.".to_string()
+            ));
+        }
+
         let creator_pubkey = Pubkey::from_str(&curve_state.creator)
-            .map_err(|e| AppError::Internal(format!("Invalid creator address: {}", e)))?;
+            .map_err(|e| AppError::Internal(format!("Invalid creator address '{}': {}", curve_state.creator, e)))?;
+
+        tracing::debug!(
+            mint = %mint,
+            creator = %curve_state.creator,
+            "Building pump.fun buy with creator"
+        );
 
         let user_token_account = get_associated_token_address_with_program_id(&user_pubkey, &mint_pubkey, &token_2022_program);
 
@@ -437,6 +466,7 @@ impl CurveTransactionBuilder {
         curve_state: &OnChainCurveState,
         token_amount: u64,
         min_sol_out: u64,
+        token_program: Pubkey,
     ) -> AppResult<Vec<Instruction>> {
         let mut instructions = Vec::new();
 
@@ -458,8 +488,6 @@ impl CurveTransactionBuilder {
             .map_err(|e| AppError::Internal(format!("Invalid event authority: {}", e)))?;
         let fee_program = Pubkey::from_str(PUMP_FUN_FEE_PROGRAM)
             .map_err(|e| AppError::Internal(format!("Invalid fee program: {}", e)))?;
-        let token_2022_program = Pubkey::from_str(TOKEN_2022_PROGRAM_ID)
-            .map_err(|e| AppError::Internal(format!("Invalid token-2022 program: {}", e)))?;
         let mint_pubkey = Pubkey::from_str(mint)
             .map_err(|e| AppError::Validation(format!("Invalid mint: {}", e)))?;
         let user_pubkey = Pubkey::from_str(user_wallet)
@@ -468,14 +496,34 @@ impl CurveTransactionBuilder {
             .map_err(|e| AppError::Internal(format!("Invalid bonding curve: {}", e)))?;
         let associated_bonding_curve = Pubkey::from_str(&curve_state.associated_bonding_curve)
             .map_err(|e| AppError::Internal(format!("Invalid associated bonding curve: {}", e)))?;
-        let creator_pubkey = Pubkey::from_str(&curve_state.creator)
-            .map_err(|e| AppError::Internal(format!("Invalid creator address: {}", e)))?;
 
-        let user_token_account = get_associated_token_address_with_program_id(&user_pubkey, &mint_pubkey, &token_2022_program);
+        // Validate creator address - if empty or invalid, we can't build the sell instruction
+        if curve_state.creator.is_empty() || curve_state.creator == Pubkey::default().to_string() {
+            return Err(AppError::Internal(
+                "Cannot sell: bonding curve has no valid creator address. The curve data may be malformed.".to_string()
+            ));
+        }
+
+        let creator_pubkey = Pubkey::from_str(&curve_state.creator)
+            .map_err(|e| AppError::Internal(format!("Invalid creator address '{}': {}", curve_state.creator, e)))?;
+
+        // Log the creator for debugging
+        tracing::debug!(
+            mint = %mint,
+            creator = %curve_state.creator,
+            "Building pump.fun sell with creator"
+        );
+
+        let user_token_account = get_associated_token_address_with_program_id(&user_pubkey, &mint_pubkey, &token_program);
 
         let (creator_vault, _) = Pubkey::find_program_address(
             &[b"creator-vault", creator_pubkey.as_ref()],
             &program_id,
+        );
+
+        tracing::debug!(
+            creator_vault = %creator_vault,
+            "Derived creator_vault PDA"
         );
 
         let (fee_config, _) = Pubkey::find_program_address(
@@ -504,7 +552,7 @@ impl CurveTransactionBuilder {
                 AccountMeta::new(user_pubkey, true),
                 AccountMeta::new_readonly(system_program::ID, false),
                 AccountMeta::new(creator_vault, false),
-                AccountMeta::new_readonly(token_2022_program, false),
+                AccountMeta::new_readonly(token_program, false),
                 AccountMeta::new_readonly(event_authority, false),
                 AccountMeta::new_readonly(program_id, false),
                 AccountMeta::new_readonly(fee_config, false),
@@ -522,6 +570,18 @@ impl CurveTransactionBuilder {
         self.on_chain_fetcher
             .get_pump_fun_bonding_curve(mint)
             .await
+    }
+
+    /// Get actual on-chain token balance for a wallet
+    pub async fn get_actual_token_balance(&self, owner: &str, mint: &str) -> AppResult<u64> {
+        self.on_chain_fetcher
+            .get_token_balance(owner, mint)
+            .await
+    }
+
+    /// Check if a mint uses Token-2022 or standard SPL Token
+    pub async fn is_token_2022(&self, mint: &str) -> AppResult<bool> {
+        self.on_chain_fetcher.is_token_2022(mint).await
     }
 }
 

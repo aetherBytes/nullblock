@@ -6,7 +6,7 @@ use tokio::sync::{broadcast, RwLock};
 use crate::agents::{
     AutonomousExecutor, CurveMetricsCollector, CurveOpportunityScorer, EngramHarvester,
     KolDiscoveryAgent, OverseerConfig, ResilienceOverseer, ScannerAgent, StrategyEngine,
-    spawn_autonomous_executor, spawn_hecate_notifier,
+    spawn_autonomous_executor, start_autonomous_executor, spawn_hecate_notifier,
 };
 use crate::handlers::engram::init_harvester;
 use crate::handlers::swarm::{init_overseer, init_circuit_breakers};
@@ -305,19 +305,19 @@ impl AppState {
             vec!["bondingcurve".to_string(), "BondingCurve".to_string()],
             "autonomous",  // Autonomous execution enabled
             RiskParams {
-                // LOW risk profile - autonomous but conservative
-                max_position_sol: 0.02,                 // Cap at 0.02 SOL (LOW risk)
+                // MEDIUM risk profile - autonomous with better capital deployment
+                max_position_sol: 0.05,                 // Increased from 0.02 to 0.05 SOL
                 daily_loss_limit_sol: 0.1,              // Max 0.1 SOL loss per day
                 min_profit_bps: 50,                     // Require 0.5% min profit
                 max_slippage_bps: 150,                  // 1.5% max slippage
                 max_risk_score: 40,                     // Conservative risk tolerance
                 require_simulation: true,               // Always simulate first
                 auto_execute_atomic: true,              // Auto-execute atomic ops
-                auto_execute_enabled: true,             // ENABLED for autonomous trading
+                auto_execute_enabled: false,            // OFF by default - user must enable
                 require_confirmation: false,            // NO confirmation needed
                 staleness_threshold_hours: 24,
                 stop_loss_percent: Some(10.0),          // 10% stop loss
-                take_profit_percent: Some(20.0),        // 20% take profit
+                take_profit_percent: Some(25.0),        // 25% take profit (achievable target)
                 trailing_stop_percent: Some(5.0),       // 5% trailing stop
                 time_limit_minutes: Some(60),           // 1 hour max hold
                 base_currency: "sol".to_string(),
@@ -342,12 +342,13 @@ impl AppState {
         }
 
         // KOL Copy Trade Strategy - use preset for copy trading
+        // Only match DEX signals - bonding curve signals should go to Curve Graduation strategy
         if let Some(kol_strategy) = get_or_create_strategy(
             &strategy_repo,
             "KOL Copy Trading",
             &default_wallet,
             "copy_trade",
-            vec!["bondingcurve".to_string(), "dexamm".to_string()],
+            vec!["dexamm".to_string(), "DexAmm".to_string()],
             "agent_directed",
             RiskParams::for_copy_trade(),
         ).await {
@@ -357,18 +358,49 @@ impl AppState {
         let strategy_count = strategy_engine.list_strategies().await.len();
         tracing::info!("✅ Strategy engine initialized with {} default strategies (persisted to DB)", strategy_count);
 
+        // NOTE: execution_mode reconciliation moved to AFTER engrams restoration (below)
+        // to ensure persisted auto_execute_enabled state is honored
+
         // Connect scanner to strategy engine for automatic signal processing
         scanner.set_strategy_engine(strategy_engine.clone()).await;
         tracing::info!("✅ Scanner connected to strategy engine (auto-processing enabled)");
 
-        // Initialize LLM consensus engine
-        let consensus_engine = if let Some(ref api_key) = config.openrouter_api_key {
-            Arc::new(ConsensusEngine::new(api_key.clone()))
+        // Initialize Erebus client for fetching agent API keys from DB
+        let erebus_client = crate::erebus::ErebusClient::new(&config.erebus_url);
+
+        // Fetch OpenRouter API key from Erebus (DB) first, fall back to env var
+        let openrouter_api_key = match erebus_client.get_openrouter_key().await {
+            Some(key) => {
+                tracing::info!("✅ Retrieved OpenRouter API key from Erebus (agent_api_keys table)");
+                Some(key)
+            }
+            None => {
+                if config.openrouter_api_key.is_some() {
+                    tracing::info!("📝 Using OpenRouter API key from environment variable (fallback)");
+                }
+                config.openrouter_api_key.clone()
+            }
+        };
+
+        // Initialize LLM consensus engine with best reasoning models from OpenRouter
+        let consensus_engine = if let Some(ref api_key) = openrouter_api_key {
+            tracing::info!("🔍 Discovering best reasoning models from OpenRouter...");
+            let discovered_models = crate::consensus::discover_best_reasoning_models(api_key).await;
+            if !discovered_models.is_empty() {
+                let model_ids: Vec<String> = discovered_models.iter().map(|m| m.model_id.clone()).collect();
+                tracing::info!("✅ Discovered {} best reasoning models:", discovered_models.len());
+                for model in &discovered_models {
+                    tracing::info!("   - {} (weight: {:.1})", model.display_name, model.weight);
+                }
+                Arc::new(ConsensusEngine::new(api_key.clone()).with_models(model_ids))
+            } else {
+                Arc::new(ConsensusEngine::new(api_key.clone()))
+            }
         } else {
             Arc::new(ConsensusEngine::new(""))
         };
-        if config.openrouter_api_key.is_some() {
-            tracing::info!("✅ Consensus engine initialized (OpenRouter multi-LLM)");
+        if openrouter_api_key.is_some() {
+            tracing::info!("✅ Consensus engine initialized (OpenRouter multi-LLM with auto-discovered models)");
         } else {
             tracing::warn!("⚠️ OpenRouter API key not configured - consensus disabled");
         }
@@ -405,6 +437,8 @@ impl AppState {
         ));
         if laserstream_client.is_configured() {
             tracing::info!("✅ LaserStream client initialized (endpoint: {})", config.helius_laserstream_url);
+            // Start reconnection monitor for auto-reconnect on disconnect
+            laserstream_client.start_reconnect_monitor();
         } else {
             tracing::warn!("⚠️ LaserStream not configured - real-time streaming disabled");
         }
@@ -419,7 +453,26 @@ impl AppState {
 
         // Restore workflow state from engrams (persisted data from previous sessions)
         if engrams_client.is_configured() {
+            tracing::info!("🔄 Starting engrams restoration for wallet: {}", default_wallet);
             let workflow_state = engrams_client.restore_workflow_state(&default_wallet).await;
+
+            tracing::info!(
+                "📦 Engrams returned: {} strategies, {} KOLs, {} avoidances, {} patterns",
+                workflow_state.strategies.len(),
+                workflow_state.discovered_kols.len(),
+                workflow_state.avoidances.len(),
+                workflow_state.patterns.len()
+            );
+
+            // Log each strategy from engrams
+            for es in &workflow_state.strategies {
+                if let Ok(risk_params) = serde_json::from_value::<RiskParams>(es.risk_params.clone()) {
+                    tracing::info!(
+                        "  └─ Engram strategy: id={}, name={}, execution_mode={}, auto_execute_enabled={}",
+                        es.strategy_id, es.name, es.execution_mode, risk_params.auto_execute_enabled
+                    );
+                }
+            }
 
             // Restore discovered KOLs
             if !workflow_state.discovered_kols.is_empty() {
@@ -439,6 +492,15 @@ impl AppState {
                                 engram_strategy.is_active
                             );
                             let _ = strategy_engine.toggle_strategy(strategy_id, engram_strategy.is_active).await;
+                        }
+
+                        // Restore execution_mode from engrams (authoritative source)
+                        if existing.execution_mode != engram_strategy.execution_mode {
+                            tracing::info!(
+                                "Restoring strategy '{}' execution_mode from engrams: {} -> {}",
+                                existing.name, existing.execution_mode, engram_strategy.execution_mode
+                            );
+                            let _ = strategy_engine.set_execution_mode(strategy_id, engram_strategy.execution_mode.clone()).await;
                         }
 
                         // Restore risk_params from engrams (authoritative source)
@@ -501,6 +563,83 @@ impl AppState {
                 workflow_state.strategies.len(),
                 workflow_state.avoidances.len(),
                 workflow_state.patterns.len()
+            );
+        } else {
+            tracing::warn!("⚠️ Engrams client not configured - skipping workflow state restoration. Strategies will use DB defaults.");
+        }
+
+        // Log strategy states BEFORE reconciliation for debugging
+        tracing::info!("📋 Pre-reconciliation strategy states:");
+        let strategies = strategy_engine.list_strategies().await;
+        for strategy in strategies.iter() {
+            tracing::info!(
+                strategy_id = %strategy.id,
+                strategy_name = %strategy.name,
+                strategy_type = %strategy.strategy_type,
+                execution_mode = %strategy.execution_mode,
+                auto_execute_enabled = strategy.risk_params.auto_execute_enabled,
+                is_active = strategy.is_active,
+                "  └─ Strategy state"
+            );
+        }
+
+        // Reconcile execution_mode with auto_execute_enabled for all strategies
+        // IMPORTANT: This runs AFTER engrams restoration to ensure persisted state is honored
+        // This ensures that if auto_execute_enabled is true, execution_mode is "autonomous"
+        let mut reconciliation_count = 0;
+        for strategy in strategies.iter() {
+            let expected_mode = if strategy.risk_params.auto_execute_enabled {
+                "autonomous"
+            } else {
+                "agent_directed"
+            };
+
+            if strategy.execution_mode != expected_mode {
+                reconciliation_count += 1;
+                tracing::info!(
+                    strategy_id = %strategy.id,
+                    strategy_name = %strategy.name,
+                    old_mode = %strategy.execution_mode,
+                    new_mode = expected_mode,
+                    auto_execute_enabled = strategy.risk_params.auto_execute_enabled,
+                    "🔧 Reconciling execution_mode to match auto_execute_enabled (post-engrams)"
+                );
+
+                // Update in-memory
+                if let Err(e) = strategy_engine.set_execution_mode(strategy.id, expected_mode.to_string()).await {
+                    tracing::warn!(error = %e, "Failed to update strategy execution_mode in memory");
+                }
+
+                // Update in database
+                use crate::database::repositories::strategies::UpdateStrategyRecord;
+                if let Err(e) = strategy_repo.update(strategy.id, UpdateStrategyRecord {
+                    name: None,
+                    venue_types: None,
+                    execution_mode: Some(expected_mode.to_string()),
+                    risk_params: None,
+                    is_active: None,
+                }).await {
+                    tracing::warn!(error = %e, "Failed to persist execution_mode reconciliation to database");
+                }
+            }
+        }
+
+        if reconciliation_count == 0 {
+            tracing::info!("✅ All strategies already have correct execution_mode (no reconciliation needed)");
+        } else {
+            tracing::info!("✅ Reconciled {} strategies' execution_mode", reconciliation_count);
+        }
+
+        // Log final strategy states AFTER reconciliation
+        tracing::info!("📋 Post-reconciliation strategy states:");
+        let final_strategies = strategy_engine.list_strategies().await;
+        for strategy in final_strategies.iter() {
+            tracing::info!(
+                strategy_id = %strategy.id,
+                strategy_name = %strategy.name,
+                execution_mode = %strategy.execution_mode,
+                auto_execute_enabled = strategy.risk_params.auto_execute_enabled,
+                "  └─ Final state"
             );
         }
 
@@ -569,11 +708,13 @@ impl AppState {
         );
         tracing::info!("✅ Curve execution engine initialized (on-chain state + tx builder)");
 
-        // Add curve support to position monitor and wrap in Arc
+        // Add curve support and engrams to position monitor and wrap in Arc
         let position_monitor = Arc::new(
-            position_monitor_base.with_curve_support(curve_builder.clone(), helius_sender.clone())
+            position_monitor_base
+                .with_curve_support(curve_builder.clone(), helius_sender.clone())
+                .with_engrams(engrams_client.clone())
         );
-        tracing::info!("✅ Position Monitor initialized with curve support (auto-exit: SL/TP/trailing/time-based + curve sell)");
+        tracing::info!("✅ Position Monitor initialized with curve support + engrams (auto-exit: SL/TP/trailing/time-based + curve sell + exit engrams)");
 
         // Initialize curve metrics collector, holder analyzer, and opportunity scorer
         let metrics_collector = Arc::new(CurveMetricsCollector::new(on_chain_fetcher.clone()));
@@ -585,7 +726,7 @@ impl AppState {
         ));
         tracing::info!("✅ Curve scoring engine initialized (metrics + holders + scorer)");
 
-        // Spawn Autonomous Executor for auto-execution of edges in autonomous mode
+        // Create Autonomous Executor (does NOT auto-start - respects user preference)
         let default_wallet_for_executor = config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
         let autonomous_executor = spawn_autonomous_executor(
             strategy_engine.clone(),
@@ -594,10 +735,49 @@ impl AppState {
             helius_sender.clone(),
             position_manager.clone(),
             risk_config.clone(),
+            engrams_client.clone(),
             event_tx.clone(),
             default_wallet_for_executor,
         );
-        tracing::info!("✅ Autonomous Executor spawned (auto-execution for autonomous strategies)");
+
+        // Check if any strategy has auto_execute_enabled - only then start the executor
+        // IMPORTANT: Also verify execution_mode matches, as executor skips non-autonomous edges
+        let strategies_for_check = strategy_engine.list_strategies().await;
+        let qualifying_strategies: Vec<_> = strategies_for_check.iter()
+            .filter(|s| s.risk_params.auto_execute_enabled && s.is_active)
+            .collect();
+
+        let should_start_executor = !qualifying_strategies.is_empty();
+
+        tracing::info!("🔍 Executor startup check:");
+        for strategy in &qualifying_strategies {
+            tracing::info!(
+                strategy_id = %strategy.id,
+                strategy_name = %strategy.name,
+                execution_mode = %strategy.execution_mode,
+                auto_execute_enabled = strategy.risk_params.auto_execute_enabled,
+                is_active = strategy.is_active,
+                "  └─ Qualifies for auto-execution"
+            );
+
+            // CRITICAL: Warn if there's a mismatch that will cause silent failures
+            if strategy.execution_mode != "autonomous" {
+                tracing::warn!(
+                    strategy_id = %strategy.id,
+                    "  ⚠️ WARNING: auto_execute_enabled=true but execution_mode='{}' - edges will be SKIPPED!",
+                    strategy.execution_mode
+                );
+            }
+        }
+
+        if should_start_executor {
+            start_autonomous_executor(autonomous_executor.clone());
+            // Sync ApprovalManager's global config with strategy state
+            approval_manager.toggle_execution(true).await;
+            tracing::info!("✅ Autonomous Executor started (user has auto-execution enabled)");
+        } else {
+            tracing::info!("✅ Autonomous Executor initialized (auto-execution disabled - waiting for user to enable)");
+        }
 
         // Initialize Real-time Position Monitor for websocket-based price updates
         let realtime_monitor = Arc::new(RealtimePositionMonitor::new(

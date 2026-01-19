@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { agentService } from '../../../common/services/agent-service';
 import { hecateAgent } from '../../../common/services/hecate-agent';
 import MarkdownRenderer from '../../common/MarkdownRenderer';
+import CommandDropdown from './CommandDropdown';
+import { useCommands, type SlashCommand } from '../../../hooks/useCommands';
 import styles from './voidChat.module.scss';
 
 interface ImageData {
@@ -136,6 +138,93 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const [showTooltip, setShowTooltip] = useState(false);
   const [hasAcknowledgedFirst, setHasAcknowledgedFirst] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+
+  // Slash command state
+  const [showCommandDropdown, setShowCommandDropdown] = useState(false);
+  const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
+  const {
+    filterCommands,
+    isToolQuery,
+    getHelpText,
+    getToolListText,
+    getMcpStatusText,
+    mcpTools,
+  } = useCommands();
+
+  // Compute filtered commands based on current input
+  const filteredCommands = input.startsWith('/') ? filterCommands(input) : [];
+
+  // Handle input changes for slash command detection
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setInput(value);
+
+    // Show dropdown when typing "/" at start
+    if (value.startsWith('/')) {
+      setShowCommandDropdown(true);
+      setCommandSelectedIndex(0);
+    } else {
+      setShowCommandDropdown(false);
+    }
+  }, []);
+
+  // Handle command selection
+  const handleCommandSelect = useCallback((command: SlashCommand) => {
+    setShowCommandDropdown(false);
+    setInput('');
+
+    // Execute built-in commands immediately
+    if (command.action === 'execute') {
+      let responseText = '';
+
+      switch (command.name) {
+        case '/help':
+          responseText = getHelpText();
+          break;
+        case '/list-tools':
+          responseText = getToolListText();
+          break;
+        case '/mcp':
+          responseText = getMcpStatusText();
+          break;
+        case '/clear':
+          setMessages([]);
+          return;
+        case '/status':
+          responseText = `## Agent Status\n\n**Active Agent**: ${activeAgent.toUpperCase()}\n**Health**: ${agentHealthStatus}\n**MCP Tools**: ${mcpTools.length} available`;
+          break;
+        default:
+          responseText = `Command ${command.name} not implemented yet.`;
+      }
+
+      // Add command response as agent message
+      const agentMsg: VoidMessage = {
+        id: `cmd-${Date.now()}`,
+        text: responseText,
+        sender: 'agent',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, agentMsg]);
+      setShowHistory(true);
+    } else if (command.action === 'tools') {
+      // Show tool list
+      const toolListText = getToolListText();
+      const agentMsg: VoidMessage = {
+        id: `tools-${Date.now()}`,
+        text: toolListText,
+        sender: 'agent',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, agentMsg]);
+      setShowHistory(true);
+    } else {
+      // Insert command as message to send to agent
+      const commandMsg = `Use the ${command.name.replace('/', '')} tool to help me.`;
+      setInput(commandMsg);
+      inputRef.current?.focus();
+    }
+  }, [activeAgent, agentHealthStatus, mcpTools.length, getHelpText, getToolListText, getMcpStatusText]);
+
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
   const pendingMessageRef = useRef<{ message: string; msgId: string } | null>(null);
@@ -230,6 +319,36 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
 
       const userMessage = input.trim();
 
+      // Close command dropdown
+      setShowCommandDropdown(false);
+
+      // Check if this is a natural language tool query
+      if (isToolQuery(userMessage)) {
+        setInput('');
+
+        // Add user message
+        const userMsg: VoidMessage = {
+          id: `user-${Date.now()}`,
+          text: userMessage,
+          sender: 'user',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, userMsg]);
+
+        // Respond with tool list
+        const toolResponse = `I have access to **${mcpTools.length} MCP tools** across various services. Here's a summary:\n\n${getToolListText()}\n\n**Tip**: Type \`/\` to see available slash commands, or ask me to use any specific tool.`;
+
+        const agentMsg: VoidMessage = {
+          id: `tools-${Date.now()}`,
+          text: toolResponse,
+          sender: 'agent',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, agentMsg]);
+        setShowHistory(true);
+        return;
+      }
+
       setInput('');
 
       // Add user message immediately
@@ -268,10 +387,52 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
         }, 150); // Reduced from 300ms
       }, 400); // Reduced from 800ms
     },
-    [input, isProcessing, energyState, hasInteracted, onFirstMessage, executeTransmission],
+    [input, isProcessing, energyState, hasInteracted, onFirstMessage, executeTransmission, isToolQuery, mcpTools.length, getToolListText],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Handle command dropdown navigation
+    if (showCommandDropdown && filteredCommands.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setCommandSelectedIndex((prev) =>
+          prev < filteredCommands.length - 1 ? prev + 1 : 0
+        );
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setCommandSelectedIndex((prev) =>
+          prev > 0 ? prev - 1 : filteredCommands.length - 1
+        );
+        return;
+      }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleCommandSelect(filteredCommands[commandSelectedIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowCommandDropdown(false);
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        // Tab autocompletes the selected command
+        setInput(filteredCommands[commandSelectedIndex].name + ' ');
+        return;
+      }
+    }
+
+    // Close dropdown on Escape even if empty
+    if (e.key === 'Escape' && showCommandDropdown) {
+      e.preventDefault();
+      setShowCommandDropdown(false);
+      return;
+    }
+
+    // Normal Enter to submit
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as unknown as React.FormEvent);
@@ -543,17 +704,27 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
                 <div className={styles.tooltipArrow} />
               </div>
             )}
+            {/* Slash command dropdown */}
+            {showCommandDropdown && (
+              <CommandDropdown
+                commands={filteredCommands}
+                selectedIndex={commandSelectedIndex}
+                onSelect={handleCommandSelect}
+                onClose={() => setShowCommandDropdown(false)}
+                query={input}
+              />
+            )}
             <textarea
               ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder={
                 agentHealthStatus === 'unhealthy'
                   ? '⚠️ Configure API keys first...'
                   : energyState === 'processing'
                     ? `Awaiting ${activeAgent} response...`
-                    : 'Chat with Hecate...'
+                    : 'Chat with Hecate... (type / for commands)'
               }
               className={styles.voidInput}
               disabled={energyState !== 'idle' || agentHealthStatus === 'unhealthy'}

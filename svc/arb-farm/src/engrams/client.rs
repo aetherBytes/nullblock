@@ -881,6 +881,491 @@ impl EngramsClient {
 
         state
     }
+
+    pub async fn save_transaction_summary(
+        &self,
+        wallet: &str,
+        summary: &crate::engrams::schemas::TransactionSummary,
+    ) -> Result<Engram, String> {
+        let key = crate::engrams::schemas::generate_transaction_key(&summary.tx_signature);
+        let content = serde_json::to_string(summary)
+            .map_err(|e| format!("Failed to serialize transaction summary: {}", e))?;
+
+        let action_str = match summary.action {
+            crate::engrams::schemas::TransactionAction::Buy => "buy",
+            crate::engrams::schemas::TransactionAction::Sell => "sell",
+        };
+
+        let metadata = serde_json::json!({
+            "type": "transaction_summary",
+            "action": action_str,
+            "venue": summary.venue,
+            "profitable": summary.pnl_sol.unwrap_or(0.0) > 0.0,
+            "execution_time_ms": summary.execution_time_ms,
+        });
+
+        let mut tags = vec![
+            "arb".to_string(),
+            "trade".to_string(),
+            "summary".to_string(),
+            summary.venue.clone(),
+            action_str.to_string(),
+        ];
+        if summary.pnl_sol.unwrap_or(0.0) > 0.0 {
+            tags.push("profit".to_string());
+        } else if summary.pnl_sol.is_some() {
+            tags.push("loss".to_string());
+        }
+
+        let request = CreateEngramRequest {
+            wallet_address: wallet.to_string(),
+            engram_type: "knowledge".to_string(),
+            key,
+            content,
+            metadata: Some(metadata),
+            tags: Some(tags),
+            is_public: Some(false),
+        };
+
+        self.create_engram(request).await
+    }
+
+    pub async fn save_execution_error(
+        &self,
+        wallet: &str,
+        error: &crate::engrams::schemas::ExecutionError,
+    ) -> Result<Engram, String> {
+        let key = crate::engrams::schemas::generate_error_key(&error.error_type, &error.timestamp);
+        let content = serde_json::to_string(error)
+            .map_err(|e| format!("Failed to serialize execution error: {}", e))?;
+
+        let error_type_str = serde_json::to_string(&error.error_type)
+            .unwrap_or_else(|_| "unknown".to_string())
+            .trim_matches('"')
+            .to_string();
+
+        let metadata = serde_json::json!({
+            "type": "execution_error",
+            "error_type": error_type_str,
+            "recoverable": error.recoverable,
+            "venue": error.context.venue,
+        });
+
+        let request = CreateEngramRequest {
+            wallet_address: wallet.to_string(),
+            engram_type: "knowledge".to_string(),
+            key,
+            content,
+            metadata: Some(metadata),
+            tags: Some(vec![
+                "arb".to_string(),
+                "error".to_string(),
+                error_type_str,
+                if error.recoverable { "recoverable".to_string() } else { "fatal".to_string() },
+            ]),
+            is_public: Some(false),
+        };
+
+        self.create_engram(request).await
+    }
+
+    pub async fn save_daily_metrics(
+        &self,
+        wallet: &str,
+        metrics: &crate::engrams::schemas::DailyMetrics,
+    ) -> Result<Engram, String> {
+        let key = crate::engrams::schemas::generate_metrics_key(&metrics.period);
+        let content = serde_json::to_string(metrics)
+            .map_err(|e| format!("Failed to serialize daily metrics: {}", e))?;
+
+        let metadata = serde_json::json!({
+            "type": "daily_metrics",
+            "period": metrics.period,
+            "total_trades": metrics.total_trades,
+            "win_rate": metrics.win_rate,
+            "total_pnl_sol": metrics.total_pnl_sol,
+        });
+
+        let request = CreateEngramRequest {
+            wallet_address: wallet.to_string(),
+            engram_type: "knowledge".to_string(),
+            key,
+            content,
+            metadata: Some(metadata),
+            tags: Some(vec![
+                "arb".to_string(),
+                "metrics".to_string(),
+                "daily".to_string(),
+                metrics.period.clone(),
+            ]),
+            is_public: Some(false),
+        };
+
+        self.upsert_engram(request).await
+    }
+
+    pub async fn save_recommendation(
+        &self,
+        wallet: &str,
+        recommendation: &crate::engrams::schemas::Recommendation,
+    ) -> Result<Engram, String> {
+        let key = crate::engrams::schemas::generate_recommendation_key(&recommendation.recommendation_id);
+        let content = serde_json::to_string(recommendation)
+            .map_err(|e| format!("Failed to serialize recommendation: {}", e))?;
+
+        let category_str = serde_json::to_string(&recommendation.category)
+            .unwrap_or_else(|_| "unknown".to_string())
+            .trim_matches('"')
+            .to_string();
+
+        let metadata = serde_json::json!({
+            "type": "recommendation",
+            "a2a_discoverable": true,
+            "schema_version": "1.0",
+            "content_type": "recommendation",
+            "category": category_str,
+            "confidence": recommendation.confidence,
+            "status": serde_json::to_string(&recommendation.status).unwrap_or_default().trim_matches('"'),
+        });
+
+        let request = CreateEngramRequest {
+            wallet_address: wallet.to_string(),
+            engram_type: "knowledge".to_string(),
+            key,
+            content,
+            metadata: Some(metadata),
+            tags: Some(vec![
+                "arb".to_string(),
+                crate::engrams::schemas::A2A_TAG_LEARNING.to_string(),
+                "recommendation".to_string(),
+                category_str,
+            ]),
+            is_public: Some(false),
+        };
+
+        self.upsert_engram(request).await
+    }
+
+    pub async fn save_conversation_log(
+        &self,
+        wallet: &str,
+        conversation: &crate::engrams::schemas::ConversationLog,
+    ) -> Result<Engram, String> {
+        let key = crate::engrams::schemas::generate_conversation_key(&conversation.session_id);
+        let content = serde_json::to_string(conversation)
+            .map_err(|e| format!("Failed to serialize conversation log: {}", e))?;
+
+        let topic_str = serde_json::to_string(&conversation.topic)
+            .unwrap_or_else(|_| "unknown".to_string())
+            .trim_matches('"')
+            .to_string();
+
+        let metadata = serde_json::json!({
+            "type": "conversation_log",
+            "a2a_discoverable": true,
+            "schema_version": "1.0",
+            "content_type": "conversation",
+            "topic": topic_str,
+            "participants": conversation.participants,
+            "message_count": conversation.messages.len(),
+            "consensus_reached": conversation.outcome.consensus_reached,
+        });
+
+        let request = CreateEngramRequest {
+            wallet_address: wallet.to_string(),
+            engram_type: "knowledge".to_string(),
+            key,
+            content,
+            metadata: Some(metadata),
+            tags: Some(vec![
+                "arb".to_string(),
+                crate::engrams::schemas::A2A_TAG_LEARNING.to_string(),
+                "conversation".to_string(),
+                topic_str,
+            ]),
+            is_public: Some(false),
+        };
+
+        self.create_engram(request).await
+    }
+
+    pub async fn get_learning_engrams(
+        &self,
+        wallet: &str,
+        category: Option<&str>,
+        limit: Option<i64>,
+    ) -> Result<Vec<Engram>, String> {
+        let mut tags = vec![crate::engrams::schemas::A2A_TAG_LEARNING.to_string()];
+        if let Some(cat) = category {
+            tags.push(cat.to_string());
+        }
+
+        let search = SearchRequest {
+            wallet_address: Some(wallet.to_string()),
+            engram_type: Some("knowledge".to_string()),
+            query: None,
+            tags: Some(tags),
+            limit: limit.or(Some(50)),
+            offset: None,
+        };
+
+        self.search_engrams(search).await
+    }
+
+    pub async fn get_recommendations(
+        &self,
+        wallet: &str,
+        status: Option<&crate::engrams::schemas::RecommendationStatus>,
+        limit: Option<i64>,
+    ) -> Result<Vec<crate::engrams::schemas::Recommendation>, String> {
+        let engrams = self.get_learning_engrams(wallet, Some("recommendation"), limit).await?;
+
+        let recommendations: Vec<crate::engrams::schemas::Recommendation> = engrams
+            .into_iter()
+            .filter_map(|e| serde_json::from_str(&e.content).ok())
+            .filter(|r: &crate::engrams::schemas::Recommendation| {
+                if let Some(s) = status {
+                    &r.status == s
+                } else {
+                    true
+                }
+            })
+            .collect();
+
+        Ok(recommendations)
+    }
+
+    pub async fn get_conversations(
+        &self,
+        wallet: &str,
+        limit: Option<i64>,
+    ) -> Result<Vec<crate::engrams::schemas::ConversationLog>, String> {
+        let engrams = self.get_learning_engrams(wallet, Some("conversation"), limit).await?;
+
+        let conversations: Vec<crate::engrams::schemas::ConversationLog> = engrams
+            .into_iter()
+            .filter_map(|e| serde_json::from_str(&e.content).ok())
+            .collect();
+
+        Ok(conversations)
+    }
+
+    pub async fn update_recommendation_status(
+        &self,
+        wallet: &str,
+        recommendation_id: &uuid::Uuid,
+        new_status: crate::engrams::schemas::RecommendationStatus,
+    ) -> Result<Engram, String> {
+        let key = crate::engrams::schemas::generate_recommendation_key(recommendation_id);
+
+        if let Some(existing) = self.get_engram_by_wallet_key(wallet, &key).await? {
+            let mut recommendation: crate::engrams::schemas::Recommendation =
+                serde_json::from_str(&existing.content)
+                    .map_err(|e| format!("Failed to parse recommendation: {}", e))?;
+
+            recommendation.status = new_status.clone();
+            if new_status == crate::engrams::schemas::RecommendationStatus::Applied {
+                recommendation.applied_at = Some(chrono::Utc::now());
+            }
+
+            let new_content = serde_json::to_string(&recommendation)
+                .map_err(|e| format!("Failed to serialize recommendation: {}", e))?;
+
+            let status_str = serde_json::to_string(&new_status)
+                .unwrap_or_default()
+                .trim_matches('"')
+                .to_string();
+
+            let mut tags = existing.tags.clone();
+            tags.retain(|t| !["pending", "acknowledged", "applied", "rejected"].contains(&t.as_str()));
+            tags.push(status_str);
+
+            self.update_engram(&existing.id, &new_content, Some(tags)).await
+        } else {
+            Err(format!("Recommendation {} not found", recommendation_id))
+        }
+    }
+
+    pub async fn get_trade_history(
+        &self,
+        wallet: &str,
+        limit: Option<i64>,
+    ) -> Result<Vec<crate::engrams::schemas::TransactionSummary>, String> {
+        let search = SearchRequest {
+            wallet_address: Some(wallet.to_string()),
+            engram_type: Some("knowledge".to_string()),
+            query: None,
+            tags: Some(vec!["trade".to_string(), "summary".to_string()]),
+            limit: limit.or(Some(100)),
+            offset: None,
+        };
+
+        let engrams = self.search_engrams(search).await?;
+
+        let trades: Vec<crate::engrams::schemas::TransactionSummary> = engrams
+            .into_iter()
+            .filter_map(|e| serde_json::from_str(&e.content).ok())
+            .collect();
+
+        Ok(trades)
+    }
+
+    pub async fn get_error_history(
+        &self,
+        wallet: &str,
+        limit: Option<i64>,
+    ) -> Result<Vec<crate::engrams::schemas::ExecutionError>, String> {
+        let search = SearchRequest {
+            wallet_address: Some(wallet.to_string()),
+            engram_type: Some("knowledge".to_string()),
+            query: None,
+            tags: Some(vec!["error".to_string()]),
+            limit: limit.or(Some(50)),
+            offset: None,
+        };
+
+        let engrams = self.search_engrams(search).await?;
+
+        let errors: Vec<crate::engrams::schemas::ExecutionError> = engrams
+            .into_iter()
+            .filter_map(|e| serde_json::from_str(&e.content).ok())
+            .collect();
+
+        Ok(errors)
+    }
+
+    pub async fn get_trade_history_with_metadata(
+        &self,
+        wallet: &str,
+        limit: Option<i64>,
+    ) -> Result<Vec<crate::engrams::schemas::TradeEngramWrapper>, String> {
+        let search = SearchRequest {
+            wallet_address: Some(wallet.to_string()),
+            engram_type: Some("knowledge".to_string()),
+            query: None,
+            tags: Some(vec!["trade".to_string(), "summary".to_string()]),
+            limit: limit.or(Some(100)),
+            offset: None,
+        };
+
+        let engrams = self.search_engrams(search).await?;
+
+        let trades: Vec<crate::engrams::schemas::TradeEngramWrapper> = engrams
+            .into_iter()
+            .filter_map(|e| {
+                let trade: crate::engrams::schemas::TransactionSummary =
+                    serde_json::from_str(&e.content).ok()?;
+                Some(crate::engrams::schemas::TradeEngramWrapper {
+                    engram_id: e.id,
+                    engram_key: e.key,
+                    tags: e.tags,
+                    created_at: e.created_at,
+                    trade,
+                })
+            })
+            .collect();
+
+        Ok(trades)
+    }
+
+    pub async fn get_recommendations_with_metadata(
+        &self,
+        wallet: &str,
+        status: Option<&crate::engrams::schemas::RecommendationStatus>,
+        limit: Option<i64>,
+    ) -> Result<Vec<crate::engrams::schemas::RecommendationEngramWrapper>, String> {
+        let engrams = self.get_learning_engrams(wallet, Some("recommendation"), limit).await?;
+
+        let recommendations: Vec<crate::engrams::schemas::RecommendationEngramWrapper> = engrams
+            .into_iter()
+            .filter_map(|e| {
+                let rec: crate::engrams::schemas::Recommendation =
+                    serde_json::from_str(&e.content).ok()?;
+                if let Some(s) = status {
+                    if &rec.status != s {
+                        return None;
+                    }
+                }
+                Some(crate::engrams::schemas::RecommendationEngramWrapper {
+                    engram_id: e.id,
+                    engram_key: e.key,
+                    tags: e.tags,
+                    created_at: e.created_at,
+                    recommendation: rec,
+                })
+            })
+            .collect();
+
+        Ok(recommendations)
+    }
+
+    pub async fn get_error_history_with_metadata(
+        &self,
+        wallet: &str,
+        limit: Option<i64>,
+    ) -> Result<Vec<crate::engrams::schemas::ErrorEngramWrapper>, String> {
+        let search = SearchRequest {
+            wallet_address: Some(wallet.to_string()),
+            engram_type: Some("knowledge".to_string()),
+            query: None,
+            tags: Some(vec!["error".to_string()]),
+            limit: limit.or(Some(50)),
+            offset: None,
+        };
+
+        let engrams = self.search_engrams(search).await?;
+
+        let errors: Vec<crate::engrams::schemas::ErrorEngramWrapper> = engrams
+            .into_iter()
+            .filter_map(|e| {
+                let error: crate::engrams::schemas::ExecutionError =
+                    serde_json::from_str(&e.content).ok()?;
+                Some(crate::engrams::schemas::ErrorEngramWrapper {
+                    engram_id: e.id,
+                    engram_key: e.key,
+                    tags: e.tags,
+                    created_at: e.created_at,
+                    error,
+                })
+            })
+            .collect();
+
+        Ok(errors)
+    }
+
+    pub async fn get_engrams_by_ids(
+        &self,
+        wallet: &str,
+        engram_ids: &[String],
+    ) -> Result<Vec<Engram>, String> {
+        let mut results = Vec::new();
+
+        for id in engram_ids {
+            let url = format!("{}/engrams/{}", self.base_url, id);
+
+            match self.http_client
+                .get(&url)
+                .header("X-Wallet-Address", wallet)
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        if let Ok(engram_resp) = response.json::<EngramResponse>().await {
+                            if let Some(engram) = engram_resp.data {
+                                results.push(engram);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to fetch engram {}: {}", id, e);
+                }
+            }
+        }
+
+        Ok(results)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

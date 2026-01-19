@@ -7,6 +7,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::agents::start_autonomous_executor;
 use crate::models::{CreateStrategyRequest, Strategy, UpdateStrategyRequest};
 use crate::server::AppState;
 
@@ -148,6 +149,12 @@ pub async fn toggle_strategy(
         Ok(_) => {
             // Persist toggle state to engrams
             if let Some(strategy) = state.strategy_engine.get_strategy(id).await {
+                // If enabling strategy with auto_execute_enabled, start executor
+                if request.enabled && strategy.risk_params.auto_execute_enabled {
+                    start_autonomous_executor(state.autonomous_executor.clone());
+                    tracing::info!(strategy_id = %id, "Strategy enabled with auto-execution - starting executor");
+                }
+
                 let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
                 let risk_params_json = serde_json::to_value(&strategy.risk_params).unwrap_or_default();
                 if let Err(e) = state.engrams_client.save_strategy_full(
@@ -202,6 +209,12 @@ pub async fn update_strategy(
     // Update in-memory engine
     match state.strategy_engine.update_strategy(id, request).await {
         Ok(strategy) => {
+            // If auto_execute_enabled is now true, start the executor if not running
+            if strategy.risk_params.auto_execute_enabled && strategy.is_active {
+                start_autonomous_executor(state.autonomous_executor.clone());
+                tracing::info!(strategy_id = %id, "Auto-execution enabled - starting autonomous executor");
+            }
+
             // Persist updated strategy to engrams
             let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
             let risk_params_json = serde_json::to_value(&strategy.risk_params).unwrap_or_default();
@@ -258,6 +271,12 @@ pub async fn set_risk_profile(
     // Update in-memory engine
     match state.strategy_engine.set_risk_params(id, risk_params.clone()).await {
         Ok(strategy) => {
+            // If auto_execute_enabled is now true, start the executor
+            if strategy.risk_params.auto_execute_enabled && strategy.is_active {
+                start_autonomous_executor(state.autonomous_executor.clone());
+                tracing::info!(strategy_id = %id, profile = %request.profile, "Risk profile enables auto-execution - starting executor");
+            }
+
             // Persist to engrams
             let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
             if let Err(e) = state.engrams_client.save_strategy_full(
