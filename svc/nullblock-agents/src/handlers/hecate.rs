@@ -1,4 +1,5 @@
 use crate::{
+    config::dev_wallet::is_dev_wallet,
     error::AppError,
     models::{
         ChatMessageResponse, ChatRequest, ModelSelectionRequest, PersonalityRequest,
@@ -30,6 +31,19 @@ pub async fn chat(
     State(state): State<AppState>,
     Json(request): Json<ChatRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    // Extract wallet_address from user_context
+    let wallet_address = request.user_context
+        .as_ref()
+        .and_then(|ctx| ctx.get("wallet_address"))
+        .and_then(|v| v.as_str());
+
+    // Check if dev wallet FIRST - they bypass everything
+    let is_dev = wallet_address.map(is_dev_wallet).unwrap_or(false);
+
+    if is_dev {
+        info!("🔥 DEV WALLET DETECTED - bypassing all limits");
+    }
+
     // Extract user_id from user_context if available
     let user_id = request.user_context
         .as_ref()
@@ -41,51 +55,60 @@ pub async fn chat(
     let mut is_free_tier = false;
     let mut rate_limit_info = None;
 
-    if let Some(ref uid) = user_id {
-        // Check if user has their own OpenRouter API key
-        let has_own_key = state.erebus_client
-            .user_has_api_key(uid, "openrouter")
-            .await
-            .unwrap_or(false);
+    // Dev wallets are NEVER free tier - they use agent's API keys with no limits
+    if !is_dev {
+        if let Some(ref uid) = user_id {
+            // Check if user has their own OpenRouter API key
+            let has_own_key = state.erebus_client
+                .user_has_api_key(uid, "openrouter")
+                .await
+                .unwrap_or(false);
 
-        if !has_own_key {
-            is_free_tier = true;
+            if !has_own_key {
+                is_free_tier = true;
 
-            // User is using agent's key - check rate limit
-            match state.erebus_client.check_rate_limit(uid, "hecate").await {
-                Ok(status) => {
-                    if !status.allowed {
-                        return Err(AppError::FreeTierRateLimitExceeded {
-                            remaining: status.remaining,
-                            limit: status.limit,
-                            resets_at: status.resets_at,
-                        });
+                // User is using agent's key - check rate limit
+                match state.erebus_client.check_rate_limit(uid, "hecate").await {
+                    Ok(status) => {
+                        if !status.allowed {
+                            return Err(AppError::FreeTierRateLimitExceeded {
+                                remaining: status.remaining,
+                                limit: status.limit,
+                                resets_at: status.resets_at,
+                            });
+                        }
+                        info!("📊 Rate limit check passed: {}/{} remaining", status.remaining, status.limit);
+                        rate_limit_info = Some(status);
                     }
-                    info!("📊 Rate limit check passed: {}/{} remaining", status.remaining, status.limit);
-                    rate_limit_info = Some(status);
+                    Err(e) => {
+                        warn!("⚠️ Rate limit check failed, allowing request: {}", e);
+                    }
                 }
-                Err(e) => {
-                    warn!("⚠️ Rate limit check failed, allowing request: {}", e);
-                }
+            } else {
+                info!("🔑 User {} has their own API key, skipping limits", uid);
             }
         } else {
-            info!("🔑 User {} has their own API key, skipping limits", uid);
+            // No user_id means anonymous/unauthenticated - treat as free tier
+            is_free_tier = true;
         }
-    } else {
-        // No user_id means anonymous/unauthenticated - treat as free tier
-        is_free_tier = true;
     }
 
-    // Apply free tier input length limit
-    if is_free_tier && request.message.len() > FREE_TIER_MAX_INPUT_CHARS {
+    // Apply free tier input length limit (SKIP for dev wallets)
+    if is_free_tier && !is_dev && request.message.len() > FREE_TIER_MAX_INPUT_CHARS {
         return Err(AppError::BadRequest(format!(
             "Message too long for free tier. Maximum {} characters allowed. Add your own API key for unlimited message length.",
             FREE_TIER_MAX_INPUT_CHARS
         )));
     }
 
-    // Build user context with free tier constraints if applicable
-    let user_context = if is_free_tier {
+    // Build user context with constraints based on user type
+    let user_context = if is_dev {
+        // Dev wallet: mark as dev, no limits
+        let mut ctx = request.user_context.unwrap_or_default();
+        ctx.insert("is_dev_wallet".to_string(), json!(true));
+        info!("🔥 Dev wallet: no output limits applied");
+        Some(ctx)
+    } else if is_free_tier {
         let mut ctx = request.user_context.unwrap_or_default();
         ctx.insert("free_tier".to_string(), json!(true));
         ctx.insert("max_output_tokens".to_string(), json!(FREE_TIER_MAX_OUTPUT_TOKENS));
@@ -95,8 +118,8 @@ pub async fn chat(
         request.user_context
     };
 
-    // For free-tier users, validate the current model is allowed
-    if is_free_tier {
+    // For free-tier users, validate the current model is allowed (SKIP for dev wallets)
+    if is_free_tier && !is_dev {
         let agent = state.hecate_agent.read().await;
         if let Some(ref current_model) = agent.current_model {
             // Check if model is free by name pattern (quick check)
@@ -714,8 +737,19 @@ pub async fn set_model(
 ) -> Result<Json<serde_json::Value>, AppError> {
     let api_keys = state.api_keys.clone();
 
-    // Check if user is free tier
-    let is_free_tier = if let Some(ref user_id) = request.user_id {
+    // Check if dev wallet from user context
+    let wallet_address = request.user_context
+        .as_ref()
+        .and_then(|ctx| ctx.get("wallet_address"))
+        .and_then(|v| v.as_str());
+
+    let is_dev = wallet_address.map(is_dev_wallet).unwrap_or(false);
+
+    // Dev wallets can select ANY model
+    let is_free_tier = if is_dev {
+        info!("🔥 DEV WALLET - allowing any model selection");
+        false
+    } else if let Some(ref user_id) = request.user_id {
         let has_own_key = state.erebus_client
             .user_has_api_key(user_id, "openrouter")
             .await
@@ -726,8 +760,8 @@ pub async fn set_model(
         true
     };
 
-    // For free-tier users, validate the requested model is free
-    if is_free_tier {
+    // Skip model validation for dev wallets
+    if is_free_tier && !is_dev {
         let agent = state.hecate_agent.read().await;
         if let Some(ref llm_factory) = agent.llm_factory {
             let factory = llm_factory.read().await;
