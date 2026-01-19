@@ -153,6 +153,9 @@ pub struct GlobalExecutionConfig {
     pub auto_approve_min_profit_bps: Option<u16>,
     pub auto_approve_max_risk_score: Option<i32>,
     pub emergency_exit_enabled: bool,
+    pub auto_min_confidence: f64,
+    pub auto_max_position_sol: f64,
+    pub require_simulation: bool,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -168,6 +171,9 @@ impl Default for GlobalExecutionConfig {
             auto_approve_min_profit_bps: Some(100),
             auto_approve_max_risk_score: Some(30),
             emergency_exit_enabled: true,
+            auto_min_confidence: 0.8,
+            auto_max_position_sol: 0.5,
+            require_simulation: true,
             updated_at: Utc::now(),
         }
     }
@@ -194,6 +200,9 @@ pub struct UpdateExecutionConfigRequest {
     pub auto_approve_min_profit_bps: Option<u16>,
     pub auto_approve_max_risk_score: Option<i32>,
     pub emergency_exit_enabled: Option<bool>,
+    pub auto_min_confidence: Option<f64>,
+    pub auto_max_position_sol: Option<f64>,
+    pub require_simulation: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

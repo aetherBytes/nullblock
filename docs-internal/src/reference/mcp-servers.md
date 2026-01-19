@@ -75,6 +75,78 @@ curl -X POST http://localhost:3000/mcp/jsonrpc \
   }'
 ```
 
+## ArbFarm MCP Server
+
+**Purpose**: Solana MEV agent swarm - trading, consensus, engram learning tools.
+
+**Protocol Version**: 2025-11-25
+
+**Endpoint**: `http://localhost:9007/mcp/jsonrpc` (direct) or `http://localhost:3000/api/arb/mcp/jsonrpc` (via Erebus)
+
+### Available Tools (97)
+
+| Category | Count | Examples |
+|----------|-------|----------|
+| Scanner | 3 | `scanner_status`, `scanner_signals`, `scanner_add_venue` |
+| Edges | 5 | `edge_list`, `edge_details`, `edge_approve`, `edge_reject` |
+| Strategies | 4 | `strategy_list`, `strategy_create`, `strategy_toggle`, `strategy_kill` |
+| Curves | 15 | `curve_tokens`, `curve_quote`, `curve_buy`, `curve_sell` |
+| Positions | 8 | `position_list`, `position_open`, `position_close`, `position_exit_config` |
+| Consensus | 9 | `consensus_request`, `consensus_models_list`, `consensus_config_get` |
+| Learning | 6 | `engram_get_arbfarm_learning`, `engram_get_trade_history`, `engram_get_errors` |
+| Approvals | 5 | `approval_list`, `approval_approve`, `approval_reject` |
+| Threat | 8 | `threat_check_token`, `threat_check_wallet`, `threat_report` |
+| KOL | 10 | `kol_list`, `kol_add`, `kol_discovery_status`, `kol_copy_enable` |
+| Wallet | 6 | `wallet_status`, `wallet_balance`, `wallet_capital` |
+| Swarm | 8 | `swarm_status`, `swarm_health`, `swarm_pause`, `swarm_resume` |
+| Other | 10 | `settings_*`, `helius_*`, `research_*` |
+
+### Tool Annotations (MCP 2025-11-25)
+
+All 97 tools include annotations:
+- `readOnlyHint`: Safe read operations (list, get, status)
+- `destructiveHint`: Dangerous operations (kill, reject, block)
+- `idempotentHint`: Safe to retry (toggle, update, config)
+
+### A2A Discovery Tags
+
+Learning tools tagged with `arbFarm.learning` for agent discovery:
+- `engram_get_arbfarm_learning`
+- `engram_acknowledge_recommendation`
+- `engram_get_trade_history`
+- `engram_get_errors`
+- `engram_request_analysis`
+- `engram_get_by_ids`
+
+### Example: List Tools with Annotations
+
+```bash
+curl -X POST http://localhost:9007/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list",
+    "params": {}
+  }' | jq '.result.tools[0]'
+```
+
+### Example: Get Trade History
+
+```bash
+curl -X POST http://localhost:9007/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "engram_get_trade_history",
+      "arguments": { "limit": 10 }
+    }
+  }'
+```
+
 ## Chrome DevTools MCP
 
 **Purpose**: Browser automation, debugging, testing for Hecate frontend.

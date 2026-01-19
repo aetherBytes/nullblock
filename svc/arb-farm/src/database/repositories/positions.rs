@@ -397,9 +397,9 @@ impl PositionRepository {
             stats.worst_trade_symbol = symbol;
         }
 
-        // Get avg hold time
+        // Get avg hold time (cast to DOUBLE PRECISION to match f64)
         let avg_hold: Option<(Option<f64>,)> = sqlx::query_as(
-            r#"SELECT AVG(EXTRACT(EPOCH FROM (exit_time - entry_time)) / 60.0)
+            r#"SELECT AVG(EXTRACT(EPOCH FROM (exit_time - entry_time)) / 60.0)::DOUBLE PRECISION
                FROM arb_positions WHERE status = 'closed' AND exit_time IS NOT NULL"#
         )
             .fetch_optional(&self.pool)
@@ -413,6 +413,7 @@ impl PositionRepository {
     pub async fn get_recent_trades(&self, limit: i32) -> AppResult<Vec<RecentTrade>> {
         #[derive(sqlx::FromRow)]
         struct TradeRow {
+            id: Uuid,
             token_symbol: Option<String>,
             token_mint: String,
             realized_pnl: Option<Decimal>,
@@ -422,7 +423,7 @@ impl PositionRepository {
         }
 
         let rows: Vec<TradeRow> = sqlx::query_as(
-            r#"SELECT token_symbol, token_mint, realized_pnl, exit_reason, exit_time, entry_amount_base
+            r#"SELECT id, token_symbol, token_mint, realized_pnl, exit_reason, exit_time, entry_amount_base
                FROM arb_positions
                WHERE status = 'closed' AND exit_time IS NOT NULL
                ORDER BY exit_time DESC
@@ -434,6 +435,7 @@ impl PositionRepository {
             .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(rows.into_iter().map(|r| RecentTrade {
+            id: r.id.to_string(),
             symbol: r.token_symbol.unwrap_or_else(|| r.token_mint[..8].to_string()),
             pnl: decimal_to_f64(r.realized_pnl.unwrap_or(Decimal::ZERO)),
             reason: r.exit_reason.unwrap_or_else(|| "Unknown".to_string()),
@@ -513,6 +515,7 @@ pub struct PnLStats {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecentTrade {
+    pub id: String,
     pub symbol: String,
     pub pnl: f64,
     pub reason: String,

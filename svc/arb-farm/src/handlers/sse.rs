@@ -155,3 +155,33 @@ pub async fn helius_stream(
             .text("keep-alive"),
     )
 }
+
+pub async fn positions_stream(
+    State(state): State<AppState>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let rx = state.subscribe_events();
+    let stream = BroadcastStream::new(rx);
+
+    let event_stream = stream.filter_map(|result| {
+        match result {
+            Ok(event) => {
+                if event.topic.starts_with("arb.position.") {
+                    let event_name = event.topic.split('.').last().unwrap_or("position");
+                    let data = serde_json::to_string(&event).unwrap_or_default();
+                    Some(Ok(Event::default()
+                        .event(event_name)
+                        .data(data)))
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        }
+    });
+
+    Sse::new(event_stream).keep_alive(
+        KeepAlive::new()
+            .interval(Duration::from_secs(15))
+            .text("keep-alive"),
+    )
+}

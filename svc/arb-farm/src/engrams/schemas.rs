@@ -1,0 +1,308 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use uuid::Uuid;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionSummary {
+    pub tx_signature: String,
+    pub action: TransactionAction,
+    pub token_mint: String,
+    pub token_symbol: Option<String>,
+    pub venue: String,
+    pub entry_sol: f64,
+    pub exit_sol: Option<f64>,
+    pub pnl_sol: Option<f64>,
+    pub pnl_percent: Option<f64>,
+    pub slippage_bps: i32,
+    pub execution_time_ms: u64,
+    pub strategy_id: Option<Uuid>,
+    pub timestamp: DateTime<Utc>,
+    #[serde(default)]
+    pub metadata: TransactionMetadata,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TransactionAction {
+    Buy,
+    Sell,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TransactionMetadata {
+    pub graduation_progress: Option<f64>,
+    pub holder_count: Option<u32>,
+    pub volume_24h_sol: Option<f64>,
+    pub market_cap_sol: Option<f64>,
+    pub bonding_curve_percent: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutionError {
+    pub error_type: ExecutionErrorType,
+    pub message: String,
+    pub context: ErrorContext,
+    pub stack_trace: Option<String>,
+    pub recoverable: bool,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecutionErrorType {
+    RpcTimeout,
+    SlippageExceeded,
+    InsufficientFunds,
+    TxFailed,
+    SimulationFailed,
+    SigningFailed,
+    NetworkError,
+    InvalidParams,
+    RateLimited,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorContext {
+    pub action: Option<String>,
+    pub token_mint: Option<String>,
+    pub attempted_amount_sol: Option<f64>,
+    pub venue: Option<String>,
+    pub strategy_id: Option<Uuid>,
+    pub edge_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DailyMetrics {
+    pub period: String, // YYYY-MM-DD
+    pub total_trades: u32,
+    pub winning_trades: u32,
+    pub win_rate: f64,
+    pub total_pnl_sol: f64,
+    pub avg_trade_pnl: f64,
+    pub max_drawdown_percent: f64,
+    pub best_trade: Option<TradeHighlight>,
+    pub worst_trade: Option<TradeHighlight>,
+    pub by_venue: std::collections::HashMap<String, VenueMetrics>,
+    pub by_strategy: std::collections::HashMap<String, StrategyMetrics>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradeHighlight {
+    pub token: String,
+    pub pnl_sol: f64,
+    pub tx_signature: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VenueMetrics {
+    pub trades: u32,
+    pub pnl_sol: f64,
+    pub win_rate: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StrategyMetrics {
+    pub trades: u32,
+    pub pnl_sol: f64,
+    pub win_rate: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Recommendation {
+    pub recommendation_id: Uuid,
+    pub source: RecommendationSource,
+    pub category: RecommendationCategory,
+    pub title: String,
+    pub description: String,
+    pub suggested_action: SuggestedAction,
+    pub confidence: f64,
+    pub supporting_data: SupportingData,
+    pub status: RecommendationStatus,
+    pub created_at: DateTime<Utc>,
+    pub applied_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecommendationSource {
+    ConsensusLlm,
+    PatternAnalysis,
+    RiskEngine,
+    Manual,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecommendationCategory {
+    Strategy,
+    Risk,
+    Timing,
+    Venue,
+    Position,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SuggestedAction {
+    pub action_type: SuggestedActionType,
+    pub target: String,
+    pub current_value: Option<Value>,
+    pub suggested_value: Value,
+    pub reasoning: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SuggestedActionType {
+    ConfigChange,
+    StrategyToggle,
+    RiskAdjustment,
+    VenueDisable,
+    AvoidToken,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SupportingData {
+    pub trades_analyzed: u32,
+    pub time_period: String,
+    pub relevant_engrams: Vec<String>,
+    pub metrics: Option<Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum RecommendationStatus {
+    Pending,
+    Acknowledged,
+    Applied,
+    Rejected,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConversationLog {
+    pub session_id: Uuid,
+    pub participants: Vec<String>,
+    pub topic: ConversationTopic,
+    pub context: ConversationContext,
+    pub messages: Vec<ConversationMessage>,
+    pub outcome: ConversationOutcome,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConversationTopic {
+    TradeAnalysis,
+    RiskAssessment,
+    StrategyReview,
+    PatternDiscovery,
+    MarketConditions,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConversationContext {
+    pub trigger: ConversationTrigger,
+    pub trades_in_scope: Option<u32>,
+    pub time_period: Option<String>,
+    pub additional_context: Option<Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConversationTrigger {
+    DailyReview,
+    TradeFailure,
+    HighProfitTrade,
+    RiskAlert,
+    UserRequest,
+    Scheduled,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConversationMessage {
+    pub role: String,
+    pub content: String,
+    pub timestamp: DateTime<Utc>,
+    pub tokens_used: Option<u32>,
+    pub latency_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConversationOutcome {
+    pub consensus_reached: bool,
+    pub recommendations_generated: u32,
+    pub engram_refs: Vec<String>,
+    pub summary: Option<String>,
+}
+
+pub const A2A_TAG_LEARNING: &str = "arbFarm.learning";
+
+pub fn generate_transaction_key(tx_signature: &str) -> String {
+    format!("arb.trade.summary.{}", tx_signature)
+}
+
+pub fn generate_error_key(error_type: &ExecutionErrorType, timestamp: &DateTime<Utc>) -> String {
+    let error_type_str = serde_json::to_string(error_type)
+        .unwrap_or_else(|_| "unknown".to_string())
+        .trim_matches('"')
+        .to_string();
+    format!("arb.error.{}.{}", error_type_str, timestamp.timestamp())
+}
+
+pub fn generate_metrics_key(period: &str) -> String {
+    format!("arb.metrics.daily.{}", period)
+}
+
+pub fn generate_recommendation_key(id: &Uuid) -> String {
+    format!("arb.learning.recommendation.{}", id)
+}
+
+pub fn generate_conversation_key(session_id: &Uuid) -> String {
+    format!("arb.learning.conversation.{}", session_id)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EngramWrapper<T> {
+    pub engram_id: String,
+    pub engram_key: String,
+    pub tags: Vec<String>,
+    pub created_at: String,
+    pub content: T,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradeEngramWrapper {
+    pub engram_id: String,
+    pub engram_key: String,
+    pub tags: Vec<String>,
+    pub created_at: String,
+    pub trade: TransactionSummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecommendationEngramWrapper {
+    pub engram_id: String,
+    pub engram_key: String,
+    pub tags: Vec<String>,
+    pub created_at: String,
+    pub recommendation: Recommendation,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorEngramWrapper {
+    pub engram_id: String,
+    pub engram_key: String,
+    pub tags: Vec<String>,
+    pub created_at: String,
+    pub error: ExecutionError,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConversationEngramWrapper {
+    pub engram_id: String,
+    pub engram_key: String,
+    pub tags: Vec<String>,
+    pub created_at: String,
+    pub conversation: ConversationLog,
+}

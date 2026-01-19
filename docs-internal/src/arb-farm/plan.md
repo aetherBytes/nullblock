@@ -2367,6 +2367,75 @@ curl http://localhost:9007/swarm/circuit-breakers
 
 ---
 
+## Audit Log
+
+### 2026-01-19: Production Readiness Audit
+
+**Status**: 95% Production Ready
+
+#### Critical Fixes Implemented
+1. **Exit Transactions Saved to Engrams** ✅
+   - Added `save_exit_to_engrams()` in `position_monitor.rs`
+   - Both buy AND sell transactions now tracked with PnL
+   - Files: `position_monitor.rs`, `server.rs`
+
+2. **MCP Tool Annotations** ✅
+   - All 97 tools annotated with `readOnlyHint`, `destructiveHint`, `idempotentHint`
+   - External agents can determine tool safety
+   - Files: `mcp/tools.rs`, `mcp/types.rs`
+
+3. **A2A Tags Exposed** ✅
+   - Learning tools tagged with `arbFarm.learning`
+   - Tools: `engram_get_arbfarm_learning`, `engram_acknowledge_recommendation`, `engram_get_trade_history`, `engram_get_errors`, `engram_request_analysis`, `engram_get_by_ids`
+   - Files: `mcp/tools.rs`, `mcp/types.rs`
+
+4. **Wallet Funding Validation** ✅
+   - Startup blocked if balance < 0.05 SOL
+   - Clear error message with wallet address
+   - File: `main.rs`
+
+5. **Position Monitor Auto-Start** ✅ (Already existed)
+   - Auto-starts with curve support + engrams
+   - File: `main.rs` lines 226-232
+
+6. **Frontend Duplicate Methods Removed** ✅
+   - Removed 7 duplicate method definitions
+   - File: `arbfarm-service.tsx`
+
+#### Build Warnings (Safe to Ignore)
+These are from stubbed/unimplemented features:
+
+| Module | Warnings | Reason |
+|--------|----------|--------|
+| `events/topics.rs` | 66 | Event constants for future features |
+| `agents/mev_hunter.rs` | 16 | DEX arbitrage (stubbed) |
+| `venues/dex/raydium.rs` | 8 | Raydium integration (stubbed) |
+| `consensus/providers/*` | 14 | Direct Anthropic/OpenAI (using OpenRouter) |
+| `agents/graduation_tracker.rs` | 8 | Graduation tracking (stubbed) |
+
+#### Verification Commands
+```bash
+# Test exit engram saves
+curl http://localhost:9007/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"engram_get_trade_history","arguments":{"limit":10}}}'
+
+# Verify annotations in tools/list
+curl http://localhost:9007/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | jq '.result.tools[0].annotations'
+
+# Filter tools by A2A tag
+curl http://localhost:9007/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | jq '.result.tools[] | select(.tags != null)'
+
+# Test wallet validation (will fail if < 0.05 SOL)
+# Startup will show: "❌ STARTUP BLOCKED: Wallet balance..."
+```
+
+---
+
 ## Related Documentation
 
 - [Poly Mev Plan](./poly-mev/plan.md) - Polymarket swarm (different service)

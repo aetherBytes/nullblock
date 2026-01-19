@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-1bc75e06.js";
+            window.path_to_searchindex_js = "../searchindex-dd80a3ec.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1cee2a9d.js"></script>
@@ -518,6 +518,134 @@
   "max_slippage_bps": 100,
   "max_concurrent_positions": 10,
   "cooldown_after_loss_ms": 5000
+}
+</code></pre>
+<h2 id="risk-levels"><a class="header" href="#risk-levels">Risk Levels</a></h2>
+<p>Quick risk profile configuration with presets.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/config/risk</code></td><td>Get current risk level and config</td></tr>
+<tr><td>POST</td><td><code>/config/risk</code></td><td>Set risk level preset (low/medium/high)</td></tr>
+<tr><td>POST</td><td><code>/config/risk/custom</code></td><td>Set custom risk parameters</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="risk-level-presets"><a class="header" href="#risk-level-presets">Risk Level Presets</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Level</th><th>max_position_sol</th><th>max_concurrent</th><th>daily_loss_limit</th></tr>
+</thead>
+<tbody>
+<tr><td>low</td><td>0.02 SOL</td><td>2</td><td>0.1 SOL</td></tr>
+<tr><td>medium</td><td>0.25 SOL</td><td>10</td><td>1.0 SOL</td></tr>
+<tr><td>high</td><td>1.0 SOL</td><td>20</td><td>5.0 SOL</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="get-risk-level-response"><a class="header" href="#get-risk-level-response">Get Risk Level Response</a></h3>
+<pre><code class="language-json">{
+  "level": "medium",
+  "max_position_sol": 0.25,
+  "max_concurrent_positions": 10,
+  "daily_loss_limit_sol": 1.0,
+  "max_drawdown_percent": 25.0,
+  "max_position_per_token_sol": 0.25,
+  "cooldown_after_loss_ms": 3000,
+  "volatility_scaling_enabled": true,
+  "auto_pause_on_drawdown": true
+}
+</code></pre>
+<h3 id="set-risk-level-request"><a class="header" href="#set-risk-level-request">Set Risk Level Request</a></h3>
+<pre><code class="language-json">{
+  "level": "medium"
+}
+</code></pre>
+<h3 id="set-custom-risk-request"><a class="header" href="#set-custom-risk-request">Set Custom Risk Request</a></h3>
+<pre><code class="language-json">{
+  "max_position_sol": 0.5,
+  "max_concurrent_positions": 5,
+  "daily_loss_limit_sol": 2.0,
+  "max_drawdown_percent": 30.0
+}
+</code></pre>
+<h2 id="positions"><a class="header" href="#positions">Positions</a></h2>
+<p>Active position tracking and management.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Method</th><th>Path</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>GET</td><td><code>/positions</code></td><td>List all positions with stats</td></tr>
+<tr><td>GET</td><td><code>/positions/:id</code></td><td>Get position details</td></tr>
+<tr><td>POST</td><td><code>/positions/:id/close</code></td><td>Close a position</td></tr>
+<tr><td>GET</td><td><code>/positions/history</code></td><td>Closed position history</td></tr>
+<tr><td>GET</td><td><code>/positions/exposure</code></td><td>Current exposure breakdown</td></tr>
+<tr><td>GET</td><td><code>/positions/pnl-summary</code></td><td>P&amp;L summary</td></tr>
+<tr><td>POST</td><td><code>/positions/reconcile</code></td><td>Reconcile with wallet</td></tr>
+<tr><td>GET</td><td><code>/positions/monitor/status</code></td><td>Position monitor status</td></tr>
+<tr><td>POST</td><td><code>/positions/monitor/start</code></td><td>Start position monitor</td></tr>
+<tr><td>POST</td><td><code>/positions/monitor/stop</code></td><td>Stop position monitor</td></tr>
+<tr><td>POST</td><td><code>/positions/emergency-close</code></td><td>Emergency close all positions</td></tr>
+<tr><td>POST</td><td><code>/positions/sell-all</code></td><td>Sell all wallet tokens</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="positions-response"><a class="header" href="#positions-response">Positions Response</a></h3>
+<pre><code class="language-json">{
+  "positions": [
+    {
+      "id": "uuid",
+      "edge_id": "uuid",
+      "strategy_id": "uuid",
+      "token_mint": "ABC123...",
+      "token_symbol": "MOON",
+      "entry_amount_base": 0.25,
+      "entry_token_amount": 1000000,
+      "entry_price": 0.00025,
+      "entry_time": "2024-01-15T10:30:00Z",
+      "entry_tx_signature": "sig...",
+      "current_price": 0.00030,
+      "current_value_base": 0.30,
+      "unrealized_pnl": 0.05,
+      "unrealized_pnl_percent": 20.0,
+      "high_water_mark": 0.00032,
+      "exit_config": {
+        "stop_loss_percent": 15.0,
+        "take_profit_percent": 50.0,
+        "trailing_stop_percent": 10.0,
+        "time_limit_minutes": 30
+      },
+      "partial_exits": [],
+      "status": "open",
+      "momentum": {
+        "velocity": 1.5,
+        "momentum_score": 25.0,
+        "momentum_decay_count": 0
+      },
+      "remaining_amount_base": 0.25,
+      "remaining_token_amount": 1000000
+    }
+  ],
+  "stats": {
+    "total_positions_opened": 50,
+    "total_positions_closed": 45,
+    "active_positions": 5,
+    "total_realized_pnl": 0.15,
+    "total_unrealized_pnl": 0.05,
+    "stop_losses_triggered": 10,
+    "take_profits_triggered": 8
+  }
+}
+</code></pre>
+<h3 id="close-position-request"><a class="header" href="#close-position-request">Close Position Request</a></h3>
+<pre><code class="language-json">{
+  "slippage_bps": 100
 }
 </code></pre>
 <h2 id="bonding-curves"><a class="header" href="#bonding-curves">Bonding Curves</a></h2>
@@ -1019,22 +1147,6 @@
         <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
         <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
-        <!-- Livereload script (if served using the cli tool) -->
-        <script>
-            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
-            const socket = new WebSocket(wsAddress);
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload();
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
 
 
         <script>

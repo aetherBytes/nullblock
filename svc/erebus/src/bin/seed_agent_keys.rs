@@ -114,6 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let agent_keys = vec![
         ("hecate", "openrouter", "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", "HECATE Primary Key"),
         ("siren", "openrouter", "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", "Siren Primary Key"),
+        ("arb-farm", "openrouter", "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", "ArbFarm Consensus Key"),
     ];
 
     for (agent_name, provider, api_key, key_name) in agent_keys {

@@ -10,6 +10,7 @@ mod config;
 mod consensus;
 mod database;
 mod engrams;
+mod erebus;
 mod error;
 mod events;
 mod execution;
@@ -156,6 +157,35 @@ async fn main() -> anyhow::Result<()> {
     // Print comprehensive startup summary for tmuxinator pane
     print_startup_summary(&state).await;
 
+    // Validate wallet funding - block startup if balance too low for trading
+    const MIN_BALANCE_SOL: f64 = 0.05;
+    if state.dev_signer.is_configured() {
+        if let Some(address) = state.dev_signer.get_address() {
+            let balance_result: Result<serde_json::Value, _> = state.helius_rpc_client
+                .rpc_call("getBalance", serde_json::json!([address]))
+                .await;
+
+            match balance_result {
+                Ok(balance_json) => {
+                    if let Some(value) = balance_json.get("value").and_then(|v| v.as_u64()) {
+                        let sol_balance = value as f64 / 1_000_000_000.0;
+                        if sol_balance < MIN_BALANCE_SOL {
+                            return Err(anyhow::anyhow!(
+                                "❌ STARTUP BLOCKED: Wallet balance ({:.4} SOL) is below minimum ({:.2} SOL). \
+                                Fund wallet {} with at least {:.2} SOL to enable trading.",
+                                sol_balance, MIN_BALANCE_SOL, address, MIN_BALANCE_SOL
+                            ));
+                        }
+                        info!("✅ Wallet funding validated: {:.4} SOL (min: {:.2} SOL)", sol_balance, MIN_BALANCE_SOL);
+                    }
+                }
+                Err(e) => {
+                    warn!("⚠️ Could not validate wallet balance: {}. Proceeding with caution.", e);
+                }
+            }
+        }
+    }
+
     // Clone state components for auto-start task BEFORE passing state to router
     let scanner_for_autostart = state.scanner.clone();
     let executor_for_autostart = state.autonomous_executor.clone();
@@ -212,9 +242,15 @@ async fn main() -> anyhow::Result<()> {
         scanner_for_autostart.start().await;
         info!("✅ Scanner started");
 
-        // Start autonomous executor
-        executor_for_autostart.start().await;
-        info!("✅ Autonomous executor started");
+        // Autonomous executor startup is handled in AppState::new() based on strategy config
+        // It should NOT be unconditionally started here - only start if user has enabled auto-execution
+        let executor_stats = executor_for_autostart.get_stats().await;
+        if executor_stats.is_running {
+            info!("✅ Autonomous executor already running (auto-execution enabled)");
+        } else {
+            info!("ℹ️ Autonomous executor NOT started (auto-execution disabled in strategy config)");
+            info!("   Enable via: curl -X POST localhost:9007/execution/toggle -d '{{\"enabled\":true}}'");
+        }
 
         // Start position monitor
         let monitor = position_monitor_for_autostart.clone();
@@ -271,10 +307,14 @@ async fn main() -> anyhow::Result<()> {
                                     if curve_state.virtual_token_reserves > 0 {
                                         curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64
                                     } else {
-                                        0.0000001
+                                        warn!("   ⚠️ {} - zero reserves, skipping position creation", &token.mint[..12]);
+                                        continue;
                                     }
                                 }
-                                Err(_) => 0.0000001,
+                                Err(e) => {
+                                    warn!("   ⚠️ {} - price unavailable ({}), skipping position creation", &token.mint[..12], e);
+                                    continue;
+                                }
                             };
 
                             let exit_config = match metrics_collector_for_autostart.calculate_metrics(&token.mint, "pump_fun").await {
@@ -332,6 +372,126 @@ async fn main() -> anyhow::Result<()> {
         }
 
         info!("🎯 All workers auto-started");
+
+        // Start periodic wallet reconciliation (every 5 minutes) to catch orphaned tokens
+        let periodic_wallet = dev_signer_for_autostart.get_address().map(|s| s.to_string());
+        let periodic_helius = helius_das_for_autostart.clone();
+        let periodic_position_manager = position_manager_for_autostart.clone();
+        let periodic_on_chain = on_chain_fetcher_for_autostart.clone();
+        let periodic_metrics = metrics_collector_for_autostart.clone();
+
+        if periodic_wallet.is_some() {
+            tokio::spawn(async move {
+                let wallet_address = periodic_wallet.unwrap();
+                let reconcile_interval = std::time::Duration::from_secs(300); // 5 minutes
+
+                loop {
+                    tokio::time::sleep(reconcile_interval).await;
+
+                    info!("🔄 [Periodic] Running wallet reconciliation...");
+
+                    match periodic_helius.get_token_accounts_by_owner(&wallet_address).await {
+                        Ok(token_accounts) => {
+                            let wallet_tokens: Vec<crate::execution::WalletTokenHolding> = token_accounts
+                                .into_iter()
+                                .map(|account| crate::execution::WalletTokenHolding {
+                                    mint: account.mint,
+                                    symbol: None,
+                                    balance: account.ui_amount,
+                                    decimals: account.decimals,
+                                })
+                                .collect();
+
+                            let result = periodic_position_manager.reconcile_wallet_tokens(&wallet_tokens).await;
+
+                            // Mark orphaned positions
+                            for position_id in &result.orphaned_positions {
+                                if let Err(e) = periodic_position_manager.mark_position_orphaned(*position_id).await {
+                                    warn!("[Periodic] Failed to mark position {} as orphaned: {}", position_id, e);
+                                }
+                            }
+
+                            // Create positions for discovered tokens
+                            for token in &result.discovered_tokens {
+                                if crate::execution::BaseCurrency::is_base_currency(&token.mint) {
+                                    continue;
+                                }
+
+                                // Skip dust amounts
+                                if token.balance < 0.001 {
+                                    continue;
+                                }
+
+                                let estimated_price = match periodic_on_chain.get_bonding_curve_state(&token.mint).await {
+                                    Ok(curve_state) => {
+                                        if curve_state.virtual_token_reserves > 0 {
+                                            curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64
+                                        } else {
+                                            warn!("[Periodic] ⚠️ {} - zero reserves, skipping", &token.mint[..12]);
+                                            continue;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        warn!("[Periodic] ⚠️ {} - price unavailable ({}), skipping", &token.mint[..12], e);
+                                        continue;
+                                    }
+                                };
+
+                                let exit_config = match periodic_metrics.calculate_metrics(&token.mint, "pump_fun").await {
+                                    Ok(metrics) => {
+                                        crate::execution::ExitConfig::for_discovered_with_metrics(metrics.volume_24h, metrics.holder_count)
+                                    }
+                                    Err(_) => crate::execution::ExitConfig::for_discovered_token(),
+                                };
+
+                                const MAX_DISCOVERED_ENTRY_SOL: f64 = 0.1;
+                                const DEFAULT_DISCOVERED_ENTRY_SOL: f64 = 0.02;
+                                let raw_estimated_entry = token.balance * estimated_price;
+                                let estimated_entry_sol = if raw_estimated_entry > MAX_DISCOVERED_ENTRY_SOL {
+                                    DEFAULT_DISCOVERED_ENTRY_SOL
+                                } else if raw_estimated_entry < 0.001 {
+                                    DEFAULT_DISCOVERED_ENTRY_SOL
+                                } else {
+                                    raw_estimated_entry
+                                };
+
+                                match periodic_position_manager.create_discovered_position_with_config(
+                                    token,
+                                    estimated_price,
+                                    estimated_entry_sol,
+                                    exit_config,
+                                ).await {
+                                    Ok(position) => {
+                                        info!(
+                                            "[Periodic] ✅ Created position for orphaned token {} - SL:{:?}%/TP:{:?}%",
+                                            &token.mint[..12],
+                                            position.exit_config.stop_loss_percent,
+                                            position.exit_config.take_profit_percent
+                                        );
+                                    }
+                                    Err(e) => {
+                                        warn!("[Periodic] ❌ Failed to create position for {}: {}", &token.mint[..12], e);
+                                    }
+                                }
+                            }
+
+                            if !result.discovered_tokens.is_empty() || !result.orphaned_positions.is_empty() {
+                                info!(
+                                    "[Periodic] 📊 Reconciliation: {} tracked, {} discovered, {} orphaned",
+                                    result.tracked_positions,
+                                    result.discovered_tokens.len(),
+                                    result.orphaned_positions.len()
+                                );
+                            }
+                        }
+                        Err(e) => {
+                            warn!("[Periodic] ⚠️ Failed to fetch wallet tokens: {}", e);
+                        }
+                    }
+                }
+            });
+            info!("✅ Periodic wallet reconciliation started (every 5 minutes)");
+        }
     });
 
     axum::serve(listener, app).await?;
@@ -351,7 +511,8 @@ fn create_router(state: server::AppState) -> Router {
     Router::new()
         // Health
         .route("/health", get(health::health_check))
-        // MCP - Crossroads discovery + tool execution
+        // MCP - Standard JSON-RPC + Crossroads discovery + tool execution
+        .route("/mcp/jsonrpc", post(mcp::handle_jsonrpc))
         .route("/mcp/manifest", get(mcp_manifest))
         .route("/mcp/tools", get(mcp_tools))
         .route("/mcp/call", post(mcp_handlers::call_tool))
@@ -429,6 +590,19 @@ fn create_router(state: server::AppState) -> Router {
         .route("/consensus/stats", get(consensus_handlers::get_consensus_stats))
         .route("/consensus/models", get(consensus_handlers::list_available_models))
         .route("/consensus/request", post(consensus_handlers::request_consensus))
+        .route("/consensus/config", get(consensus_handlers::get_consensus_config))
+        .route("/consensus/config", axum::routing::put(consensus_handlers::update_consensus_config))
+        .route("/consensus/config/reset", post(consensus_handlers::reset_consensus_config))
+        .route("/consensus/conversations", get(consensus_handlers::list_conversations))
+        .route("/consensus/conversations/:id", get(consensus_handlers::get_conversation_detail))
+        .route("/consensus/recommendations", get(consensus_handlers::list_recommendations))
+        .route("/consensus/recommendations/:id/status", axum::routing::put(consensus_handlers::update_recommendation_status))
+        .route("/consensus/learning", get(consensus_handlers::get_learning_summary))
+        .route("/consensus/engrams", get(consensus_handlers::list_engrams))
+        .route("/consensus/engrams/:key", get(consensus_handlers::get_engram_detail))
+        .route("/consensus/models/discovery", get(consensus_handlers::get_model_discovery_status))
+        .route("/consensus/models/refresh", post(consensus_handlers::refresh_models))
+        .route("/consensus/models/discovered", get(consensus_handlers::get_discovered_models))
         .route("/consensus/:id", get(consensus_handlers::get_consensus_detail))
         // KOL Tracking + Copy Trading
         .route("/kol", get(kol::list_kols))
@@ -543,6 +717,7 @@ fn create_router(state: server::AppState) -> Router {
         .route("/positions/monitor/stop", post(position_handlers::stop_monitor))
         .route("/positions/emergency-close", post(position_handlers::emergency_close_all))
         .route("/positions/sell-all", post(position_handlers::sell_all_wallet_tokens))
+        .route("/positions/force-clear", post(position_handlers::force_clear_all_positions))
         .route("/positions/exit-config", axum::routing::put(position_handlers::update_all_positions_exit_config))
         .route("/positions/:id", get(position_handlers::get_position))
         .route("/positions/:id/close", post(position_handlers::close_position))
@@ -569,6 +744,7 @@ fn create_router(state: server::AppState) -> Router {
         .route("/events/stream", get(sse::all_events_stream))
         .route("/threat/stream", get(sse::threat_stream))
         .route("/helius/stream", get(sse::helius_stream))
+        .route("/positions/stream", get(sse::positions_stream))
         .with_state(state)
         .layer(
             CorsLayer::new()

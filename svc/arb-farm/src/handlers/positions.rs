@@ -3,11 +3,14 @@ use axum::{
     http::StatusCode,
     Json,
 };
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 use uuid::Uuid;
 
+use crate::engrams::schemas::{TransactionSummary, TransactionAction, TransactionMetadata, ExecutionError, ExecutionErrorType, ErrorContext};
 use crate::error::AppError;
+use crate::events::{ArbEvent, EventSource, AgentType, topics};
 use crate::execution::{OpenPosition, PositionStatus, ExitReason, BaseCurrency, WalletTokenHolding, ReconciliationResult, ExitConfig};
 use crate::server::AppState;
 
@@ -375,6 +378,83 @@ pub async fn emergency_close_all(
     }))
 }
 
+/// Force clear all positions from tracking (without selling)
+/// Use this after external sales or to reset position state
+pub async fn force_clear_all_positions(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    info!("🧹 FORCE CLEAR - Removing all positions from tracking");
+
+    let positions = state.position_manager.get_open_positions().await;
+    let total = positions.len();
+
+    if total == 0 {
+        return Ok(Json(serde_json::json!({
+            "cleared": 0,
+            "message": "No positions to clear"
+        })));
+    }
+
+    let mut cleared = 0;
+    for position in positions {
+        // Close the position with zero PnL (just removing from tracking)
+        if let Err(e) = state.position_manager.close_position(
+            position.id,
+            position.current_price,
+            0.0, // Unknown PnL since sold externally
+            "ForceClear",
+            None,
+        ).await {
+            tracing::warn!("Failed to clear position {}: {}", position.id, e);
+        } else {
+            cleared += 1;
+            // Release any reserved capital
+            if let Some(released_lamports) = state.capital_manager.release_capital(position.id).await {
+                let released_sol = released_lamports as f64 / 1_000_000_000.0;
+                info!("   Released {:.4} SOL from position {}", released_sol, position.id);
+            }
+
+            // Emit position closed event for real-time UI updates
+            let event = ArbEvent::new(
+                "position.closed",
+                EventSource::Agent(AgentType::Executor),
+                topics::position::CLOSED,
+                serde_json::json!({
+                    "position_id": position.id,
+                    "token_mint": position.token_mint,
+                    "token_symbol": position.token_symbol,
+                    "exit_reason": "ForceClear",
+                    "exit_price": position.current_price,
+                    "realized_pnl_sol": 0.0,
+                }),
+            );
+            let _ = state.event_tx.send(event);
+        }
+    }
+
+    // Emit bulk update event for UI to refresh positions list
+    let event = ArbEvent::new(
+        "positions.cleared",
+        EventSource::Agent(AgentType::Executor),
+        topics::position::BULK_CLEARED,
+        serde_json::json!({
+            "action": "force_clear",
+            "cleared_count": cleared,
+            "total_count": total,
+        }),
+    );
+    let _ = state.event_tx.send(event);
+
+    let message = format!("🧹 Cleared {}/{} positions from tracking", cleared, total);
+    info!("{}", message);
+
+    Ok(Json(serde_json::json!({
+        "cleared": cleared,
+        "total": total,
+        "message": message
+    })))
+}
+
 #[derive(Debug, Serialize)]
 pub struct SellAllResponse {
     pub tokens_found: usize,
@@ -383,6 +463,17 @@ pub struct SellAllResponse {
     pub total_sol_received: f64,
     pub results: Vec<SellTokenResult>,
     pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub daily_volume_usage: Option<DailyVolumeInfo>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DailyVolumeInfo {
+    pub used_sol: f64,
+    pub limit_sol: f64,
+    pub remaining_sol: f64,
+    pub percent_used: f64,
+    pub limit_reached: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -406,8 +497,63 @@ pub async fn sell_all_wallet_tokens(
     let wallet_address = state.dev_signer.get_address()
         .ok_or_else(|| AppError::Validation("No wallet configured".to_string()))?;
 
+    // Check daily volume limits
+    let signer_status = state.turnkey_signer.get_status().await;
+    let daily_usage = &signer_status.daily_usage;
+    let policy = &signer_status.policy;
+
+    let used_sol = daily_usage.total_volume_lamports as f64 / 1_000_000_000.0;
+    let limit_sol = policy.daily_volume_limit_lamports as f64 / 1_000_000_000.0;
+    let remaining_sol = if policy.daily_volume_limit_lamports > daily_usage.total_volume_lamports {
+        (policy.daily_volume_limit_lamports - daily_usage.total_volume_lamports) as f64 / 1_000_000_000.0
+    } else {
+        0.0
+    };
+    let percent_used = (used_sol / limit_sol) * 100.0;
+    let limit_reached = remaining_sol <= 0.0;
+
+    let volume_info = DailyVolumeInfo {
+        used_sol,
+        limit_sol,
+        remaining_sol,
+        percent_used,
+        limit_reached,
+    };
+
+    if limit_reached {
+        tracing::warn!(
+            used = used_sol,
+            limit = limit_sol,
+            "🚫 DAILY VOLUME LIMIT REACHED - Cannot execute sells"
+        );
+        return Ok(Json(SellAllResponse {
+            tokens_found: 0,
+            tokens_sold: 0,
+            tokens_failed: 0,
+            total_sol_received: 0.0,
+            results: vec![],
+            message: format!(
+                "❌ Daily volume limit reached! Used {:.4} SOL of {:.4} SOL limit. Limit resets at midnight UTC.",
+                used_sol, limit_sol
+            ),
+            daily_volume_usage: Some(volume_info),
+        }));
+    }
+
+    if percent_used > 90.0 {
+        tracing::warn!(
+            used = used_sol,
+            limit = limit_sol,
+            remaining = remaining_sol,
+            "⚠️ DAILY VOLUME LIMIT >90% - Only {:.4} SOL remaining",
+            remaining_sol
+        );
+    }
+
     info!("🔥 SELL ALL TOKENS - Liquidating entire wallet to SOL");
     info!("   Wallet: {}", &wallet_address[..12]);
+    info!("   Daily volume: {:.4}/{:.4} SOL ({:.1}% used, {:.4} SOL remaining)",
+        used_sol, limit_sol, percent_used, remaining_sol);
 
     // Step 1: Get all tokens in wallet via DAS
     let token_accounts = state.helius_das
@@ -415,10 +561,24 @@ pub async fn sell_all_wallet_tokens(
         .await
         .map_err(|e| AppError::ExternalApi(format!("Failed to fetch wallet tokens: {}", e)))?;
 
-    // Filter out base currencies (SOL, USDC, etc.)
+    // Filter out base currencies (SOL, USDC, etc.) and dust amounts
+    const MIN_DUST_THRESHOLD: f64 = 0.001; // Skip tokens with less than 0.001 balance
     let sellable_tokens: Vec<_> = token_accounts
         .into_iter()
-        .filter(|t| !BaseCurrency::is_base_currency(&t.mint) && t.ui_amount > 0.0)
+        .filter(|t| {
+            if BaseCurrency::is_base_currency(&t.mint) {
+                return false;
+            }
+            if t.ui_amount < MIN_DUST_THRESHOLD {
+                tracing::debug!(
+                    mint = &t.mint[..12],
+                    balance = t.ui_amount,
+                    "Skipping dust amount token"
+                );
+                return false;
+            }
+            true
+        })
         .collect();
 
     let total_found = sellable_tokens.len();
@@ -432,6 +592,7 @@ pub async fn sell_all_wallet_tokens(
             total_sol_received: 0.0,
             results: vec![],
             message: "No tokens to sell - wallet only contains base currencies".to_string(),
+            daily_volume_usage: Some(volume_info),
         }));
     }
 
@@ -457,6 +618,71 @@ pub async fn sell_all_wallet_tokens(
                 sold += 1;
                 total_sol += sol_received;
                 info!("   ✅ Sold for {:.6} SOL (tx: {}...)", sol_received, &signature[..12]);
+
+                // Close any matching position in the position manager
+                if let Some(position) = state.position_manager.get_open_position_for_mint(&token.mint).await {
+                    let pnl = sol_received - position.entry_amount_base;
+                    let exit_price = sol_received / position.entry_token_amount;
+                    if let Err(e) = state.position_manager.close_position(
+                        position.id,
+                        exit_price,
+                        pnl,
+                        "ManualSellAll",
+                        Some(signature.clone()),
+                    ).await {
+                        tracing::warn!("Failed to close position {} after sell: {}", position.id, e);
+                    } else {
+                        info!("   📦 Closed position {} (PnL: {:.6} SOL)", position.id, pnl);
+
+                        // Save transaction summary to engrams
+                        let pnl_percent = if position.entry_amount_base > 0.0 {
+                            (pnl / position.entry_amount_base) * 100.0
+                        } else {
+                            0.0
+                        };
+
+                        let tx_summary = TransactionSummary {
+                            tx_signature: signature.clone(),
+                            action: TransactionAction::Sell,
+                            token_mint: position.token_mint.clone(),
+                            token_symbol: position.token_symbol.clone(),
+                            venue: "pump_fun".to_string(),
+                            entry_sol: position.entry_amount_base,
+                            exit_sol: Some(sol_received),
+                            pnl_sol: Some(pnl),
+                            pnl_percent: Some(pnl_percent),
+                            slippage_bps: 0,
+                            execution_time_ms: 0,
+                            strategy_id: Some(position.strategy_id),
+                            timestamp: Utc::now(),
+                            metadata: TransactionMetadata::default(),
+                        };
+
+                        if let Err(e) = state.engrams_client.save_transaction_summary(&wallet_address, &tx_summary).await {
+                            tracing::warn!("Failed to save transaction summary engram: {}", e);
+                        } else {
+                            tracing::debug!("📝 Saved transaction summary engram for {}", &signature[..12]);
+                        }
+
+                        // Emit position closed event for real-time UI updates
+                        let event = ArbEvent::new(
+                            "position.closed",
+                            EventSource::Agent(AgentType::Executor),
+                            topics::position::CLOSED,
+                            serde_json::json!({
+                                "position_id": position.id,
+                                "token_mint": position.token_mint,
+                                "token_symbol": position.token_symbol,
+                                "exit_reason": "ManualSellAll",
+                                "exit_price": exit_price,
+                                "realized_pnl_sol": pnl,
+                                "tx_signature": signature,
+                            }),
+                        );
+                        let _ = state.event_tx.send(event);
+                    }
+                }
+
                 results.push(SellTokenResult {
                     mint: token.mint,
                     symbol: None,
@@ -470,6 +696,46 @@ pub async fn sell_all_wallet_tokens(
             Err(e) => {
                 failed += 1;
                 tracing::warn!("   ❌ Failed to sell {}: {}", &token.mint[..12], e);
+
+                // Determine error type based on error message
+                let error_type = if e.to_string().contains("slippage") {
+                    ExecutionErrorType::SlippageExceeded
+                } else if e.to_string().contains("timeout") || e.to_string().contains("timed out") {
+                    ExecutionErrorType::RpcTimeout
+                } else if e.to_string().contains("insufficient") || e.to_string().contains("balance") {
+                    ExecutionErrorType::InsufficientFunds
+                } else if e.to_string().contains("simulation") {
+                    ExecutionErrorType::SimulationFailed
+                } else if e.to_string().contains("rate limit") {
+                    ExecutionErrorType::RateLimited
+                } else if e.to_string().contains("network") || e.to_string().contains("connection") {
+                    ExecutionErrorType::NetworkError
+                } else {
+                    ExecutionErrorType::TxFailed
+                };
+
+                let exec_error = ExecutionError {
+                    error_type,
+                    message: e.to_string(),
+                    context: ErrorContext {
+                        action: Some("sell".to_string()),
+                        token_mint: Some(token.mint.clone()),
+                        attempted_amount_sol: Some(token.ui_amount),
+                        venue: Some("pump_fun".to_string()),
+                        strategy_id: None,
+                        edge_id: None,
+                    },
+                    stack_trace: None,
+                    recoverable: true,
+                    timestamp: Utc::now(),
+                };
+
+                if let Err(save_err) = state.engrams_client.save_execution_error(&wallet_address, &exec_error).await {
+                    tracing::warn!("Failed to save execution error engram: {}", save_err);
+                } else {
+                    tracing::debug!("📝 Saved execution error engram for failed sell of {}", &token.mint[..12]);
+                }
+
                 results.push(SellTokenResult {
                     mint: token.mint,
                     symbol: None,
@@ -483,13 +749,99 @@ pub async fn sell_all_wallet_tokens(
         }
     }
 
+    // Refresh daily volume info after sells
+    let signer_status = state.turnkey_signer.get_status().await;
+    let daily_usage = &signer_status.daily_usage;
+    let policy = &signer_status.policy;
+
+    let used_sol = daily_usage.total_volume_lamports as f64 / 1_000_000_000.0;
+    let limit_sol = policy.daily_volume_limit_lamports as f64 / 1_000_000_000.0;
+    let remaining_sol = if policy.daily_volume_limit_lamports > daily_usage.total_volume_lamports {
+        (policy.daily_volume_limit_lamports - daily_usage.total_volume_lamports) as f64 / 1_000_000_000.0
+    } else {
+        0.0
+    };
+    let percent_used = (used_sol / limit_sol) * 100.0;
+
+    let final_volume_info = DailyVolumeInfo {
+        used_sol,
+        limit_sol,
+        remaining_sol,
+        percent_used,
+        limit_reached: remaining_sol <= 0.0,
+    };
+
     let message = if failed == 0 {
         format!("🔥 Sold all {} tokens for {:.6} SOL total", sold, total_sol)
+    } else if final_volume_info.limit_reached {
+        format!("❌ Sold {}/{} tokens for {:.6} SOL - DAILY LIMIT REACHED ({} failed). Used {:.4}/{:.4} SOL.",
+            sold, total_found, total_sol, failed, used_sol, limit_sol)
     } else {
-        format!("⚠️ Sold {}/{} tokens for {:.6} SOL ({} failed)", sold, total_found, total_sol, failed)
+        format!("⚠️ Sold {}/{} tokens for {:.6} SOL ({} failed). Daily usage: {:.4}/{:.4} SOL ({:.1}%)",
+            sold, total_found, total_sol, failed, used_sol, limit_sol, percent_used)
     };
 
     info!("{}", message);
+
+    // If any sells failed, run reconciliation to ensure orphaned tokens have positions
+    if failed > 0 {
+        info!("🔄 Running post-sell reconciliation for {} failed tokens...", failed);
+
+        // Re-fetch wallet tokens
+        if let Ok(remaining_tokens) = state.helius_das.get_token_accounts_by_owner(&wallet_address).await {
+            let wallet_tokens: Vec<WalletTokenHolding> = remaining_tokens
+                .into_iter()
+                .filter(|t| !BaseCurrency::is_base_currency(&t.mint) && t.ui_amount >= 0.001)
+                .map(|account| WalletTokenHolding {
+                    mint: account.mint,
+                    symbol: None,
+                    balance: account.ui_amount,
+                    decimals: account.decimals,
+                })
+                .collect();
+
+            let reconcile_result = state.position_manager.reconcile_wallet_tokens(&wallet_tokens).await;
+
+            // Create positions for discovered tokens (ones that failed to sell but have no position)
+            for token in &reconcile_result.discovered_tokens {
+                if token.balance < 0.001 {
+                    continue;
+                }
+
+                let estimated_price = match state.on_chain_fetcher.get_bonding_curve_state(&token.mint).await {
+                    Ok(curve_state) if curve_state.virtual_token_reserves > 0 => {
+                        curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64
+                    }
+                    _ => 0.0000001,
+                };
+
+                let exit_config = match state.metrics_collector.calculate_metrics(&token.mint, "pump_fun").await {
+                    Ok(metrics) => ExitConfig::for_discovered_with_metrics(metrics.volume_24h, metrics.holder_count),
+                    Err(_) => ExitConfig::for_discovered_token(),
+                };
+
+                const MAX_ENTRY: f64 = 0.1;
+                const DEFAULT_ENTRY: f64 = 0.02;
+                let raw_entry = token.balance * estimated_price;
+                let entry_sol = if raw_entry > MAX_ENTRY || raw_entry < 0.001 { DEFAULT_ENTRY } else { raw_entry };
+
+                if let Ok(position) = state.position_manager.create_discovered_position_with_config(
+                    token, estimated_price, entry_sol, exit_config,
+                ).await {
+                    info!(
+                        "   ✅ Created recovery position {} for failed sell {} (SL:{:?}%/TP:{:?}%)",
+                        position.id, &token.mint[..12],
+                        position.exit_config.stop_loss_percent,
+                        position.exit_config.take_profit_percent
+                    );
+                }
+            }
+
+            if !reconcile_result.discovered_tokens.is_empty() {
+                info!("📊 Post-sell reconciliation: created {} recovery positions", reconcile_result.discovered_tokens.len());
+            }
+        }
+    }
 
     Ok(Json(SellAllResponse {
         tokens_found: total_found,
@@ -498,6 +850,7 @@ pub async fn sell_all_wallet_tokens(
         total_sol_received: total_sol,
         results,
         message,
+        daily_volume_usage: Some(final_volume_info),
     }))
 }
 
@@ -505,15 +858,34 @@ pub async fn sell_all_wallet_tokens(
 async fn sell_token_to_sol(
     state: &AppState,
     mint: &str,
-    amount: f64,
+    _amount: f64,  // Ignored - we fetch actual on-chain balance
     decimals: u8,
     wallet_address: &str,
 ) -> Result<(f64, String), AppError> {
     use crate::execution::{CurveSellParams, SwapParams};
     use crate::wallet::SignRequest;
 
-    // Convert UI amount to raw amount
-    let raw_amount = (amount * 10f64.powi(decimals as i32)) as u64;
+    // CRITICAL: Fetch ACTUAL on-chain balance instead of using DAS (which can be stale)
+    let actual_balance = state.on_chain_fetcher
+        .get_token_balance(wallet_address, mint)
+        .await
+        .map_err(|e| AppError::ExternalApi(format!("Failed to get actual token balance: {}", e)))?;
+
+    if actual_balance == 0 {
+        return Err(AppError::Validation(format!(
+            "Token {} has zero on-chain balance - already sold or transferred",
+            &mint[..12]
+        )));
+    }
+
+    let raw_amount = actual_balance;
+    let ui_amount = actual_balance as f64 / 10f64.powi(decimals as i32);
+    tracing::info!(
+        mint = &mint[..12],
+        raw_amount = raw_amount,
+        ui_amount = ui_amount,
+        "📊 Actual on-chain balance fetched"
+    );
 
     // Try bonding curve sell first (pump.fun/moonshot)
     match state.on_chain_fetcher.get_bonding_curve_state(mint).await {
@@ -539,28 +911,57 @@ async fn sell_token_to_sol(
 async fn sell_via_bonding_curve(
     state: &AppState,
     mint: &str,
-    raw_amount: u64,
+    initial_raw_amount: u64,
     wallet_address: &str,
 ) -> Result<(f64, String), AppError> {
     use crate::execution::CurveSellParams;
     use crate::wallet::SignRequest;
 
     const MAX_RETRIES: u32 = 3;
-    const MAX_SLIPPAGE: u16 = 2500; // 25% max
-    let mut slippage: u16 = 1000; // Start at 10%
+    const INITIAL_SLIPPAGE: u16 = 1000;   // 10% initial for manual sells
+    const EMERGENCY_SLIPPAGE: u16 = 2500; // 25% emergency - prioritize exit
+    let mut slippage: u16 = INITIAL_SLIPPAGE;
     let mut last_error = String::new();
+    let mut used_emergency = false;
+    let mut raw_amount = initial_raw_amount;
 
     for attempt in 0..=MAX_RETRIES {
         if attempt > 0 {
-            // Increase slippage by 50% each retry
-            slippage = (slippage as u32 * 150 / 100).min(MAX_SLIPPAGE as u32) as u16;
-            tracing::info!(
-                mint = &mint[..12],
-                attempt = attempt,
-                slippage_bps = slippage,
-                "🔄 Retrying curve sell with increased slippage"
-            );
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            // On ANY retry, immediately jump to emergency slippage
+            if !used_emergency {
+                slippage = EMERGENCY_SLIPPAGE;
+                used_emergency = true;
+                tracing::warn!(
+                    mint = &mint[..12],
+                    "🚨 EMERGENCY SLIPPAGE: Jumping to {}bps after failure",
+                    slippage
+                );
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+            // Re-fetch actual balance on retry (handles race conditions / stale data)
+            match state.on_chain_fetcher.get_token_balance(wallet_address, mint).await {
+                Ok(0) => {
+                    return Err(AppError::Validation(format!(
+                        "Token {} balance is now 0 - already sold",
+                        &mint[..12]
+                    )));
+                }
+                Ok(fresh_balance) => {
+                    if fresh_balance != raw_amount {
+                        tracing::info!(
+                            mint = &mint[..12],
+                            old_amount = raw_amount,
+                            new_amount = fresh_balance,
+                            "🔄 Balance changed, using fresh value"
+                        );
+                        raw_amount = fresh_balance;
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!(mint = &mint[..12], error = %e, "Failed to re-fetch balance, using previous");
+                }
+            }
         }
 
         let sell_params = CurveSellParams {
@@ -611,16 +1012,25 @@ async fn sell_via_bonding_curve(
             }
         };
 
-        // Send via Helius
-        match state.helius_sender.send_transaction(&signed_tx, true).await {
+        // Send via Helius and wait for confirmation
+        let confirmation_timeout = std::time::Duration::from_secs(30);
+        match state.helius_sender.send_and_confirm(&signed_tx, confirmation_timeout).await {
             Ok(signature) => {
                 let sol_received = expected_sol as f64 / 1_000_000_000.0;
+                tracing::info!(
+                    mint = &mint[..12],
+                    signature = &signature[..16],
+                    sol_received = sol_received,
+                    "✅ Curve sell CONFIRMED on-chain"
+                );
                 return Ok((sol_received, signature));
             }
             Err(e) => {
-                last_error = format!("Failed to send tx: {}", e);
+                last_error = format!("Transaction failed or not confirmed: {}", e);
                 let is_slippage_error = last_error.contains("6003")
                     || last_error.to_lowercase().contains("slippage");
+                let is_insufficient_tokens = last_error.contains("6023")
+                    || last_error.to_lowercase().contains("not enough tokens");
 
                 if is_slippage_error && attempt < MAX_RETRIES {
                     tracing::warn!(
@@ -630,6 +1040,22 @@ async fn sell_via_bonding_curve(
                     );
                     continue;
                 }
+
+                if is_insufficient_tokens && attempt < MAX_RETRIES {
+                    tracing::warn!(
+                        mint = &mint[..12],
+                        tried_amount = raw_amount,
+                        error = %last_error,
+                        "⚠️ Not enough tokens error (6023) - will re-fetch balance and retry"
+                    );
+                    continue; // Will re-fetch balance at top of loop
+                }
+
+                tracing::error!(
+                    mint = &mint[..12],
+                    error = %last_error,
+                    "❌ Transaction failed to confirm"
+                );
             }
         }
     }
@@ -684,11 +1110,18 @@ async fn sell_via_jupiter(
     let signed_tx = signed.signed_transaction_base64
         .ok_or_else(|| AppError::ExternalApi("Signed transaction missing".to_string()))?;
 
-    // Send via Helius
-    let signature = state.helius_sender.send_transaction(
+    // Send via Helius and wait for confirmation
+    let confirmation_timeout = std::time::Duration::from_secs(30);
+    let signature = state.helius_sender.send_and_confirm(
         &signed_tx,
-        true, // skip preflight for speed
-    ).await.map_err(|e| AppError::ExternalApi(format!("Failed to send tx: {}", e)))?;
+        confirmation_timeout,
+    ).await.map_err(|e| AppError::ExternalApi(format!("Transaction failed to confirm: {}", e)))?;
+
+    tracing::info!(
+        mint = &mint[..12],
+        signature = &signature[..16],
+        "✅ Jupiter sell CONFIRMED on-chain"
+    );
 
     let sol_received = expected_sol as f64 / 1_000_000_000.0;
     Ok((sol_received, signature))
@@ -711,8 +1144,8 @@ pub async fn get_monitor_status(
 
     Ok(Json(MonitorStatusResponse {
         monitoring_active: true,
-        price_check_interval_secs: 30,
-        exit_slippage_bps: 100,
+        price_check_interval_secs: 3,
+        exit_slippage_bps: 1000,
         active_positions: stats.active_positions,
         pending_exit_signals: signals.len(),
     }))
@@ -788,10 +1221,11 @@ pub struct BestWorstTrade {
 
 #[derive(Debug, Serialize)]
 pub struct RecentTradeInfo {
+    pub id: String,
     pub symbol: String,
     pub pnl: f64,
     pub pnl_percent: f64,
-    pub reason: String,
+    pub exit_type: String,
     pub time_ago: String,
 }
 
@@ -850,10 +1284,11 @@ pub async fn get_pnl_summary(
             }
         }).unwrap_or_else(|| "?".to_string());
         RecentTradeInfo {
+            id: t.id,
             symbol: t.symbol,
             pnl: t.pnl,
             pnl_percent,
-            reason: t.reason,
+            exit_type: t.reason,
             time_ago,
         }
     }).collect();
@@ -963,6 +1398,16 @@ pub async fn reconcile_wallet(
         .collect();
 
     info!("📊 Found {} tokens with non-zero balance in wallet", wallet_tokens.len());
+
+    // Log each token found for debugging
+    for token in &wallet_tokens {
+        info!(
+            "   Token: {} - balance: {:.6} (decimals: {})",
+            &token.mint[..12],
+            token.balance,
+            token.decimals
+        );
+    }
 
     let result = state.position_manager.reconcile_wallet_tokens(&wallet_tokens).await;
 

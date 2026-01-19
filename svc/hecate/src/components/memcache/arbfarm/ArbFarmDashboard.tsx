@@ -28,6 +28,9 @@ import type {
   DiscoveredKol,
   KolDiscoveryStatus,
   CapitalUsageResponse,
+  WhitelistedEntity,
+  WatchedEntity,
+  ThreatStats,
 } from '../../../types/arbfarm';
 import {
   PRIORITY_LEVEL_LABELS,
@@ -43,6 +46,10 @@ import TradeHistoryCard from './components/TradeHistoryCard';
 import CurvePanel from './components/CurvePanel';
 import HomeTab from './components/HomeTab';
 import WipTab from './components/WipTab';
+import ConsensusTab from './components/ConsensusTab';
+import ConversationsTab from './components/ConversationsTab';
+import EngramBrowserTab from './components/EngramBrowserTab';
+import RecommendationsTab from './components/RecommendationsTab';
 
 export type ArbFarmView =
   | 'dashboard'
@@ -55,6 +62,10 @@ export type ArbFarmView =
   | 'kol-tracker'
   | 'threats'
   | 'helius'
+  | 'consensus'
+  | 'conversations'
+  | 'engrams'
+  | 'recommendations'
   | 'settings';
 
 interface ArbFarmDashboardProps {
@@ -70,10 +81,28 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     autoFetchSwarm: true,
   });
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+
+  // Recent activity events collected from SSE
+  const [recentEvents, setRecentEvents] = useState<Array<{
+    id: string;
+    event_type: string;
+    timestamp: string;
+    payload?: Record<string, unknown>;
+  }>>([]);
+
   const [opportunitiesFilter, setOpportunitiesFilter] = useState<string>('all');
   const [threatTokenInput, setThreatTokenInput] = useState('');
   const [threatCheckResult, setThreatCheckResult] = useState<any>(null);
   const [threatChecking, setThreatChecking] = useState(false);
+  const [threatTab, setThreatTab] = useState<'alerts' | 'blocked' | 'whitelist' | 'watch' | 'stats'>('alerts');
+  const [whitelistedEntities, setWhitelistedEntities] = useState<WhitelistedEntity[]>([]);
+  const [watchedEntities, setWatchedEntities] = useState<WatchedEntity[]>([]);
+  const [threatStats, setThreatStats] = useState<ThreatStats | null>(null);
+  const [threatsLoading, setThreatsLoading] = useState(false);
+  const [newWatchMint, setNewWatchMint] = useState('');
+  const [newWatchReason, setNewWatchReason] = useState('');
   const [cowsFilter, setCowsFilter] = useState<'all' | 'mine' | 'forkable'>('all');
   const [selectedCowForFork, setSelectedCowForFork] = useState<ArbFarmCowSummary | null>(null);
 
@@ -176,6 +205,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     auto_max_position_sol: 0.5,
     require_simulation: true,
   });
+  const [savingExecutionSettings, setSavingExecutionSettings] = useState(false);
 
   // Dev wallet state
   const [devModeAvailable, setDevModeAvailable] = useState(false);
@@ -224,12 +254,30 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     notify_hecate_on_pending: boolean;
   } | null>(null);
   const [togglingExecution, setTogglingExecution] = useState(false);
+  const [showAutoExecWarning, setShowAutoExecWarning] = useState(false);
+  const [pendingAutoExecToggle, setPendingAutoExecToggle] = useState<boolean | null>(null);
+  const [hideAutoExecWarning, setHideAutoExecWarning] = useState(() => {
+    return localStorage.getItem('arbfarm_hide_autoexec_warning') === 'true';
+  });
 
   useEffect(() => {
     sse.connect(['arb.edge.*', 'arb.trade.*', 'arb.threat.*', 'arb.swarm.*', 'arb.helius.*', 'arb.approval.*']);
 
     return () => sse.disconnect();
   }, []);
+
+  // Collect SSE events for Recent Activity display
+  useEffect(() => {
+    if (sse.lastEvent) {
+      const newEvent = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        event_type: sse.lastEvent.topic.replace(/^arb\./, '').replace(/\./g, '_'),
+        timestamp: new Date().toISOString(),
+        payload: sse.lastEvent.payload as Record<string, unknown>,
+      };
+      setRecentEvents((prev) => [newEvent, ...prev].slice(0, 50));
+    }
+  }, [sse.lastEvent]);
 
   useEffect(() => {
     edges.refresh();
@@ -253,6 +301,36 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
       fetchHeliusData();
     }
   }, [activeView]);
+
+  const handleRefreshAll = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        dashboard.refresh(),
+        edges.refresh(),
+        trades.refresh(),
+        scanner.refresh(),
+        swarm.refresh(),
+        strategies.refresh(),
+        threats.refresh(),
+      ]);
+      setLastRefresh(new Date());
+    } catch (err) {
+      console.error('Failed to refresh:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    const autoRefreshInterval = setInterval(() => {
+      if (!isRefreshing) {
+        handleRefreshAll();
+      }
+    }, 30000);
+
+    return () => clearInterval(autoRefreshInterval);
+  }, [isRefreshing]);
 
   const fetchHeliusData = async () => {
     setHeliusLoading(true);
@@ -337,10 +415,13 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
       const res = await arbFarmService.getExecutionConfig();
       if (res.success && res.data) {
         setExecutionConfig(res.data);
-        setExecutionSettings((prev) => ({
-          ...prev,
+        // Sync all execution settings from backend config
+        setExecutionSettings({
           auto_execute_enabled: res.data?.auto_execution_enabled || false,
-        }));
+          auto_min_confidence: res.data?.auto_min_confidence ?? 0.8,
+          auto_max_position_sol: res.data?.auto_max_position_sol ?? 0.5,
+          require_simulation: res.data?.require_simulation ?? true,
+        });
       }
     } catch (err) {
       console.error('Failed to fetch execution config:', err);
@@ -378,6 +459,15 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
   };
 
   const handleToggleExecution = async (enabled: boolean) => {
+    if (!hideAutoExecWarning) {
+      setPendingAutoExecToggle(enabled);
+      setShowAutoExecWarning(true);
+      return;
+    }
+    await executeToggle(enabled);
+  };
+
+  const executeToggle = async (enabled: boolean) => {
     setTogglingExecution(true);
     try {
       const res = await arbFarmService.toggleExecution(enabled);
@@ -389,6 +479,53 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
       console.error('Failed to toggle execution:', err);
     } finally {
       setTogglingExecution(false);
+    }
+  };
+
+  const handleConfirmAutoExec = async () => {
+    if (pendingAutoExecToggle !== null) {
+      setShowAutoExecWarning(false);
+      await executeToggle(pendingAutoExecToggle);
+      setPendingAutoExecToggle(null);
+    }
+  };
+
+  const handleCancelAutoExec = () => {
+    setShowAutoExecWarning(false);
+    setPendingAutoExecToggle(null);
+  };
+
+  const handleDontShowAgain = (checked: boolean) => {
+    setHideAutoExecWarning(checked);
+    if (checked) {
+      localStorage.setItem('arbfarm_hide_autoexec_warning', 'true');
+    } else {
+      localStorage.removeItem('arbfarm_hide_autoexec_warning');
+    }
+  };
+
+  const handleApplyExecutionSettings = async () => {
+    setSavingExecutionSettings(true);
+    try {
+      const res = await arbFarmService.saveExecutionSettings({
+        auto_execution_enabled: executionSettings.auto_execute_enabled,
+        auto_min_confidence: executionSettings.auto_min_confidence,
+        auto_max_position_sol: executionSettings.auto_max_position_sol,
+        require_simulation: executionSettings.require_simulation,
+      });
+      if (res.success && res.data) {
+        setExecutionConfig((prev) => prev ? {
+          ...prev,
+          auto_execution_enabled: res.data!.auto_execution_enabled,
+        } : null);
+        console.log('Execution settings applied successfully');
+      } else {
+        console.error('Failed to apply execution settings:', res.error);
+      }
+    } catch (err) {
+      console.error('Failed to apply execution settings:', err);
+    } finally {
+      setSavingExecutionSettings(false);
     }
   };
 
@@ -576,6 +713,28 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
       }
     } catch (err) {
       console.error('Failed to queue backtest:', err);
+    }
+  };
+
+  const handleApproveDiscovery = async (discoveryId: string) => {
+    try {
+      const res = await arbFarmService.approveDiscovery(discoveryId);
+      if (res.success) {
+        fetchDiscoveries();
+      }
+    } catch (err) {
+      console.error('Failed to approve discovery:', err);
+    }
+  };
+
+  const handleRejectDiscovery = async (discoveryId: string) => {
+    try {
+      const res = await arbFarmService.rejectDiscovery(discoveryId);
+      if (res.success) {
+        fetchDiscoveries();
+      }
+    } catch (err) {
+      console.error('Failed to reject discovery:', err);
     }
   };
 
@@ -2222,7 +2381,83 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     setThreatChecking(false);
   };
 
+  const fetchThreatData = async () => {
+    setThreatsLoading(true);
+    try {
+      const [whitelistRes, watchRes, statsRes] = await Promise.all([
+        arbFarmService.listWhitelisted(),
+        arbFarmService.listWatched(),
+        arbFarmService.getThreatStats(),
+      ]);
+      if (whitelistRes.success && whitelistRes.data) {
+        setWhitelistedEntities(whitelistRes.data);
+      }
+      if (watchRes.success && watchRes.data) {
+        setWatchedEntities(watchRes.data);
+      }
+      if (statsRes.success && statsRes.data) {
+        setThreatStats(statsRes.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch threat data:', error);
+    } finally {
+      setThreatsLoading(false);
+    }
+  };
+
+  const handleAddWatch = async () => {
+    if (!newWatchMint.trim()) return;
+    try {
+      const res = await arbFarmService.addWatch(newWatchMint.trim(), newWatchReason.trim() || undefined);
+      if (res.success) {
+        setNewWatchMint('');
+        setNewWatchReason('');
+        await fetchThreatData();
+      }
+    } catch (error) {
+      console.error('Failed to add watch:', error);
+    }
+  };
+
+  const handleRemoveWatch = async (mint: string) => {
+    try {
+      const res = await arbFarmService.removeWatch(mint);
+      if (res.success) {
+        await fetchThreatData();
+      }
+    } catch (error) {
+      console.error('Failed to remove watch:', error);
+    }
+  };
+
+  const handleRemoveFromBlocklist = async (address: string) => {
+    try {
+      const res = await arbFarmService.removeFromBlocklist(address);
+      if (res.success) {
+        threats.refresh();
+      }
+    } catch (error) {
+      console.error('Failed to remove from blocklist:', error);
+    }
+  };
+
+  const handleRemoveFromWhitelist = async (address: string) => {
+    try {
+      const res = await arbFarmService.removeFromWhitelist(address);
+      if (res.success) {
+        await fetchThreatData();
+      }
+    } catch (error) {
+      console.error('Failed to remove from whitelist:', error);
+    }
+  };
+
   const renderThreatsView = () => {
+    if (threatTab === 'whitelist' || threatTab === 'watch' || threatTab === 'stats') {
+      if (whitelistedEntities.length === 0 && watchedEntities.length === 0 && !threatStats) {
+        fetchThreatData();
+      }
+    }
 
     return (
       <div className={styles.threatsView}>
@@ -2274,37 +2509,225 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
           )}
         </div>
 
-        <div className={styles.alertsSection}>
-          <h3>Recent Alerts ({(threats.alerts || []).length})</h3>
-          <div className={styles.alertsList}>
-            {threats.isLoading ? (
-              <div className={styles.loadingState}>Loading alerts...</div>
-            ) : (threats.alerts || []).length === 0 ? (
-              <div className={styles.emptyState}>No threat alerts</div>
-            ) : (
-              (threats.alerts || []).map((alert) => <ThreatAlertCard key={alert.id} alert={alert} />)
-            )}
-          </div>
+        <div className={styles.threatTabs}>
+          <button
+            className={`${styles.threatTab} ${threatTab === 'alerts' ? styles.active : ''}`}
+            onClick={() => setThreatTab('alerts')}
+          >
+            Alerts ({(threats.alerts || []).length})
+          </button>
+          <button
+            className={`${styles.threatTab} ${threatTab === 'blocked' ? styles.active : ''}`}
+            onClick={() => setThreatTab('blocked')}
+          >
+            Blocked ({(threats.blocked || []).length})
+          </button>
+          <button
+            className={`${styles.threatTab} ${threatTab === 'whitelist' ? styles.active : ''}`}
+            onClick={() => setThreatTab('whitelist')}
+          >
+            Whitelist ({whitelistedEntities.length})
+          </button>
+          <button
+            className={`${styles.threatTab} ${threatTab === 'watch' ? styles.active : ''}`}
+            onClick={() => setThreatTab('watch')}
+          >
+            Watch List ({watchedEntities.length})
+          </button>
+          <button
+            className={`${styles.threatTab} ${threatTab === 'stats' ? styles.active : ''}`}
+            onClick={() => setThreatTab('stats')}
+          >
+            Stats
+          </button>
         </div>
 
-        <div className={styles.blockedSection}>
-          <h3>Blocked Entities ({(threats.blocked || []).length})</h3>
-          <div className={styles.blockedList}>
-            {(threats.blocked || []).length === 0 ? (
-              <div className={styles.emptyState}>No blocked entities</div>
-            ) : (
-              (threats.blocked || []).slice(0, 10).map((entity) => (
-                <div key={entity.id} className={styles.blockedItem}>
-                  <span className={styles.blockedType}>{entity.entity_type}</span>
-                  <span className={styles.blockedAddress}>
-                    {entity.address.slice(0, 8)}...{entity.address.slice(-4)}
-                  </span>
-                  <span className={styles.blockedCategory}>{entity.threat_category}</span>
+        {threatTab === 'alerts' && (
+          <div className={styles.alertsSection}>
+            <div className={styles.sectionHeader}>
+              <h3>Recent Alerts</h3>
+              <button className={styles.refreshButton} onClick={() => threats.refresh()}>
+                Refresh
+              </button>
+            </div>
+            <div className={styles.alertsList}>
+              {threats.isLoading ? (
+                <div className={styles.loadingState}>Loading alerts...</div>
+              ) : (threats.alerts || []).length === 0 ? (
+                <div className={styles.emptyState}>No threat alerts</div>
+              ) : (
+                (threats.alerts || []).map((alert) => <ThreatAlertCard key={alert.id} alert={alert} />)
+              )}
+            </div>
+          </div>
+        )}
+
+        {threatTab === 'blocked' && (
+          <div className={styles.blockedSection}>
+            <div className={styles.sectionHeader}>
+              <h3>Blocked Entities</h3>
+            </div>
+            <div className={styles.blockedList}>
+              {(threats.blocked || []).length === 0 ? (
+                <div className={styles.emptyState}>No blocked entities</div>
+              ) : (
+                (threats.blocked || []).map((entity) => (
+                  <div key={entity.id} className={styles.blockedItem}>
+                    <span className={styles.blockedType}>{entity.entity_type}</span>
+                    <span className={styles.blockedAddress}>
+                      {entity.address.slice(0, 8)}...{entity.address.slice(-4)}
+                    </span>
+                    <span className={styles.blockedCategory}>{entity.threat_category}</span>
+                    <button
+                      className={styles.removeButton}
+                      onClick={() => handleRemoveFromBlocklist(entity.address)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {threatTab === 'whitelist' && (
+          <div className={styles.whitelistSection}>
+            <div className={styles.sectionHeader}>
+              <h3>Whitelisted Entities</h3>
+              <button className={styles.refreshButton} onClick={fetchThreatData} disabled={threatsLoading}>
+                {threatsLoading ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+            <div className={styles.whitelistList}>
+              {whitelistedEntities.length === 0 ? (
+                <div className={styles.emptyState}>No whitelisted entities</div>
+              ) : (
+                whitelistedEntities.map((entity) => (
+                  <div key={entity.id} className={styles.whitelistItem}>
+                    <div className={styles.whitelistInfo}>
+                      <span className={styles.whitelistType}>{entity.entity_type}</span>
+                      <span className={styles.whitelistAddress}>
+                        {entity.address.slice(0, 8)}...{entity.address.slice(-4)}
+                      </span>
+                      <span className={styles.whitelistReason}>{entity.reason}</span>
+                    </div>
+                    <button
+                      className={styles.removeButton}
+                      onClick={() => handleRemoveFromWhitelist(entity.address)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {threatTab === 'watch' && (
+          <div className={styles.watchSection}>
+            <div className={styles.sectionHeader}>
+              <h3>Watch List</h3>
+              <button className={styles.refreshButton} onClick={fetchThreatData} disabled={threatsLoading}>
+                {threatsLoading ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+            <div className={styles.addWatchForm}>
+              <input
+                type="text"
+                placeholder="Token mint address..."
+                value={newWatchMint}
+                onChange={(e) => setNewWatchMint(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Reason (optional)..."
+                value={newWatchReason}
+                onChange={(e) => setNewWatchReason(e.target.value)}
+              />
+              <button onClick={handleAddWatch} disabled={!newWatchMint.trim()}>
+                Add Watch
+              </button>
+            </div>
+            <div className={styles.watchList}>
+              {watchedEntities.length === 0 ? (
+                <div className={styles.emptyState}>No entities being watched</div>
+              ) : (
+                watchedEntities.map((entity) => (
+                  <div key={entity.id} className={styles.watchItem}>
+                    <div className={styles.watchInfo}>
+                      <span className={styles.watchAddress}>
+                        {entity.address.slice(0, 8)}...{entity.address.slice(-4)}
+                      </span>
+                      {entity.reason && <span className={styles.watchReason}>{entity.reason}</span>}
+                      {entity.last_score !== undefined && (
+                        <span
+                          className={`${styles.watchScore} ${entity.last_score > 0.7 ? styles.high : entity.last_score > 0.3 ? styles.medium : styles.low}`}
+                        >
+                          Score: {(entity.last_score * 100).toFixed(0)}%
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      className={styles.removeButton}
+                      onClick={() => handleRemoveWatch(entity.address)}
+                    >
+                      Unwatch
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {threatTab === 'stats' && (
+          <div className={styles.threatStatsSection}>
+            <div className={styles.sectionHeader}>
+              <h3>Threat Statistics</h3>
+              <button className={styles.refreshButton} onClick={fetchThreatData} disabled={threatsLoading}>
+                {threatsLoading ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+            {threatStats ? (
+              <div className={styles.threatStatsGrid}>
+                <div className={styles.threatStatCard}>
+                  <span className={styles.threatStatValue}>{threatStats.total_checks}</span>
+                  <span className={styles.threatStatLabel}>Total Checks</span>
                 </div>
-              ))
+                <div className={styles.threatStatCard}>
+                  <span className={styles.threatStatValue}>{threatStats.checks_last_24h}</span>
+                  <span className={styles.threatStatLabel}>Checks (24h)</span>
+                </div>
+                <div className={styles.threatStatCard}>
+                  <span className={styles.threatStatValue}>{threatStats.blocked_count}</span>
+                  <span className={styles.threatStatLabel}>Blocked</span>
+                </div>
+                <div className={styles.threatStatCard}>
+                  <span className={styles.threatStatValue}>{threatStats.whitelisted_count}</span>
+                  <span className={styles.threatStatLabel}>Whitelisted</span>
+                </div>
+                <div className={styles.threatStatCard}>
+                  <span className={styles.threatStatValue}>{threatStats.watched_count}</span>
+                  <span className={styles.threatStatLabel}>Watched</span>
+                </div>
+                <div className={styles.threatStatCard}>
+                  <span className={styles.threatStatValue}>{(threatStats.avg_score * 100).toFixed(0)}%</span>
+                  <span className={styles.threatStatLabel}>Avg Score</span>
+                </div>
+                <div className={styles.threatStatCard}>
+                  <span className={`${styles.threatStatValue} ${styles.danger}`}>
+                    {threatStats.high_risk_detected}
+                  </span>
+                  <span className={styles.threatStatLabel}>High Risk Found</span>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.emptyState}>No statistics available</div>
             )}
           </div>
-        </div>
+        )}
       </div>
     );
   };
@@ -3491,9 +3914,66 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
                     </div>
                   </div>
                 </div>
+
+                <div className={styles.applySettingsSection}>
+                  <button
+                    className={styles.applyButton}
+                    onClick={handleApplyExecutionSettings}
+                    disabled={savingExecutionSettings}
+                  >
+                    {savingExecutionSettings ? 'Applying...' : 'Apply Settings'}
+                  </button>
+                  <span className={styles.applyHint}>
+                    Click to save and apply all execution settings. Services will be reconfigured.
+                  </span>
+                </div>
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {showAutoExecWarning && (
+        <div className={styles.modalOverlay} onClick={handleCancelAutoExec}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>⚡ Immediate Effect</h3>
+              <button className={styles.closeButton} onClick={handleCancelAutoExec}>
+                ×
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <p>
+                <strong>This toggle takes effect immediately.</strong>
+              </p>
+              <p>
+                {pendingAutoExecToggle
+                  ? 'Enabling auto-execution will allow the agent to execute trades without approval. Make sure your risk parameters are configured correctly.'
+                  : 'Disabling auto-execution will require manual approval for all trades.'}
+              </p>
+              <p style={{ color: '#f59e0b', fontSize: '0.85rem' }}>
+                No need to hit the Apply button - changes are saved instantly.
+              </p>
+              <div className={styles.forkOptions} style={{ marginTop: '1rem' }}>
+                <label className={styles.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={hideAutoExecWarning}
+                    onChange={(e) => handleDontShowAgain(e.target.checked)}
+                  />
+                  <span>Don't show this again</span>
+                </label>
+              </div>
+            </div>
+            <div className={styles.modalActions}>
+              <button className={styles.cancelButton} onClick={handleCancelAutoExec}>
+                Cancel
+              </button>
+              <button className={styles.confirmButton} onClick={handleConfirmAutoExec}>
+                {pendingAutoExecToggle ? 'Enable Auto-Execute' : 'Disable Auto-Execute'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -4289,6 +4769,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
             </div>
           </div>
         )}
+
       </div>
     );
   };
@@ -4521,36 +5002,69 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
 
   const renderNavigationTabs = () => (
     <div className={styles.mainNavTabs}>
-      <button
-        className={`${styles.navTab} ${activeView === 'dashboard' ? styles.active : ''}`}
-        onClick={() => onViewChange('dashboard')}
-      >
-        Dashboard
-      </button>
-      <button
-        className={`${styles.navTab} ${activeView === 'curves' ? styles.active : ''}`}
-        onClick={() => onViewChange('curves')}
-      >
-        Curve Bonding
-      </button>
-      <button
-        className={`${styles.navTab} ${activeView === 'opportunities' ? styles.active : ''}`}
-        onClick={() => onViewChange('opportunities')}
-      >
-        Opportunities
-      </button>
-      <button
-        className={`${styles.navTab} ${activeView === 'kol-tracker' ? styles.active : ''}`}
-        onClick={() => onViewChange('kol-tracker')}
-      >
-        KOL Tracker
-      </button>
-      <button
-        className={`${styles.navTab} ${activeView === 'settings' ? styles.active : ''}`}
-        onClick={() => onViewChange('settings')}
-      >
-        Settings
-      </button>
+      <div className={styles.navTabsLeft}>
+        <button
+          className={`${styles.navTab} ${activeView === 'dashboard' ? styles.active : ''}`}
+          onClick={() => onViewChange('dashboard')}
+        >
+          Dashboard
+        </button>
+        <button
+          className={`${styles.navTab} ${activeView === 'curves' ? styles.active : ''}`}
+          onClick={() => onViewChange('curves')}
+        >
+          Curve Bonding
+        </button>
+        <button
+          className={`${styles.navTab} ${activeView === 'opportunities' ? styles.active : ''}`}
+          onClick={() => onViewChange('opportunities')}
+        >
+          Opportunities
+        </button>
+        <button
+          className={`${styles.navTab} ${activeView === 'kol-tracker' ? styles.active : ''}`}
+          onClick={() => onViewChange('kol-tracker')}
+        >
+          KOL Tracker
+        </button>
+        <button
+          className={`${styles.navTab} ${activeView === 'consensus' ? styles.active : ''}`}
+          onClick={() => onViewChange('consensus')}
+        >
+          Consensus
+        </button>
+        <button
+          className={`${styles.navTab} ${activeView === 'recommendations' ? styles.active : ''}`}
+          onClick={() => onViewChange('recommendations')}
+        >
+          Recommendations
+        </button>
+        <button
+          className={`${styles.navTab} ${activeView === 'engrams' ? styles.active : ''}`}
+          onClick={() => onViewChange('engrams')}
+        >
+          Engrams
+        </button>
+        <button
+          className={`${styles.navTab} ${activeView === 'settings' ? styles.active : ''}`}
+          onClick={() => onViewChange('settings')}
+        >
+          Settings
+        </button>
+      </div>
+      <div className={styles.navTabsRight}>
+        <span className={styles.lastRefreshTime}>
+          {lastRefresh.toLocaleTimeString()}
+        </span>
+        <button
+          className={`${styles.refreshButton} ${isRefreshing ? styles.spinning : ''}`}
+          onClick={handleRefreshAll}
+          disabled={isRefreshing}
+          title="Refresh all data"
+        >
+          ↻
+        </button>
+      </div>
     </div>
   );
 
@@ -4568,7 +5082,8 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
               unrealized_pnl: 0,
               status: 'open',
             })) || []}
-            recentEvents={[]}
+            recentEvents={recentEvents}
+            liveTrades={trades.data?.slice(0, 10)}
           />
         </div>
       );
@@ -4600,6 +5115,34 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
       return renderSettingsView();
     case 'research':
       return renderResearchView();
+    case 'consensus':
+      return (
+        <div className={styles.viewContainer}>
+          {renderNavigationTabs()}
+          <ConsensusTab />
+        </div>
+      );
+    case 'conversations':
+      return (
+        <div className={styles.viewContainer}>
+          {renderNavigationTabs()}
+          <ConversationsTab />
+        </div>
+      );
+    case 'engrams':
+      return (
+        <div className={styles.viewContainer}>
+          {renderNavigationTabs()}
+          <EngramBrowserTab />
+        </div>
+      );
+    case 'recommendations':
+      return (
+        <div className={styles.viewContainer}>
+          {renderNavigationTabs()}
+          <RecommendationsTab />
+        </div>
+      );
     default:
       return (
         <div className={styles.viewContainer}>
@@ -4613,7 +5156,8 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
               unrealized_pnl: 0,
               status: 'open',
             })) || []}
-            recentEvents={[]}
+            recentEvents={recentEvents}
+            liveTrades={trades.data?.slice(0, 10)}
           />
         </div>
       );

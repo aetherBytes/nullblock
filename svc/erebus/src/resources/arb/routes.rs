@@ -703,6 +703,11 @@ pub async fn threat_stream() -> Result<Response, StatusCode> {
     proxy_sse("threat/stream").await
 }
 
+// Positions Stream
+pub async fn positions_stream() -> Result<Response, StatusCode> {
+    proxy_sse("positions/stream").await
+}
+
 // Positions
 pub async fn list_positions() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
     info!("📊 List positions requested");
@@ -752,6 +757,11 @@ pub async fn positions_emergency_close() -> Result<ResponseJson<Value>, (StatusC
 pub async fn positions_sell_all() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
     info!("💰 Positions sell all requested");
     proxy_request("POST", "positions/sell-all", None).await
+}
+
+pub async fn positions_force_clear() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🧹 Positions force clear requested");
+    proxy_request("POST", "positions/force-clear", None).await
 }
 
 pub async fn get_position(
@@ -921,6 +931,13 @@ pub async fn execution_config() -> Result<ResponseJson<Value>, (StatusCode, Resp
     proxy_request("GET", "execution/config", None).await
 }
 
+pub async fn update_execution_config(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Update execution config requested");
+    proxy_request("PUT", "execution/config", Some(request)).await
+}
+
 pub async fn execution_toggle(
     Json(request): Json<Value>,
 ) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
@@ -1050,6 +1067,7 @@ where
         // Event Streams
         .route("/api/arb/events/stream", get(events_stream))
         .route("/api/arb/threat/stream", get(threat_stream))
+        .route("/api/arb/positions/stream", get(positions_stream))
 
         // Positions
         .route("/api/arb/positions", get(list_positions))
@@ -1062,6 +1080,7 @@ where
         .route("/api/arb/positions/monitor/stop", post(positions_monitor_stop))
         .route("/api/arb/positions/emergency-close", post(positions_emergency_close))
         .route("/api/arb/positions/sell-all", post(positions_sell_all))
+        .route("/api/arb/positions/force-clear", post(positions_force_clear))
         .route("/api/arb/positions/:id", get(get_position))
         .route("/api/arb/positions/:id/close", post(close_position))
 
@@ -1098,7 +1117,7 @@ where
         // Approvals
         .route("/api/arb/approvals", get(list_approvals))
         .route("/api/arb/approvals/pending", get(list_pending_approvals))
-        .route("/api/arb/execution/config", get(execution_config))
+        .route("/api/arb/execution/config", get(execution_config).put(update_execution_config))
         .route("/api/arb/execution/toggle", post(execution_toggle))
 
         // Engrams

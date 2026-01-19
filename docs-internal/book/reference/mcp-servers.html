@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "coal";
             const default_dark_theme = "coal";
-            window.path_to_searchindex_js = "../searchindex-1bc75e06.js";
+            window.path_to_searchindex_js = "../searchindex-dd80a3ec.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1cee2a9d.js"></script>
@@ -259,6 +259,73 @@
     }
   }'
 </code></pre>
+<h2 id="arbfarm-mcp-server"><a class="header" href="#arbfarm-mcp-server">ArbFarm MCP Server</a></h2>
+<p><strong>Purpose</strong>: Solana MEV agent swarm - trading, consensus, engram learning tools.</p>
+<p><strong>Protocol Version</strong>: 2025-11-25</p>
+<p><strong>Endpoint</strong>: <code>http://localhost:9007/mcp/jsonrpc</code> (direct) or <code>http://localhost:3000/api/arb/mcp/jsonrpc</code> (via Erebus)</p>
+<h3 id="available-tools-97"><a class="header" href="#available-tools-97">Available Tools (97)</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Count</th><th>Examples</th></tr>
+</thead>
+<tbody>
+<tr><td>Scanner</td><td>3</td><td><code>scanner_status</code>, <code>scanner_signals</code>, <code>scanner_add_venue</code></td></tr>
+<tr><td>Edges</td><td>5</td><td><code>edge_list</code>, <code>edge_details</code>, <code>edge_approve</code>, <code>edge_reject</code></td></tr>
+<tr><td>Strategies</td><td>4</td><td><code>strategy_list</code>, <code>strategy_create</code>, <code>strategy_toggle</code>, <code>strategy_kill</code></td></tr>
+<tr><td>Curves</td><td>15</td><td><code>curve_tokens</code>, <code>curve_quote</code>, <code>curve_buy</code>, <code>curve_sell</code></td></tr>
+<tr><td>Positions</td><td>8</td><td><code>position_list</code>, <code>position_open</code>, <code>position_close</code>, <code>position_exit_config</code></td></tr>
+<tr><td>Consensus</td><td>9</td><td><code>consensus_request</code>, <code>consensus_models_list</code>, <code>consensus_config_get</code></td></tr>
+<tr><td>Learning</td><td>6</td><td><code>engram_get_arbfarm_learning</code>, <code>engram_get_trade_history</code>, <code>engram_get_errors</code></td></tr>
+<tr><td>Approvals</td><td>5</td><td><code>approval_list</code>, <code>approval_approve</code>, <code>approval_reject</code></td></tr>
+<tr><td>Threat</td><td>8</td><td><code>threat_check_token</code>, <code>threat_check_wallet</code>, <code>threat_report</code></td></tr>
+<tr><td>KOL</td><td>10</td><td><code>kol_list</code>, <code>kol_add</code>, <code>kol_discovery_status</code>, <code>kol_copy_enable</code></td></tr>
+<tr><td>Wallet</td><td>6</td><td><code>wallet_status</code>, <code>wallet_balance</code>, <code>wallet_capital</code></td></tr>
+<tr><td>Swarm</td><td>8</td><td><code>swarm_status</code>, <code>swarm_health</code>, <code>swarm_pause</code>, <code>swarm_resume</code></td></tr>
+<tr><td>Other</td><td>10</td><td><code>settings_*</code>, <code>helius_*</code>, <code>research_*</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="tool-annotations-mcp-2025-11-25"><a class="header" href="#tool-annotations-mcp-2025-11-25">Tool Annotations (MCP 2025-11-25)</a></h3>
+<p>All 97 tools include annotations:</p>
+<ul>
+<li><code>readOnlyHint</code>: Safe read operations (list, get, status)</li>
+<li><code>destructiveHint</code>: Dangerous operations (kill, reject, block)</li>
+<li><code>idempotentHint</code>: Safe to retry (toggle, update, config)</li>
+</ul>
+<h3 id="a2a-discovery-tags"><a class="header" href="#a2a-discovery-tags">A2A Discovery Tags</a></h3>
+<p>Learning tools tagged with <code>arbFarm.learning</code> for agent discovery:</p>
+<ul>
+<li><code>engram_get_arbfarm_learning</code></li>
+<li><code>engram_acknowledge_recommendation</code></li>
+<li><code>engram_get_trade_history</code></li>
+<li><code>engram_get_errors</code></li>
+<li><code>engram_request_analysis</code></li>
+<li><code>engram_get_by_ids</code></li>
+</ul>
+<h3 id="example-list-tools-with-annotations"><a class="header" href="#example-list-tools-with-annotations">Example: List Tools with Annotations</a></h3>
+<pre><code class="language-bash">curl -X POST http://localhost:9007/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list",
+    "params": {}
+  }' | jq '.result.tools[0]'
+</code></pre>
+<h3 id="example-get-trade-history"><a class="header" href="#example-get-trade-history">Example: Get Trade History</a></h3>
+<pre><code class="language-bash">curl -X POST http://localhost:9007/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "engram_get_trade_history",
+      "arguments": { "limit": 10 }
+    }
+  }'
+</code></pre>
 <h2 id="chrome-devtools-mcp"><a class="header" href="#chrome-devtools-mcp">Chrome DevTools MCP</a></h2>
 <p><strong>Purpose</strong>: Browser automation, debugging, testing for Hecate frontend.</p>
 <h3 id="installation"><a class="header" href="#installation">Installation</a></h3>
@@ -392,22 +459,6 @@ npx chrome-devtools-mcp@latest
         <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
         <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
-        <!-- Livereload script (if served using the cli tool) -->
-        <script>
-            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
-            const socket = new WebSocket(wsAddress);
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload();
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
 
 
         <script>

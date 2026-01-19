@@ -49,7 +49,7 @@ use resources::agents::routes::{
 };
 use resources::users::routes::{create_user_endpoint, lookup_user_endpoint, get_user_endpoint};
 use resources::wallets::routes::create_wallet_routes;
-use resources::{WalletManager, create_crossroads_routes, create_engram_routes, create_mcp_routes, create_arb_routes, ExternalService};
+use resources::{WalletManager, create_crossroads_routes, create_engram_routes, create_mcp_routes, create_arb_routes, create_discovery_routes, ExternalService};
 
 #[derive(Serialize)]
 struct StatusResponse {
@@ -483,6 +483,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(resources::api_keys::create_api_key_routes(api_key_service.clone()))
         // Merge ArbFarm routes
         .merge(create_arb_routes())
+        // Merge Discovery routes (federated MCP/agent/protocol discovery)
+        .merge(create_discovery_routes())
         .with_state(app_state.clone())
         // Add logging middleware
         .layer(middleware::from_fn(logging_middleware))
@@ -520,7 +522,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🔐 Wallet challenge: {}/api/wallets/challenge", erebus_base_url);
     info!("✅ Wallet verify: {}/api/wallets/verify", erebus_base_url);
     info!("🛣️  Crossroads marketplace: {}/api/marketplace", erebus_base_url);
-    info!("🔍 Discovery service: {}/api/discovery", erebus_base_url);
+    info!("🔍 Discovery service: {}/api/discovery (federated)", erebus_base_url);
+    info!("🔧 Discovery tools: {}/api/discovery/tools", erebus_base_url);
+    info!("🔥 Discovery hot: {}/api/discovery/hot", erebus_base_url);
     info!("⚙️  Admin panel: {}/api/admin", erebus_base_url);
     info!("🏥 Crossroads health: {}/api/crossroads/health", erebus_base_url);
     info!("🔐 API key management: {}/api/users/:user_id/api-keys", erebus_base_url);

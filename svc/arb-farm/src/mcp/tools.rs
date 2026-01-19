@@ -2,11 +2,59 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpToolAnnotations {
+    #[serde(rename = "readOnlyHint", skip_serializing_if = "Option::is_none")]
+    pub read_only_hint: Option<bool>,
+    #[serde(rename = "destructiveHint", skip_serializing_if = "Option::is_none")]
+    pub destructive_hint: Option<bool>,
+    #[serde(rename = "idempotentHint", skip_serializing_if = "Option::is_none")]
+    pub idempotent_hint: Option<bool>,
+}
+
+impl McpToolAnnotations {
+    pub fn read_only() -> Self {
+        Self {
+            read_only_hint: Some(true),
+            destructive_hint: Some(false),
+            idempotent_hint: Some(true),
+        }
+    }
+
+    pub fn write() -> Self {
+        Self {
+            read_only_hint: Some(false),
+            destructive_hint: Some(false),
+            idempotent_hint: Some(false),
+        }
+    }
+
+    pub fn destructive() -> Self {
+        Self {
+            read_only_hint: Some(false),
+            destructive_hint: Some(true),
+            idempotent_hint: Some(false),
+        }
+    }
+
+    pub fn idempotent_write() -> Self {
+        Self {
+            read_only_hint: Some(false),
+            destructive_hint: Some(false),
+            idempotent_hint: Some(true),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct McpTool {
     pub name: String,
     pub description: String,
     #[serde(rename = "inputSchema")]
     pub input_schema: Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub annotations: Option<McpToolAnnotations>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,6 +103,8 @@ pub fn get_scanner_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "scanner_signals".to_string(),
@@ -83,6 +133,8 @@ pub fn get_scanner_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "scanner_add_venue".to_string(),
@@ -106,6 +158,8 @@ pub fn get_scanner_tools() -> Vec<McpTool> {
                 },
                 "required": ["venue_type"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
     ]
 }
@@ -138,6 +192,8 @@ pub fn get_edge_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "edge_details".to_string(),
@@ -152,6 +208,8 @@ pub fn get_edge_tools() -> Vec<McpTool> {
                 },
                 "required": ["edge_id"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "edge_approve".to_string(),
@@ -166,6 +224,8 @@ pub fn get_edge_tools() -> Vec<McpTool> {
                 },
                 "required": ["edge_id"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "edge_reject".to_string(),
@@ -184,6 +244,8 @@ pub fn get_edge_tools() -> Vec<McpTool> {
                 },
                 "required": ["edge_id", "reason"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "edge_classify_atomicity".to_string(),
@@ -198,6 +260,8 @@ pub fn get_edge_tools() -> Vec<McpTool> {
                 },
                 "required": ["edge_id"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
     ]
 }
@@ -212,6 +276,8 @@ pub fn get_strategy_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "strategy_create".to_string(),
@@ -240,6 +306,8 @@ pub fn get_strategy_tools() -> Vec<McpTool> {
                 },
                 "required": ["name", "venue_types", "execution_mode"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "strategy_toggle".to_string(),
@@ -258,6 +326,8 @@ pub fn get_strategy_tools() -> Vec<McpTool> {
                 },
                 "required": ["strategy_id", "enabled"]
             }),
+            annotations: Some(McpToolAnnotations::idempotent_write()),
+            tags: None,
         },
         McpTool {
             name: "strategy_kill".to_string(),
@@ -272,6 +342,8 @@ pub fn get_strategy_tools() -> Vec<McpTool> {
                 },
                 "required": ["strategy_id"]
             }),
+            annotations: Some(McpToolAnnotations::destructive()),
+            tags: None,
         },
     ]
 }
@@ -296,6 +368,8 @@ pub fn get_threat_tools() -> Vec<McpTool> {
                 },
                 "required": ["token_mint"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "threat_check_wallet".to_string(),
@@ -310,6 +384,8 @@ pub fn get_threat_tools() -> Vec<McpTool> {
                 },
                 "required": ["wallet_address"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "threat_list_blocked".to_string(),
@@ -329,6 +405,8 @@ pub fn get_threat_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::destructive()),
+            tags: None,
         },
         McpTool {
             name: "threat_report".to_string(),
@@ -361,6 +439,8 @@ pub fn get_threat_tools() -> Vec<McpTool> {
                 },
                 "required": ["entity_type", "address", "category", "reason"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "threat_whitelist".to_string(),
@@ -384,6 +464,8 @@ pub fn get_threat_tools() -> Vec<McpTool> {
                 },
                 "required": ["entity_type", "address", "reason"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "threat_watch_wallet".to_string(),
@@ -415,6 +497,8 @@ pub fn get_threat_tools() -> Vec<McpTool> {
                 },
                 "required": ["wallet_address"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "threat_alerts".to_string(),
@@ -434,6 +518,8 @@ pub fn get_threat_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "threat_score_history".to_string(),
@@ -448,6 +534,8 @@ pub fn get_threat_tools() -> Vec<McpTool> {
                 },
                 "required": ["token_mint"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "threat_stats".to_string(),
@@ -457,6 +545,8 @@ pub fn get_threat_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "threat_is_blocked".to_string(),
@@ -471,6 +561,8 @@ pub fn get_threat_tools() -> Vec<McpTool> {
                 },
                 "required": ["address"]
             }),
+            annotations: Some(McpToolAnnotations::destructive()),
+            tags: None,
         },
         McpTool {
             name: "threat_is_whitelisted".to_string(),
@@ -485,6 +577,8 @@ pub fn get_threat_tools() -> Vec<McpTool> {
                 },
                 "required": ["address"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
     ]
 }
@@ -509,6 +603,8 @@ pub fn get_event_tools() -> Vec<McpTool> {
                 },
                 "required": ["topics"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "event_history".to_string(),
@@ -536,6 +632,8 @@ pub fn get_event_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
     ]
 }
@@ -565,6 +663,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
                 },
                 "required": ["token_mint", "sol_amount"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "curve_sell_token".to_string(),
@@ -589,6 +689,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
                 },
                 "required": ["token_mint", "token_amount"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "curve_check_progress".to_string(),
@@ -609,6 +711,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
                 },
                 "required": ["token_mint"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "curve_get_holder_stats".to_string(),
@@ -629,6 +733,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
                 },
                 "required": ["token_mint"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "curve_graduation_eta".to_string(),
@@ -649,6 +755,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
                 },
                 "required": ["token_mint"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "curve_list_tokens".to_string(),
@@ -670,6 +778,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "curve_graduation_candidates".to_string(),
@@ -700,6 +810,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "curve_cross_venue_arb".to_string(),
@@ -720,6 +832,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "curve_get_parameters".to_string(),
@@ -734,6 +848,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
                 },
                 "required": ["token_mint"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "curve_venues_health".to_string(),
@@ -743,6 +859,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
     ]
 }
@@ -771,6 +889,8 @@ pub fn get_research_tools() -> Vec<McpTool> {
                 },
                 "required": ["url"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "research_monitor_account".to_string(),
@@ -796,6 +916,8 @@ pub fn get_research_tools() -> Vec<McpTool> {
                 },
                 "required": ["handle"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "research_backtest_strategy".to_string(),
@@ -825,6 +947,8 @@ pub fn get_research_tools() -> Vec<McpTool> {
                 },
                 "required": ["strategy_id"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "research_list_discoveries".to_string(),
@@ -844,6 +968,8 @@ pub fn get_research_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "research_approve_discovery".to_string(),
@@ -862,6 +988,8 @@ pub fn get_research_tools() -> Vec<McpTool> {
                 },
                 "required": ["discovery_id"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "research_reject_discovery".to_string(),
@@ -880,6 +1008,8 @@ pub fn get_research_tools() -> Vec<McpTool> {
                 },
                 "required": ["discovery_id", "reason"]
             }),
+            annotations: Some(McpToolAnnotations::destructive()),
+            tags: None,
         },
         McpTool {
             name: "research_list_sources".to_string(),
@@ -905,6 +1035,8 @@ pub fn get_research_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "research_alerts".to_string(),
@@ -928,6 +1060,8 @@ pub fn get_research_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "research_stats".to_string(),
@@ -937,6 +1071,8 @@ pub fn get_research_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
     ]
 }
@@ -964,6 +1100,8 @@ pub fn get_kol_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "kol_list".to_string(),
@@ -990,6 +1128,8 @@ pub fn get_kol_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "kol_stats".to_string(),
@@ -1004,6 +1144,8 @@ pub fn get_kol_tools() -> Vec<McpTool> {
                 },
                 "required": ["kol_id"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "kol_trades".to_string(),
@@ -1027,6 +1169,8 @@ pub fn get_kol_tools() -> Vec<McpTool> {
                 },
                 "required": ["kol_id"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "kol_trust_breakdown".to_string(),
@@ -1041,6 +1185,8 @@ pub fn get_kol_tools() -> Vec<McpTool> {
                 },
                 "required": ["kol_id"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "copy_enable".to_string(),
@@ -1075,6 +1221,8 @@ pub fn get_kol_tools() -> Vec<McpTool> {
                 },
                 "required": ["kol_id"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "copy_disable".to_string(),
@@ -1089,6 +1237,8 @@ pub fn get_kol_tools() -> Vec<McpTool> {
                 },
                 "required": ["kol_id"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "copy_active".to_string(),
@@ -1098,6 +1248,8 @@ pub fn get_kol_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "copy_stats".to_string(),
@@ -1107,6 +1259,8 @@ pub fn get_kol_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "copy_history".to_string(),
@@ -1130,6 +1284,8 @@ pub fn get_kol_tools() -> Vec<McpTool> {
                 },
                 "required": ["kol_id"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
     ]
 }
@@ -1172,6 +1328,8 @@ pub fn get_engram_tools() -> Vec<McpTool> {
                 },
                 "required": ["key", "engram_type", "content"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "engram_get".to_string(),
@@ -1186,6 +1344,8 @@ pub fn get_engram_tools() -> Vec<McpTool> {
                 },
                 "required": ["key"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "engram_search".to_string(),
@@ -1221,6 +1381,8 @@ pub fn get_engram_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "engram_find_patterns".to_string(),
@@ -1248,6 +1410,8 @@ pub fn get_engram_tools() -> Vec<McpTool> {
                 },
                 "required": ["edge_type", "venue_type"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "engram_check_avoidance".to_string(),
@@ -1266,6 +1430,8 @@ pub fn get_engram_tools() -> Vec<McpTool> {
                 },
                 "required": ["entity_type", "address"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "engram_create_avoidance".to_string(),
@@ -1297,6 +1463,8 @@ pub fn get_engram_tools() -> Vec<McpTool> {
                 },
                 "required": ["entity_type", "address", "reason", "category", "severity"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "engram_create_pattern".to_string(),
@@ -1331,6 +1499,8 @@ pub fn get_engram_tools() -> Vec<McpTool> {
                 },
                 "required": ["edge_type", "venue_type", "route_signature", "success_rate", "avg_profit_bps", "sample_count"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "engram_delete".to_string(),
@@ -1345,6 +1515,8 @@ pub fn get_engram_tools() -> Vec<McpTool> {
                 },
                 "required": ["key"]
             }),
+            annotations: Some(McpToolAnnotations::destructive()),
+            tags: None,
         },
         McpTool {
             name: "engram_stats".to_string(),
@@ -1354,6 +1526,8 @@ pub fn get_engram_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
     ]
 }
@@ -1362,36 +1536,53 @@ pub fn get_consensus_tools() -> Vec<McpTool> {
     vec![
         McpTool {
             name: "consensus_request".to_string(),
-            description: "Request multi-LLM consensus on a trade decision".to_string(),
+            description: "Request multi-LLM consensus on a trade decision. Queries multiple AI models (Claude, GPT-4, Llama, DeepSeek) and returns a weighted voting result with reasoning. Use this for any decision requiring diverse AI perspectives.".to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
                     "edge_id": {
                         "type": "string",
-                        "description": "UUID of the edge to evaluate"
+                        "description": "UUID of the edge/decision to evaluate (optional, auto-generated if not provided)"
+                    },
+                    "edge_type": {
+                        "type": "string",
+                        "description": "Type of opportunity (e.g., 'curve_arb', 'dex_arb', 'liquidation')"
+                    },
+                    "venue": {
+                        "type": "string",
+                        "description": "Venue name (e.g., 'pump_fun', 'moonshot', 'raydium')"
+                    },
+                    "token_pair": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Token pair involved (e.g., ['SOL', 'USDC'])"
+                    },
+                    "estimated_profit_lamports": {
+                        "type": "integer",
+                        "description": "Estimated profit in lamports"
+                    },
+                    "risk_score": {
+                        "type": "integer",
+                        "description": "Risk score 0-100 (higher = riskier)"
+                    },
+                    "route_data": {
+                        "type": "object",
+                        "description": "Additional context about the trade route"
                     },
                     "models": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "LLM models to query (defaults to claude-3.5-sonnet, gpt-4-turbo, llama-3.1-70b)"
-                    },
-                    "min_agreement": {
-                        "type": "number",
-                        "description": "Minimum agreement threshold (0.0-1.0)",
-                        "default": 0.5
-                    },
-                    "timeout_secs": {
-                        "type": "integer",
-                        "description": "Timeout in seconds",
-                        "default": 30
+                        "description": "Specific LLM models to query (defaults to best discovered models)"
                     }
                 },
-                "required": ["edge_id"]
+                "required": ["edge_type", "venue"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "consensus_result".to_string(),
-            description: "Get the result of a consensus request".to_string(),
+            description: "Get the result of a previous consensus request by its ID".to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -1402,10 +1593,12 @@ pub fn get_consensus_tools() -> Vec<McpTool> {
                 },
                 "required": ["consensus_id"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "consensus_history".to_string(),
-            description: "Get history of consensus decisions".to_string(),
+            description: "Get history of consensus decisions with optional filtering".to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -1424,6 +1617,83 @@ pub fn get_consensus_tools() -> Vec<McpTool> {
                 },
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
+        },
+        McpTool {
+            name: "consensus_stats".to_string(),
+            description: "Get consensus engine statistics including approval rates and latency".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
+        },
+        McpTool {
+            name: "consensus_config_get".to_string(),
+            description: "Get current consensus engine configuration including active models and weights".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
+        },
+        McpTool {
+            name: "consensus_config_update".to_string(),
+            description: "Update consensus engine configuration (redirects to REST API for security)".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "enabled": {
+                        "type": "boolean",
+                        "description": "Enable/disable consensus engine"
+                    },
+                    "min_consensus_threshold": {
+                        "type": "number",
+                        "description": "Minimum agreement threshold (0.0-1.0)"
+                    }
+                },
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::idempotent_write()),
+            tags: None,
+        },
+        McpTool {
+            name: "consensus_models_list".to_string(),
+            description: "List all available LLM models for consensus voting with their weights".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
+        },
+        McpTool {
+            name: "consensus_models_discovered".to_string(),
+            description: "Get models discovered from OpenRouter with best reasoning capabilities".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
+        },
+        McpTool {
+            name: "consensus_learning_summary".to_string(),
+            description: "Get a summary of consensus learning including recommendations and conversations".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
     ]
 }
@@ -1438,6 +1708,8 @@ pub fn get_swarm_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "swarm_health".to_string(),
@@ -1447,6 +1719,8 @@ pub fn get_swarm_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "swarm_agents".to_string(),
@@ -1456,6 +1730,8 @@ pub fn get_swarm_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "swarm_agent_status".to_string(),
@@ -1470,6 +1746,8 @@ pub fn get_swarm_tools() -> Vec<McpTool> {
                 },
                 "required": ["agent_id"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "swarm_pause".to_string(),
@@ -1479,6 +1757,8 @@ pub fn get_swarm_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "swarm_resume".to_string(),
@@ -1488,6 +1768,8 @@ pub fn get_swarm_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "swarm_heartbeat".to_string(),
@@ -1502,6 +1784,8 @@ pub fn get_swarm_tools() -> Vec<McpTool> {
                 },
                 "required": ["agent_id"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "swarm_report_failure".to_string(),
@@ -1520,6 +1804,8 @@ pub fn get_swarm_tools() -> Vec<McpTool> {
                 },
                 "required": ["agent_id", "error"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "circuit_breakers_list".to_string(),
@@ -1529,6 +1815,8 @@ pub fn get_swarm_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "circuit_breaker_reset".to_string(),
@@ -1543,6 +1831,8 @@ pub fn get_swarm_tools() -> Vec<McpTool> {
                 },
                 "required": ["name"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "circuit_breakers_reset_all".to_string(),
@@ -1552,6 +1842,151 @@ pub fn get_swarm_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::idempotent_write()),
+            tags: None,
+        },
+    ]
+}
+
+pub const A2A_TAG_LEARNING: &str = "arbFarm.learning";
+
+pub fn get_learning_tools() -> Vec<McpTool> {
+    let learning_tag = Some(vec![A2A_TAG_LEARNING.to_string()]);
+    vec![
+        McpTool {
+            name: "engram_get_arbfarm_learning".to_string(),
+            description: "Fetch ArbFarm learning engrams (recommendations, conversations, patterns). Use this to see what the consensus LLM has learned and recommended. Filter by category: recommendations, conversations, patterns, or all.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "enum": ["recommendations", "conversations", "patterns", "all"],
+                        "description": "Type of learning content to retrieve",
+                        "default": "all"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["pending", "acknowledged", "applied", "rejected", "all"],
+                        "description": "Filter recommendations by status (only applies when category is 'recommendations')",
+                        "default": "all"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of engrams to return",
+                        "default": 20
+                    }
+                },
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: learning_tag.clone(),
+        },
+        McpTool {
+            name: "engram_acknowledge_recommendation".to_string(),
+            description: "Update the status of a recommendation engram. Use to acknowledge, apply, or reject a recommendation.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "recommendation_id": {
+                        "type": "string",
+                        "description": "UUID of the recommendation to update"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["acknowledged", "applied", "rejected"],
+                        "description": "New status for the recommendation"
+                    }
+                },
+                "required": ["recommendation_id", "status"]
+            }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: learning_tag.clone(),
+        },
+        McpTool {
+            name: "engram_get_trade_history".to_string(),
+            description: "Get trade history summaries stored as engrams. Returns transaction summaries with PnL, venue, and execution details.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of trades to return",
+                        "default": 50
+                    },
+                    "profitable_only": {
+                        "type": "boolean",
+                        "description": "Only return profitable trades",
+                        "default": false
+                    }
+                },
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: learning_tag.clone(),
+        },
+        McpTool {
+            name: "engram_get_errors".to_string(),
+            description: "Get execution error history stored as engrams. Returns errors with type, message, context, and recoverability status.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of errors to return",
+                        "default": 50
+                    },
+                    "error_type": {
+                        "type": "string",
+                        "enum": ["rpc_timeout", "slippage_exceeded", "insufficient_funds", "tx_failed", "simulation_failed", "signing_failed", "network_error", "invalid_params", "rate_limited", "unknown"],
+                        "description": "Filter by specific error type"
+                    }
+                },
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: learning_tag.clone(),
+        },
+        McpTool {
+            name: "engram_request_analysis".to_string(),
+            description: "Trigger a consensus LLM analysis of recent trading performance. This will review recent trades, patterns, and errors to generate new recommendations.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "analysis_type": {
+                        "type": "string",
+                        "enum": ["trade_review", "risk_assessment", "strategy_optimization", "pattern_discovery"],
+                        "description": "Type of analysis to perform",
+                        "default": "trade_review"
+                    },
+                    "time_period": {
+                        "type": "string",
+                        "enum": ["24h", "7d", "30d"],
+                        "description": "Time period to analyze",
+                        "default": "24h"
+                    }
+                },
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: learning_tag.clone(),
+        },
+        McpTool {
+            name: "engram_get_by_ids".to_string(),
+            description: "Fetch specific engrams by their UUIDs. Use this to examine particular engrams in detail when you already know their IDs from previous queries.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "engram_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Array of engram UUIDs to fetch"
+                    }
+                },
+                "required": ["engram_ids"]
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: learning_tag.clone(),
         },
     ]
 }
@@ -1566,6 +2001,8 @@ pub fn get_approval_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "approval_details".to_string(),
@@ -1580,6 +2017,8 @@ pub fn get_approval_tools() -> Vec<McpTool> {
                 },
                 "required": ["approval_id"]
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "approval_approve".to_string(),
@@ -1598,6 +2037,8 @@ pub fn get_approval_tools() -> Vec<McpTool> {
                 },
                 "required": ["approval_id"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
         McpTool {
             name: "approval_reject".to_string(),
@@ -1616,6 +2057,8 @@ pub fn get_approval_tools() -> Vec<McpTool> {
                 },
                 "required": ["approval_id", "reason"]
             }),
+            annotations: Some(McpToolAnnotations::destructive()),
+            tags: None,
         },
         McpTool {
             name: "execution_config_get".to_string(),
@@ -1625,6 +2068,8 @@ pub fn get_approval_tools() -> Vec<McpTool> {
                 "properties": {},
                 "required": []
             }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
         },
         McpTool {
             name: "execution_toggle".to_string(),
@@ -1639,6 +2084,8 @@ pub fn get_approval_tools() -> Vec<McpTool> {
                 },
                 "required": ["enabled"]
             }),
+            annotations: Some(McpToolAnnotations::idempotent_write()),
+            tags: None,
         },
         McpTool {
             name: "approval_recommend".to_string(),
@@ -1665,6 +2112,8 @@ pub fn get_approval_tools() -> Vec<McpTool> {
                 },
                 "required": ["approval_id", "decision", "reasoning", "confidence"]
             }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
         },
     ]
 }
@@ -1680,6 +2129,7 @@ pub fn get_all_tools() -> Vec<McpTool> {
     tools.extend(get_threat_tools());
     tools.extend(get_event_tools());
     tools.extend(get_engram_tools());
+    tools.extend(get_learning_tools());
     tools.extend(get_consensus_tools());
     tools.extend(get_swarm_tools());
     tools.extend(get_approval_tools());

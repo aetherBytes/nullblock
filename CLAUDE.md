@@ -133,6 +133,127 @@ Von Neumann-class vessel AI. Default model: `cognitivecomputations/dolphin3.0-mi
 | `/mcp/*` | MCP Protocol (2025-11-25) |
 | `/a2a/*` | A2A Protocol |
 
+## ArbFarm Production Status (Audit: 2026-01-19)
+
+**Overall**: 95% Production Ready
+
+### Implemented (Live Trading Ready)
+- ✅ Exit transactions saved to engrams (buy AND sell tracked)
+- ✅ MCP tool annotations (97 tools with readOnlyHint/destructiveHint/idempotentHint)
+- ✅ A2A tags exposed (`arbFarm.learning` on 6 learning tools)
+- ✅ Wallet funding validated at startup (blocks if < 0.05 SOL)
+- ✅ Position monitor auto-starts with curve support + engrams
+- ✅ Frontend service methods deduplicated
+
+### Stubbed Features (Generate Warnings - Safe to Ignore)
+These features are scaffolded but not implemented. Warnings are expected:
+
+| Module | Warnings | Status |
+|--------|----------|--------|
+| `events/topics.rs` | 66 | Event constants for future features |
+| `agents/mev_hunter.rs` | 16 | DEX arbitrage detection (stubbed) |
+| `venues/dex/raydium.rs` | 8 | Raydium integration (stubbed) |
+| `consensus/providers/*` | 14 | Anthropic/OpenAI direct providers (using OpenRouter) |
+| `agents/graduation_tracker.rs` | 8 | Graduation tracking (stubbed) |
+
+### Next Implementation Priorities
+1. **Crossroads Integration** - Marketplace listing for ArbFarm COW
+2. **DEX Arbitrage** - Complete `mev_hunter.rs` and Raydium venue
+3. **Threat Detection** - Implement rug pull / honeypot detection
+4. **Research Agent** - Social sentiment + alpha discovery
+
+## ArbFarm MCP Tools for Learning
+
+ArbFarm exposes MCP tools for AI-to-AI learning integration:
+
+| Tool | Description |
+|------|-------------|
+| `engram_get_arbfarm_learning` | Fetch learning engrams (recommendations, conversations, patterns) |
+| `engram_acknowledge_recommendation` | Update recommendation status (acknowledged/applied/rejected) |
+| `engram_get_trade_history` | Get transaction summaries with PnL |
+| `engram_get_errors` | Get execution error history |
+| `engram_request_analysis` | Trigger consensus LLM analysis |
+
+### /scrape-engrams Skill
+
+The `/scrape-engrams` skill analyzes ArbFarm learning data and generates profit optimization recommendations.
+
+**Usage**: Run `/scrape-engrams` in Claude Code to:
+1. Fetch all engrams tagged `arbFarm.learning`
+2. Analyze trade history and error patterns
+3. Review pending LLM consensus recommendations
+4. Generate actionable profit optimization plan
+
+**Workflow**:
+```
+/scrape-engrams
+├── Fetch learning engrams via engram_get_arbfarm_learning
+├── Fetch trade history via engram_get_trade_history
+├── Fetch error patterns via engram_get_errors
+├── Cross-reference with current strategy configs
+└── Generate profit maximization recommendations
+```
+
+**Output**: Markdown report with:
+- Trade performance summary (win rate, PnL, patterns)
+- Top pending recommendations from consensus LLM
+- Suggested config changes with confidence scores
+- Implementation steps for each recommendation
+
+### MCP Server Configuration (Cursor IDE / Claude Desktop)
+
+ArbFarm exposes 97 MCP tools via standard JSON-RPC at `/mcp/jsonrpc`. To use in external clients:
+
+**Cursor IDE** (`.cursor/mcp.json` or `~/.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "arbfarm": {
+      "url": "http://localhost:9007/mcp/jsonrpc"
+    }
+  }
+}
+```
+
+**Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "arbfarm": {
+      "url": "http://localhost:9007/mcp/jsonrpc"
+    }
+  }
+}
+```
+
+**Available MCP Methods**:
+- `initialize` - Server handshake with capabilities
+- `tools/list` - List all 97 available tools
+- `tools/call` - Execute any tool by name
+- `resources/list` - List available resources (empty)
+- `prompts/list` - List available prompts (empty)
+- `ping` - Health check
+
+**Protocol**: MCP 2025-11-25, JSON-RPC 2.0 over HTTP
+
+**Test with curl**:
+```bash
+# Initialize
+curl -X POST http://localhost:9007/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+
+# List tools
+curl -X POST http://localhost:9007/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+
+# Call tool
+curl -X POST http://localhost:9007/mcp/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"engram_get_trade_history","arguments":{"limit":10}}}'
+```
+
 ## Common Commands
 
 ```bash

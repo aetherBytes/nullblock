@@ -335,9 +335,24 @@ impl LaserStreamClient {
             }
 
             // Update status on disconnect
-            let mut s = status.write().await;
-            *s = LaserStreamStatus::Disconnected;
+            {
+                let mut s = status.write().await;
+                *s = LaserStreamStatus::Disconnected;
+            }
             info!("🔌 WebSocket disconnected");
+
+            // Auto-reconnect after delay
+            let accounts_to_resubscribe: Vec<String> = subscribed_accounts.read().await.iter().cloned().collect();
+            if !accounts_to_resubscribe.is_empty() {
+                warn!("🔄 Will attempt to reconnect in 5 seconds (had {} subscriptions)", accounts_to_resubscribe.len());
+                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+
+                // Signal that we need reconnection - the main loop should handle this
+                {
+                    let mut s = status.write().await;
+                    *s = LaserStreamStatus::Reconnecting;
+                }
+            }
         });
 
         Ok(())
@@ -347,6 +362,52 @@ impl LaserStreamClient {
         if let Some(tx) = self.command_tx.read().await.as_ref() {
             let _ = tx.send(WebSocketCommand::Disconnect).await;
         }
+    }
+
+    /// Start a background task that monitors connection status and auto-reconnects
+    pub fn start_reconnect_monitor(self: &Arc<Self>) {
+        let client = Arc::clone(self);
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+
+                let status = client.get_status().await;
+                if status == LaserStreamStatus::Reconnecting {
+                    info!("🔄 Attempting WebSocket reconnection...");
+
+                    // Get accounts to resubscribe
+                    let accounts: Vec<String> = client.subscribed_accounts.read().await.iter().cloned().collect();
+
+                    // Clear old subscription IDs
+                    {
+                        let mut sub_ids = client.subscription_ids.write().await;
+                        sub_ids.clear();
+                    }
+
+                    // Try to reconnect
+                    match client.connect().await {
+                        Ok(_) => {
+                            info!("✅ WebSocket reconnected successfully");
+                            // Resubscribe to accounts
+                            if !accounts.is_empty() {
+                                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                                if let Err(e) = client.subscribe_accounts(accounts.clone()).await {
+                                    warn!("⚠️ Failed to resubscribe to accounts: {}", e);
+                                } else {
+                                    info!("✅ Resubscribed to {} accounts", accounts.len());
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            error!("❌ Reconnection failed: {}", e);
+                            // Will retry on next loop iteration
+                            let mut s = client.status.write().await;
+                            *s = LaserStreamStatus::Reconnecting;
+                        }
+                    }
+                }
+            }
+        });
     }
 
     pub async fn subscribe_accounts(&self, addresses: Vec<String>) -> Result<(), String> {

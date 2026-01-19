@@ -1,17 +1,18 @@
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
 
 use crate::agents::StrategyEngine;
+use crate::engrams::client::EngramsClient;
+use crate::engrams::schemas::{TransactionSummary, TransactionAction, TransactionMetadata, ExecutionError, ExecutionErrorType, ErrorContext};
 use crate::error::{AppError, AppResult};
 use crate::events::{edge as edge_topics, ArbEvent, AgentType, EventSource};
 use crate::execution::{CurveBuyParams, CurveTransactionBuilder, ExitConfig, PositionManager};
 use crate::execution::risk::RiskConfig;
 use crate::helius::HeliusSender;
-use crate::models::{Edge, EdgeStatus, Strategy};
 use crate::wallet::DevWalletSigner;
 use crate::wallet::turnkey::SignRequest;
 
@@ -62,6 +63,7 @@ pub struct AutonomousExecutor {
     helius_sender: Arc<HeliusSender>,
     position_manager: Arc<PositionManager>,
     risk_config: Arc<RwLock<RiskConfig>>,
+    engrams_client: Arc<EngramsClient>,
     event_tx: broadcast::Sender<ArbEvent>,
     executions: Arc<RwLock<HashMap<Uuid, AutoExecutionRecord>>>,
     recent_mints: Arc<RwLock<HashMap<String, DateTime<Utc>>>>,
@@ -79,6 +81,7 @@ impl AutonomousExecutor {
         helius_sender: Arc<HeliusSender>,
         position_manager: Arc<PositionManager>,
         risk_config: Arc<RwLock<RiskConfig>>,
+        engrams_client: Arc<EngramsClient>,
         event_tx: broadcast::Sender<ArbEvent>,
         default_wallet: String,
     ) -> Self {
@@ -89,6 +92,7 @@ impl AutonomousExecutor {
             helius_sender,
             position_manager,
             risk_config,
+            engrams_client,
             event_tx,
             executions: Arc::new(RwLock::new(HashMap::new())),
             recent_mints: Arc::new(RwLock::new(HashMap::new())),
@@ -128,6 +132,7 @@ impl AutonomousExecutor {
         let helius_sender = self.helius_sender.clone();
         let position_manager = self.position_manager.clone();
         let risk_config = self.risk_config.clone();
+        let engrams_client = self.engrams_client.clone();
         let event_tx = self.event_tx.clone();
         let executions = self.executions.clone();
         let recent_mints = self.recent_mints.clone();
@@ -139,39 +144,65 @@ impl AutonomousExecutor {
         tokio::spawn(async move {
             tracing::info!("🤖 Autonomous executor event loop started, waiting for events...");
             let mut events_received = 0u64;
+            let mut last_heartbeat = std::time::Instant::now();
 
             loop {
                 let running = { *is_running.read().await };
                 if !running {
+                    tracing::info!("🤖 Executor loop: is_running=false, breaking out of loop");
                     break;
                 }
 
+                // Heartbeat every 60 seconds
+                if last_heartbeat.elapsed() > std::time::Duration::from_secs(60) {
+                    tracing::info!(
+                        "🤖 Executor heartbeat: events_received={}, is_running=true",
+                        events_received
+                    );
+                    last_heartbeat = std::time::Instant::now();
+                }
+
                 tokio::select! {
-                    Ok(event) = event_rx.recv() => {
-                        events_received += 1;
-                        tracing::debug!(
-                            "🤖 Executor received event #{}: topic={}, event_type={}",
-                            events_received,
-                            event.topic,
-                            event.event_type
-                        );
-                        if event.topic == edge_topics::DETECTED {
-                            if let Err(e) = Self::handle_edge_detected(
-                                &event,
-                                &strategy_engine,
-                                &curve_builder,
-                                &dev_signer,
-                                &helius_sender,
-                                &position_manager,
-                                &risk_config,
-                                &event_tx,
-                                &executions,
-                                &recent_mints,
-                                &stats,
-                                &default_wallet,
-                                default_slippage_bps,
-                            ).await {
-                                tracing::warn!("Auto-execution failed: {}", e);
+                    result = event_rx.recv() => {
+                        match result {
+                            Ok(event) => {
+                                events_received += 1;
+                                tracing::debug!(
+                                    "🤖 Executor received event #{}: topic={}, event_type={}",
+                                    events_received,
+                                    event.topic,
+                                    event.event_type
+                                );
+                                if event.topic == edge_topics::DETECTED {
+                                    if let Err(e) = Self::handle_edge_detected(
+                                        &event,
+                                        &strategy_engine,
+                                        &curve_builder,
+                                        &dev_signer,
+                                        &helius_sender,
+                                        &position_manager,
+                                        &risk_config,
+                                        &engrams_client,
+                                        &event_tx,
+                                        &executions,
+                                        &recent_mints,
+                                        &stats,
+                                        &default_wallet,
+                                        default_slippage_bps,
+                                    ).await {
+                                        tracing::warn!("Auto-execution failed: {}", e);
+                                    }
+                                }
+                            }
+                            Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                                tracing::warn!(
+                                    "🤖 ⚠️ Executor event channel lagged! Skipped {} events. This may cause missed opportunities.",
+                                    skipped
+                                );
+                            }
+                            Err(broadcast::error::RecvError::Closed) => {
+                                tracing::error!("🤖 ❌ Executor event channel CLOSED! Event bus may have been dropped.");
+                                break;
                             }
                         }
                     }
@@ -179,7 +210,7 @@ impl AutonomousExecutor {
                 }
             }
 
-            tracing::info!("🤖 Autonomous executor stopped");
+            tracing::warn!("🤖 Autonomous executor event loop EXITED (events_received={})", events_received);
         });
     }
 
@@ -209,6 +240,7 @@ impl AutonomousExecutor {
         helius_sender: &Arc<HeliusSender>,
         position_manager: &Arc<PositionManager>,
         risk_config: &Arc<RwLock<RiskConfig>>,
+        engrams_client: &Arc<EngramsClient>,
         event_tx: &broadcast::Sender<ArbEvent>,
         executions: &Arc<RwLock<HashMap<Uuid, AutoExecutionRecord>>>,
         recent_mints: &Arc<RwLock<HashMap<String, DateTime<Utc>>>>,
@@ -556,6 +588,36 @@ impl AutonomousExecutor {
                             "📊 Position opened for tracking"
                         );
                     }
+
+                    // Save buy transaction summary to engrams
+                    let tx_summary = TransactionSummary {
+                        tx_signature: signature.clone(),
+                        action: TransactionAction::Buy,
+                        token_mint: mint.clone(),
+                        token_symbol: None,
+                        venue: "pump_fun".to_string(),
+                        entry_sol: sol_amount_lamports as f64 / 1e9,
+                        exit_sol: None,
+                        pnl_sol: None,
+                        pnl_percent: None,
+                        slippage_bps: default_slippage_bps as i32,
+                        execution_time_ms: 0,
+                        strategy_id: Some(strategy_id),
+                        timestamp: Utc::now(),
+                        metadata: TransactionMetadata {
+                            graduation_progress: None,
+                            holder_count: None,
+                            volume_24h_sol: None,
+                            market_cap_sol: None,
+                            bonding_curve_percent: None,
+                        },
+                    };
+
+                    if let Err(e) = engrams_client.save_transaction_summary(default_wallet, &tx_summary).await {
+                        tracing::warn!("Failed to save buy transaction summary engram: {}", e);
+                    } else {
+                        tracing::debug!("📝 Saved buy transaction summary engram for {}", &signature[..12.min(signature.len())]);
+                    }
                 }
 
                 Ok(())
@@ -592,6 +654,48 @@ impl AutonomousExecutor {
                         "error": e.to_string(),
                     }),
                 ));
+
+                // Save execution error to engrams
+                let error_str = e.to_string();
+                let error_type = if error_str.contains("slippage") {
+                    ExecutionErrorType::SlippageExceeded
+                } else if error_str.contains("timeout") || error_str.contains("timed out") {
+                    ExecutionErrorType::RpcTimeout
+                } else if error_str.contains("insufficient") || error_str.contains("balance") {
+                    ExecutionErrorType::InsufficientFunds
+                } else if error_str.contains("simulation") {
+                    ExecutionErrorType::SimulationFailed
+                } else if error_str.contains("signing") || error_str.contains("sign") {
+                    ExecutionErrorType::SigningFailed
+                } else if error_str.contains("rate limit") {
+                    ExecutionErrorType::RateLimited
+                } else if error_str.contains("network") || error_str.contains("connection") {
+                    ExecutionErrorType::NetworkError
+                } else {
+                    ExecutionErrorType::TxFailed
+                };
+
+                let exec_error = ExecutionError {
+                    error_type,
+                    message: error_str,
+                    context: ErrorContext {
+                        action: Some("buy".to_string()),
+                        token_mint: Some(mint.clone()),
+                        attempted_amount_sol: Some(sol_amount_lamports as f64 / 1e9),
+                        venue: Some("pump_fun".to_string()),
+                        strategy_id: Some(strategy_id),
+                        edge_id: Some(edge_id),
+                    },
+                    stack_trace: None,
+                    recoverable: true,
+                    timestamp: Utc::now(),
+                };
+
+                if let Err(save_err) = engrams_client.save_execution_error(default_wallet, &exec_error).await {
+                    tracing::warn!("Failed to save execution error engram: {}", save_err);
+                } else {
+                    tracing::debug!("📝 Saved execution error engram for failed buy of {}", &mint[..12.min(mint.len())]);
+                }
 
                 Err(e)
             }
@@ -660,24 +764,26 @@ pub fn spawn_autonomous_executor(
     helius_sender: Arc<HeliusSender>,
     position_manager: Arc<PositionManager>,
     risk_config: Arc<RwLock<RiskConfig>>,
+    engrams_client: Arc<EngramsClient>,
     event_tx: broadcast::Sender<ArbEvent>,
     default_wallet: String,
 ) -> Arc<AutonomousExecutor> {
-    let executor = Arc::new(AutonomousExecutor::new(
+    Arc::new(AutonomousExecutor::new(
         strategy_engine,
         curve_builder,
         dev_signer,
         helius_sender,
         position_manager,
         risk_config,
+        engrams_client,
         event_tx,
         default_wallet,
-    ));
+    ))
+}
 
+pub fn start_autonomous_executor(executor: Arc<AutonomousExecutor>) {
     let executor_clone = executor.clone();
     tokio::spawn(async move {
         executor_clone.start().await;
     });
-
-    executor
 }

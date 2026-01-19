@@ -36,11 +36,68 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
 .mainNavTabs {
   display: flex;
-  gap: 0.25rem;
+  justify-content: space-between;
+  align-items: center;
   padding: 0.75rem 1.5rem;
   background: $color-bg-elevated;
   border-bottom: 1px solid $color-border;
+}
+
+.navTabsLeft {
+  display: flex;
+  gap: 0.25rem;
   flex-wrap: wrap;
+}
+
+.navTabsRight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lastRefreshTime {
+  font-size: 0.7rem;
+  color: $color-text-muted;
+  font-family: $font-mono;
+}
+
+.navTabsRight .refreshButton {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: $color-bg-card;
+    color: $color-text;
+    border-color: $color-text-muted;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.spinning {
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .navTab {
@@ -2338,6 +2395,278 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   text-transform: capitalize;
 }
 
+// Threat Management Tabs
+.threatTabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.threatTab {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  color: $color-text-muted;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+
+  &.active {
+    background: $color-info-dim;
+    border-color: $color-info;
+    color: $color-info;
+  }
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+}
+
+.refreshButton {
+  padding: 0.4rem 0.8rem;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: $color-info;
+    color: $color-info;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.removeButton {
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  border: 1px solid $color-danger;
+  border-radius: 4px;
+  color: $color-danger;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-danger;
+    color: white;
+  }
+}
+
+// Whitelist Section
+.whitelistSection {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.whitelistList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.whitelistItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: $color-bg;
+  border-radius: 6px;
+}
+
+.whitelistInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.whitelistType {
+  text-transform: capitalize;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  min-width: 60px;
+}
+
+.whitelistAddress {
+  font-family: $font-mono;
+  font-size: 0.85rem;
+}
+
+.whitelistReason {
+  color: $color-text-muted;
+  font-size: 0.8rem;
+}
+
+// Watch Section
+.watchSection {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.addWatchForm {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+
+  input {
+    flex: 1;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    padding: 0.6rem;
+    color: $color-text;
+    font-family: $font-mono;
+    font-size: 0.85rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+
+    &::placeholder {
+      color: $color-text-dim;
+    }
+  }
+
+  button {
+    background: $color-info;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    font-weight: 500;
+
+    &:hover:not(:disabled) {
+      background: lighten($color-info, 10%);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.watchList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.watchItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: $color-bg;
+  border-radius: 6px;
+}
+
+.watchInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.watchAddress {
+  font-family: $font-mono;
+  font-size: 0.85rem;
+}
+
+.watchReason {
+  color: $color-text-muted;
+  font-size: 0.8rem;
+}
+
+.watchScore {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+
+  &.high {
+    background: $color-danger-dim;
+    color: $color-danger;
+  }
+
+  &.medium {
+    background: $color-warning-dim;
+    color: $color-warning;
+  }
+
+  &.low {
+    background: $color-success-dim;
+    color: $color-success;
+  }
+}
+
+// Threat Stats Section
+.threatStatsSection {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.threatStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.threatStatCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  background: $color-bg;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.threatStatValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: $font-mono;
+  color: $color-text;
+
+  &.danger {
+    color: $color-danger;
+  }
+}
+
+.threatStatLabel {
+  font-size: 0.7rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  margin-top: 0.25rem;
+}
+
 // ============================================
 // Filter Bar
 // ============================================
@@ -2650,7 +2979,7 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10100;
   padding: 1rem;
 }
 
@@ -5898,7 +6227,7 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   border-radius: 8px;
   color: $color-info;
   font-weight: 500;
-  z-index: 100;
+  z-index: 10100;
 }
 
 // Candidates View
@@ -6097,6 +6426,68 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
     font-size: 0.85rem;
     font-weight: 600;
     color: $color-text;
+  }
+}
+
+// Recommendation Badge
+.recBadge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  margin-left: 0.5rem;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.recBuy {
+  background: rgba($color-success, 0.2);
+  color: $color-success;
+}
+
+.recHold {
+  background: rgba($color-warning, 0.2);
+  color: $color-warning;
+}
+
+.recSell {
+  background: rgba($color-danger, 0.2);
+  color: $color-danger;
+}
+
+// Quick Metrics Row
+.quickMetricsRow {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid rgba($color-border, 0.5);
+  margin-top: 0.5rem;
+}
+
+.quickMetric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.quickMetricLabel {
+  font-size: 0.65rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+}
+
+.quickMetricValue {
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: $font-mono;
+
+  &.positive {
+    color: $color-success;
+  }
+
+  &.negative {
+    color: $color-danger;
   }
 }
 
@@ -7661,7 +8052,7 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   background: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: flex-end;
-  z-index: 1000;
+  z-index: 10100;
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -7710,7 +8101,7 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10100;
   padding: 1rem;
   animation: fadeIn 0.2s ease-out;
 }
@@ -8050,6 +8441,463 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 }
 
 // ============================================
+// Curve Strategy Config Modal Styles
+// ============================================
+
+.configModalHeader {
+  margin-bottom: 1.5rem;
+
+  h2 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.25rem;
+    color: $color-text;
+  }
+}
+
+.strategyNameLabel {
+  font-size: 0.9rem;
+  color: $color-text-muted;
+}
+
+.configSection {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid $color-border;
+
+  &:last-of-type {
+    border-bottom: none;
+  }
+
+  h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: $color-text;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.configHint {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+  font-style: italic;
+}
+
+.rangeInputGroup {
+  display: flex;
+  gap: 2rem;
+}
+
+.rangeInput {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  label {
+    font-size: 0.85rem;
+    color: $color-text-muted;
+  }
+
+  input[type='range'] {
+    width: 100%;
+    accent-color: $color-info;
+    cursor: pointer;
+  }
+}
+
+.rangeValue {
+  font-family: $font-mono;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $color-info;
+}
+
+.configModalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+
+  label {
+    font-size: 0.9rem;
+    color: $color-text-muted;
+    min-width: 180px;
+  }
+}
+
+.configModalInput {
+  width: 120px;
+  padding: 0.5rem 0.75rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text;
+  font-family: $font-mono;
+  font-size: 0.9rem;
+  text-align: right;
+
+  &:focus {
+    outline: none;
+    border-color: $color-info;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.toggleSwitch {
+  padding: 0.4rem 1rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 20px;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 60px;
+
+  &:hover {
+    border-color: $color-info;
+  }
+}
+
+.toggleOn {
+  background: $color-success-dim;
+  border-color: $color-success;
+  color: $color-success;
+}
+
+.configModalActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid $color-border;
+}
+
+.configCancelButton {
+  padding: 0.6rem 1.25rem;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    border-color: $color-text-muted;
+    color: $color-text;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.configResetButton {
+  padding: 0.6rem 1.25rem;
+  background: transparent;
+  border: 1px solid $color-warning;
+  border-radius: 6px;
+  color: $color-warning;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: $color-warning;
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.configSaveButton {
+  padding: 0.6rem 1.5rem;
+  background: $color-success;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: lighten($color-success, 10%);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ============================================
+// Toast Notification Styles
+// ============================================
+
+.toastContainer {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 10200;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.75rem;
+  max-width: 400px;
+}
+
+.toastItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: toastSlideIn 0.3s ease-out;
+
+  &.toastExiting {
+    animation: toastSlideOut 0.2s ease-in forwards;
+  }
+}
+
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.toastSuccess {
+  border-color: $color-success;
+  background: rgba($color-success, 0.1);
+
+  .toastIcon {
+    color: $color-success;
+    background: rgba($color-success, 0.2);
+  }
+}
+
+.toastError {
+  border-color: $color-danger;
+  background: rgba($color-danger, 0.1);
+
+  .toastIcon {
+    color: $color-danger;
+    background: rgba($color-danger, 0.2);
+  }
+}
+
+.toastWarning {
+  border-color: $color-warning;
+  background: rgba($color-warning, 0.1);
+
+  .toastIcon {
+    color: $color-warning;
+    background: rgba($color-warning, 0.2);
+  }
+}
+
+.toastInfo {
+  border-color: $color-info;
+  background: rgba($color-info, 0.1);
+
+  .toastIcon {
+    color: $color-info;
+    background: rgba($color-info, 0.2);
+  }
+}
+
+.toastIcon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.toastMessage {
+  flex: 1;
+  font-size: 0.9rem;
+  color: $color-text;
+  line-height: 1.4;
+}
+
+.toastDismiss {
+  background: none;
+  border: none;
+  color: $color-text-muted;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  margin-left: 0.5rem;
+
+  &:hover {
+    color: $color-text;
+  }
+}
+
+// ============================================
+// Confirmation Modal Styles
+// ============================================
+
+.confirmationModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10300;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.confirmationContent {
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  max-width: 450px;
+  width: 100%;
+  padding: 1.5rem;
+  animation: scaleIn 0.2s ease-out;
+}
+
+.confirmationHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: $color-text;
+  }
+}
+
+.confirmationIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+
+  &.danger {
+    background: rgba($color-danger, 0.15);
+    color: $color-danger;
+  }
+
+  &.warning {
+    background: rgba($color-warning, 0.15);
+    color: $color-warning;
+  }
+}
+
+.confirmationMessage {
+  font-size: 0.95rem;
+  color: $color-text-muted;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.confirmationActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.confirmCancelButton {
+  padding: 0.6rem 1.25rem;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-text-muted;
+    color: $color-text;
+  }
+}
+
+.confirmDangerButton {
+  padding: 0.6rem 1.25rem;
+  background: $color-danger;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: lighten($color-danger, 10%);
+  }
+}
+
+.confirmWarningButton {
+  padding: 0.6rem 1.25rem;
+  background: $color-warning;
+  border: none;
+  border-radius: 6px;
+  color: #000;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: lighten($color-warning, 10%);
+  }
+}
+
+// ============================================
 // Home Tab Styles
 // ============================================
 
@@ -8079,7 +8927,7 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
 .pnlGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
 }
@@ -8192,6 +9040,65 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   grid-column: 1 / -1;
 }
 
+// Consolidated Performance Card Styles
+.performanceGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pnlSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.positionStatsSection {
+  border-top: 1px solid $color-border;
+  padding-top: 0.75rem;
+}
+
+.miniStatsRow {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.miniStat {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+
+  strong {
+    color: $color-text;
+    font-weight: 600;
+    margin-right: 0.25rem;
+  }
+}
+
+// Consolidated Trade Activity Card Styles
+.tradeActivityList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.liveTradesSection,
+.recentTradesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sectionLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: $color-text-muted;
+  letter-spacing: 0.5px;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid $color-border;
+}
+
 .balanceDisplay {
   text-align: center;
   margin-bottom: 1rem;
@@ -8218,6 +9125,27 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid transparent;
+  background: transparent;
+
+  &.primary {
+    border-color: $color-info;
+    color: $color-info;
+
+    &:hover:not(:disabled) {
+      background: $color-info;
+      color: white;
+    }
+  }
+
+  &.warning {
+    border-color: $color-warning;
+    color: $color-warning;
+
+    &:hover:not(:disabled) {
+      background: $color-warning;
+      color: $color-bg;
+    }
+  }
 
   &.danger {
     background: transparent;
@@ -8228,12 +9156,137 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
       background: $color-danger;
       color: white;
     }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Capital Exposure Styles
+.exposureBar {
+  height: 8px;
+  background: $color-bg-elevated;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.exposureFill {
+  height: 100%;
+  background: linear-gradient(90deg, $color-info, $color-success);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.exposureLabel {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  position: absolute;
+  right: 0;
+  top: 12px;
+}
+
+.exposureGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.exposureItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: center;
+
+  .exposureLabel {
+    position: static;
+    font-size: 0.7rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+  }
+
+  .exposureValue {
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: $font-mono;
+    color: $color-text;
+  }
+}
+
+.exposureBreakdown {
+  border-top: 1px solid $color-border;
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.breakdownTitle {
+  font-size: 0.7rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.breakdownRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 0.25rem 0;
+  font-family: $font-mono;
+
+  span:first-child {
+    color: $color-text-muted;
+  }
+}
+
+// Monitor Status Styles
+.monitorStatus {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.statusIndicator {
+  font-size: 0.9rem;
+  font-weight: 500;
+
+  &.running {
+    color: $color-success;
+  }
+
+  &.stopped {
+    color: $color-text-muted;
+  }
+}
+
+.monitorStats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.monitorStatItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.monitorStatLabel {
+  font-size: 0.7rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+}
+
+.monitorStatValue {
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: $font-mono;
 }
 
 .statsGrid {
@@ -8284,6 +9337,46 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   align-items: center;
   gap: 1rem;
   margin-bottom: 0.5rem;
+}
+
+.positionFlow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: $color-text-muted;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.35rem 0.5rem;
+  background: rgba($color-bg-elevated, 0.5);
+  border-radius: 4px;
+}
+
+.flowItem {
+  background: $color-bg-card;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: $font-mono;
+  cursor: help;
+}
+
+.flowArrow {
+  color: $color-purple;
+  font-weight: 500;
+}
+
+.flowLink {
+  background: $color-bg-card;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: $font-mono;
+  color: $color-purple;
+  text-decoration: none;
+
+  &:hover {
+    background: $color-purple-dim;
+    text-decoration: underline;
+  }
 }
 
 .positionVenue {
@@ -8522,13 +9615,91 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   max-width: 400px;
 }
 
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  gap: 1rem;
+}
+
 .loadingSpinner {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 200px;
+}
+
+.spinnerRing {
+  width: 48px;
+  height: 48px;
+  border: 3px solid $color-border;
+  border-top-color: $color-info;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingText {
   color: $color-text-muted;
-  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.operationLoading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: $color-text-muted;
+
+  .miniSpinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid $color-border;
+    border-top-color: $color-info;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+}
+
+.skeletonCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1.5rem;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.skeletonLine {
+  height: 1rem;
+  background: $color-border;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+
+  &.short {
+    width: 40%;
+  }
+
+  &.medium {
+    width: 70%;
+  }
+
+  &.full {
+    width: 100%;
+  }
 }
 
 // Custom Risk Configuration
@@ -8579,6 +9750,1121 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
     &::placeholder {
       color: $color-text-dim;
+    }
+  }
+}
+
+.applySettingsSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid $color-border;
+}
+
+.applyButton {
+  padding: 0.75rem 2rem;
+  background: $color-success;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: lighten($color-success, 8%);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.applyHint {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+  text-align: center;
+}
+
+// ============================================
+// Consensus Tab Styles
+// ============================================
+
+.consensusTab {
+  padding: 1.5rem;
+  min-height: 100%;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  background: $color-bg;
+}
+
+.consensusHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: $color-text;
+  }
+}
+
+.consensusStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: $color-bg-card;
+  border-radius: 6px;
+  font-size: 0.85rem;
+
+  &.enabled {
+    border: 1px solid $color-success;
+    color: $color-success;
+  }
+
+  &.disabled {
+    border: 1px solid $color-text-dim;
+    color: $color-text-muted;
+  }
+}
+
+.consensusSections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.consensusSection {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1.25rem;
+
+  h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: $color-text;
+  }
+}
+
+.modelsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modelCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+
+  &.disabled {
+    opacity: 0.5;
+  }
+}
+
+.modelInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.modelName {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: $color-text;
+}
+
+.modelProvider {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+  text-transform: capitalize;
+}
+
+.modelControls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.weightControl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  label {
+    font-size: 0.8rem;
+    color: $color-text-muted;
+  }
+
+  input[type="number"] {
+    width: 60px;
+    padding: 0.4rem 0.5rem;
+    background: $color-bg-elevated;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    color: $color-text;
+    font-family: $font-mono;
+    font-size: 0.85rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+}
+
+.modelToggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: 24px;
+    transition: 0.3s;
+
+    &:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: $color-text-muted;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+  }
+
+  input:checked + .slider {
+    background-color: $color-success-dim;
+    border-color: $color-success;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(20px);
+    background-color: $color-success;
+  }
+}
+
+.removeModelButton {
+  padding: 0.4rem 0.6rem;
+  background: transparent;
+  border: 1px solid $color-danger;
+  border-radius: 4px;
+  color: $color-danger;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-danger-dim;
+  }
+}
+
+.addModelForm {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+
+  input, select {
+    flex: 1;
+    padding: 0.6rem 0.75rem;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    color: $color-text;
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+
+  button {
+    padding: 0.6rem 1rem;
+    background: $color-info;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: lighten($color-info, 8%);
+    }
+  }
+}
+
+.configOptions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.configOption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  label {
+    font-size: 0.8rem;
+    color: $color-text-muted;
+  }
+
+  input[type="number"] {
+    padding: 0.6rem 0.75rem;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    color: $color-text;
+    font-family: $font-mono;
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+}
+
+.discoveryStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: $color-bg;
+  border-radius: 6px;
+
+  .statusIcon {
+    font-size: 1.25rem;
+  }
+
+  .statusText {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    .statusLabel {
+      font-size: 0.85rem;
+      color: $color-text;
+    }
+
+    .statusValue {
+      font-size: 0.8rem;
+      color: $color-text-muted;
+      font-family: $font-mono;
+    }
+  }
+}
+
+.consensusActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid $color-border;
+
+  button {
+    padding: 0.6rem 1.25rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &.saveButton {
+      background: $color-success;
+      border: none;
+      color: white;
+
+      &:hover {
+        background: lighten($color-success, 8%);
+      }
+    }
+
+    &.resetButton {
+      background: transparent;
+      border: 1px solid $color-border;
+      color: $color-text-muted;
+
+      &:hover {
+        border-color: $color-text-muted;
+        color: $color-text;
+      }
+    }
+
+    &.refreshButton {
+      background: transparent;
+      border: 1px solid $color-info;
+      color: $color-info;
+
+      &:hover {
+        background: $color-info-dim;
+      }
+    }
+  }
+}
+
+// ============================================
+// Conversations Tab Styles
+// ============================================
+
+.conversationsTab {
+  padding: 1.5rem;
+  min-height: 100%;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  background: $color-bg;
+}
+
+.conversationsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: $color-text;
+  }
+}
+
+.conversationFilters {
+  display: flex;
+  gap: 0.75rem;
+
+  select {
+    padding: 0.5rem 0.75rem;
+    background: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    color: $color-text;
+    font-size: 0.85rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+}
+
+.conversationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.conversationCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+
+  &.expanded {
+    border-color: $color-info;
+  }
+}
+
+.conversationHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: $color-bg-elevated;
+  }
+}
+
+.conversationTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: $color-text;
+  }
+
+  .conversationMeta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+    color: $color-text-muted;
+  }
+}
+
+.conversationStats {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  .stat {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: $color-text-muted;
+  }
+}
+
+.expandIcon {
+  color: $color-text-muted;
+  font-size: 0.9rem;
+  transition: transform 0.2s;
+
+  &.expanded {
+    transform: rotate(180deg);
+  }
+}
+
+.conversationBody {
+  border-top: 1px solid $color-border;
+  padding: 1rem;
+  background: $color-bg;
+}
+
+.messagesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.messageItem {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: $color-bg-elevated;
+  border-radius: 6px;
+
+  &.systemMessage {
+    background: $color-info-dim;
+    border-left: 3px solid $color-info;
+  }
+}
+
+.messageRole {
+  min-width: 100px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: $color-purple;
+  text-transform: capitalize;
+}
+
+.messageContent {
+  flex: 1;
+  font-size: 0.85rem;
+  color: $color-text;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.messageTime {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+  font-family: $font-mono;
+}
+
+.conversationOutcome {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: $color-bg-card;
+  border-radius: 6px;
+  border-left: 3px solid $color-success;
+
+  h5 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.85rem;
+    color: $color-text;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: $color-text-muted;
+  }
+}
+
+// ============================================
+// Engram Browser Tab Styles
+// ============================================
+
+.engramBrowserTab {
+  padding: 1.5rem;
+  min-height: 100%;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  background: $color-bg;
+}
+
+.engramBrowserHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: $color-text;
+  }
+}
+
+.engramSearch {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+
+  input {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    background: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    color: $color-text;
+    font-family: $font-mono;
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+
+    &::placeholder {
+      color: $color-text-dim;
+    }
+  }
+
+  select {
+    padding: 0.6rem 0.75rem;
+    background: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    color: $color-text;
+    font-size: 0.9rem;
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+
+  button {
+    padding: 0.6rem 1rem;
+    background: $color-info;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+
+    &:hover {
+      background: lighten($color-info, 8%);
+    }
+  }
+}
+
+.engramTags {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.engramTag {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  background: $color-purple-dim;
+  border: 1px solid $color-purple;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: $color-purple;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-purple;
+    color: white;
+  }
+
+  .removeTag {
+    font-size: 0.7rem;
+  }
+}
+
+.engramContent {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.engramList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.engramItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+
+  &.selected {
+    border-color: $color-info;
+    background: $color-info-dim;
+  }
+}
+
+.engramKey {
+  font-size: 0.85rem;
+  font-family: $font-mono;
+  color: $color-text;
+  word-break: break-all;
+}
+
+.engramMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: $color-text-muted;
+
+  .engramType {
+    padding: 0.2rem 0.5rem;
+    background: $color-bg;
+    border-radius: 4px;
+    text-transform: capitalize;
+  }
+}
+
+.engramDetail {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.engramDetailHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: $color-bg-elevated;
+  border-bottom: 1px solid $color-border;
+
+  h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: $color-text;
+    word-break: break-all;
+  }
+}
+
+.engramDetailActions {
+  display: flex;
+  gap: 0.5rem;
+
+  button {
+    padding: 0.4rem 0.6rem;
+    background: transparent;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    color: $color-text-muted;
+    font-size: 0.75rem;
+    cursor: pointer;
+
+    &:hover {
+      border-color: $color-info;
+      color: $color-info;
+    }
+
+    &.deleteButton:hover {
+      border-color: $color-danger;
+      color: $color-danger;
+    }
+  }
+}
+
+.engramDetailBody {
+  padding: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.jsonViewer {
+  background: $color-bg;
+  border-radius: 6px;
+  padding: 1rem;
+  font-family: $font-mono;
+  font-size: 0.8rem;
+  color: $color-text;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.engramDetailMeta {
+  padding: 1rem;
+  border-top: 1px solid $color-border;
+  background: $color-bg;
+
+  .metaGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .metaItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    label {
+      font-size: 0.7rem;
+      color: $color-text-dim;
+      text-transform: uppercase;
+    }
+
+    span {
+      font-size: 0.85rem;
+      color: $color-text;
+      font-family: $font-mono;
+    }
+  }
+}
+
+// ============================================
+// Recommendations Tab Styles
+// ============================================
+
+.recommendationsTab {
+  padding: 1.5rem;
+  min-height: 100%;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  background: $color-bg;
+}
+
+.recommendationsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: $color-text;
+  }
+}
+
+.recommendationFilters {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filterChip {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 20px;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-text-muted;
+    color: $color-text;
+  }
+
+  &.active {
+    background: $color-info-dim;
+    border-color: $color-info;
+    color: $color-info;
+  }
+}
+
+.recommendationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recommendationCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-border-active;
+  }
+
+  &.pending {
+    border-left: 3px solid $color-warning;
+  }
+
+  &.acknowledged {
+    border-left: 3px solid $color-info;
+  }
+
+  &.applied {
+    border-left: 3px solid $color-success;
+  }
+
+  &.rejected {
+    border-left: 3px solid $color-danger;
+    opacity: 0.7;
+  }
+}
+
+.recommendationHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.recommendationTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: $color-text;
+  }
+
+  .recommendationCategory {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .categoryBadge {
+      padding: 0.25rem 0.5rem;
+      background: $color-bg;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: $color-text-muted;
+      text-transform: capitalize;
+    }
+
+    .confidenceBadge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: $font-mono;
+
+      &.high {
+        background: $color-success-dim;
+        color: $color-success;
+      }
+
+      &.medium {
+        background: $color-warning-dim;
+        color: $color-warning;
+      }
+
+      &.low {
+        background: $color-danger-dim;
+        color: $color-danger;
+      }
+    }
+  }
+}
+
+.recommendationStatus {
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+
+  &.pending {
+    background: $color-warning-dim;
+    color: $color-warning;
+  }
+
+  &.acknowledged {
+    background: $color-info-dim;
+    color: $color-info;
+  }
+
+  &.applied {
+    background: $color-success-dim;
+    color: $color-success;
+  }
+
+  &.rejected {
+    background: $color-danger-dim;
+    color: $color-danger;
+  }
+}
+
+.recommendationBody {
+  padding: 0 1rem 1rem;
+
+  p {
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+    color: $color-text-muted;
+    line-height: 1.5;
+  }
+}
+
+.suggestedAction {
+  background: $color-bg;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+
+  h5 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.85rem;
+    color: $color-text;
+  }
+
+  .actionDetails {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    font-size: 0.85rem;
+
+    .actionItem {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+
+      label {
+        font-size: 0.75rem;
+        color: $color-text-dim;
+      }
+
+      span {
+        color: $color-text;
+        font-family: $font-mono;
+      }
+    }
+  }
+}
+
+.recommendationActions {
+  display: flex;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid $color-border;
+
+  button {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &.applyButton {
+      background: $color-success;
+      border: none;
+      color: white;
+
+      &:hover {
+        background: lighten($color-success, 8%);
+      }
+    }
+
+    &.acknowledgeButton {
+      background: transparent;
+      border: 1px solid $color-info;
+      color: $color-info;
+
+      &:hover {
+        background: $color-info-dim;
+      }
+    }
+
+    &.rejectButton {
+      background: transparent;
+      border: 1px solid $color-danger;
+      color: $color-danger;
+
+      &:hover {
+        background: $color-danger-dim;
+      }
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   }
 }

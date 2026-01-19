@@ -26,15 +26,14 @@ pub fn create_crossroads_routes(_external_service: &Arc<ExternalService>) -> Rou
         .route("/api/marketplace/search", post(search_listings))
         .route("/api/marketplace/featured", get(get_featured_listings))
         .route("/api/marketplace/stats", get(get_marketplace_stats))
-        
-        // Service Discovery API - Core to marketplace discovery
-        .route("/api/discovery/agents", get(discover_agents))
+
+        // Service Discovery API - Legacy endpoints (moved to /resources/discovery module)
+        // New federated discovery: /api/discovery/tools, /api/discovery/agents, /api/discovery/protocols, etc.
         .route("/api/discovery/workflows", get(discover_workflows))
-        .route("/api/discovery/tools", get(discover_tools))
         .route("/api/discovery/mcp-servers", get(discover_mcp_servers))
         .route("/api/discovery/scan", post(trigger_discovery_scan))
         .route("/api/discovery/health/:endpoint", get(check_service_health))
-        
+
         // Marketplace Admin API - Only marketplace moderation
         .route("/api/admin/listings/approve/:id", post(approve_listing))
         .route("/api/admin/listings/reject/:id", post(reject_listing))
