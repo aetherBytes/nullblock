@@ -91,6 +91,7 @@ pub struct ChatRequest {
 pub struct ModelSelectionRequest {
     pub model_name: String,
     pub user_id: Option<String>,
+    pub user_context: Option<HashMap<String, serde_json::Value>>,
 }
 
 #[derive(Debug, Deserialize)]

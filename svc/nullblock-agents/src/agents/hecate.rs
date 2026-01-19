@@ -5,6 +5,7 @@
 
 use crate::{
     config::ApiKeys,
+    config::dev_wallet::get_dev_preferred_model,
     database::repositories::AgentRepository,
     error::{AppError, AppResult},
     llm::{LLMServiceFactory, OptimizationGoal, Priority, TaskRequirements, validator::{ModelValidator, sort_models_by_context_length}},
@@ -409,9 +410,27 @@ When asked about capabilities, features, tools, or what you can do:
             (Some(context.system_prompt), Some(context.messages))
         };
 
+        // Check if this is a dev wallet (set by handler)
+        let is_dev = user_context
+            .as_ref()
+            .and_then(|ctx| ctx.get("is_dev_wallet"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        // Override model for dev wallets if currently on a free model
+        let model_override = if is_dev && self.current_model.as_ref().map(|m| m.ends_with(":free")).unwrap_or(true) {
+            info!("🔥 Dev wallet - auto-boosting to premium model: {}", get_dev_preferred_model());
+            Some(get_dev_preferred_model().to_string())
+        } else {
+            self.current_model.clone()
+        };
+
         // Determine max_tokens based on request type and user tier
         let max_tokens = if is_image_request {
             Some(16384)  // Increased for full base64 image responses (50-200KB+)
+        } else if is_dev {
+            // Dev wallets get higher token limits
+            Some(4096)
         } else {
             // Check if user_context specifies a max_output_tokens limit (free tier)
             let free_tier_limit = user_context
@@ -437,7 +456,7 @@ When asked about capabilities, features, tools, or what you can do:
             top_p: None,
             stop_sequences: None,
             tools: None,
-            model_override: self.current_model.clone(),
+            model_override,
             concise: true,
             max_chars: None,
             reasoning: None,

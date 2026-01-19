@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+pub mod dev_wallet;
+
 use serde::{Deserialize, Serialize};
 use std::env;
 use thiserror::Error;
@@ -63,7 +65,7 @@ impl Config {
         Ok(Self {
             service_name: env::var("SERVICE_NAME").unwrap_or_else(|_| "nullblock-agents".to_string()),
             version: env::var("SERVICE_VERSION").unwrap_or_else(|_| "0.1.0".to_string()),
-            
+
             server: ServerConfig {
                 host: env::var("AGENTS_HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
                 port: env::var("AGENTS_PORT")
@@ -204,7 +206,7 @@ pub struct ApiKeys {
 impl ApiKeys {
     pub fn available_providers(&self) -> Vec<&'static str> {
         let mut providers = Vec::new();
-        
+
         if self.openai.is_some() {
             providers.push("openai");
         }
@@ -220,18 +222,18 @@ impl ApiKeys {
         if self.openrouter.is_some() {
             providers.push("openrouter");
         }
-        
+
         // Local providers are always "available" (though might not be running)
         providers.push("ollama");
-        
+
         providers
     }
 
     pub fn has_api_providers(&self) -> bool {
-        self.openai.is_some() 
-            || self.anthropic.is_some() 
-            || self.groq.is_some() 
-            || self.huggingface.is_some() 
+        self.openai.is_some()
+            || self.anthropic.is_some()
+            || self.groq.is_some()
+            || self.huggingface.is_some()
             || self.openrouter.is_some()
     }
 }
