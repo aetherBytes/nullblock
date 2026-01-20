@@ -10,13 +10,9 @@ const DEV_SHOW_ALL_COW_TABS = true;
 const BASE_MEMCACHE_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
   { id: 'engrams', icon: '◈', label: 'Engrams' },
   { id: 'stash', icon: '⬡', label: 'Stash' },
-  { id: 'tasks', icon: '▣', label: 'Tasks' },
   { id: 'agents', icon: '◉', label: 'Agents' },
+  { id: 'consensus', icon: '⚖', label: 'Consensus' },
   { id: 'model', icon: '◎', label: 'Model' },
-  { id: 'listings', icon: '◇', label: 'Listings' },
-  { id: 'earnings', icon: '◆', label: 'Earnings' },
-  { id: 'connections', icon: '○', label: 'Connections' },
-  { id: 'bookmarks', icon: '☆', label: 'Bookmarks' },
 ];
 
 interface VoidOverlayProps {

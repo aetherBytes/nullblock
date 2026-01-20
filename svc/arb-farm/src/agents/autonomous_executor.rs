@@ -6,6 +6,7 @@ use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
 
 use crate::agents::StrategyEngine;
+use crate::consensus::{ConsensusConfig, ConsensusEngine, format_edge_context};
 use crate::engrams::client::EngramsClient;
 use crate::engrams::schemas::{TransactionSummary, TransactionAction, TransactionMetadata, ExecutionError, ExecutionErrorType, ErrorContext};
 use crate::error::{AppError, AppResult};
@@ -64,6 +65,8 @@ pub struct AutonomousExecutor {
     position_manager: Arc<PositionManager>,
     risk_config: Arc<RwLock<RiskConfig>>,
     engrams_client: Arc<EngramsClient>,
+    consensus_engine: Option<Arc<ConsensusEngine>>,
+    consensus_config: Arc<RwLock<ConsensusConfig>>,
     event_tx: broadcast::Sender<ArbEvent>,
     executions: Arc<RwLock<HashMap<Uuid, AutoExecutionRecord>>>,
     recent_mints: Arc<RwLock<HashMap<String, DateTime<Utc>>>>,
@@ -82,6 +85,8 @@ impl AutonomousExecutor {
         position_manager: Arc<PositionManager>,
         risk_config: Arc<RwLock<RiskConfig>>,
         engrams_client: Arc<EngramsClient>,
+        consensus_engine: Option<Arc<ConsensusEngine>>,
+        consensus_config: Arc<RwLock<ConsensusConfig>>,
         event_tx: broadcast::Sender<ArbEvent>,
         default_wallet: String,
     ) -> Self {
@@ -93,6 +98,8 @@ impl AutonomousExecutor {
             position_manager,
             risk_config,
             engrams_client,
+            consensus_engine,
+            consensus_config,
             event_tx,
             executions: Arc::new(RwLock::new(HashMap::new())),
             recent_mints: Arc::new(RwLock::new(HashMap::new())),
@@ -133,6 +140,8 @@ impl AutonomousExecutor {
         let position_manager = self.position_manager.clone();
         let risk_config = self.risk_config.clone();
         let engrams_client = self.engrams_client.clone();
+        let consensus_engine = self.consensus_engine.clone();
+        let consensus_config = self.consensus_config.clone();
         let event_tx = self.event_tx.clone();
         let executions = self.executions.clone();
         let recent_mints = self.recent_mints.clone();
@@ -183,6 +192,8 @@ impl AutonomousExecutor {
                                         &position_manager,
                                         &risk_config,
                                         &engrams_client,
+                                        &consensus_engine,
+                                        &consensus_config,
                                         &event_tx,
                                         &executions,
                                         &recent_mints,
@@ -241,6 +252,8 @@ impl AutonomousExecutor {
         position_manager: &Arc<PositionManager>,
         risk_config: &Arc<RwLock<RiskConfig>>,
         engrams_client: &Arc<EngramsClient>,
+        consensus_engine: &Option<Arc<ConsensusEngine>>,
+        consensus_config: &Arc<RwLock<ConsensusConfig>>,
         event_tx: &broadcast::Sender<ArbEvent>,
         executions: &Arc<RwLock<HashMap<Uuid, AutoExecutionRecord>>>,
         recent_mints: &Arc<RwLock<HashMap<String, DateTime<Utc>>>>,
@@ -258,19 +271,8 @@ impl AutonomousExecutor {
             .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or_else(|| AppError::Validation("Missing strategy_id in event".into()))?;
 
-        let execution_mode = event.payload.get("execution_mode")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-
-        if !execution_mode.to_lowercase().contains("autonomous") {
-            tracing::debug!(
-                edge_id = %edge_id,
-                mode = %execution_mode,
-                "Skipping non-autonomous edge"
-            );
-            return Ok(());
-        }
-
+        // IMPORTANT: Check the CURRENT strategy state, not the stale event payload
+        // This allows toggling autonomous mode to take effect immediately for new edges
         let strategy = strategy_engine.get_strategy(strategy_id).await
             .ok_or_else(|| AppError::NotFound(format!("Strategy {} not found", strategy_id)))?;
 
@@ -282,9 +284,8 @@ impl AutonomousExecutor {
                 edge_id = %edge_id,
                 strategy_id = %strategy_id,
                 execution_mode = %strategy.execution_mode,
-                "Strategy cannot auto-execute (mode: {}, can_auto_execute: {})",
-                strategy.execution_mode,
-                strategy.can_auto_execute()
+                auto_execute_enabled = strategy.risk_params.auto_execute_enabled,
+                "Skipping non-autonomous edge (current strategy state)"
             );
             return Ok(());
         }
@@ -298,13 +299,114 @@ impl AutonomousExecutor {
             return Ok(());
         }
 
+        let config = consensus_config.read().await;
+        let global_consensus_enabled = config.consensus_enabled_for_execution;
+        let fail_open = config.fail_open_on_consensus_error;
+        drop(config);
+        let strategy_requires_consensus = strategy.risk_params.require_consensus;
+
+        if global_consensus_enabled && strategy_requires_consensus {
+            if let Some(engine) = consensus_engine {
+                let edge_context = format_edge_context(
+                    event.payload.get("edge_type").and_then(|v| v.as_str()).unwrap_or("curve_buy"),
+                    event.payload.get("venue").and_then(|v| v.as_str()).unwrap_or("pump_fun"),
+                    &[
+                        event.payload.get("token_mint").and_then(|v| v.as_str()).unwrap_or("unknown").to_string(),
+                        "SOL".to_string(),
+                    ],
+                    event.payload.get("estimated_profit_lamports").and_then(|v| v.as_i64()).unwrap_or(0),
+                    event.payload.get("risk_score").and_then(|v| v.as_i64()).unwrap_or(50) as i32,
+                    event.payload.get("route_data").unwrap_or(&serde_json::json!({})),
+                );
+
+                match engine.request_consensus(edge_id, &edge_context, None).await {
+                    Ok(result) => {
+                        // Save consensus decision to engrams
+                        let decision = crate::engrams::ConsensusDecision {
+                            decision_id: uuid::Uuid::new_v4(),
+                            edge_id,
+                            strategy_id: Some(strategy_id),
+                            approved: result.approved,
+                            agreement_score: result.agreement_score,
+                            weighted_confidence: result.weighted_confidence,
+                            model_votes: result.model_votes.iter().map(|v| v.model.clone()).collect(),
+                            reasoning_summary: result.reasoning_summary.clone(),
+                            edge_context: edge_context.clone(),
+                            total_latency_ms: result.total_latency_ms,
+                            created_at: chrono::Utc::now(),
+                        };
+                        if let Err(e) = engrams_client.save_consensus_decision(default_wallet, &decision).await {
+                            tracing::warn!("Failed to save consensus decision engram: {}", e);
+                        }
+
+                        if !result.approved {
+                            tracing::info!(
+                                edge_id = %edge_id,
+                                strategy_id = %strategy_id,
+                                agreement = result.agreement_score,
+                                reasoning = %result.reasoning_summary,
+                                "🚫 Edge rejected by consensus - skipping execution"
+                            );
+                            let _ = event_tx.send(ArbEvent::new(
+                                "consensus.rejected",
+                                EventSource::Agent(AgentType::Executor),
+                                "arb.edge.rejected",
+                                serde_json::json!({
+                                    "edge_id": edge_id,
+                                    "strategy_id": strategy_id,
+                                    "agreement_score": result.agreement_score,
+                                    "reasoning": result.reasoning_summary,
+                                }),
+                            ));
+                            return Ok(());
+                        }
+                        tracing::info!(
+                            edge_id = %edge_id,
+                            agreement = result.agreement_score,
+                            "✅ Edge approved by consensus"
+                        );
+                    }
+                    Err(e) => {
+                        if fail_open {
+                            tracing::warn!(
+                                edge_id = %edge_id,
+                                error = %e,
+                                "⚠️ Consensus check failed, proceeding anyway (fail-open mode)"
+                            );
+                        } else {
+                            tracing::error!(
+                                edge_id = %edge_id,
+                                error = %e,
+                                "❌ Consensus check failed, aborting execution (fail-closed mode)"
+                            );
+                            return Err(AppError::ConsensusFailed(e.to_string()));
+                        }
+                    }
+                }
+            } else {
+                tracing::warn!(
+                    edge_id = %edge_id,
+                    "Consensus required but engine not configured, {}",
+                    if fail_open { "proceeding anyway" } else { "aborting" }
+                );
+                if !fail_open {
+                    return Err(AppError::ConsensusFailed("Consensus engine not configured".to_string()));
+                }
+            }
+        }
+
         if !dev_signer.is_configured() {
             tracing::warn!("Cannot auto-execute: dev signer not configured");
             return Err(AppError::Internal("Dev signer not configured".into()));
         }
 
+        let route_data = event.payload.get("route_data")
+            .cloned()
+            .unwrap_or(serde_json::json!({}));
+
         let mint = event.payload.get("token_mint")
             .or_else(|| event.payload.get("mint"))
+            .or_else(|| route_data.get("token_mint"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
@@ -315,6 +417,11 @@ impl AutonomousExecutor {
                 return Ok(());
             }
         };
+
+        // Extract token_symbol from route_data (populated by signal metadata)
+        let token_symbol = route_data.get("token_symbol")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         if position_manager.has_open_position_for_mint(&mint).await {
             tracing::info!(
@@ -428,8 +535,13 @@ impl AutonomousExecutor {
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0);
 
-        // Don't enter if momentum is strongly negative (price declining)
-        if velocity < -1.0 {
+        let progress_velocity = event.payload.get("progress_velocity")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+
+        // ENTRY FILTER 1: Require positive momentum (or at least not declining)
+        // Tightened from -1.0 to 0.0 - don't enter during any decline
+        if velocity < 0.0 {
             tracing::info!(
                 edge_id = %edge_id,
                 mint = %mint,
@@ -440,9 +552,9 @@ impl AutonomousExecutor {
             return Ok(());
         }
 
-        // Don't enter if already pumped significantly (buying the top)
-        // This prevents FOMO entries after a big spike
-        let max_recent_pump = 25.0;
+        // ENTRY FILTER 2: Anti-FOMO check - don't buy after big spike
+        // Tightened from 25% to 15% max recent pump
+        let max_recent_pump = 15.0;
         if price_change_1m > max_recent_pump {
             tracing::info!(
                 edge_id = %edge_id,
@@ -452,6 +564,21 @@ impl AutonomousExecutor {
                 "⏭️ Skipping: already pumped {:.1}% in last minute (max {:.0}%)",
                 price_change_1m,
                 max_recent_pump
+            );
+            return Ok(());
+        }
+
+        // ENTRY FILTER 3: Require positive progress velocity (graduation accelerating)
+        let min_progress_velocity = 0.5;  // % per minute
+        if progress_velocity < min_progress_velocity && progress_velocity != 0.0 {
+            tracing::info!(
+                edge_id = %edge_id,
+                mint = %mint,
+                progress_velocity = progress_velocity,
+                min_required = min_progress_velocity,
+                "⏭️ Skipping: progress velocity {:.2}%/min below threshold {:.1}%/min",
+                progress_velocity,
+                min_progress_velocity
             );
             return Ok(());
         }
@@ -538,6 +665,13 @@ impl AutonomousExecutor {
                     s.total_sol_deployed += sol_amount_lamports as f64 / 1e9;
                 }
 
+                let signal_source = route_data.get("signal_source")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let symbol = route_data.get("symbol")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("???");
+
                 let _ = event_tx.send(ArbEvent::new(
                     "auto_execution_succeeded",
                     EventSource::Agent(AgentType::Executor),
@@ -546,9 +680,12 @@ impl AutonomousExecutor {
                         "edge_id": edge_id,
                         "strategy_id": strategy_id,
                         "mint": mint,
+                        "symbol": symbol,
                         "signature": signature,
                         "tokens_received": tokens_out,
+                        "sol_amount": sol_amount_lamports as f64 / 1e9,
                         "sol_spent": sol_amount_lamports as f64 / 1e9,
+                        "signal_source": signal_source,
                         "significance": "critical",
                     }),
                 ));
@@ -561,19 +698,42 @@ impl AutonomousExecutor {
                 let tokens_received = tokens_out.unwrap_or(0);
                 if tokens_received > 0 {
                     let entry_price = sol_amount_lamports as f64 / tokens_received as f64;
-                    // Use curve-specific exit config with trailing stops
-                    let exit_config = ExitConfig::for_curve_bonding();
+                    // Use momentum-adaptive exit config if enabled, otherwise standard curve config
+                    let exit_config = if strategy.risk_params.momentum_adaptive_exits {
+                        tracing::info!(
+                            edge_id = %edge_id,
+                            "🎯 Using momentum-adaptive exit config (let_winners_run={})",
+                            strategy.risk_params.let_winners_run
+                        );
+                        ExitConfig::for_curve_bonding_momentum_adaptive()
+                    } else {
+                        ExitConfig::for_curve_bonding()
+                    };
+
+                    let venue = route_data.get("venue")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .or_else(|| Some("pump_fun".to_string()));
+                    let signal_src = if signal_source.is_empty() {
+                        None
+                    } else {
+                        Some(signal_source.to_string())
+                    };
+                    let is_snipe = signal_source == "graduation_sniper";
+                    let snipe_indicator = if is_snipe { "🔫 " } else { "" };
 
                     if let Err(e) = position_manager.open_position(
                         edge_id,
                         strategy_id,
                         mint.clone(),
-                        None,
+                        token_symbol.clone(),
                         sol_amount_lamports as f64 / 1e9,
                         tokens_received as f64,
                         entry_price,
                         exit_config,
                         Some(signature.clone()),
+                        venue,
+                        signal_src,
                     ).await {
                         tracing::warn!(
                             edge_id = %edge_id,
@@ -584,8 +744,10 @@ impl AutonomousExecutor {
                         tracing::info!(
                             edge_id = %edge_id,
                             mint = %mint,
+                            symbol = ?token_symbol,
                             tokens = tokens_received,
-                            "📊 Position opened for tracking"
+                            is_snipe = is_snipe,
+                            "{}📊 Position opened for tracking", snipe_indicator
                         );
                     }
 
@@ -594,7 +756,7 @@ impl AutonomousExecutor {
                         tx_signature: signature.clone(),
                         action: TransactionAction::Buy,
                         token_mint: mint.clone(),
-                        token_symbol: None,
+                        token_symbol: token_symbol.clone(),
                         venue: "pump_fun".to_string(),
                         entry_sol: sol_amount_lamports as f64 / 1e9,
                         exit_sol: None,
@@ -765,6 +927,8 @@ pub fn spawn_autonomous_executor(
     position_manager: Arc<PositionManager>,
     risk_config: Arc<RwLock<RiskConfig>>,
     engrams_client: Arc<EngramsClient>,
+    consensus_engine: Option<Arc<ConsensusEngine>>,
+    consensus_config: Arc<RwLock<ConsensusConfig>>,
     event_tx: broadcast::Sender<ArbEvent>,
     default_wallet: String,
 ) -> Arc<AutonomousExecutor> {
@@ -776,6 +940,8 @@ pub fn spawn_autonomous_executor(
         position_manager,
         risk_config,
         engrams_client,
+        consensus_engine,
+        consensus_config,
         event_tx,
         default_wallet,
     ))

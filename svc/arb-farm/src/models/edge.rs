@@ -78,6 +78,7 @@ pub enum EdgeType {
     Jit,
     Sandwich,
     FlashLoan,
+    GraduationSnipe,
 }
 
 impl std::fmt::Display for EdgeType {
@@ -90,6 +91,7 @@ impl std::fmt::Display for EdgeType {
             EdgeType::Jit => write!(f, "jit"),
             EdgeType::Sandwich => write!(f, "sandwich"),
             EdgeType::FlashLoan => write!(f, "flash_loan"),
+            EdgeType::GraduationSnipe => write!(f, "graduation_snipe"),
         }
     }
 }

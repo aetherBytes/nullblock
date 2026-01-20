@@ -80,7 +80,7 @@ const HECATE_RETURN_MESSAGES = [
 ];
 
 const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
-  publicKey: _publicKey,
+  publicKey,
   isActive = true,
   onFirstMessage,
   onAgentResponseReceived,
@@ -138,6 +138,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const [showTooltip, setShowTooltip] = useState(false);
   const [hasAcknowledgedFirst, setHasAcknowledgedFirst] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Slash command state
   const [showCommandDropdown, setShowCommandDropdown] = useState(false);
@@ -250,7 +251,8 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     }
 
     try {
-      const response = await agentService.chatWithAgent(activeAgent, pending.message);
+      // Pass wallet address to enable dev wallet LLM boost
+      const response = await agentService.chatWithAgent(activeAgent, pending.message, publicKey);
 
       if (response.success && response.data) {
         const agentMsg: VoidMessage = {
@@ -259,6 +261,11 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
           sender: 'agent',
           timestamp: new Date(),
         };
+
+        // Update displayed model if the response used a different model (e.g., dev wallet boost)
+        if (response.data.model_used && response.data.model_used !== fetchedModel) {
+          setFetchedModel(response.data.model_used);
+        }
 
         // Trigger incoming tendril before showing message
         onAgentResponseReceived?.(agentMsg.id);
@@ -307,7 +314,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
       setEnergyState('idle');
       pendingMessageRef.current = null;
     }
-  }, [onAgentResponseReceived, hasAcknowledgedFirst, activeAgent]);
+  }, [onAgentResponseReceived, hasAcknowledgedFirst, activeAgent, publicKey]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -335,17 +342,19 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
         };
         setMessages((prev) => [...prev, userMsg]);
 
-        // Respond with tool list
-        const toolResponse = `I have access to **${mcpTools.length} MCP tools** across various services. Here's a summary:\n\n${getToolListText()}\n\n**Tip**: Type \`/\` to see available slash commands, or ask me to use any specific tool.`;
+        // Respond with help text (same as /help command)
+        const helpResponse = getHelpText();
 
         const agentMsg: VoidMessage = {
           id: `tools-${Date.now()}`,
-          text: toolResponse,
+          text: helpResponse,
           sender: 'agent',
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, agentMsg]);
         setShowHistory(true);
+        // Restore focus to input
+        setTimeout(() => inputRef.current?.focus(), 100);
         return;
       }
 
@@ -376,6 +385,9 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
       // Brief charging glow, then immediately start processing
       setEnergyState('charging');
 
+      // Restore focus to input for follow-up messages
+      setTimeout(() => inputRef.current?.focus(), 100);
+
       // Quick transition to firing then processing (reduced delay)
       setTimeout(() => {
         setEnergyState('firing');
@@ -387,7 +399,7 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
         }, 150); // Reduced from 300ms
       }, 400); // Reduced from 800ms
     },
-    [input, isProcessing, energyState, hasInteracted, onFirstMessage, executeTransmission, isToolQuery, mcpTools.length, getToolListText],
+    [input, isProcessing, energyState, hasInteracted, onFirstMessage, executeTransmission, isToolQuery, getHelpText],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -553,9 +565,17 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     return null;
   }
 
+  // Expand chat when there are unread messages or user interacts
+  const handleExpand = useCallback(() => {
+    setIsCollapsed(false);
+    if (messages.length > 0) {
+      setShowHistory(true);
+    }
+  }, [messages.length]);
+
   // Use portal to render at body level, escaping VoidExperience's stacking context
   const chatContent = (
-    <div className={styles.voidChatContainer}>
+    <div className={`${styles.voidChatContainer} ${isCollapsed ? styles.collapsed : ''}`}>
       {/* Input bar */}
       <div className={styles.voidInputBar}>
         {/* Chat History Popup */}
@@ -649,54 +669,92 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
           <div
             className={`${styles.inputContainer} ${energyState === 'charging' ? styles.charging : ''} ${energyState === 'firing' ? styles.firing : ''} ${energyState === 'processing' ? styles.processing : ''} ${glowActive ? styles.receiving : ''}`}
           >
-            {/* History toggle button */}
+            {/* Collapse/Expand toggle */}
             <button
               type="button"
-              className={`${styles.historyToggle} ${showHistory ? styles.historyActive : ''} ${messages.length === 0 ? styles.historyDisabled : ''} ${hasUnreadMessages && !showHistory ? styles.historyNotification : ''}`}
+              className={`${styles.collapseToggle} ${isCollapsed ? styles.isCollapsed : ''} ${hasUnreadMessages ? styles.hasUpdates : ''}`}
               onClick={() => {
-                if (messages.length > 0) {
-                  const newShowHistory = !showHistory;
-
-                  setShowHistory(newShowHistory);
-
-                  if (newShowHistory) {
-                    setHasUnreadMessages(false);
-
-                    // Clear tooltip timer and hide tooltip
-                    if (tooltipTimerRef.current) {
-                      clearTimeout(tooltipTimerRef.current);
-                      tooltipTimerRef.current = null;
-                    }
-
-                    setShowTooltip(false);
-
-                    // Mark that user has acknowledged first message
-                    if (!hasAcknowledgedFirst) {
-                      setHasAcknowledgedFirst(true);
-                    }
-                  }
+                if (isCollapsed) {
+                  handleExpand();
+                } else {
+                  setIsCollapsed(true);
+                  setShowHistory(false);
                 }
               }}
-              aria-label="Toggle chat history"
-              disabled={messages.length === 0}
+              aria-label={isCollapsed ? 'Expand chat' : 'Collapse chat'}
             >
               <svg
-                width="24"
-                height="24"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2.5"
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                style={{
-                  transform: showHistory ? 'rotate(0deg)' : 'rotate(180deg)',
-                  transition: 'transform 0.3s ease',
-                }}
               >
-                <polyline points="6 9 12 15 18 9" />
+                {isCollapsed ? (
+                  <polyline points="15 18 9 12 15 6" />
+                ) : (
+                  <polyline points="9 18 15 12 9 6" />
+                )}
               </svg>
             </button>
+
+            {/* History toggle button - hidden when collapsed unless unread */}
+            {(!isCollapsed || hasUnreadMessages) && (
+              <button
+                type="button"
+                className={`${styles.historyToggle} ${showHistory ? styles.historyActive : ''} ${messages.length === 0 ? styles.historyDisabled : ''} ${hasUnreadMessages && !showHistory ? styles.historyNotification : ''}`}
+                onClick={() => {
+                  if (isCollapsed) {
+                    handleExpand();
+                    return;
+                  }
+                  if (messages.length > 0) {
+                    const newShowHistory = !showHistory;
+
+                    setShowHistory(newShowHistory);
+
+                    if (newShowHistory) {
+                      setHasUnreadMessages(false);
+
+                      // Clear tooltip timer and hide tooltip
+                      if (tooltipTimerRef.current) {
+                        clearTimeout(tooltipTimerRef.current);
+                        tooltipTimerRef.current = null;
+                      }
+
+                      setShowTooltip(false);
+
+                      // Mark that user has acknowledged first message
+                      if (!hasAcknowledgedFirst) {
+                        setHasAcknowledgedFirst(true);
+                      }
+                    }
+                  }
+                }}
+                aria-label="Toggle chat history"
+                disabled={messages.length === 0 && !isCollapsed}
+              >
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{
+                    transform: showHistory ? 'rotate(0deg)' : 'rotate(180deg)',
+                    transition: 'transform 0.3s ease',
+                  }}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+            )}
             {/* Tooltip for unread message reminder */}
             {showTooltip && !showHistory && (
               <div className={styles.unreadTooltip}>

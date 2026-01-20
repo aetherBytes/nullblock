@@ -1006,7 +1006,7 @@ class ArbFarmService {
   // ============================================================================
 
   async listCurvePositions(): Promise<ArbFarmServiceResponse<CurvePosition[]>> {
-    return this.makeRequest('/curves/positions');
+    return this.makeRequest('/positions');
   }
 
   async getCurvePosition(positionId: string): Promise<ArbFarmServiceResponse<CurvePosition>> {
@@ -1064,10 +1064,21 @@ class ArbFarmService {
   async trackToken(
     mint: string,
     strategyId: string,
-  ): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
+    options?: {
+      name?: string;
+      symbol?: string;
+      venue?: string;
+    },
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; message: string; mint: string }>> {
     return this.makeRequest('/graduation/track', {
       method: 'POST',
-      body: JSON.stringify({ mint, strategy_id: strategyId }),
+      body: JSON.stringify({
+        mint,
+        strategy_id: strategyId || undefined,
+        name: options?.name,
+        symbol: options?.symbol,
+        venue: options?.venue,
+      }),
     });
   }
 
@@ -1075,6 +1086,16 @@ class ArbFarmService {
     mint: string,
   ): Promise<ArbFarmServiceResponse<{ success: boolean; message: string }>> {
     return this.makeRequest(`/graduation/untrack/${mint}`, { method: 'POST' });
+  }
+
+  async isTokenTracked(
+    mint: string,
+  ): Promise<ArbFarmServiceResponse<{ mint: string; is_tracked: boolean; token: TrackedToken | null }>> {
+    return this.makeRequest(`/graduation/tracked/${mint}`);
+  }
+
+  async clearAllTracked(): Promise<ArbFarmServiceResponse<{ success: boolean; message: string; cleared: number }>> {
+    return this.makeRequest('/graduation/clear', { method: 'POST' });
   }
 
   async startGraduationTracker(): Promise<
@@ -2635,6 +2656,47 @@ class ArbFarmService {
   async getAvailableModels(): Promise<ArbFarmServiceResponse<import('../../types/consensus').AvailableModelsResponse>> {
     return this.request<import('../../types/consensus').AvailableModelsResponse>('/consensus/models', {
       method: 'GET',
+    });
+  }
+
+  async getConsensusHistory(options?: { limit?: number; offset?: number; approved_only?: boolean }): Promise<ArbFarmServiceResponse<import('../../types/consensus').ConsensusHistoryEntry[]>> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.set('limit', options.limit.toString());
+    if (options?.offset) params.set('offset', options.offset.toString());
+    if (options?.approved_only !== undefined) params.set('approved_only', options.approved_only.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request<import('../../types/consensus').ConsensusHistoryEntry[]>(`/consensus${query}`, {
+      method: 'GET',
+    });
+  }
+
+  async getConsensusRecommendations(status?: string): Promise<ArbFarmServiceResponse<import('../../types/consensus').Recommendation[]>> {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request<import('../../types/consensus').Recommendation[]>(`/consensus/recommendations${query}`, {
+      method: 'GET',
+    });
+  }
+
+  async getConsensusConversations(limit?: number): Promise<ArbFarmServiceResponse<import('../../types/consensus').ConversationLog[]>> {
+    const params = new URLSearchParams();
+    if (limit) params.set('limit', limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request<import('../../types/consensus').ConversationLog[]>(`/consensus/conversations${query}`, {
+      method: 'GET',
+    });
+  }
+
+  async getDiscoveredModels(): Promise<ArbFarmServiceResponse<import('../../types/consensus').DiscoveredModel[]>> {
+    return this.request<import('../../types/consensus').DiscoveredModel[]>('/consensus/models/discovered', {
+      method: 'GET',
+    });
+  }
+
+  async refreshDiscoveredModels(): Promise<ArbFarmServiceResponse<{ success: boolean; count: number }>> {
+    return this.request<{ success: boolean; count: number }>('/consensus/models/refresh', {
+      method: 'POST',
     });
   }
 }

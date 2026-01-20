@@ -194,6 +194,159 @@ IMPORTANT: Only approve trades with CLEAR, QUANTIFIABLE profit potential in base
     )
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalysisContext {
+    pub total_trades: u32,
+    pub winning_trades: u32,
+    pub win_rate: f64,
+    pub total_pnl_sol: f64,
+    pub today_pnl_sol: f64,
+    pub week_pnl_sol: f64,
+    pub avg_hold_minutes: f64,
+    pub best_trade: Option<TradeHighlightContext>,
+    pub worst_trade: Option<TradeHighlightContext>,
+    pub take_profit_count: u32,
+    pub stop_loss_count: u32,
+    pub recent_errors: Vec<ErrorSummary>,
+    pub time_period: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradeHighlightContext {
+    pub symbol: String,
+    pub pnl_sol: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorSummary {
+    pub error_type: String,
+    pub count: u32,
+    pub last_message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalysisVote {
+    pub recommendations: Vec<ParsedRecommendation>,
+    pub risk_alerts: Vec<String>,
+    pub overall_assessment: String,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParsedRecommendation {
+    pub category: String,
+    pub title: String,
+    pub description: String,
+    pub action_type: String,
+    pub target: String,
+    pub current_value: Option<serde_json::Value>,
+    pub suggested_value: serde_json::Value,
+    pub reasoning: String,
+    pub confidence: f64,
+}
+
+pub fn generate_analysis_prompt(context: &AnalysisContext) -> String {
+    let best_trade_str = context.best_trade.as_ref()
+        .map(|t| format!("{} (+{:.4} SOL)", t.symbol, t.pnl_sol))
+        .unwrap_or_else(|| "None".to_string());
+    let worst_trade_str = context.worst_trade.as_ref()
+        .map(|t| format!("{} ({:.4} SOL)", t.symbol, t.pnl_sol))
+        .unwrap_or_else(|| "None".to_string());
+
+    let errors_summary = if context.recent_errors.is_empty() {
+        "No recent errors".to_string()
+    } else {
+        context.recent_errors.iter()
+            .map(|e| format!("  - {} (x{}): {}", e.error_type, e.count, e.last_message))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+
+    format!(
+        r#"You are an AI trading analyst for an autonomous MEV agent on Solana. Analyze the trading performance and provide actionable recommendations to improve profitability.
+
+## Performance Summary ({})
+
+### Trading Stats
+- Total Trades: {}
+- Winning Trades: {} ({:.1}% win rate)
+- Total PnL: {:.4} SOL
+- Today's PnL: {:.4} SOL
+- Week's PnL: {:.4} SOL
+- Avg Hold Time: {:.1} minutes
+
+### Exit Stats
+- Take Profits: {}
+- Stop Losses: {}
+
+### Notable Trades
+- Best Trade: {}
+- Worst Trade: {}
+
+### Recent Errors
+{}
+
+## Your Task
+
+Analyze this trading performance and provide specific, actionable recommendations. Focus on:
+1. Strategy improvements (entry/exit timing, position sizing)
+2. Risk adjustments (stop-loss levels, max position sizes)
+3. Venue preferences (which venues are performing best)
+4. Error pattern resolution
+
+Respond with a JSON object in this exact format:
+{{
+    "recommendations": [
+        {{
+            "category": "strategy|risk|timing|venue|position",
+            "title": "Brief title (max 50 chars)",
+            "description": "Detailed explanation",
+            "action_type": "config_change|strategy_toggle|risk_adjustment|venue_disable|avoid_token",
+            "target": "The config/strategy/venue to modify",
+            "current_value": null,
+            "suggested_value": "The recommended value",
+            "reasoning": "Why this change will improve performance",
+            "confidence": 0.0-1.0
+        }}
+    ],
+    "risk_alerts": ["Any immediate risk concerns"],
+    "overall_assessment": "Summary of trading performance and key insights",
+    "confidence": 0.0-1.0
+}}
+
+Requirements:
+- Provide 2-5 specific recommendations
+- Each recommendation must have confidence > 0.5 to be actionable
+- Focus on data-driven insights from the metrics provided
+- Prioritize recommendations by potential profit impact"#,
+        context.time_period,
+        context.total_trades,
+        context.winning_trades,
+        context.win_rate * 100.0,
+        context.total_pnl_sol,
+        context.today_pnl_sol,
+        context.week_pnl_sol,
+        context.avg_hold_minutes,
+        context.take_profit_count,
+        context.stop_loss_count,
+        best_trade_str,
+        worst_trade_str,
+        errors_summary
+    )
+}
+
+pub fn parse_analysis_response(content: &str) -> Option<AnalysisVote> {
+    let json_start = content.find('{');
+    let json_end = content.rfind('}');
+
+    let json_str = match (json_start, json_end) {
+        (Some(start), Some(end)) if end > start => &content[start..=end],
+        _ => return None,
+    };
+
+    serde_json::from_str(json_str).ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

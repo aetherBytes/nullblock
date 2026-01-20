@@ -77,9 +77,9 @@ const BUILTIN_COMMANDS: SlashCommand[] = [
   },
 ];
 
-// Natural language patterns that should trigger tool listing
+// Natural language patterns that should trigger help/tool listing
 const TOOL_QUERY_PATTERNS = [
-  /what (tools|commands|capabilities) (do you have|are available|can you use)/i,
+  /what (tools|commands|capabilities) (do you have|are available|can you use|are live|are online|are working)/i,
   /show me (your |the )?(tools|commands|capabilities)/i,
   /list (your |the )?(tools|commands|capabilities)/i,
   /what can you do/i,
@@ -87,6 +87,14 @@ const TOOL_QUERY_PATTERNS = [
   /do you have any tools/i,
   /available (tools|commands|mcp)/i,
   /mcp tools/i,
+  /what('s| is) (live|online|available|working)/i,
+  /what (tools|mcp|commands) (are|is) (live|online|available|working)/i,
+  /tools (live|online|available)/i,
+  /internal (mcp|tools|tooling)/i,
+  /your (mcp|tooling)/i,
+  /help$/i,
+  /what commands/i,
+  /show commands/i,
 ];
 
 export function useCommands(erebusUrl: string = 'http://localhost:3000') {

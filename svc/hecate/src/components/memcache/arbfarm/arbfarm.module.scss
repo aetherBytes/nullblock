@@ -134,11 +134,30 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 .researchView,
 .heliusView,
 .cowsView {
-  padding: 1.5rem;
+  padding: 0;
   min-height: 100%;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
-  background: $color-bg;
+  background: transparent;
+
+  // Styled scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.3);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(100, 116, 139, 0.5);
+    }
+  }
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
 }
 
 // ============================================
@@ -2740,8 +2759,6 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 .cowsView {
   padding: 1.5rem;
   min-height: 100%;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
   background: $color-bg;
 }
 
@@ -3139,22 +3156,23 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 }
 
 .kolCard {
-  padding: 0.75rem;
+  padding: 1rem;
   margin-bottom: 0.5rem;
-  background: $color-bg-elevated;
-  border: 1px solid $color-border;
-  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
 
   &:hover {
-    border-color: $color-border-active;
-    background: lighten($color-bg-elevated, 3%);
+    border-color: rgba(139, 92, 246, 0.4);
+    background: rgba(30, 41, 59, 0.45);
   }
 
   &.selected {
-    border-color: $color-purple;
-    background: rgba($color-purple, 0.1);
+    border-color: rgba(139, 92, 246, 0.6);
+    background: rgba(139, 92, 246, 0.15);
   }
 }
 
@@ -4110,26 +4128,29 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
 .tabButton {
   padding: 0.75rem 1.25rem;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px 6px 0 0;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 6px;
   color: $color-text-muted;
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  text-align: left;
 
   &:hover {
     color: $color-text;
-    background: $color-bg-elevated;
+    background: rgba(30, 41, 59, 0.7);
+    border-color: $color-info;
+    transform: translateX(4px);
   }
 
   &.active {
-    color: $color-info;
-    background: $color-bg-card;
-    border-color: $color-border;
-    border-bottom-color: $color-bg;
-    margin-bottom: -1px;
+    color: white;
+    background: $color-info;
+    border-color: $color-info;
+    transform: translateX(4px);
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
   }
 }
 
@@ -5045,8 +5066,6 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   gap: 1.5rem;
   padding: 1.5rem;
   min-height: 100%;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
   background: $color-bg;
 }
 
@@ -6169,7 +6188,7 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 .curvePanel {
   padding: 1.5rem;
   min-height: 100%;
-  background: $color-bg;
+  background: transparent;
 }
 
 .curvePanelHeader {
@@ -6195,24 +6214,28 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
 .curveTab {
   padding: 0.6rem 1rem;
-  background: $color-bg-card;
-  border: 1px solid $color-border;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(100, 116, 139, 0.3);
   border-radius: 6px;
   color: $color-text-muted;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 
   &:hover {
-    background: $color-bg-elevated;
+    background: rgba(30, 41, 59, 0.7);
+    border-color: $color-info;
     color: $color-text;
+    transform: translateX(3px);
   }
 
   &.active {
-    background: $color-info-dim;
+    background: $color-info;
     border-color: $color-info;
-    color: $color-info;
+    color: white;
+    transform: translateX(3px);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
   }
 }
 
@@ -6240,10 +6263,11 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 .candidatesFilters {
   display: flex;
   gap: 1rem;
-  padding: 1rem;
-  background: $color-bg-card;
-  border: 1px solid $color-border;
-  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
   align-items: center;
   flex-wrap: wrap;
 
@@ -6257,30 +6281,32 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
     input {
       width: 60px;
       padding: 0.4rem 0.6rem;
-      background: $color-bg;
-      border: 1px solid $color-border;
-      border-radius: 4px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(100, 116, 139, 0.3);
+      border-radius: 6px;
       color: $color-text;
       font-size: 0.85rem;
 
       &:focus {
         outline: none;
-        border-color: $color-info;
+        border-color: rgba(139, 92, 246, 0.5);
       }
     }
   }
 
   button {
     padding: 0.5rem 1rem;
-    background: $color-info;
-    border: none;
-    border-radius: 4px;
-    color: white;
+    background: rgba(139, 92, 246, 0.2);
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    border-radius: 6px;
+    color: rgb(167, 139, 250);
     font-size: 0.85rem;
     cursor: pointer;
+    transition: all 0.2s ease;
 
     &:hover {
-      background: lighten($color-info, 10%);
+      background: rgba(139, 92, 246, 0.3);
+      border-color: rgba(139, 92, 246, 0.6);
     }
   }
 }
@@ -6305,21 +6331,27 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
 // Candidate Card
 .curveCandidateCard {
-  background: $color-bg-card;
-  border: 1px solid $color-border;
-  border-radius: 8px;
-  padding: 1rem;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    background: rgba(30, 41, 59, 0.45);
+  }
 
   &.clickable {
     cursor: pointer;
 
     &:hover {
-      border-color: $color-info;
-      box-shadow: 0 4px 12px rgba($color-info, 0.15);
+      border-color: rgba(139, 92, 246, 0.5);
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15);
       transform: translateY(-2px);
     }
   }
@@ -6340,6 +6372,18 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
 .venueIcon {
   font-size: 1.5rem;
+}
+
+.tokenImage {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.hidden {
+  display: none !important;
 }
 
 .tokenInfo {
@@ -6936,16 +6980,18 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
   button {
     padding: 0.5rem 1rem;
-    background: $color-bg-card;
-    border: 1px solid $color-border;
-    border-radius: 4px;
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    border-radius: 6px;
     color: $color-text-muted;
     font-size: 0.85rem;
     cursor: pointer;
+    transition: all 0.2s ease;
 
     &:hover {
-      border-color: $color-info;
-      color: $color-info;
+      border-color: rgba(139, 92, 246, 0.5);
+      color: rgb(167, 139, 250);
+      background: rgba(139, 92, 246, 0.1);
     }
   }
 }
@@ -6955,10 +7001,11 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 .sniperStatsBar {
   display: flex;
   gap: 1.5rem;
-  padding: 0.75rem 1rem;
-  background: $color-bg-card;
-  border: 1px solid $color-border;
-  border-radius: 6px;
+  padding: 0.75rem 1.25rem;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
   margin-bottom: 1rem;
   font-size: 0.85rem;
   color: $color-text-muted;
@@ -6981,21 +7028,28 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
 .trackerStatus,
 .sniperStatus {
-  padding: 0.25rem 0.5rem;
-  background: $color-bg;
-  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 6px;
   font-size: 0.85rem;
 }
 
 // Tracked Token Card
 .trackedTokenCard {
-  background: $color-bg-card;
-  border: 1px solid $color-border;
-  border-radius: 8px;
-  padding: 1rem;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    background: rgba(30, 41, 59, 0.45);
+  }
 }
 
 .trackedHeader {
@@ -7019,15 +7073,124 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   color: $color-text-muted;
 }
 
-// Snipe Position Card
-.snipePositionCard {
-  background: $color-bg-card;
+.trackedActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.untrackButton {
+  padding: 0.4rem 0.75rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.6);
+  }
+}
+
+.customTokenInput {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(30, 41, 59, 0.3);
   border: 1px solid $color-border;
   border-radius: 8px;
-  padding: 1rem;
+
+  input {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    color: $color-text;
+    font-size: 0.85rem;
+    font-family: $font-mono;
+
+    &::placeholder {
+      color: $color-text-dim;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: $color-info;
+    }
+  }
+
+  button {
+    padding: 0.6rem 1.25rem;
+    background: $color-info-dim;
+    border: 1px solid $color-info;
+    border-radius: 6px;
+    color: $color-info;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.3);
+    }
+  }
+}
+
+.dangerButton {
+  padding: 0.4rem 0.75rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.6);
+  }
+}
+
+// Track Button - tracked state
+.trackButton.tracked {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+
+  &:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.6);
+  }
+}
+
+// Snipe Position Card
+.snipePositionCard {
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    background: rgba(30, 41, 59, 0.45);
+  }
 }
 
 .snipeHeader {
@@ -7098,13 +7261,20 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
 // Strategy Card
 .curveStrategyCard {
-  background: $color-bg-card;
-  border: 1px solid $color-border;
-  border-radius: 8px;
-  padding: 1rem;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    background: rgba(30, 41, 59, 0.45);
+  }
 }
 
 .strategyHeader {
@@ -7351,25 +7521,28 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 // Create Strategy Form
 .createButton {
   padding: 0.5rem 1rem;
-  background: $color-success;
-  border: none;
-  border-radius: 4px;
-  color: white;
+  background: rgba(139, 92, 246, 0.25);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 6px;
+  color: rgb(167, 139, 250);
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s ease;
 
   &:hover {
-    background: lighten($color-success, 10%);
+    background: rgba(139, 92, 246, 0.35);
+    border-color: rgba(139, 92, 246, 0.7);
   }
 }
 
 .createStrategyForm {
-  background: $color-bg-card;
-  border: 1px solid $color-border;
-  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1rem;
+  backdrop-filter: blur(10px);
 
   h4 {
     margin: 0 0 1rem 0;
@@ -7396,16 +7569,16 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
   input,
   select {
-    padding: 0.5rem;
-    background: $color-bg;
-    border: 1px solid $color-border;
-    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    border-radius: 6px;
     color: $color-text;
     font-size: 0.9rem;
 
     &:focus {
       outline: none;
-      border-color: $color-info;
+      border-color: rgba(139, 92, 246, 0.5);
     }
   }
 }
@@ -8152,6 +8325,7 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  padding-right: 2.5rem; // Leave space for close button
 }
 
 .tokenIdentity {
@@ -8901,21 +9075,92 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 // Home Tab Styles
 // ============================================
 
-.homeGrid {
+.positionsHeader {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+
+  .sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: $color-text;
+    }
+  }
+
+  .positionsActions {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+.activityRow {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
+  margin-bottom: 1.5rem;
 
   @media (max-width: 1200px) {
     grid-template-columns: 1fr;
   }
 }
 
+.statusCardsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  width: 100%;
+  margin-bottom: 1.25rem;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.statusCard {
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
+  padding: 1.5rem 1.75rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    background: rgba(30, 41, 59, 0.45);
+  }
+}
+
+.homeGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  width: 100%;
+}
+
 .homeCard {
-  background: $color-bg-card;
-  border: 1px solid $color-border;
-  border-radius: 8px;
-  padding: 1.5rem;
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  border-radius: 12px;
+  padding: 1.25rem;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+    background: rgba(30, 41, 59, 0.4);
+  }
 }
 
 .cardTitle {
@@ -9038,6 +9283,10 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
 .wideCard {
   grid-column: 1 / -1;
+
+  @media (max-width: 900px) {
+    grid-column: 1;
+  }
 }
 
 // Consolidated Performance Card Styles
@@ -9799,9 +10048,7 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 .consensusTab {
   padding: 1.5rem;
   min-height: 100%;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
-  background: $color-bg;
+  background: transparent;
 }
 
 .consensusHeader {
@@ -9822,17 +10069,18 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: $color-bg-card;
-  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.35);
+  border-radius: 8px;
   font-size: 0.85rem;
+  backdrop-filter: blur(8px);
 
   &.enabled {
-    border: 1px solid $color-success;
+    border: 1px solid rgba(34, 197, 94, 0.5);
     color: $color-success;
   }
 
   &.disabled {
-    border: 1px solid $color-text-dim;
+    border: 1px solid rgba(100, 116, 139, 0.3);
     color: $color-text-muted;
   }
 }
@@ -9844,15 +10092,61 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 }
 
 .consensusSection {
-  background: $color-bg-card;
-  border: 1px solid $color-border;
-  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
   padding: 1.25rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+  }
 
   h3 {
     margin: 0 0 1rem 0;
     font-size: 1rem;
     color: $color-text;
+  }
+}
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+}
+
+.statValue {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: $color-text;
+  font-family: $font-mono;
+
+  &.positive {
+    color: $color-success;
+  }
+
+  &.negative {
+    color: $color-danger;
   }
 }
 
@@ -9867,13 +10161,14 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   align-items: center;
   justify-content: space-between;
   padding: 1rem;
-  background: $color-bg;
-  border: 1px solid $color-border;
-  border-radius: 6px;
-  transition: all 0.2s;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  border-radius: 8px;
+  transition: all 0.2s ease;
 
   &:hover {
-    border-color: $color-border-active;
+    border-color: rgba(139, 92, 246, 0.4);
+    background: rgba(15, 23, 42, 0.5);
   }
 
   &.disabled {
@@ -10150,9 +10445,7 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 .conversationsTab {
   padding: 1.5rem;
   min-height: 100%;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
-  background: $color-bg;
+  background: transparent;
 }
 
 .conversationsHeader {
@@ -10174,15 +10467,15 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
   select {
     padding: 0.5rem 0.75rem;
-    background: $color-bg-card;
-    border: 1px solid $color-border;
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid rgba(100, 116, 139, 0.3);
     border-radius: 6px;
     color: $color-text;
     font-size: 0.85rem;
 
     &:focus {
       outline: none;
-      border-color: $color-info;
+      border-color: rgba(139, 92, 246, 0.5);
     }
   }
 }
@@ -10194,18 +10487,19 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 }
 
 .conversationCard {
-  background: $color-bg-card;
-  border: 1px solid $color-border;
-  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
 
   &:hover {
-    border-color: $color-border-active;
+    border-color: rgba(139, 92, 246, 0.4);
   }
 
   &.expanded {
-    border-color: $color-info;
+    border-color: rgba(139, 92, 246, 0.5);
   }
 }
 
@@ -10218,7 +10512,7 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   transition: background 0.2s;
 
   &:hover {
-    background: $color-bg-elevated;
+    background: rgba(30, 41, 59, 0.5);
   }
 }
 
@@ -10267,9 +10561,9 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 }
 
 .conversationBody {
-  border-top: 1px solid $color-border;
+  border-top: 1px solid rgba(100, 116, 139, 0.2);
   padding: 1rem;
-  background: $color-bg;
+  background: rgba(15, 23, 42, 0.3);
 }
 
 .messagesList {
@@ -10282,8 +10576,9 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   display: flex;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: $color-bg-elevated;
-  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.4);
+  border-radius: 8px;
+  border: 1px solid rgba(100, 116, 139, 0.15);
 
   &.systemMessage {
     background: $color-info-dim;
@@ -10340,8 +10635,6 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 .engramBrowserTab {
   padding: 1.5rem;
   min-height: 100%;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
   background: $color-bg;
 }
 
@@ -10606,9 +10899,7 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 .recommendationsTab {
   padding: 1.5rem;
   min-height: 100%;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
-  background: $color-bg;
+  background: transparent;
 }
 
 .recommendationsHeader {
@@ -10631,8 +10922,8 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
 .filterChip {
   padding: 0.5rem 1rem;
-  background: transparent;
-  border: 1px solid $color-border;
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px solid rgba(100, 116, 139, 0.3);
   border-radius: 20px;
   color: $color-text-muted;
   font-size: 0.85rem;
@@ -10640,14 +10931,14 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   transition: all 0.2s;
 
   &:hover {
-    border-color: $color-text-muted;
+    border-color: rgba(139, 92, 246, 0.4);
     color: $color-text;
   }
 
   &.active {
-    background: $color-info-dim;
-    border-color: $color-info;
-    color: $color-info;
+    background: rgba(139, 92, 246, 0.2);
+    border-color: rgba(139, 92, 246, 0.5);
+    color: rgb(167, 139, 250);
   }
 }
 
@@ -10658,14 +10949,15 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 }
 
 .recommendationCard {
-  background: $color-bg-card;
-  border: 1px solid $color-border;
-  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
 
   &:hover {
-    border-color: $color-border-active;
+    border-color: rgba(139, 92, 246, 0.4);
   }
 
   &.pending {
@@ -10817,6 +11109,26 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   }
 }
 
+.valueCode {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  background: rgba(185, 103, 255, 0.08);
+  border: 1px solid rgba(185, 103, 255, 0.2);
+  border-radius: 6px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #f8f8f2;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+  max-height: 150px;
+
+  &.suggested {
+    background: rgba(76, 175, 80, 0.15);
+    border-color: rgba(76, 175, 80, 0.3);
+  }
+}
+
 .recommendationActions {
   display: flex;
   gap: 0.75rem;
@@ -10867,4 +11179,887 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
       cursor: not-allowed;
     }
   }
+}
+
+// Dashboard Position Card (same structure as CurveCandidateCard)
+.dashboardPositionCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color-info;
+    box-shadow: 0 4px 12px rgba($color-info, 0.15);
+    transform: translateY(-2px);
+  }
+
+  &.expanded {
+    border-color: $color-purple;
+    box-shadow: 0 4px 16px rgba($color-purple, 0.2);
+  }
+}
+
+// Sell Buttons for Position Cards
+.sellButton {
+  padding: 0.4rem 0.6rem;
+  background: $color-danger-dim;
+  border: 1px solid $color-danger;
+  border-radius: 4px;
+  color: $color-danger;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-danger;
+    color: white;
+  }
+}
+
+.sellButtonAll {
+  padding: 0.4rem 0.6rem;
+  background: rgba($color-danger, 0.3);
+  border: 1px solid $color-danger;
+  border-radius: 4px;
+  color: $color-danger;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-danger;
+    color: white;
+  }
+}
+
+// Open Positions Section
+.openPositionsSection {
+  grid-column: 1 / -1;
+  margin-top: 0.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid $color-border;
+
+  .sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: $color-text;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+  }
+
+  @media (max-width: 900px) {
+    grid-column: 1;
+  }
+}
+
+.openPositionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+// ============================================
+// Activity Cards (Trade Activity & Recent Activity)
+// ============================================
+
+.activityCard {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  min-height: 320px;
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.15);
+  }
+}
+
+.activityCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.activityCardTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: $color-text;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.liveIndicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $color-success;
+  animation: pulse 2s infinite;
+  box-shadow: 0 0 8px $color-success;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+.activityBadge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba($color-info, 0.15);
+  color: $color-info;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.activityCardContent {
+  padding: 1rem 1.25rem;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 450px;
+}
+
+.activityEmptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  color: $color-text-muted;
+  gap: 0.5rem;
+}
+
+.activityEmptyIcon {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+.activityEmptyHint {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.activitySection {
+  margin-bottom: 1.25rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.activitySectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.activitySectionLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $color-text-muted;
+}
+
+.activitySectionCount {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  background: rgba($color-purple, 0.15);
+  color: $color-purple;
+  border-radius: 3px;
+}
+
+.activityItems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.activityItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: $color-purple;
+    transform: translateX(4px);
+    box-shadow: 0 2px 12px rgba(139, 92, 246, 0.15);
+  }
+
+  &.liveItem {
+    border-left: 3px solid $color-success;
+    background: rgba(34, 197, 94, 0.08);
+  }
+
+  &.completedItem {
+    border-left: 3px solid $color-info;
+  }
+
+  &.newItem {
+    animation: itemFlash 0.5s ease-out;
+    background: rgba($color-success, 0.2);
+  }
+}
+
+@keyframes itemFlash {
+  0% { background: rgba($color-success, 0.3); }
+  100% { background: rgba(30, 41, 59, 0.5); }
+}
+
+.activityItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.activityIcon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+
+  &.profitIcon { filter: hue-rotate(-60deg); }
+  &.lossIcon { filter: hue-rotate(60deg); }
+}
+
+.activityItemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.activityItemTitle {
+  font-weight: 500;
+  color: $color-text;
+  font-size: 0.9rem;
+}
+
+.activityItemMeta {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+}
+
+.txLink {
+  color: $color-purple;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.activityItemRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.activityItemValue {
+  font-family: $font-mono;
+  font-weight: 500;
+  color: $color-text;
+  font-size: 0.85rem;
+}
+
+.activityItemTime {
+  font-size: 0.7rem;
+  color: $color-text-muted;
+}
+
+.activityItemPnl {
+  font-family: $font-mono;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.activityItemPercent {
+  font-size: 0.7rem;
+  font-family: $font-mono;
+}
+
+// Activity Stream (for Recent Activity)
+.activityStream {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.activityStreamItem {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 3px solid var(--event-color, $color-info);
+
+  &:hover {
+    background: rgba(30, 41, 59, 0.7);
+    border-color: rgba(139, 92, 246, 0.4);
+    transform: translateX(4px);
+    box-shadow: 0 2px 12px rgba(139, 92, 246, 0.12);
+
+    .streamItemArrow {
+      opacity: 1;
+      transform: translateX(4px);
+    }
+  }
+
+  &.newItem {
+    animation: streamItemFlash 0.5s ease-out;
+  }
+}
+
+@keyframes streamItemFlash {
+  0% { background: rgba($color-purple, 0.2); }
+  100% { background: rgba(30, 41, 59, 0.4); }
+}
+
+.streamItemIcon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 41, 59, 0.7);
+  border-radius: 8px;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.streamItemContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.streamItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.streamItemLabel {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: $color-text;
+}
+
+.streamItemTime {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+}
+
+.streamItemSummary {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-family: $font-mono;
+}
+
+.streamItemSource {
+  font-size: 0.7rem;
+  color: rgba($color-text-muted, 0.8);
+}
+
+.streamItemArrow {
+  color: $color-text-muted;
+  font-size: 1.1rem;
+  opacity: 0;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+// ============================================
+// Activity Detail Modal
+// ============================================
+
+.detailModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.detailModal {
+  background: rgba(18, 18, 26, 0.95);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 16px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(139, 92, 246, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.detailModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.detailModalTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+}
+
+.detailModalIcon {
+  font-size: 1.5rem;
+}
+
+.detailModalClose {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(100, 116, 139, 0.2);
+  border: none;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba($color-danger, 0.2);
+    color: $color-danger;
+  }
+}
+
+.detailModalContent {
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.detailSection {
+  margin-bottom: 1.5rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  h4 {
+    margin: 0 0 1rem 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $color-text-muted;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid $color-border;
+  }
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detailLabel {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+}
+
+.detailValue {
+  font-size: 0.9rem;
+  color: $color-text;
+  font-weight: 500;
+}
+
+.detailValueMono {
+  font-size: 0.8rem;
+  font-family: $font-mono;
+  color: $color-text;
+  background: rgba(30, 41, 59, 0.5);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+.pnlDisplay {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.pnlAmount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: $font-mono;
+}
+
+.pnlPercent {
+  font-size: 1rem;
+  font-weight: 500;
+  font-family: $font-mono;
+}
+
+.payloadDisplay {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.payloadItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: rgba(30, 41, 59, 0.4);
+  border-radius: 4px;
+}
+
+.payloadKey {
+  font-size: 0.7rem;
+  color: $color-text-muted;
+  text-transform: capitalize;
+}
+
+.payloadValue {
+  font-size: 0.85rem;
+  font-family: $font-mono;
+  color: $color-text;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.detailActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.detailLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: rgba($color-purple, 0.15);
+  border: 1px solid rgba($color-purple, 0.3);
+  border-radius: 6px;
+  color: $color-purple;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba($color-purple, 0.25);
+    border-color: $color-purple;
+  }
+}
+
+// ============================================
+// ArbFarm Sidebar (Crossroads Style)
+// ============================================
+
+.arbfarmSidebar {
+  width: 180px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 0.75rem 1.5rem;
+  background: rgba(15, 23, 42, 0.3);
+  border-right: 1px solid rgba(100, 116, 139, 0.15);
+  overflow-y: auto;
+  overflow-x: hidden;
+  backdrop-filter: blur(8px);
+  max-height: 100%;
+
+  // Styled scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.3);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(100, 116, 139, 0.5);
+    }
+  }
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
+
+  @media (max-width: 1024px) {
+    width: 160px;
+    padding: 0.75rem 0.5rem 2rem;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.arbfarmSidebarSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.arbfarmSidebarTitle {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 0.375rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.15);
+}
+
+.arbfarmNavButton {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-weight: 500;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+
+  &:hover {
+    background: rgba(30, 41, 59, 0.6);
+    border-color: rgba(139, 92, 246, 0.4);
+    color: #e2e8f0;
+    transform: translateX(3px);
+  }
+
+  &.active {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: rgba(139, 92, 246, 0.5);
+    color: #e2e8f0;
+    transform: translateX(3px);
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+  }
+}
+
+.arbfarmNavIcon {
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.arbfarmNavLabel {
+  flex: 1;
+}
+
+.arbfarmNavBadge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+// Main layout with sidebar
+.arbfarmLayout {
+  display: flex;
+  height: calc(100vh - 200px);
+  min-height: 400px;
+}
+
+.arbfarmContent {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 0.75rem 1.5rem 1rem;
+  background: transparent;
+  max-height: 100%;
+
+  // Styled scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.3);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(100, 116, 139, 0.5);
+    }
+  }
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
+
+  @media (max-width: 768px) {
+    padding: 0.75rem;
+  }
+}
+
+// Mobile navigation
+.arbfarmMobileNav {
+  display: none;
+  padding: 1rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-bottom: 1px solid $color-border;
+  background: rgba(15, 23, 42, 0.6);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+.arbfarmMobileButton {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+
+  &.active {
+    background: $color-info;
+    border-color: $color-info;
+    color: white;
+  }
+
+  &:hover:not(.active) {
+    background: rgba(30, 41, 59, 0.7);
+    border-color: rgba(100, 116, 139, 0.5);
+  }
+}
+
+.sidebarStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(30, 41, 59, 0.4);
+  border-radius: 6px;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+
+  .lastRefreshTime {
+    font-size: 0.75rem;
+    color: $color-text-muted;
+  }
+
+  .refreshButton {
+    width: 100%;
+    padding: 0.5rem;
+    background: rgba($color-info, 0.15);
+    border: 1px solid rgba($color-info, 0.3);
+    border-radius: 4px;
+    color: $color-info;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba($color-info, 0.25);
+    }
+
+    &.spinning {
+      animation: spin 1s linear infinite;
+    }
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

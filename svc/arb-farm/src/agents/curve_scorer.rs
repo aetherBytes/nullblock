@@ -577,6 +577,7 @@ mod tests {
             is_complete: false,
             creator: "creator".to_string(),
             created_slot: 0,
+            is_mayhem_mode: false,
         }
     }
 

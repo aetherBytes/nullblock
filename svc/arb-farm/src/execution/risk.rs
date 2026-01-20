@@ -24,7 +24,17 @@ pub struct RiskConfig {
     pub cooldown_after_loss_ms: u64,
     pub volatility_scaling_enabled: bool,
     pub auto_pause_on_drawdown: bool,
+    #[serde(default = "default_take_profit")]
+    pub take_profit_percent: f64,
+    #[serde(default = "default_trailing_stop")]
+    pub trailing_stop_percent: f64,
+    #[serde(default = "default_time_limit")]
+    pub time_limit_minutes: u32,
 }
+
+fn default_take_profit() -> f64 { 15.0 }
+fn default_trailing_stop() -> f64 { 12.0 }
+fn default_time_limit() -> u32 { 7 }
 
 impl Default for RiskConfig {
     fn default() -> Self {
@@ -37,6 +47,9 @@ impl Default for RiskConfig {
             cooldown_after_loss_ms: 5000,
             volatility_scaling_enabled: true,
             auto_pause_on_drawdown: true,
+            take_profit_percent: 15.0,
+            trailing_stop_percent: 12.0,
+            time_limit_minutes: 7,
         }
     }
 }
@@ -47,12 +60,15 @@ impl RiskConfig {
         Self {
             max_position_sol: 0.02,
             daily_loss_limit_sol: 0.1,
-            max_drawdown_percent: 10.0,
+            max_drawdown_percent: 15.0,
             max_concurrent_positions: 2,
             max_position_per_token_sol: 0.02,
             cooldown_after_loss_ms: 10000,
             volatility_scaling_enabled: true,
             auto_pause_on_drawdown: true,
+            take_profit_percent: 10.0,
+            trailing_stop_percent: 8.0,
+            time_limit_minutes: 5,
         }
     }
 
@@ -60,12 +76,15 @@ impl RiskConfig {
         Self {
             max_position_sol: 5.0,
             daily_loss_limit_sol: 2.0,
-            max_drawdown_percent: 40.0,
+            max_drawdown_percent: 25.0,
             max_concurrent_positions: 10,
             max_position_per_token_sol: 2.0,
             cooldown_after_loss_ms: 2000,
             volatility_scaling_enabled: true,
             auto_pause_on_drawdown: false,
+            take_profit_percent: 20.0,
+            trailing_stop_percent: 15.0,
+            time_limit_minutes: 10,
         }
     }
 
@@ -73,25 +92,31 @@ impl RiskConfig {
         Self {
             max_position_sol: 1.0,
             daily_loss_limit_sol: 0.5,
-            max_drawdown_percent: 10.0,
+            max_drawdown_percent: 15.0,
             max_concurrent_positions: 3,
             max_position_per_token_sol: 0.5,
             cooldown_after_loss_ms: 10000,
             volatility_scaling_enabled: true,
             auto_pause_on_drawdown: true,
+            take_profit_percent: 12.0,
+            trailing_stop_percent: 10.0,
+            time_limit_minutes: 5,
         }
     }
 
     pub fn medium() -> Self {
         Self {
-            max_position_sol: 0.25,
+            max_position_sol: 0.3,
             daily_loss_limit_sol: 1.0,
-            max_drawdown_percent: 25.0,
+            max_drawdown_percent: 20.0,
             max_concurrent_positions: 10,
-            max_position_per_token_sol: 0.25,
+            max_position_per_token_sol: 0.3,
             cooldown_after_loss_ms: 3000,
             volatility_scaling_enabled: true,
             auto_pause_on_drawdown: true,
+            take_profit_percent: 15.0,
+            trailing_stop_percent: 12.0,
+            time_limit_minutes: 7,
         }
     }
 
@@ -99,12 +124,15 @@ impl RiskConfig {
         Self {
             max_position_sol: 10.0,
             daily_loss_limit_sol: 5.0,
-            max_drawdown_percent: 50.0,
+            max_drawdown_percent: 25.0,
             max_concurrent_positions: 20,
             max_position_per_token_sol: 5.0,
             cooldown_after_loss_ms: 1000,
             volatility_scaling_enabled: false,
             auto_pause_on_drawdown: false,
+            take_profit_percent: 20.0,
+            trailing_stop_percent: 15.0,
+            time_limit_minutes: 10,
         }
     }
 }

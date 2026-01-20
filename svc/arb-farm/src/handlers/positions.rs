@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -5,6 +7,7 @@ use axum::{
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use tokio::sync::Semaphore;
 use tracing::info;
 use uuid::Uuid;
 
@@ -601,23 +604,36 @@ pub async fn sell_all_wallet_tokens(
     let mut failed = 0;
     let mut total_sol = 0.0;
 
-    for token in sellable_tokens {
-        info!("💰 Selling {} ({:.2} tokens)", &token.mint[..12], token.ui_amount);
+    // Parallel sells with max 3 concurrent to avoid rate limits and RPC congestion
+    const MAX_CONCURRENT_SELLS: usize = 3;
+    let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_SELLS));
 
-        // Try to sell via bonding curve first (for pump.fun/moonshot tokens)
-        let sell_result = sell_token_to_sol(
-            &state,
-            &token.mint,
-            token.ui_amount,
-            token.decimals,
-            &wallet_address,
-        ).await;
+    info!("📊 Selling {} tokens concurrently (max {} at a time)", total_found, MAX_CONCURRENT_SELLS);
 
+    // Create sell futures for parallel execution
+    let sell_futures: Vec<_> = sellable_tokens.into_iter().map(|token| {
+        let state = state.clone();
+        let wallet = wallet_address.clone();
+        let sem = semaphore.clone();
+
+        async move {
+            let _permit = sem.acquire().await.unwrap();
+            info!("💰 Selling {} ({:.2} tokens)", &token.mint[..12], token.ui_amount);
+            let result = sell_token_to_sol(&state, &token.mint, token.ui_amount, token.decimals, &wallet).await;
+            (token, result)
+        }
+    }).collect();
+
+    // Execute all sells in parallel
+    let sell_results = futures::future::join_all(sell_futures).await;
+
+    // Process results sequentially (for position management and engram saves)
+    for (token, sell_result) in sell_results {
         match sell_result {
             Ok((sol_received, signature)) => {
                 sold += 1;
                 total_sol += sol_received;
-                info!("   ✅ Sold for {:.6} SOL (tx: {}...)", sol_received, &signature[..12]);
+                info!("   ✅ Sold {} for {:.6} SOL (tx: {}...)", &token.mint[..12], sol_received, &signature[..12]);
 
                 // Close any matching position in the position manager
                 if let Some(position) = state.position_manager.get_open_position_for_mint(&token.mint).await {
@@ -820,10 +836,9 @@ pub async fn sell_all_wallet_tokens(
                     Err(_) => ExitConfig::for_discovered_token(),
                 };
 
-                const MAX_ENTRY: f64 = 0.1;
-                const DEFAULT_ENTRY: f64 = 0.02;
+                let max_position_sol = state.risk_config.read().await.max_position_sol;
                 let raw_entry = token.balance * estimated_price;
-                let entry_sol = if raw_entry > MAX_ENTRY || raw_entry < 0.001 { DEFAULT_ENTRY } else { raw_entry };
+                let entry_sol = if raw_entry > max_position_sol || raw_entry < 0.001 { max_position_sol } else { raw_entry };
 
                 if let Ok(position) = state.position_manager.create_discovered_position_with_config(
                     token, estimated_price, entry_sol, exit_config,
@@ -918,7 +933,7 @@ async fn sell_via_bonding_curve(
     use crate::wallet::SignRequest;
 
     const MAX_RETRIES: u32 = 3;
-    const INITIAL_SLIPPAGE: u16 = 1000;   // 10% initial for manual sells
+    const INITIAL_SLIPPAGE: u16 = 1500;   // 15% initial for manual sells
     const EMERGENCY_SLIPPAGE: u16 = 2500; // 25% emergency - prioritize exit
     let mut slippage: u16 = INITIAL_SLIPPAGE;
     let mut last_error = String::new();
@@ -1013,7 +1028,7 @@ async fn sell_via_bonding_curve(
         };
 
         // Send via Helius and wait for confirmation
-        let confirmation_timeout = std::time::Duration::from_secs(30);
+        let confirmation_timeout = std::time::Duration::from_secs(10);
         match state.helius_sender.send_and_confirm(&signed_tx, confirmation_timeout).await {
             Ok(signature) => {
                 let sol_received = expected_sol as f64 / 1_000_000_000.0;
@@ -1111,7 +1126,7 @@ async fn sell_via_jupiter(
         .ok_or_else(|| AppError::ExternalApi("Signed transaction missing".to_string()))?;
 
     // Send via Helius and wait for confirmation
-    let confirmation_timeout = std::time::Duration::from_secs(30);
+    let confirmation_timeout = std::time::Duration::from_secs(10);
     let signature = state.helius_sender.send_and_confirm(
         &signed_tx,
         confirmation_timeout,
@@ -1369,6 +1384,7 @@ pub struct ReconciliationResponse {
     pub tracked_positions: usize,
     pub discovered_tokens: Vec<WalletTokenHolding>,
     pub orphaned_positions: Vec<String>,
+    pub exit_strategies_fixed: Vec<String>,
     pub message: String,
 }
 
@@ -1490,20 +1506,18 @@ pub async fn reconcile_wallet(
                 }
             }
         } else {
-            // Cap estimated entry to reasonable maximum for discovered positions
-            // We don't know actual purchase price, so use conservative estimate
-            const MAX_DISCOVERED_ENTRY_SOL: f64 = 0.1;
-            const DEFAULT_DISCOVERED_ENTRY_SOL: f64 = 0.02;
+            // Use current risk config for discovered position entry estimates
+            let max_position_sol = state.risk_config.read().await.max_position_sol;
 
             let raw_estimated_entry = token.balance * estimated_price;
-            let estimated_entry_sol = if raw_estimated_entry > MAX_DISCOVERED_ENTRY_SOL {
-                // Likely inflated estimate due to large token balance, use default
-                info!("   📉 Raw estimate {:.4} SOL too high, capping to {:.4} SOL",
-                    raw_estimated_entry, DEFAULT_DISCOVERED_ENTRY_SOL);
-                DEFAULT_DISCOVERED_ENTRY_SOL
+            let estimated_entry_sol = if raw_estimated_entry > max_position_sol {
+                // Estimated value exceeds max position - cap at max (likely price moved)
+                info!("   📉 Raw estimate {:.4} SOL exceeds max, capping to {:.4} SOL",
+                    raw_estimated_entry, max_position_sol);
+                max_position_sol
             } else if raw_estimated_entry < 0.001 {
-                // Too low, use default
-                DEFAULT_DISCOVERED_ENTRY_SOL
+                // Too small to estimate, use max as conservative default
+                max_position_sol
             } else {
                 raw_estimated_entry
             };
@@ -1532,14 +1546,16 @@ pub async fn reconcile_wallet(
     }
 
     let orphaned_ids: Vec<String> = result.orphaned_positions.iter().map(|id| id.to_string()).collect();
+    let fixed_exit_ids: Vec<String> = result.exit_strategies_fixed.iter().map(|id| id.to_string()).collect();
 
     let message = format!(
-        "Reconciliation complete: {} tracked, {} discovered ({} new, {} reactivated), {} orphaned",
+        "Reconciliation complete: {} tracked, {} discovered ({} new, {} reactivated), {} orphaned, {} exit strategies fixed",
         result.tracked_positions,
         result.discovered_tokens.len(),
         created_positions,
         reactivated_positions,
-        result.orphaned_positions.len()
+        result.orphaned_positions.len(),
+        result.exit_strategies_fixed.len()
     );
 
     info!("📊 {}", message);
@@ -1548,6 +1564,7 @@ pub async fn reconcile_wallet(
         tracked_positions: result.tracked_positions,
         discovered_tokens: result.discovered_tokens,
         orphaned_positions: orphaned_ids,
+        exit_strategies_fixed: fixed_exit_ids,
         message,
     }))
 }

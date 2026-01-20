@@ -7,9 +7,11 @@ interface CurveCandidateCardProps {
   candidate: GraduationCandidate;
   onQuickBuy: (mint: string, amount: number) => void;
   onTrack: (mint: string) => void;
+  onUntrack?: (mint: string) => void;
   onViewMetrics?: (mint: string, venue: string, symbol: string) => void;
   onViewDetails?: (candidate: GraduationCandidate) => void;
   isTracking?: boolean;
+  isTracked?: boolean;
   quickMetrics?: DetailedCurveMetrics;
   opportunityScore?: OpportunityScore;
 }
@@ -18,9 +20,11 @@ const CurveCandidateCard: React.FC<CurveCandidateCardProps> = ({
   candidate,
   onQuickBuy,
   onTrack,
+  onUntrack,
   onViewMetrics,
   onViewDetails,
   isTracking = false,
+  isTracked = false,
   quickMetrics,
   opportunityScore,
 }) => {
@@ -160,11 +164,11 @@ const CurveCandidateCard: React.FC<CurveCandidateCardProps> = ({
       <div className={styles.candidateActions}>
         <div className={styles.actionButtonsRow}>
           <button
-            className={styles.trackButton}
-            onClick={() => onTrack(token.mint)}
+            className={`${styles.trackButton} ${isTracked ? styles.tracked : ''}`}
+            onClick={() => isTracked && onUntrack ? onUntrack(token.mint) : onTrack(token.mint)}
             disabled={isTracking}
           >
-            {isTracking ? 'Tracking...' : 'Track'}
+            {isTracking ? 'Processing...' : isTracked ? 'Untrack' : 'Track'}
           </button>
           {onViewMetrics && (
             <button

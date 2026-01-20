@@ -283,6 +283,8 @@ When asked about capabilities, features, tools, or what you can do:
 
     fn is_capability_question(message: &str) -> bool {
         let lower = message.to_lowercase();
+
+        // Direct capability inquiry phrases
         let capability_phrases = [
             "what can you do",
             "what are your capabilities",
@@ -299,7 +301,39 @@ When asked about capabilities, features, tools, or what you can do:
             "/help",
             "/capabilities",
         ];
-        capability_phrases.iter().any(|phrase| lower.contains(phrase))
+
+        if capability_phrases.iter().any(|phrase| lower.contains(phrase)) {
+            return true;
+        }
+
+        // MCP-specific questions (any mention of "mcp" with tool context)
+        if lower.contains("mcp") && (lower.contains("tool") || lower.contains("capability") || lower.contains("function")) {
+            return true;
+        }
+
+        // Questions about specific tools or tool functionality
+        let tool_question_patterns = [
+            "what does",
+            "tell me about",
+            "describe the",
+            "explain the",
+            "how does the",
+            "what is the",
+            "do you have",
+            "is there a",
+        ];
+
+        let tool_context_words = ["tool", "tools", "scanner", "curve", "consensus", "engram", "strategy", "execution", "swarm", "kol", "threat", "research"];
+
+        // Check if message has both a question pattern AND a tool context word
+        let has_question_pattern = tool_question_patterns.iter().any(|p| lower.contains(p));
+        let has_tool_context = tool_context_words.iter().any(|w| lower.contains(w));
+
+        if has_question_pattern && has_tool_context {
+            return true;
+        }
+
+        false
     }
 
     pub async fn chat(
@@ -417,10 +451,13 @@ When asked about capabilities, features, tools, or what you can do:
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        // Override model for dev wallets if currently on a free model
-        let model_override = if is_dev && self.current_model.as_ref().map(|m| m.ends_with(":free")).unwrap_or(true) {
-            info!("🔥 Dev wallet - auto-boosting to premium model: {}", get_dev_preferred_model());
-            Some(get_dev_preferred_model().to_string())
+        info!("🔍 Chat request - is_dev_wallet: {}, current_model: {:?}", is_dev, self.current_model);
+
+        // Override model for dev wallets - ALWAYS use premium model for dev wallets
+        let model_override = if is_dev {
+            let premium_model = get_dev_preferred_model();
+            info!("🔥 DEV WALLET BOOST - forcing premium model: {}", premium_model);
+            Some(premium_model.to_string())
         } else {
             self.current_model.clone()
         };

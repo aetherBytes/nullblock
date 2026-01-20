@@ -8,6 +8,14 @@ import type {
   LearningSummary,
 } from '../../../../types/consensus';
 
+const formatValue = (value: unknown): string => {
+  if (value === null || value === undefined) return 'null';
+  if (typeof value === 'object') {
+    return JSON.stringify(value, null, 2);
+  }
+  return String(value);
+};
+
 const STATUS_LABELS: Record<RecommendationStatus, string> = {
   pending: 'Pending',
   acknowledged: 'Acknowledged',
@@ -214,14 +222,16 @@ const RecommendationsTab: React.FC = () => {
                       {rec.suggested_action.current_value !== undefined && (
                         <div className={styles.actionRow}>
                           <span className={styles.actionLabel}>Current:</span>
-                          <code>{JSON.stringify(rec.suggested_action.current_value)}</code>
+                          <pre className={styles.valueCode}>
+                            {formatValue(rec.suggested_action.current_value)}
+                          </pre>
                         </div>
                       )}
                       <div className={styles.actionRow}>
                         <span className={styles.actionLabel}>Suggested:</span>
-                        <code className={styles.suggested}>
-                          {JSON.stringify(rec.suggested_action.suggested_value)}
-                        </code>
+                        <pre className={`${styles.valueCode} ${styles.suggested}`}>
+                          {formatValue(rec.suggested_action.suggested_value)}
+                        </pre>
                       </div>
                       <div className={styles.reasoningRow}>
                         <span className={styles.actionLabel}>Reasoning:</span>

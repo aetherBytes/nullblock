@@ -150,7 +150,7 @@ impl HeliusSender {
 
     async fn wait_for_confirmation(&self, signature: &str, timeout: Duration) -> AppResult<u64> {
         let start = Instant::now();
-        let mut interval = tokio::time::interval(Duration::from_millis(500));
+        let mut interval = tokio::time::interval(Duration::from_millis(250));
 
         while start.elapsed() < timeout {
             interval.tick().await;

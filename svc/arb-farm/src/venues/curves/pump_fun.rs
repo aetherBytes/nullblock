@@ -220,7 +220,7 @@ impl PumpFunVenue {
     }
 
     pub async fn detect_graduation_opportunities(&self) -> AppResult<Vec<Signal>> {
-        let tokens = self.get_new_tokens(50).await?;
+        let tokens = self.get_new_tokens(100).await?;
         let mut signals = Vec::new();
 
         for token in tokens {
@@ -230,8 +230,9 @@ impl PumpFunVenue {
 
             let progress = (token.market_cap / token.graduation_threshold.unwrap_or(69000.0)) * 100.0;
 
-            // Look for tokens approaching graduation (50-95% progress)
-            if progress >= 50.0 && progress < 95.0 {
+            // Look for tokens approaching graduation (30-98% progress - more inclusive)
+            // Lower threshold captures earlier opportunities, higher ceiling catches late-stage tokens
+            if progress >= 30.0 && progress < 98.0 {
                 let significance = if progress >= 85.0 {
                     Significance::High
                 } else {

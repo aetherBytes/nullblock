@@ -5,7 +5,6 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
@@ -13,13 +12,8 @@ use uuid::Uuid;
 use crate::consensus::{
     format_edge_context, get_default_models, ConsensusResult, ModelVote, AVAILABLE_MODELS,
 };
-use crate::error::AppResult;
+use crate::database::repositories::{ConsensusRecord, CreateConsensusRecord};
 use crate::server::AppState;
-
-lazy_static::lazy_static! {
-    static ref CONSENSUS_HISTORY: Arc<RwLock<HashMap<Uuid, ConsensusHistoryEntry>>> =
-        Arc::new(RwLock::new(HashMap::new()));
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsensusHistoryEntry {
@@ -44,39 +38,70 @@ pub struct ConsensusListResponse {
 }
 
 pub async fn list_consensus_history(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Query(query): Query<ListConsensusQuery>,
 ) -> impl IntoResponse {
-    let history = CONSENSUS_HISTORY.read().await;
+    let offset = query.offset.unwrap_or(0) as i64;
+    let limit = query.limit.unwrap_or(50) as i64;
 
-    let mut decisions: Vec<ConsensusHistoryEntry> = history
-        .values()
-        .filter(|entry| {
-            if let Some(approved_only) = query.approved_only {
-                entry.result.approved == approved_only
-            } else {
-                true
-            }
-        })
-        .cloned()
-        .collect();
+    match state.consensus_repo.list(limit, offset).await {
+        Ok(records) => {
+            // Filter by approved status if specified
+            let filtered: Vec<ConsensusHistoryEntry> = records
+                .into_iter()
+                .filter(|r| {
+                    if let Some(approved_only) = query.approved_only {
+                        r.approved == Some(approved_only)
+                    } else {
+                        true
+                    }
+                })
+                .map(|r| consensus_record_to_history_entry(r))
+                .collect();
 
-    decisions.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+            let total = filtered.len();
 
-    let total = decisions.len();
-    let offset = query.offset.unwrap_or(0);
-    let limit = query.limit.unwrap_or(50);
+            (
+                StatusCode::OK,
+                Json(ConsensusListResponse {
+                    decisions: filtered,
+                    total,
+                }),
+            )
+        }
+        Err(e) => {
+            tracing::error!("Failed to list consensus history from DB: {}", e);
+            (
+                StatusCode::OK,
+                Json(ConsensusListResponse {
+                    decisions: vec![],
+                    total: 0,
+                }),
+            )
+        }
+    }
+}
 
-    let decisions: Vec<ConsensusHistoryEntry> = decisions
-        .into_iter()
-        .skip(offset)
-        .take(limit)
-        .collect();
+/// Convert a database ConsensusRecord to the API's ConsensusHistoryEntry
+fn consensus_record_to_history_entry(record: ConsensusRecord) -> ConsensusHistoryEntry {
+    // Reconstruct model votes from stored JSON
+    let model_votes: Vec<ModelVote> = serde_json::from_value(record.model_votes.clone())
+        .unwrap_or_default();
 
-    (
-        StatusCode::OK,
-        Json(ConsensusListResponse { decisions, total }),
-    )
+    ConsensusHistoryEntry {
+        id: record.id,
+        edge_id: record.edge_id.unwrap_or_else(Uuid::nil),
+        result: ConsensusResult {
+            approved: record.approved.unwrap_or(false),
+            agreement_score: record.agreement_score.unwrap_or(0.0),
+            weighted_confidence: record.weighted_confidence.unwrap_or(0.0),
+            reasoning_summary: record.reasoning_summary.unwrap_or_default(),
+            model_votes,
+            total_latency_ms: record.total_latency_ms.unwrap_or(0) as u64,
+        },
+        edge_context: record.edge_context.unwrap_or_default(),
+        created_at: record.created_at,
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -94,29 +119,32 @@ pub struct ConsensusDetailResponse {
 }
 
 pub async fn get_consensus_detail(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Path(consensus_id): Path<Uuid>,
 ) -> impl IntoResponse {
-    let history = CONSENSUS_HISTORY.read().await;
+    match state.consensus_repo.get_by_id(consensus_id).await {
+        Ok(Some(record)) => {
+            let model_votes: Vec<ModelVote> = serde_json::from_value(record.model_votes.clone())
+                .unwrap_or_default();
 
-    match history.get(&consensus_id) {
-        Some(entry) => (
-            StatusCode::OK,
-            Json(serde_json::json!(ConsensusDetailResponse {
-                id: entry.id,
-                edge_id: entry.edge_id,
-                approved: entry.result.approved,
-                agreement_score: entry.result.agreement_score,
-                weighted_confidence: entry.result.weighted_confidence,
-                reasoning_summary: entry.result.reasoning_summary.clone(),
-                model_votes: entry.result.model_votes.clone(),
-                edge_context: entry.edge_context.clone(),
-                total_latency_ms: entry.result.total_latency_ms,
-                created_at: entry.created_at,
-            })),
-        )
-            .into_response(),
-        None => (
+            (
+                StatusCode::OK,
+                Json(serde_json::json!(ConsensusDetailResponse {
+                    id: record.id,
+                    edge_id: record.edge_id.unwrap_or_else(Uuid::nil),
+                    approved: record.approved.unwrap_or(false),
+                    agreement_score: record.agreement_score.unwrap_or(0.0),
+                    weighted_confidence: record.weighted_confidence.unwrap_or(0.0),
+                    reasoning_summary: record.reasoning_summary.clone().unwrap_or_default(),
+                    model_votes,
+                    edge_context: record.edge_context.clone().unwrap_or_default(),
+                    total_latency_ms: record.total_latency_ms.unwrap_or(0) as u64,
+                    created_at: record.created_at,
+                })),
+            )
+                .into_response()
+        }
+        Ok(None) => (
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({
                 "error": "Consensus decision not found",
@@ -124,6 +152,16 @@ pub async fn get_consensus_detail(
             })),
         )
             .into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch consensus detail: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": format!("Database error: {}", e)
+                })),
+            )
+                .into_response()
+        }
     }
 }
 
@@ -202,24 +240,38 @@ pub async fn request_consensus(
         }
     };
 
-    let consensus_id = Uuid::new_v4();
-
     let event = state.consensus_engine.create_consensus_event(edge_id, &result);
     let _ = state.event_tx.send(event);
 
-    {
-        let mut history = CONSENSUS_HISTORY.write().await;
-        history.insert(
-            consensus_id,
-            ConsensusHistoryEntry {
-                id: consensus_id,
-                edge_id,
-                result: result.clone(),
-                edge_context,
-                created_at: chrono::Utc::now(),
-            },
-        );
-    }
+    // Persist consensus decision to database
+    let create_record = CreateConsensusRecord {
+        edge_id: Some(edge_id),
+        models: result.model_votes.iter().map(|v| v.model.clone()).collect(),
+        model_votes: serde_json::to_value(&result.model_votes).unwrap_or(serde_json::json!([])),
+        approved: result.approved,
+        agreement_score: result.agreement_score,
+        weighted_confidence: result.weighted_confidence,
+        reasoning_summary: result.reasoning_summary.clone(),
+        edge_context: Some(edge_context),
+        total_latency_ms: Some(result.total_latency_ms as i64),
+    };
+
+    let consensus_id = match state.consensus_repo.create(create_record).await {
+        Ok(record) => {
+            tracing::debug!(
+                consensus_id = %record.id,
+                edge_id = %edge_id,
+                approved = result.approved,
+                "Consensus decision persisted to database"
+            );
+            record.id
+        }
+        Err(e) => {
+            tracing::warn!("Failed to persist consensus to DB (continuing): {}", e);
+            // Generate a temp ID if DB fails but continue - don't fail the request
+            Uuid::new_v4()
+        }
+    };
 
     let model_votes: Vec<ModelVoteResponse> = result
         .model_votes
@@ -301,55 +353,36 @@ pub struct ConsensusStatsResponse {
     pub decisions_last_24h: usize,
 }
 
-pub async fn get_consensus_stats(State(_state): State<AppState>) -> impl IntoResponse {
-    let history = CONSENSUS_HISTORY.read().await;
-
-    if history.is_empty() {
-        return (
+pub async fn get_consensus_stats(State(state): State<AppState>) -> impl IntoResponse {
+    match state.consensus_repo.get_stats().await {
+        Ok(stats) => (
             StatusCode::OK,
             Json(ConsensusStatsResponse {
-                total_decisions: 0,
-                approved_count: 0,
-                rejected_count: 0,
-                average_agreement: 0.0,
-                average_confidence: 0.0,
-                average_latency_ms: 0.0,
-                decisions_last_24h: 0,
+                total_decisions: stats.total_decisions as usize,
+                approved_count: stats.approved_count as usize,
+                rejected_count: stats.rejected_count as usize,
+                average_agreement: stats.avg_agreement_score,
+                average_confidence: 0.0, // Not tracked in DB stats yet
+                average_latency_ms: stats.avg_latency_ms,
+                decisions_last_24h: stats.decisions_today as usize,
             }),
-        );
+        ),
+        Err(e) => {
+            tracing::error!("Failed to fetch consensus stats from DB: {}", e);
+            (
+                StatusCode::OK,
+                Json(ConsensusStatsResponse {
+                    total_decisions: 0,
+                    approved_count: 0,
+                    rejected_count: 0,
+                    average_agreement: 0.0,
+                    average_confidence: 0.0,
+                    average_latency_ms: 0.0,
+                    decisions_last_24h: 0,
+                }),
+            )
+        }
     }
-
-    let total = history.len();
-    let approved = history.values().filter(|e| e.result.approved).count();
-    let rejected = total - approved;
-
-    let avg_agreement: f64 =
-        history.values().map(|e| e.result.agreement_score).sum::<f64>() / total as f64;
-
-    let avg_confidence: f64 =
-        history.values().map(|e| e.result.weighted_confidence).sum::<f64>() / total as f64;
-
-    let avg_latency: f64 =
-        history.values().map(|e| e.result.total_latency_ms as f64).sum::<f64>() / total as f64;
-
-    let twenty_four_hours_ago = chrono::Utc::now() - chrono::Duration::hours(24);
-    let decisions_24h = history
-        .values()
-        .filter(|e| e.created_at > twenty_four_hours_ago)
-        .count();
-
-    (
-        StatusCode::OK,
-        Json(ConsensusStatsResponse {
-            total_decisions: total,
-            approved_count: approved,
-            rejected_count: rejected,
-            average_agreement: avg_agreement,
-            average_confidence: avg_confidence,
-            average_latency_ms: avg_latency,
-            decisions_last_24h: decisions_24h,
-        }),
-    )
 }
 
 lazy_static::lazy_static! {

@@ -8,20 +8,17 @@ import TaskCreationForm from '../hud/TaskCreationForm';
 import EngramsShelf from './EngramsShelf';
 import { ArbFarmDashboard } from './arbfarm';
 import type { ArbFarmView } from './arbfarm';
+import { ConsensusView } from './consensus';
 import { StashView } from './stash';
 import styles from './memcache.module.scss';
 
 export type MemCacheSection =
   | 'engrams'
   | 'stash'
-  | 'tasks'
-  | 'listings'
-  | 'earnings'
-  | 'connections'
-  | 'bookmarks'
   | 'agents'
   | 'model'
-  | 'arbfarm';
+  | 'arbfarm'
+  | 'consensus';
 
 type TaskCategory = 'todo' | 'running' | 'completed';
 
@@ -1059,16 +1056,6 @@ const MemCache: React.FC<MemCacheProps> = ({
         );
       case 'stash':
         return <StashView walletAddress={publicKey} />;
-      case 'tasks':
-        if (showTaskForm) {
-          return renderTaskForm();
-        }
-
-        if (selectedTaskId) {
-          return renderTaskDetails();
-        }
-
-        return renderTaskList();
       case 'agents':
         if (selectedAgentId) {
           return renderAgentDetails();
@@ -1081,40 +1068,10 @@ const MemCache: React.FC<MemCacheProps> = ({
         }
 
         return renderModelInfo();
-      case 'listings':
-        return (
-          <div className={styles.placeholderSection}>
-            <div className={styles.placeholderIcon}>◇</div>
-            <h2>Listings</h2>
-            <p>COWs and tools you're selling on Crossroads.</p>
-          </div>
-        );
-      case 'earnings':
-        return (
-          <div className={styles.placeholderSection}>
-            <div className={styles.placeholderIcon}>◆</div>
-            <h2>Earnings</h2>
-            <p>Your profits and royalties from NullBlock.</p>
-          </div>
-        );
-      case 'connections':
-        return (
-          <div className={styles.placeholderSection}>
-            <div className={styles.placeholderIcon}>○</div>
-            <h2>Connections</h2>
-            <p>Frequent collaborators and creators you work with.</p>
-          </div>
-        );
-      case 'bookmarks':
-        return (
-          <div className={styles.placeholderSection}>
-            <div className={styles.placeholderIcon}>☆</div>
-            <h2>Bookmarks</h2>
-            <p>Saved items from Crossroads.</p>
-          </div>
-        );
       case 'arbfarm':
         return <ArbFarmDashboard activeView={arbFarmView} onViewChange={setArbFarmView} />;
+      case 'consensus':
+        return <ConsensusView />;
       default:
         return null;
     }

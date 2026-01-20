@@ -42,6 +42,9 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
   const [trackerStats, setTrackerStats] = useState<GraduationTrackerStats | null>(null);
   const [sniperStats, setSniperStats] = useState<SniperStats | null>(null);
 
+  const [trackedMints, setTrackedMints] = useState<Set<string>>(new Set());
+  const [customMint, setCustomMint] = useState('');
+
   const [showCreateStrategy, setShowCreateStrategy] = useState(false);
   const [newStrategy, setNewStrategy] = useState<{
     name: string;
@@ -104,7 +107,10 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
     try {
       const res = await arbFarmService.listCurvePositions();
       if (res.success && res.data) {
-        setPositions(res.data);
+        // Handle both array and {positions: [...]} response formats
+        const data = res.data as CurvePosition[] | { positions?: CurvePosition[] };
+        const positions = Array.isArray(data) ? data : (data.positions || []);
+        setPositions(positions);
       }
     } catch (e) {
       onError('Failed to fetch positions');
@@ -118,7 +124,11 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
         arbFarmService.getGraduationTrackerStats(),
       ]);
       if (tokensRes.success && tokensRes.data) {
-        setTrackedTokens(tokensRes.data);
+        // Handle both array and {tokens: [...]} response formats
+        const data = tokensRes.data as TrackedToken[] | { tokens?: TrackedToken[] };
+        const tokens = Array.isArray(data) ? data : (data.tokens || []);
+        setTrackedTokens(tokens);
+        setTrackedMints(new Set(tokens.map(t => t.mint)));
       }
       if (statsRes.success && statsRes.data) {
         setTrackerStats(statsRes.data);
@@ -135,7 +145,10 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
         arbFarmService.getSniperStats(),
       ]);
       if (posRes.success && posRes.data) {
-        setSnipePositions(posRes.data);
+        // Handle both array and {positions: [...]} response formats
+        const data = posRes.data as SnipePosition[] | { positions?: SnipePosition[] };
+        const positions = Array.isArray(data) ? data : (data.positions || []);
+        setSnipePositions(positions);
       }
       if (statsRes.success && statsRes.data) {
         setSniperStats(statsRes.data);
@@ -149,7 +162,10 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
     try {
       const res = await arbFarmService.listStrategies();
       if (res.success && res.data) {
-        const curveStrategies = res.data.filter(
+        // Handle both array and {strategies: [...]} response formats
+        const data = res.data as Strategy[] | { strategies?: Strategy[] };
+        const allStrategies = Array.isArray(data) ? data : (data.strategies || []);
+        const curveStrategies = allStrategies.filter(
           (s: Strategy) => s.strategy_type === 'curve_arb'
         );
         setStrategies(curveStrategies);
@@ -186,9 +202,15 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
 
   const handleTrackToken = async (mint: string) => {
     try {
-      const res = await arbFarmService.trackToken(mint, '');
+      const candidate = candidates.find(c => c.token.mint === mint);
+      const res = await arbFarmService.trackToken(mint, '', {
+        name: candidate?.token.name,
+        symbol: candidate?.token.symbol,
+        venue: candidate?.token.venue,
+      });
       if (res.success) {
         onSuccess('Token tracked');
+        setTrackedMints(prev => new Set([...prev, mint]));
         fetchTrackedTokens();
       } else {
         onError(res.error || 'Failed to track');
@@ -198,12 +220,86 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
     }
   };
 
+  const handleUntrackToken = async (mint: string) => {
+    try {
+      const res = await arbFarmService.untrackToken(mint);
+      if (res.success) {
+        onSuccess('Token untracked');
+        setTrackedMints(prev => {
+          const next = new Set(prev);
+          next.delete(mint);
+          return next;
+        });
+        fetchTrackedTokens();
+      } else {
+        onError(res.error || 'Failed to untrack');
+      }
+    } catch (e) {
+      onError('Failed to untrack token');
+    }
+  };
+
+  const handleClearAllTracked = async () => {
+    const confirmed = window.confirm(
+      '⚠️ CLEAR ALL TRACKED TOKENS\n\n' +
+      `This will remove all ${trackedTokens.length} tracked tokens from your watchlist.\n` +
+      'This action cannot be undone.\n\n' +
+      'Are you sure you want to proceed?'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const res = await arbFarmService.clearAllTracked();
+      if (res.success && res.data) {
+        onSuccess(`Cleared ${res.data.cleared} tracked tokens`);
+        setTrackedMints(new Set());
+        fetchTrackedTokens();
+      } else {
+        onError(res.error || 'Failed to clear tracked tokens');
+      }
+    } catch (e) {
+      onError('Failed to clear tracked tokens');
+    }
+  };
+
+  const handleTrackCustomToken = async () => {
+    const mint = customMint.trim();
+    if (!mint) {
+      onError('Please enter a contract address');
+      return;
+    }
+
+    if (mint.length < 32 || mint.length > 64) {
+      onError('Invalid contract address format');
+      return;
+    }
+
+    try {
+      const res = await arbFarmService.trackToken(mint, '', {
+        name: 'Custom Token',
+        symbol: mint.slice(0, 4).toUpperCase(),
+        venue: 'pump_fun',
+      });
+      if (res.success) {
+        onSuccess('Custom token tracked');
+        setCustomMint('');
+        setTrackedMints(prev => new Set([...prev, mint]));
+        fetchTrackedTokens();
+      } else {
+        onError(res.error || 'Failed to track custom token');
+      }
+    } catch (e) {
+      onError('Failed to track custom token');
+    }
+  };
+
   const handleClosePosition = async (positionId: string, percent?: number) => {
     setLoading(true);
     try {
       const res = await arbFarmService.closeCurvePosition(positionId, percent);
       if (res.success) {
-        onSuccess(`Position closed${res.data?.pnl_sol !== undefined ? ` - PnL: ${res.data.pnl_sol.toFixed(4)} SOL` : ''}`);
+        onSuccess(`Position closed${res.data?.pnl_sol != null ? ` - PnL: ${res.data.pnl_sol.toFixed(4)} SOL` : ''}`);
         fetchPositions();
       } else {
         onError(res.error || 'Close failed');
@@ -533,8 +629,10 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
                 candidate={candidate}
                 onQuickBuy={handleQuickBuy}
                 onTrack={handleTrackToken}
+                onUntrack={handleUntrackToken}
                 onViewMetrics={handleViewMetrics}
                 onViewDetails={handleViewDetails}
+                isTracked={trackedMints.has(candidate.token.mint)}
               />
             ))}
             {candidates.length === 0 && !loading && (
@@ -594,6 +692,15 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
                 {trackerStats?.is_running ? 'Stop' : 'Start'}
               </button>
               <button onClick={fetchTrackedTokens}>Refresh</button>
+              {trackedTokens.length > 0 && (
+                <button
+                  className={styles.dangerButton}
+                  onClick={handleClearAllTracked}
+                  title="Remove all tracked tokens"
+                >
+                  Clear All
+                </button>
+              )}
             </div>
           </div>
 
@@ -605,6 +712,17 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
               <span>Checks: {trackerStats.total_checks}</span>
             </div>
           )}
+
+          <div className={styles.customTokenInput}>
+            <input
+              type="text"
+              placeholder="Enter contract address to track..."
+              value={customMint}
+              onChange={(e) => setCustomMint(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleTrackCustomToken()}
+            />
+            <button onClick={handleTrackCustomToken}>Track</button>
+          </div>
 
           <div className={styles.trackedGrid}>
             {trackedTokens.map((token) => (
@@ -619,9 +737,20 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
                 />
                 <div className={styles.trackedInfo}>
                   <span>Venue: {token.venue}</span>
-                  {token.entry_price_sol && (
+                  {token.entry_price_sol != null && (
                     <span>Entry: {token.entry_price_sol.toFixed(4)} SOL</span>
                   )}
+                </div>
+                <div className={styles.trackedActions}>
+                  <button
+                    className={styles.untrackButton}
+                    onClick={() => handleUntrackToken(token.mint)}
+                  >
+                    Untrack
+                  </button>
+                  <span className={styles.mintAddress} title={token.mint}>
+                    {token.mint.slice(0, 8)}...{token.mint.slice(-6)}
+                  </span>
                 </div>
               </div>
             ))}
@@ -651,13 +780,13 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
 
           {sniperStats && (
             <div className={styles.sniperStatsBar}>
-              <span>Waiting: {sniperStats.positions_waiting}</span>
-              <span>Sold: {sniperStats.positions_sold}</span>
-              <span>Failed: {sniperStats.positions_failed}</span>
+              <span>Waiting: {sniperStats.positions_waiting ?? 0}</span>
+              <span>Sold: {sniperStats.positions_sold ?? 0}</span>
+              <span>Failed: {sniperStats.positions_failed ?? 0}</span>
               <span
-                className={sniperStats.total_pnl_sol >= 0 ? styles.positive : styles.negative}
+                className={(sniperStats.total_pnl_sol ?? 0) >= 0 ? styles.positive : styles.negative}
               >
-                P&L: {sniperStats.total_pnl_sol.toFixed(4)} SOL
+                P&L: {(sniperStats.total_pnl_sol ?? 0).toFixed(4)} SOL
               </span>
             </div>
           )}
@@ -672,9 +801,9 @@ const CurvePanel: React.FC<CurvePanelProps> = ({ onError, onSuccess }) => {
                   </span>
                 </div>
                 <div className={styles.snipeInfo}>
-                  <div>Entry: {pos.entry_price_sol.toFixed(4)} SOL</div>
-                  <div>Tokens: {pos.entry_tokens.toLocaleString()}</div>
-                  {pos.pnl_sol !== undefined && (
+                  <div>Entry: {(pos.entry_price_sol ?? 0).toFixed(4)} SOL</div>
+                  <div>Tokens: {(pos.entry_tokens ?? 0).toLocaleString()}</div>
+                  {pos.pnl_sol !== undefined && pos.pnl_sol !== null && (
                     <div className={pos.pnl_sol >= 0 ? styles.positive : styles.negative}>
                       P&L: {pos.pnl_sol.toFixed(4)} SOL
                     </div>

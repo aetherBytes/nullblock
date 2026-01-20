@@ -88,6 +88,8 @@ impl From<PositionRow> for OpenPosition {
             momentum: MomentumData::default(),
             remaining_amount_base,
             remaining_token_amount,
+            venue: None,
+            signal_source: None,
         }
     }
 }
@@ -206,13 +208,25 @@ impl PositionRepository {
 
     pub async fn get_open_positions(&self) -> AppResult<Vec<OpenPosition>> {
         let rows: Vec<PositionRow> = sqlx::query_as(
-            "SELECT * FROM arb_positions WHERE status = 'open' OR status = 'pending_exit' ORDER BY entry_time DESC"
+            "SELECT * FROM arb_positions WHERE status IN ('open', 'pending_exit', 'partially_exited') ORDER BY entry_time DESC"
         )
             .fetch_all(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(rows.into_iter().map(|r| r.into()).collect())
+    }
+
+    pub async fn get_open_by_mint(&self, token_mint: &str) -> AppResult<Option<OpenPosition>> {
+        let row: Option<PositionRow> = sqlx::query_as(
+            "SELECT * FROM arb_positions WHERE token_mint = $1 AND status IN ('open', 'pending_exit', 'partially_exited') ORDER BY entry_time DESC LIMIT 1"
+        )
+            .bind(token_mint)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(row.map(|r| r.into()))
     }
 
     pub async fn get_all_positions(&self, limit: i32) -> AppResult<Vec<PositionRow>> {
@@ -241,7 +255,7 @@ impl PositionRepository {
 
     pub async fn get_positions_by_mint(&self, token_mint: &str) -> AppResult<Vec<OpenPosition>> {
         let rows: Vec<PositionRow> = sqlx::query_as(
-            "SELECT * FROM arb_positions WHERE token_mint = $1 AND (status = 'open' OR status = 'pending_exit') ORDER BY entry_time DESC"
+            "SELECT * FROM arb_positions WHERE token_mint = $1 AND status IN ('open', 'pending_exit', 'partially_exited') ORDER BY entry_time DESC"
         )
             .bind(token_mint)
             .fetch_all(&self.pool)
@@ -442,6 +456,23 @@ impl PositionRepository {
             time: r.exit_time,
             entry_sol: decimal_to_f64(r.entry_amount_base),
         }).collect())
+    }
+
+    pub async fn get_closed_positions_for_period(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> AppResult<Vec<OpenPosition>> {
+        let rows: Vec<PositionRow> = sqlx::query_as(
+            "SELECT * FROM arb_positions WHERE status = 'closed' AND exit_time >= $1 AND exit_time < $2 ORDER BY exit_time DESC"
+        )
+            .bind(start)
+            .bind(end)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(rows.into_iter().map(|r| r.into()).collect())
     }
 
     pub async fn get_orphaned_position_by_mint(&self, token_mint: &str) -> AppResult<Option<OpenPosition>> {

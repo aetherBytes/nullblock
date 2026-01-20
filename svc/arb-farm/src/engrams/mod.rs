@@ -7,10 +7,12 @@ pub use client::{
 };
 
 pub use schemas::{
+    AnalysisContextSummary, ConsensusAnalysis, ConsensusAnalysisType, ConsensusDecision,
     ConversationContext, ConversationLog, ConversationMessage, ConversationOutcome,
     ConversationTopic, ConversationTrigger, DailyMetrics, ErrorContext, ExecutionError,
     ExecutionErrorType, Recommendation, RecommendationCategory, RecommendationSource,
     RecommendationStatus, StrategyMetrics, SuggestedAction, SuggestedActionType, SupportingData,
     TradeHighlight, TransactionAction, TransactionMetadata, TransactionSummary, VenueMetrics,
-    A2A_TAG_LEARNING,
+    WatchlistToken, A2A_TAG_LEARNING, WATCHLIST_TAG, generate_consensus_analysis_key,
+    generate_consensus_decision_key, generate_watchlist_key,
 };

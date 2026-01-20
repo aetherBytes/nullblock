@@ -21,6 +21,7 @@ use crate::venues::curves::on_chain::{derive_pump_fun_bonding_curve, OnChainCurv
 
 const DEFAULT_COMPUTE_UNITS: u32 = 200_000;
 const DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS: u64 = 1_000_000;
+const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CurveBuildResult {
@@ -60,6 +61,53 @@ pub struct SimulatedTrade {
     pub price_impact_percent: f64,
     pub fee_lamports: u64,
     pub effective_price: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PostGraduationSellResult {
+    pub transaction_base64: String,
+    pub expected_sol_out: u64,
+    pub price_impact_percent: f64,
+    pub route_label: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JupiterQuoteResponse {
+    pub input_mint: String,
+    pub output_mint: String,
+    pub in_amount: String,
+    pub out_amount: String,
+    pub other_amount_threshold: String,
+    pub swap_mode: String,
+    pub slippage_bps: u16,
+    #[serde(default)]
+    pub price_impact_pct: Option<f64>,
+    pub route_plan: Vec<JupiterRoutePlan>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JupiterRoutePlan {
+    pub swap_info: JupiterSwapInfo,
+    pub percent: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JupiterSwapInfo {
+    pub amm_key: String,
+    pub label: Option<String>,
+    pub input_mint: String,
+    pub output_mint: String,
+    pub in_amount: String,
+    pub out_amount: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JupiterSwapResponse {
+    pub swap_transaction: String,
 }
 
 #[derive(BorshSerialize, BorshDeserialize)]
@@ -570,6 +618,92 @@ impl CurveTransactionBuilder {
         self.on_chain_fetcher
             .get_pump_fun_bonding_curve(mint)
             .await
+    }
+
+    pub async fn build_post_graduation_sell(
+        &self,
+        params: &CurveSellParams,
+        jupiter_api_url: &str,
+    ) -> AppResult<PostGraduationSellResult> {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| AppError::Internal(format!("Failed to create HTTP client: {}", e)))?;
+
+        let quote_url = format!(
+            "{}/quote?inputMint={}&outputMint={}&amount={}&slippageBps={}&onlyDirectRoutes=false",
+            jupiter_api_url,
+            params.mint,
+            SOL_MINT,
+            params.token_amount,
+            params.slippage_bps
+        );
+
+        let quote_response = client
+            .get(&quote_url)
+            .send()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Jupiter quote request failed: {}", e)))?;
+
+        if !quote_response.status().is_success() {
+            let error_text = quote_response.text().await.unwrap_or_default();
+            return Err(AppError::ExternalApi(format!(
+                "Jupiter quote error for graduated token: {}",
+                error_text
+            )));
+        }
+
+        let quote: JupiterQuoteResponse = quote_response
+            .json()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter quote: {}", e)))?;
+
+        let swap_url = format!("{}/swap", jupiter_api_url);
+        let swap_request = serde_json::json!({
+            "userPublicKey": params.user_wallet,
+            "quoteResponse": quote,
+            "wrapAndUnwrapSol": true,
+            "useSharedAccounts": false,
+            "computeUnitPriceMicroLamports": self.priority_fee_micro_lamports,
+            "priorityLevelWithMaxLamports": {
+                "maxLamports": 1_000_000u64
+            },
+            "asLegacyTransaction": false,
+            "dynamicComputeUnitLimit": true,
+            "skipUserAccountsRpcCalls": false
+        });
+
+        let swap_response = client
+            .post(&swap_url)
+            .json(&swap_request)
+            .send()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Jupiter swap request failed: {}", e)))?;
+
+        if !swap_response.status().is_success() {
+            let error_text = swap_response.text().await.unwrap_or_default();
+            return Err(AppError::ExternalApi(format!(
+                "Jupiter swap error for graduated token: {}",
+                error_text
+            )));
+        }
+
+        let swap_result: JupiterSwapResponse = swap_response
+            .json()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter swap: {}", e)))?;
+
+        let expected_sol_out: u64 = quote.out_amount.parse().unwrap_or(0);
+        let price_impact: f64 = quote.price_impact_pct.unwrap_or(0.0);
+
+        Ok(PostGraduationSellResult {
+            transaction_base64: swap_result.swap_transaction,
+            expected_sol_out,
+            price_impact_percent: price_impact,
+            route_label: quote.route_plan.first()
+                .and_then(|r| r.swap_info.label.clone())
+                .unwrap_or_else(|| "Jupiter".to_string()),
+        })
     }
 
     /// Get actual on-chain token balance for a wallet

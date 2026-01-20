@@ -46,10 +46,10 @@ pub struct MonitorConfig {
 impl Default for MonitorConfig {
     fn default() -> Self {
         Self {
-            price_check_interval_secs: 3, // Fast backup when real-time fails
+            price_check_interval_secs: 2, // Reduced from 3s for faster response to price movements
             exit_slippage_bps: 1000,      // 10% - curves are highly volatile, price moves fast
             max_exit_retries: 3,
-            emergency_slippage_bps: 1500, // 15% - reduced from 25% for better profit retention
+            emergency_slippage_bps: 1200, // 12% - reduced from 15% for better profit retention
             bundle_timeout_secs: 60,
         }
     }
@@ -91,9 +91,9 @@ impl PositionMonitor {
     }
 
     fn calculate_profit_aware_slippage(&self, position: &OpenPosition, signal: &ExitSignal) -> u16 {
-        const MIN_SLIPPAGE_BPS: u16 = 300;  // 3% floor - covers network costs
-        const MAX_SLIPPAGE_BPS: u16 = 1500; // 15% cap - reduced from 25% for better profit retention
-        const PROFIT_SACRIFICE_RATIO: f64 = 0.20; // Willing to give up 20% of profits (reduced from 30%)
+        const MIN_SLIPPAGE_BPS: u16 = 150;  // 1.5% floor - reduced from 3% to retain more profit
+        const MAX_SLIPPAGE_BPS: u16 = 1200; // 12% cap - reduced from 15% for better profit retention
+        const PROFIT_SACRIFICE_RATIO: f64 = 0.15; // Willing to give up 15% of profits (reduced from 20%)
 
         let pnl_percent = if position.entry_price > 0.0 {
             ((signal.current_price - position.entry_price) / position.entry_price) * 100.0
@@ -102,7 +102,7 @@ impl PositionMonitor {
         };
 
         let calculated_slippage = if pnl_percent > 0.0 {
-            // Profitable: slippage = 30% of profit (e.g., 50% profit -> 15% slippage)
+            // Profitable: slippage = 15% of profit (e.g., 50% profit -> 7.5% slippage)
             let profit_based = (pnl_percent * PROFIT_SACRIFICE_RATIO * 100.0) as u16;
             profit_based.max(MIN_SLIPPAGE_BPS)
         } else {
@@ -110,10 +110,10 @@ impl PositionMonitor {
             MIN_SLIPPAGE_BPS
         };
 
-        // Apply urgency multiplier for critical exits
+        // Apply urgency multiplier for critical exits (reduced to preserve more profit)
         let urgency_multiplier = match signal.urgency {
-            ExitUrgency::Critical => 2.0,
-            ExitUrgency::High => 1.5,
+            ExitUrgency::Critical => 1.5,  // Was 2.0
+            ExitUrgency::High => 1.25,     // Was 1.5
             _ => 1.0,
         };
 
@@ -187,7 +187,7 @@ impl PositionMonitor {
 
     pub async fn start_monitoring(&self, signer: Arc<DevWalletSigner>) {
         info!(
-            "🔭 Position monitor started (checking every {}s)",
+            "🔭 Position monitor started (base interval {}s, adaptive)",
             self.config.price_check_interval_secs
         );
 
@@ -202,7 +202,33 @@ impl PositionMonitor {
                 error!("Position monitor error: {}", e);
             }
 
-            tokio::time::sleep(Duration::from_secs(self.config.price_check_interval_secs)).await;
+            // Use adaptive interval based on position risk profile
+            let interval = self.calculate_adaptive_interval().await;
+            tokio::time::sleep(Duration::from_secs(interval)).await;
+        }
+    }
+
+    async fn calculate_adaptive_interval(&self) -> u64 {
+        let positions = self.position_manager.get_open_positions().await;
+
+        if positions.is_empty() {
+            return self.config.price_check_interval_secs;
+        }
+
+        // Check if any positions are at-risk (profitable but losing momentum)
+        let has_at_risk = positions.iter().any(|p|
+            p.unrealized_pnl_percent > 10.0 && p.momentum.velocity < 0.0
+        );
+
+        // Check if any positions are moderately profitable
+        let has_profitable = positions.iter().any(|p| p.unrealized_pnl_percent > 5.0);
+
+        if has_at_risk {
+            1  // 1 second for at-risk positions
+        } else if has_profitable {
+            2  // 2 seconds for profitable positions
+        } else {
+            self.config.price_check_interval_secs  // Default for others
         }
     }
 
@@ -642,16 +668,32 @@ impl PositionMonitor {
             .unwrap_or(0);
 
         if actual_balance == 0 {
+            // Calculate PnL based on current price vs entry price
+            // We use current_price as a proxy for exit price since the token was sold externally
+            let pnl_percent = if position.entry_price > 0.0 {
+                (position.current_price - position.entry_price) / position.entry_price
+            } else {
+                0.0
+            };
+            let effective_base = if position.remaining_amount_base > 0.0 {
+                position.remaining_amount_base
+            } else {
+                position.entry_amount_base
+            };
+            let estimated_pnl = effective_base * pnl_percent;
+
             warn!(
-                "⚠️ Token {} has zero on-chain balance - already sold or transferred. Closing position.",
-                &position.token_mint[..8]
+                "⚠️ Token {} has zero on-chain balance - already sold or transferred. Closing position with estimated PnL: {:.6} SOL ({:.2}%)",
+                &position.token_mint[..8],
+                estimated_pnl,
+                pnl_percent * 100.0
             );
-            // Close the position with zero PnL since we don't know the actual exit price
+
             self.position_manager
                 .close_position(
                     position.id,
                     position.current_price,
-                    0.0,
+                    estimated_pnl,
                     "AlreadySold",
                     None,
                 )

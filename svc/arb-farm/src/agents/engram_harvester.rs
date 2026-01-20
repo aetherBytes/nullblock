@@ -3,6 +3,7 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
 
+use crate::engrams::{CreateEngramRequest, EngramsClient, SearchRequest};
 use crate::error::AppResult;
 use crate::events::{engram as engram_topics, AgentType, ArbEvent, EventSource};
 use crate::models::{
@@ -15,6 +16,8 @@ pub struct EngramHarvester {
     engrams: Arc<RwLock<HashMap<String, ArbEngram>>>,
     event_tx: broadcast::Sender<ArbEvent>,
     stats: Arc<RwLock<HarvesterStats>>,
+    engrams_client: Option<Arc<EngramsClient>>,
+    wallet_address: Option<String>,
 }
 
 impl Clone for EngramHarvester {
@@ -24,6 +27,8 @@ impl Clone for EngramHarvester {
             engrams: Arc::clone(&self.engrams),
             event_tx: self.event_tx.clone(),
             stats: Arc::clone(&self.stats),
+            engrams_client: self.engrams_client.clone(),
+            wallet_address: self.wallet_address.clone(),
         }
     }
 }
@@ -44,7 +49,15 @@ impl EngramHarvester {
             engrams: Arc::new(RwLock::new(HashMap::new())),
             event_tx,
             stats: Arc::new(RwLock::new(HarvesterStats::default())),
+            engrams_client: None,
+            wallet_address: None,
         }
+    }
+
+    pub fn with_engrams_client(mut self, client: Arc<EngramsClient>, wallet: String) -> Self {
+        self.engrams_client = Some(client);
+        self.wallet_address = Some(wallet);
+        self
     }
 
     pub fn id(&self) -> Uuid {
@@ -57,7 +70,7 @@ impl EngramHarvester {
         let engram_type = engram.engram_type;
 
         let mut engrams = self.engrams.write().await;
-        engrams.insert(key.clone(), engram);
+        engrams.insert(key.clone(), engram.clone());
 
         let mut stats = self.stats.write().await;
         stats.total_engrams += 1;
@@ -77,6 +90,35 @@ impl EngramHarvester {
                 "engram_type": engram_type.to_string(),
             }),
         ));
+
+        // Spawn async task to sync to remote engrams service (non-blocking)
+        if let (Some(client), Some(wallet)) = (self.engrams_client.clone(), self.wallet_address.clone()) {
+            let engram_clone = engram;
+            tokio::spawn(async move {
+                let request = CreateEngramRequest {
+                    wallet_address: wallet,
+                    engram_type: engram_clone.engram_type.to_string(),
+                    key: engram_clone.key.clone(),
+                    content: serde_json::to_string(&engram_clone.content).unwrap_or_default(),
+                    metadata: Some(serde_json::to_value(&engram_clone.metadata).unwrap_or_default()),
+                    tags: Some(engram_clone.metadata.tags.clone()),
+                    is_public: Some(false),
+                };
+
+                if let Err(e) = client.upsert_engram(request).await {
+                    tracing::warn!(
+                        key = %engram_clone.key,
+                        "Failed to sync engram to remote service: {}",
+                        e
+                    );
+                } else {
+                    tracing::debug!(
+                        key = %engram_clone.key,
+                        "Engram synced to remote service"
+                    );
+                }
+            });
+        }
 
         Ok(engram_id)
     }
@@ -404,6 +446,112 @@ impl EngramHarvester {
         ));
 
         Ok(count)
+    }
+
+    pub async fn restore_from_remote(&self) -> usize {
+        let (client, wallet) = match (&self.engrams_client, &self.wallet_address) {
+            (Some(c), Some(w)) => (c.clone(), w.clone()),
+            _ => {
+                tracing::debug!("Engrams client not configured - skipping remote restore");
+                return 0;
+            }
+        };
+
+        if !client.is_configured() {
+            tracing::debug!("Engrams service not configured - skipping remote restore");
+            return 0;
+        }
+
+        tracing::info!(wallet = %wallet, "Restoring engrams from remote service...");
+
+        let mut restored_count = 0;
+
+        // Restore patterns
+        let pattern_search = SearchRequest {
+            wallet_address: Some(wallet.clone()),
+            engram_type: Some("EdgePattern".to_string()),
+            query: None,
+            tags: None,
+            limit: Some(100),
+            offset: None,
+        };
+
+        if let Ok(patterns) = client.search_engrams(pattern_search).await {
+            for remote_engram in patterns {
+                if let Ok(content) = serde_json::from_str::<serde_json::Value>(&remote_engram.content) {
+                    let mut metadata = EngramMetadata::default();
+                    metadata.tags = remote_engram.tags.clone();
+
+                    let engram = ArbEngram::new(
+                        remote_engram.key.clone(),
+                        EngramType::EdgePattern,
+                        content,
+                        EngramSource::Agent("remote_restore".to_string()),
+                    )
+                    .with_metadata(metadata);
+
+                    let mut engrams = self.engrams.write().await;
+                    engrams.insert(remote_engram.key.clone(), engram);
+                    restored_count += 1;
+                }
+            }
+        }
+
+        // Restore avoidances
+        let avoidance_search = SearchRequest {
+            wallet_address: Some(wallet.clone()),
+            engram_type: Some("Avoidance".to_string()),
+            query: None,
+            tags: None,
+            limit: Some(100),
+            offset: None,
+        };
+
+        if let Ok(avoidances) = client.search_engrams(avoidance_search).await {
+            for remote_engram in avoidances {
+                if let Ok(content) = serde_json::from_str::<serde_json::Value>(&remote_engram.content) {
+                    let mut metadata = EngramMetadata::default();
+                    metadata.tags = remote_engram.tags.clone();
+
+                    let engram = ArbEngram::new(
+                        remote_engram.key.clone(),
+                        EngramType::Avoidance,
+                        content,
+                        EngramSource::Agent("remote_restore".to_string()),
+                    )
+                    .with_metadata(metadata);
+
+                    let mut engrams = self.engrams.write().await;
+                    engrams.insert(remote_engram.key.clone(), engram);
+                    restored_count += 1;
+                }
+            }
+        }
+
+        // Update stats
+        {
+            let mut stats = self.stats.write().await;
+            stats.total_engrams = restored_count as u64;
+        }
+
+        if restored_count > 0 {
+            tracing::info!(
+                count = restored_count,
+                "Restored engrams from remote service"
+            );
+
+            let _ = self.event_tx.send(ArbEvent::new(
+                "engrams_restored",
+                EventSource::Agent(AgentType::EngramHarvester),
+                engram_topics::CREATED,
+                serde_json::json!({
+                    "restored_count": restored_count,
+                    "wallet": wallet,
+                }),
+            ));
+        }
+
+        restored_count
     }
 }
 

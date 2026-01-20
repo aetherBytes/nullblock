@@ -245,7 +245,7 @@ pub async fn available_models(
         "recommended_models": {
             "free": "cognitivecomputations/dolphin3.0-mistral-24b:free",
             "reasoning": "cognitivecomputations/dolphin3.0-r1-mistral-24b:free",
-            "premium": "anthropic/claude-3.5-sonnet",
+            "premium": "anthropic/claude-sonnet-4",
             "fast": "deepseek/deepseek-chat-v3.1:free",
             "image_generation": "google/gemini-2.5-flash-image-preview"
         },

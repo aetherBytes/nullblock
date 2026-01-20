@@ -51,6 +51,13 @@ pub struct Config {
     pub default_daily_loss_limit_sol: f64,
     pub default_min_profit_bps: u16,
     pub default_max_slippage_bps: u16,
+
+    // Graduation tracker settings
+    pub graduation_threshold: Option<f64>,
+    pub tracker_fast_poll_ms: Option<u64>,
+    pub tracker_normal_poll_ms: Option<u64>,
+    pub tracker_rpc_timeout_secs: Option<u64>,
+    pub tracker_eviction_hours: Option<i64>,
 }
 
 impl Config {
@@ -146,6 +153,23 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(100), // 1%
+
+            // Graduation tracker settings (all optional with defaults in TrackerConfig)
+            graduation_threshold: env::var("GRADUATION_THRESHOLD")
+                .ok()
+                .and_then(|v| v.parse().ok()),
+            tracker_fast_poll_ms: env::var("TRACKER_FAST_POLL_MS")
+                .ok()
+                .and_then(|v| v.parse().ok()),
+            tracker_normal_poll_ms: env::var("TRACKER_NORMAL_POLL_MS")
+                .ok()
+                .and_then(|v| v.parse().ok()),
+            tracker_rpc_timeout_secs: env::var("TRACKER_RPC_TIMEOUT_SECS")
+                .ok()
+                .and_then(|v| v.parse().ok()),
+            tracker_eviction_hours: env::var("TRACKER_EVICTION_HOURS")
+                .ok()
+                .and_then(|v| v.parse().ok()),
         })
     }
 }

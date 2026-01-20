@@ -887,6 +887,119 @@ pub async fn executor_stop() -> Result<ResponseJson<Value>, (StatusCode, Respons
     proxy_request("POST", "executor/stop", None).await
 }
 
+// Graduation Sniper
+pub async fn sniper_stats() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Sniper stats requested");
+    proxy_request("GET", "sniper/stats", None).await
+}
+
+pub async fn sniper_positions() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📋 Sniper positions requested");
+    proxy_request("GET", "sniper/positions", None).await
+}
+
+pub async fn sniper_add_position(
+    Json(body): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("➕ Sniper add position requested");
+    proxy_request("POST", "sniper/positions", Some(body)).await
+}
+
+pub async fn sniper_remove_position(
+    Path(mint): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("➖ Sniper remove position requested: {}", mint);
+    proxy_request("DELETE", &format!("sniper/positions/{}", mint), None).await
+}
+
+pub async fn sniper_manual_sell(
+    Path(mint): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("💰 Sniper manual sell requested: {}", mint);
+    proxy_request("POST", &format!("sniper/positions/{}/sell", mint), None).await
+}
+
+pub async fn sniper_start() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("▶️ Sniper start requested");
+    proxy_request("POST", "sniper/start", None).await
+}
+
+pub async fn sniper_stop() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⏹️ Sniper stop requested");
+    proxy_request("POST", "sniper/stop", None).await
+}
+
+pub async fn sniper_config_get() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Sniper config get requested");
+    proxy_request("GET", "sniper/config", None).await
+}
+
+pub async fn sniper_config_update(
+    Json(body): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Sniper config update requested");
+    proxy_request("PUT", "sniper/config", Some(body)).await
+}
+
+// Graduation Tracker
+pub async fn tracker_stats() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Tracker stats requested");
+    proxy_request("GET", "graduation/stats", None).await
+}
+
+pub async fn tracker_tokens() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📋 Tracker tokens requested");
+    proxy_request("GET", "graduation/tracked", None).await
+}
+
+pub async fn tracker_is_tracked(
+    Path(mint): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("❓ Tracker is tracked requested: {}", mint);
+    proxy_request("GET", &format!("graduation/tracked/{}", mint), None).await
+}
+
+pub async fn tracker_untrack(
+    Path(mint): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("➖ Tracker untrack requested: {}", mint);
+    proxy_request("POST", &format!("graduation/untrack/{}", mint), None).await
+}
+
+pub async fn tracker_track(
+    Json(body): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("➕ Tracker track requested");
+    proxy_request("POST", "graduation/track", Some(body)).await
+}
+
+pub async fn tracker_start() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("▶️ Tracker start requested");
+    proxy_request("POST", "graduation/start", None).await
+}
+
+pub async fn tracker_stop() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⏹️ Tracker stop requested");
+    proxy_request("POST", "graduation/stop", None).await
+}
+
+pub async fn tracker_clear() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🗑️ Tracker clear requested");
+    proxy_request("POST", "graduation/clear", None).await
+}
+
+pub async fn tracker_config_get() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Tracker config get requested");
+    proxy_request("GET", "graduation/config", None).await
+}
+
+pub async fn tracker_config_update(
+    Json(body): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("⚙️ Tracker config update requested");
+    proxy_request("PUT", "graduation/config", Some(body)).await
+}
+
 // Helius
 pub async fn helius_status() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
     info!("📊 Helius status requested");
@@ -1123,4 +1236,24 @@ where
         // Engrams
         .route("/api/arb/engram/search", get(engram_search))
         .route("/api/arb/engram/insights", get(engram_insights))
+
+        // Graduation Sniper
+        .route("/api/arb/sniper/stats", get(sniper_stats))
+        .route("/api/arb/sniper/positions", get(sniper_positions).post(sniper_add_position))
+        .route("/api/arb/sniper/positions/:mint", delete(sniper_remove_position))
+        .route("/api/arb/sniper/positions/:mint/sell", post(sniper_manual_sell))
+        .route("/api/arb/sniper/start", post(sniper_start))
+        .route("/api/arb/sniper/stop", post(sniper_stop))
+        .route("/api/arb/sniper/config", get(sniper_config_get).put(sniper_config_update))
+
+        // Graduation Tracker
+        .route("/api/arb/graduation/stats", get(tracker_stats))
+        .route("/api/arb/graduation/tracked", get(tracker_tokens))
+        .route("/api/arb/graduation/tracked/:mint", get(tracker_is_tracked))
+        .route("/api/arb/graduation/untrack/:mint", post(tracker_untrack))
+        .route("/api/arb/graduation/track", post(tracker_track))
+        .route("/api/arb/graduation/start", post(tracker_start))
+        .route("/api/arb/graduation/stop", post(tracker_stop))
+        .route("/api/arb/graduation/clear", post(tracker_clear))
+        .route("/api/arb/graduation/config", get(tracker_config_get).put(tracker_config_update))
 }

@@ -274,3 +274,132 @@ impl Default for SimulationConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simulation_result_creation() {
+        let edge_id = Uuid::new_v4();
+        let result = SimulationResult {
+            edge_id,
+            success: true,
+            simulated_profit_lamports: Some(1_000_000),
+            simulated_gas_lamports: 5000,
+            logs: vec!["Program executed".to_string()],
+            error: None,
+            atomicity: AtomicityLevel::NonAtomic,
+            profit_guaranteed: false,
+            simulation_slot: 12345,
+        };
+
+        assert!(result.success);
+        assert_eq!(result.simulated_profit_lamports, Some(1_000_000));
+        assert_eq!(result.simulated_gas_lamports, 5000);
+        assert!(!result.profit_guaranteed);
+    }
+
+    #[test]
+    fn test_analyze_logs_detects_flash_loan_atomicity() {
+        let simulator = TransactionSimulator::new("http://localhost:8899".to_string());
+
+        let logs = vec![
+            "Program started".to_string(),
+            "flash_loan initiated".to_string(),
+            "Swap complete".to_string(),
+        ];
+
+        let (profit, atomicity, guaranteed) = simulator.analyze_simulation_logs(&logs);
+
+        assert_eq!(atomicity, AtomicityLevel::FullyAtomic);
+        assert!(guaranteed);
+        assert!(profit.is_none());
+    }
+
+    #[test]
+    fn test_analyze_logs_detects_jito_bundle() {
+        let simulator = TransactionSimulator::new("http://localhost:8899".to_string());
+
+        let logs = vec![
+            "jito bundle submitted".to_string(),
+            "Transaction confirmed".to_string(),
+        ];
+
+        let (_, atomicity, _) = simulator.analyze_simulation_logs(&logs);
+
+        assert_eq!(atomicity, AtomicityLevel::FullyAtomic);
+    }
+
+    #[test]
+    fn test_analyze_logs_detects_atomic_swap() {
+        let simulator = TransactionSimulator::new("http://localhost:8899".to_string());
+
+        let logs = vec![
+            "swap_exact_tokens_for_tokens".to_string(),
+            "atomic operation".to_string(),
+        ];
+
+        let (_, atomicity, _) = simulator.analyze_simulation_logs(&logs);
+
+        assert_eq!(atomicity, AtomicityLevel::PartiallyAtomic);
+    }
+
+    #[test]
+    fn test_analyze_logs_extracts_profit() {
+        let simulator = TransactionSimulator::new("http://localhost:8899".to_string());
+
+        let logs = vec![
+            "Program executed".to_string(),
+            "profit: 500000 lamports".to_string(),
+            "Done".to_string(),
+        ];
+
+        let (profit, atomicity, _) = simulator.analyze_simulation_logs(&logs);
+
+        assert_eq!(profit, Some(500000));
+        assert_eq!(atomicity, AtomicityLevel::NonAtomic);
+    }
+
+    #[test]
+    fn test_analyze_logs_empty() {
+        let simulator = TransactionSimulator::new("http://localhost:8899".to_string());
+
+        let logs: Vec<String> = vec![];
+        let (profit, atomicity, guaranteed) = simulator.analyze_simulation_logs(&logs);
+
+        assert!(profit.is_none());
+        assert_eq!(atomicity, AtomicityLevel::NonAtomic);
+        assert!(!guaranteed);
+    }
+
+    #[test]
+    fn test_simulation_config_defaults() {
+        let config = SimulationConfig::default();
+
+        assert!(config.enabled);
+        assert_eq!(config.max_simulation_time_ms, 5000);
+        assert!(!config.require_profit_guarantee);
+        assert_eq!(config.min_profit_after_gas_bps, 10);
+    }
+
+    #[test]
+    fn test_failed_simulation_result() {
+        let edge_id = Uuid::new_v4();
+        let result = SimulationResult {
+            edge_id,
+            success: false,
+            simulated_profit_lamports: None,
+            simulated_gas_lamports: 0,
+            logs: vec![],
+            error: Some("Transaction simulation failed".to_string()),
+            atomicity: AtomicityLevel::NonAtomic,
+            profit_guaranteed: false,
+            simulation_slot: 0,
+        };
+
+        assert!(!result.success);
+        assert!(result.error.is_some());
+        assert_eq!(result.simulated_gas_lamports, 0);
+    }
+}

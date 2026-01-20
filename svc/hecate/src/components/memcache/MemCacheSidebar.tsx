@@ -4,11 +4,8 @@ import styles from './memcache.module.scss';
 export type MemCacheSection =
   | 'engrams'
   | 'stash'
-  | 'tasks'
-  | 'listings'
-  | 'earnings'
-  | 'connections'
-  | 'bookmarks'
+  | 'agents'
+  | 'model'
   | 'arbfarm';
 
 interface MemCacheSidebarProps {
@@ -21,12 +18,9 @@ interface MemCacheSidebarProps {
 const SIDEBAR_ITEMS: { id: MemCacheSection; icon: string; label: string }[] = [
   { id: 'engrams', icon: '◈', label: 'Engrams' },
   { id: 'stash', icon: '⬡', label: 'Stash' },
-  { id: 'tasks', icon: '▣', label: 'Active Tasks' },
+  { id: 'agents', icon: '◉', label: 'Agents' },
+  { id: 'model', icon: '◎', label: 'Model' },
   { id: 'arbfarm', icon: '⚡', label: 'ArbFarm' },
-  { id: 'listings', icon: '◇', label: 'Listings' },
-  { id: 'earnings', icon: '◆', label: 'Earnings' },
-  { id: 'connections', icon: '○', label: 'Connections' },
-  { id: 'bookmarks', icon: '☆', label: 'Bookmarks' },
 ];
 
 const MemCacheSidebar: React.FC<MemCacheSidebarProps> = ({

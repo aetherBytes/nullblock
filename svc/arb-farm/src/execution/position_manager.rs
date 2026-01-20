@@ -13,6 +13,15 @@ pub const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 pub const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 pub const USDT_MINT: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 
+#[allow(dead_code)]
+pub const CURVE_ENTRY_FEE_BPS: u16 = 100;      // 1% entry fee on bonding curves
+#[allow(dead_code)]
+pub const CURVE_EXIT_FEE_BPS: u16 = 100;       // 1% exit fee on bonding curves
+#[allow(dead_code)]
+pub const MIN_EXIT_SLIPPAGE_BPS: u16 = 150;    // 1.5% minimum slippage tolerance
+#[allow(dead_code)]
+pub const MIN_NET_PROFIT_THRESHOLD_PERCENT: f64 = 4.0;  // Break-even threshold after all costs
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum BaseCurrency {
@@ -93,6 +102,10 @@ pub struct ExitConfig {
     pub partial_take_profit: Option<PartialTakeProfit>,
     #[serde(default)]
     pub custom_exit_instructions: Option<String>,
+    #[serde(default)]
+    pub momentum_adaptive: Option<MomentumAdaptiveConfig>,
+    #[serde(default)]
+    pub adaptive_partial_tp: Option<AdaptivePartialTakeProfit>,
 }
 
 impl Default for ExitConfig {
@@ -100,12 +113,14 @@ impl Default for ExitConfig {
         Self {
             base_currency: BaseCurrency::Sol,
             exit_mode: ExitMode::Default,
-            stop_loss_percent: Some(10.0),
-            take_profit_percent: Some(25.0),
-            trailing_stop_percent: None,
-            time_limit_minutes: Some(60),
+            stop_loss_percent: Some(20.0),       // 20% stop loss - matches curve volatility
+            take_profit_percent: Some(15.0),     // 15% take profit - above break-even after costs
+            trailing_stop_percent: Some(12.0),   // 12% trailing stop - protect gains
+            time_limit_minutes: Some(7),         // 7 min max hold - force exit before momentum dies
             partial_take_profit: None,
             custom_exit_instructions: None,
+            momentum_adaptive: None,
+            adaptive_partial_tp: None,
         }
     }
 }
@@ -121,6 +136,8 @@ impl ExitConfig {
             time_limit_minutes: None,
             partial_take_profit: None,
             custom_exit_instructions: None,
+            momentum_adaptive: None,
+            adaptive_partial_tp: None,
         }
     }
 
@@ -134,6 +151,8 @@ impl ExitConfig {
             time_limit_minutes: None,
             partial_take_profit: None,
             custom_exit_instructions: None,
+            momentum_adaptive: None,
+            adaptive_partial_tp: None,
         }
     }
 
@@ -143,6 +162,27 @@ impl ExitConfig {
 
     pub fn is_atomic(&self) -> bool {
         matches!(self.exit_mode, ExitMode::Atomic)
+    }
+
+    pub fn has_valid_exit_strategy(&self) -> bool {
+        match self.exit_mode {
+            ExitMode::Atomic => true,
+            ExitMode::Hold => true,
+            ExitMode::Default | ExitMode::Custom => {
+                self.stop_loss_percent.is_some() ||
+                self.take_profit_percent.is_some() ||
+                self.time_limit_minutes.is_some() ||
+                self.trailing_stop_percent.is_some()
+            }
+        }
+    }
+
+    pub fn ensure_minimum_exit_strategy(&mut self) {
+        if !self.has_valid_exit_strategy() {
+            self.stop_loss_percent = Some(15.0);
+            self.take_profit_percent = Some(50.0);
+            self.time_limit_minutes = Some(5);
+        }
     }
 
     pub fn for_discovered_token() -> Self {
@@ -160,6 +200,8 @@ impl ExitConfig {
                 second_exit_percent: 100.0,
             }),
             custom_exit_instructions: Some("Auto-created for discovered wallet token".to_string()),
+            momentum_adaptive: None,
+            adaptive_partial_tp: None,
         }
     }
 
@@ -193,31 +235,35 @@ impl ExitConfig {
                 "Auto-created: vol={:.1} SOL, holders={}",
                 volume_24h_sol, holder_count
             )),
+            momentum_adaptive: None,
+            adaptive_partial_tp: None,
         }
     }
 
     /// Exit config optimized for bonding curve (pump.fun/moonshot) trading
-    /// OPTIMIZED for faster profit capture:
-    /// - 10% stop loss limits drawdown
-    /// - 25% take profit is achievable target (coins often hit 5-8% then reverse)
-    /// - 5% trailing stop locks in gains quickly
-    /// - 30 min time limit forces exit before curve goes cold
-    /// - Tighter momentum thresholds protect profitable positions
+    /// OPTIMIZED based on trade history analysis:
+    /// - 20% stop loss matches curve volatility (was 10% - triggered too often)
+    /// - 12% take profit is achievable target (was 25% - rarely hit)
+    /// - 8% trailing stop protects gains while allowing swings (was 5%)
+    /// - 12 min time limit forces exit before momentum dies (was 30 min)
+    /// - Partial TP at 6%/40% and 12%/60% for earlier profit capture
     pub fn for_curve_bonding() -> Self {
         Self {
             base_currency: BaseCurrency::Sol,
             exit_mode: ExitMode::Default,
-            stop_loss_percent: Some(10.0),      // -10% stop loss
-            take_profit_percent: Some(25.0),    // +25% take profit (achievable)
-            trailing_stop_percent: Some(5.0),   // 5% trailing stop (tight)
-            time_limit_minutes: Some(30),       // 30 min max hold
+            stop_loss_percent: Some(20.0),      // -20% stop loss (matches volatility)
+            take_profit_percent: Some(15.0),    // +15% take profit (above break-even after costs)
+            trailing_stop_percent: Some(12.0),  // 12% trailing stop (allow volatility)
+            time_limit_minutes: Some(7),        // 7 min max hold - force exit if nothing else triggers
             partial_take_profit: Some(PartialTakeProfit {
-                first_target_percent: 10.0,     // Sell 50% at +10%
-                first_exit_percent: 50.0,
-                second_target_percent: 25.0,    // Sell remaining at +25%
-                second_exit_percent: 100.0,
+                first_target_percent: 8.0,      // Sell 35% at +8% (above ~5% break-even)
+                first_exit_percent: 35.0,       // Sell 35% (preserve upside)
+                second_target_percent: 15.0,    // Sell remaining 65% at +15%
+                second_exit_percent: 65.0,
             }),
             custom_exit_instructions: None,
+            momentum_adaptive: None,
+            adaptive_partial_tp: None,
         }
     }
 
@@ -226,12 +272,32 @@ impl ExitConfig {
         Self {
             base_currency: BaseCurrency::Sol,
             exit_mode: ExitMode::Default,
-            stop_loss_percent: Some(10.0),      // -10% stop loss
-            take_profit_percent: Some(30.0),    // +30% take profit
-            trailing_stop_percent: Some(10.0),  // 10% trailing stop
-            time_limit_minutes: Some(30),       // 30 min max hold
+            stop_loss_percent: Some(15.0),      // -15% stop loss
+            take_profit_percent: Some(8.0),     // +8% take profit (conservative)
+            trailing_stop_percent: Some(6.0),   // 6% trailing stop
+            time_limit_minutes: Some(5),        // 5 min max hold - conservative is faster
             partial_take_profit: None,          // No partial - exit all at once
             custom_exit_instructions: None,
+            momentum_adaptive: None,
+            adaptive_partial_tp: None,
+        }
+    }
+
+    /// Exit config with momentum-adaptive exits for curve bonding
+    /// Strong momentum = sell less and let winners run
+    /// Weak/reversing momentum = exit quickly to protect profits
+    pub fn for_curve_bonding_momentum_adaptive() -> Self {
+        Self {
+            base_currency: BaseCurrency::Sol,
+            exit_mode: ExitMode::Default,
+            stop_loss_percent: Some(20.0),      // -20% stop loss (matches volatility)
+            take_profit_percent: Some(15.0),    // +15% take profit (above break-even)
+            trailing_stop_percent: Some(12.0),  // 12% trailing stop (allow volatility)
+            time_limit_minutes: Some(7),        // 7 min max hold - momentum adapts within this
+            partial_take_profit: None,          // Replaced by adaptive_partial_tp
+            custom_exit_instructions: None,
+            momentum_adaptive: Some(MomentumAdaptiveConfig::default()),
+            adaptive_partial_tp: Some(AdaptivePartialTakeProfit::default()),
         }
     }
 }
@@ -257,6 +323,10 @@ pub struct MomentumData {
     pub momentum_score: f64,      // -100 to +100, current momentum strength
     pub predicted_time_to_tp_mins: Option<f32>,  // Estimated mins to reach TP
     pub momentum_decay_count: u32, // Consecutive updates with declining momentum
+    #[serde(default)]
+    pub consecutive_negative_readings: u32,  // For reversal confirmation
+    #[serde(default)]
+    pub peak_velocity: f64,       // Track maximum velocity achieved
 }
 
 impl MomentumData {
@@ -288,6 +358,18 @@ impl MomentumData {
         self.velocity = velocity;
         self.momentum_score = momentum;
 
+        // Track peak velocity
+        if self.velocity > self.peak_velocity {
+            self.peak_velocity = self.velocity;
+        }
+
+        // Track consecutive negative readings for reversal confirmation
+        if self.velocity < 0.0 && self.momentum_score < 0.0 {
+            self.consecutive_negative_readings += 1;
+        } else if self.velocity > 0.0 {
+            self.consecutive_negative_readings = 0;
+        }
+
         // Predict time to target
         if let Some(tp) = take_profit_pct {
             self.predicted_time_to_tp_mins = self.predict_time_to_target(entry_price, price, tp);
@@ -299,6 +381,75 @@ impl MomentumData {
         } else if self.velocity >= prev_velocity {
             self.momentum_decay_count = 0;
         }
+    }
+
+    pub fn classify_strength(&self, config: &MomentumAdaptiveConfig) -> MomentumStrength {
+        // Priority order: Reversing > Strong > Weak > Normal
+
+        // Check for reversal (most critical)
+        if self.velocity < config.reversal_velocity_threshold
+            && self.momentum_score < config.reversal_momentum_score
+            && self.consecutive_negative_readings >= config.reversal_confirmation_count
+        {
+            return MomentumStrength::Reversing;
+        }
+
+        // Check for strong momentum
+        if self.velocity > config.strong_velocity_threshold
+            && self.momentum_score > config.strong_momentum_score
+        {
+            return MomentumStrength::Strong;
+        }
+
+        // Check for weak momentum
+        if self.velocity < config.weak_velocity_threshold
+            || self.momentum_score < config.weak_momentum_score
+        {
+            return MomentumStrength::Weak;
+        }
+
+        MomentumStrength::Normal
+    }
+
+    pub fn calculate_adaptive_exit_percent(&self, base_percent: f64, config: &MomentumAdaptiveConfig) -> f64 {
+        let strength = self.classify_strength(config);
+        let multiplier = match strength {
+            MomentumStrength::Strong => config.strong_exit_multiplier,
+            MomentumStrength::Normal => config.normal_exit_multiplier,
+            MomentumStrength::Weak => config.weak_exit_multiplier,
+            MomentumStrength::Reversing => config.reversing_exit_multiplier,
+        };
+
+        (base_percent * multiplier).min(100.0)
+    }
+
+    pub fn calculate_adaptive_target(&self, base_target: f64, config: &MomentumAdaptiveConfig) -> f64 {
+        let strength = self.classify_strength(config);
+        match strength {
+            MomentumStrength::Strong => {
+                base_target * (1.0 + config.strong_target_extension_percent / 100.0)
+            }
+            MomentumStrength::Weak => {
+                base_target * (1.0 - config.weak_target_reduction_percent / 100.0)
+            }
+            _ => base_target,
+        }
+    }
+
+    pub fn should_exit_on_reversal(&self, config: &MomentumAdaptiveConfig, current_pnl_percent: f64) -> bool {
+        if !config.reversal_immediate_exit {
+            return false;
+        }
+
+        // Only exit on reversal if profitable above minimum threshold
+        if current_pnl_percent < config.min_profit_for_momentum_exit {
+            return false;
+        }
+
+        // Require reversal confirmation
+        self.velocity < config.reversal_velocity_threshold
+            && self.momentum_score < config.reversal_momentum_score
+            && self.consecutive_negative_readings >= config.reversal_confirmation_count
     }
 
     fn calculate_velocity_and_momentum(&self) -> (f64, f64) {
@@ -381,12 +532,14 @@ impl MomentumData {
     }
 
     pub fn should_exit_momentum_decay(&self, hold_time_mins: i64) -> bool {
-        // Give positions more time in first 5 minutes (curves are volatile at launch)
-        // Require stronger decay signal before exiting early
+        // TUNED: Less sensitive thresholds to avoid premature exits
+        // Curve volatility is high - normal 10-30% swings shouldn't trigger exits
         let (velocity_threshold, score_threshold, decay_count_min) = if hold_time_mins < 5 {
-            (-2.0, -40.0, 5u32)  // Stricter thresholds in first 5 min
+            (-5.0, -60.0, 8u32)  // Very strict in first 5 min - allow high volatility (was -3, -50, 6)
+        } else if hold_time_mins < 10 {
+            (-3.0, -40.0, 6u32)  // Moderate strictness for 5-10 min hold
         } else {
-            (-0.5, -20.0, 3u32) // Standard thresholds after 5 min
+            (-2.5, -35.0, 5u32)  // Standard after 10 min (was -2, -30, 5)
         };
 
         // Exit if momentum has been consistently declining
@@ -394,7 +547,7 @@ impl MomentumData {
             return true;
         }
 
-        // Exit if velocity turned negative while we expected positive movement
+        // Exit if velocity turned strongly negative (confirmed downturn)
         if self.velocity < velocity_threshold && self.momentum_score < score_threshold {
             return true;
         }
@@ -447,6 +600,10 @@ pub struct OpenPosition {
     pub remaining_amount_base: f64,
     #[serde(default)]
     pub remaining_token_amount: f64,
+    #[serde(default)]
+    pub venue: Option<String>,
+    #[serde(default)]
+    pub signal_source: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -481,6 +638,92 @@ pub enum ExitReason {
     PartialTakeProfit,
     Emergency,
     MomentumDecay,  // Momentum dropped below threshold, target unlikely to be reached
+    MomentumAdaptivePartial,  // Partial exit scaled by momentum strength
+    MomentumReversal,  // Immediate exit due to momentum reversal while profitable
+    ExtendedTakeProfit,  // Extended target hit due to strong momentum
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MomentumStrength {
+    Strong,    // velocity > threshold AND momentum_score > threshold
+    Normal,    // between strong and weak
+    Weak,      // velocity < threshold OR momentum_score < threshold
+    Reversing, // velocity < 0 AND momentum_score < threshold AND confirmations met
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MomentumAdaptiveConfig {
+    pub strong_velocity_threshold: f64,      // %/min (default: 2.0)
+    pub weak_velocity_threshold: f64,        // %/min (default: 0.5)
+    pub reversal_velocity_threshold: f64,    // %/min (default: 0.0)
+
+    pub strong_momentum_score: f64,          // default: 30.0
+    pub weak_momentum_score: f64,            // default: 10.0
+    pub reversal_momentum_score: f64,        // default: -20.0
+
+    pub strong_exit_multiplier: f64,         // Sell less (default: 0.5)
+    pub normal_exit_multiplier: f64,         // Sell standard (default: 1.0)
+    pub weak_exit_multiplier: f64,           // Sell more (default: 1.5)
+    pub reversing_exit_multiplier: f64,      // Full exit (default: 2.0)
+
+    pub strong_target_extension_percent: f64,  // Extend target (default: 50.0)
+    pub weak_target_reduction_percent: f64,    // Reduce target (default: 40.0)
+
+    pub reversal_confirmation_count: u32,    // default: 2
+    pub reversal_immediate_exit: bool,       // default: true
+    pub min_profit_for_momentum_exit: f64,   // 3% minimum profit before momentum logic applies
+}
+
+impl Default for MomentumAdaptiveConfig {
+    fn default() -> Self {
+        Self {
+            strong_velocity_threshold: 2.0,
+            weak_velocity_threshold: 0.3,        // Was 0.5 - less sensitive to slow periods
+            reversal_velocity_threshold: -0.5,   // Was 0.0 - require actual negative movement
+
+            strong_momentum_score: 30.0,
+            weak_momentum_score: 5.0,            // Was 10.0 - less sensitive to weak momentum
+            reversal_momentum_score: -30.0,      // Was -20.0 - require stronger reversal signal
+
+            strong_exit_multiplier: 0.5,
+            normal_exit_multiplier: 1.0,
+            weak_exit_multiplier: 1.3,           // Was 1.5 - sell less on weak momentum
+            reversing_exit_multiplier: 1.5,      // Was 2.0 - don't panic sell on reversal
+
+            strong_target_extension_percent: 50.0,
+            weak_target_reduction_percent: 30.0, // Was 40.0 - reduce target less aggressively
+
+            reversal_confirmation_count: 4,      // Was 2 - require more confirmations before reversal exit
+            reversal_immediate_exit: true,
+            min_profit_for_momentum_exit: 5.0,   // Was 3.0 - only apply momentum exits above break-even
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdaptivePartialTakeProfit {
+    pub first_target_percent: f64,    // default: 10.0
+    pub first_exit_percent: f64,      // default: 50.0
+    pub second_target_percent: f64,   // default: 25.0
+    pub second_exit_percent: f64,     // default: 50.0
+    pub third_target_percent: f64,    // Extended target (default: 50.0)
+    pub third_exit_percent: f64,      // default: 100.0 (remaining)
+    pub enable_extended_targets: bool, // default: true
+}
+
+impl Default for AdaptivePartialTakeProfit {
+    fn default() -> Self {
+        Self {
+            first_target_percent: 6.0,   // Achievable first target (was 10%)
+            first_exit_percent: 40.0,    // Capture 40% of profits early
+            second_target_percent: 12.0, // Main TP target (was 25%)
+            second_exit_percent: 60.0,   // Exit most of remaining
+            third_target_percent: 25.0,  // Extended target for strong momentum (was 50%)
+            third_exit_percent: 100.0,
+            enable_extended_targets: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -614,7 +857,32 @@ impl PositionManager {
         entry_price: f64,
         exit_config: ExitConfig,
         entry_tx_signature: Option<String>,
+        venue: Option<String>,
+        signal_source: Option<String>,
     ) -> AppResult<OpenPosition> {
+        // Check for existing open position to prevent duplicates (race condition with reconciler)
+        {
+            let by_token = self.positions_by_token.read().await;
+            if let Some(position_ids) = by_token.get(&token_mint) {
+                let positions = self.positions.read().await;
+                for pos_id in position_ids {
+                    if let Some(pos) = positions.get(pos_id) {
+                        if matches!(pos.status, PositionStatus::Open | PositionStatus::PendingExit | PositionStatus::PartiallyExited) {
+                            info!(
+                                "⏭️ Position already exists for {} (position {}) - skipping duplicate creation",
+                                &token_mint[..12.min(token_mint.len())],
+                                pos_id
+                            );
+                            return Err(crate::error::AppError::Internal(format!(
+                                "Position already exists for mint {}",
+                                token_mint
+                            )));
+                        }
+                    }
+                }
+            }
+        }
+
         let position_id = Uuid::new_v4();
         let now = Utc::now();
 
@@ -623,6 +891,9 @@ impl PositionManager {
             price: entry_price,
             timestamp: now,
         });
+
+        let is_snipe = signal_source.as_deref() == Some("graduation_sniper");
+        let snipe_emoji = if is_snipe { "🔫 " } else { "" };
 
         let position = OpenPosition {
             id: position_id,
@@ -646,6 +917,8 @@ impl PositionManager {
             momentum: initial_momentum,
             remaining_amount_base: entry_amount_base,
             remaining_token_amount: entry_token_amount,
+            venue,
+            signal_source,
         };
 
         {
@@ -681,7 +954,8 @@ impl PositionManager {
         }
 
         info!(
-            "📈 Position opened: {} | {} @ {} | Entry: {} {} | Exit config: SL {}% / TP {}%",
+            "{}📈 Position opened: {} | {} @ {} | Entry: {} {} | Exit config: SL {}% / TP {}%",
+            snipe_emoji,
             position_id,
             position.token_symbol.as_deref().unwrap_or(&token_mint[..8]),
             entry_price,
@@ -696,6 +970,7 @@ impl PositionManager {
 
     pub async fn update_price(&self, token_mint: &str, current_price: f64) -> Vec<ExitSignal> {
         let mut signals = Vec::new();
+        let mut positions_to_persist: Vec<(Uuid, f64, f64, f64, f64)> = Vec::new();
 
         let position_ids = {
             let by_token = self.positions_by_token.read().await;
@@ -713,6 +988,27 @@ impl PositionManager {
         for position_id in position_ids {
             if let Some(signal) = self.check_exit_conditions(position_id, current_price).await {
                 signals.push(signal);
+            }
+            // Gather position data for database persistence
+            if let Some(pos) = self.get_position(position_id).await {
+                if matches!(pos.status, PositionStatus::Open | PositionStatus::PartiallyExited) {
+                    positions_to_persist.push((
+                        position_id,
+                        pos.current_price,
+                        pos.unrealized_pnl,
+                        pos.unrealized_pnl_percent,
+                        pos.high_water_mark,
+                    ));
+                }
+            }
+        }
+
+        // Persist price updates to database for open positions
+        if let Some(repo) = &self.position_repo {
+            for (id, price, pnl, pnl_pct, hwm) in positions_to_persist {
+                if let Err(e) = repo.update_price(id, price, pnl, pnl_pct, hwm).await {
+                    debug!("Failed to persist price update for {}: {}", id, e);
+                }
             }
         }
 
@@ -800,7 +1096,128 @@ impl PositionManager {
             }
         }
 
-        // Check partial take profit BEFORE full take profit
+        // ==================== MOMENTUM-ADAPTIVE EXIT LOGIC ====================
+        // Check momentum reversal (Critical urgency, full exit to protect profits)
+        if let Some(ref momentum_config) = config.momentum_adaptive {
+            if position.momentum.should_exit_on_reversal(momentum_config, position.unrealized_pnl_percent) {
+                let strength = position.momentum.classify_strength(momentum_config);
+                tracing::info!(
+                    position_id = %position_id,
+                    pnl_pct = position.unrealized_pnl_percent,
+                    velocity = position.momentum.velocity,
+                    momentum_score = position.momentum.momentum_score,
+                    strength = ?strength,
+                    "🚨 MOMENTUM REVERSAL - immediate exit to protect profits"
+                );
+                position.status = PositionStatus::PendingExit;
+                return Some(ExitSignal {
+                    position_id,
+                    reason: ExitReason::MomentumReversal,
+                    exit_percent: 100.0,
+                    current_price,
+                    triggered_at: now,
+                    urgency: ExitUrgency::Critical,
+                });
+            }
+        }
+
+        // Check momentum-adaptive partial take profits (takes priority over standard partial TP)
+        if let (Some(ref momentum_config), Some(ref adaptive_tp)) = (&config.momentum_adaptive, &config.adaptive_partial_tp) {
+            let strength = position.momentum.classify_strength(momentum_config);
+            let already_did_first = position.partial_exits.iter()
+                .any(|e| e.reason.contains("PartialTakeProfit1") || e.reason.contains("MomentumAdaptive1"));
+            let already_did_second = position.partial_exits.iter()
+                .any(|e| e.reason.contains("PartialTakeProfit2") || e.reason.contains("MomentumAdaptive2"));
+            let already_did_third = position.partial_exits.iter()
+                .any(|e| e.reason.contains("PartialTakeProfit3") || e.reason.contains("ExtendedTP"));
+
+            // Calculate adaptive targets and exit percentages based on momentum strength
+            let first_target = position.momentum.calculate_adaptive_target(
+                adaptive_tp.first_target_percent, momentum_config);
+            let first_exit_pct = position.momentum.calculate_adaptive_exit_percent(
+                adaptive_tp.first_exit_percent, momentum_config);
+
+            // First adaptive partial: momentum-adjusted target and size
+            if !already_did_first && position.unrealized_pnl_percent >= first_target {
+                tracing::info!(
+                    position_id = %position_id,
+                    pnl_pct = position.unrealized_pnl_percent,
+                    target_pct = first_target,
+                    base_target = adaptive_tp.first_target_percent,
+                    exit_pct = first_exit_pct,
+                    strength = ?strength,
+                    "🎯 Momentum-adaptive partial #1 (strength={:?})",
+                    strength
+                );
+                return Some(ExitSignal {
+                    position_id,
+                    reason: ExitReason::MomentumAdaptivePartial,
+                    exit_percent: first_exit_pct,
+                    current_price,
+                    triggered_at: now,
+                    urgency: ExitUrgency::Medium,
+                });
+            }
+
+            // Second adaptive partial
+            let second_target = position.momentum.calculate_adaptive_target(
+                adaptive_tp.second_target_percent, momentum_config);
+            let second_exit_pct = position.momentum.calculate_adaptive_exit_percent(
+                adaptive_tp.second_exit_percent, momentum_config);
+
+            if already_did_first && !already_did_second && position.unrealized_pnl_percent >= second_target {
+                tracing::info!(
+                    position_id = %position_id,
+                    pnl_pct = position.unrealized_pnl_percent,
+                    target_pct = second_target,
+                    exit_pct = second_exit_pct,
+                    strength = ?strength,
+                    "🎯 Momentum-adaptive partial #2 (strength={:?})",
+                    strength
+                );
+                return Some(ExitSignal {
+                    position_id,
+                    reason: ExitReason::MomentumAdaptivePartial,
+                    exit_percent: second_exit_pct,
+                    current_price,
+                    triggered_at: now,
+                    urgency: ExitUrgency::Medium,
+                });
+            }
+
+            // Extended third target (only for strong momentum)
+            if adaptive_tp.enable_extended_targets
+                && already_did_first
+                && already_did_second
+                && !already_did_third
+                && strength == MomentumStrength::Strong
+            {
+                let third_target = position.momentum.calculate_adaptive_target(
+                    adaptive_tp.third_target_percent, momentum_config);
+
+                if position.unrealized_pnl_percent >= third_target {
+                    tracing::info!(
+                        position_id = %position_id,
+                        pnl_pct = position.unrealized_pnl_percent,
+                        target_pct = third_target,
+                        strength = ?strength,
+                        "🚀 EXTENDED take profit hit (strong momentum rode to higher target)"
+                    );
+                    position.status = PositionStatus::PendingExit;
+                    return Some(ExitSignal {
+                        position_id,
+                        reason: ExitReason::ExtendedTakeProfit,
+                        exit_percent: adaptive_tp.third_exit_percent,
+                        current_price,
+                        triggered_at: now,
+                        urgency: ExitUrgency::High,
+                    });
+                }
+            }
+        }
+        // ==================== END MOMENTUM-ADAPTIVE LOGIC ====================
+
+        // Check partial take profit BEFORE full take profit (standard, non-adaptive)
         if let Some(ref partial_tp) = config.partial_take_profit {
             let already_did_first_partial = position.partial_exits.iter()
                 .any(|e| e.reason == "PartialTakeProfit1");
@@ -877,16 +1294,21 @@ impl PositionManager {
             }
         }
 
-        // Tighter exit thresholds when in profit - protect gains aggressively
-        if position.unrealized_pnl_percent > 5.0 {
-            // Exit if velocity turns negative while profitable (momentum reversal)
-            if position.momentum.velocity < 0.0 && position.momentum.momentum_decay_count >= 2 {
+        // Tighter exit thresholds when in significant profit - protect gains (only at 10%+ to avoid false exits)
+        if position.unrealized_pnl_percent > 10.0 {
+            // Exit if velocity turns strongly negative while profitable (requires stronger reversal confirmation)
+            // Require: velocity < -0.5 (actual decline), decay_count >= 3 (sustained), momentum_score < -10 (confirmed negative)
+            if position.momentum.velocity < -0.5
+               && position.momentum.momentum_decay_count >= 3
+               && position.momentum.momentum_score < -10.0
+            {
                 tracing::info!(
                     position_id = %position_id,
                     pnl_pct = position.unrealized_pnl_percent,
                     velocity = position.momentum.velocity,
                     decay_count = position.momentum.momentum_decay_count,
-                    "📉 Profitable position losing momentum - exiting to protect gains"
+                    momentum_score = position.momentum.momentum_score,
+                    "📉 Profitable position confirmed reversal - exiting to protect gains"
                 );
                 position.status = PositionStatus::PendingExit;
                 return Some(ExitSignal {
@@ -903,14 +1325,15 @@ impl PositionManager {
             let peak_pnl_percent = ((position.high_water_mark - position.entry_price) / position.entry_price) * 100.0;
             let pnl_drop_from_peak = peak_pnl_percent - position.unrealized_pnl_percent;
 
-            // Exit if dropped 3% from peak while profitable
-            if pnl_drop_from_peak > 3.0 {
+            // Exit if dropped 6% from peak while still profitable (was 3%, allow more volatility)
+            // Only trigger if we're still above 4% profit (above break-even after costs)
+            if pnl_drop_from_peak > 6.0 && position.unrealized_pnl_percent > 4.0 {
                 tracing::info!(
                     position_id = %position_id,
                     current_pnl = position.unrealized_pnl_percent,
                     peak_pnl = peak_pnl_percent,
                     drop = pnl_drop_from_peak,
-                    "📉 Dropped 3%+ from peak profit - exiting to protect gains"
+                    "📉 Dropped 6%+ from peak profit - exiting to protect gains"
                 );
                 position.status = PositionStatus::PendingExit;
                 return Some(ExitSignal {
@@ -1013,14 +1436,14 @@ impl PositionManager {
         let positions = self.positions.read().await;
         positions
             .values()
-            .any(|p| p.status == PositionStatus::Open && p.token_mint == mint)
+            .any(|p| matches!(p.status, PositionStatus::Open | PositionStatus::PendingExit | PositionStatus::PartiallyExited) && p.token_mint == mint)
     }
 
     pub async fn get_open_position_for_mint(&self, mint: &str) -> Option<OpenPosition> {
         let positions = self.positions.read().await;
         positions
             .values()
-            .find(|p| p.status == PositionStatus::Open && p.token_mint == mint)
+            .find(|p| matches!(p.status, PositionStatus::Open | PositionStatus::PendingExit | PositionStatus::PartiallyExited) && p.token_mint == mint)
             .cloned()
     }
 
@@ -1342,6 +1765,7 @@ pub struct ReconciliationResult {
     pub tracked_positions: usize,
     pub discovered_tokens: Vec<WalletTokenHolding>,
     pub orphaned_positions: Vec<Uuid>,
+    pub exit_strategies_fixed: Vec<Uuid>,
 }
 
 impl PositionManager {
@@ -1349,67 +1773,117 @@ impl PositionManager {
         &self,
         wallet_tokens: &[WalletTokenHolding],
     ) -> ReconciliationResult {
-        let positions = self.positions.read().await;
-        let tracked_mints: std::collections::HashSet<_> = positions
-            .values()
-            .filter(|p| p.status == PositionStatus::Open)
-            .map(|p| p.token_mint.clone())
-            .collect();
-
         let mut discovered_tokens = Vec::new();
         let mut orphaned_positions = Vec::new();
+        let mut positions_needing_exit_fix = Vec::new();
 
-        for holding in wallet_tokens {
-            if holding.mint == SOL_MINT || holding.mint == USDC_MINT || holding.mint == USDT_MINT {
-                continue;
-            }
+        // First pass: read-only analysis
+        {
+            let positions = self.positions.read().await;
+            let tracked_mints: std::collections::HashSet<_> = positions
+                .values()
+                .filter(|p| matches!(p.status, PositionStatus::Open | PositionStatus::PendingExit | PositionStatus::PartiallyExited))
+                .map(|p| p.token_mint.clone())
+                .collect();
 
-            // Lower threshold to capture tokens with fractional balances
-            // 0.0001 filters dust while allowing small positions
-            if holding.balance < 0.0001 {
-                continue;
-            }
+            for holding in wallet_tokens {
+                if holding.mint == SOL_MINT || holding.mint == USDC_MINT || holding.mint == USDT_MINT {
+                    continue;
+                }
 
-            if !tracked_mints.contains(&holding.mint) {
-                info!(
-                    "🔍 Discovered untracked token in wallet: {} ({}) - {} tokens",
-                    holding.symbol.as_deref().unwrap_or("Unknown"),
-                    &holding.mint[..8],
-                    holding.balance
-                );
-                discovered_tokens.push(holding.clone());
-            }
-        }
+                // Lower threshold to capture tokens with fractional balances
+                // 0.0001 filters dust while allowing small positions
+                if holding.balance < 0.0001 {
+                    continue;
+                }
 
-        for position in positions.values() {
-            if position.status == PositionStatus::Open {
-                let wallet_has_token = wallet_tokens
-                    .iter()
-                    .any(|t| t.mint == position.token_mint && t.balance >= 0.0001);
-
-                if !wallet_has_token {
-                    warn!(
-                        "⚠️ Position {} ({}) has no corresponding wallet balance - may have been sold externally",
-                        position.id,
-                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                if !tracked_mints.contains(&holding.mint) {
+                    info!(
+                        "🔍 Discovered untracked token in wallet: {} ({}) - {} tokens",
+                        holding.symbol.as_deref().unwrap_or("Unknown"),
+                        &holding.mint[..8],
+                        holding.balance
                     );
-                    orphaned_positions.push(position.id);
+                    discovered_tokens.push(holding.clone());
+                }
+            }
+
+            for position in positions.values() {
+                if matches!(position.status, PositionStatus::Open | PositionStatus::PendingExit | PositionStatus::PartiallyExited) {
+                    let wallet_has_token = wallet_tokens
+                        .iter()
+                        .any(|t| t.mint == position.token_mint && t.balance >= 0.0001);
+
+                    if !wallet_has_token {
+                        warn!(
+                            "⚠️ Position {} ({}) [status: {:?}] has no corresponding wallet balance - may have been sold externally",
+                            position.id,
+                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                            position.status
+                        );
+                        orphaned_positions.push(position.id);
+                    }
+
+                    // Check for missing exit strategy
+                    if !position.exit_config.has_valid_exit_strategy() {
+                        warn!(
+                            "⚠️ Position {} ({}) has no valid exit strategy - will assign default",
+                            position.id,
+                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                        );
+                        positions_needing_exit_fix.push(position.id);
+                    }
                 }
             }
         }
 
-        let result = ReconciliationResult {
-            tracked_positions: tracked_mints.len(),
-            discovered_tokens: discovered_tokens.clone(),
-            orphaned_positions: orphaned_positions.clone(),
+        // Second pass: fix positions with missing exit strategies
+        let mut exit_strategies_fixed = Vec::new();
+        if !positions_needing_exit_fix.is_empty() {
+            let mut positions = self.positions.write().await;
+            for position_id in positions_needing_exit_fix {
+                if let Some(position) = positions.get_mut(&position_id) {
+                    position.exit_config.ensure_minimum_exit_strategy();
+                    exit_strategies_fixed.push(position_id);
+                    info!(
+                        "🛡️ Fixed exit strategy for position {} ({}) - assigned SL {}% / TP {}%",
+                        position_id,
+                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                        position.exit_config.stop_loss_percent.unwrap_or(0.0),
+                        position.exit_config.take_profit_percent.unwrap_or(0.0),
+                    );
+
+                    // Persist the fix to database
+                    if let Some(repo) = &self.position_repo {
+                        if let Err(e) = repo.save_position(position).await {
+                            warn!("Failed to persist exit strategy fix for position {}: {}", position_id, e);
+                        }
+                    }
+                }
+            }
+        }
+
+        let tracked_count = {
+            let positions = self.positions.read().await;
+            positions.values()
+                .filter(|p| matches!(p.status, PositionStatus::Open | PositionStatus::PendingExit | PositionStatus::PartiallyExited))
+                .count()
         };
 
-        if !discovered_tokens.is_empty() || !orphaned_positions.is_empty() {
+        let result = ReconciliationResult {
+            tracked_positions: tracked_count,
+            discovered_tokens: discovered_tokens.clone(),
+            orphaned_positions: orphaned_positions.clone(),
+            exit_strategies_fixed: exit_strategies_fixed.clone(),
+        };
+
+        if !discovered_tokens.is_empty() || !orphaned_positions.is_empty() || !exit_strategies_fixed.is_empty() {
             info!(
-                "📊 Wallet reconciliation complete: {} tracked, {} discovered, {} orphaned",
+                "📊 Wallet reconciliation complete: {} tracked, {} discovered, {} orphaned, {} exit strategies fixed",
                 result.tracked_positions,
                 discovered_tokens.len(),
-                orphaned_positions.len()
+                orphaned_positions.len(),
+                exit_strategies_fixed.len()
             );
         }
 
@@ -1433,6 +1907,8 @@ impl PositionManager {
                 estimated_entry_price,
                 ExitConfig::default(),
                 Some("discovered".to_string()),
+                None,
+                Some("wallet_discovery".to_string()),
             )
             .await?;
 
@@ -1454,6 +1930,44 @@ impl PositionManager {
         estimated_entry_sol: f64,
         exit_config: ExitConfig,
     ) -> AppResult<OpenPosition> {
+        // Check for existing position to prevent duplicates (race condition with autonomous executor)
+        {
+            let by_token = self.positions_by_token.read().await;
+            if let Some(position_ids) = by_token.get(&holding.mint) {
+                let positions = self.positions.read().await;
+                for pos_id in position_ids {
+                    if let Some(pos) = positions.get(pos_id) {
+                        if matches!(pos.status, PositionStatus::Open | PositionStatus::PendingExit | PositionStatus::PartiallyExited) {
+                            info!(
+                                "⏭️ Skipping discovered position for {} - already tracked as position {}",
+                                &holding.mint[..12],
+                                pos_id
+                            );
+                            return Err(crate::error::AppError::Internal(format!(
+                                "Position already exists for mint {}",
+                                holding.mint
+                            )));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Also check database for recent positions to avoid race conditions
+        if let Some(repo) = &self.position_repo {
+            if let Ok(Some(existing)) = repo.get_open_by_mint(&holding.mint).await {
+                info!(
+                    "⏭️ Skipping discovered position for {} - found in database as position {}",
+                    &holding.mint[..12],
+                    existing.id
+                );
+                return Err(crate::error::AppError::Internal(format!(
+                    "Position already exists in database for mint {}",
+                    holding.mint
+                )));
+            }
+        }
+
         let position = self
             .open_position(
                 Uuid::new_v4(),
@@ -1465,6 +1979,8 @@ impl PositionManager {
                 estimated_entry_price,
                 exit_config,
                 Some("discovered_with_strategy".to_string()),
+                None,
+                Some("wallet_discovery".to_string()),
             )
             .await?;
 
@@ -1504,9 +2020,6 @@ impl PositionManager {
         new_price: f64,
         new_exit_config: ExitConfig,
     ) -> AppResult<OpenPosition> {
-        const MAX_DISCOVERED_ENTRY_SOL: f64 = 0.1;
-        const DEFAULT_DISCOVERED_ENTRY_SOL: f64 = 0.02;
-
         let mut reactivated = position.clone();
         reactivated.status = PositionStatus::Open;
         reactivated.entry_token_amount = new_balance;
@@ -1516,15 +2029,7 @@ impl PositionManager {
         reactivated.unrealized_pnl = 0.0;
         reactivated.unrealized_pnl_percent = 0.0;
         reactivated.exit_config = new_exit_config;
-
-        // Cap entry amount for reactivated positions if it looks inflated
-        if reactivated.entry_amount_base > MAX_DISCOVERED_ENTRY_SOL {
-            info!(
-                "   📉 Capping inflated entry {:.4} SOL to {:.4} SOL for reactivated position",
-                reactivated.entry_amount_base, DEFAULT_DISCOVERED_ENTRY_SOL
-            );
-            reactivated.entry_amount_base = DEFAULT_DISCOVERED_ENTRY_SOL;
-        }
+        // Note: entry_amount_base is preserved from the original position creation
 
         {
             let mut positions = self.positions.write().await;
@@ -1619,6 +2124,8 @@ mod tests {
                 0.001,
                 ExitConfig::default(),
                 None,
+                None,
+                None,
             )
             .await
             .unwrap();
@@ -1646,6 +2153,8 @@ mod tests {
                     stop_loss_percent: Some(10.0),
                     ..Default::default()
                 },
+                None,
+                None,
                 None,
             )
             .await
@@ -1675,6 +2184,8 @@ mod tests {
                     ..Default::default()
                 },
                 None,
+                None,
+                None,
             )
             .await
             .unwrap();
@@ -1683,5 +2194,128 @@ mod tests {
 
         assert_eq!(signals.len(), 1);
         assert_eq!(signals[0].reason, ExitReason::TakeProfit);
+    }
+
+    #[test]
+    fn test_exit_config_has_valid_exit_strategy_atomic() {
+        let config = ExitConfig {
+            exit_mode: ExitMode::Atomic,
+            ..Default::default()
+        };
+        assert!(config.has_valid_exit_strategy());
+    }
+
+    #[test]
+    fn test_exit_config_has_valid_exit_strategy_hold() {
+        let config = ExitConfig {
+            exit_mode: ExitMode::Hold,
+            ..Default::default()
+        };
+        assert!(config.has_valid_exit_strategy());
+    }
+
+    #[test]
+    fn test_exit_config_has_valid_exit_strategy_default_with_stop_loss() {
+        let config = ExitConfig {
+            exit_mode: ExitMode::Default,
+            stop_loss_percent: Some(15.0),
+            ..Default::default()
+        };
+        assert!(config.has_valid_exit_strategy());
+    }
+
+    #[test]
+    fn test_exit_config_has_valid_exit_strategy_default_with_take_profit() {
+        let config = ExitConfig {
+            exit_mode: ExitMode::Default,
+            take_profit_percent: Some(50.0),
+            ..Default::default()
+        };
+        assert!(config.has_valid_exit_strategy());
+    }
+
+    #[test]
+    fn test_exit_config_has_valid_exit_strategy_default_with_time_limit() {
+        let config = ExitConfig {
+            exit_mode: ExitMode::Default,
+            time_limit_minutes: Some(120),
+            ..Default::default()
+        };
+        assert!(config.has_valid_exit_strategy());
+    }
+
+    #[test]
+    fn test_exit_config_has_valid_exit_strategy_default_with_trailing_stop() {
+        let config = ExitConfig {
+            exit_mode: ExitMode::Default,
+            trailing_stop_percent: Some(10.0),
+            ..Default::default()
+        };
+        assert!(config.has_valid_exit_strategy());
+    }
+
+    #[test]
+    fn test_exit_config_invalid_when_default_mode_with_no_params() {
+        let config = ExitConfig {
+            exit_mode: ExitMode::Default,
+            stop_loss_percent: None,
+            take_profit_percent: None,
+            time_limit_minutes: None,
+            trailing_stop_percent: None,
+            ..Default::default()
+        };
+        assert!(!config.has_valid_exit_strategy());
+    }
+
+    #[test]
+    fn test_exit_config_invalid_when_custom_mode_with_no_params() {
+        let config = ExitConfig {
+            exit_mode: ExitMode::Custom,
+            stop_loss_percent: None,
+            take_profit_percent: None,
+            time_limit_minutes: None,
+            trailing_stop_percent: None,
+            ..Default::default()
+        };
+        assert!(!config.has_valid_exit_strategy());
+    }
+
+    #[test]
+    fn test_ensure_minimum_exit_strategy_adds_defaults() {
+        let mut config = ExitConfig {
+            exit_mode: ExitMode::Default,
+            stop_loss_percent: None,
+            take_profit_percent: None,
+            time_limit_minutes: None,
+            trailing_stop_percent: None,
+            ..Default::default()
+        };
+        assert!(!config.has_valid_exit_strategy());
+
+        config.ensure_minimum_exit_strategy();
+
+        assert!(config.has_valid_exit_strategy());
+        assert_eq!(config.stop_loss_percent, Some(15.0));
+        assert_eq!(config.take_profit_percent, Some(50.0));
+        assert_eq!(config.time_limit_minutes, Some(5));
+    }
+
+    #[test]
+    fn test_ensure_minimum_exit_strategy_preserves_existing() {
+        let mut config = ExitConfig {
+            exit_mode: ExitMode::Default,
+            stop_loss_percent: Some(20.0),
+            take_profit_percent: None,
+            time_limit_minutes: None,
+            trailing_stop_percent: None,
+            ..Default::default()
+        };
+        assert!(config.has_valid_exit_strategy());
+
+        config.ensure_minimum_exit_strategy();
+
+        assert_eq!(config.stop_loss_percent, Some(20.0));
+        assert_eq!(config.take_profit_percent, None);
+        assert_eq!(config.time_limit_minutes, None);
     }
 }
