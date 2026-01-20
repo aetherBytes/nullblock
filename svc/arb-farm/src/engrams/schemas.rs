@@ -236,7 +236,81 @@ pub struct ConversationOutcome {
     pub summary: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsensusAnalysis {
+    pub analysis_id: Uuid,
+    pub analysis_type: ConsensusAnalysisType,
+    pub time_period: String,
+    pub total_trades_analyzed: u32,
+    pub overall_assessment: String,
+    pub risk_alerts: Vec<String>,
+    pub recommendations_count: u32,
+    pub recommendation_ids: Vec<Uuid>,
+    pub avg_confidence: f64,
+    pub models_queried: Vec<String>,
+    pub total_latency_ms: u64,
+    pub context_summary: AnalysisContextSummary,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConsensusAnalysisType {
+    TradeReview,
+    RiskAssessment,
+    StrategyOptimization,
+    PatternDiscovery,
+    Scheduled,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalysisContextSummary {
+    pub win_rate: f64,
+    pub total_pnl_sol: f64,
+    pub top_venue: Option<String>,
+    pub error_count: u32,
+}
+
+pub fn generate_consensus_analysis_key(analysis_id: &Uuid) -> String {
+    format!("arb.learning.analysis.{}", analysis_id)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsensusDecision {
+    pub decision_id: Uuid,
+    pub edge_id: Uuid,
+    pub strategy_id: Option<Uuid>,
+    pub approved: bool,
+    pub agreement_score: f64,
+    pub weighted_confidence: f64,
+    pub model_votes: Vec<String>,
+    pub reasoning_summary: String,
+    pub edge_context: String,
+    pub total_latency_ms: u64,
+    pub created_at: DateTime<Utc>,
+}
+
+pub fn generate_consensus_decision_key(decision_id: &Uuid) -> String {
+    format!("arb.consensus.decision.{}", decision_id)
+}
+
 pub const A2A_TAG_LEARNING: &str = "arbFarm.learning";
+pub const WATCHLIST_TAG: &str = "watchlist";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WatchlistToken {
+    pub mint: String,
+    pub name: String,
+    pub symbol: String,
+    pub venue: String,
+    pub tracked_at: DateTime<Utc>,
+    pub notes: Option<String>,
+    pub last_progress: Option<f64>,
+}
+
+pub fn generate_watchlist_key(mint: &str) -> String {
+    format!("arb.watchlist.{}", mint)
+}
 
 pub fn generate_transaction_key(tx_signature: &str) -> String {
     format!("arb.trade.summary.{}", tx_signature)

@@ -3,8 +3,11 @@ use futures::future::join_all;
 use uuid::Uuid;
 
 use super::{
-    openrouter::{get_default_models, OpenRouterClient},
-    voting::{generate_trade_prompt, parse_trade_approval, ConsensusResult, ModelVote, VotingEngine},
+    openrouter::{get_default_models, get_model_weight, OpenRouterClient},
+    voting::{
+        generate_trade_prompt, parse_trade_approval, ConsensusResult, ModelVote, VotingEngine,
+        AnalysisContext, AnalysisVote, ParsedRecommendation, generate_analysis_prompt, parse_analysis_response,
+    },
 };
 use crate::{
     error::{AppError, AppResult},
@@ -53,15 +56,153 @@ impl ConsensusEngine {
 
     pub async fn request_analysis(
         &self,
-        topic: crate::engrams::schemas::ConversationTopic,
-        time_period: String,
-    ) -> AppResult<()> {
-        tracing::info!(
-            topic = ?topic,
-            time_period = %time_period,
-            "Analysis request queued (not yet fully implemented)"
+        context: AnalysisContext,
+    ) -> AppResult<AnalysisResult> {
+        let models_to_query = self.default_models.clone();
+        let prompt = generate_analysis_prompt(&context);
+
+        let system_prompt = Some(
+            "You are an expert trading analyst for an autonomous Solana MEV agent. Your goal is to analyze trading performance data and provide actionable recommendations to maximize profit in SOL. Focus on data-driven insights and specific, measurable improvements. Always respond with valid JSON.",
         );
-        Ok(())
+
+        tracing::info!(
+            time_period = %context.time_period,
+            total_trades = context.total_trades,
+            models = ?models_to_query,
+            "Starting consensus analysis"
+        );
+
+        let futures: Vec<_> = models_to_query
+            .iter()
+            .map(|model| self.query_analysis_model(model, &prompt, system_prompt))
+            .collect();
+
+        let results = join_all(futures).await;
+
+        let model_votes: Vec<AnalysisModelVote> = results
+            .into_iter()
+            .filter_map(|r| r.ok())
+            .collect();
+
+        if model_votes.is_empty() {
+            return Err(AppError::ConsensusFailed(
+                "All model queries failed for analysis".to_string(),
+            ));
+        }
+
+        let aggregated = self.aggregate_analysis_votes(&model_votes);
+
+        tracing::info!(
+            recommendations_count = aggregated.recommendations.len(),
+            risk_alerts_count = aggregated.risk_alerts.len(),
+            avg_confidence = aggregated.avg_confidence,
+            models_responded = model_votes.len(),
+            "Consensus analysis completed"
+        );
+
+        Ok(aggregated)
+    }
+
+    async fn query_analysis_model(
+        &self,
+        model: &str,
+        prompt: &str,
+        system_prompt: Option<&str>,
+    ) -> AppResult<AnalysisModelVote> {
+        let timeout = tokio::time::Duration::from_millis(self.timeout_ms);
+
+        let result = tokio::time::timeout(
+            timeout,
+            self.openrouter.query_model(model, prompt, system_prompt, 2048),
+        )
+        .await
+        .map_err(|_| AppError::Timeout(format!("Analysis model {} timed out", model)))?;
+
+        let response = result?;
+
+        let vote = parse_analysis_response(&response.content).ok_or_else(|| {
+            AppError::ExternalApi(format!(
+                "Failed to parse analysis vote from {}: {}",
+                model,
+                &response.content[..response.content.len().min(200)]
+            ))
+        })?;
+
+        Ok(AnalysisModelVote {
+            model: model.to_string(),
+            vote,
+            latency_ms: response.latency_ms,
+        })
+    }
+
+    fn aggregate_analysis_votes(&self, votes: &[AnalysisModelVote]) -> AnalysisResult {
+        if votes.is_empty() {
+            return AnalysisResult::default();
+        }
+
+        let mut all_recommendations: Vec<(ParsedRecommendation, f64)> = Vec::new();
+        let mut all_risk_alerts: Vec<String> = Vec::new();
+        let mut assessments: Vec<String> = Vec::new();
+        let mut total_confidence = 0.0;
+        let mut total_weight = 0.0;
+
+        for vote in votes {
+            let weight = get_model_weight(&vote.model);
+            total_weight += weight;
+            total_confidence += vote.vote.confidence * weight;
+
+            for rec in &vote.vote.recommendations {
+                all_recommendations.push((rec.clone(), weight));
+            }
+
+            for alert in &vote.vote.risk_alerts {
+                if !all_risk_alerts.contains(alert) {
+                    all_risk_alerts.push(alert.clone());
+                }
+            }
+
+            assessments.push(vote.vote.overall_assessment.clone());
+        }
+
+        let mut deduped_recommendations: Vec<ParsedRecommendation> = Vec::new();
+        let mut seen_targets: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        all_recommendations.sort_by(|a, b| {
+            let weighted_conf_a = a.0.confidence * a.1;
+            let weighted_conf_b = b.0.confidence * b.1;
+            weighted_conf_b.partial_cmp(&weighted_conf_a).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        for (rec, _weight) in all_recommendations {
+            let key = format!("{}:{}", rec.category, rec.target);
+            if !seen_targets.contains(&key) && rec.confidence >= 0.5 {
+                seen_targets.insert(key);
+                deduped_recommendations.push(rec);
+            }
+        }
+
+        deduped_recommendations.truncate(5);
+
+        let combined_assessment = if assessments.len() == 1 {
+            assessments.into_iter().next().unwrap_or_default()
+        } else {
+            format!(
+                "Multi-model analysis ({} models): {}",
+                votes.len(),
+                assessments.first().cloned().unwrap_or_default()
+            )
+        };
+
+        let total_latency_ms = votes.iter().map(|v| v.latency_ms).max().unwrap_or(0);
+
+        AnalysisResult {
+            recommendations: deduped_recommendations,
+            risk_alerts: all_risk_alerts,
+            overall_assessment: combined_assessment,
+            avg_confidence: if total_weight > 0.0 { total_confidence / total_weight } else { 0.0 },
+            model_votes: votes.iter().map(|v| v.model.clone()).collect(),
+            total_latency_ms,
+        }
     }
 
     pub async fn request_consensus(
@@ -207,6 +348,23 @@ impl ConsensusEngine {
         )
         .with_correlation(edge_id)
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct AnalysisModelVote {
+    pub model: String,
+    pub vote: AnalysisVote,
+    pub latency_ms: u64,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct AnalysisResult {
+    pub recommendations: Vec<ParsedRecommendation>,
+    pub risk_alerts: Vec<String>,
+    pub overall_assessment: String,
+    pub avg_confidence: f64,
+    pub model_votes: Vec<String>,
+    pub total_latency_ms: u64,
 }
 
 #[derive(Debug, Clone)]

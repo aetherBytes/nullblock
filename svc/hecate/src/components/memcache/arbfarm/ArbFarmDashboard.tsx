@@ -38,6 +38,7 @@ import {
 } from '../../../types/arbfarm';
 import { arbFarmService } from '../../../common/services/arbfarm-service';
 import styles from './arbfarm.module.scss';
+import CodeBlock, { formatJson } from '../../common/CodeBlock';
 import EdgeCard from './components/EdgeCard';
 import MetricCard from './components/MetricCard';
 import SwarmStatusCard from './components/SwarmStatusCard';
@@ -53,7 +54,6 @@ import RecommendationsTab from './components/RecommendationsTab';
 
 export type ArbFarmView =
   | 'dashboard'
-  | 'opportunities'
   | 'signals'
   | 'strategies'
   | 'curves'
@@ -197,12 +197,14 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     max_position_sol: string;
     max_concurrent_positions: string;
     daily_loss_limit_sol: string;
-  }>({ max_position_sol: '', max_concurrent_positions: '', daily_loss_limit_sol: '' });
+    max_drawdown_percent: string;
+    take_profit_percent: string;
+    trailing_stop_percent: string;
+    time_limit_minutes: string;
+  }>({ max_position_sol: '', max_concurrent_positions: '', daily_loss_limit_sol: '', max_drawdown_percent: '', take_profit_percent: '', trailing_stop_percent: '', time_limit_minutes: '' });
   const [savingCustomRisk, setSavingCustomRisk] = useState(false);
   const [executionSettings, setExecutionSettings] = useState({
     auto_execute_enabled: false,
-    auto_min_confidence: 0.8,
-    auto_max_position_sol: 0.5,
     require_simulation: true,
   });
   const [savingExecutionSettings, setSavingExecutionSettings] = useState(false);
@@ -415,11 +417,9 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
       const res = await arbFarmService.getExecutionConfig();
       if (res.success && res.data) {
         setExecutionConfig(res.data);
-        // Sync all execution settings from backend config
+        // Sync execution settings from backend config (risk settings are in Risk tab)
         setExecutionSettings({
           auto_execute_enabled: res.data?.auto_execution_enabled || false,
-          auto_min_confidence: res.data?.auto_min_confidence ?? 0.8,
-          auto_max_position_sol: res.data?.auto_max_position_sol ?? 0.5,
           require_simulation: res.data?.require_simulation ?? true,
         });
       }
@@ -474,6 +474,17 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
       if (res.success) {
         setExecutionConfig((prev) => prev ? { ...prev, auto_execution_enabled: enabled } : null);
         setExecutionSettings((prev) => ({ ...prev, auto_execute_enabled: enabled }));
+
+        // Also update all strategies' execution_mode
+        const newMode = enabled ? 'autonomous' : 'agent_directed';
+        const allStrategies = strategies.data || [];
+        const updatePromises = allStrategies.map((strategy) =>
+          arbFarmService.updateStrategy(strategy.id, { execution_mode: newMode })
+        );
+
+        await Promise.all(updatePromises);
+        strategies.refresh();
+        console.log(`Updated ${allStrategies.length} strategies to ${newMode} mode`);
       }
     } catch (err) {
       console.error('Failed to toggle execution:', err);
@@ -509,8 +520,6 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     try {
       const res = await arbFarmService.saveExecutionSettings({
         auto_execution_enabled: executionSettings.auto_execute_enabled,
-        auto_min_confidence: executionSettings.auto_min_confidence,
-        auto_max_position_sol: executionSettings.auto_max_position_sol,
         require_simulation: executionSettings.require_simulation,
       });
       if (res.success && res.data) {
@@ -2343,10 +2352,13 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
               {devModeAvailable && (
                 <div className={styles.devSection}>
                   <h4>🔧 Dev Options</h4>
-                  <details className={styles.jsonView}>
-                    <summary>Raw JSON</summary>
-                    <pre>{JSON.stringify(editingStrategy, null, 2)}</pre>
-                  </details>
+                  <CodeBlock
+                    code={formatJson(editingStrategy)}
+                    language="json"
+                    collapsible
+                    defaultCollapsed
+                    title="Raw JSON"
+                  />
                 </div>
               )}
             </div>
@@ -3367,6 +3379,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
       const res = await arbFarmService.updateRiskSettings(presetName);
       if (res.success && res.data?.config) {
         setRiskConfig(res.data.config);
+        strategies.refresh();
       }
     } catch (err) {
       console.error('Failed to update risk settings:', err);
@@ -3378,7 +3391,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
   const handleSaveCustomRisk = async () => {
     setSavingCustomRisk(true);
     try {
-      const config: { max_position_sol?: number; max_concurrent_positions?: number; daily_loss_limit_sol?: number } = {};
+      const config: { max_position_sol?: number; max_concurrent_positions?: number; daily_loss_limit_sol?: number; max_drawdown_percent?: number; take_profit_percent?: number; trailing_stop_percent?: number; time_limit_minutes?: number } = {};
       if (customRiskEdit.max_position_sol) {
         config.max_position_sol = parseFloat(customRiskEdit.max_position_sol);
       }
@@ -3388,10 +3401,23 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
       if (customRiskEdit.daily_loss_limit_sol) {
         config.daily_loss_limit_sol = parseFloat(customRiskEdit.daily_loss_limit_sol);
       }
+      if (customRiskEdit.max_drawdown_percent) {
+        config.max_drawdown_percent = parseFloat(customRiskEdit.max_drawdown_percent);
+      }
+      if (customRiskEdit.take_profit_percent) {
+        config.take_profit_percent = parseFloat(customRiskEdit.take_profit_percent);
+      }
+      if (customRiskEdit.trailing_stop_percent) {
+        config.trailing_stop_percent = parseFloat(customRiskEdit.trailing_stop_percent);
+      }
+      if (customRiskEdit.time_limit_minutes) {
+        config.time_limit_minutes = parseInt(customRiskEdit.time_limit_minutes, 10);
+      }
       const res = await arbFarmService.setCustomRisk(config);
       if (res.success && res.data?.config) {
         setRiskConfig(res.data.config as RiskConfig);
-        setCustomRiskEdit({ max_position_sol: '', max_concurrent_positions: '', daily_loss_limit_sol: '' });
+        setCustomRiskEdit({ max_position_sol: '', max_concurrent_positions: '', daily_loss_limit_sol: '', max_drawdown_percent: '', take_profit_percent: '', trailing_stop_percent: '', time_limit_minutes: '' });
+        strategies.refresh();
       }
     } catch (err) {
       console.error('Failed to save custom risk:', err);
@@ -3653,6 +3679,24 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
                         {riskConfig.auto_pause_on_drawdown ? 'Enabled' : 'Disabled'}
                       </span>
                     </div>
+                    <div className={styles.configItem}>
+                      <span className={styles.configLabel}>Take Profit</span>
+                      <span className={styles.configValue}>
+                        {riskConfig.take_profit_percent}%
+                      </span>
+                    </div>
+                    <div className={styles.configItem}>
+                      <span className={styles.configLabel}>Trailing Stop</span>
+                      <span className={styles.configValue}>
+                        {riskConfig.trailing_stop_percent}%
+                      </span>
+                    </div>
+                    <div className={styles.configItem}>
+                      <span className={styles.configLabel}>Time Limit</span>
+                      <span className={styles.configValue}>
+                        {riskConfig.time_limit_minutes} min
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -3670,7 +3714,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
                       step="0.01"
                       min="0.001"
                       max="10"
-                      placeholder={riskConfig?.max_position_sol?.toString() || '0.02'}
+                      placeholder={riskConfig?.max_position_sol?.toString() || '0.3'}
                       value={customRiskEdit.max_position_sol}
                       onChange={(e) => setCustomRiskEdit(prev => ({ ...prev, max_position_sol: e.target.value }))}
                     />
@@ -3682,7 +3726,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
                       step="1"
                       min="1"
                       max="50"
-                      placeholder={riskConfig?.max_concurrent_positions?.toString() || '2'}
+                      placeholder={riskConfig?.max_concurrent_positions?.toString() || '10'}
                       value={customRiskEdit.max_concurrent_positions}
                       onChange={(e) => setCustomRiskEdit(prev => ({ ...prev, max_concurrent_positions: e.target.value }))}
                     />
@@ -3694,15 +3738,63 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
                       step="0.01"
                       min="0.01"
                       max="100"
-                      placeholder={riskConfig?.daily_loss_limit_sol?.toString() || '0.1'}
+                      placeholder={riskConfig?.daily_loss_limit_sol?.toString() || '1.0'}
                       value={customRiskEdit.daily_loss_limit_sol}
                       onChange={(e) => setCustomRiskEdit(prev => ({ ...prev, daily_loss_limit_sol: e.target.value }))}
+                    />
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label>Stop Loss %</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      max="100"
+                      placeholder={riskConfig?.max_drawdown_percent?.toString() || '20'}
+                      value={customRiskEdit.max_drawdown_percent}
+                      onChange={(e) => setCustomRiskEdit(prev => ({ ...prev, max_drawdown_percent: e.target.value }))}
+                    />
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label>Take Profit %</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      max="200"
+                      placeholder={riskConfig?.take_profit_percent?.toString() || '15'}
+                      value={customRiskEdit.take_profit_percent}
+                      onChange={(e) => setCustomRiskEdit(prev => ({ ...prev, take_profit_percent: e.target.value }))}
+                    />
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label>Trailing Stop %</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      max="100"
+                      placeholder={riskConfig?.trailing_stop_percent?.toString() || '12'}
+                      value={customRiskEdit.trailing_stop_percent}
+                      onChange={(e) => setCustomRiskEdit(prev => ({ ...prev, trailing_stop_percent: e.target.value }))}
+                    />
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label>Time Limit (min)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      max="60"
+                      placeholder={riskConfig?.time_limit_minutes?.toString() || '7'}
+                      value={customRiskEdit.time_limit_minutes}
+                      onChange={(e) => setCustomRiskEdit(prev => ({ ...prev, time_limit_minutes: e.target.value }))}
                     />
                   </div>
                   <button
                     className={styles.saveButton}
                     onClick={handleSaveCustomRisk}
-                    disabled={savingCustomRisk || (!customRiskEdit.max_position_sol && !customRiskEdit.max_concurrent_positions && !customRiskEdit.daily_loss_limit_sol)}
+                    disabled={savingCustomRisk || (!customRiskEdit.max_position_sol && !customRiskEdit.max_concurrent_positions && !customRiskEdit.daily_loss_limit_sol && !customRiskEdit.max_drawdown_percent && !customRiskEdit.take_profit_percent && !customRiskEdit.trailing_stop_percent && !customRiskEdit.time_limit_minutes)}
                   >
                     {savingCustomRisk ? 'Saving...' : 'Save Custom Config'}
                   </button>
@@ -3809,62 +3901,6 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
                       <span>Notify Hecate: {executionConfig.notify_hecate_on_pending ? 'Yes' : 'No'}</span>
                     </div>
                   )}
-                </div>
-
-                <div className={styles.thresholdSettings}>
-                  <h4>Auto-Execute Thresholds</h4>
-                  <p className={styles.thresholdDescription}>
-                    These thresholds determine when auto-execution is allowed, even in autonomous mode.
-                  </p>
-
-                  <div className={styles.thresholdGrid}>
-                    <div className={styles.thresholdItem}>
-                      <label>Minimum Confidence</label>
-                      <div className={styles.inputWithUnit}>
-                        <input
-                          type="number"
-                          step="0.05"
-                          min="0"
-                          max="1"
-                          value={executionSettings.auto_min_confidence}
-                          onChange={(e) =>
-                            setExecutionSettings((prev) => ({
-                              ...prev,
-                              auto_min_confidence: parseFloat(e.target.value) || 0,
-                            }))
-                          }
-                        />
-                        <span className={styles.percentage}>
-                          ({(executionSettings.auto_min_confidence * 100).toFixed(0)}%)
-                        </span>
-                      </div>
-                      <span className={styles.hint}>
-                        Only auto-execute when strategy confidence exceeds this threshold
-                      </span>
-                    </div>
-
-                    <div className={styles.thresholdItem}>
-                      <label>Maximum Position for Auto</label>
-                      <div className={styles.inputWithUnit}>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0.01"
-                          value={executionSettings.auto_max_position_sol}
-                          onChange={(e) =>
-                            setExecutionSettings((prev) => ({
-                              ...prev,
-                              auto_max_position_sol: parseFloat(e.target.value) || 0,
-                            }))
-                          }
-                        />
-                        <span className={styles.unit}>SOL</span>
-                      </div>
-                      <span className={styles.hint}>
-                        Positions larger than this always require manual approval
-                      </span>
-                    </div>
-                  </div>
                 </div>
 
                 <div className={styles.safetySettings}>
@@ -4486,7 +4522,11 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
 
                 <div className={styles.contextSection}>
                   <h4>Edge Context</h4>
-                  <pre className={styles.contextPre}>{consensusDetail.edge_context}</pre>
+                  <CodeBlock
+                    code={consensusDetail.edge_context}
+                    language="markdown"
+                    maxHeight="200px"
+                  />
                 </div>
               </div>
             </div>
@@ -5000,79 +5040,81 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     );
   };
 
-  const renderNavigationTabs = () => (
-    <div className={styles.mainNavTabs}>
-      <div className={styles.navTabsLeft}>
+  const NAV_ITEMS: Array<{ id: ArbFarmView; icon: string; label: string; section?: string }> = [
+    { id: 'dashboard', icon: '📊', label: 'Dashboard', section: 'Main' },
+    { id: 'curves', icon: '📈', label: 'Curve Bonding', section: 'Main' },
+    { id: 'kol-tracker', icon: '👥', label: 'KOL Tracker', section: 'Trading' },
+    { id: 'consensus', icon: '🤝', label: 'Consensus', section: 'Learning' },
+    { id: 'recommendations', icon: '💡', label: 'Recommendations', section: 'Learning' },
+    { id: 'engrams', icon: '🧠', label: 'Engrams', section: 'Learning' },
+    { id: 'conversations', icon: '💬', label: 'Conversations', section: 'Learning' },
+    { id: 'settings', icon: '⚙️', label: 'Settings', section: 'System' },
+  ];
+
+  const renderSidebar = () => {
+    const sections = NAV_ITEMS.reduce((acc, item) => {
+      const section = item.section || 'Other';
+      if (!acc[section]) acc[section] = [];
+      acc[section].push(item);
+      return acc;
+    }, {} as Record<string, typeof NAV_ITEMS>);
+
+    return (
+      <aside className={styles.arbfarmSidebar}>
+        {Object.entries(sections).map(([sectionName, items]) => (
+          <div key={sectionName} className={styles.arbfarmSidebarSection}>
+            <div className={styles.arbfarmSidebarTitle}>{sectionName}</div>
+            {items.map((item) => (
+              <button
+                key={item.id}
+                className={`${styles.arbfarmNavButton} ${activeView === item.id ? styles.active : ''}`}
+                onClick={() => onViewChange(item.id)}
+              >
+                <span className={styles.arbfarmNavIcon}>{item.icon}</span>
+                <span className={styles.arbfarmNavLabel}>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        ))}
+
+        <div className={styles.arbfarmSidebarSection}>
+          <div className={styles.arbfarmSidebarTitle}>Status</div>
+          <div className={styles.sidebarStatus}>
+            <span className={styles.lastRefreshTime}>
+              Last refresh: {lastRefresh.toLocaleTimeString()}
+            </span>
+            <button
+              className={`${styles.refreshButton} ${isRefreshing ? styles.spinning : ''}`}
+              onClick={handleRefreshAll}
+              disabled={isRefreshing}
+              title="Refresh all data"
+            >
+              ↻ Refresh
+            </button>
+          </div>
+        </div>
+      </aside>
+    );
+  };
+
+  const renderMobileNav = () => (
+    <div className={styles.arbfarmMobileNav}>
+      {NAV_ITEMS.map((item) => (
         <button
-          className={`${styles.navTab} ${activeView === 'dashboard' ? styles.active : ''}`}
-          onClick={() => onViewChange('dashboard')}
+          key={item.id}
+          className={`${styles.arbfarmMobileButton} ${activeView === item.id ? styles.active : ''}`}
+          onClick={() => onViewChange(item.id)}
         >
-          Dashboard
+          {item.icon} {item.label}
         </button>
-        <button
-          className={`${styles.navTab} ${activeView === 'curves' ? styles.active : ''}`}
-          onClick={() => onViewChange('curves')}
-        >
-          Curve Bonding
-        </button>
-        <button
-          className={`${styles.navTab} ${activeView === 'opportunities' ? styles.active : ''}`}
-          onClick={() => onViewChange('opportunities')}
-        >
-          Opportunities
-        </button>
-        <button
-          className={`${styles.navTab} ${activeView === 'kol-tracker' ? styles.active : ''}`}
-          onClick={() => onViewChange('kol-tracker')}
-        >
-          KOL Tracker
-        </button>
-        <button
-          className={`${styles.navTab} ${activeView === 'consensus' ? styles.active : ''}`}
-          onClick={() => onViewChange('consensus')}
-        >
-          Consensus
-        </button>
-        <button
-          className={`${styles.navTab} ${activeView === 'recommendations' ? styles.active : ''}`}
-          onClick={() => onViewChange('recommendations')}
-        >
-          Recommendations
-        </button>
-        <button
-          className={`${styles.navTab} ${activeView === 'engrams' ? styles.active : ''}`}
-          onClick={() => onViewChange('engrams')}
-        >
-          Engrams
-        </button>
-        <button
-          className={`${styles.navTab} ${activeView === 'settings' ? styles.active : ''}`}
-          onClick={() => onViewChange('settings')}
-        >
-          Settings
-        </button>
-      </div>
-      <div className={styles.navTabsRight}>
-        <span className={styles.lastRefreshTime}>
-          {lastRefresh.toLocaleTimeString()}
-        </span>
-        <button
-          className={`${styles.refreshButton} ${isRefreshing ? styles.spinning : ''}`}
-          onClick={handleRefreshAll}
-          disabled={isRefreshing}
-          title="Refresh all data"
-        >
-          ↻
-        </button>
-      </div>
+      ))}
     </div>
   );
 
-  switch (activeView) {
-    case 'dashboard':
-      return (
-        <div className={styles.viewContainer}>
-          {renderNavigationTabs()}
+  const renderContent = () => {
+    switch (activeView) {
+      case 'dashboard':
+        return (
           <HomeTab
             positions={edges.data?.filter(e => e.status === 'executed').map(e => ({
               id: e.id,
@@ -5085,68 +5127,40 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
             recentEvents={recentEvents}
             liveTrades={trades.data?.slice(0, 10)}
           />
-        </div>
-      );
-    case 'opportunities':
-      return renderOpportunitiesView();
-    case 'signals':
-      return renderSignalsView();
-    case 'strategies':
-      return renderStrategiesView();
-    case 'curves':
-      return (
-        <div className={styles.viewContainer}>
-          {renderNavigationTabs()}
+        );
+      case 'signals':
+        return renderSignalsView();
+      case 'strategies':
+        return renderStrategiesView();
+      case 'curves':
+        return (
           <CurvePanel
             onError={(msg) => console.error('Curve error:', msg)}
             onSuccess={(msg) => console.log('Curve success:', msg)}
           />
-        </div>
-      );
-    case 'cows':
-      return renderCowsView();
-    case 'threats':
-      return renderThreatsView();
-    case 'kol-tracker':
-      return renderKOLTrackerView();
-    case 'helius':
-      return renderHeliusView();
-    case 'settings':
-      return renderSettingsView();
-    case 'research':
-      return renderResearchView();
-    case 'consensus':
-      return (
-        <div className={styles.viewContainer}>
-          {renderNavigationTabs()}
-          <ConsensusTab />
-        </div>
-      );
-    case 'conversations':
-      return (
-        <div className={styles.viewContainer}>
-          {renderNavigationTabs()}
-          <ConversationsTab />
-        </div>
-      );
-    case 'engrams':
-      return (
-        <div className={styles.viewContainer}>
-          {renderNavigationTabs()}
-          <EngramBrowserTab />
-        </div>
-      );
-    case 'recommendations':
-      return (
-        <div className={styles.viewContainer}>
-          {renderNavigationTabs()}
-          <RecommendationsTab />
-        </div>
-      );
-    default:
-      return (
-        <div className={styles.viewContainer}>
-          {renderNavigationTabs()}
+        );
+      case 'cows':
+        return renderCowsView();
+      case 'threats':
+        return renderThreatsView();
+      case 'kol-tracker':
+        return renderKOLTrackerView();
+      case 'helius':
+        return renderHeliusView();
+      case 'settings':
+        return renderSettingsView();
+      case 'research':
+        return renderResearchView();
+      case 'consensus':
+        return <ConsensusTab />;
+      case 'conversations':
+        return <ConversationsTab />;
+      case 'engrams':
+        return <EngramBrowserTab />;
+      case 'recommendations':
+        return <RecommendationsTab />;
+      default:
+        return (
           <HomeTab
             positions={edges.data?.filter(e => e.status === 'executed').map(e => ({
               id: e.id,
@@ -5159,9 +5173,19 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
             recentEvents={recentEvents}
             liveTrades={trades.data?.slice(0, 10)}
           />
-        </div>
-      );
-  }
+        );
+    }
+  };
+
+  return (
+    <div className={styles.arbfarmLayout}>
+      {renderSidebar()}
+      {renderMobileNav()}
+      <div className={styles.arbfarmContent}>
+        {renderContent()}
+      </div>
+    </div>
+  );
 };
 
 export default ArbFarmDashboard;

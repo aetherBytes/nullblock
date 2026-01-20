@@ -6,9 +6,9 @@ use uuid::Uuid;
 
 use crate::error::AppResult;
 use crate::events::{ArbEvent, AgentType, EventSource, scanner as scanner_topics, swarm as swarm_topics};
-use crate::models::{Signal, VenueType};
+use crate::models::{Signal, SignalType, VenueType};
 use crate::venues::MevVenue;
-use super::StrategyEngine;
+use super::{GraduationTracker, StrategyEngine};
 
 pub struct ScannerAgent {
     id: Uuid,
@@ -18,6 +18,7 @@ pub struct ScannerAgent {
     is_running: Arc<RwLock<bool>>,
     stats: Arc<RwLock<ScannerStats>>,
     strategy_engine: Arc<RwLock<Option<Arc<StrategyEngine>>>>,
+    graduation_tracker: Arc<RwLock<Option<Arc<GraduationTracker>>>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -58,6 +59,7 @@ impl ScannerAgent {
             is_running: Arc::new(RwLock::new(false)),
             stats: Arc::new(RwLock::new(ScannerStats::default())),
             strategy_engine: Arc::new(RwLock::new(None)),
+            graduation_tracker: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -69,6 +71,12 @@ impl ScannerAgent {
         let mut se = self.strategy_engine.write().await;
         *se = Some(engine);
         tracing::info!("📡 Scanner: Strategy engine connected (auto-processing enabled)");
+    }
+
+    pub async fn set_graduation_tracker(&self, tracker: Arc<GraduationTracker>) {
+        let mut gt = self.graduation_tracker.write().await;
+        *gt = Some(tracker);
+        tracing::info!("📡 Scanner: Graduation tracker connected (auto-tracking enabled for CurveGraduation signals)");
     }
 
     pub async fn add_venue(&self, venue: Box<dyn MevVenue>) {
@@ -140,6 +148,7 @@ impl ScannerAgent {
         let is_running = Arc::clone(&self.is_running);
         let scan_interval = self.scan_interval_ms;
         let strategy_engine = Arc::clone(&self.strategy_engine);
+        let graduation_tracker = Arc::clone(&self.graduation_tracker);
 
         let _ = event_tx.send(ArbEvent::new(
             "scanner_started",
@@ -230,6 +239,50 @@ impl ScannerAgent {
                     *stats_guard.signals_by_venue.entry(venue_id).or_insert(0) += 1;
                 }
                 drop(stats_guard);
+
+                // Auto-track CurveGraduation signals in graduation tracker
+                let gt_guard = graduation_tracker.read().await;
+                if let Some(tracker) = gt_guard.as_ref() {
+                    for signal in all_signals.iter().filter(|s| s.signal_type == SignalType::CurveGraduation) {
+                        if let Some(ref mint) = signal.token_mint {
+                            // Skip if already tracking
+                            if tracker.is_token_tracked(mint).await {
+                                continue;
+                            }
+
+                            let name = signal.metadata.get("token_name")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("Unknown")
+                                .to_string();
+                            let symbol = signal.metadata.get("token_symbol")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("???")
+                                .to_string();
+                            let progress = signal.metadata.get("progress_percent")
+                                .and_then(|v| v.as_f64())
+                                .unwrap_or(0.0);
+                            let venue = format!("{:?}", signal.venue_type).to_lowercase();
+
+                            // Auto-track with persistence
+                            tracker.track_with_persistence(
+                                mint,
+                                &name,
+                                &symbol,
+                                &venue,
+                                Uuid::nil(), // Strategy ID assigned later when edge is created
+                                progress,
+                            ).await;
+
+                            tracing::info!(
+                                "🎯 Auto-tracked {} ({}) from scanner - progress: {:.1}%",
+                                symbol,
+                                mint,
+                                progress
+                            );
+                        }
+                    }
+                }
+                drop(gt_guard);
 
                 // Auto-process signals through strategy engine if configured
                 if !all_signals.is_empty() {

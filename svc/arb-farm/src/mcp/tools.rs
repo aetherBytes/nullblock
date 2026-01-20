@@ -1904,6 +1904,27 @@ pub fn get_learning_tools() -> Vec<McpTool> {
             tags: learning_tag.clone(),
         },
         McpTool {
+            name: "engram_apply_recommendation".to_string(),
+            description: "Apply a recommendation's suggested action to the system. Modifies configs, strategies, or adds avoidances based on the recommendation type. Recommendation must be 'pending' or 'acknowledged'.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "recommendation_id": {
+                        "type": "string",
+                        "description": "UUID of the recommendation to apply"
+                    },
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": "If true, shows what would be changed without applying",
+                        "default": false
+                    }
+                },
+                "required": ["recommendation_id"]
+            }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: learning_tag.clone(),
+        },
+        McpTool {
             name: "engram_get_trade_history".to_string(),
             description: "Get trade history summaries stored as engrams. Returns transaction summaries with PnL, venue, and execution details.".to_string(),
             input_schema: serde_json::json!({

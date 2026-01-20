@@ -98,6 +98,7 @@ pub async fn execute_tool(state: &AppState, name: &str, args: Value) -> McpToolR
         // Learning engram tools (A2A tagged)
         "engram_get_arbfarm_learning" => engram_get_arbfarm_learning(state, args).await,
         "engram_acknowledge_recommendation" => engram_acknowledge_recommendation(state, args).await,
+        "engram_apply_recommendation" => engram_apply_recommendation(state, args).await,
         "engram_get_trade_history" => engram_get_trade_history(state, args).await,
         "engram_get_errors" => engram_get_errors(state, args).await,
         "engram_request_analysis" => engram_request_analysis(state, args).await,
@@ -708,13 +709,69 @@ async fn execution_toggle(state: &AppState, args: Value) -> McpToolResult {
 
     let config = state.approval_manager.toggle_execution(enabled).await;
 
+    // Start/stop the autonomous executor
+    if enabled {
+        crate::agents::start_autonomous_executor(state.autonomous_executor.clone());
+        tracing::info!("Auto-execution enabled via MCP toggle - starting executor");
+    } else {
+        state.autonomous_executor.stop().await;
+        tracing::info!("Auto-execution disabled via MCP toggle - stopping executor");
+    }
+
+    // Update all autonomous-capable strategies (curve_arb AND graduation_snipe)
+    let strategies = state.strategy_engine.list_strategies().await;
+    let mut updated_count = 0;
+    for strategy in strategies.iter().filter(|s|
+        s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe"
+    ) {
+        let mut updated_params = strategy.risk_params.clone();
+        updated_params.auto_execute_enabled = enabled;
+
+        let new_execution_mode = if enabled { "autonomous" } else { "agent_directed" };
+
+        // Update in-memory engine
+        let _ = state.strategy_engine.set_risk_params(strategy.id, updated_params.clone()).await;
+        let _ = state.strategy_engine.set_execution_mode(strategy.id, new_execution_mode.to_string()).await;
+
+        // Persist to database
+        use crate::database::repositories::strategies::UpdateStrategyRecord;
+        let _ = state.strategy_repo.update(strategy.id, UpdateStrategyRecord {
+            name: None,
+            venue_types: None,
+            execution_mode: Some(new_execution_mode.to_string()),
+            risk_params: Some(updated_params.clone()),
+            is_active: None,
+        }).await;
+
+        // Persist to engrams
+        if state.engrams_client.is_configured() {
+            if let Some(wallet) = state.dev_signer.get_address() {
+                let risk_params_value = serde_json::to_value(&updated_params).unwrap_or_default();
+                let _ = state.engrams_client.save_strategy_full(
+                    &wallet,
+                    &strategy.id.to_string(),
+                    &strategy.name,
+                    &strategy.strategy_type,
+                    &strategy.venue_types,
+                    new_execution_mode,
+                    &risk_params_value,
+                    strategy.is_active,
+                ).await;
+            }
+        }
+
+        updated_count += 1;
+    }
+
     McpToolResult::success(serde_json::json!({
         "success": true,
         "auto_execution_enabled": config.auto_execution_enabled,
+        "executor_running": enabled,
+        "strategies_updated": updated_count,
         "message": if config.auto_execution_enabled {
-            "Auto-execution enabled"
+            "Auto-execution enabled - executor started"
         } else {
-            "Auto-execution disabled"
+            "Auto-execution disabled - executor stopped"
         }
     }).to_string())
 }
@@ -871,6 +928,246 @@ async fn engram_acknowledge_recommendation(state: &AppState, args: Value) -> Mcp
     }
 }
 
+async fn engram_apply_recommendation(state: &AppState, args: Value) -> McpToolResult {
+    if !state.engrams_client.is_configured() {
+        return McpToolResult::error("Engrams service not configured");
+    }
+
+    let recommendation_id = match args.get("recommendation_id").and_then(|v| v.as_str()) {
+        Some(id) => match uuid::Uuid::parse_str(id) {
+            Ok(uuid) => uuid,
+            Err(_) => return McpToolResult::error("Invalid recommendation_id format"),
+        },
+        None => return McpToolResult::error("recommendation_id is required"),
+    };
+
+    let dry_run = args.get("dry_run").and_then(|v| v.as_bool()).unwrap_or(false);
+    let wallet = state.dev_signer.get_address().unwrap_or_default();
+
+    // Fetch the recommendation from engrams (pass None for status filter)
+    let recommendations = match state.engrams_client.get_recommendations(&wallet, None, Some(100)).await {
+        Ok(recs) => recs,
+        Err(e) => return McpToolResult::error(format!("Failed to fetch recommendations: {}", e)),
+    };
+
+    // Find the recommendation by ID (recommendations are returned directly, not wrapped)
+    let recommendation = match recommendations.iter().find(|r| r.recommendation_id == recommendation_id) {
+        Some(r) => r.clone(),
+        None => return McpToolResult::error(format!("Recommendation {} not found", recommendation_id)),
+    };
+
+    // Check status - must be pending or acknowledged
+    if recommendation.status != crate::engrams::RecommendationStatus::Pending
+        && recommendation.status != crate::engrams::RecommendationStatus::Acknowledged
+    {
+        return McpToolResult::error(format!(
+            "Recommendation already has status {:?}. Can only apply pending or acknowledged recommendations.",
+            recommendation.status
+        ));
+    }
+
+    let action = &recommendation.suggested_action;
+    let mut changes_made = Vec::new();
+
+    // Apply based on action type
+    match action.action_type {
+        crate::engrams::SuggestedActionType::ConfigChange => {
+            // Update consensus config
+            let target = &action.target;
+            let new_value = &action.suggested_value;
+
+            if target.starts_with("consensus.") {
+                let field = target.strip_prefix("consensus.").unwrap_or(target);
+                if !dry_run {
+                    let mut config = state.consensus_config.write().await;
+                    match field {
+                        "min_consensus_threshold" => {
+                            if let Some(v) = new_value.as_f64() {
+                                config.min_consensus_threshold = v;
+                                changes_made.push(format!("Set consensus.min_consensus_threshold to {}", v));
+                            }
+                        }
+                        "review_interval_hours" => {
+                            if let Some(v) = new_value.as_u64() {
+                                config.review_interval_hours = v as u32;
+                                changes_made.push(format!("Set consensus.review_interval_hours to {}", v));
+                            }
+                        }
+                        _ => {
+                            changes_made.push(format!("Unknown consensus field: {}", field));
+                        }
+                    }
+                } else {
+                    changes_made.push(format!("[DRY RUN] Would set {} to {:?}", target, new_value));
+                }
+            } else if target.starts_with("risk.") {
+                let field = target.strip_prefix("risk.").unwrap_or(target);
+                if !dry_run {
+                    let mut config = state.risk_config.write().await;
+                    match field {
+                        "max_position_sol" => {
+                            if let Some(v) = new_value.as_f64() {
+                                config.max_position_sol = v;
+                                changes_made.push(format!("Set risk.max_position_sol to {}", v));
+                            }
+                        }
+                        "daily_loss_limit_sol" => {
+                            if let Some(v) = new_value.as_f64() {
+                                config.daily_loss_limit_sol = v;
+                                changes_made.push(format!("Set risk.daily_loss_limit_sol to {}", v));
+                            }
+                        }
+                        "max_drawdown_percent" => {
+                            if let Some(v) = new_value.as_f64() {
+                                config.max_drawdown_percent = v;
+                                changes_made.push(format!("Set risk.max_drawdown_percent to {}", v));
+                            }
+                        }
+                        "max_concurrent_positions" => {
+                            if let Some(v) = new_value.as_u64() {
+                                config.max_concurrent_positions = v as u32;
+                                changes_made.push(format!("Set risk.max_concurrent_positions to {}", v));
+                            }
+                        }
+                        _ => {
+                            changes_made.push(format!("Unknown risk field: {}", field));
+                        }
+                    }
+                } else {
+                    changes_made.push(format!("[DRY RUN] Would set {} to {:?}", target, new_value));
+                }
+            } else {
+                changes_made.push(format!("Unrecognized config target: {}", target));
+            }
+        }
+        crate::engrams::SuggestedActionType::StrategyToggle => {
+            // Toggle strategy active state
+            let strategy_id_str = &action.target;
+            let enable = action.suggested_value.as_bool().unwrap_or(false);
+
+            if let Ok(strategy_id) = uuid::Uuid::parse_str(strategy_id_str) {
+                if !dry_run {
+                    match state.strategy_engine.toggle_strategy(strategy_id, enable).await {
+                        Ok(_) => {
+                            changes_made.push(format!(
+                                "Strategy {} {}",
+                                strategy_id,
+                                if enable { "enabled" } else { "disabled" }
+                            ));
+                        }
+                        Err(e) => {
+                            changes_made.push(format!("Failed to toggle strategy: {}", e));
+                        }
+                    }
+                } else {
+                    changes_made.push(format!(
+                        "[DRY RUN] Would {} strategy {}",
+                        if enable { "enable" } else { "disable" },
+                        strategy_id
+                    ));
+                }
+            } else {
+                changes_made.push(format!("Invalid strategy ID: {}", strategy_id_str));
+            }
+        }
+        crate::engrams::SuggestedActionType::RiskAdjustment => {
+            // Similar to ConfigChange but specifically for risk params
+            let target = &action.target;
+            let new_value = &action.suggested_value;
+
+            if !dry_run {
+                let mut config = state.risk_config.write().await;
+                match target.as_str() {
+                    "max_position_sol" => {
+                        if let Some(v) = new_value.as_f64() {
+                            config.max_position_sol = v;
+                            changes_made.push(format!("Set max_position_sol to {}", v));
+                        }
+                    }
+                    "daily_loss_limit_sol" => {
+                        if let Some(v) = new_value.as_f64() {
+                            config.daily_loss_limit_sol = v;
+                            changes_made.push(format!("Set daily_loss_limit_sol to {}", v));
+                        }
+                    }
+                    "max_concurrent_positions" => {
+                        if let Some(v) = new_value.as_u64() {
+                            config.max_concurrent_positions = v as u32;
+                            changes_made.push(format!("Set max_concurrent_positions to {}", v));
+                        }
+                    }
+                    "max_drawdown_percent" => {
+                        if let Some(v) = new_value.as_f64() {
+                            config.max_drawdown_percent = v;
+                            changes_made.push(format!("Set max_drawdown_percent to {}", v));
+                        }
+                    }
+                    _ => {
+                        changes_made.push(format!("Unknown risk adjustment target: {}", target));
+                    }
+                }
+            } else {
+                changes_made.push(format!("[DRY RUN] Would set {} to {:?}", target, new_value));
+            }
+        }
+        crate::engrams::SuggestedActionType::AvoidToken => {
+            // Add token to avoidance list
+            let token_mint = &action.target;
+            let reason = action.reasoning.clone();
+
+            if !dry_run {
+                let avoidance = crate::engrams::client::AvoidanceEngram {
+                    entity_type: "token".to_string(),
+                    address: token_mint.clone(),
+                    reason: reason.clone(),
+                    severity: "Medium".to_string(),
+                    detected_at: chrono::Utc::now().to_rfc3339(),
+                    evidence: serde_json::json!({
+                        "source": "recommendation",
+                        "recommendation_id": recommendation_id.to_string(),
+                    }),
+                };
+                match state.engrams_client.save_avoidance(&wallet, avoidance).await {
+                    Ok(_) => {
+                        changes_made.push(format!("Added {} to avoidance list: {}", token_mint, reason));
+                    }
+                    Err(e) => {
+                        changes_made.push(format!("Failed to add avoidance: {}", e));
+                    }
+                }
+            } else {
+                changes_made.push(format!("[DRY RUN] Would add {} to avoidance list", token_mint));
+            }
+        }
+        crate::engrams::SuggestedActionType::VenueDisable => {
+            // Venue disabling not yet implemented
+            changes_made.push(format!(
+                "Venue disable for '{}' not yet implemented. Please disable manually.",
+                action.target
+            ));
+        }
+    }
+
+    // Update recommendation status to Applied (unless dry run)
+    if !dry_run && !changes_made.is_empty() {
+        let _ = state.engrams_client.update_recommendation_status(
+            &wallet,
+            &recommendation_id,
+            crate::engrams::RecommendationStatus::Applied,
+        ).await;
+    }
+
+    McpToolResult::success(serde_json::json!({
+        "success": true,
+        "recommendation_id": recommendation_id.to_string(),
+        "dry_run": dry_run,
+        "action_type": format!("{:?}", action.action_type),
+        "target": action.target,
+        "changes_made": changes_made,
+        "status": if dry_run { "simulated" } else { "applied" }
+    }).to_string())
+}
+
 async fn engram_get_trade_history(state: &AppState, args: Value) -> McpToolResult {
     if !state.engrams_client.is_configured() {
         return McpToolResult::error("Engrams service not configured");
@@ -983,42 +1280,202 @@ async fn engram_request_analysis(state: &AppState, args: Value) -> McpToolResult
     let errors = state.engrams_client.get_error_history(&wallet, Some(limit / 2)).await.unwrap_or_default();
 
     // Calculate summary stats
-    let total_trades = trades.len();
-    let winning_trades = trades.iter().filter(|t| t.pnl_sol.unwrap_or(0.0) > 0.0).count();
+    let total_trades = trades.len() as u32;
+    let winning_trades = trades.iter().filter(|t| t.pnl_sol.unwrap_or(0.0) > 0.0).count() as u32;
     let total_pnl: f64 = trades.iter().filter_map(|t| t.pnl_sol).sum();
-    let win_rate = if total_trades > 0 { (winning_trades as f64 / total_trades as f64) * 100.0 } else { 0.0 };
+    let win_rate = if total_trades > 0 { winning_trades as f64 / total_trades as f64 } else { 0.0 };
+
+    // Aggregate error counts by type
+    let mut error_counts: std::collections::HashMap<String, (u32, String)> = std::collections::HashMap::new();
+    for error in &errors {
+        let error_type_str = serde_json::to_string(&error.error_type)
+            .unwrap_or_else(|_| "unknown".to_string())
+            .trim_matches('"')
+            .to_string();
+        let entry = error_counts.entry(error_type_str).or_insert((0, error.message.clone()));
+        entry.0 += 1;
+    }
+
+    let error_summaries: Vec<crate::consensus::ErrorSummary> = error_counts
+        .into_iter()
+        .map(|(error_type, (count, last_message))| crate::consensus::ErrorSummary {
+            error_type,
+            count,
+            last_message,
+        })
+        .collect();
+
+    // Find best and worst trades
+    let best_trade = trades.iter()
+        .filter_map(|t| t.pnl_sol.map(|pnl| (t.token_symbol.clone().unwrap_or_else(|| t.token_mint[..8].to_string()), pnl)))
+        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        .map(|(symbol, pnl)| crate::consensus::TradeHighlightContext { symbol, pnl_sol: pnl });
+
+    let worst_trade = trades.iter()
+        .filter_map(|t| t.pnl_sol.map(|pnl| (t.token_symbol.clone().unwrap_or_else(|| t.token_mint[..8].to_string()), pnl)))
+        .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        .map(|(symbol, pnl)| crate::consensus::TradeHighlightContext { symbol, pnl_sol: pnl });
+
+    // Build analysis context
+    let context = crate::consensus::AnalysisContext {
+        total_trades,
+        winning_trades,
+        win_rate,
+        total_pnl_sol: total_pnl,
+        today_pnl_sol: 0.0, // Would need DB query for accurate value
+        week_pnl_sol: total_pnl, // Approximation based on time_period
+        avg_hold_minutes: 0.0, // Would need DB query for accurate value
+        best_trade,
+        worst_trade,
+        take_profit_count: winning_trades,
+        stop_loss_count: total_trades.saturating_sub(winning_trades),
+        recent_errors: error_summaries,
+        time_period: time_period.to_string(),
+    };
 
     // Check if consensus engine is available
     let consensus_available = state.consensus_engine.is_ready().await;
 
-    let result = if consensus_available {
-        // Trigger consensus analysis (async, won't block)
-        let topic = match analysis_type {
-            "risk_assessment" => crate::engrams::schemas::ConversationTopic::RiskAssessment,
-            "strategy_optimization" => crate::engrams::schemas::ConversationTopic::StrategyReview,
-            "pattern_discovery" => crate::engrams::schemas::ConversationTopic::PatternDiscovery,
-            _ => crate::engrams::schemas::ConversationTopic::TradeAnalysis,
-        };
+    let result = if consensus_available && total_trades > 0 {
+        // Run consensus analysis synchronously
+        match state.consensus_engine.request_analysis(context).await {
+            Ok(analysis_result) => {
+                // Save recommendations to engrams and collect IDs
+                let mut recommendation_ids: Vec<uuid::Uuid> = Vec::new();
+                for rec in &analysis_result.recommendations {
+                    let rec_id = uuid::Uuid::new_v4();
+                    recommendation_ids.push(rec_id);
+                    let recommendation = crate::engrams::schemas::Recommendation {
+                        recommendation_id: rec_id,
+                        source: crate::engrams::schemas::RecommendationSource::ConsensusLlm,
+                        category: match rec.category.as_str() {
+                            "strategy" => crate::engrams::schemas::RecommendationCategory::Strategy,
+                            "risk" => crate::engrams::schemas::RecommendationCategory::Risk,
+                            "timing" => crate::engrams::schemas::RecommendationCategory::Timing,
+                            "venue" => crate::engrams::schemas::RecommendationCategory::Venue,
+                            "position" => crate::engrams::schemas::RecommendationCategory::Position,
+                            _ => crate::engrams::schemas::RecommendationCategory::Strategy,
+                        },
+                        title: rec.title.clone(),
+                        description: rec.description.clone(),
+                        suggested_action: crate::engrams::schemas::SuggestedAction {
+                            action_type: match rec.action_type.as_str() {
+                                "config_change" => crate::engrams::schemas::SuggestedActionType::ConfigChange,
+                                "strategy_toggle" => crate::engrams::schemas::SuggestedActionType::StrategyToggle,
+                                "risk_adjustment" => crate::engrams::schemas::SuggestedActionType::RiskAdjustment,
+                                "venue_disable" => crate::engrams::schemas::SuggestedActionType::VenueDisable,
+                                "avoid_token" => crate::engrams::schemas::SuggestedActionType::AvoidToken,
+                                _ => crate::engrams::schemas::SuggestedActionType::ConfigChange,
+                            },
+                            target: rec.target.clone(),
+                            current_value: rec.current_value.clone(),
+                            suggested_value: rec.suggested_value.clone(),
+                            reasoning: rec.reasoning.clone(),
+                        },
+                        confidence: rec.confidence,
+                        supporting_data: crate::engrams::schemas::SupportingData {
+                            trades_analyzed: total_trades,
+                            time_period: time_period.to_string(),
+                            relevant_engrams: Vec::new(),
+                            metrics: Some(serde_json::json!({
+                                "win_rate": win_rate,
+                                "total_pnl": total_pnl,
+                            })),
+                        },
+                        status: crate::engrams::schemas::RecommendationStatus::Pending,
+                        created_at: chrono::Utc::now(),
+                        applied_at: None,
+                    };
+                    let _ = state.engrams_client.save_recommendation(&wallet, &recommendation).await;
+                }
 
-        // Queue analysis request
-        if let Err(e) = state.consensus_engine.request_analysis(topic, time_period.to_string()).await {
-            return McpToolResult::error(format!("Failed to request analysis: {}", e));
+                // Save the full consensus analysis as an engram
+                let analysis_id = uuid::Uuid::new_v4();
+                let consensus_analysis = crate::engrams::schemas::ConsensusAnalysis {
+                    analysis_id,
+                    analysis_type: match analysis_type {
+                        "trade_review" => crate::engrams::schemas::ConsensusAnalysisType::TradeReview,
+                        "risk_assessment" => crate::engrams::schemas::ConsensusAnalysisType::RiskAssessment,
+                        "strategy_optimization" => crate::engrams::schemas::ConsensusAnalysisType::StrategyOptimization,
+                        "pattern_discovery" => crate::engrams::schemas::ConsensusAnalysisType::PatternDiscovery,
+                        _ => crate::engrams::schemas::ConsensusAnalysisType::TradeReview,
+                    },
+                    time_period: time_period.to_string(),
+                    total_trades_analyzed: total_trades,
+                    overall_assessment: analysis_result.overall_assessment.clone(),
+                    risk_alerts: analysis_result.risk_alerts.clone(),
+                    recommendations_count: analysis_result.recommendations.len() as u32,
+                    recommendation_ids,
+                    avg_confidence: analysis_result.avg_confidence,
+                    models_queried: analysis_result.model_votes.clone(),
+                    total_latency_ms: analysis_result.total_latency_ms,
+                    context_summary: crate::engrams::schemas::AnalysisContextSummary {
+                        win_rate,
+                        total_pnl_sol: total_pnl,
+                        top_venue: None,
+                        error_count: errors.len() as u32,
+                    },
+                    created_at: chrono::Utc::now(),
+                };
+
+                if let Err(e) = state.engrams_client.save_consensus_analysis(&wallet, &consensus_analysis).await {
+                    tracing::warn!("Failed to save consensus analysis engram: {}", e);
+                }
+
+                serde_json::json!({
+                    "success": true,
+                    "message": format!("Analysis completed for {} over {}", analysis_type, time_period),
+                    "analysis_type": analysis_type,
+                    "time_period": time_period,
+                    "consensus_status": "completed",
+                    "analysis_result": {
+                        "recommendations_count": analysis_result.recommendations.len(),
+                        "risk_alerts": analysis_result.risk_alerts,
+                        "overall_assessment": analysis_result.overall_assessment,
+                        "avg_confidence": analysis_result.avg_confidence,
+                        "models_queried": analysis_result.model_votes,
+                    },
+                    "data_summary": {
+                        "trades_in_scope": total_trades,
+                        "winning_trades": winning_trades,
+                        "win_rate_percent": win_rate * 100.0,
+                        "total_pnl_sol": total_pnl,
+                        "errors_in_scope": errors.len()
+                    },
+                    "analysis_engram_id": analysis_id.to_string(),
+                    "note": "Analysis and recommendations saved as engrams. Retrieve with engram_get_arbfarm_learning category='recommendation' or category='analysis'"
+                })
+            }
+            Err(e) => {
+                serde_json::json!({
+                    "success": false,
+                    "message": format!("Analysis failed: {}", e),
+                    "analysis_type": analysis_type,
+                    "time_period": time_period,
+                    "data_summary": {
+                        "trades_in_scope": total_trades,
+                        "winning_trades": winning_trades,
+                        "win_rate_percent": win_rate * 100.0,
+                        "total_pnl_sol": total_pnl,
+                        "errors_in_scope": errors.len()
+                    }
+                })
+            }
         }
-
+    } else if total_trades == 0 {
         serde_json::json!({
-            "success": true,
-            "message": format!("Analysis requested for {} over {}", analysis_type, time_period),
+            "success": false,
+            "message": "No trades found in the specified time period",
             "analysis_type": analysis_type,
             "time_period": time_period,
-            "consensus_status": "analysis_queued",
             "data_summary": {
-                "trades_in_scope": total_trades,
-                "winning_trades": winning_trades,
-                "win_rate_percent": win_rate,
-                "total_pnl_sol": total_pnl,
+                "trades_in_scope": 0,
+                "winning_trades": 0,
+                "win_rate_percent": 0.0,
+                "total_pnl_sol": 0.0,
                 "errors_in_scope": errors.len()
             },
-            "note": "Analysis results will be saved as recommendation engrams. Check back using engram_get_arbfarm_learning with category='recommendations'"
+            "note": "Start trading to generate data for analysis"
         })
     } else {
         serde_json::json!({
@@ -1029,7 +1486,7 @@ async fn engram_request_analysis(state: &AppState, args: Value) -> McpToolResult
             "data_summary": {
                 "trades_in_scope": total_trades,
                 "winning_trades": winning_trades,
-                "win_rate_percent": win_rate,
+                "win_rate_percent": win_rate * 100.0,
                 "total_pnl_sol": total_pnl,
                 "errors_in_scope": errors.len()
             },

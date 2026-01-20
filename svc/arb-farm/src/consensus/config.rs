@@ -7,6 +7,8 @@ pub const DEV_WALLET: &str = "YOUR_DEV_WALLET_PUBKEY";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsensusConfig {
     pub enabled: bool,
+    pub consensus_enabled_for_execution: bool,
+    pub fail_open_on_consensus_error: bool,
     pub models: Vec<ConsensusModelConfig>,
     pub min_consensus_threshold: f64,
     pub auto_apply_recommendations: bool,
@@ -19,6 +21,8 @@ impl Default for ConsensusConfig {
     fn default() -> Self {
         Self {
             enabled: true,
+            consensus_enabled_for_execution: false,
+            fail_open_on_consensus_error: true,
             models: get_standard_models(),
             min_consensus_threshold: 0.6,
             auto_apply_recommendations: false,

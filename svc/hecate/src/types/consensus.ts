@@ -197,3 +197,16 @@ export interface RecommendationListResponse {
   recommendations: Recommendation[];
   total: number;
 }
+
+export interface DiscoveredModel {
+  id: string;
+  name: string;
+  provider?: string;
+  context_length?: number;
+  pricing?: {
+    prompt: string;
+    completion: string;
+  };
+  reasoning_capable?: boolean;
+  image_capable?: boolean;
+}

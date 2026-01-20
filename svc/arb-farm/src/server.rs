@@ -5,15 +5,17 @@ use tokio::sync::{broadcast, RwLock};
 
 use crate::agents::{
     AutonomousExecutor, CurveMetricsCollector, CurveOpportunityScorer, EngramHarvester,
-    KolDiscoveryAgent, OverseerConfig, ResilienceOverseer, ScannerAgent, StrategyEngine,
-    spawn_autonomous_executor, start_autonomous_executor, spawn_hecate_notifier,
+    GraduationSniper, GraduationTracker, KolDiscoveryAgent, OverseerConfig, ResilienceOverseer,
+    ScannerAgent, StrategyEngine, spawn_autonomous_executor, start_autonomous_executor,
+    spawn_hecate_notifier,
 };
 use crate::handlers::engram::init_harvester;
 use crate::handlers::swarm::{init_overseer, init_circuit_breakers};
 use crate::resilience::CircuitBreakerRegistry;
 use crate::config::Config;
-use crate::consensus::ConsensusEngine;
+use crate::consensus::{ConsensusConfig, ConsensusEngine};
 use crate::database::{EdgeRepository, PositionRepository, StrategyRepository, TradeRepository};
+use crate::database::repositories::ConsensusRepository;
 use crate::engrams::EngramsClient;
 use crate::events::{ArbEvent, EventBus};
 use crate::execution::{ApprovalManager, CapitalManager, CurveTransactionBuilder, ExecutorAgent, TransactionSimulator, TransactionBuilder, PositionMonitor, MonitorConfig, JitoClient, RealtimePositionMonitor};
@@ -57,7 +59,10 @@ pub struct AppState {
     pub kol_tracker: Arc<KOLTracker>,
     pub strategy_engine: Arc<StrategyEngine>,
     pub consensus_engine: Arc<ConsensusEngine>,
+    pub consensus_config: Arc<RwLock<ConsensusConfig>>,
     pub engrams_client: Arc<EngramsClient>,
+    pub position_repo: Arc<PositionRepository>,
+    pub consensus_repo: Arc<ConsensusRepository>,
     pub laserstream_client: Arc<LaserStreamClient>,
     pub kol_discovery: Arc<KolDiscoveryAgent>,
     pub dev_signer: Arc<DevWalletSigner>,
@@ -73,6 +78,8 @@ pub struct AppState {
     pub curve_scorer: Arc<CurveOpportunityScorer>,
     pub autonomous_executor: Arc<AutonomousExecutor>,
     pub realtime_monitor: Arc<RealtimePositionMonitor>,
+    pub graduation_tracker: Arc<GraduationTracker>,
+    pub graduation_sniper: Arc<GraduationSniper>,
 }
 
 impl AppState {
@@ -132,7 +139,13 @@ impl AppState {
             api_public_key: config.turnkey_api_public_key.clone(),
             api_private_key: config.turnkey_api_private_key.clone(),
         };
-        let turnkey_signer = Arc::new(TurnkeySigner::new(turnkey_config));
+        let is_dev_mode = std::env::var("ARBFARM_DEV_MODE").is_ok();
+        let turnkey_signer = Arc::new(if is_dev_mode {
+            tracing::info!("🔓 Dev mode: no daily volume limits");
+            TurnkeySigner::new_dev(turnkey_config)
+        } else {
+            TurnkeySigner::new(turnkey_config)
+        });
 
         // Initialize DevWalletSigner for development mode signing
         let dev_signer = match DevWalletSigner::new(
@@ -179,7 +192,7 @@ impl AppState {
 
         // Initialize risk config with MEDIUM profile - balanced risk/reward
         let risk_config = Arc::new(RwLock::new(RiskConfig::medium()));
-        tracing::info!("✅ Risk config initialized (MEDIUM profile: 0.25 SOL max position, 10 concurrent)");
+        tracing::info!("✅ Risk config initialized (MEDIUM profile: 0.3 SOL max position, 10 concurrent)");
 
         // Initialize Helius clients (webhook + RPC + sender + DAS)
         let helius_webhook_client = Arc::new(HeliusWebhookClient::new(
@@ -305,24 +318,27 @@ impl AppState {
             vec!["bondingcurve".to_string(), "BondingCurve".to_string()],
             "autonomous",  // Autonomous execution enabled
             RiskParams {
-                // MEDIUM risk profile - autonomous with better capital deployment
-                max_position_sol: 0.05,                 // Increased from 0.02 to 0.05 SOL
-                daily_loss_limit_sol: 0.1,              // Max 0.1 SOL loss per day
+                // MEDIUM risk profile - matches global RiskConfig::medium()
+                max_position_sol: 0.3,                  // Matches global default
+                daily_loss_limit_sol: 1.0,              // Matches global default
                 min_profit_bps: 50,                     // Require 0.5% min profit
                 max_slippage_bps: 150,                  // 1.5% max slippage
                 max_risk_score: 40,                     // Conservative risk tolerance
                 require_simulation: true,               // Always simulate first
                 auto_execute_atomic: true,              // Auto-execute atomic ops
                 auto_execute_enabled: false,            // OFF by default - user must enable
+                require_consensus: false,               // No consensus required for autonomous
                 require_confirmation: false,            // NO confirmation needed
                 staleness_threshold_hours: 24,
-                stop_loss_percent: Some(10.0),          // 10% stop loss
-                take_profit_percent: Some(25.0),        // 25% take profit (achievable target)
+                stop_loss_percent: Some(15.0),          // 15% stop loss
+                take_profit_percent: Some(50.0),        // 50% take profit
                 trailing_stop_percent: Some(5.0),       // 5% trailing stop
                 time_limit_minutes: Some(60),           // 1 hour max hold
                 base_currency: "sol".to_string(),
-                max_capital_allocation_percent: 10.0,   // Conservative 10% allocation
-                concurrent_positions: Some(2),          // Max 2 positions at a time
+                max_capital_allocation_percent: 25.0,   // 25% allocation
+                concurrent_positions: Some(5),          // Max 5 positions at a time
+                momentum_adaptive_exits: false,         // Disabled by default
+                let_winners_run: false,
             },
         ).await {
             strategy_engine.add_strategy(curve_strategy).await;
@@ -355,8 +371,94 @@ impl AppState {
             strategy_engine.add_strategy(kol_strategy).await;
         }
 
+        // Graduation Snipe Strategy - Buy at high graduation progress, sell on Raydium migration
+        // Listens for graduation_imminent events (95%+) and creates entry signals
+        if let Some(snipe_strategy) = get_or_create_strategy(
+            &strategy_repo,
+            "Graduation Snipe",
+            &default_wallet,
+            "graduation_snipe",
+            vec!["bondingcurve".to_string(), "BondingCurve".to_string()],
+            "autonomous",  // Autonomous execution for speed
+            RiskParams {
+                // Same as curve_arb - synced with global config
+                max_position_sol: 0.3,                  // Matches global default
+                daily_loss_limit_sol: 1.0,              // Matches global default
+                min_profit_bps: 25,                     // Lower profit threshold (0.25%)
+                max_slippage_bps: 300,                  // Higher slippage tolerance for speed
+                max_risk_score: 50,                     // Moderate risk tolerance
+                require_simulation: false,              // Skip simulation for speed
+                auto_execute_atomic: true,              // Auto-execute atomic ops
+                auto_execute_enabled: false,            // OFF by default - user must enable
+                require_consensus: false,               // No consensus for time-sensitive snipes
+                require_confirmation: false,            // No confirmation needed
+                staleness_threshold_hours: 1,          // Short staleness window
+                stop_loss_percent: Some(15.0),          // Wider stop loss for volatility
+                take_profit_percent: Some(30.0),        // Target 30% on graduation
+                trailing_stop_percent: Some(8.0),       // Wider trailing stop
+                time_limit_minutes: Some(30),           // Max 30 min hold (graduation should happen)
+                base_currency: "sol".to_string(),
+                max_capital_allocation_percent: 5.0,    // Conservative 5% allocation
+                concurrent_positions: Some(3),          // Up to 3 snipe positions
+                momentum_adaptive_exits: true,          // Enable for graduation snipes
+                let_winners_run: true,                  // Let winners run post-graduation
+            },
+        ).await {
+            strategy_engine.add_strategy(snipe_strategy).await;
+        }
+
         let strategy_count = strategy_engine.list_strategies().await.len();
         tracing::info!("✅ Strategy engine initialized with {} default strategies (persisted to DB)", strategy_count);
+
+        // AUTO-SYNC: Ensure all strategies match global RiskConfig
+        // This handles the case where strategies exist in DB with old values
+        {
+            let global_config = risk_config.read().await;
+            let strategies = strategy_engine.list_strategies().await;
+            let mut synced_count = 0;
+
+            for strategy in strategies.iter().filter(|s|
+                s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe"
+            ) {
+                // Only sync if strategy has smaller max_position_sol than global
+                if strategy.risk_params.max_position_sol < global_config.max_position_sol {
+                    let mut updated_params = strategy.risk_params.clone();
+                    updated_params.max_position_sol = global_config.max_position_sol;
+                    updated_params.daily_loss_limit_sol = global_config.daily_loss_limit_sol;
+
+                    // Update in-memory
+                    if let Err(e) = strategy_engine.set_risk_params(strategy.id, updated_params.clone()).await {
+                        tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to sync strategy on startup");
+                        continue;
+                    }
+
+                    // Persist to database
+                    use crate::database::repositories::strategies::UpdateStrategyRecord;
+                    if let Err(e) = strategy_repo.update(strategy.id, UpdateStrategyRecord {
+                        name: None,
+                        venue_types: None,
+                        execution_mode: None,
+                        risk_params: Some(updated_params),
+                        is_active: None,
+                    }).await {
+                        tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to persist strategy sync");
+                    }
+
+                    synced_count += 1;
+                    tracing::info!(
+                        strategy_id = %strategy.id,
+                        strategy_name = %strategy.name,
+                        old_max = strategy.risk_params.max_position_sol,
+                        new_max = global_config.max_position_sol,
+                        "🔄 Auto-synced strategy to global config"
+                    );
+                }
+            }
+
+            if synced_count > 0 {
+                tracing::info!("✅ Auto-synced {} strategies to global RiskConfig (0.3 SOL max position)", synced_count);
+            }
+        }
 
         // NOTE: execution_mode reconciliation moved to AFTER engrams restoration (below)
         // to ensure persisted auto_execute_enabled state is honored
@@ -405,6 +507,13 @@ impl AppState {
             tracing::warn!("⚠️ OpenRouter API key not configured - consensus disabled");
         }
 
+        let consensus_config = Arc::new(RwLock::new(ConsensusConfig::default()));
+        tracing::info!(
+            "✅ Consensus config initialized (execution_gating: {}, fail_open: {})",
+            ConsensusConfig::default().consensus_enabled_for_execution,
+            ConsensusConfig::default().fail_open_on_consensus_error
+        );
+
         // Initialize Engrams client for persistent memory
         let engrams_client = Arc::new(EngramsClient::new(config.engrams_url.clone()));
         if engrams_client.is_configured() {
@@ -413,10 +522,23 @@ impl AppState {
             tracing::warn!("⚠️ Engrams service URL not configured - persistence disabled");
         }
 
-        // Initialize EngramHarvester for local pattern learning
-        let engram_harvester = EngramHarvester::new(event_tx.clone());
+        // Initialize EngramHarvester for local pattern learning with remote sync
+        let engram_harvester = EngramHarvester::new(event_tx.clone())
+            .with_engrams_client(engrams_client.clone(), default_wallet.clone());
+
+        // Restore patterns from remote engrams service on startup
+        if engrams_client.is_configured() {
+            let restored_count = engram_harvester.restore_from_remote().await;
+            if restored_count > 0 {
+                tracing::info!("✅ Engram Harvester initialized with {} restored patterns from remote", restored_count);
+            } else {
+                tracing::info!("✅ Engram Harvester initialized (no prior patterns to restore)");
+            }
+        } else {
+            tracing::info!("✅ Engram Harvester initialized (local-only mode - remote sync disabled)");
+        }
+
         init_harvester(engram_harvester);
-        tracing::info!("✅ Engram Harvester initialized (local pattern store)");
 
         // Initialize Resilience Overseer for swarm health monitoring
         let overseer_config = OverseerConfig::default();
@@ -481,7 +603,6 @@ impl AppState {
 
             // Restore strategies from engrams (authoritative source for state)
             for engram_strategy in &workflow_state.strategies {
-                // Check if strategy exists in engine
                 if let Ok(strategy_id) = uuid::Uuid::parse_str(&engram_strategy.strategy_id) {
                     if let Some(existing) = strategy_engine.get_strategy(strategy_id).await {
                         // Update existing strategy's is_active from engram
@@ -646,8 +767,12 @@ impl AppState {
         // Initialize Position Repository and Manager for tracking open positions and exit conditions
         let position_repo = Arc::new(PositionRepository::new(db_pool.clone()));
         let position_manager = Arc::new(
-            crate::execution::PositionManager::with_repository(position_repo)
+            crate::execution::PositionManager::with_repository(position_repo.clone())
         );
+
+        // Initialize Consensus Repository for persisting LLM consensus decisions
+        let consensus_repo = Arc::new(ConsensusRepository::new(db_pool.clone()));
+        tracing::info!("✅ Consensus repository initialized (persisting to PostgreSQL)");
 
         // Restore any open positions from database
         match position_manager.load_positions_from_db().await {
@@ -679,7 +804,14 @@ impl AppState {
 
         // Initialize Approval Manager for execution controls
         let approval_manager = Arc::new(ApprovalManager::new(event_tx.clone()));
-        tracing::info!("✅ Approval Manager initialized (execution controls + Hecate integration)");
+
+        // Sync global execution config from strategy states (persisted from previous session)
+        let strategies_for_sync = strategy_engine.list_strategies().await;
+        let any_autonomous = strategies_for_sync.iter()
+            .filter(|s| s.is_active)
+            .any(|s| s.execution_mode == "autonomous" || s.risk_params.auto_execute_enabled);
+        approval_manager.sync_from_strategies(any_autonomous).await;
+        tracing::info!("✅ Approval Manager initialized (execution controls + Hecate integration, synced from strategies: auto={})", any_autonomous);
 
         // Spawn HecateNotifier to forward approval events to Hecate for recommendations
         let hecate_event_rx = event_tx.subscribe();
@@ -736,6 +868,8 @@ impl AppState {
             position_manager.clone(),
             risk_config.clone(),
             engrams_client.clone(),
+            Some(consensus_engine.clone()),
+            consensus_config.clone(),
             event_tx.clone(),
             default_wallet_for_executor,
         );
@@ -789,6 +923,74 @@ impl AppState {
         ));
         tracing::info!("✅ Real-time Position Monitor initialized (websocket price updates)");
 
+        // Initialize Graduation Tracker with engrams persistence and config from env
+        let tracker_config = {
+            use crate::agents::graduation_tracker::TrackerConfig;
+            let mut tc = TrackerConfig::default();
+            if let Some(threshold) = config.graduation_threshold {
+                tc.graduation_threshold = threshold;
+            }
+            if let Some(fast_poll) = config.tracker_fast_poll_ms {
+                tc.fast_poll_interval_ms = fast_poll;
+            }
+            if let Some(normal_poll) = config.tracker_normal_poll_ms {
+                tc.normal_poll_interval_ms = normal_poll;
+            }
+            if let Some(timeout) = config.tracker_rpc_timeout_secs {
+                tc.rpc_timeout_secs = timeout;
+            }
+            if let Some(eviction) = config.tracker_eviction_hours {
+                tc.eviction_hours = eviction;
+            }
+            tc
+        };
+
+        let graduation_tracker = Arc::new(
+            GraduationTracker::new(
+                event_tx.clone(),
+                on_chain_fetcher.clone(),
+                curve_builder.clone(),
+            )
+            .with_config(tracker_config.clone())
+            .with_engrams(engrams_client.clone(), default_wallet.clone())
+        );
+
+        tracing::info!(
+            "✅ Graduation Tracker config: threshold={:.1}%, fast={}ms, normal={}ms, rpc_timeout={}s, eviction={}h",
+            tracker_config.graduation_threshold,
+            tracker_config.fast_poll_interval_ms,
+            tracker_config.normal_poll_interval_ms,
+            tracker_config.rpc_timeout_secs,
+            tracker_config.eviction_hours
+        );
+
+        // Restore tracked tokens from engrams on startup
+        let restored_count = graduation_tracker.restore_from_engrams().await;
+        if restored_count > 0 {
+            tracing::info!("✅ Graduation Tracker initialized with {} restored tokens from engrams", restored_count);
+        } else {
+            tracing::info!("✅ Graduation Tracker initialized (no prior tracked tokens to restore)");
+        }
+
+        // Connect scanner to graduation tracker for automatic token tracking from CurveGraduation signals
+        scanner.set_graduation_tracker(graduation_tracker.clone()).await;
+        tracing::info!("✅ Scanner connected to graduation tracker (auto-tracking enabled)");
+
+        // Initialize Graduation Sniper for automated buy on graduation_imminent and sell on graduation
+        let graduation_sniper = Arc::new(
+            GraduationSniper::new(
+                graduation_tracker.clone(),
+                curve_builder.clone(),
+                jito_client.clone(),
+                on_chain_fetcher.clone(),
+                event_tx.clone(),
+                default_wallet.clone(),
+            )
+            .with_jupiter_api_url(config.jupiter_api_url.clone())
+            .with_strategy_engine(strategy_engine.clone())
+        );
+        tracing::info!("✅ Graduation Sniper initialized (strategy engine + Jupiter fallback for post-graduation sells)");
+
         Ok(Self {
             config,
             db_pool,
@@ -815,7 +1017,10 @@ impl AppState {
             kol_tracker,
             strategy_engine,
             consensus_engine,
+            consensus_config,
             engrams_client,
+            position_repo,
+            consensus_repo,
             laserstream_client,
             kol_discovery,
             dev_signer,
@@ -831,6 +1036,8 @@ impl AppState {
             curve_scorer,
             autonomous_executor,
             realtime_monitor,
+            graduation_tracker,
+            graduation_sniper,
         })
     }
 
@@ -855,6 +1062,19 @@ impl AppState {
         });
 
         tracing::info!("📡 Real-time position monitor background task started");
+    }
+
+    pub fn start_daily_metrics_scheduler(&self, wallet_address: String) {
+        use crate::agents::start_daily_metrics_scheduler;
+
+        let position_repo = self.position_repo.clone();
+        let engrams_client = self.engrams_client.clone();
+
+        tokio::spawn(async move {
+            start_daily_metrics_scheduler(position_repo, engrams_client, wallet_address).await;
+        });
+
+        tracing::info!("📊 Daily metrics scheduler started (runs at 00:05 UTC)");
     }
 
     pub fn subscribe_events(&self) -> broadcast::Receiver<ArbEvent> {

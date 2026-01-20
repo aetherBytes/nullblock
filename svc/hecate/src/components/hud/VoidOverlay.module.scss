@@ -98,16 +98,37 @@ $void-purple: #b967ff;
 .navWrapper {
   display: flex;
   align-items: flex-start;
+  max-width: calc(100vw - 340px); // Never go past the NULLBLOCK logo area
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  position: relative;
+
+  // Fade mask on left edge when scrollable
+  mask-image: linear-gradient(
+    to right,
+    transparent 0px,
+    black 30px,
+    black 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0px,
+    black 30px,
+    black 100%
+  );
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (max-width: 1024px) {
+    max-width: calc(100vw - 240px);
+  }
 
   @media (max-width: 768px) {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
     max-width: calc(100vw - 120px);
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
   }
 }
 
@@ -397,9 +418,12 @@ $void-purple: #b967ff;
 
 .submenuItemActive {
   color: rgba(255, 255, 255, 1);
+  background: rgba(139, 92, 246, 0.15);
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
 
   &::after {
     width: 80%;
+    box-shadow: 0 0 6px currentColor;
   }
 }
 

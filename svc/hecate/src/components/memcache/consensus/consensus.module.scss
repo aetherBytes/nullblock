@@ -1,0 +1,1819 @@
+// Consensus View Styles
+// Ethereal theme with transparency
+
+$color-bg: #0a0a0f;
+$color-bg-elevated: #12121a;
+$color-bg-card: rgba(30, 41, 59, 0.4);
+$color-border: rgba(100, 116, 139, 0.25);
+$color-text: #e8e8e8;
+$color-text-muted: #94a3b8;
+$color-text-dim: #64748b;
+
+$color-success: #22c55e;
+$color-warning: #f59e0b;
+$color-danger: #ef4444;
+$color-info: #3b82f6;
+$color-purple: #8b5cf6;
+
+$font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
+
+// ============================================
+// Main Container
+// ============================================
+
+.consensusView {
+  padding: 0;
+  min-height: 100%;
+  overflow-y: auto;
+  background: transparent;
+}
+
+.consensusHeader {
+  margin-bottom: 1.5rem;
+}
+
+.headerTitle {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: $color-text;
+  background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.headerSubtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: $color-text-muted;
+}
+
+// ============================================
+// Navigation
+// ============================================
+
+.consensusNav {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  backdrop-filter: blur(8px);
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.4);
+    border-radius: 2px;
+  }
+}
+
+.navTab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(30, 41, 59, 0.5);
+    color: $color-text;
+  }
+
+  &.active {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: rgba(139, 92, 246, 0.4);
+    color: $color-text;
+  }
+}
+
+.navIcon {
+  font-size: 1rem;
+}
+
+.navLabel {
+  font-weight: 500;
+}
+
+.consensusContent {
+  min-height: 400px;
+}
+
+// ============================================
+// Dashboard Grid
+// ============================================
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.statsCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  padding: 1.25rem;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+
+  &.wideCard {
+    grid-column: span 3;
+
+    @media (max-width: 1200px) {
+      grid-column: span 2;
+    }
+
+    @media (max-width: 768px) {
+      grid-column: span 1;
+    }
+  }
+}
+
+.cardTitle {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $color-text;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.engineStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 8px;
+}
+
+.statusDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+
+  &.active {
+    background: $color-success;
+    box-shadow: 0 0 8px $color-success;
+  }
+
+  &.inactive {
+    background: $color-text-dim;
+  }
+}
+
+.toggleButton {
+  margin-left: auto;
+  padding: 0.4rem 0.75rem;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(30, 41, 59, 0.8);
+    color: $color-text;
+  }
+
+  &.enabled {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: $color-danger;
+  }
+}
+
+.statItems {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  color: $color-text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.statValue {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-family: $font-mono;
+  color: $color-text;
+
+  &.success {
+    color: $color-success;
+  }
+
+  &.danger {
+    color: $color-danger;
+  }
+}
+
+.modelChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.modelChip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 6px;
+}
+
+.modelChipName {
+  font-size: 0.8rem;
+  color: $color-text;
+}
+
+.modelChipWeight {
+  font-size: 0.7rem;
+  color: $color-purple;
+  font-family: $font-mono;
+}
+
+.noModels {
+  color: $color-text-muted;
+  font-size: 0.85rem;
+}
+
+.recentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.recentItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(30, 41, 59, 0.7);
+    transform: translateX(4px);
+  }
+
+  &.approved {
+    border-left: 3px solid $color-success;
+  }
+
+  &.rejected {
+    border-left: 3px solid $color-danger;
+  }
+}
+
+.recentIcon {
+  font-size: 1rem;
+}
+
+.recentEdge {
+  flex: 1;
+  font-family: $font-mono;
+  font-size: 0.85rem;
+  color: $color-text;
+}
+
+.recentAgreement {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+  font-family: $font-mono;
+}
+
+.recentTime {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
+// ============================================
+// Models View
+// ============================================
+
+.modelsView {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+}
+
+.refreshButton {
+  padding: 0.5rem 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: rgba(30, 41, 59, 0.7);
+    color: $color-text;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+.modelCount {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+}
+
+.modelsList {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.modelCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  padding: 1.25rem;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+
+  &.disabled {
+    opacity: 0.6;
+  }
+}
+
+.modelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.modelInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.modelName {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.modelId {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  font-family: $font-mono;
+}
+
+.modelControls {
+  display: flex;
+  align-items: center;
+}
+
+.toggleSwitch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(100, 116, 139, 0.4);
+    border-radius: 24px;
+    transition: 0.3s;
+
+    &::before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+  }
+
+  input:checked + .slider {
+    background: $color-purple;
+  }
+
+  input:checked + .slider::before {
+    transform: translateX(20px);
+  }
+}
+
+.modelDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.modelDetail {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.detailLabel {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  min-width: 70px;
+}
+
+.detailValue {
+  font-size: 0.85rem;
+  color: $color-text;
+}
+
+.weightSlider {
+  flex: 1;
+  height: 4px;
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 2px;
+  -webkit-appearance: none;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: $color-purple;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+}
+
+.weightValue {
+  font-size: 0.85rem;
+  color: $color-text;
+  font-family: $font-mono;
+  min-width: 30px;
+}
+
+.removeModelButton {
+  width: 100%;
+  padding: 0.5rem;
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  color: $color-danger;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.1);
+  }
+}
+
+.availableModels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.availableModelCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+}
+
+.availableModelInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.availableModelName {
+  font-size: 0.85rem;
+  color: $color-text;
+}
+
+.availableModelProvider {
+  font-size: 0.7rem;
+  color: $color-text-muted;
+}
+
+.addModelButton {
+  padding: 0.4rem 0.75rem;
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 6px;
+  color: $color-purple;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(139, 92, 246, 0.3);
+  }
+}
+
+// ============================================
+// History View
+// ============================================
+
+.historyView {
+  display: flex;
+  flex-direction: column;
+}
+
+.historyCount {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.historyItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    transform: translateX(4px);
+  }
+
+  &.approved {
+    border-left: 4px solid $color-success;
+  }
+
+  &.rejected {
+    border-left: 4px solid $color-danger;
+  }
+}
+
+.historyItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+}
+
+.historyIcon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 1.1rem;
+
+  &.iconApproved {
+    background: rgba(34, 197, 94, 0.2);
+    color: $color-success;
+  }
+
+  &.iconRejected {
+    background: rgba(239, 68, 68, 0.2);
+    color: $color-danger;
+  }
+}
+
+.historyItemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.historyEdgeId {
+  font-family: $font-mono;
+  font-size: 0.9rem;
+  color: $color-text;
+}
+
+.historyTime {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+}
+
+.historyItemRight {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.historyMetric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.metricLabel {
+  font-size: 0.65rem;
+  color: $color-text-dim;
+  text-transform: uppercase;
+}
+
+.metricValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $color-text;
+  font-family: $font-mono;
+}
+
+.historyArrow {
+  color: $color-text-muted;
+  font-size: 1.2rem;
+}
+
+// History Detail
+.historyDetail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.backButton {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(30, 41, 59, 0.7);
+    color: $color-text;
+  }
+}
+
+.detailCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  padding: 1.5rem;
+  backdrop-filter: blur(8px);
+}
+
+.detailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.resultBadge {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+
+  &.approved {
+    background: rgba(34, 197, 94, 0.2);
+    color: $color-success;
+  }
+
+  &.rejected {
+    background: rgba(239, 68, 68, 0.2);
+    color: $color-danger;
+  }
+}
+
+.detailTime {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+}
+
+.detailSection {
+  margin-bottom: 1.5rem;
+
+  h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+}
+
+.contextPre {
+  padding: 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 8px;
+  font-family: $font-mono;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+.resultStats {
+  display: flex;
+  gap: 2rem;
+}
+
+.resultStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.resultLabel {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+}
+
+.resultValue {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: $color-text;
+  font-family: $font-mono;
+}
+
+.votesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.voteCard {
+  padding: 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid $color-border;
+  border-radius: 8px;
+
+  &.voteApproved {
+    border-left: 3px solid $color-success;
+  }
+
+  &.voteRejected {
+    border-left: 3px solid $color-danger;
+  }
+}
+
+.voteHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.voteModel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.voteBadge {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.8rem;
+
+  &.approved {
+    background: rgba(34, 197, 94, 0.2);
+    color: $color-success;
+  }
+
+  &.rejected {
+    background: rgba(239, 68, 68, 0.2);
+    color: $color-danger;
+  }
+}
+
+.voteStats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.voteReasoning {
+  margin: 0;
+  font-size: 0.85rem;
+  color: $color-text-muted;
+  line-height: 1.5;
+}
+
+.reasoningSummary {
+  margin: 0;
+  font-size: 0.9rem;
+  color: $color-text;
+  line-height: 1.6;
+}
+
+// ============================================
+// Recommendations View
+// ============================================
+
+.recommendationsView {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.filterTabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filterTab {
+  padding: 0.4rem 0.75rem;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(30, 41, 59, 0.5);
+    color: $color-text;
+  }
+}
+
+.recommendationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recommendationCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  padding: 1.25rem;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+
+  &.strategy { border-left: 4px solid $color-info; }
+  &.risk { border-left: 4px solid $color-warning; }
+  &.timing { border-left: 4px solid $color-purple; }
+  &.venue { border-left: 4px solid $color-success; }
+  &.position { border-left: 4px solid #06b6d4; }
+}
+
+.recHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.recCategory {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $color-text-muted;
+}
+
+.recStatus {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+
+  &.pending {
+    background: rgba(245, 158, 11, 0.2);
+    color: $color-warning;
+  }
+
+  &.acknowledged {
+    background: rgba(59, 130, 246, 0.2);
+    color: $color-info;
+  }
+
+  &.applied {
+    background: rgba(34, 197, 94, 0.2);
+    color: $color-success;
+  }
+
+  &.rejected {
+    background: rgba(239, 68, 68, 0.2);
+    color: $color-danger;
+  }
+}
+
+.recTitle {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.recDescription {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  color: $color-text-muted;
+  line-height: 1.5;
+}
+
+.recMeta {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: $color-text-dim;
+}
+
+.recConfidence {
+  font-family: $font-mono;
+}
+
+.recActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.applyButton,
+.acknowledgeButton,
+.rejectButton {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.applyButton {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: $color-success;
+
+  &:hover {
+    background: rgba(34, 197, 94, 0.3);
+  }
+}
+
+.acknowledgeButton {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: $color-info;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.3);
+  }
+}
+
+.rejectButton {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: $color-danger;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.1);
+  }
+}
+
+// ============================================
+// Conversations View
+// ============================================
+
+.conversationsView {
+  display: flex;
+  flex-direction: column;
+}
+
+.convCount {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+}
+
+.conversationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.convListItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    transform: translateX(4px);
+  }
+}
+
+.convListLeft {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.convListTopic {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: $color-text;
+  text-transform: capitalize;
+}
+
+.convListParticipants {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.convListRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.convListMessages {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.convListTime {
+  font-size: 0.75rem;
+  color: $color-text-dim;
+}
+
+.convListArrow {
+  color: $color-text-muted;
+  font-size: 1.2rem;
+}
+
+// Conversation Detail
+.conversationDetail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.conversationCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  padding: 1.5rem;
+  backdrop-filter: blur(8px);
+}
+
+.convHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.convTopic {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: $color-text;
+  text-transform: capitalize;
+}
+
+.convTime {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+}
+
+.convParticipants {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.participantsLabel {
+  font-size: 0.85rem;
+  color: $color-text-muted;
+}
+
+.participantChip {
+  padding: 0.25rem 0.5rem;
+  background: rgba(139, 92, 246, 0.15);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: $color-purple;
+}
+
+.convMessages {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.messageItem {
+  padding: 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 8px;
+}
+
+.messageHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.messageRole {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: $color-text;
+  text-transform: capitalize;
+}
+
+.messageModel {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  font-family: $font-mono;
+}
+
+.messageContent {
+  margin: 0;
+  font-size: 0.9rem;
+  color: $color-text-muted;
+  line-height: 1.5;
+}
+
+.convOutcome {
+  padding-top: 1rem;
+  border-top: 1px solid $color-border;
+
+  h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: $color-text-muted;
+    line-height: 1.5;
+  }
+}
+
+// ============================================
+// Config View
+// ============================================
+
+.configView {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.configSection {
+  h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+}
+
+.configCard {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  padding: 1.5rem;
+  backdrop-filter: blur(8px);
+}
+
+.configItem {
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.15);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  &:first-child {
+    padding-top: 0;
+  }
+}
+
+.configItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.configLabel {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: $color-text;
+}
+
+.configValue {
+  font-size: 0.9rem;
+  font-family: $font-mono;
+  color: $color-purple;
+}
+
+.configSlider {
+  width: 100%;
+  height: 4px;
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 2px;
+  -webkit-appearance: none;
+  margin: 0.5rem 0;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: $color-purple;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+}
+
+.configHint {
+  font-size: 0.8rem;
+  color: $color-text-dim;
+}
+
+.resetButton {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 8px;
+  color: $color-danger;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.1);
+  }
+}
+
+// ============================================
+// API View
+// ============================================
+
+.apiView {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.apiSection {
+  h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: $color-text;
+  }
+}
+
+.endpointList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.endpointItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}
+
+.endpointMethod {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: $font-mono;
+
+  &.get {
+    background: rgba(34, 197, 94, 0.2);
+    color: $color-success;
+  }
+
+  &.post {
+    background: rgba(59, 130, 246, 0.2);
+    color: $color-info;
+  }
+
+  &.put {
+    background: rgba(245, 158, 11, 0.2);
+    color: $color-warning;
+  }
+
+  &.delete {
+    background: rgba(239, 68, 68, 0.2);
+    color: $color-danger;
+  }
+}
+
+.endpointPath {
+  flex: 1;
+  font-size: 0.85rem;
+  font-family: $font-mono;
+  color: $color-text;
+}
+
+.endpointDesc {
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.toolsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toolItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}
+
+.toolName {
+  font-size: 0.85rem;
+  font-family: $font-mono;
+  color: $color-purple;
+}
+
+.toolType {
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &.read {
+    background: rgba(34, 197, 94, 0.2);
+    color: $color-success;
+  }
+
+  &.write {
+    background: rgba(245, 158, 11, 0.2);
+    color: $color-warning;
+  }
+}
+
+.toolDesc {
+  flex: 1;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+}
+
+.mcpInfo {
+  padding: 1.25rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+
+  p {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: $color-text-muted;
+  }
+}
+
+.mcpEndpoint {
+  display: block;
+  padding: 0.75rem 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 6px;
+  font-family: $font-mono;
+  font-size: 0.9rem;
+  color: $color-info;
+  margin-bottom: 0.5rem;
+}
+
+.mcpHint {
+  margin: 0 !important;
+  font-size: 0.8rem !important;
+  color: $color-text-dim !important;
+}
+
+// ============================================
+// States
+// ============================================
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  gap: 1rem;
+  color: $color-text-muted;
+}
+
+.loadingSpinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(139, 92, 246, 0.2);
+  border-top-color: $color-purple;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+  color: $color-text-muted;
+}
+
+.emptyIcon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+.emptyHint {
+  font-size: 0.85rem;
+  color: $color-text-dim;
+  margin-top: 0.25rem;
+}
+
+// ============================================
+// Layout with Sidebar
+// ============================================
+
+.consensusLayout {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.consensusSidebar {
+  width: 180px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 0.75rem 2rem;
+  background: rgba(15, 23, 42, 0.3);
+  border-right: 1px solid rgba(100, 116, 139, 0.15);
+  overflow-y: auto;
+  backdrop-filter: blur(8px);
+
+  // Styled scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.3);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(100, 116, 139, 0.5);
+    }
+  }
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
+
+  @media (max-width: 1024px) {
+    width: 160px;
+    padding: 0.75rem 0.5rem 2rem;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.sidebarSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.sidebarTitle {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $color-text-dim;
+  margin-bottom: 0.375rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.15);
+}
+
+.navButton {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-weight: 500;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+
+  &:hover {
+    background: rgba(30, 41, 59, 0.6);
+    border-color: rgba(139, 92, 246, 0.4);
+    color: $color-text;
+    transform: translateX(3px);
+  }
+
+  &.active {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: rgba(139, 92, 246, 0.5);
+    color: $color-text;
+    transform: translateX(3px);
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+  }
+}
+
+.navIcon {
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.navLabel {
+  flex: 1;
+}
+
+.consensusContent {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 1rem 0.75rem 2.5rem 1rem;
+  background: transparent;
+
+  // Styled scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.3);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(100, 116, 139, 0.5);
+    }
+  }
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
+
+  @media (max-width: 768px) {
+    padding: 0.75rem;
+  }
+}
+
+// Mobile navigation
+.mobileNav {
+  display: none;
+  padding: 1rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-bottom: 1px solid $color-border;
+  background: rgba(15, 23, 42, 0.6);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+.mobileButton {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+
+  &.active {
+    background: $color-info;
+    border-color: $color-info;
+    color: white;
+  }
+
+  &:hover:not(.active) {
+    background: rgba(30, 41, 59, 0.7);
+    border-color: rgba(100, 116, 139, 0.5);
+  }
+}
+
+.sidebarStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(30, 41, 59, 0.4);
+  border-radius: 6px;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+
+  .statusRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: $color-text-muted;
+  }
+
+  .lastRefreshTime {
+    font-size: 0.75rem;
+    color: $color-text-muted;
+  }
+
+  .refreshButton {
+    width: 100%;
+    padding: 0.5rem;
+    background: rgba($color-info, 0.15);
+    border: 1px solid rgba($color-info, 0.3);
+    border-radius: 4px;
+    color: $color-info;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba($color-info, 0.25);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &.spinning {
+      animation: spin 1s linear infinite;
+    }
+  }
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

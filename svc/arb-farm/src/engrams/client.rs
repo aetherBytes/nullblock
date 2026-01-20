@@ -514,21 +514,36 @@ impl EngramsClient {
                 if response.status().is_success() {
                     match response.json::<EngramResponse>().await {
                         Ok(resp) => {
-                            if resp.success {
-                                Ok(resp.data)
-                            } else {
-                                Ok(None) // Not found is OK
+                            if resp.success && resp.data.is_some() {
+                                return Ok(resp.data);
                             }
+                            // Direct lookup failed - try search as fallback
+                            debug!("Direct lookup failed for {}/{}, trying search fallback", wallet, key);
                         }
-                        Err(_) => Ok(None),
+                        Err(_) => {}
                     }
-                } else if response.status().as_u16() == 404 {
-                    Ok(None)
-                } else {
-                    let status = response.status();
-                    let body = response.text().await.unwrap_or_default();
-                    Err(format!("Engrams service error {}: {}", status, body))
                 }
+
+                // Fallback: search for engram by key
+                let search = SearchRequest {
+                    wallet_address: Some(wallet.to_string()),
+                    engram_type: None,
+                    query: None,
+                    tags: None,
+                    limit: Some(100),
+                    offset: None,
+                };
+
+                if let Ok(engrams) = self.search_engrams(search).await {
+                    for engram in engrams {
+                        if engram.key == key {
+                            debug!("Found engram via search fallback: {} ({})", key, engram.id);
+                            return Ok(Some(engram));
+                        }
+                    }
+                }
+
+                Ok(None) // Not found
             }
             Err(e) => {
                 error!("Failed to connect to Engrams service: {}", e);
@@ -609,9 +624,19 @@ impl EngramsClient {
         // Try to create new, but handle duplicate key gracefully
         match self.create_engram(request.clone()).await {
             Ok(engram) => Ok(engram),
-            Err(e) if e.contains("duplicate key") => {
-                // Engram exists but we couldn't find it - this shouldn't happen, but treat as success
-                warn!("Engram {} already exists (duplicate key) but wasn't found - treating as success", request.key);
+            Err(e) if e.contains("duplicate key") || e.contains("unique constraint") => {
+                // Engram exists but we couldn't find it - try one more time to fetch and update
+                warn!("Engram {} already exists but wasn't found initially - retrying fetch", request.key);
+
+                // Retry fetching after a small delay (race condition mitigation)
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+                if let Ok(Some(existing)) = self.get_engram_by_wallet_key(&request.wallet_address, &request.key).await {
+                    return self.update_engram(&existing.id, &request.content, request.tags).await;
+                }
+
+                // Still can't find it - return a synthetic success
+                warn!("Engram {} still not found after duplicate key error - treating as success", request.key);
                 Ok(Engram {
                     id: String::new(),
                     wallet_address: request.wallet_address,
@@ -1089,6 +1114,96 @@ impl EngramsClient {
         self.create_engram(request).await
     }
 
+    pub async fn save_consensus_analysis(
+        &self,
+        wallet: &str,
+        analysis: &crate::engrams::schemas::ConsensusAnalysis,
+    ) -> Result<Engram, String> {
+        let key = crate::engrams::schemas::generate_consensus_analysis_key(&analysis.analysis_id);
+        let content = serde_json::to_string(analysis)
+            .map_err(|e| format!("Failed to serialize consensus analysis: {}", e))?;
+
+        let analysis_type_str = serde_json::to_string(&analysis.analysis_type)
+            .unwrap_or_else(|_| "unknown".to_string())
+            .trim_matches('"')
+            .to_string();
+
+        let metadata = serde_json::json!({
+            "type": "consensus_analysis",
+            "a2a_discoverable": true,
+            "schema_version": "1.0",
+            "content_type": "analysis",
+            "analysis_type": analysis_type_str,
+            "time_period": analysis.time_period,
+            "trades_analyzed": analysis.total_trades_analyzed,
+            "recommendations_count": analysis.recommendations_count,
+            "avg_confidence": analysis.avg_confidence,
+            "models_queried": analysis.models_queried,
+            "latency_ms": analysis.total_latency_ms,
+            "risk_alerts_count": analysis.risk_alerts.len(),
+        });
+
+        let request = CreateEngramRequest {
+            wallet_address: wallet.to_string(),
+            engram_type: "knowledge".to_string(),
+            key,
+            content,
+            metadata: Some(metadata),
+            tags: Some(vec![
+                "arb".to_string(),
+                crate::engrams::schemas::A2A_TAG_LEARNING.to_string(),
+                "analysis".to_string(),
+                "consensus".to_string(),
+                analysis_type_str,
+            ]),
+            is_public: Some(false),
+        };
+
+        self.create_engram(request).await
+    }
+
+    pub async fn save_consensus_decision(
+        &self,
+        wallet: &str,
+        decision: &crate::engrams::schemas::ConsensusDecision,
+    ) -> Result<Engram, String> {
+        let key = crate::engrams::schemas::generate_consensus_decision_key(&decision.decision_id);
+        let content = serde_json::to_string(decision)
+            .map_err(|e| format!("Failed to serialize consensus decision: {}", e))?;
+
+        let metadata = serde_json::json!({
+            "type": "consensus_decision",
+            "a2a_discoverable": true,
+            "schema_version": "1.0",
+            "content_type": "decision",
+            "edge_id": decision.edge_id.to_string(),
+            "strategy_id": decision.strategy_id.map(|s| s.to_string()),
+            "approved": decision.approved,
+            "agreement_score": decision.agreement_score,
+            "weighted_confidence": decision.weighted_confidence,
+            "models_count": decision.model_votes.len(),
+            "latency_ms": decision.total_latency_ms,
+        });
+
+        let request = CreateEngramRequest {
+            wallet_address: wallet.to_string(),
+            engram_type: "knowledge".to_string(),
+            key,
+            content,
+            metadata: Some(metadata),
+            tags: Some(vec![
+                "arb".to_string(),
+                crate::engrams::schemas::A2A_TAG_LEARNING.to_string(),
+                "decision".to_string(),
+                "consensus".to_string(),
+                if decision.approved { "approved" } else { "rejected" }.to_string(),
+            ]),
+            is_public: Some(false),
+        };
+
+        self.create_engram(request).await
+    }
+
     pub async fn get_learning_engrams(
         &self,
         wallet: &str,
@@ -1365,6 +1480,128 @@ impl EngramsClient {
         }
 
         Ok(results)
+    }
+
+    pub async fn save_watchlist_token(
+        &self,
+        wallet: &str,
+        token: &crate::engrams::schemas::WatchlistToken,
+    ) -> Result<Engram, String> {
+        let key = crate::engrams::schemas::generate_watchlist_key(&token.mint);
+        let content = serde_json::to_string(token)
+            .map_err(|e| format!("Failed to serialize watchlist token: {}", e))?;
+
+        let metadata = serde_json::json!({
+            "type": "watchlist_token",
+            "venue": token.venue,
+            "symbol": token.symbol,
+            "last_progress": token.last_progress,
+        });
+
+        let request = CreateEngramRequest {
+            wallet_address: wallet.to_string(),
+            engram_type: "knowledge".to_string(),
+            key,
+            content,
+            metadata: Some(metadata),
+            tags: Some(vec![
+                "arb".to_string(),
+                crate::engrams::schemas::WATCHLIST_TAG.to_string(),
+                "token".to_string(),
+                token.venue.clone(),
+            ]),
+            is_public: Some(false),
+        };
+
+        self.upsert_engram(request).await
+    }
+
+    pub async fn get_watchlist_tokens(
+        &self,
+        wallet: &str,
+    ) -> Result<Vec<crate::engrams::schemas::WatchlistToken>, String> {
+        let search = SearchRequest {
+            wallet_address: Some(wallet.to_string()),
+            engram_type: Some("knowledge".to_string()),
+            query: None,
+            tags: Some(vec![crate::engrams::schemas::WATCHLIST_TAG.to_string()]),
+            limit: Some(500),
+            offset: None,
+        };
+
+        let engrams = self.search_engrams(search).await?;
+
+        let tokens: Vec<crate::engrams::schemas::WatchlistToken> = engrams
+            .into_iter()
+            .filter_map(|e| serde_json::from_str(&e.content).ok())
+            .collect();
+
+        info!("Retrieved {} watchlist tokens from engrams", tokens.len());
+        Ok(tokens)
+    }
+
+    pub async fn remove_watchlist_token(&self, wallet: &str, mint: &str) -> Result<bool, String> {
+        let key = crate::engrams::schemas::generate_watchlist_key(mint);
+
+        if let Some(existing) = self.get_engram_by_wallet_key(wallet, &key).await? {
+            self.delete_engram(&existing.id).await?;
+            info!("Removed watchlist token {} from engrams", mint);
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    pub async fn is_token_tracked(&self, wallet: &str, mint: &str) -> Result<bool, String> {
+        let key = crate::engrams::schemas::generate_watchlist_key(mint);
+        let result = self.get_engram_by_wallet_key(wallet, &key).await?;
+        Ok(result.is_some())
+    }
+
+    pub async fn delete_engram(&self, id: &str) -> Result<(), String> {
+        if !self.is_configured() {
+            return Err("Engrams service not configured".to_string());
+        }
+
+        let url = format!("{}/engrams/{}", self.base_url, id);
+        debug!("Deleting engram: {} at {}", id, url);
+
+        match self.http_client
+            .delete(&url)
+            .timeout(std::time::Duration::from_secs(30))
+            .send()
+            .await
+        {
+            Ok(response) => {
+                if response.status().is_success() {
+                    info!("Deleted engram: {}", id);
+                    Ok(())
+                } else {
+                    let status = response.status();
+                    let body = response.text().await.unwrap_or_default();
+                    error!("Engrams service error {}: {}", status, body);
+                    Err(format!("Engrams service error {}: {}", status, body))
+                }
+            }
+            Err(e) => {
+                error!("Failed to connect to Engrams service: {}", e);
+                Err(format!("Connection error: {}", e))
+            }
+        }
+    }
+
+    pub async fn clear_all_watchlist_tokens(&self, wallet: &str) -> Result<usize, String> {
+        let tokens = self.get_watchlist_tokens(wallet).await?;
+        let mut removed = 0;
+
+        for token in tokens {
+            if self.remove_watchlist_token(wallet, &token.mint).await? {
+                removed += 1;
+            }
+        }
+
+        info!("Cleared {} watchlist tokens from engrams", removed);
+        Ok(removed)
     }
 }
 

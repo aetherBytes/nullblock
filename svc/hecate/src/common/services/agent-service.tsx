@@ -88,10 +88,19 @@ class AgentService {
   }
 
   // Agent Interaction Operations
-  async chatWithAgent(agentName: string, message: string): Promise<AgentServiceResponse<any>> {
+  async chatWithAgent(agentName: string, message: string, walletAddress?: string | null): Promise<AgentServiceResponse<any>> {
+    const body: Record<string, unknown> = { message };
+
+    // Include user context with wallet address if provided (enables dev wallet LLM boost)
+    if (walletAddress) {
+      body.user_context = {
+        wallet_address: walletAddress,
+      };
+    }
+
     return this.makeRequest<any>(`/api/agents/${agentName}/chat`, {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify(body),
     });
   }
 

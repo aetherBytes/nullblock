@@ -59,6 +59,15 @@ impl Default for WalletStatus {
     }
 }
 
+impl WalletStatus {
+    pub fn dev() -> Self {
+        Self {
+            policy: ArbFarmPolicy::dev_testing(),
+            ..Self::default()
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignRequest {
     pub transaction_base64: String,
@@ -124,6 +133,17 @@ impl TurnkeySigner {
                 .expect("Failed to create HTTP client"),
             config,
             wallet_status: Arc::new(RwLock::new(WalletStatus::default())),
+        }
+    }
+
+    pub fn new_dev(config: TurnkeyConfig) -> Self {
+        Self {
+            client: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(30))
+                .build()
+                .expect("Failed to create HTTP client"),
+            config,
+            wallet_status: Arc::new(RwLock::new(WalletStatus::dev())),
         }
     }
 

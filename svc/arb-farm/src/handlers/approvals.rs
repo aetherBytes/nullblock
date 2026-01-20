@@ -86,20 +86,20 @@ pub async fn get_execution_config(State(state): State<AppState>) -> impl IntoRes
 
     // Check for state mismatch between executor and strategy execution_mode
     let strategies = state.strategy_engine.list_strategies().await;
-    let curve_strategies: Vec<_> = strategies.iter()
-        .filter(|s| s.strategy_type == "curve_arb" && s.is_active)
+    let autonomous_strategies: Vec<_> = strategies.iter()
+        .filter(|s| (s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe") && s.is_active)
         .collect();
-    let any_autonomous = curve_strategies.iter().any(|s| s.execution_mode == "autonomous");
+    let any_autonomous = autonomous_strategies.iter().any(|s| s.execution_mode == "autonomous");
 
-    if executor_stats.is_running && !any_autonomous && !curve_strategies.is_empty() {
+    if executor_stats.is_running && !any_autonomous && !autonomous_strategies.is_empty() {
         tracing::warn!(
             executor_running = executor_stats.is_running,
-            curve_strategies_count = curve_strategies.len(),
-            "⚠️ STATE MISMATCH: executor is running but no curve_arb strategy has autonomous mode - auto-fixing"
+            strategies_count = autonomous_strategies.len(),
+            "⚠️ STATE MISMATCH: executor is running but no strategy has autonomous mode - auto-fixing"
         );
 
         // Log each strategy's current state for debugging
-        for strategy in &curve_strategies {
+        for strategy in &autonomous_strategies {
             tracing::warn!(
                 strategy_id = %strategy.id,
                 strategy_name = %strategy.name,
@@ -110,22 +110,31 @@ pub async fn get_execution_config(State(state): State<AppState>) -> impl IntoRes
             );
         }
 
-        // Auto-fix: update strategies to autonomous
-        for strategy in curve_strategies {
+        // Auto-fix: update strategies to autonomous mode
+        for strategy in autonomous_strategies {
+            // Update execution_mode
             if let Err(e) = state.strategy_engine.set_execution_mode(strategy.id, "autonomous".to_string()).await {
                 tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to auto-fix execution_mode");
-            } else {
-                // Also update database
-                use crate::database::repositories::strategies::UpdateStrategyRecord;
-                let _ = state.strategy_repo.update(strategy.id, UpdateStrategyRecord {
-                    name: None,
-                    venue_types: None,
-                    execution_mode: Some("autonomous".to_string()),
-                    risk_params: None,
-                    is_active: None,
-                }).await;
-                tracing::info!(strategy_id = %strategy.id, strategy_name = %strategy.name, "✅ Auto-fixed execution_mode to autonomous");
+                continue;
             }
+
+            // Also update risk_params.auto_execute_enabled
+            let mut updated_params = strategy.risk_params.clone();
+            updated_params.auto_execute_enabled = true;
+            if let Err(e) = state.strategy_engine.set_risk_params(strategy.id, updated_params.clone()).await {
+                tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to auto-fix auto_execute_enabled");
+            }
+
+            // Persist to database
+            use crate::database::repositories::strategies::UpdateStrategyRecord;
+            let _ = state.strategy_repo.update(strategy.id, UpdateStrategyRecord {
+                name: None,
+                venue_types: None,
+                execution_mode: Some("autonomous".to_string()),
+                risk_params: Some(updated_params),
+                is_active: None,
+            }).await;
+            tracing::info!(strategy_id = %strategy.id, strategy_name = %strategy.name, "✅ Auto-fixed to autonomous mode");
         }
     }
 
@@ -136,6 +145,13 @@ pub async fn update_execution_config(
     State(state): State<AppState>,
     Json(request): Json<UpdateExecutionConfigRequest>,
 ) -> impl IntoResponse {
+    tracing::info!(
+        auto_execution_enabled = ?request.auto_execution_enabled,
+        auto_max_position_sol = ?request.auto_max_position_sol,
+        require_simulation = ?request.require_simulation,
+        "🔄 update_execution_config called (Apply button)"
+    );
+
     let auto_exec_requested = request.auto_execution_enabled;
     let config = state.approval_manager.update_config(request.clone()).await;
 
@@ -158,8 +174,11 @@ pub async fn update_execution_config(
         }
     }
 
+    // Update all autonomous-capable strategies (curve_arb AND graduation_snipe)
     let strategies = state.strategy_engine.list_strategies().await;
-    for strategy in strategies.iter().filter(|s| s.strategy_type == "curve_arb") {
+    for strategy in strategies.iter().filter(|s|
+        s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe"
+    ) {
         let mut updated_params = strategy.risk_params.clone();
 
         if let Some(enabled) = request.auto_execution_enabled {
@@ -170,6 +189,15 @@ pub async fn update_execution_config(
         }
         if let Some(v) = request.auto_max_position_sol {
             updated_params.max_position_sol = v;
+        }
+        if let Some(v) = request.auto_approve_atomic {
+            updated_params.auto_execute_atomic = v;
+        }
+        if let Some(v) = request.auto_approve_min_profit_bps {
+            updated_params.min_profit_bps = v;
+        }
+        if let Some(v) = request.auto_approve_max_risk_score {
+            updated_params.max_risk_score = v;
         }
 
         // Determine execution_mode based on auto_execution setting
@@ -224,7 +252,9 @@ pub async fn update_execution_config(
 
     // Post-update verification logging
     let updated_strategies = state.strategy_engine.list_strategies().await;
-    for strategy in updated_strategies.iter().filter(|s| s.strategy_type == "curve_arb") {
+    for strategy in updated_strategies.iter().filter(|s|
+        s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe"
+    ) {
         tracing::info!(
             strategy_id = %strategy.id,
             strategy_name = %strategy.name,
@@ -241,6 +271,11 @@ pub async fn toggle_execution(
     State(state): State<AppState>,
     Json(request): Json<ExecutionToggleRequest>,
 ) -> impl IntoResponse {
+    tracing::info!(
+        enabled = request.enabled,
+        "🔄 toggle_execution called - updating all autonomous-capable strategies"
+    );
+
     let config = state.approval_manager.toggle_execution(request.enabled).await;
 
     // Also control the autonomous executor
@@ -253,11 +288,11 @@ pub async fn toggle_execution(
         tracing::info!("Auto-execution disabled via global toggle - stopping executor");
     }
 
-    // Persist the toggle state for the default Curve Graduation strategy
+    // Persist the toggle state for ALL active strategies
     // This syncs the global toggle with the per-strategy auto_execute_enabled setting
     // AND updates execution_mode to match (autonomous when enabled, agent_directed when disabled)
     let strategies = state.strategy_engine.list_strategies().await;
-    for strategy in strategies.iter().filter(|s| s.strategy_type == "curve_arb") {
+    for strategy in strategies.iter().filter(|s| s.is_active) {
         let mut updated_params = strategy.risk_params.clone();
         updated_params.auto_execute_enabled = request.enabled;
 
@@ -313,7 +348,7 @@ pub async fn toggle_execution(
 
     // Post-toggle verification logging
     let updated_strategies = state.strategy_engine.list_strategies().await;
-    for strategy in updated_strategies.iter().filter(|s| s.strategy_type == "curve_arb") {
+    for strategy in updated_strategies.iter().filter(|s| s.is_active) {
         tracing::info!(
             strategy_id = %strategy.id,
             strategy_name = %strategy.name,

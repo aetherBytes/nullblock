@@ -268,6 +268,7 @@ impl StrategyEngine {
                     "execution_mode": &strategy.execution_mode,
                     "token_mint": signal.token_mint,
                     "estimated_profit_bps": signal.estimated_profit_bps,
+                    "route_data": edge.route_data,
                 }),
             ));
 
@@ -457,6 +458,7 @@ impl StrategyEngine {
                     "token_mint": signal.token_mint,
                     "estimated_profit_bps": signal.estimated_profit_bps,
                     "consensus_required": requires_consensus,
+                    "route_data": edge.route_data,
                 }),
             ));
 

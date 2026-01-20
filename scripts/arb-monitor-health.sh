@@ -1,5 +1,5 @@
 #!/bin/bash
-# ArbFarm Health Monitor - sets risk MEDIUM by default
+# ArbFarm Health Monitor - displays status only (risk config set dynamically at startup)
 
 echo "⏳ Waiting for ArbFarm..."
 
@@ -12,10 +12,9 @@ done
 echo "✅ Service is up!"
 sleep 2
 
-echo "🔒 Setting risk level to MEDIUM..."
-curl -s -X POST http://localhost:9007/config/risk \
-  -H "Content-Type: application/json" \
-  -d '{"level": "medium"}' | jq -r '"Risk set: max_position=\(.params.max_position_sol) SOL, max_concurrent=\(.params.max_concurrent_positions)"' || echo "Failed to set risk"
+# Note: Risk config is now set dynamically at startup based on wallet balance (1/15th, max 10 SOL)
+echo "📊 Risk config is set automatically based on wallet balance"
+curl -s http://localhost:9007/config/risk 2>/dev/null | jq -r '"Current: max_position=\(.max_position_sol) SOL, max_concurrent=\(.max_concurrent_positions)"' || echo "Failed to get risk"
 echo ""
 sleep 2
 
@@ -34,6 +33,6 @@ while true; do
   curl -s http://localhost:9007/wallet/balance 2>/dev/null | jq -r '"Balance: \(.balance_sol) SOL"' || echo "Unknown"
   echo ""
   echo "🔒 Risk Config"
-  curl -s http://localhost:9007/config/risk 2>/dev/null | jq -r '"Max: \(.max_position_sol) SOL | Concurrent: \(.max_concurrent_positions) | SL: \(.max_drawdown_percent)%"' || true
+  curl -s http://localhost:9007/config/risk 2>/dev/null | jq -r '"Max: \(.max_position_sol) SOL | SL: \(.max_drawdown_percent)% | TP: \(.take_profit_percent)% | Trail: \(.trailing_stop_percent)% | Time: \(.time_limit_minutes)min"' || true
   sleep 5
 done

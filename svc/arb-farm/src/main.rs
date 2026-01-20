@@ -28,7 +28,7 @@ mod webhooks;
 
 use axum::Json;
 use crate::config::Config;
-use crate::handlers::{approvals as approval_handlers, autonomous as autonomous_handlers, config_handlers, consensus as consensus_handlers, curves, edges, engram as engram_handlers, health, helius as helius_handlers, kol, positions as position_handlers, research as research_handlers, scanner, settings, sse, strategies, swarm, threat as threat_handlers, trades, wallet as wallet_handlers, webhooks as webhook_handlers};
+use crate::handlers::{approvals as approval_handlers, autonomous as autonomous_handlers, config_handlers, consensus as consensus_handlers, curves, edges, engram as engram_handlers, graduation as graduation_handlers, health, helius as helius_handlers, kol, positions as position_handlers, research as research_handlers, scanner, settings, sniper as sniper_handlers, sse, strategies, swarm, threat as threat_handlers, trades, wallet as wallet_handlers, webhooks as webhook_handlers};
 use crate::mcp::{get_manifest, get_all_tools, handlers as mcp_handlers};
 
 async fn print_startup_summary(state: &server::AppState) {
@@ -177,6 +177,48 @@ async fn main() -> anyhow::Result<()> {
                             ));
                         }
                         info!("✅ Wallet funding validated: {:.4} SOL (min: {:.2} SOL)", sol_balance, MIN_BALANCE_SOL);
+
+                        // Dynamic max position: 1/15th of wallet balance, capped at 10 SOL
+                        const MAX_POSITION_CAP_SOL: f64 = 10.0;
+                        let dynamic_max_position = (sol_balance / 15.0).min(MAX_POSITION_CAP_SOL);
+                        let dynamic_max_position = (dynamic_max_position * 100.0).round() / 100.0; // Round to 2 decimals
+
+                        {
+                            let mut risk_config = state.risk_config.write().await;
+                            risk_config.max_position_sol = dynamic_max_position;
+                            risk_config.max_position_per_token_sol = dynamic_max_position;
+                        }
+                        info!(
+                            "💰 Dynamic max position set: {:.2} SOL (1/15th of {:.2} SOL balance, cap: {} SOL)",
+                            dynamic_max_position, sol_balance, MAX_POSITION_CAP_SOL
+                        );
+
+                        // Sync all active strategies with the dynamic max position (in-memory + database)
+                        use crate::database::repositories::strategies::UpdateStrategyRecord;
+                        let strategies = state.strategy_engine.list_strategies().await;
+                        let mut synced = 0;
+                        for strategy in strategies.iter().filter(|s| s.is_active) {
+                            let mut params = strategy.risk_params.clone();
+                            params.max_position_sol = dynamic_max_position;
+
+                            // Update in-memory
+                            if state.strategy_engine.set_risk_params(strategy.id, params.clone()).await.is_ok() {
+                                // Persist to database
+                                if let Err(e) = state.strategy_repo.update(strategy.id, UpdateStrategyRecord {
+                                    name: None,
+                                    venue_types: None,
+                                    execution_mode: None,
+                                    risk_params: Some(params),
+                                    is_active: None,
+                                }).await {
+                                    warn!("Failed to persist dynamic max position to DB for strategy {}: {}", strategy.id, e);
+                                }
+                                synced += 1;
+                            }
+                        }
+                        if synced > 0 {
+                            info!("✅ Synced {} strategies with dynamic max position: {:.2} SOL (persisted to DB)", synced, dynamic_max_position);
+                        }
                     }
                 }
                 Err(e) => {
@@ -196,6 +238,19 @@ async fn main() -> anyhow::Result<()> {
     let position_manager_for_autostart = state.position_manager.clone();
     let on_chain_fetcher_for_autostart = state.on_chain_fetcher.clone();
     let metrics_collector_for_autostart = state.metrics_collector.clone();
+    let jupiter_venue_for_autostart = state.jupiter_venue.clone();
+    let risk_config_for_autostart = state.risk_config.clone();
+    let graduation_tracker_for_autostart = state.graduation_tracker.clone();
+    let graduation_sniper_for_autostart = state.graduation_sniper.clone();
+    let consensus_engine_for_analysis = state.consensus_engine.clone();
+    let engrams_client_for_analysis = state.engrams_client.clone();
+    let db_pool_for_analysis = state.db_pool.clone();
+    let event_tx_for_analysis = state.event_tx.clone();
+    let dev_signer_for_analysis = state.dev_signer.clone();
+
+    let position_repo_for_metrics = state.position_repo.clone();
+    let engrams_client_for_metrics = state.engrams_client.clone();
+    let dev_signer_for_metrics = state.dev_signer.clone();
 
     let app = create_router(state);
 
@@ -227,6 +282,7 @@ async fn main() -> anyhow::Result<()> {
     info!("⚙️ Settings API: {}/settings", base_url);
     info!("🔐 Approvals API: {}/approvals", base_url);
     info!("🎮 Execution Config API: {}/execution", base_url);
+    info!("🔫 Sniper API: {}/sniper", base_url);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("✅ Server listening on {}", addr);
@@ -270,6 +326,13 @@ async fn main() -> anyhow::Result<()> {
             }
         });
 
+        // Start graduation tracker and sniper
+        graduation_tracker_for_autostart.start().await;
+        info!("✅ Graduation tracker started (monitoring tracked tokens)");
+
+        graduation_sniper_for_autostart.start().await;
+        info!("✅ Graduation sniper started (listening for graduation events)");
+
         // Run wallet reconciliation to pick up orphaned positions
         if let Some(wallet_address) = dev_signer_for_autostart.get_address() {
             info!("🔄 Running wallet position reconciliation...");
@@ -307,13 +370,31 @@ async fn main() -> anyhow::Result<()> {
                                     if curve_state.virtual_token_reserves > 0 {
                                         curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64
                                     } else {
-                                        warn!("   ⚠️ {} - zero reserves, skipping position creation", &token.mint[..12]);
-                                        continue;
+                                        // Try Jupiter as fallback for zero reserves
+                                        match jupiter_venue_for_autostart.get_token_price(&token.mint).await {
+                                            Ok(price) => {
+                                                info!("   📈 {} - using Jupiter price (zero curve reserves)", &token.mint[..12]);
+                                                price
+                                            }
+                                            Err(_) => {
+                                                warn!("   ⚠️ {} - zero reserves and Jupiter unavailable, skipping", &token.mint[..12]);
+                                                continue;
+                                            }
+                                        }
                                     }
                                 }
-                                Err(e) => {
-                                    warn!("   ⚠️ {} - price unavailable ({}), skipping position creation", &token.mint[..12], e);
-                                    continue;
+                                Err(_) => {
+                                    // Bonding curve not found - try Jupiter (likely graduated token)
+                                    match jupiter_venue_for_autostart.get_token_price(&token.mint).await {
+                                        Ok(price) => {
+                                            info!("   📈 {} - using Jupiter price (graduated/DEX token)", &token.mint[..12]);
+                                            price
+                                        }
+                                        Err(e) => {
+                                            warn!("   ⚠️ {} - no price source available ({}), skipping", &token.mint[..12], e);
+                                            continue;
+                                        }
+                                    }
                                 }
                             };
 
@@ -324,14 +405,15 @@ async fn main() -> anyhow::Result<()> {
                                 Err(_) => crate::execution::ExitConfig::for_discovered_token(),
                             };
 
-                            // Cap estimated entry to reasonable maximum for discovered positions
-                            const MAX_DISCOVERED_ENTRY_SOL: f64 = 0.1;
-                            const DEFAULT_DISCOVERED_ENTRY_SOL: f64 = 0.02;
+                            // Use current risk config for discovered position entry estimates
+                            let max_position_sol = risk_config_for_autostart.read().await.max_position_sol;
                             let raw_estimated_entry = token.balance * estimated_price;
-                            let estimated_entry_sol = if raw_estimated_entry > MAX_DISCOVERED_ENTRY_SOL {
-                                DEFAULT_DISCOVERED_ENTRY_SOL
+                            let estimated_entry_sol = if raw_estimated_entry > max_position_sol {
+                                // Estimated value exceeds max position - cap at max (likely price moved)
+                                max_position_sol
                             } else if raw_estimated_entry < 0.001 {
-                                DEFAULT_DISCOVERED_ENTRY_SOL
+                                // Too small to estimate, use max as conservative default
+                                max_position_sol
                             } else {
                                 raw_estimated_entry
                             };
@@ -373,17 +455,19 @@ async fn main() -> anyhow::Result<()> {
 
         info!("🎯 All workers auto-started");
 
-        // Start periodic wallet reconciliation (every 5 minutes) to catch orphaned tokens
+        // Start periodic wallet reconciliation (every 10 seconds) to catch orphaned tokens
         let periodic_wallet = dev_signer_for_autostart.get_address().map(|s| s.to_string());
         let periodic_helius = helius_das_for_autostart.clone();
         let periodic_position_manager = position_manager_for_autostart.clone();
         let periodic_on_chain = on_chain_fetcher_for_autostart.clone();
         let periodic_metrics = metrics_collector_for_autostart.clone();
+        let periodic_jupiter = jupiter_venue_for_autostart.clone();
+        let periodic_risk_config = risk_config_for_autostart.clone();
 
         if periodic_wallet.is_some() {
             tokio::spawn(async move {
                 let wallet_address = periodic_wallet.unwrap();
-                let reconcile_interval = std::time::Duration::from_secs(300); // 5 minutes
+                let reconcile_interval = std::time::Duration::from_secs(10); // 10 seconds
 
                 loop {
                     tokio::time::sleep(reconcile_interval).await;
@@ -427,13 +511,31 @@ async fn main() -> anyhow::Result<()> {
                                         if curve_state.virtual_token_reserves > 0 {
                                             curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64
                                         } else {
-                                            warn!("[Periodic] ⚠️ {} - zero reserves, skipping", &token.mint[..12]);
-                                            continue;
+                                            // Try Jupiter as fallback for zero reserves
+                                            match periodic_jupiter.get_token_price(&token.mint).await {
+                                                Ok(price) => {
+                                                    info!("[Periodic] 📈 {} - using Jupiter price (zero curve reserves)", &token.mint[..12]);
+                                                    price
+                                                }
+                                                Err(_) => {
+                                                    warn!("[Periodic] ⚠️ {} - zero reserves and Jupiter unavailable, skipping", &token.mint[..12]);
+                                                    continue;
+                                                }
+                                            }
                                         }
                                     }
-                                    Err(e) => {
-                                        warn!("[Periodic] ⚠️ {} - price unavailable ({}), skipping", &token.mint[..12], e);
-                                        continue;
+                                    Err(_) => {
+                                        // Bonding curve not found - try Jupiter (likely graduated token)
+                                        match periodic_jupiter.get_token_price(&token.mint).await {
+                                            Ok(price) => {
+                                                info!("[Periodic] 📈 {} - using Jupiter price (graduated/DEX token)", &token.mint[..12]);
+                                                price
+                                            }
+                                            Err(e) => {
+                                                warn!("[Periodic] ⚠️ {} - no price source available ({}), skipping", &token.mint[..12], e);
+                                                continue;
+                                            }
+                                        }
                                     }
                                 };
 
@@ -444,13 +546,15 @@ async fn main() -> anyhow::Result<()> {
                                     Err(_) => crate::execution::ExitConfig::for_discovered_token(),
                                 };
 
-                                const MAX_DISCOVERED_ENTRY_SOL: f64 = 0.1;
-                                const DEFAULT_DISCOVERED_ENTRY_SOL: f64 = 0.02;
+                                // Use current risk config for discovered position entry estimates
+                                let max_position_sol = periodic_risk_config.read().await.max_position_sol;
                                 let raw_estimated_entry = token.balance * estimated_price;
-                                let estimated_entry_sol = if raw_estimated_entry > MAX_DISCOVERED_ENTRY_SOL {
-                                    DEFAULT_DISCOVERED_ENTRY_SOL
+                                let estimated_entry_sol = if raw_estimated_entry > max_position_sol {
+                                    // Estimated value exceeds max position - cap at max (likely price moved)
+                                    max_position_sol
                                 } else if raw_estimated_entry < 0.001 {
-                                    DEFAULT_DISCOVERED_ENTRY_SOL
+                                    // Too small to estimate, use max as conservative default
+                                    max_position_sol
                                 } else {
                                     raw_estimated_entry
                                 };
@@ -490,7 +594,291 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
             });
-            info!("✅ Periodic wallet reconciliation started (every 5 minutes)");
+            info!("✅ Periodic wallet reconciliation started (every 10 seconds)");
+        }
+
+        // Start periodic consensus analysis (every 5 minutes)
+        let analysis_wallet = dev_signer_for_analysis.get_address().map(|s| s.to_string());
+        let analysis_engrams = engrams_client_for_analysis.clone();
+        let analysis_consensus = consensus_engine_for_analysis.clone();
+        let analysis_db_pool = db_pool_for_analysis.clone();
+        let analysis_event_tx = event_tx_for_analysis.clone();
+
+        if analysis_wallet.is_some() && analysis_engrams.is_configured() && analysis_consensus.is_ready().await {
+            tokio::spawn(async move {
+                let wallet_address = analysis_wallet.unwrap();
+                let analysis_interval = std::time::Duration::from_secs(300); // 5 minutes
+                let initial_delay = std::time::Duration::from_secs(60); // 1 minute initial delay
+
+                info!("🧠 [Consensus] Starting periodic analysis scheduler (every 5 minutes, initial delay 60s)");
+                tokio::time::sleep(initial_delay).await;
+
+                loop {
+                    info!("🧠 [Consensus] Starting periodic consensus analysis...");
+
+                    // Gather trading metrics from database
+                    let position_repo = crate::database::PositionRepository::new(analysis_db_pool.clone());
+                    let pnl_stats = match position_repo.get_pnl_stats().await {
+                        Ok(stats) => stats,
+                        Err(e) => {
+                            warn!("[Consensus] ⚠️ Failed to get PnL stats: {}", e);
+                            tokio::time::sleep(analysis_interval).await;
+                            continue;
+                        }
+                    };
+
+                    // Skip analysis if no trading activity
+                    if pnl_stats.total_trades == 0 {
+                        info!("[Consensus] ℹ️ No trades yet, skipping analysis");
+                        tokio::time::sleep(analysis_interval).await;
+                        continue;
+                    }
+
+                    // Gather recent errors from engrams
+                    let error_history = match analysis_engrams.get_error_history(&wallet_address, Some(20)).await {
+                        Ok(errors) => errors,
+                        Err(e) => {
+                            warn!("[Consensus] ⚠️ Failed to get error history: {}", e);
+                            Vec::new()
+                        }
+                    };
+
+                    // Aggregate error counts by type
+                    let mut error_counts: std::collections::HashMap<String, (u32, String)> = std::collections::HashMap::new();
+                    for error in &error_history {
+                        let error_type_str = serde_json::to_string(&error.error_type)
+                            .unwrap_or_else(|_| "unknown".to_string())
+                            .trim_matches('"')
+                            .to_string();
+                        let entry = error_counts.entry(error_type_str).or_insert((0, error.message.clone()));
+                        entry.0 += 1;
+                    }
+
+                    let recent_errors: Vec<crate::consensus::ErrorSummary> = error_counts
+                        .into_iter()
+                        .map(|(error_type, (count, last_message))| crate::consensus::ErrorSummary {
+                            error_type,
+                            count,
+                            last_message,
+                        })
+                        .collect();
+
+                    // Build analysis context
+                    let win_rate = if pnl_stats.total_trades > 0 {
+                        pnl_stats.take_profits as f64 / pnl_stats.total_trades as f64
+                    } else {
+                        0.0
+                    };
+
+                    let context = crate::consensus::AnalysisContext {
+                        total_trades: pnl_stats.total_trades,
+                        winning_trades: pnl_stats.take_profits,
+                        win_rate,
+                        total_pnl_sol: pnl_stats.total_pnl,
+                        today_pnl_sol: pnl_stats.today_pnl,
+                        week_pnl_sol: pnl_stats.week_pnl,
+                        avg_hold_minutes: pnl_stats.avg_hold_minutes,
+                        best_trade: pnl_stats.best_trade_symbol.clone().map(|symbol| {
+                            crate::consensus::TradeHighlightContext {
+                                symbol,
+                                pnl_sol: pnl_stats.best_trade_pnl,
+                            }
+                        }),
+                        worst_trade: pnl_stats.worst_trade_symbol.clone().map(|symbol| {
+                            crate::consensus::TradeHighlightContext {
+                                symbol,
+                                pnl_sol: pnl_stats.worst_trade_pnl,
+                            }
+                        }),
+                        take_profit_count: pnl_stats.take_profits,
+                        stop_loss_count: pnl_stats.stop_losses,
+                        recent_errors,
+                        time_period: "Last 7 days".to_string(),
+                    };
+
+                    // Request consensus analysis
+                    match analysis_consensus.request_analysis(context).await {
+                        Ok(result) => {
+                            info!(
+                                "[Consensus] ✅ Analysis complete: {} recommendations, {} risk alerts, confidence: {:.1}%",
+                                result.recommendations.len(),
+                                result.risk_alerts.len(),
+                                result.avg_confidence * 100.0
+                            );
+
+                            // Generate conversation log
+                            let session_id = uuid::Uuid::new_v4();
+                            let conversation = crate::engrams::schemas::ConversationLog {
+                                session_id,
+                                participants: result.model_votes.clone(),
+                                topic: crate::engrams::schemas::ConversationTopic::StrategyReview,
+                                context: crate::engrams::schemas::ConversationContext {
+                                    trigger: crate::engrams::schemas::ConversationTrigger::Scheduled,
+                                    trades_in_scope: Some(pnl_stats.total_trades),
+                                    time_period: Some("Last 7 days".to_string()),
+                                    additional_context: Some(serde_json::json!({
+                                        "total_pnl_sol": pnl_stats.total_pnl,
+                                        "win_rate": win_rate,
+                                    })),
+                                },
+                                messages: vec![
+                                    crate::engrams::schemas::ConversationMessage {
+                                        role: "system".to_string(),
+                                        content: "Periodic strategy review analysis".to_string(),
+                                        timestamp: chrono::Utc::now(),
+                                        tokens_used: None,
+                                        latency_ms: Some(result.total_latency_ms),
+                                    },
+                                    crate::engrams::schemas::ConversationMessage {
+                                        role: "assistant".to_string(),
+                                        content: result.overall_assessment.clone(),
+                                        timestamp: chrono::Utc::now(),
+                                        tokens_used: None,
+                                        latency_ms: None,
+                                    },
+                                ],
+                                outcome: crate::engrams::schemas::ConversationOutcome {
+                                    consensus_reached: !result.recommendations.is_empty(),
+                                    recommendations_generated: result.recommendations.len() as u32,
+                                    engram_refs: Vec::new(),
+                                    summary: Some(result.overall_assessment.clone()),
+                                },
+                                created_at: chrono::Utc::now(),
+                            };
+
+                            // Save conversation log
+                            if let Err(e) = analysis_engrams.save_conversation_log(&wallet_address, &conversation).await {
+                                warn!("[Consensus] ⚠️ Failed to save conversation log: {}", e);
+                            } else {
+                                info!("[Consensus] 💾 Saved conversation log: {}", session_id);
+                            }
+
+                            // Save each recommendation as an engram and collect IDs
+                            let mut recommendation_ids: Vec<uuid::Uuid> = Vec::new();
+                            for rec in &result.recommendations {
+                                let rec_id = uuid::Uuid::new_v4();
+                                recommendation_ids.push(rec_id);
+                                let recommendation = crate::engrams::schemas::Recommendation {
+                                    recommendation_id: rec_id,
+                                    source: crate::engrams::schemas::RecommendationSource::ConsensusLlm,
+                                    category: match rec.category.as_str() {
+                                        "strategy" => crate::engrams::schemas::RecommendationCategory::Strategy,
+                                        "risk" => crate::engrams::schemas::RecommendationCategory::Risk,
+                                        "timing" => crate::engrams::schemas::RecommendationCategory::Timing,
+                                        "venue" => crate::engrams::schemas::RecommendationCategory::Venue,
+                                        "position" => crate::engrams::schemas::RecommendationCategory::Position,
+                                        _ => crate::engrams::schemas::RecommendationCategory::Strategy,
+                                    },
+                                    title: rec.title.clone(),
+                                    description: rec.description.clone(),
+                                    suggested_action: crate::engrams::schemas::SuggestedAction {
+                                        action_type: match rec.action_type.as_str() {
+                                            "config_change" => crate::engrams::schemas::SuggestedActionType::ConfigChange,
+                                            "strategy_toggle" => crate::engrams::schemas::SuggestedActionType::StrategyToggle,
+                                            "risk_adjustment" => crate::engrams::schemas::SuggestedActionType::RiskAdjustment,
+                                            "venue_disable" => crate::engrams::schemas::SuggestedActionType::VenueDisable,
+                                            "avoid_token" => crate::engrams::schemas::SuggestedActionType::AvoidToken,
+                                            _ => crate::engrams::schemas::SuggestedActionType::ConfigChange,
+                                        },
+                                        target: rec.target.clone(),
+                                        current_value: rec.current_value.clone(),
+                                        suggested_value: rec.suggested_value.clone(),
+                                        reasoning: rec.reasoning.clone(),
+                                    },
+                                    confidence: rec.confidence,
+                                    supporting_data: crate::engrams::schemas::SupportingData {
+                                        trades_analyzed: pnl_stats.total_trades,
+                                        time_period: "Last 7 days".to_string(),
+                                        relevant_engrams: Vec::new(),
+                                        metrics: Some(serde_json::json!({
+                                            "win_rate": win_rate,
+                                            "total_pnl": pnl_stats.total_pnl,
+                                        })),
+                                    },
+                                    status: crate::engrams::schemas::RecommendationStatus::Pending,
+                                    created_at: chrono::Utc::now(),
+                                    applied_at: None,
+                                };
+
+                                if let Err(e) = analysis_engrams.save_recommendation(&wallet_address, &recommendation).await {
+                                    warn!("[Consensus] ⚠️ Failed to save recommendation '{}': {}", rec.title, e);
+                                } else {
+                                    info!("[Consensus] 💡 Saved recommendation: {} (confidence: {:.0}%)", rec.title, rec.confidence * 100.0);
+                                }
+                            }
+
+                            // Save the full consensus analysis as an engram
+                            let analysis_id = uuid::Uuid::new_v4();
+                            let consensus_analysis = crate::engrams::schemas::ConsensusAnalysis {
+                                analysis_id,
+                                analysis_type: crate::engrams::schemas::ConsensusAnalysisType::Scheduled,
+                                time_period: "Last 7 days".to_string(),
+                                total_trades_analyzed: pnl_stats.total_trades,
+                                overall_assessment: result.overall_assessment.clone(),
+                                risk_alerts: result.risk_alerts.clone(),
+                                recommendations_count: result.recommendations.len() as u32,
+                                recommendation_ids,
+                                avg_confidence: result.avg_confidence,
+                                models_queried: result.model_votes.clone(),
+                                total_latency_ms: result.total_latency_ms,
+                                context_summary: crate::engrams::schemas::AnalysisContextSummary {
+                                    win_rate,
+                                    total_pnl_sol: pnl_stats.total_pnl,
+                                    top_venue: None,
+                                    error_count: 0,
+                                },
+                                created_at: chrono::Utc::now(),
+                            };
+
+                            if let Err(e) = analysis_engrams.save_consensus_analysis(&wallet_address, &consensus_analysis).await {
+                                warn!("[Consensus] ⚠️ Failed to save consensus analysis: {}", e);
+                            } else {
+                                info!("[Consensus] 📊 Saved consensus analysis: {} (confidence: {:.0}%)", analysis_id, result.avg_confidence * 100.0);
+                            }
+
+                            // Emit event for frontend real-time update
+                            let event = crate::events::ArbEvent::new(
+                                "consensus.analysis_complete",
+                                crate::events::EventSource::Agent(crate::events::AgentType::StrategyEngine),
+                                "arb.consensus.analysis",
+                                serde_json::json!({
+                                    "session_id": session_id,
+                                    "recommendations_count": result.recommendations.len(),
+                                    "risk_alerts_count": result.risk_alerts.len(),
+                                    "avg_confidence": result.avg_confidence,
+                                    "models_queried": result.model_votes,
+                                    "timestamp": chrono::Utc::now(),
+                                }),
+                            );
+                            let _ = analysis_event_tx.send(event);
+                        }
+                        Err(e) => {
+                            warn!("[Consensus] ❌ Analysis failed: {}", e);
+                        }
+                    }
+
+                    tokio::time::sleep(analysis_interval).await;
+                }
+            });
+            info!("✅ Periodic consensus analysis started (every 5 minutes)");
+        } else {
+            info!("ℹ️ Periodic consensus analysis skipped (wallet/engrams/consensus not configured)");
+        }
+
+        // Start daily metrics scheduler (runs at 00:05 UTC)
+        let metrics_wallet = dev_signer_for_metrics.get_address().map(|s| s.to_string());
+        if metrics_wallet.is_some() && engrams_client_for_metrics.is_configured() {
+            let wallet_address = metrics_wallet.unwrap();
+            tokio::spawn(async move {
+                crate::agents::start_daily_metrics_scheduler(
+                    position_repo_for_metrics,
+                    engrams_client_for_metrics,
+                    wallet_address,
+                ).await;
+            });
+            info!("✅ Daily metrics scheduler started (runs at 00:05 UTC)");
+        } else {
+            info!("ℹ️ Daily metrics scheduler skipped (wallet/engrams not configured)");
         }
     });
 
@@ -568,6 +956,27 @@ fn create_router(state: server::AppState) -> Router {
         .route("/curves/:mint/score", get(curves::get_opportunity_score))
         .route("/curves/top-opportunities", get(curves::get_top_opportunities))
         .route("/curves/scoring-config", get(curves::get_scoring_config))
+        // Graduation Tracker (Token Watchlist with Engram Persistence)
+        .route("/graduation/track", post(graduation_handlers::track_token))
+        .route("/graduation/untrack/:mint", post(graduation_handlers::untrack_token))
+        .route("/graduation/clear", post(graduation_handlers::clear_all_tracked))
+        .route("/graduation/tracked", get(graduation_handlers::list_tracked))
+        .route("/graduation/tracked/:mint", get(graduation_handlers::is_tracked))
+        .route("/graduation/stats", get(graduation_handlers::get_tracker_stats))
+        .route("/graduation/start", post(graduation_handlers::start_tracker))
+        .route("/graduation/stop", post(graduation_handlers::stop_tracker))
+        .route("/graduation/config", get(graduation_handlers::get_tracker_config))
+        .route("/graduation/config", axum::routing::put(graduation_handlers::update_tracker_config))
+        // Graduation Sniper (Auto-sell positions on graduation)
+        .route("/sniper/stats", get(sniper_handlers::get_sniper_stats))
+        .route("/sniper/positions", get(sniper_handlers::list_snipe_positions))
+        .route("/sniper/positions", post(sniper_handlers::add_snipe_position))
+        .route("/sniper/positions/:mint", axum::routing::delete(sniper_handlers::remove_snipe_position))
+        .route("/sniper/positions/:mint/sell", post(sniper_handlers::manual_sell_position))
+        .route("/sniper/start", post(sniper_handlers::start_sniper))
+        .route("/sniper/stop", post(sniper_handlers::stop_sniper))
+        .route("/sniper/config", get(sniper_handlers::get_sniper_config))
+        .route("/sniper/config", axum::routing::put(sniper_handlers::update_sniper_config))
         // Research/DD
         .route("/research/ingest", post(research_handlers::ingest_url))
         .route("/research/extract", post(research_handlers::extract_strategy_from_text))

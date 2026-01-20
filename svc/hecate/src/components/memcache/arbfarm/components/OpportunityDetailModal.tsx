@@ -226,7 +226,7 @@ const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
                   </div>
                   <div className={styles.metricItem}>
                     <span className={styles.metricLabel}>Creator Holdings</span>
-                    <span className={styles.metricValue}>{(metrics.creator_holdings ?? 0).toFixed(1)}%</span>
+                    <span className={styles.metricValue}>{(metrics.creator_holdings_percent ?? 0).toFixed(1)}%</span>
                   </div>
                   <div className={styles.metricItem}>
                     <span className={styles.metricLabel}>Volume Velocity</span>
@@ -236,8 +236,8 @@ const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
                   </div>
                   <div className={styles.metricItem}>
                     <span className={styles.metricLabel}>Price Momentum</span>
-                    <span className={`${styles.metricValue} ${(metrics.price_momentum ?? 0) >= 0 ? styles.positive : styles.negative}`}>
-                      {(metrics.price_momentum ?? 0) >= 0 ? '+' : ''}{(metrics.price_momentum ?? 0).toFixed(2)}%
+                    <span className={`${styles.metricValue} ${(metrics.price_momentum_1h ?? 0) >= 0 ? styles.positive : styles.negative}`}>
+                      {(metrics.price_momentum_1h ?? 0) >= 0 ? '+' : ''}{(metrics.price_momentum_1h ?? 0).toFixed(2)}%
                     </span>
                   </div>
                 </>
@@ -268,6 +268,9 @@ const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
           </a>
           <a href={`https://dexscreener.com/solana/${token.mint}`} target="_blank" rel="noopener noreferrer" className={styles.linkButton}>
             📊 DEX Screener
+          </a>
+          <a href={`https://jup.ag/swap?inputMint=So11111111111111111111111111111111111111112&outputMint=${token.mint}`} target="_blank" rel="noopener noreferrer" className={styles.linkButton}>
+            🪐 Jupiter
           </a>
         </div>
 

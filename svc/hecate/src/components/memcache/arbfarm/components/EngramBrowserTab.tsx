@@ -3,6 +3,7 @@ import styles from '../arbfarm.module.scss';
 import { arbFarmService } from '../../../../common/services/arbfarm-service';
 import type { Engram, EngramType, EngramBrowserFilter } from '../../../../types/engram';
 import { A2A_TAG_LEARNING } from '../../../../types/engram';
+import CodeBlock, { formatJson } from '../../../common/CodeBlock';
 
 const ENGRAM_TYPE_LABELS: Record<EngramType, string> = {
   persona: 'Persona',
@@ -249,17 +250,23 @@ const EngramBrowserTab: React.FC = () => {
 
               <div className={styles.contentSection}>
                 <label>Content</label>
-                <pre className={styles.contentPre}>
-                  {JSON.stringify(parseContent(selectedEngram.content), null, 2)}
-                </pre>
+                <CodeBlock
+                  code={formatJson(parseContent(selectedEngram.content))}
+                  language="json"
+                  maxHeight="300px"
+                />
               </div>
 
               {selectedEngram.metadata && (
                 <div className={styles.metadataSection}>
                   <label>Metadata</label>
-                  <pre className={styles.metadataPre}>
-                    {JSON.stringify(selectedEngram.metadata, null, 2)}
-                  </pre>
+                  <CodeBlock
+                    code={formatJson(selectedEngram.metadata)}
+                    language="json"
+                    collapsible
+                    defaultCollapsed
+                    title="Metadata"
+                  />
                 </div>
               )}
 

@@ -2,6 +2,7 @@ import React from 'react';
 import styles from '../crossroads.module.scss';
 import type { MCPTool } from '../../../types/crossroads';
 import { TOOL_CATEGORY_ICONS, TOOL_CATEGORY_LABELS } from '../../../types/crossroads';
+import CodeBlock, { formatJson } from '../../common/CodeBlock';
 
 interface ToolDetailPanelProps {
   tool: MCPTool;
@@ -9,12 +10,47 @@ interface ToolDetailPanelProps {
 }
 
 const ToolDetailPanel: React.FC<ToolDetailPanelProps> = ({ tool, onClose }) => {
-  const formatSchema = (schema: Record<string, unknown>): string => {
-    try {
-      return JSON.stringify(schema, null, 2);
-    } catch {
-      return '{}';
+  const generateUsageExample = (toolName: string, schema: Record<string, unknown>): string => {
+    const properties = schema.properties as Record<string, { type?: string }> | undefined;
+    const required = (schema.required as string[]) || [];
+
+    const args: Record<string, unknown> = {};
+    if (properties) {
+      for (const [name, prop] of Object.entries(properties)) {
+        if (required.includes(name)) {
+          switch (prop.type) {
+            case 'string':
+              args[name] = `<${name}>`;
+              break;
+            case 'number':
+            case 'integer':
+              args[name] = 0;
+              break;
+            case 'boolean':
+              args[name] = true;
+              break;
+            case 'array':
+              args[name] = [];
+              break;
+            case 'object':
+              args[name] = {};
+              break;
+            default:
+              args[name] = `<${name}>`;
+          }
+        }
+      }
     }
+
+    return JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: {
+        name: toolName,
+        arguments: args
+      }
+    }, null, 2);
   };
 
   const getSchemaProperties = (schema: Record<string, unknown>): Array<{ name: string; type: string; description?: string; required: boolean }> => {
@@ -105,28 +141,22 @@ const ToolDetailPanel: React.FC<ToolDetailPanelProps> = ({ tool, onClose }) => {
         </div>
 
         <div className={styles.toolDetailSection}>
-          <h3 className={styles.toolDetailSectionTitle}>Raw Schema</h3>
-          <pre className={styles.toolDetailCode}>
-            {formatSchema(tool.inputSchema)}
-          </pre>
+          <h3 className={styles.toolDetailSectionTitle}>Input Schema</h3>
+          <CodeBlock
+            code={formatJson(tool.inputSchema)}
+            language="json"
+            maxHeight="200px"
+          />
         </div>
 
         <div className={styles.toolDetailSection}>
           <h3 className={styles.toolDetailSectionTitle}>Usage Example</h3>
-          <pre className={styles.toolDetailCode}>
-{`// Call this tool via MCP
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "${tool.name}",
-    "arguments": {
-      // Add required parameters here
-    }
-  }
-}`}
-          </pre>
+          <CodeBlock
+            code={generateUsageExample(tool.name, tool.inputSchema)}
+            language="json"
+            title="MCP JSON-RPC Request"
+            showCopy
+          />
         </div>
 
         <div className={styles.toolDetailActions}>

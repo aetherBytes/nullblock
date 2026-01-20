@@ -350,6 +350,7 @@ mod tests {
             estimated_profit_lamports: Some(profit),
             risk_score: Some(10),
             route_data: serde_json::json!({}),
+            signal_data: None,
             status: EdgeStatus::Detected,
             token_mint: None,
             created_at: chrono::Utc::now(),

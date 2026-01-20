@@ -28,8 +28,8 @@ impl Default for ArbFarmPolicy {
     fn default() -> Self {
         Self {
             max_transaction_amount_lamports: 5_000_000_000, // 5 SOL
-            daily_volume_limit_lamports: 25_000_000_000,    // 25 SOL
-            max_transactions_per_day: 10_000,
+            daily_volume_limit_lamports: u64::MAX,          // No daily limit
+            max_transactions_per_day: u32::MAX,             // No tx count limit
             require_simulation: true,
             allowed_programs: ALLOWED_PROGRAMS.iter().map(|s| s.to_string()).collect(),
             blocked_tokens: Vec::new(),
@@ -42,8 +42,8 @@ impl ArbFarmPolicy {
     pub fn dev_testing() -> Self {
         Self {
             max_transaction_amount_lamports: 5_000_000_000, // 5 SOL
-            daily_volume_limit_lamports: 25_000_000_000,    // 25 SOL
-            max_transactions_per_day: 10_000,
+            daily_volume_limit_lamports: u64::MAX,          // No daily limit in dev mode
+            max_transactions_per_day: u32::MAX,             // No tx count limit in dev mode
             require_simulation: true,
             allowed_programs: ALLOWED_PROGRAMS.iter().map(|s| s.to_string()).collect(),
             blocked_tokens: Vec::new(),
@@ -235,7 +235,7 @@ mod tests {
 
     #[test]
     fn test_daily_usage() {
-        let policy = ArbFarmPolicy::default();
+        let policy = ArbFarmPolicy::conservative(); // Use conservative for limit testing
         let mut usage = DailyUsage::new();
 
         // Should allow first transaction
@@ -247,7 +247,34 @@ mod tests {
         // Should still allow more
         assert!(usage.can_execute(1_000_000_000, &policy).is_ok());
 
-        // But not over limit
-        assert!(usage.can_execute(6_000_000_000, &policy).is_err());
+        // But not over per-tx limit (conservative is 1 SOL per tx)
+        assert!(usage.can_execute(2_000_000_000, &policy).is_err());
+    }
+
+    #[test]
+    fn test_dev_testing_has_no_limits() {
+        let policy = ArbFarmPolicy::dev_testing();
+
+        // Dev mode should have unlimited daily volume
+        assert_eq!(policy.daily_volume_limit_lamports, u64::MAX);
+        assert_eq!(policy.max_transactions_per_day, u32::MAX);
+
+        // But still has per-transaction limit for safety
+        assert_eq!(policy.max_transaction_amount_lamports, 5_000_000_000);
+    }
+
+    #[test]
+    fn test_dev_testing_allows_massive_daily_volume() {
+        let policy = ArbFarmPolicy::dev_testing();
+        let mut usage = DailyUsage::new();
+
+        // Simulate massive daily volume (100 SOL)
+        for _ in 0..20 {
+            assert!(usage.can_execute(5_000_000_000, &policy).is_ok());
+            usage.record_transaction(5_000_000_000);
+        }
+
+        // Still allows more even after 100 SOL
+        assert!(usage.can_execute(5_000_000_000, &policy).is_ok());
     }
 }

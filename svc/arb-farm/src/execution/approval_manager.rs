@@ -111,6 +111,19 @@ impl ApprovalManager {
         config.clone()
     }
 
+    pub async fn sync_from_strategies(&self, any_autonomous: bool) {
+        let mut config = self.config.write().await;
+        let was_enabled = config.auto_execution_enabled;
+        config.auto_execution_enabled = any_autonomous;
+
+        if was_enabled != any_autonomous {
+            tracing::info!(
+                "🔄 Synced global execution config from strategies: auto_execution_enabled={}",
+                any_autonomous
+            );
+        }
+    }
+
     pub async fn create_approval(&self, approval: PendingApproval) -> AppResult<PendingApproval> {
         let config = self.config.read().await;
 

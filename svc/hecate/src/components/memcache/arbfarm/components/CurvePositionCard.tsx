@@ -42,6 +42,7 @@ const CurvePositionCard: React.FC<CurvePositionCardProps> = ({
   };
 
   const statusBadge = getStatusBadge(position.status);
+  const isSnipe = position.signal_source === 'graduation_sniper';
 
   const handleSaveExit = () => {
     onUpdateExit(position.id, exitConfig);
@@ -52,7 +53,7 @@ const CurvePositionCard: React.FC<CurvePositionCardProps> = ({
     <div className={styles.curvePositionCard}>
       <div className={styles.positionHeader}>
         <div className={styles.positionToken}>
-          <span className={styles.tokenSymbol}>${position.token_symbol}</span>
+          <span className={styles.tokenSymbol}>{isSnipe && '🔫 '}${position.token_symbol}</span>
           <span className={`${styles.statusBadge} ${statusBadge.className}`}>
             {statusBadge.text}
           </span>

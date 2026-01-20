@@ -120,17 +120,20 @@ export interface SignalListResponse {
 
 export interface Trade {
   id: string;
-  edge_id: string;
+  edge_id?: string;
   strategy_id?: string;
   tx_signature?: string;
   bundle_id?: string;
-  entry_price: number;
+  entry_price?: number;
   exit_price?: number;
-  profit_lamports: number;
-  profit_sol: number;
-  gas_cost_lamports: number;
-  slippage_bps: number;
+  profit_lamports?: number;
+  profit_sol?: number;
+  gas_cost_lamports?: number;
+  slippage_bps?: number;
   executed_at: string;
+  token_mint?: string;
+  token_symbol?: string;
+  venue?: string;
 }
 
 export interface TradeStats {
@@ -540,6 +543,7 @@ export interface CurvePosition {
   token_mint: string;
   token_symbol: string;
   venue: CurveVenue;
+  signal_source?: string;
   entry_sol: number;
   entry_tokens: number;
   entry_progress: number;
@@ -1101,6 +1105,9 @@ export interface RiskConfig {
   cooldown_after_loss_ms: number;
   volatility_scaling_enabled: boolean;
   auto_pause_on_drawdown: boolean;
+  take_profit_percent: number;
+  trailing_stop_percent: number;
+  time_limit_minutes: number;
 }
 
 export interface RiskPreset {
@@ -1575,17 +1582,23 @@ export interface BestWorstTrade {
 
 export interface RecentTradeInfo {
   id: string;
-  symbol: string;
-  pnl: number;
-  pnl_percent: number;
-  exit_type: string;
-  time_ago: string;
+  symbol?: string;
+  pnl?: number;
+  pnl_percent?: number;
+  exit_type?: string;
+  time_ago?: string;
 }
 
 export interface ActiveStrategy {
-  id: string;
-  name: string;
-  position_count: number;
+  symbol: string;
+  mint: string;
+  entry_sol: number;
+  current_pnl_percent: number;
+  stop_loss?: number;
+  take_profit?: number;
+  trailing_stop?: number;
+  time_limit_mins?: number;
+  hold_time_mins: number;
 }
 
 export interface PnLSummary {
@@ -1622,19 +1635,27 @@ export interface ExitConfig {
 export interface OpenPosition {
   id: string;
   edge_id?: string;
-  token_mint: string;
+  token_mint?: string;
   token_symbol?: string;
-  venue: string;
+  venue?: string;
+  signal_source?: string;
   strategy_id?: string;
-  entry_price: number;
-  entry_amount_sol: number;
+  entry_price?: number;
+  entry_amount_sol?: number;
+  entry_amount_base?: number;
+  entry_token_amount?: number;
   entry_tx_signature?: string;
+  entry_time?: string;
   current_price?: number;
+  current_value_base?: number;
   unrealized_pnl?: number;
   unrealized_pnl_percent?: number;
-  exit_config: ExitConfig;
-  status: string;
-  opened_at: string;
+  high_water_mark?: number;
+  exit_config?: ExitConfig;
+  status?: string;
+  opened_at?: string;
+  remaining_amount_base?: number;
+  remaining_token_amount?: number;
 }
 
 export interface PositionStats {
