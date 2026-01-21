@@ -7,6 +7,7 @@ use super::{
     voting::{
         generate_trade_prompt, parse_trade_approval, ConsensusResult, ModelVote, VotingEngine,
         AnalysisContext, AnalysisVote, ParsedRecommendation, generate_analysis_prompt, parse_analysis_response,
+        TradeAnalysisItem, PatternSummary,
     },
 };
 use crate::{
@@ -145,6 +146,8 @@ impl ConsensusEngine {
         let mut assessments: Vec<String> = Vec::new();
         let mut total_confidence = 0.0;
         let mut total_weight = 0.0;
+        let mut all_trade_analyses: Vec<TradeAnalysisItem> = Vec::new();
+        let mut aggregated_pattern_summary: Option<PatternSummary> = None;
 
         for vote in votes {
             let weight = get_model_weight(&vote.model);
@@ -162,6 +165,20 @@ impl ConsensusEngine {
             }
 
             assessments.push(vote.vote.overall_assessment.clone());
+
+            // Collect trade analyses (dedup by position_id)
+            for analysis in &vote.vote.trade_analyses {
+                if !all_trade_analyses.iter().any(|a| a.position_id == analysis.position_id) {
+                    all_trade_analyses.push(analysis.clone());
+                }
+            }
+
+            // Use the first non-empty pattern summary
+            if aggregated_pattern_summary.is_none() {
+                if let Some(summary) = &vote.vote.pattern_summary {
+                    aggregated_pattern_summary = Some(summary.clone());
+                }
+            }
         }
 
         let mut deduped_recommendations: Vec<ParsedRecommendation> = Vec::new();
@@ -202,6 +219,8 @@ impl ConsensusEngine {
             avg_confidence: if total_weight > 0.0 { total_confidence / total_weight } else { 0.0 },
             model_votes: votes.iter().map(|v| v.model.clone()).collect(),
             total_latency_ms,
+            trade_analyses: all_trade_analyses,
+            pattern_summary: aggregated_pattern_summary,
         }
     }
 
@@ -365,6 +384,8 @@ pub struct AnalysisResult {
     pub avg_confidence: f64,
     pub model_votes: Vec<String>,
     pub total_latency_ms: u64,
+    pub trade_analyses: Vec<TradeAnalysisItem>,
+    pub pattern_summary: Option<PatternSummary>,
 }
 
 #[derive(Debug, Clone)]

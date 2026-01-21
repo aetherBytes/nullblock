@@ -1331,6 +1331,7 @@ async fn engram_request_analysis(state: &AppState, args: Value) -> McpToolResult
         stop_loss_count: total_trades.saturating_sub(winning_trades),
         recent_errors: error_summaries,
         time_period: time_period.to_string(),
+        recent_trades: Vec::new(), // MCP analysis uses engram-based trade history
     };
 
     // Check if consensus engine is available

@@ -273,14 +273,16 @@ const ConsensusTab: React.FC = () => {
           <div className={styles.configField}>
             <label>Review Interval</label>
             <select
-              value={config?.review_interval_hours ?? 24}
+              value={config?.review_interval_hours ?? 1}
               onChange={e => handleUpdateReviewInterval(parseInt(e.target.value))}
               disabled={saving}
             >
+              <option value={1}>1 hour</option>
+              <option value={2}>2 hours</option>
+              <option value={4}>4 hours</option>
               <option value={6}>6 hours</option>
               <option value={12}>12 hours</option>
               <option value={24}>24 hours</option>
-              <option value={48}>48 hours</option>
             </select>
           </div>
         </div>

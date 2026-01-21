@@ -832,3 +832,101 @@ pub async fn get_discovered_models(State(_state): State<AppState>) -> impl IntoR
         })),
     )
 }
+
+#[derive(Debug, Deserialize)]
+pub struct ListTradeAnalysesQuery {
+    pub limit: Option<i64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TradeAnalysisListResponse {
+    pub analyses: Vec<crate::engrams::schemas::TradeAnalysis>,
+    pub total: usize,
+}
+
+pub async fn list_trade_analyses(
+    State(state): State<AppState>,
+    Query(query): Query<ListTradeAnalysesQuery>,
+) -> impl IntoResponse {
+    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+
+    match state.engrams_client.get_trade_analyses(&wallet, query.limit).await {
+        Ok(analyses) => {
+            let total = analyses.len();
+            (
+                StatusCode::OK,
+                Json(TradeAnalysisListResponse { analyses, total }),
+            )
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch trade analyses: {}", e);
+            (
+                StatusCode::OK,
+                Json(TradeAnalysisListResponse {
+                    analyses: vec![],
+                    total: 0,
+                }),
+            )
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct PatternSummaryResponse {
+    pub summary: Option<crate::engrams::schemas::StoredPatternSummary>,
+    pub has_data: bool,
+}
+
+pub async fn get_pattern_summary(State(state): State<AppState>) -> impl IntoResponse {
+    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+
+    match state.engrams_client.get_latest_pattern_summary(&wallet).await {
+        Ok(summary) => {
+            let has_data = summary.is_some();
+            (
+                StatusCode::OK,
+                Json(PatternSummaryResponse { summary, has_data }),
+            )
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch pattern summary: {}", e);
+            (
+                StatusCode::OK,
+                Json(PatternSummaryResponse {
+                    summary: None,
+                    has_data: false,
+                }),
+            )
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct AnalysisSummaryResponse {
+    pub trade_analyses_count: usize,
+    pub latest_pattern_summary: Option<crate::engrams::schemas::StoredPatternSummary>,
+    pub recent_trade_analyses: Vec<crate::engrams::schemas::TradeAnalysis>,
+    pub config: crate::consensus::ConsensusConfig,
+    pub is_dev_wallet: bool,
+}
+
+pub async fn get_analysis_summary(State(state): State<AppState>) -> impl IntoResponse {
+    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let is_dev = crate::consensus::is_dev_wallet(&wallet);
+    let config = CONSENSUS_CONFIG.read().await.clone();
+
+    let trade_analyses = state.engrams_client.get_trade_analyses(&wallet, Some(10)).await.unwrap_or_default();
+    let pattern_summary = state.engrams_client.get_latest_pattern_summary(&wallet).await.ok().flatten();
+    let total_analyses = state.engrams_client.get_trade_analyses(&wallet, Some(1000)).await.map(|a| a.len()).unwrap_or(0);
+
+    (
+        StatusCode::OK,
+        Json(AnalysisSummaryResponse {
+            trade_analyses_count: total_analyses,
+            latest_pattern_summary: pattern_summary,
+            recent_trade_analyses: trade_analyses,
+            config,
+            is_dev_wallet: is_dev,
+        }),
+    )
+}

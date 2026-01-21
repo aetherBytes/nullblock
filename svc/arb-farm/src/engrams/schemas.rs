@@ -296,6 +296,62 @@ pub fn generate_consensus_decision_key(decision_id: &Uuid) -> String {
 
 pub const A2A_TAG_LEARNING: &str = "arbFarm.learning";
 pub const WATCHLIST_TAG: &str = "watchlist";
+pub const TRADE_ANALYSIS_TAG: &str = "arbFarm.tradeAnalysis";
+pub const PATTERN_SUMMARY_TAG: &str = "arbFarm.patternSummary";
+pub const RECOMMENDATION_TAG: &str = "arbFarm.recommendation";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradeAnalysis {
+    pub analysis_id: Uuid,
+    pub position_id: Uuid,
+    pub token_symbol: String,
+    pub venue: String,
+    pub pnl_sol: f64,
+    pub exit_reason: String,
+    pub root_cause: String,
+    pub config_issue: Option<String>,
+    pub pattern: Option<String>,
+    pub suggested_fix: Option<String>,
+    pub confidence: f64,
+    pub created_at: DateTime<Utc>,
+}
+
+pub fn generate_trade_analysis_key(analysis_id: &Uuid) -> String {
+    format!("arb.learning.trade_analysis.{}", analysis_id)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoredPatternSummary {
+    pub summary_id: Uuid,
+    pub losing_patterns: Vec<String>,
+    pub winning_patterns: Vec<String>,
+    pub config_recommendations: Vec<String>,
+    pub trades_analyzed: u32,
+    pub time_period: String,
+    pub created_at: DateTime<Utc>,
+}
+
+pub fn generate_pattern_summary_key(summary_id: &Uuid) -> String {
+    format!("arb.learning.pattern_summary.{}", summary_id)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradeAnalysisEngramWrapper {
+    pub engram_id: String,
+    pub engram_key: String,
+    pub tags: Vec<String>,
+    pub created_at: String,
+    pub analysis: TradeAnalysis,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PatternSummaryEngramWrapper {
+    pub engram_id: String,
+    pub engram_key: String,
+    pub tags: Vec<String>,
+    pub created_at: String,
+    pub summary: StoredPatternSummary,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WatchlistToken {

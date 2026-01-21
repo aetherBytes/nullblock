@@ -210,3 +210,46 @@ export interface DiscoveredModel {
   reasoning_capable?: boolean;
   image_capable?: boolean;
 }
+
+export interface TradeAnalysis {
+  analysis_id: string;
+  position_id: string;
+  token_symbol: string;
+  venue: string;
+  pnl_sol: number;
+  exit_reason: string;
+  root_cause: string;
+  config_issue?: string;
+  pattern?: string;
+  suggested_fix?: string;
+  confidence: number;
+  created_at: string;
+}
+
+export interface TradeAnalysisListResponse {
+  analyses: TradeAnalysis[];
+  total: number;
+}
+
+export interface PatternSummary {
+  summary_id: string;
+  losing_patterns: string[];
+  winning_patterns: string[];
+  config_recommendations: string[];
+  trades_analyzed: number;
+  time_period: string;
+  created_at: string;
+}
+
+export interface PatternSummaryResponse {
+  summary: PatternSummary | null;
+  has_data: boolean;
+}
+
+export interface AnalysisSummaryResponse {
+  trade_analyses_count: number;
+  latest_pattern_summary: PatternSummary | null;
+  recent_trade_analyses: TradeAnalysis[];
+  config: ConsensusConfig;
+  is_dev_wallet: boolean;
+}

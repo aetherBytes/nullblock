@@ -209,6 +209,8 @@ pub struct AnalysisContext {
     pub stop_loss_count: u32,
     pub recent_errors: Vec<ErrorSummary>,
     pub time_period: String,
+    #[serde(default)]
+    pub recent_trades: Vec<DetailedTradeContext>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -225,11 +227,54 @@ pub struct ErrorSummary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetailedTradeContext {
+    pub position_id: uuid::Uuid,
+    pub token_symbol: String,
+    pub venue: String,
+    pub entry_sol: f64,
+    pub exit_sol: f64,
+    pub pnl_sol: f64,
+    pub pnl_percent: f64,
+    pub hold_minutes: f64,
+    pub exit_reason: String,
+    pub stop_loss_pct: Option<f64>,
+    pub take_profit_pct: Option<f64>,
+    pub entry_time: chrono::DateTime<chrono::Utc>,
+    pub exit_time: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisVote {
     pub recommendations: Vec<ParsedRecommendation>,
     pub risk_alerts: Vec<String>,
     pub overall_assessment: String,
     pub confidence: f64,
+    #[serde(default)]
+    pub trade_analyses: Vec<TradeAnalysisItem>,
+    #[serde(default)]
+    pub pattern_summary: Option<PatternSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradeAnalysisItem {
+    pub position_id: String,
+    pub root_cause: String,
+    #[serde(default)]
+    pub config_issue: Option<String>,
+    #[serde(default)]
+    pub pattern: Option<String>,
+    #[serde(default)]
+    pub suggested_fix: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PatternSummary {
+    #[serde(default)]
+    pub losing_patterns: Vec<String>,
+    #[serde(default)]
+    pub winning_patterns: Vec<String>,
+    #[serde(default)]
+    pub config_recommendations: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -262,6 +307,41 @@ pub fn generate_analysis_prompt(context: &AnalysisContext) -> String {
             .join("\n")
     };
 
+    let trades_table = if context.recent_trades.is_empty() {
+        "No recent trades to analyze.".to_string()
+    } else {
+        let mut table = String::from("| # | Token | Venue | Entry | Exit | PnL | Hold | Exit Reason | SL% | TP% |\n");
+        table.push_str("|---|-------|-------|-------|------|-----|------|-------------|-----|-----|\n");
+        for (i, trade) in context.recent_trades.iter().enumerate() {
+            let sl_str = trade.stop_loss_pct.map(|v| format!("{:.1}", v)).unwrap_or_else(|| "-".to_string());
+            let tp_str = trade.take_profit_pct.map(|v| format!("{:.1}", v)).unwrap_or_else(|| "-".to_string());
+            let pnl_sign = if trade.pnl_sol >= 0.0 { "+" } else { "" };
+            table.push_str(&format!(
+                "| {} | {} | {} | {:.4} | {:.4} | {}{:.4} ({:.1}%) | {:.1}m | {} | {} | {} |\n",
+                i + 1,
+                trade.token_symbol,
+                trade.venue,
+                trade.entry_sol,
+                trade.exit_sol,
+                pnl_sign,
+                trade.pnl_sol,
+                trade.pnl_percent,
+                trade.hold_minutes,
+                trade.exit_reason,
+                sl_str,
+                tp_str
+            ));
+        }
+        table
+    };
+
+    let losing_trades_note = if !context.recent_trades.is_empty() {
+        let losing_count = context.recent_trades.iter().filter(|t| t.pnl_sol < 0.0).count();
+        format!("\n**Losing Trades to Analyze: {}**", losing_count)
+    } else {
+        String::new()
+    };
+
     format!(
         r#"You are an AI trading analyst for an autonomous MEV agent on Solana. Analyze the trading performance and provide actionable recommendations to improve profitability.
 
@@ -286,26 +366,42 @@ pub fn generate_analysis_prompt(context: &AnalysisContext) -> String {
 ### Recent Errors
 {}
 
+## Recent Trades (Analyze Each)
+{}
+{}
+
 ## Your Task
 
-Analyze this trading performance and provide specific, actionable recommendations. Focus on:
-1. Strategy improvements (entry/exit timing, position sizing)
-2. Risk adjustments (stop-loss levels, max position sizes)
-3. Venue preferences (which venues are performing best)
-4. Error pattern resolution
+1. **Per-Trade Analysis**: For each LOSING trade above, identify the root cause and config correlation.
+2. **Pattern Discovery**: Group similar issues across trades to find systematic problems.
+3. **Actionable Recommendations**: Provide specific config changes with evidence from the trades.
 
 Respond with a JSON object in this exact format:
 {{
+    "trade_analyses": [
+        {{
+            "position_id": "uuid from table",
+            "root_cause": "specific issue (e.g., 'SL triggered during normal volatility')",
+            "config_issue": "SL at 5% triggered, but token recovered to +20% - suggest 8% SL",
+            "pattern": "pump.fun early entry SL trigger",
+            "suggested_fix": "Increase stop_loss_percent from 5% to 8% for pump.fun entries"
+        }}
+    ],
+    "pattern_summary": {{
+        "losing_patterns": ["pattern1: X trades affected", "pattern2: Y trades affected"],
+        "winning_patterns": ["pattern1: why these worked"],
+        "config_recommendations": ["specific config change with evidence"]
+    }},
     "recommendations": [
         {{
             "category": "strategy|risk|timing|venue|position",
             "title": "Brief title (max 50 chars)",
-            "description": "Detailed explanation",
+            "description": "Detailed explanation with trade evidence",
             "action_type": "config_change|strategy_toggle|risk_adjustment|venue_disable|avoid_token",
             "target": "The config/strategy/venue to modify",
             "current_value": null,
             "suggested_value": "The recommended value",
-            "reasoning": "Why this change will improve performance",
+            "reasoning": "Why this change will improve performance - cite specific trades",
             "confidence": 0.0-1.0
         }}
     ],
@@ -315,9 +411,10 @@ Respond with a JSON object in this exact format:
 }}
 
 Requirements:
-- Provide 2-5 specific recommendations
-- Each recommendation must have confidence > 0.5 to be actionable
-- Focus on data-driven insights from the metrics provided
+- Analyze EACH losing trade and provide specific root cause
+- Group similar issues into patterns
+- Provide 2-5 specific recommendations with TRADE EVIDENCE
+- Each recommendation must cite which trades support the change
 - Prioritize recommendations by potential profit impact"#,
         context.time_period,
         context.total_trades,
@@ -331,7 +428,9 @@ Requirements:
         context.stop_loss_count,
         best_trade_str,
         worst_trade_str,
-        errors_summary
+        errors_summary,
+        trades_table,
+        losing_trades_note
     )
 }
 

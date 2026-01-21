@@ -183,6 +183,11 @@ pub struct UpdateSniperConfigRequest {
     pub take_profit_percent: Option<f64>,
     pub stop_loss_percent: Option<f64>,
     pub auto_sell_on_graduation: Option<bool>,
+    pub enable_post_graduation_entry: Option<bool>,
+    pub post_graduation_entry_sol: Option<f64>,
+    pub post_graduation_take_profit: Option<f64>,
+    pub post_graduation_stop_loss: Option<f64>,
+    pub post_graduation_max_delay_ms: Option<u64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -219,20 +224,37 @@ pub async fn update_sniper_config(
     if let Some(v) = request.auto_sell_on_graduation {
         config.auto_sell_on_graduation = v;
     }
+    if let Some(v) = request.enable_post_graduation_entry {
+        config.enable_post_graduation_entry = v;
+    }
+    if let Some(v) = request.post_graduation_entry_sol {
+        config.post_graduation_entry_sol = v;
+    }
+    if let Some(v) = request.post_graduation_take_profit {
+        config.post_graduation_take_profit = v;
+    }
+    if let Some(v) = request.post_graduation_stop_loss {
+        config.post_graduation_stop_loss = v;
+    }
+    if let Some(v) = request.post_graduation_max_delay_ms {
+        config.post_graduation_max_delay_ms = v;
+    }
 
     state.graduation_sniper.update_config(config.clone()).await;
 
     Ok(Json(UpdateSniperConfigResponse {
         success: true,
         message: format!(
-            "Sniper config updated: sell_delay={}ms, retries={}, slippage={}bps, max_positions={}, TP={:.1}%, SL={:.1}%, auto_sell={}",
+            "Sniper config updated: sell_delay={}ms, retries={}, slippage={}bps, max_positions={}, TP={:.1}%, SL={:.1}%, auto_sell={}, post_grad_entry={} ({:.2} SOL)",
             config.sell_delay_ms,
             config.max_sell_retries,
             config.slippage_bps,
             config.max_concurrent_positions,
             config.take_profit_percent,
             config.stop_loss_percent,
-            config.auto_sell_on_graduation
+            config.auto_sell_on_graduation,
+            config.enable_post_graduation_entry,
+            config.post_graduation_entry_sol
         ),
         config,
     }))

@@ -326,7 +326,7 @@ impl AppState {
                 max_risk_score: 40,                     // Conservative risk tolerance
                 require_simulation: true,               // Always simulate first
                 auto_execute_atomic: true,              // Auto-execute atomic ops
-                auto_execute_enabled: false,            // OFF by default - user must enable
+                auto_execute_enabled: true,             // ON by default - curve trades need speed
                 require_consensus: false,               // No consensus required for autonomous
                 require_confirmation: false,            // NO confirmation needed
                 staleness_threshold_hours: 24,
@@ -389,7 +389,7 @@ impl AppState {
                 max_risk_score: 50,                     // Moderate risk tolerance
                 require_simulation: false,              // Skip simulation for speed
                 auto_execute_atomic: true,              // Auto-execute atomic ops
-                auto_execute_enabled: false,            // OFF by default - user must enable
+                auto_execute_enabled: true,             // ON by default - snipes must be fast
                 require_consensus: false,               // No consensus for time-sensitive snipes
                 require_confirmation: false,            // No confirmation needed
                 staleness_threshold_hours: 1,          // Short staleness window
@@ -704,6 +704,46 @@ impl AppState {
             );
         }
 
+        // Reconcile curve strategies to have auto_execute_enabled=true
+        // This ensures both graduation_snipe AND curve_arb are ready for autonomous execution
+        let strategies_to_enable: Vec<_> = strategies.iter()
+            .filter(|s| (s.strategy_type == "graduation_snipe" || s.strategy_type == "curve_arb")
+                && !s.risk_params.auto_execute_enabled)
+            .map(|s| s.id)
+            .collect();
+
+        for strategy_id in strategies_to_enable {
+            if let Some(strategy) = strategies.iter().find(|s| s.id == strategy_id) {
+                tracing::info!(
+                    strategy_id = %strategy_id,
+                    strategy_name = %strategy.name,
+                    strategy_type = %strategy.strategy_type,
+                    "🔫 Enabling auto_execute for curve strategy (autonomous trading)"
+                );
+
+                let mut updated_risk_params = strategy.risk_params.clone();
+                updated_risk_params.auto_execute_enabled = true;
+
+                use crate::database::repositories::strategies::UpdateStrategyRecord;
+                if let Err(e) = strategy_repo.update(strategy_id, UpdateStrategyRecord {
+                    name: None,
+                    venue_types: None,
+                    execution_mode: Some("autonomous".to_string()),
+                    risk_params: Some(updated_risk_params.clone()),
+                    is_active: None,
+                }).await {
+                    tracing::warn!(error = %e, "Failed to enable auto_execute for graduation_snipe");
+                } else {
+                    // Update in-memory
+                    let _ = strategy_engine.set_risk_params(strategy_id, updated_risk_params).await;
+                    let _ = strategy_engine.set_execution_mode(strategy_id, "autonomous".to_string()).await;
+                }
+            }
+        }
+
+        // Refresh strategies list after snipe reconciliation
+        let strategies = strategy_engine.list_strategies().await;
+
         // Reconcile execution_mode with auto_execute_enabled for all strategies
         // IMPORTANT: This runs AFTER engrams restoration to ensure persisted state is honored
         // This ensures that if auto_execute_enabled is true, execution_mode is "autonomous"
@@ -988,8 +1028,9 @@ impl AppState {
             )
             .with_jupiter_api_url(config.jupiter_api_url.clone())
             .with_strategy_engine(strategy_engine.clone())
+            .with_transaction_support(dev_signer.clone(), helius_sender.clone())
         );
-        tracing::info!("✅ Graduation Sniper initialized (strategy engine + Jupiter fallback for post-graduation sells)");
+        tracing::info!("✅ Graduation Sniper initialized (strategy engine + Jupiter for post-graduation buys/sells)");
 
         Ok(Self {
             config,

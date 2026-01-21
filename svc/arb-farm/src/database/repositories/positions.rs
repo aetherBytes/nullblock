@@ -519,6 +519,81 @@ impl PositionRepository {
 
         Ok(())
     }
+
+    pub async fn get_recent_closed_trades(&self, limit: i32) -> AppResult<Vec<DetailedClosedTrade>> {
+        #[derive(sqlx::FromRow)]
+        struct TradeRow {
+            id: Uuid,
+            token_symbol: Option<String>,
+            token_mint: String,
+            entry_amount_base: Decimal,
+            exit_price: Option<Decimal>,
+            realized_pnl: Option<Decimal>,
+            exit_reason: Option<String>,
+            entry_time: DateTime<Utc>,
+            exit_time: Option<DateTime<Utc>>,
+            exit_config: serde_json::Value,
+        }
+
+        let rows: Vec<TradeRow> = sqlx::query_as(
+            r#"SELECT id, token_symbol, token_mint, entry_amount_base, exit_price,
+                      realized_pnl, exit_reason, entry_time, exit_time, exit_config
+               FROM arb_positions
+               WHERE status = 'closed' AND exit_time IS NOT NULL
+               ORDER BY exit_time DESC
+               LIMIT $1"#
+        )
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(rows.into_iter().map(|r| {
+            let entry_sol = decimal_to_f64(r.entry_amount_base);
+            let pnl_sol = r.realized_pnl.map(decimal_to_f64).unwrap_or(0.0);
+            let exit_sol = entry_sol + pnl_sol;
+            let pnl_percent = if entry_sol > 0.0 { (pnl_sol / entry_sol) * 100.0 } else { 0.0 };
+
+            let exit_time = r.exit_time.unwrap_or_else(chrono::Utc::now);
+            let hold_minutes = (exit_time - r.entry_time).num_seconds() as f64 / 60.0;
+
+            let exit_config: ExitConfig = serde_json::from_value(r.exit_config.clone())
+                .unwrap_or_default();
+
+            DetailedClosedTrade {
+                position_id: r.id,
+                token_symbol: r.token_symbol.unwrap_or_else(|| r.token_mint[..8.min(r.token_mint.len())].to_string()),
+                venue: "pump.fun".to_string(),
+                entry_sol,
+                exit_sol,
+                pnl_sol,
+                pnl_percent,
+                hold_minutes,
+                exit_reason: r.exit_reason.unwrap_or_else(|| "Unknown".to_string()),
+                stop_loss_pct: exit_config.stop_loss_percent,
+                take_profit_pct: exit_config.take_profit_percent,
+                entry_time: r.entry_time,
+                exit_time,
+            }
+        }).collect())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetailedClosedTrade {
+    pub position_id: Uuid,
+    pub token_symbol: String,
+    pub venue: String,
+    pub entry_sol: f64,
+    pub exit_sol: f64,
+    pub pnl_sol: f64,
+    pub pnl_percent: f64,
+    pub hold_minutes: f64,
+    pub exit_reason: String,
+    pub stop_loss_pct: Option<f64>,
+    pub take_profit_pct: Option<f64>,
+    pub entry_time: DateTime<Utc>,
+    pub exit_time: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
