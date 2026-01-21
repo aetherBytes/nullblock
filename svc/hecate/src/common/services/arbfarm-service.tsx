@@ -2699,6 +2699,27 @@ class ArbFarmService {
       method: 'POST',
     });
   }
+
+  async getTradeAnalyses(limit?: number): Promise<ArbFarmServiceResponse<import('../../types/consensus').TradeAnalysisListResponse>> {
+    const params = new URLSearchParams();
+    if (limit) params.set('limit', limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request<import('../../types/consensus').TradeAnalysisListResponse>(`/consensus/trade-analyses${query}`, {
+      method: 'GET',
+    });
+  }
+
+  async getPatternSummary(): Promise<ArbFarmServiceResponse<import('../../types/consensus').PatternSummaryResponse>> {
+    return this.request<import('../../types/consensus').PatternSummaryResponse>('/consensus/patterns', {
+      method: 'GET',
+    });
+  }
+
+  async getAnalysisSummary(): Promise<ArbFarmServiceResponse<import('../../types/consensus').AnalysisSummaryResponse>> {
+    return this.request<import('../../types/consensus').AnalysisSummaryResponse>('/consensus/analysis-summary', {
+      method: 'GET',
+    });
+  }
 }
 
 export const arbFarmService = new ArbFarmService();

@@ -670,6 +670,29 @@ async fn main() -> anyhow::Result<()> {
                         0.0
                     };
 
+                    // Fetch recent closed trades with detailed context
+                    let recent_trades = match position_repo.get_recent_closed_trades(15).await {
+                        Ok(trades) => trades.into_iter().map(|t| crate::consensus::DetailedTradeContext {
+                            position_id: t.position_id,
+                            token_symbol: t.token_symbol,
+                            venue: t.venue,
+                            entry_sol: t.entry_sol,
+                            exit_sol: t.exit_sol,
+                            pnl_sol: t.pnl_sol,
+                            pnl_percent: t.pnl_percent,
+                            hold_minutes: t.hold_minutes,
+                            exit_reason: t.exit_reason,
+                            stop_loss_pct: t.stop_loss_pct,
+                            take_profit_pct: t.take_profit_pct,
+                            entry_time: t.entry_time,
+                            exit_time: t.exit_time,
+                        }).collect(),
+                        Err(e) => {
+                            warn!("[Consensus] ⚠️ Failed to get recent trades: {}", e);
+                            Vec::new()
+                        }
+                    };
+
                     let context = crate::consensus::AnalysisContext {
                         total_trades: pnl_stats.total_trades,
                         winning_trades: pnl_stats.take_profits,
@@ -694,7 +717,11 @@ async fn main() -> anyhow::Result<()> {
                         stop_loss_count: pnl_stats.stop_losses,
                         recent_errors,
                         time_period: "Last 7 days".to_string(),
+                        recent_trades,
                     };
+
+                    // Store context data needed after move
+                    let context_recent_trades = context.recent_trades.clone();
 
                     // Request consensus analysis
                     match analysis_consensus.request_analysis(context).await {
@@ -834,6 +861,57 @@ async fn main() -> anyhow::Result<()> {
                                 warn!("[Consensus] ⚠️ Failed to save consensus analysis: {}", e);
                             } else {
                                 info!("[Consensus] 📊 Saved consensus analysis: {} (confidence: {:.0}%)", analysis_id, result.avg_confidence * 100.0);
+                            }
+
+                            // Save trade analyses from the result
+                            for trade_analysis in &result.trade_analyses {
+                                // Find the matching trade from recent_trades to get additional context
+                                let trade_context = context_recent_trades.iter()
+                                    .find(|t| t.position_id.to_string() == trade_analysis.position_id);
+
+                                let analysis = crate::engrams::schemas::TradeAnalysis {
+                                    analysis_id: uuid::Uuid::new_v4(),
+                                    position_id: uuid::Uuid::parse_str(&trade_analysis.position_id)
+                                        .unwrap_or_else(|_| uuid::Uuid::nil()),
+                                    token_symbol: trade_context.map(|t| t.token_symbol.clone()).unwrap_or_else(|| "Unknown".to_string()),
+                                    venue: trade_context.map(|t| t.venue.clone()).unwrap_or_else(|| "pump.fun".to_string()),
+                                    pnl_sol: trade_context.map(|t| t.pnl_sol).unwrap_or(0.0),
+                                    exit_reason: trade_context.map(|t| t.exit_reason.clone()).unwrap_or_else(|| "Unknown".to_string()),
+                                    root_cause: trade_analysis.root_cause.clone(),
+                                    config_issue: trade_analysis.config_issue.clone(),
+                                    pattern: trade_analysis.pattern.clone(),
+                                    suggested_fix: trade_analysis.suggested_fix.clone(),
+                                    confidence: 0.7, // Default confidence for trade analyses
+                                    created_at: chrono::Utc::now(),
+                                };
+
+                                if let Err(e) = analysis_engrams.save_trade_analysis(&wallet_address, &analysis).await {
+                                    warn!("[Consensus] ⚠️ Failed to save trade analysis: {}", e);
+                                } else {
+                                    info!("[Consensus] 🔍 Saved trade analysis for position: {}", trade_analysis.position_id);
+                                }
+                            }
+
+                            // Save pattern summary if present
+                            if let Some(pattern_summary) = &result.pattern_summary {
+                                let stored_summary = crate::engrams::schemas::StoredPatternSummary {
+                                    summary_id: uuid::Uuid::new_v4(),
+                                    losing_patterns: pattern_summary.losing_patterns.clone(),
+                                    winning_patterns: pattern_summary.winning_patterns.clone(),
+                                    config_recommendations: pattern_summary.config_recommendations.clone(),
+                                    trades_analyzed: context_recent_trades.len() as u32,
+                                    time_period: "Last 7 days".to_string(),
+                                    created_at: chrono::Utc::now(),
+                                };
+
+                                if let Err(e) = analysis_engrams.save_pattern_summary(&wallet_address, &stored_summary).await {
+                                    warn!("[Consensus] ⚠️ Failed to save pattern summary: {}", e);
+                                } else {
+                                    info!("[Consensus] 📈 Saved pattern summary with {} losing and {} winning patterns",
+                                        stored_summary.losing_patterns.len(),
+                                        stored_summary.winning_patterns.len()
+                                    );
+                                }
                             }
 
                             // Emit event for frontend real-time update
@@ -1012,6 +1090,9 @@ fn create_router(state: server::AppState) -> Router {
         .route("/consensus/models/discovery", get(consensus_handlers::get_model_discovery_status))
         .route("/consensus/models/refresh", post(consensus_handlers::refresh_models))
         .route("/consensus/models/discovered", get(consensus_handlers::get_discovered_models))
+        .route("/consensus/trade-analyses", get(consensus_handlers::list_trade_analyses))
+        .route("/consensus/patterns", get(consensus_handlers::get_pattern_summary))
+        .route("/consensus/analysis-summary", get(consensus_handlers::get_analysis_summary))
         .route("/consensus/:id", get(consensus_handlers::get_consensus_detail))
         // KOL Tracking + Copy Trading
         .route("/kol", get(kol::list_kols))

@@ -47,8 +47,7 @@ import TradeHistoryCard from './components/TradeHistoryCard';
 import CurvePanel from './components/CurvePanel';
 import HomeTab from './components/HomeTab';
 import WipTab from './components/WipTab';
-import ConsensusTab from './components/ConsensusTab';
-import ConversationsTab from './components/ConversationsTab';
+import AnalysisTab from './components/AnalysisTab';
 import EngramBrowserTab from './components/EngramBrowserTab';
 import RecommendationsTab from './components/RecommendationsTab';
 
@@ -62,8 +61,7 @@ export type ArbFarmView =
   | 'kol-tracker'
   | 'threats'
   | 'helius'
-  | 'consensus'
-  | 'conversations'
+  | 'analysis'
   | 'engrams'
   | 'recommendations'
   | 'settings';
@@ -5044,10 +5042,9 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     { id: 'dashboard', icon: '📊', label: 'Dashboard', section: 'Main' },
     { id: 'curves', icon: '📈', label: 'Curve Bonding', section: 'Main' },
     { id: 'kol-tracker', icon: '👥', label: 'KOL Tracker', section: 'Trading' },
-    { id: 'consensus', icon: '🤝', label: 'Consensus', section: 'Learning' },
+    { id: 'analysis', icon: '🔍', label: 'Analysis', section: 'Learning' },
     { id: 'recommendations', icon: '💡', label: 'Recommendations', section: 'Learning' },
     { id: 'engrams', icon: '🧠', label: 'Engrams', section: 'Learning' },
-    { id: 'conversations', icon: '💬', label: 'Conversations', section: 'Learning' },
     { id: 'settings', icon: '⚙️', label: 'Settings', section: 'System' },
   ];
 
@@ -5151,10 +5148,8 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
         return renderSettingsView();
       case 'research':
         return renderResearchView();
-      case 'consensus':
-        return <ConsensusTab />;
-      case 'conversations':
-        return <ConversationsTab />;
+      case 'analysis':
+        return <AnalysisTab />;
       case 'engrams':
         return <EngramBrowserTab />;
       case 'recommendations':

@@ -72,6 +72,14 @@ pub struct PostGraduationSellResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PostGraduationBuyResult {
+    pub transaction_base64: String,
+    pub expected_tokens_out: u64,
+    pub price_impact_percent: f64,
+    pub route_label: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct JupiterQuoteResponse {
     pub input_mint: String,
@@ -699,6 +707,97 @@ impl CurveTransactionBuilder {
         Ok(PostGraduationSellResult {
             transaction_base64: swap_result.swap_transaction,
             expected_sol_out,
+            price_impact_percent: price_impact,
+            route_label: quote.route_plan.first()
+                .and_then(|r| r.swap_info.label.clone())
+                .unwrap_or_else(|| "Jupiter".to_string()),
+        })
+    }
+
+    /// Build a Jupiter swap transaction for buying a token after graduation (SOL -> Token)
+    pub async fn build_post_graduation_buy(
+        &self,
+        mint: &str,
+        sol_amount_lamports: u64,
+        slippage_bps: u16,
+        user_wallet: &str,
+        jupiter_api_url: &str,
+    ) -> AppResult<PostGraduationBuyResult> {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| AppError::Internal(format!("Failed to create HTTP client: {}", e)))?;
+
+        // Quote: SOL -> Token
+        let quote_url = format!(
+            "{}/quote?inputMint={}&outputMint={}&amount={}&slippageBps={}&onlyDirectRoutes=false",
+            jupiter_api_url,
+            SOL_MINT,
+            mint,
+            sol_amount_lamports,
+            slippage_bps
+        );
+
+        let quote_response = client
+            .get(&quote_url)
+            .send()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Jupiter quote request failed: {}", e)))?;
+
+        if !quote_response.status().is_success() {
+            let error_text = quote_response.text().await.unwrap_or_default();
+            return Err(AppError::ExternalApi(format!(
+                "Jupiter quote error for post-graduation buy: {}",
+                error_text
+            )));
+        }
+
+        let quote: JupiterQuoteResponse = quote_response
+            .json()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter quote: {}", e)))?;
+
+        let swap_url = format!("{}/swap", jupiter_api_url);
+        let swap_request = serde_json::json!({
+            "userPublicKey": user_wallet,
+            "quoteResponse": quote,
+            "wrapAndUnwrapSol": true,
+            "useSharedAccounts": false,
+            "computeUnitPriceMicroLamports": self.priority_fee_micro_lamports,
+            "priorityLevelWithMaxLamports": {
+                "maxLamports": 1_000_000u64
+            },
+            "asLegacyTransaction": false,
+            "dynamicComputeUnitLimit": true,
+            "skipUserAccountsRpcCalls": false
+        });
+
+        let swap_response = client
+            .post(&swap_url)
+            .json(&swap_request)
+            .send()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Jupiter swap request failed: {}", e)))?;
+
+        if !swap_response.status().is_success() {
+            let error_text = swap_response.text().await.unwrap_or_default();
+            return Err(AppError::ExternalApi(format!(
+                "Jupiter swap error for post-graduation buy: {}",
+                error_text
+            )));
+        }
+
+        let swap_result: JupiterSwapResponse = swap_response
+            .json()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter swap: {}", e)))?;
+
+        let expected_tokens_out: u64 = quote.out_amount.parse().unwrap_or(0);
+        let price_impact: f64 = quote.price_impact_pct.unwrap_or(0.0);
+
+        Ok(PostGraduationBuyResult {
+            transaction_base64: swap_result.swap_transaction,
+            expected_tokens_out,
             price_impact_percent: price_impact,
             route_label: quote.route_plan.first()
                 .and_then(|r| r.swap_info.label.clone())

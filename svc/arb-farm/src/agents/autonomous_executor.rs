@@ -455,15 +455,54 @@ impl AutonomousExecutor {
 
         let global_max_sol = risk_config.read().await.max_position_sol;
         let strategy_max_sol = strategy.risk_params.max_position_sol;
-        let capped_sol = strategy_max_sol.min(global_max_sol);
+
+        // Check if this is a graduation snipe - use aggressive sizing
+        let is_graduation_snipe = route_data.get("signal_source")
+            .and_then(|v| v.as_str())
+            .map(|s| s == "graduation_sniper")
+            .unwrap_or(false)
+            || strategy.strategy_type == "graduation_snipe";
+
+        // For graduation snipes: use MAX of strategy/global (aggressive)
+        // For regular trades: use MIN of strategy/global (conservative)
+        let base_sol = if is_graduation_snipe {
+            strategy_max_sol.max(global_max_sol)
+        } else {
+            strategy_max_sol.min(global_max_sol)
+        };
+
+        // Velocity-based position scaling for snipes
+        let velocity = route_data.get("progress_velocity")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+
+        let velocity_multiplier = if is_graduation_snipe && velocity > 0.0 {
+            if velocity >= 2.0 {
+                1.0  // Full position for strong momentum (>2%/min)
+            } else if velocity >= 1.0 {
+                0.7  // 70% for good momentum (1-2%/min)
+            } else if velocity >= 0.5 {
+                0.5  // 50% for moderate momentum (0.5-1%/min)
+            } else {
+                0.3  // 30% for weak momentum (<0.5%/min)
+            }
+        } else {
+            1.0  // No scaling for non-snipes
+        };
+
+        let capped_sol = base_sol * velocity_multiplier;
 
         tracing::info!(
             edge_id = %edge_id,
             strategy_max = strategy_max_sol,
             global_max = global_max_sol,
+            base = base_sol,
+            velocity = velocity,
+            velocity_multiplier = velocity_multiplier,
             capped = capped_sol,
-            "💰 Position size: strategy wants {} SOL, global cap {} SOL → using {} SOL",
-            strategy_max_sol, global_max_sol, capped_sol
+            is_snipe = is_graduation_snipe,
+            "💰 Position size: {} SOL (base={}, v={:.2}%/min, mult={:.0}%)",
+            capped_sol, base_sol, velocity, velocity_multiplier * 100.0
         );
 
         let sol_amount_lamports = (capped_sol * 1_000_000_000.0) as u64;

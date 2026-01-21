@@ -24,10 +24,10 @@ const STATUS_LABELS: Record<RecommendationStatus, string> = {
 };
 
 const STATUS_COLORS: Record<RecommendationStatus, string> = {
-  pending: '#FF9800',
-  acknowledged: '#2196F3',
-  applied: '#4CAF50',
-  rejected: '#F44336',
+  pending: '#F59E0B',
+  acknowledged: '#3B82F6',
+  applied: '#22C55E',
+  rejected: '#EF4444',
 };
 
 const CATEGORY_LABELS: Record<RecommendationCategory, string> = {
@@ -38,12 +38,12 @@ const CATEGORY_LABELS: Record<RecommendationCategory, string> = {
   position: 'Position',
 };
 
-const CATEGORY_COLORS: Record<RecommendationCategory, string> = {
-  strategy: '#4CAF50',
-  risk: '#FF9800',
-  timing: '#2196F3',
-  venue: '#9C27B0',
-  position: '#00BCD4',
+const CATEGORY_ICONS: Record<RecommendationCategory, string> = {
+  strategy: '🎯',
+  risk: '⚠️',
+  timing: '⏱️',
+  venue: '🏛️',
+  position: '📊',
 };
 
 const RecommendationsTab: React.FC = () => {
@@ -98,20 +98,10 @@ const RecommendationsTab: React.FC = () => {
     return date.toLocaleString();
   };
 
-  const getStatusColor = (status: RecommendationStatus) => {
-    return STATUS_COLORS[status] || '#666';
-  };
-
-  const getStatusLabel = (status: RecommendationStatus) => {
-    return STATUS_LABELS[status] || status;
-  };
-
-  const getCategoryColor = (category: RecommendationCategory) => {
-    return CATEGORY_COLORS[category] || '#666';
-  };
-
-  const getCategoryLabel = (category: RecommendationCategory) => {
-    return CATEGORY_LABELS[category] || category;
+  const getConfidenceLevel = (confidence: number): 'high' | 'medium' | 'low' => {
+    if (confidence >= 0.8) return 'high';
+    if (confidence >= 0.6) return 'medium';
+    return 'low';
   };
 
   if (loading) {
@@ -124,186 +114,229 @@ const RecommendationsTab: React.FC = () => {
   }
 
   return (
-    <div className={styles.recommendationsTab}>
-      <div className={styles.sectionHeader}>
-        <h3>Learning Recommendations</h3>
-      </div>
-
-      {summary && (
-        <div className={styles.summaryStats}>
-          <div className={styles.statCard}>
-            <span className={styles.statValue}>{summary.total_recommendations}</span>
-            <span className={styles.statLabel}>Total</span>
-          </div>
-          <div className={`${styles.statCard} ${styles.pending}`}>
-            <span className={styles.statValue}>{summary.pending_recommendations}</span>
-            <span className={styles.statLabel}>Pending</span>
-          </div>
-          <div className={`${styles.statCard} ${styles.applied}`}>
-            <span className={styles.statValue}>{summary.applied_recommendations}</span>
-            <span className={styles.statLabel}>Applied</span>
-          </div>
-          <div className={styles.statCard}>
-            <span className={styles.statValue}>{summary.total_conversations}</span>
-            <span className={styles.statLabel}>Conversations</span>
-          </div>
+    <div className={styles.recommendationsTabV2}>
+      {/* Summary Section */}
+      <div className={styles.recSummarySection}>
+        <div className={styles.recSummaryHeader}>
+          <h3>Learning Recommendations</h3>
+          <span className={styles.recSubtitle}>
+            AI-powered suggestions from consensus analysis
+          </span>
         </div>
-      )}
 
-      <div className={styles.filterRow}>
-        <label>Filter by Status:</label>
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-        >
-          <option value="">All</option>
-          <option value="pending">Pending</option>
-          <option value="acknowledged">Acknowledged</option>
-          <option value="applied">Applied</option>
-          <option value="rejected">Rejected</option>
-        </select>
+        {summary && (
+          <div className={styles.recStatsGrid}>
+            <div className={styles.recStatCard}>
+              <div className={styles.recStatIcon}>📋</div>
+              <div className={styles.recStatContent}>
+                <span className={styles.recStatValue}>{summary.total_recommendations}</span>
+                <span className={styles.recStatLabel}>Total</span>
+              </div>
+            </div>
+            <div className={`${styles.recStatCard} ${styles.pending}`}>
+              <div className={styles.recStatIcon}>⏳</div>
+              <div className={styles.recStatContent}>
+                <span className={styles.recStatValue}>{summary.pending_recommendations}</span>
+                <span className={styles.recStatLabel}>Pending Review</span>
+              </div>
+            </div>
+            <div className={`${styles.recStatCard} ${styles.applied}`}>
+              <div className={styles.recStatIcon}>✅</div>
+              <div className={styles.recStatContent}>
+                <span className={styles.recStatValue}>{summary.applied_recommendations}</span>
+                <span className={styles.recStatLabel}>Applied</span>
+              </div>
+            </div>
+            <div className={styles.recStatCard}>
+              <div className={styles.recStatIcon}>💬</div>
+              <div className={styles.recStatContent}>
+                <span className={styles.recStatValue}>{summary.total_conversations}</span>
+                <span className={styles.recStatLabel}>Conversations</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Filter Section */}
+      <div className={styles.recFilterSection}>
+        <div className={styles.recFilterLabel}>Filter by Status</div>
+        <div className={styles.recFilterChips}>
+          <button
+            className={`${styles.recFilterChip} ${statusFilter === '' ? styles.active : ''}`}
+            onClick={() => setStatusFilter('')}
+          >
+            All
+          </button>
+          <button
+            className={`${styles.recFilterChip} ${statusFilter === 'pending' ? styles.active : ''} ${styles.pending}`}
+            onClick={() => setStatusFilter('pending')}
+          >
+            Pending
+          </button>
+          <button
+            className={`${styles.recFilterChip} ${statusFilter === 'acknowledged' ? styles.active : ''} ${styles.acknowledged}`}
+            onClick={() => setStatusFilter('acknowledged')}
+          >
+            Acknowledged
+          </button>
+          <button
+            className={`${styles.recFilterChip} ${statusFilter === 'applied' ? styles.active : ''} ${styles.applied}`}
+            onClick={() => setStatusFilter('applied')}
+          >
+            Applied
+          </button>
+          <button
+            className={`${styles.recFilterChip} ${statusFilter === 'rejected' ? styles.active : ''} ${styles.rejected}`}
+            onClick={() => setStatusFilter('rejected')}
+          >
+            Rejected
+          </button>
+        </div>
+      </div>
+
+      {/* Recommendations List */}
       {recommendations.length === 0 ? (
         <div className={styles.emptyState}>
           <p>No recommendations found</p>
           <span>The LLM consensus engine will generate recommendations based on trade analysis and pattern discovery.</span>
         </div>
       ) : (
-        <div className={styles.recommendationsList}>
-          {recommendations.map(rec => (
-            <div key={rec.recommendation_id} className={styles.recommendationItem}>
+        <div className={styles.recCardsList}>
+          {recommendations.map(rec => {
+            const confidenceLevel = getConfidenceLevel(rec.confidence);
+            const isExpanded = expandedId === rec.recommendation_id;
+
+            return (
               <div
-                className={styles.recommendationHeader}
-                onClick={() => setExpandedId(expandedId === rec.recommendation_id ? null : rec.recommendation_id)}
+                key={rec.recommendation_id}
+                className={`${styles.recCard} ${styles[rec.status]}`}
               >
-                <div className={styles.headerLeft}>
-                  <span
-                    className={styles.categoryBadge}
-                    style={{ backgroundColor: getCategoryColor(rec.category) }}
-                  >
-                    {getCategoryLabel(rec.category)}
-                  </span>
-                  <span className={styles.title}>{rec.title}</span>
-                </div>
-                <div className={styles.headerRight}>
-                  <span
-                    className={styles.statusBadge}
-                    style={{ backgroundColor: getStatusColor(rec.status) }}
-                  >
-                    {getStatusLabel(rec.status)}
-                  </span>
-                  <span className={styles.confidence}>
-                    {(rec.confidence * 100).toFixed(0)}% confidence
-                  </span>
-                  <span className={styles.expandIcon}>
-                    {expandedId === rec.recommendation_id ? '▼' : '▶'}
-                  </span>
-                </div>
-              </div>
-
-              {expandedId === rec.recommendation_id && (
-                <div className={styles.recommendationContent}>
-                  <p className={styles.description}>{rec.description}</p>
-
-                  <div className={styles.suggestedAction}>
-                    <h5>Suggested Action</h5>
-                    <div className={styles.actionDetails}>
-                      <div className={styles.actionRow}>
-                        <span className={styles.actionLabel}>Type:</span>
-                        <span className={styles.actionValue}>
-                          {rec.suggested_action.action_type.replace('_', ' ')}
+                <div
+                  className={styles.recCardHeader}
+                  onClick={() => setExpandedId(isExpanded ? null : rec.recommendation_id)}
+                >
+                  <div className={styles.recCardLeft}>
+                    <span className={styles.recCategoryIcon}>
+                      {CATEGORY_ICONS[rec.category]}
+                    </span>
+                    <div className={styles.recCardMeta}>
+                      <div className={styles.recCardTitle}>{rec.title}</div>
+                      <div className={styles.recCardTags}>
+                        <span className={styles.recCategoryTag}>
+                          {CATEGORY_LABELS[rec.category]}
+                        </span>
+                        <span className={`${styles.recConfidenceTag} ${styles[confidenceLevel]}`}>
+                          {(rec.confidence * 100).toFixed(0)}% confidence
                         </span>
                       </div>
-                      <div className={styles.actionRow}>
-                        <span className={styles.actionLabel}>Target:</span>
-                        <code>{rec.suggested_action.target}</code>
+                    </div>
+                  </div>
+                  <div className={styles.recCardRight}>
+                    <span
+                      className={styles.recStatusBadge}
+                      style={{ backgroundColor: STATUS_COLORS[rec.status] }}
+                    >
+                      {STATUS_LABELS[rec.status]}
+                    </span>
+                    <span className={styles.recExpandIcon}>
+                      {isExpanded ? '▼' : '▶'}
+                    </span>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className={styles.recCardBody}>
+                    <p className={styles.recDescription}>{rec.description}</p>
+
+                    <div className={styles.recActionBox}>
+                      <div className={styles.recActionHeader}>
+                        <span className={styles.recActionTitle}>Suggested Action</span>
+                        <span className={styles.recActionType}>
+                          {rec.suggested_action.action_type.replace(/_/g, ' ')}
+                        </span>
                       </div>
-                      {rec.suggested_action.current_value !== undefined && (
-                        <div className={styles.actionRow}>
-                          <span className={styles.actionLabel}>Current:</span>
-                          <pre className={styles.valueCode}>
-                            {formatValue(rec.suggested_action.current_value)}
+
+                      <div className={styles.recActionGrid}>
+                        <div className={styles.recActionItem}>
+                          <span className={styles.recActionLabel}>Target</span>
+                          <code className={styles.recActionCode}>{rec.suggested_action.target}</code>
+                        </div>
+
+                        {rec.suggested_action.current_value !== undefined && (
+                          <div className={styles.recActionItem}>
+                            <span className={styles.recActionLabel}>Current Value</span>
+                            <pre className={styles.recValuePre}>
+                              {formatValue(rec.suggested_action.current_value)}
+                            </pre>
+                          </div>
+                        )}
+
+                        <div className={`${styles.recActionItem} ${styles.suggested}`}>
+                          <span className={styles.recActionLabel}>Suggested Value</span>
+                          <pre className={styles.recValuePre}>
+                            {formatValue(rec.suggested_action.suggested_value)}
                           </pre>
                         </div>
-                      )}
-                      <div className={styles.actionRow}>
-                        <span className={styles.actionLabel}>Suggested:</span>
-                        <pre className={`${styles.valueCode} ${styles.suggested}`}>
-                          {formatValue(rec.suggested_action.suggested_value)}
-                        </pre>
                       </div>
-                      <div className={styles.reasoningRow}>
-                        <span className={styles.actionLabel}>Reasoning:</span>
+
+                      <div className={styles.recReasoning}>
+                        <span className={styles.recReasoningLabel}>Reasoning</span>
                         <p>{rec.suggested_action.reasoning}</p>
                       </div>
                     </div>
-                  </div>
 
-                  <div className={styles.supportingData}>
-                    <h5>Supporting Data</h5>
-                    <div className={styles.dataDetails}>
-                      <span>Trades Analyzed: {rec.supporting_data.trades_analyzed}</span>
-                      <span>Time Period: {rec.supporting_data.time_period}</span>
+                    <div className={styles.recSupportingData}>
+                      <span className={styles.recDataItem}>
+                        📊 {rec.supporting_data.trades_analyzed} trades analyzed
+                      </span>
+                      <span className={styles.recDataItem}>
+                        📅 {rec.supporting_data.time_period}
+                      </span>
+                      <span className={styles.recDataItem}>
+                        🔗 Source: {rec.source.replace(/_/g, ' ')}
+                      </span>
                     </div>
-                  </div>
 
-                  <div className={styles.metaInfo}>
-                    <span>Source: {rec.source.replace('_', ' ')}</span>
-                    <span>Created: {formatTimestamp(rec.created_at)}</span>
-                    {rec.applied_at && (
-                      <span>Applied: {formatTimestamp(rec.applied_at)}</span>
+                    <div className={styles.recTimestamps}>
+                      <span>Created: {formatTimestamp(rec.created_at)}</span>
+                      {rec.applied_at && (
+                        <span>Applied: {formatTimestamp(rec.applied_at)}</span>
+                      )}
+                    </div>
+
+                    {(rec.status === 'pending' || rec.status === 'acknowledged') && (
+                      <div className={styles.recActions}>
+                        {rec.status === 'pending' && (
+                          <button
+                            className={styles.recAcknowledgeBtn}
+                            onClick={() => handleUpdateStatus(rec.recommendation_id, 'acknowledged')}
+                            disabled={updating === rec.recommendation_id}
+                          >
+                            Acknowledge
+                          </button>
+                        )}
+                        <button
+                          className={styles.recApplyBtn}
+                          onClick={() => handleUpdateStatus(rec.recommendation_id, 'applied')}
+                          disabled={updating === rec.recommendation_id}
+                        >
+                          {rec.status === 'pending' ? 'Apply' : 'Apply Now'}
+                        </button>
+                        <button
+                          className={styles.recRejectBtn}
+                          onClick={() => handleUpdateStatus(rec.recommendation_id, 'rejected')}
+                          disabled={updating === rec.recommendation_id}
+                        >
+                          Reject
+                        </button>
+                      </div>
                     )}
                   </div>
-
-                  {rec.status === 'pending' && (
-                    <div className={styles.actionButtons}>
-                      <button
-                        className={styles.acknowledgeButton}
-                        onClick={() => handleUpdateStatus(rec.recommendation_id, 'acknowledged')}
-                        disabled={updating === rec.recommendation_id}
-                      >
-                        Acknowledge
-                      </button>
-                      <button
-                        className={styles.applyButton}
-                        onClick={() => handleUpdateStatus(rec.recommendation_id, 'applied')}
-                        disabled={updating === rec.recommendation_id}
-                      >
-                        Apply
-                      </button>
-                      <button
-                        className={styles.rejectButton}
-                        onClick={() => handleUpdateStatus(rec.recommendation_id, 'rejected')}
-                        disabled={updating === rec.recommendation_id}
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  )}
-
-                  {rec.status === 'acknowledged' && (
-                    <div className={styles.actionButtons}>
-                      <button
-                        className={styles.applyButton}
-                        onClick={() => handleUpdateStatus(rec.recommendation_id, 'applied')}
-                        disabled={updating === rec.recommendation_id}
-                      >
-                        Apply Now
-                      </button>
-                      <button
-                        className={styles.rejectButton}
-                        onClick={() => handleUpdateStatus(rec.recommendation_id, 'rejected')}
-                        disabled={updating === rec.recommendation_id}
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

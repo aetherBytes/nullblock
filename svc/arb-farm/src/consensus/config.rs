@@ -26,7 +26,7 @@ impl Default for ConsensusConfig {
             models: get_standard_models(),
             min_consensus_threshold: 0.6,
             auto_apply_recommendations: false,
-            review_interval_hours: 24,
+            review_interval_hours: 1,
             max_tokens_per_request: 2048,
             timeout_ms: 30000,
         }

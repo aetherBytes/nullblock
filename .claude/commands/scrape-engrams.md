@@ -1,6 +1,6 @@
 # Scrape Engrams Command
 
-Fetch ArbFarm learning engrams and generate profit optimization recommendations based on LLM consensus suggestions and trade history.
+Fetch ArbFarm learning engrams and generate profit optimization recommendations based on LLM consensus suggestions, trade analyses, and pattern summaries.
 
 **Arguments:** `$ARGUMENTS` (optional - comma-separated list of engram UUIDs to focus on)
 
@@ -29,19 +29,34 @@ When focusing on specific engrams:
 - Analyze ONLY the content of those specific engrams
 - Provide detailed analysis of each engram's content
 - If they are recommendations, analyze the suggested changes in depth
-- If they are trade summaries, analyze the patterns in those specific trades
+- If they are trade analyses, examine root causes and suggested fixes
 - Cross-reference with the codebase to suggest implementation
 
 ---
 
 ## Full Analysis Flow (No Arguments)
 
-### 1. Fetch Learning Engrams
+### 1. Fetch Learning Data
 
 First, fetch all learning data from the ArbFarm service:
 
 ```bash
-# Fetch learning engrams (recommendations, conversations, patterns)
+# Fetch the combined analysis summary (config + trade analyses + pattern summary)
+curl -s "http://localhost:9007/consensus/analysis-summary"
+
+# Fetch detailed trade analyses
+curl -s "http://localhost:9007/consensus/trade-analyses?limit=50"
+
+# Fetch pattern summary (losing/winning patterns + config recommendations)
+curl -s "http://localhost:9007/consensus/patterns"
+
+# Fetch LLM consensus recommendations (key data source!)
+curl -s "http://localhost:9007/consensus/recommendations?limit=50"
+
+# Fetch pending recommendations only
+curl -s "http://localhost:9007/consensus/recommendations?status=pending&limit=50"
+
+# Fetch learning engrams (recommendations, conversations)
 curl -s -X POST "http://localhost:9007/mcp/call" \
   -H "Content-Type: application/json" \
   -d '{"name":"engram_get_arbfarm_learning","arguments":{"category":"all","limit":50}}'
@@ -62,16 +77,52 @@ curl -s "http://localhost:9007/consensus/learning"
 
 ### 2. Analyze the Data
 
-**From Learning Engrams (arbFarm.learning tag):**
-- Extract pending recommendations from LLM consensus
+**From Analysis Summary (`/consensus/analysis-summary`):**
+- Review the current consensus config state (enabled, models, review interval)
+- Note the total trade analyses count
+- Check is_dev_wallet status for context
+
+**From Trade Analyses (`/consensus/trade-analyses`):**
+Each trade analysis contains LLM-identified root causes for trade outcomes:
+- `position_id` - Links to the original trade
+- `token_symbol` / `venue` - What was traded
+- `pnl_sol` / `exit_reason` - Trade outcome
+- `root_cause` - **KEY**: Why the trade succeeded/failed
+- `config_issue` - **KEY**: Specific config problem (e.g., "SL at 5% triggered, but token recovered to +20%")
+- `pattern` - Identified recurring pattern
+- `suggested_fix` - **KEY**: LLM suggestion for improvement
+- `confidence` - How confident the LLM is
+
+**From Pattern Summary (`/consensus/patterns`):**
+- `losing_patterns` - Common failure modes across trades
+- `winning_patterns` - Success factors to reinforce
+- `config_recommendations` - **KEY**: Aggregated config change suggestions
+- `trades_analyzed` - How much data informed these patterns
+
+**From Recommendations (`/consensus/recommendations`):**
+Each recommendation contains actionable suggestions from LLM consensus:
+- `recommendation_id` - Unique ID for referencing and status updates
+- `source` - Origin (consensus_llm, pattern_analysis, risk_engine, manual)
+- `category` - Type: strategy, risk, timing, venue, position
+- `title` / `description` - Human-readable summary
+- `suggested_action` - **KEY**: Contains:
+  - `action_type` - config_change, strategy_toggle, risk_adjustment, venue_disable, avoid_token
+  - `target` - What config/setting to change
+  - `current_value` / `suggested_value` - The proposed change
+  - `reasoning` - Why this change is recommended
+- `confidence` - LLM confidence score (0.0 - 1.0)
+- `supporting_data` - Trades analyzed, time period, relevant engrams
+- `status` - pending, acknowledged, applied, rejected
+
+**From Learning Engrams (arbFarm.recommendation tag):**
+- Recommendations persisted with tags: `arbFarm.recommendation`, `category:{category}`, `status:{status}`
 - Note recommendation confidence scores
 - Identify patterns in suggested changes
 - **IMPORTANT**: Note the `engram_id`, `engram_key`, and `tags` for each engram
 
 **From Trade History:**
 - Calculate win rate and total PnL
-- Identify winning patterns (venue, token characteristics, timing)
-- Identify losing patterns to avoid
+- Cross-reference with trade analyses for deeper insight
 - **IMPORTANT**: Note the `engram_id` for trades you want to reference
 
 **From Error History:**
@@ -98,6 +149,7 @@ Present findings in this format:
 
 ### Data Summary
 - Trades analyzed: X
+- Trade analyses stored: X
 - Win rate: X%
 - Total PnL: X SOL
 - Errors recorded: X
@@ -108,7 +160,35 @@ Present findings in this format:
 | Engram ID | Key | Tags | Type |
 |-----------|-----|------|------|
 | `abc-123` | arb.learning.recommendation.xyz | arbFarm.learning | Recommendation |
-| `def-456` | arb.trade.summary.xyz | arbFarm.trade | Trade Summary |
+| `def-456` | arb.learning.trade_analysis.xyz | arbFarm.tradeAnalysis | Trade Analysis |
+| `ghi-789` | arb.learning.pattern_summary.xyz | arbFarm.patternSummary | Pattern Summary |
+
+### Trade Analysis Insights
+
+**Per-Trade Root Causes (from LLM analysis):**
+
+| Token | Venue | PnL | Exit | Root Cause | Config Issue |
+|-------|-------|-----|------|------------|--------------|
+| PUMP1 | pump.fun | -0.02 | StopLoss | SL too tight | SL 5% → suggest 8% |
+| TOKEN2 | pump.fun | +0.05 | TakeProfit | Good entry timing | - |
+
+**Suggested Fixes from Trade Analyses:**
+1. [Token/Pattern]: [suggested_fix from analysis]
+2. ...
+
+### Pattern Summary (from `/consensus/patterns`)
+
+**Losing Patterns:**
+- [Pattern 1 from losing_patterns]
+- [Pattern 2]
+
+**Winning Patterns:**
+- [Pattern 1 from winning_patterns]
+- [Pattern 2]
+
+**Config Recommendations (from pattern analysis):**
+- [Recommendation 1 from config_recommendations]
+- [Recommendation 2]
 
 ### Top LLM Consensus Recommendations
 
@@ -121,16 +201,6 @@ Present findings in this format:
 
 2. ...
 
-### Patterns from Trade History
-
-**Winning Patterns:**
-- [Pattern 1] (Engram IDs: `uuid1`, `uuid2`)
-- [Pattern 2]
-
-**Losing Patterns to Avoid:**
-- [Pattern 1]
-- [Pattern 2]
-
 ### Error Analysis
 
 **Systemic Issues:**
@@ -141,9 +211,10 @@ Present findings in this format:
 
 Based on the above analysis, here are recommended code changes:
 
-1. **[Change Title]**
+1. **[Change Title]** (from trade analysis + pattern summary)
    - File: `path/to/file.rs`
    - Change: [description]
+   - Evidence: [cite specific trade analyses and patterns]
    - Expected Impact: [profit improvement estimate]
    - Related Engrams: `uuid1`, `uuid2`
 
@@ -172,10 +243,63 @@ curl -s -X POST "http://localhost:9007/mcp/call" \
   -d '{"name":"engram_acknowledge_recommendation","arguments":{"recommendation_id":"UUID","status":"applied"}}'
 ```
 
+## API Endpoints Reference
+
+The following endpoints are available for learning analysis:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /consensus/trade-analyses?limit=N` | Per-trade LLM root cause analyses |
+| `GET /consensus/patterns` | Pattern summary (losing/winning/config recs) |
+| `GET /consensus/analysis-summary` | Combined view with config + recent analyses |
+| `GET /consensus/recommendations?status=&limit=` | LLM consensus recommendations (filter by status) |
+| `PUT /consensus/recommendations/:id/status` | Update recommendation status |
+| `GET /consensus/learning` | Learning summary stats |
+
+## Data Flow
+
+```
+Scheduled Analysis (every 1-24h, default: hourly)
+        │
+        ▼
+┌─────────────────────────────────────────────┐
+│ Fetch Recent Closed Trades (15 max)         │
+│ Build trade table in analysis prompt        │
+└─────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────┐
+│ LLM Consensus Analysis                      │
+│ - Per-trade root cause identification       │
+│ - Pattern discovery across trades           │
+│ - Config recommendations with evidence      │
+└─────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────┐
+│ Save to Engrams                             │
+│ - TradeAnalysis (tag: arbFarm.tradeAnalysis)│
+│ - PatternSummary (tag: arbFarm.patternSummary)│
+│ - Recommendations (tag: arbFarm.recommendation│
+│   + category:{cat} + status:{status})       │
+└─────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────┐
+│ /scrape-engrams fetches and synthesizes     │
+│ - Trade analyses with root causes           │
+│ - Pattern summaries                         │
+│ - Recommendations with action items         │
+│ - Actionable implementation plan            │
+└─────────────────────────────────────────────┘
+```
+
 ## Notes
 
 - This command requires arb-farm service running on port 9007
-- Recommendations come from multi-LLM consensus (Claude, GPT-4, Llama)
+- Recommendations come from multi-LLM consensus (Claude, GPT-4, Llama via OpenRouter)
+- Trade analyses now include **per-trade root causes** from LLM analysis
+- Pattern summaries aggregate issues across trades for systemic improvements
 - All changes should maintain the profit-maximization objective
 - Test thoroughly before deploying to production wallet
 - **Engram IDs** are always included so you can drill down with `/scrape-engrams uuid1,uuid2`

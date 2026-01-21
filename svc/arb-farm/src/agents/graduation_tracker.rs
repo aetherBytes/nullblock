@@ -12,7 +12,7 @@ use crate::execution::CurveTransactionBuilder;
 use crate::models::{CurveStrategyParams, SignalType, VenueType};
 use crate::venues::curves::{GraduationStatus, OnChainFetcher};
 
-const DEFAULT_GRADUATION_THRESHOLD: f64 = 95.0;
+const DEFAULT_GRADUATION_THRESHOLD: f64 = 85.0;
 const DEFAULT_CHECK_INTERVAL_FAST_MS: u64 = 1000;
 const DEFAULT_CHECK_INTERVAL_NORMAL_MS: u64 = 5000;
 const RPC_TIMEOUT_SECS: u64 = 10;

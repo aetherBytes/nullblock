@@ -1053,6 +1053,11 @@ impl EngramsClient {
             "status": serde_json::to_string(&recommendation.status).unwrap_or_default().trim_matches('"'),
         });
 
+        let status_str = serde_json::to_string(&recommendation.status)
+            .unwrap_or_else(|_| "pending".to_string())
+            .trim_matches('"')
+            .to_string();
+
         let request = CreateEngramRequest {
             wallet_address: wallet.to_string(),
             engram_type: "knowledge".to_string(),
@@ -1062,8 +1067,9 @@ impl EngramsClient {
             tags: Some(vec![
                 "arb".to_string(),
                 crate::engrams::schemas::A2A_TAG_LEARNING.to_string(),
-                "recommendation".to_string(),
-                category_str,
+                crate::engrams::schemas::RECOMMENDATION_TAG.to_string(),
+                format!("category.{}", category_str),
+                format!("status.{}", status_str),
             ]),
             is_public: Some(false),
         };
@@ -1602,6 +1608,141 @@ impl EngramsClient {
 
         info!("Cleared {} watchlist tokens from engrams", removed);
         Ok(removed)
+    }
+
+    pub async fn save_trade_analysis(
+        &self,
+        wallet: &str,
+        analysis: &crate::engrams::schemas::TradeAnalysis,
+    ) -> Result<Engram, String> {
+        let key = crate::engrams::schemas::generate_trade_analysis_key(&analysis.analysis_id);
+        let content = serde_json::to_string(analysis)
+            .map_err(|e| format!("Failed to serialize trade analysis: {}", e))?;
+
+        let metadata = serde_json::json!({
+            "type": "trade_analysis",
+            "a2a_discoverable": true,
+            "schema_version": "1.0",
+            "content_type": "trade_analysis",
+            "position_id": analysis.position_id.to_string(),
+            "token_symbol": analysis.token_symbol,
+            "venue": analysis.venue,
+            "pnl_sol": analysis.pnl_sol,
+            "exit_reason": analysis.exit_reason,
+            "confidence": analysis.confidence,
+        });
+
+        let request = CreateEngramRequest {
+            wallet_address: wallet.to_string(),
+            engram_type: "knowledge".to_string(),
+            key,
+            content,
+            metadata: Some(metadata),
+            tags: Some(vec![
+                "arb".to_string(),
+                crate::engrams::schemas::A2A_TAG_LEARNING.to_string(),
+                crate::engrams::schemas::TRADE_ANALYSIS_TAG.to_string(),
+                analysis.venue.clone(),
+                analysis.exit_reason.clone(),
+            ]),
+            is_public: Some(false),
+        };
+
+        self.create_engram(request).await
+    }
+
+    pub async fn save_pattern_summary(
+        &self,
+        wallet: &str,
+        summary: &crate::engrams::schemas::StoredPatternSummary,
+    ) -> Result<Engram, String> {
+        let key = crate::engrams::schemas::generate_pattern_summary_key(&summary.summary_id);
+        let content = serde_json::to_string(summary)
+            .map_err(|e| format!("Failed to serialize pattern summary: {}", e))?;
+
+        let metadata = serde_json::json!({
+            "type": "pattern_summary",
+            "a2a_discoverable": true,
+            "schema_version": "1.0",
+            "content_type": "pattern_summary",
+            "trades_analyzed": summary.trades_analyzed,
+            "time_period": summary.time_period,
+            "losing_patterns_count": summary.losing_patterns.len(),
+            "winning_patterns_count": summary.winning_patterns.len(),
+            "recommendations_count": summary.config_recommendations.len(),
+        });
+
+        let request = CreateEngramRequest {
+            wallet_address: wallet.to_string(),
+            engram_type: "knowledge".to_string(),
+            key,
+            content,
+            metadata: Some(metadata),
+            tags: Some(vec![
+                "arb".to_string(),
+                crate::engrams::schemas::A2A_TAG_LEARNING.to_string(),
+                crate::engrams::schemas::PATTERN_SUMMARY_TAG.to_string(),
+            ]),
+            is_public: Some(false),
+        };
+
+        self.create_engram(request).await
+    }
+
+    pub async fn get_trade_analyses(
+        &self,
+        wallet: &str,
+        limit: Option<i64>,
+    ) -> Result<Vec<crate::engrams::schemas::TradeAnalysis>, String> {
+        let search = SearchRequest {
+            wallet_address: Some(wallet.to_string()),
+            engram_type: Some("knowledge".to_string()),
+            query: None,
+            tags: Some(vec![crate::engrams::schemas::TRADE_ANALYSIS_TAG.to_string()]),
+            limit: limit.or(Some(50)),
+            offset: None,
+        };
+
+        let engrams = self.search_engrams(search).await?;
+
+        let analyses: Vec<crate::engrams::schemas::TradeAnalysis> = engrams
+            .into_iter()
+            .filter_map(|e| serde_json::from_str(&e.content).ok())
+            .collect();
+
+        Ok(analyses)
+    }
+
+    pub async fn get_pattern_summaries(
+        &self,
+        wallet: &str,
+        limit: Option<i64>,
+    ) -> Result<Vec<crate::engrams::schemas::StoredPatternSummary>, String> {
+        let search = SearchRequest {
+            wallet_address: Some(wallet.to_string()),
+            engram_type: Some("knowledge".to_string()),
+            query: None,
+            tags: Some(vec![crate::engrams::schemas::PATTERN_SUMMARY_TAG.to_string()]),
+            limit: limit.or(Some(10)),
+            offset: None,
+        };
+
+        let engrams = self.search_engrams(search).await?;
+
+        let summaries: Vec<crate::engrams::schemas::StoredPatternSummary> = engrams
+            .into_iter()
+            .filter_map(|e| serde_json::from_str(&e.content).ok())
+            .collect();
+
+        Ok(summaries)
+    }
+
+    pub async fn get_latest_pattern_summary(
+        &self,
+        wallet: &str,
+    ) -> Result<Option<crate::engrams::schemas::StoredPatternSummary>, String> {
+        let summaries = self.get_pattern_summaries(wallet, Some(1)).await?;
+        Ok(summaries.into_iter().next())
     }
 }
 
