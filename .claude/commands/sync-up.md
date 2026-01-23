@@ -39,7 +39,25 @@ Check if `scripts/nullblock-dev-mac.yml` and `scripts/nullblock-dev.yml` need up
 - `scripts/nullblock-dev.yml`
 - `justfile` (for new commands)
 
-### 3. Analyze mdBook Documentation
+### 3. Read Trading Strategies Documentation
+
+**Always read the trading strategies doc to stay current on ArbFarm behavior:**
+
+```bash
+# Read the strategies documentation
+cat docs-internal/src/arb-farm/strategies.md
+```
+
+This file documents:
+- Entry/exit logic for all strategies
+- Position management and tiered exits
+- Risk configuration
+- Momentum-based exits
+- Raydium/Jupiter routing
+
+Any code changes to trading logic should be reflected here.
+
+### 4. Analyze mdBook Documentation
 
 Check if `docs-internal/` needs updates:
 
@@ -49,14 +67,16 @@ Check if `docs-internal/` needs updates:
 - New API endpoints not documented in `reference/api.md`
 - Port changes not reflected in `ports.md`
 - Architecture changes not in `architecture.md`
+- **Trading logic changes not reflected in `arb-farm/strategies.md`**
 
 **Files to check:**
 - `docs-internal/src/SUMMARY.md` (navigation)
 - `docs-internal/src/services/*.md`
 - `docs-internal/src/ports.md`
 - `docs-internal/src/reference/api.md`
+- `docs-internal/src/arb-farm/strategies.md` (trading strategies)
 
-### 4. Report Findings
+### 5. Report Findings
 
 Present findings in this format:
 
@@ -82,7 +102,7 @@ Present findings in this format:
 2. [Action 2]
 ```
 
-### 5. Offer to Make Changes
+### 6. Offer to Make Changes
 
 After presenting the report, ask if the user wants you to:
 - Update tmuxinator scripts
