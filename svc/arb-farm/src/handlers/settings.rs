@@ -219,11 +219,20 @@ pub async fn update_risk_settings(
         })));
     };
 
-    // Preserve dynamic max_position_sol when selecting presets (calculated at startup based on wallet balance)
-    // Only apply preset's max if custom config explicitly sets it
+    let wallet_max = *state.wallet_max_position_sol.read().await;
     if request.preset.is_some() {
         new_config.max_position_sol = current_max_position;
         new_config.max_position_per_token_sol = current_max_position;
+    } else {
+        let capped = new_config.max_position_sol.min(wallet_max);
+        if capped < new_config.max_position_sol {
+            tracing::warn!(
+                requested = new_config.max_position_sol, capped = capped, wallet_max = wallet_max,
+                "Custom max_position_sol capped at wallet-based limit"
+            );
+        }
+        new_config.max_position_sol = capped;
+        new_config.max_position_per_token_sol = capped;
     }
 
     {

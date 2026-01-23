@@ -358,8 +358,15 @@ async fn main() -> anyhow::Result<()> {
         graduation_tracker_for_autostart.start().await;
         info!("✅ Graduation tracker started (monitoring tracked tokens)");
 
-        graduation_sniper_for_autostart.start().await;
-        info!("✅ Graduation sniper started (listening for graduation events)");
+        // Start sniper (unless /tmp/arb-no-snipe exists)
+        let sniper_auto_start = !std::path::Path::new("/tmp/arb-no-snipe").exists();
+        if sniper_auto_start {
+            graduation_sniper_for_autostart.start().await;
+            info!("✅ Graduation sniper started (listening for graduation events)");
+        } else {
+            info!("ℹ️ Graduation sniper NOT auto-started (/tmp/arb-no-snipe exists)");
+            info!("   Start manually: curl -X POST localhost:9007/sniper/start");
+        }
 
         // Run wallet reconciliation to pick up orphaned positions
         if let Some(wallet_address) = dev_signer_for_autostart.get_address() {
@@ -393,44 +400,41 @@ async fn main() -> anyhow::Result<()> {
                                 continue;
                             }
 
-                            let estimated_price = match on_chain_fetcher_for_autostart.get_bonding_curve_state(&token.mint).await {
+                            let (estimated_price, is_dead_token) = match on_chain_fetcher_for_autostart.get_bonding_curve_state(&token.mint).await {
                                 Ok(curve_state) => {
                                     if curve_state.virtual_token_reserves > 0 {
-                                        curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64
+                                        (curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64, false)
                                     } else {
-                                        // Try Jupiter as fallback for zero reserves
                                         match jupiter_venue_for_autostart.get_token_price(&token.mint).await {
                                             Ok(price) => {
                                                 info!("   📈 {} - using Jupiter price (zero curve reserves)", &token.mint[..12]);
-                                                price
+                                                (price, false)
                                             }
                                             Err(_) => {
-                                                warn!("   ⚠️ {} - zero reserves and Jupiter unavailable, skipping", &token.mint[..12]);
-                                                continue;
+                                                warn!("   💀 {} - dead token (zero reserves, no Jupiter) - queueing immediate sell", &token.mint[..12]);
+                                                (0.0000001, true)
                                             }
                                         }
                                     }
                                 }
                                 Err(_) => {
-                                    // Bonding curve not found - try Jupiter (likely graduated token)
                                     match jupiter_venue_for_autostart.get_token_price(&token.mint).await {
                                         Ok(price) => {
                                             info!("   📈 {} - using Jupiter price (graduated/DEX token)", &token.mint[..12]);
-                                            price
+                                            (price, false)
                                         }
-                                        Err(e) => {
-                                            warn!("   ⚠️ {} - no price source available ({}), skipping", &token.mint[..12], e);
-                                            continue;
+                                        Err(_) => {
+                                            warn!("   💀 {} - dead token (no curve, no Jupiter) - queueing immediate sell", &token.mint[..12]);
+                                            (0.0000001, true)
                                         }
                                     }
                                 }
                             };
 
-                            let exit_config = match metrics_collector_for_autostart.calculate_metrics(&token.mint, "pump_fun").await {
-                                Ok(metrics) => {
-                                    crate::execution::ExitConfig::for_discovered_with_metrics(metrics.volume_24h, metrics.holder_count)
-                                }
-                                Err(_) => crate::execution::ExitConfig::for_discovered_token(),
+                            let exit_config = if is_dead_token {
+                                crate::execution::ExitConfig::for_dead_token()
+                            } else {
+                                crate::execution::ExitConfig::for_curve_bonding()
                             };
 
                             // Use current risk config for discovered position entry estimates
@@ -534,48 +538,41 @@ async fn main() -> anyhow::Result<()> {
                                     continue;
                                 }
 
-                                // Get estimated price - skip dead tokens (zero liquidity)
-                                let estimated_price = match periodic_on_chain.get_bonding_curve_state(&token.mint).await {
+                                let (estimated_price, is_dead_token) = match periodic_on_chain.get_bonding_curve_state(&token.mint).await {
                                     Ok(curve_state) => {
                                         if curve_state.virtual_token_reserves > 0 {
-                                            curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64
+                                            (curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64, false)
                                         } else {
-                                            // Try Jupiter as fallback for zero reserves
                                             match periodic_jupiter.get_token_price(&token.mint).await {
                                                 Ok(price) => {
                                                     info!("[Periodic] 📈 {} - using Jupiter price (zero curve reserves)", &token.mint[..12]);
-                                                    price
+                                                    (price, false)
                                                 }
                                                 Err(_) => {
-                                                    // Dead token - zero reserves and no Jupiter price
-                                                    warn!("[Periodic] 💀 {} - dead token (zero reserves, no Jupiter) - SKIPPING", &token.mint[..12]);
-                                                    continue;
+                                                    warn!("[Periodic] 💀 {} - dead token (zero reserves, no Jupiter) - queueing immediate sell", &token.mint[..12]);
+                                                    (0.0000001, true)
                                                 }
                                             }
                                         }
                                     }
                                     Err(_) => {
-                                        // Bonding curve not found - try Jupiter (likely graduated token)
                                         match periodic_jupiter.get_token_price(&token.mint).await {
                                             Ok(price) => {
                                                 info!("[Periodic] 📈 {} - using Jupiter price (graduated/DEX token)", &token.mint[..12]);
-                                                price
+                                                (price, false)
                                             }
-                                            Err(e) => {
-                                                // No curve and no Jupiter - dead token
-                                                warn!("[Periodic] 💀 {} - dead token (no curve, no Jupiter: {}) - SKIPPING", &token.mint[..12], e);
-                                                continue;
+                                            Err(_) => {
+                                                warn!("[Periodic] 💀 {} - dead token (no curve, no Jupiter) - queueing immediate sell", &token.mint[..12]);
+                                                (0.0000001, true)
                                             }
                                         }
                                     }
                                 };
 
-                                // Dead tokens are now skipped via `continue` above, so we only reach here for live tokens
-                                let exit_config = match periodic_metrics.calculate_metrics(&token.mint, "pump_fun").await {
-                                    Ok(metrics) => {
-                                        crate::execution::ExitConfig::for_discovered_with_metrics(metrics.volume_24h, metrics.holder_count)
-                                    }
-                                    Err(_) => crate::execution::ExitConfig::for_discovered_token(),
+                                let exit_config = if is_dead_token {
+                                    crate::execution::ExitConfig::for_dead_token()
+                                } else {
+                                    crate::execution::ExitConfig::for_curve_bonding()
                                 };
 
                                 // Use current risk config for discovered position entry estimates

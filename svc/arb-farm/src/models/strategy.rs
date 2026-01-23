@@ -118,15 +118,15 @@ impl Default for RiskParams {
             require_consensus: false,
             require_confirmation: true,
             staleness_threshold_hours: 24,
-            stop_loss_percent: Some(20.0),    // 20% - matches for_curve_bonding
-            take_profit_percent: Some(15.0),  // 15% - above break-even (was 12%)
-            trailing_stop_percent: Some(12.0), // 12% - allow volatility (was 8%)
-            time_limit_minutes: Some(7),      // 7 min - faster exit (was 12)
+            stop_loss_percent: Some(30.0),     // 30% - allow curve volatility
+            take_profit_percent: Some(100.0),  // 100% (2x) - first major target
+            trailing_stop_percent: Some(20.0), // 20% trailing for moon bag
+            time_limit_minutes: Some(15),      // 15 min - let winners run
             base_currency: "sol".to_string(),
             max_capital_allocation_percent: 25.0,
             concurrent_positions: Some(1),
-            momentum_adaptive_exits: false,
-            let_winners_run: false,
+            momentum_adaptive_exits: true,     // Enable momentum tracking by default
+            let_winners_run: true,             // Let profitable positions run
         }
     }
 }

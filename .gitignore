@@ -43,6 +43,9 @@ node_modules
 # Build targets
 **/target/
 
+# Generated docs
+docs-internal/book/
+
 # Python bytecode and cache
 __pycache__/
 *.py[cod]

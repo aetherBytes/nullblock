@@ -166,11 +166,19 @@ pub async fn update_execution_config(
     }
 
     {
+        let wallet_max = *state.wallet_max_position_sol.read().await;
         let mut risk_config = state.risk_config.write().await;
         if let Some(v) = request.auto_max_position_sol {
-            risk_config.max_position_sol = v;
-            risk_config.max_position_per_token_sol = v;
-            tracing::info!(max_position_sol = v, "Updated global RiskConfig max_position_sol");
+            let capped = v.min(wallet_max);
+            if capped < v {
+                tracing::warn!(
+                    requested = v, capped = capped, wallet_max = wallet_max,
+                    "max_position_sol capped at wallet-based limit"
+                );
+            }
+            risk_config.max_position_sol = capped;
+            risk_config.max_position_per_token_sol = capped;
+            tracing::info!(max_position_sol = capped, "Updated global RiskConfig max_position_sol");
         }
     }
 
@@ -188,7 +196,8 @@ pub async fn update_execution_config(
             updated_params.require_simulation = v;
         }
         if let Some(v) = request.auto_max_position_sol {
-            updated_params.max_position_sol = v;
+            let wallet_max = *state.wallet_max_position_sol.read().await;
+            updated_params.max_position_sol = v.min(wallet_max);
         }
         if let Some(v) = request.auto_approve_atomic {
             updated_params.auto_execute_atomic = v;

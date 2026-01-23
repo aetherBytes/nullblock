@@ -1,4 +1,8 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use tokio::sync::{RwLock, Semaphore};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
@@ -7,11 +11,26 @@ use crate::models::Edge;
 use super::blockhash::BlockhashCache;
 use super::position_manager::{BaseCurrency, ExitSignal, OpenPosition, SOL_MINT, USDC_MINT, USDT_MINT};
 
+const PRICE_CACHE_TTL_SECS: u64 = 10;
+const JUPITER_RATE_LIMIT_RETRIES: u32 = 3;
+const JUPITER_RATE_LIMIT_BACKOFF_MS: u64 = 2000;
+const JUPITER_MAX_CONCURRENT_REQUESTS: usize = 2;
+const JUPITER_MIN_REQUEST_INTERVAL_MS: u64 = 500;
+
+#[derive(Clone)]
+struct CachedPrice {
+    price: f64,
+    cached_at: std::time::Instant,
+}
+
 pub struct TransactionBuilder {
     client: reqwest::Client,
     jupiter_api_url: String,
     rpc_url: String,
     blockhash_cache: BlockhashCache,
+    price_cache: Arc<RwLock<HashMap<String, CachedPrice>>>,
+    jupiter_semaphore: Arc<Semaphore>,
+    last_jupiter_request: Arc<AtomicU64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,7 +72,35 @@ impl TransactionBuilder {
             jupiter_api_url,
             rpc_url: rpc_url.clone(),
             blockhash_cache: BlockhashCache::new(rpc_url),
+            price_cache: Arc::new(RwLock::new(HashMap::new())),
+            jupiter_semaphore: Arc::new(Semaphore::new(JUPITER_MAX_CONCURRENT_REQUESTS)),
+            last_jupiter_request: Arc::new(AtomicU64::new(0)),
         }
+    }
+
+    async fn rate_limit_jupiter(&self) {
+        let _permit = self.jupiter_semaphore.acquire().await.expect("Semaphore closed");
+
+        let now_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+
+        let last_request = self.last_jupiter_request.load(Ordering::Relaxed);
+        let elapsed = now_ms.saturating_sub(last_request);
+
+        if elapsed < JUPITER_MIN_REQUEST_INTERVAL_MS {
+            let wait_ms = JUPITER_MIN_REQUEST_INTERVAL_MS - elapsed;
+            tokio::time::sleep(tokio::time::Duration::from_millis(wait_ms)).await;
+        }
+
+        self.last_jupiter_request.store(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64,
+            Ordering::Relaxed
+        );
     }
 
     pub async fn build_swap(
@@ -112,6 +159,8 @@ impl TransactionBuilder {
     }
 
     async fn get_jupiter_quote(&self, params: &SwapParams) -> AppResult<JupiterQuoteResponse> {
+        self.rate_limit_jupiter().await;
+
         let url = format!(
             "{}/quote?inputMint={}&outputMint={}&amount={}&slippageBps={}&onlyDirectRoutes=false",
             self.jupiter_api_url,
@@ -414,12 +463,39 @@ impl TransactionBuilder {
         &self,
         token_mints: &[String],
         base: BaseCurrency,
-    ) -> AppResult<std::collections::HashMap<String, f64>> {
+    ) -> AppResult<HashMap<String, f64>> {
         if token_mints.is_empty() {
-            return Ok(std::collections::HashMap::new());
+            return Ok(HashMap::new());
         }
 
-        let ids = token_mints.join(",");
+        let now = std::time::Instant::now();
+        let mut result = HashMap::new();
+        let mut mints_to_fetch = Vec::new();
+
+        // Check cache first
+        {
+            let cache = self.price_cache.read().await;
+            for mint in token_mints {
+                if let Some(cached) = cache.get(mint) {
+                    if now.duration_since(cached.cached_at).as_secs() < PRICE_CACHE_TTL_SECS {
+                        result.insert(mint.clone(), cached.price);
+                        continue;
+                    }
+                }
+                mints_to_fetch.push(mint.clone());
+            }
+        }
+
+        // If all prices were cached, return early
+        if mints_to_fetch.is_empty() {
+            return Ok(result);
+        }
+
+        // Rate limit before fetching from Jupiter
+        self.rate_limit_jupiter().await;
+
+        // Fetch remaining prices from Jupiter with retry logic
+        let ids = mints_to_fetch.join(",");
         let url = format!(
             "{}/price?ids={}&vsToken={}",
             self.jupiter_api_url,
@@ -427,30 +503,64 @@ impl TransactionBuilder {
             base.mint()
         );
 
-        let response = self
-            .client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Jupiter price request failed: {}", e)))?;
+        let mut last_error = String::new();
+        for attempt in 0..JUPITER_RATE_LIMIT_RETRIES {
+            if attempt > 0 {
+                let backoff = JUPITER_RATE_LIMIT_BACKOFF_MS * (1 << attempt);
+                tokio::time::sleep(tokio::time::Duration::from_millis(backoff)).await;
+            }
 
-        if !response.status().is_success() {
-            return Err(AppError::ExternalApi(format!(
-                "Jupiter price error: {}",
-                response.status()
-            )));
+            let response = match self.client.get(&url).send().await {
+                Ok(r) => r,
+                Err(e) => {
+                    last_error = format!("Jupiter price request failed: {}", e);
+                    continue;
+                }
+            };
+
+            let status = response.status();
+            if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                warn!("Jupiter rate limited (429), attempt {}/{}", attempt + 1, JUPITER_RATE_LIMIT_RETRIES);
+                last_error = "Jupiter rate limited (429)".to_string();
+                continue;
+            }
+
+            if !status.is_success() {
+                last_error = format!("Jupiter price error: {}", status);
+                // Don't retry on other errors (404, 500, etc.)
+                break;
+            }
+
+            let price_data: JupiterPriceResponse = match response.json().await {
+                Ok(p) => p,
+                Err(e) => {
+                    last_error = format!("Failed to parse Jupiter price: {}", e);
+                    break;
+                }
+            };
+
+            // Update cache and result
+            let mut cache = self.price_cache.write().await;
+            for (mint, price_info) in price_data.data {
+                cache.insert(mint.clone(), CachedPrice {
+                    price: price_info.price,
+                    cached_at: now,
+                });
+                result.insert(mint, price_info.price);
+            }
+
+            return Ok(result);
         }
 
-        let price_data: JupiterPriceResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter price: {}", e)))?;
+        // If we get here after retries, return what we have from cache (may be stale)
+        // plus the error for logging
+        if result.is_empty() {
+            return Err(AppError::ExternalApi(last_error));
+        }
 
-        Ok(price_data
-            .data
-            .into_iter()
-            .map(|(k, v)| (k, v.price))
-            .collect())
+        // Return partial results from cache
+        warn!("Jupiter price fetch failed after retries, using cached prices for {} tokens", result.len());
+        Ok(result)
     }
 }
 
