@@ -364,7 +364,13 @@ dev-tmux:
     ./scripts/dev-tmux
 
 # Launch development environment with tmuxinator (macOS)
-dev-mac:
+# Usage: just dev-mac [no-scan]
+#   no-scan: Start with scanner disabled (positions still sell, no new buys)
+dev-mac mode="":
+    @if [ "{{mode}}" = "no-scan" ]; then \
+        echo "🚫 No-scan mode: scanner will not auto-start"; \
+        touch /tmp/arb-no-scan; \
+    fi
     @echo "🍎 Launching macOS development environment..."
     ./scripts/dev-mac
 
@@ -644,6 +650,21 @@ arb-stop:
     @curl -s -X POST http://localhost:9007/scanner/stop | jq -c '.'
     @curl -s -X POST http://localhost:9007/executor/stop | jq -c '.'
     @echo "✅ Scanner and Executor stopped"
+
+# Stop scanner only (no new buys, positions still sell)
+arb-scanner-stop:
+    @echo "🛑 Stopping scanner only (positions will continue to sell)..."
+    @curl -s -X POST http://localhost:9007/scanner/stop | jq -c '.'
+    @echo ""
+    @echo "Position monitor status:"
+    @curl -s http://localhost:9007/positions/monitor/status | jq '{is_running: .is_running, positions_tracked: .positions_tracked}'
+    @echo "✅ Scanner stopped - existing positions will continue to exit"
+
+# Start scanner only (resume scanning for new opportunities)
+arb-scanner-start:
+    @echo "🚀 Starting scanner only..."
+    @curl -s -X POST http://localhost:9007/scanner/start | jq -c '.'
+    @echo "✅ Scanner started"
 
 # ArbFarm emergency sell all tracked positions
 arb-emergency-sell:

@@ -157,7 +157,7 @@ async fn main() -> anyhow::Result<()> {
     // Print comprehensive startup summary for tmuxinator pane
     print_startup_summary(&state).await;
 
-    // Validate wallet funding - block startup if balance too low for trading
+    // Validate wallet funding - warn if balance too low for new buys, but allow exits
     const MIN_BALANCE_SOL: f64 = 0.05;
     if state.dev_signer.is_configured() {
         if let Some(address) = state.dev_signer.get_address() {
@@ -169,28 +169,47 @@ async fn main() -> anyhow::Result<()> {
                 Ok(balance_json) => {
                     if let Some(value) = balance_json.get("value").and_then(|v| v.as_u64()) {
                         let sol_balance = value as f64 / 1_000_000_000.0;
-                        if sol_balance < MIN_BALANCE_SOL {
-                            return Err(anyhow::anyhow!(
-                                "❌ STARTUP BLOCKED: Wallet balance ({:.4} SOL) is below minimum ({:.2} SOL). \
-                                Fund wallet {} with at least {:.2} SOL to enable trading.",
-                                sol_balance, MIN_BALANCE_SOL, address, MIN_BALANCE_SOL
-                            ));
-                        }
-                        info!("✅ Wallet funding validated: {:.4} SOL (min: {:.2} SOL)", sol_balance, MIN_BALANCE_SOL);
 
-                        // Dynamic max position: 1/15th of wallet balance, capped at 10 SOL
+                        // Reserve SOL for gas fees (~10 transactions worth)
+                        const GAS_RESERVE_SOL: f64 = 0.02;
+                        let available_for_trading = (sol_balance - GAS_RESERVE_SOL).max(0.0);
+
+                        if sol_balance < MIN_BALANCE_SOL {
+                            warn!(
+                                "⚠️ LOW BALANCE: Wallet has {:.4} SOL (below {:.2} SOL threshold). \
+                                New buys disabled, exits still allowed. Fund wallet {} for full trading.",
+                                sol_balance, MIN_BALANCE_SOL, address
+                            );
+                        } else {
+                            info!("✅ Wallet funding validated: {:.4} SOL (min: {:.2} SOL, reserved for gas: {:.2} SOL)",
+                                sol_balance, MIN_BALANCE_SOL, GAS_RESERVE_SOL);
+                        }
+
                         const MAX_POSITION_CAP_SOL: f64 = 10.0;
-                        let dynamic_max_position = (sol_balance / 15.0).min(MAX_POSITION_CAP_SOL);
-                        let dynamic_max_position = (dynamic_max_position * 100.0).round() / 100.0; // Round to 2 decimals
+                        let (divisor, tier_name) = if available_for_trading < 1.0 {
+                            (10.0, "micro (<1 SOL)")
+                        } else if available_for_trading < 10.0 {
+                            (15.0, "small (1-10 SOL)")
+                        } else if available_for_trading < 50.0 {
+                            (20.0, "medium (10-50 SOL)")
+                        } else {
+                            (25.0, "large (50+ SOL)")
+                        };
+                        let dynamic_max_position = (available_for_trading / divisor).min(MAX_POSITION_CAP_SOL);
+                        let dynamic_max_position = (dynamic_max_position * 100.0).round() / 100.0;
 
                         {
                             let mut risk_config = state.risk_config.write().await;
                             risk_config.max_position_sol = dynamic_max_position;
                             risk_config.max_position_per_token_sol = dynamic_max_position;
                         }
+                        {
+                            let mut wallet_max = state.wallet_max_position_sol.write().await;
+                            *wallet_max = dynamic_max_position;
+                        }
                         info!(
-                            "💰 Dynamic max position set: {:.2} SOL (1/15th of {:.2} SOL balance, cap: {} SOL)",
-                            dynamic_max_position, sol_balance, MAX_POSITION_CAP_SOL
+                            "💰 Dynamic max position set: {:.2} SOL (1/{} of {:.2} SOL, tier: {}, cap: {} SOL)",
+                            dynamic_max_position, divisor as u32, available_for_trading, tier_name, MAX_POSITION_CAP_SOL
                         );
 
                         // Sync all active strategies with the dynamic max position (in-memory + database)
@@ -294,9 +313,18 @@ async fn main() -> anyhow::Result<()> {
 
         info!("🚀 Auto-starting workers...");
 
-        // Start scanner
-        scanner_for_autostart.start().await;
-        info!("✅ Scanner started");
+        // Start scanner (unless ARB_SCANNER_AUTO_START=false)
+        let scanner_auto_start = env::var("ARB_SCANNER_AUTO_START")
+            .map(|v| v.to_lowercase() != "false" && v != "0")
+            .unwrap_or(true);
+
+        if scanner_auto_start {
+            scanner_for_autostart.start().await;
+            info!("✅ Scanner started");
+        } else {
+            info!("ℹ️ Scanner NOT auto-started (ARB_SCANNER_AUTO_START=false)");
+            info!("   Start manually: curl -X POST localhost:9007/scanner/start");
+        }
 
         // Autonomous executor startup is handled in AppState::new() based on strategy config
         // It should NOT be unconditionally started here - only start if user has enabled auto-execution
@@ -506,6 +534,7 @@ async fn main() -> anyhow::Result<()> {
                                     continue;
                                 }
 
+                                // Get estimated price - skip dead tokens (zero liquidity)
                                 let estimated_price = match periodic_on_chain.get_bonding_curve_state(&token.mint).await {
                                     Ok(curve_state) => {
                                         if curve_state.virtual_token_reserves > 0 {
@@ -518,7 +547,8 @@ async fn main() -> anyhow::Result<()> {
                                                     price
                                                 }
                                                 Err(_) => {
-                                                    warn!("[Periodic] ⚠️ {} - zero reserves and Jupiter unavailable, skipping", &token.mint[..12]);
+                                                    // Dead token - zero reserves and no Jupiter price
+                                                    warn!("[Periodic] 💀 {} - dead token (zero reserves, no Jupiter) - SKIPPING", &token.mint[..12]);
                                                     continue;
                                                 }
                                             }
@@ -532,13 +562,15 @@ async fn main() -> anyhow::Result<()> {
                                                 price
                                             }
                                             Err(e) => {
-                                                warn!("[Periodic] ⚠️ {} - no price source available ({}), skipping", &token.mint[..12], e);
+                                                // No curve and no Jupiter - dead token
+                                                warn!("[Periodic] 💀 {} - dead token (no curve, no Jupiter: {}) - SKIPPING", &token.mint[..12], e);
                                                 continue;
                                             }
                                         }
                                     }
                                 };
 
+                                // Dead tokens are now skipped via `continue` above, so we only reach here for live tokens
                                 let exit_config = match periodic_metrics.calculate_metrics(&token.mint, "pump_fun").await {
                                     Ok(metrics) => {
                                         crate::execution::ExitConfig::for_discovered_with_metrics(metrics.volume_24h, metrics.holder_count)
