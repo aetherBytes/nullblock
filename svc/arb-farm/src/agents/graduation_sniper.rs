@@ -1,13 +1,14 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock, Semaphore};
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 use crate::events::{ArbEvent, AgentType, EventSource, Significance};
-use crate::execution::{CurveTransactionBuilder, CurveSellParams, JitoClient, MomentumAdaptiveConfig, MomentumData, MomentumStrength};
+use crate::execution::{CurveTransactionBuilder, CurveSellParams, ExitConfig, JitoClient, MomentumAdaptiveConfig, MomentumData, MomentumStrength, PositionManager};
+use crate::execution::risk::RiskConfig;
 use crate::helius::HeliusSender;
 use crate::models::{Signal, SignalType, VenueType};
 use crate::venues::curves::OnChainFetcher;
@@ -23,7 +24,7 @@ const MAX_CONCURRENT_SELLS: usize = 5;
 const DEFAULT_SELL_DELAY_MS: u64 = 50;  // Reduced from 500ms to beat front-runners
 const MAX_SELL_RETRIES: u32 = 3;
 const DEFAULT_SLIPPAGE_BPS: u32 = 300;
-const DEFAULT_MAX_CONCURRENT_POSITIONS: u32 = 3;
+const DEFAULT_MAX_CONCURRENT_POSITIONS: u32 = 5;
 const DEFAULT_TAKE_PROFIT_PERCENT: f64 = 12.0;  // Achievable target (was 30%)
 const DEFAULT_STOP_LOSS_PERCENT: f64 = 20.0;   // Matches volatility (was 15%)
 const MIN_ENTRY_VELOCITY: f64 = 0.0;           // Minimum velocity for entry (% per min)
@@ -116,6 +117,10 @@ pub struct GraduationSniper {
     sell_semaphore: Arc<Semaphore>,
     dev_signer: Option<Arc<DevWalletSigner>>,
     helius_sender: Option<Arc<HeliusSender>>,
+    position_manager: Option<Arc<PositionManager>>,
+    risk_config: Option<Arc<RwLock<RiskConfig>>>,
+    in_flight_buys: Arc<RwLock<HashSet<String>>>,
+    in_flight_sells: Arc<RwLock<HashSet<String>>>,
 }
 
 impl GraduationSniper {
@@ -142,6 +147,10 @@ impl GraduationSniper {
             sell_semaphore: Arc::new(Semaphore::new(MAX_CONCURRENT_SELLS)),
             dev_signer: None,
             helius_sender: None,
+            position_manager: None,
+            risk_config: None,
+            in_flight_buys: Arc::new(RwLock::new(HashSet::new())),
+            in_flight_sells: Arc::new(RwLock::new(HashSet::new())),
         }
     }
 
@@ -171,6 +180,49 @@ impl GraduationSniper {
         self.dev_signer = Some(dev_signer);
         self.helius_sender = Some(helius_sender);
         self
+    }
+
+    pub fn with_position_manager(mut self, position_manager: Arc<PositionManager>) -> Self {
+        self.position_manager = Some(position_manager);
+        self
+    }
+
+    pub fn with_risk_config(mut self, risk_config: Arc<RwLock<RiskConfig>>) -> Self {
+        self.risk_config = Some(risk_config);
+        self
+    }
+
+    fn calculate_adaptive_slippage(position: &SnipePosition, is_post_graduation: bool) -> u32 {
+        const MIN_SLIPPAGE_BPS: u32 = 500;  // 5% floor - post-grad markets can be volatile
+        const MAX_SLIPPAGE_BPS: u32 = 2000; // 20% cap - prioritize execution
+        const POST_GRAD_SLIPPAGE_BPS: u32 = 1500; // 15% for post-graduation sells (thin liquidity)
+        const PROFIT_SACRIFICE_RATIO: f64 = 0.25; // 25% of profits
+
+        if is_post_graduation {
+            tracing::info!("🎓 Post-graduation sell: using base slippage {}bps (15%)", POST_GRAD_SLIPPAGE_BPS);
+            return POST_GRAD_SLIPPAGE_BPS;
+        }
+
+        let pnl_percent = if position.entry_price_sol > 0.0 {
+            let current_value_estimate = position.entry_price_sol; // Use entry as baseline since we don't track current
+            ((current_value_estimate - position.entry_price_sol) / position.entry_price_sol) * 100.0
+        } else {
+            0.0
+        };
+
+        let calculated_slippage = if pnl_percent > 0.0 {
+            let profit_based = (pnl_percent * PROFIT_SACRIFICE_RATIO * 100.0) as u32;
+            profit_based.max(MIN_SLIPPAGE_BPS)
+        } else {
+            MIN_SLIPPAGE_BPS
+        };
+
+        tracing::info!(
+            "📊 Sniper slippage: entry={:.6} SOL | base={}bps | final={}bps",
+            position.entry_price_sol, calculated_slippage, calculated_slippage.min(MAX_SLIPPAGE_BPS)
+        );
+
+        calculated_slippage.min(MAX_SLIPPAGE_BPS)
     }
 
     pub async fn get_config(&self) -> SniperConfig {
@@ -345,6 +397,10 @@ impl GraduationSniper {
         let jupiter_api_url = self.jupiter_api_url.clone();
         let dev_signer = self.dev_signer.clone();
         let helius_sender = self.helius_sender.clone();
+        let position_manager = self.position_manager.clone();
+        let risk_config = self.risk_config.clone();
+        let in_flight_buys = self.in_flight_buys.clone();
+        let in_flight_sells = self.in_flight_sells.clone();
 
         tokio::spawn(async move {
             loop {
@@ -467,9 +523,34 @@ impl GraduationSniper {
                                             continue;
                                         }
 
+                                        // Check if sell is already in flight to prevent duplicates
+                                        let adaptive_slippage = {
+                                            let mut in_flight = in_flight_sells.write().await;
+                                            if in_flight.contains(mint) {
+                                                tracing::warn!(
+                                                    "⚠️ Sell already in flight for {} - skipping duplicate",
+                                                    mint
+                                                );
+                                                let mut positions_lock = positions.write().await;
+                                                if let Some(p) = positions_lock.get_mut(mint) {
+                                                    p.status = SnipeStatus::Waiting;
+                                                }
+                                                continue;
+                                            }
+                                            in_flight.insert(mint.to_string());
+
+                                            // Calculate adaptive slippage based on position
+                                            let positions_lock = positions.read().await;
+                                            if let Some(pos) = positions_lock.get(mint) {
+                                                Self::calculate_adaptive_slippage(pos, true) // Post-graduation = true
+                                            } else {
+                                                current_config.slippage_bps
+                                            }
+                                        };
+
                                         tracing::info!(
                                             "🎓 Graduation detected for position {}! Spawning sell task (delay={}ms, slippage={}bps, raydium_pool={:?})...",
-                                            mint, current_config.sell_delay_ms, current_config.slippage_bps, raydium_pool
+                                            mint, current_config.sell_delay_ms, adaptive_slippage, raydium_pool
                                         );
 
                                         let positions_clone = positions.clone();
@@ -480,12 +561,14 @@ impl GraduationSniper {
                                         let wallet_clone = default_wallet.clone();
                                         let semaphore_clone = sell_semaphore.clone();
                                         let jupiter_url_clone = jupiter_api_url.clone();
+                                        let in_flight_sells_clone = in_flight_sells.clone();
 
                                         tokio::spawn(async move {
                                             let _permit = match semaphore_clone.acquire().await {
                                                 Ok(p) => p,
                                                 Err(_) => {
                                                     tracing::error!("Semaphore closed, cannot execute sell for {}", mint_owned);
+                                                    in_flight_sells_clone.write().await.remove(&mint_owned);
                                                     return;
                                                 }
                                             };
@@ -501,11 +584,14 @@ impl GraduationSniper {
                                                 &jito_client_clone,
                                                 &event_tx_clone,
                                                 &wallet_clone,
-                                                current_config.slippage_bps,
+                                                adaptive_slippage,
                                                 current_config.max_sell_retries,
                                                 &jupiter_url_clone,
                                                 raydium_pool.as_deref(),
                                             ).await;
+
+                                            // Clear in-flight status after completion
+                                            in_flight_sells_clone.write().await.remove(&mint_owned);
                                         });
                                     } else if !has_position && current_config.enable_post_graduation_entry {
                                         // NO POSITION + POST-GRAD ENTRY ENABLED: Try quick-flip BUY via Jupiter
@@ -538,6 +624,19 @@ impl GraduationSniper {
                                             }
                                         };
 
+                                        // Check if buy is already in flight to prevent duplicates
+                                        {
+                                            let mut in_flight = in_flight_buys.write().await;
+                                            if in_flight.contains(mint) {
+                                                tracing::warn!(
+                                                    "⚠️ Post-grad buy already in flight for {} - skipping duplicate",
+                                                    symbol
+                                                );
+                                                continue;
+                                            }
+                                            in_flight.insert(mint.to_string());
+                                        }
+
                                         tracing::info!(
                                             "🎓🔫 Post-graduation entry opportunity for {} - executing quick-flip buy via Jupiter",
                                             symbol
@@ -563,7 +662,40 @@ impl GraduationSniper {
                                             tracing::warn!("Failed to send post_grad_entry_signal event: {}", e);
                                         }
 
-                                        // Spawn the actual buy execution
+                                        // Check wallet balance before attempting buy
+                                        // Use global risk_config max_position_sol if available, else fall back to config
+                                        let entry_sol = if let Some(ref rc) = risk_config {
+                                            rc.read().await.max_position_sol
+                                        } else {
+                                            current_config.post_graduation_entry_sol
+                                        };
+                                        const GAS_RESERVE_SOL: f64 = 0.02;
+                                        let required_sol = entry_sol + GAS_RESERVE_SOL;
+
+                                        let wallet_balance_sol = match curve_builder.get_wallet_balance(&default_wallet).await {
+                                            Ok(lamports) => lamports as f64 / 1_000_000_000.0,
+                                            Err(e) => {
+                                                tracing::warn!(
+                                                    "⚠️ Failed to check balance for post-grad buy {}: {} - skipping",
+                                                    symbol, e
+                                                );
+                                                in_flight_buys.write().await.remove(mint);
+                                                continue;
+                                            }
+                                        };
+
+                                        if wallet_balance_sol < required_sol {
+                                            tracing::warn!(
+                                                "⚠️ Post-grad buy skipped for {} - insufficient balance ({:.4} SOL < {:.4} SOL needed)",
+                                                symbol,
+                                                wallet_balance_sol,
+                                                required_sol
+                                            );
+                                            in_flight_buys.write().await.remove(mint);
+                                            continue;
+                                        }
+
+                                        // Spawn the actual buy execution with retry logic
                                         let mint_owned = mint.to_string();
                                         let symbol_owned = symbol.to_string();
                                         let positions_clone = positions.clone();
@@ -571,13 +703,14 @@ impl GraduationSniper {
                                         let event_tx_clone = event_tx.clone();
                                         let wallet_clone = default_wallet.clone();
                                         let jupiter_url_clone = jupiter_api_url.clone();
-                                        let entry_sol = current_config.post_graduation_entry_sol;
                                         let slippage_bps = current_config.slippage_bps;
                                         let take_profit = current_config.post_graduation_take_profit;
                                         let stop_loss = current_config.post_graduation_stop_loss;
+                                        let position_manager_clone = position_manager.clone();
+                                        let in_flight_buys_clone = in_flight_buys.clone();
 
                                         tokio::spawn(async move {
-                                            Self::execute_post_graduation_buy(
+                                            Self::execute_post_graduation_buy_with_retry(
                                                 &positions_clone,
                                                 &mint_owned,
                                                 &symbol_owned,
@@ -591,6 +724,8 @@ impl GraduationSniper {
                                                 slippage_bps as u16,
                                                 take_profit,
                                                 stop_loss,
+                                                position_manager_clone.as_ref(),
+                                                &in_flight_buys_clone,
                                             ).await;
                                         });
                                     }
@@ -669,17 +804,18 @@ impl GraduationSniper {
                                         }
                                     };
 
-                                    let should_proceed = {
+                                    let (should_proceed, adaptive_slippage) = {
                                         let mut positions_lock = positions_clone.write().await;
                                         if let Some(p) = positions_lock.get_mut(&mint) {
                                             if p.status == SnipeStatus::Waiting {
                                                 p.status = SnipeStatus::Selling;
-                                                true
+                                                let slippage = Self::calculate_adaptive_slippage(p, true);
+                                                (true, slippage)
                                             } else {
-                                                false
+                                                (false, 0)
                                             }
                                         } else {
-                                            false
+                                            (false, 0)
                                         }
                                     };
 
@@ -691,7 +827,7 @@ impl GraduationSniper {
                                             &jito_client_clone,
                                             &event_tx_clone,
                                             &wallet_clone,
-                                            current_config.slippage_bps,
+                                            adaptive_slippage,
                                             current_config.max_sell_retries,
                                             &jupiter_url_clone,
                                             None,
@@ -728,7 +864,7 @@ impl GraduationSniper {
         slippage_bps: u32,
         max_sell_retries: u32,
         jupiter_api_url: &str,
-        _raydium_pool: Option<&str>,
+        raydium_pool: Option<&str>,
     ) {
         Self::execute_graduation_sell_with_momentum(
             positions,
@@ -740,7 +876,7 @@ impl GraduationSniper {
             slippage_bps,
             max_sell_retries,
             jupiter_api_url,
-            _raydium_pool,
+            raydium_pool,
             None,  // No momentum data
             None,  // No momentum config
         ).await
@@ -756,7 +892,7 @@ impl GraduationSniper {
         slippage_bps: u32,
         max_sell_retries: u32,
         jupiter_api_url: &str,
-        _raydium_pool: Option<&str>,
+        raydium_pool: Option<&str>,
         momentum_data: Option<&MomentumData>,
         momentum_config: Option<&MomentumAdaptiveConfig>,
     ) {
@@ -818,36 +954,60 @@ impl GraduationSniper {
                     let err_str = e.to_string();
                     if err_str.contains("graduated") || err_str.contains("is_complete") {
                         tracing::info!(
-                            "🎓 Token {} has graduated, falling back to Jupiter for sell",
-                            position.symbol
+                            "🎓 Token {} has graduated, attempting Raydium direct sell (pool={:?})",
+                            position.symbol,
+                            raydium_pool
                         );
-                        match curve_builder.build_post_graduation_sell(&sell_params, jupiter_api_url).await {
-                            Ok(jupiter_result) => {
+
+                        match curve_builder.build_raydium_sell(&sell_params).await {
+                            Ok(raydium_result) => {
                                 tracing::info!(
-                                    "📤 Built Jupiter sell tx for {}: expected {} SOL, impact {:.2}%, route: {}",
+                                    "📤 Built Raydium sell tx for {}: expected {} SOL, impact {:.2}%",
                                     position.symbol,
-                                    jupiter_result.expected_sol_out as f64 / 1e9,
-                                    jupiter_result.price_impact_percent,
-                                    jupiter_result.route_label
+                                    raydium_result.expected_sol_out as f64 / 1e9,
+                                    raydium_result.price_impact_percent
                                 );
                                 (
-                                    jupiter_result.transaction_base64,
-                                    jupiter_result.expected_sol_out,
-                                    jupiter_result.price_impact_percent,
-                                    jupiter_result.route_label,
+                                    raydium_result.transaction_base64,
+                                    raydium_result.expected_sol_out,
+                                    raydium_result.price_impact_percent,
+                                    raydium_result.route_label,
                                 )
                             }
-                            Err(jupiter_err) => {
-                                tracing::error!(
-                                    "Failed to build Jupiter sell for {}: {}",
-                                    position.symbol, jupiter_err
+                            Err(raydium_err) => {
+                                tracing::warn!(
+                                    "⚠️ Raydium sell failed for {}: {}, falling back to Jupiter",
+                                    position.symbol, raydium_err
                                 );
-                                Self::handle_sell_failure(
-                                    positions, mint, &position, event_tx,
-                                    max_sell_retries, jupiter_api_url,
-                                    &format!("Jupiter build error: {}", jupiter_err),
-                                ).await;
-                                return;
+                                match curve_builder.build_post_graduation_sell(&sell_params, jupiter_api_url).await {
+                                    Ok(jupiter_result) => {
+                                        tracing::info!(
+                                            "📤 Built Jupiter sell tx for {}: expected {} SOL, impact {:.2}%, route: {}",
+                                            position.symbol,
+                                            jupiter_result.expected_sol_out as f64 / 1e9,
+                                            jupiter_result.price_impact_percent,
+                                            jupiter_result.route_label
+                                        );
+                                        (
+                                            jupiter_result.transaction_base64,
+                                            jupiter_result.expected_sol_out,
+                                            jupiter_result.price_impact_percent,
+                                            jupiter_result.route_label,
+                                        )
+                                    }
+                                    Err(jupiter_err) => {
+                                        tracing::error!(
+                                            "Failed to build Jupiter sell for {}: {}",
+                                            position.symbol, jupiter_err
+                                        );
+                                        Self::handle_sell_failure(
+                                            positions, mint, &position, event_tx,
+                                            max_sell_retries, jupiter_api_url,
+                                            &format!("Raydium: {} | Jupiter: {}", raydium_err, jupiter_err),
+                                        ).await;
+                                        return;
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -1085,12 +1245,13 @@ impl GraduationSniper {
     pub async fn manual_sell(&self, mint: &str) -> AppResult<()> {
         let config = self.config.read().await.clone();
 
-        let should_sell = {
+        let (should_sell, adaptive_slippage) = {
             let mut positions = self.positions.write().await;
             if let Some(p) = positions.get_mut(mint) {
                 if p.status == SnipeStatus::Waiting {
                     p.status = SnipeStatus::Selling;
-                    true
+                    let slippage = Self::calculate_adaptive_slippage(p, true); // Manual = post-grad context
+                    (true, slippage)
                 } else {
                     return Err(crate::error::AppError::Validation(format!(
                         "Position {} is in {:?} state, cannot sell",
@@ -1113,7 +1274,7 @@ impl GraduationSniper {
                 &self.jito_client,
                 &self.event_tx,
                 &self.default_wallet,
-                config.slippage_bps,
+                adaptive_slippage,
                 config.max_sell_retries,
                 &self.jupiter_api_url,
                 None,
@@ -1123,8 +1284,9 @@ impl GraduationSniper {
         Ok(())
     }
 
-    /// Execute a post-graduation buy via Jupiter
-    async fn execute_post_graduation_buy(
+    /// Execute a post-graduation buy with retry logic for TOKEN_NOT_TRADABLE errors
+    /// Jupiter may not have indexed the new Raydium pool immediately after graduation
+    async fn execute_post_graduation_buy_with_retry(
         positions: &Arc<RwLock<HashMap<String, SnipePosition>>>,
         mint: &str,
         symbol: &str,
@@ -1138,7 +1300,107 @@ impl GraduationSniper {
         slippage_bps: u16,
         take_profit: f64,
         stop_loss: f64,
+        position_manager: Option<&Arc<PositionManager>>,
+        in_flight_buys: &Arc<RwLock<HashSet<String>>>,
     ) {
+        const MAX_RETRIES: u32 = 5;
+        const INITIAL_DELAY_SECS: u64 = 10;
+
+        for attempt in 0..MAX_RETRIES {
+            if attempt > 0 {
+                let delay_secs = INITIAL_DELAY_SECS * (attempt as u64 + 1);
+                tracing::info!(
+                    "🔄 Retry {}/{} for post-grad buy {} - waiting {}s for Jupiter indexing...",
+                    attempt + 1, MAX_RETRIES, symbol, delay_secs
+                );
+                tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs)).await;
+            }
+
+            let result = Self::execute_post_graduation_buy_inner(
+                positions,
+                mint,
+                symbol,
+                curve_builder,
+                dev_signer,
+                helius_sender,
+                event_tx,
+                wallet,
+                jupiter_api_url,
+                entry_sol,
+                slippage_bps,
+                take_profit,
+                stop_loss,
+                position_manager,
+            ).await;
+
+            match result {
+                Ok(()) => {
+                    // Success - clear in-flight and return
+                    in_flight_buys.write().await.remove(mint);
+                    return;
+                }
+                Err(e) => {
+                    let err_str = e.to_string();
+                    let is_retryable = err_str.contains("TOKEN_NOT_TRADABLE")
+                        || err_str.contains("not tradable")
+                        || err_str.contains("No route found")
+                        || err_str.contains("error decoding response");
+
+                    if is_retryable && attempt < MAX_RETRIES - 1 {
+                        tracing::warn!(
+                            "⚠️ Post-grad buy for {} failed with retryable error (attempt {}/{}): {}",
+                            symbol, attempt + 1, MAX_RETRIES, err_str
+                        );
+                        continue;
+                    } else {
+                        tracing::error!(
+                            "❌ Post-grad buy for {} failed permanently after {} attempts: {}",
+                            symbol, attempt + 1, err_str
+                        );
+
+                        let fail_event = ArbEvent::new(
+                            "arb.curve.post_grad_buy_failed",
+                            EventSource::Agent(AgentType::Scanner),
+                            "arb.curve.post_grad_buy_failed",
+                            serde_json::json!({
+                                "mint": mint,
+                                "symbol": symbol,
+                                "error": err_str,
+                                "stage": "exhausted_retries",
+                                "attempts": attempt + 1,
+                            }),
+                        );
+                        let _ = event_tx.send(fail_event);
+
+                        // Clear in-flight and return
+                        in_flight_buys.write().await.remove(mint);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Should not reach here, but clear in-flight just in case
+        in_flight_buys.write().await.remove(mint);
+    }
+
+    /// Inner implementation of post-graduation buy that returns a Result for retry handling
+    async fn execute_post_graduation_buy_inner(
+        positions: &Arc<RwLock<HashMap<String, SnipePosition>>>,
+        mint: &str,
+        symbol: &str,
+        curve_builder: &Arc<CurveTransactionBuilder>,
+        dev_signer: &Arc<DevWalletSigner>,
+        helius_sender: &Arc<HeliusSender>,
+        event_tx: &broadcast::Sender<ArbEvent>,
+        wallet: &str,
+        jupiter_api_url: &str,
+        entry_sol: f64,
+        slippage_bps: u16,
+        take_profit: f64,
+        stop_loss: f64,
+        position_manager: Option<&Arc<PositionManager>>,
+    ) -> Result<(), AppError> {
         tracing::info!(
             "🎓🔫 Executing post-graduation BUY for {} via Jupiter ({} SOL, {}bps slippage)",
             symbol,
@@ -1150,41 +1412,21 @@ impl GraduationSniper {
         let sol_amount_lamports = (entry_sol * 1_000_000_000.0) as u64;
 
         // Build the Jupiter swap transaction (SOL -> Token)
-        let buy_result = match curve_builder.build_post_graduation_buy(
+        let buy_result = curve_builder.build_post_graduation_buy(
             mint,
             sol_amount_lamports,
             slippage_bps,
             wallet,
             jupiter_api_url,
-        ).await {
-            Ok(result) => {
-                tracing::info!(
-                    "📦 Built Jupiter buy tx for {}: expected {} tokens, impact {:.2}%, route: {}",
-                    symbol,
-                    result.expected_tokens_out,
-                    result.price_impact_percent,
-                    result.route_label
-                );
-                result
-            }
-            Err(e) => {
-                tracing::error!("❌ Failed to build post-graduation buy for {}: {}", symbol, e);
+        ).await?;
 
-                let fail_event = ArbEvent::new(
-                    "arb.curve.post_grad_buy_failed",
-                    EventSource::Agent(AgentType::Scanner),
-                    "arb.curve.post_grad_buy_failed",
-                    serde_json::json!({
-                        "mint": mint,
-                        "symbol": symbol,
-                        "error": e.to_string(),
-                        "stage": "build",
-                    }),
-                );
-                let _ = event_tx.send(fail_event);
-                return;
-            }
-        };
+        tracing::info!(
+            "📦 Built Jupiter buy tx for {}: expected {} tokens, impact {:.2}%, route: {}",
+            symbol,
+            buy_result.expected_tokens_out,
+            buy_result.price_impact_percent,
+            buy_result.route_label
+        );
 
         // Sign the transaction
         let sign_request = SignRequest {
@@ -1199,116 +1441,155 @@ impl GraduationSniper {
             ),
         };
 
-        let sign_result = match dev_signer.sign_transaction(sign_request).await {
-            Ok(result) => result,
-            Err(e) => {
-                tracing::error!("❌ Failed to sign post-graduation buy for {}: {}", symbol, e);
-
-                let fail_event = ArbEvent::new(
-                    "arb.curve.post_grad_buy_failed",
-                    EventSource::Agent(AgentType::Scanner),
-                    "arb.curve.post_grad_buy_failed",
-                    serde_json::json!({
-                        "mint": mint,
-                        "symbol": symbol,
-                        "error": e.to_string(),
-                        "stage": "sign",
-                    }),
-                );
-                let _ = event_tx.send(fail_event);
-                return;
-            }
-        };
+        let sign_result = dev_signer.sign_transaction(sign_request).await
+            .map_err(|e| AppError::Internal(format!("Signing error: {}", e)))?;
 
         if !sign_result.success {
             let error = sign_result.error.unwrap_or_else(|| "Unknown signing error".to_string());
             tracing::error!("❌ Signing rejected for post-graduation buy {}: {}", symbol, error);
-            return;
+
+            let fail_event = ArbEvent::new(
+                "arb.curve.post_grad_buy_failed",
+                EventSource::Agent(AgentType::Scanner),
+                "arb.curve.post_grad_buy_failed",
+                serde_json::json!({
+                    "mint": mint,
+                    "symbol": symbol,
+                    "error": error,
+                    "stage": "sign_rejected",
+                    "entry_sol": entry_sol,
+                }),
+            );
+            let _ = event_tx.send(fail_event);
+            return Err(AppError::Internal(format!("Signing rejected: {}", error)));
         }
 
-        let signed_tx = match sign_result.signed_transaction_base64 {
-            Some(tx) => tx,
-            None => {
-                tracing::error!("❌ No signed transaction returned for {}", symbol);
-                return;
-            }
-        };
+        let signed_tx = sign_result.signed_transaction_base64
+            .ok_or_else(|| AppError::Internal("No signed transaction returned".to_string()))?;
 
         // Send the transaction
-        match helius_sender.send_transaction(&signed_tx, true).await {
-            Ok(signature) => {
-                let tokens_received = buy_result.expected_tokens_out;
+        let signature = helius_sender.send_transaction(&signed_tx, true).await
+            .map_err(|e| AppError::Internal(format!("Send error: {}", e)))?;
 
-                // Create the position with actual data
-                let position = SnipePosition {
-                    mint: mint.to_string(),
-                    symbol: symbol.to_string(),
-                    strategy_id: Uuid::nil(),
-                    entry_tokens: tokens_received,
-                    entry_price_sol: entry_sol,
-                    entry_time: Utc::now(),
-                    status: SnipeStatus::Waiting,  // Waiting for price movement to trigger sell
-                    sell_attempts: 0,
-                    last_sell_attempt: None,
-                    sell_tx_signature: None,
-                    exit_sol: None,
-                    pnl_sol: None,
-                };
+        let tokens_received = buy_result.expected_tokens_out;
+        let edge_id = Uuid::new_v4();
 
-                {
-                    let mut positions_lock = positions.write().await;
-                    positions_lock.insert(mint.to_string(), position);
-                }
+        // Create the position with actual data
+        let position = SnipePosition {
+            mint: mint.to_string(),
+            symbol: symbol.to_string(),
+            strategy_id: Uuid::nil(),
+            entry_tokens: tokens_received,
+            entry_price_sol: entry_sol,
+            entry_time: Utc::now(),
+            status: SnipeStatus::Waiting,
+            sell_attempts: 0,
+            last_sell_attempt: None,
+            sell_tx_signature: None,
+            exit_sol: None,
+            pnl_sol: None,
+        };
 
-                tracing::info!(
-                    "✅ Post-graduation BUY executed for {} | {} tokens @ {} SOL | TP={:.1}% SL={:.1}% | sig={}",
-                    symbol,
-                    tokens_received,
-                    entry_sol,
-                    take_profit,
-                    stop_loss,
-                    &signature[..16.min(signature.len())]
+        // FIX #3: Check for duplicate position before inserting
+        {
+            let mut positions_lock = positions.write().await;
+            if positions_lock.contains_key(mint) {
+                tracing::warn!(
+                    "⚠️ Position already exists for {} - skipping duplicate insertion",
+                    symbol
                 );
-
-                // Emit success event
-                let success_event = ArbEvent::new(
-                    "arb.curve.post_grad_buy_success",
-                    EventSource::Agent(AgentType::Scanner),
-                    "arb.curve.post_grad_buy_success",
-                    serde_json::json!({
-                        "mint": mint,
-                        "symbol": symbol,
-                        "tokens_received": tokens_received,
-                        "entry_sol": entry_sol,
-                        "take_profit_percent": take_profit,
-                        "stop_loss_percent": stop_loss,
-                        "tx_signature": signature,
-                        "price_impact_percent": buy_result.price_impact_percent,
-                        "route": buy_result.route_label,
-                        "signal_source": "graduation_sniper",
-                    }),
-                );
-
-                if let Err(e) = event_tx.send(success_event) {
-                    tracing::warn!("Failed to send post_grad_buy_success event: {}", e);
-                }
-            }
-            Err(e) => {
-                tracing::error!("❌ Failed to send post-graduation buy tx for {}: {}", symbol, e);
-
-                let fail_event = ArbEvent::new(
-                    "arb.curve.post_grad_buy_failed",
-                    EventSource::Agent(AgentType::Scanner),
-                    "arb.curve.post_grad_buy_failed",
-                    serde_json::json!({
-                        "mint": mint,
-                        "symbol": symbol,
-                        "error": e.to_string(),
-                        "stage": "send",
-                    }),
-                );
-                let _ = event_tx.send(fail_event);
+            } else {
+                positions_lock.insert(mint.to_string(), position);
             }
         }
+
+        // FIX #1: Register with PositionManager for exit monitoring (TP/SL triggers)
+        if let Some(pm) = position_manager {
+            // Pump.fun tokens have 6 decimals - convert raw amount to actual tokens
+            let actual_tokens = tokens_received as f64 / 1e6;
+            let entry_price = if actual_tokens > 0.0 {
+                entry_sol / actual_tokens
+            } else {
+                0.0
+            };
+
+            let exit_config = ExitConfig {
+                stop_loss_percent: Some(stop_loss),
+                take_profit_percent: Some(take_profit),
+                trailing_stop_percent: Some(8.0),
+                time_limit_minutes: Some(30),
+                ..Default::default()
+            };
+
+            match pm.open_position(
+                edge_id,
+                Uuid::nil(),
+                mint.to_string(),
+                Some(symbol.to_string()),
+                entry_sol,
+                actual_tokens,
+                entry_price,
+                exit_config,
+                Some(signature.clone()),
+                Some("jupiter".to_string()),
+                Some("graduation_sniper".to_string()),
+            ).await {
+                Ok(pos) => {
+                    tracing::info!(
+                        "🎯 Post-grad position registered with PositionManager: {} (pos_id={})",
+                        symbol,
+                        pos.id
+                    );
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "⚠️ Failed to register post-grad position with PositionManager: {} - {}",
+                        symbol,
+                        e
+                    );
+                }
+            }
+        } else {
+            tracing::warn!(
+                "⚠️ No PositionManager configured - post-grad position {} will NOT have exit monitoring",
+                symbol
+            );
+        }
+
+        tracing::info!(
+            "✅ Post-graduation BUY executed for {} | {} tokens @ {} SOL | TP={:.1}% SL={:.1}% | sig={}",
+            symbol,
+            tokens_received,
+            entry_sol,
+            take_profit,
+            stop_loss,
+            &signature[..16.min(signature.len())]
+        );
+
+        // Emit success event
+        let success_event = ArbEvent::new(
+            "arb.curve.post_grad_buy_success",
+            EventSource::Agent(AgentType::Scanner),
+            "arb.curve.post_grad_buy_success",
+            serde_json::json!({
+                "mint": mint,
+                "symbol": symbol,
+                "tokens_received": tokens_received,
+                "entry_sol": entry_sol,
+                "take_profit_percent": take_profit,
+                "stop_loss_percent": stop_loss,
+                "tx_signature": signature,
+                "price_impact_percent": buy_result.price_impact_percent,
+                "route": buy_result.route_label,
+                "signal_source": "graduation_sniper",
+                "position_manager_registered": position_manager.is_some(),
+            }),
+        );
+
+        if let Err(e) = event_tx.send(success_event) {
+            tracing::warn!("Failed to send post_grad_buy_success event: {}", e);
+        }
+
+        Ok(())
     }
 }

@@ -1,5 +1,5 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use solana_sdk::{
     compute_budget::ComputeBudgetInstruction,
     instruction::{AccountMeta, Instruction},
@@ -22,6 +22,106 @@ use crate::venues::curves::on_chain::{derive_pump_fun_bonding_curve, OnChainCurv
 const DEFAULT_COMPUTE_UNITS: u32 = 200_000;
 const DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS: u64 = 1_000_000;
 const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
+const RAYDIUM_API_URL: &str = "https://transaction-v1.raydium.io";
+
+fn deserialize_string_or_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de::{self, Visitor};
+
+    struct StringOrF64Visitor;
+
+    impl<'de> Visitor<'de> for StringOrF64Visitor {
+        type Value = Option<f64>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a string or f64 representing a number")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            deserializer.deserialize_any(StringOrF64InnerVisitor).map(Some)
+        }
+
+        fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(value))
+        }
+
+        fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(value as f64))
+        }
+
+        fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(Some(value as f64))
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            value.parse::<f64>().map(Some).map_err(de::Error::custom)
+        }
+    }
+
+    struct StringOrF64InnerVisitor;
+
+    impl<'de> Visitor<'de> for StringOrF64InnerVisitor {
+        type Value = f64;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a string or f64 representing a number")
+        }
+
+        fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(value)
+        }
+
+        fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(value as f64)
+        }
+
+        fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(value as f64)
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            value.parse::<f64>().map_err(de::Error::custom)
+        }
+    }
+
+    deserializer.deserialize_option(StringOrF64Visitor)
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CurveBuildResult {
@@ -89,7 +189,7 @@ struct JupiterQuoteResponse {
     pub other_amount_threshold: String,
     pub swap_mode: String,
     pub slippage_bps: u16,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_string_or_f64")]
     pub price_impact_pct: Option<f64>,
     pub route_plan: Vec<JupiterRoutePlan>,
 }
@@ -116,6 +216,58 @@ struct JupiterSwapInfo {
 #[serde(rename_all = "camelCase")]
 struct JupiterSwapResponse {
     pub swap_transaction: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JupiterErrorResponse {
+    pub error: String,
+    #[serde(default)]
+    pub error_code: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RaydiumApiResponse {
+    #[serde(default)]
+    pub success: Option<bool>,
+    #[serde(default)]
+    pub msg: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RaydiumQuoteResponse {
+    pub input_mint: String,
+    pub output_mint: String,
+    pub in_amount: String,
+    pub out_amount: String,
+    #[serde(default, deserialize_with = "deserialize_string_or_f64")]
+    pub price_impact_pct: Option<f64>,
+    #[serde(default)]
+    pub route_plan: Option<Vec<serde_json::Value>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RaydiumSwapRequest {
+    pub swap_response: RaydiumQuoteResponse,
+    pub wallet: String,
+    pub tx_version: String,
+    pub wrap_sol: bool,
+    pub unwrap_sol: bool,
+    pub compute_unit_price_micro_lamports: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RaydiumSwapResponse {
+    #[serde(alias = "data")]
+    pub transaction: Option<String>,
+    #[serde(default)]
+    pub success: Option<bool>,
+    #[serde(default)]
+    pub msg: Option<String>,
 }
 
 #[derive(BorshSerialize, BorshDeserialize)]
@@ -198,6 +350,37 @@ impl CurveTransactionBuilder {
         self
     }
 
+    pub async fn get_wallet_balance(&self, wallet_address: &str) -> AppResult<u64> {
+        let client = reqwest::Client::new();
+        let response = client
+            .post(&self.rpc_url)
+            .json(&serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "getBalance",
+                "params": [wallet_address]
+            }))
+            .send()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to fetch balance: {}", e)))?;
+
+        #[derive(Deserialize)]
+        struct BalanceResponse {
+            result: BalanceResult,
+        }
+        #[derive(Deserialize)]
+        struct BalanceResult {
+            value: u64,
+        }
+
+        let data: BalanceResponse = response
+            .json()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to parse balance response: {}", e)))?;
+
+        Ok(data.result.value)
+    }
+
     pub async fn simulate_buy(&self, params: &CurveBuyParams) -> AppResult<SimulatedTrade> {
         let curve_state = self
             .on_chain_fetcher
@@ -268,6 +451,24 @@ impl CurveTransactionBuilder {
         &self,
         params: &CurveBuyParams,
     ) -> AppResult<CurveBuildResult> {
+        // Validate non-zero SOL amount to prevent wasting network fees
+        if params.sol_amount_lamports == 0 {
+            return Err(AppError::Validation(
+                "Cannot buy with zero SOL amount".to_string(),
+            ));
+        }
+
+        // Minimum 0.001 SOL to prevent dust transactions
+        const MIN_SOL_LAMPORTS: u64 = 1_000_000; // 0.001 SOL
+        if params.sol_amount_lamports < MIN_SOL_LAMPORTS {
+            return Err(AppError::Validation(
+                format!(
+                    "SOL amount {} lamports below minimum {} (0.001 SOL)",
+                    params.sol_amount_lamports, MIN_SOL_LAMPORTS
+                ),
+            ));
+        }
+
         let curve_state = self
             .on_chain_fetcher
             .get_pump_fun_bonding_curve(&params.mint)
@@ -714,6 +915,108 @@ impl CurveTransactionBuilder {
         })
     }
 
+    pub async fn build_raydium_sell(
+        &self,
+        params: &CurveSellParams,
+    ) -> AppResult<PostGraduationSellResult> {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(15))
+            .build()
+            .map_err(|e| AppError::Internal(format!("Failed to create HTTP client: {}", e)))?;
+
+        let quote_url = format!(
+            "{}/compute/swap-base-in?inputMint={}&outputMint={}&amount={}&slippageBps={}&txVersion=V0",
+            RAYDIUM_API_URL,
+            params.mint,
+            SOL_MINT,
+            params.token_amount,
+            params.slippage_bps
+        );
+
+        tracing::debug!("Raydium quote URL: {}", quote_url);
+
+        let quote_response = client
+            .get(&quote_url)
+            .send()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Raydium quote request failed: {}", e)))?;
+
+        if !quote_response.status().is_success() {
+            let error_text = quote_response.text().await.unwrap_or_default();
+            return Err(AppError::ExternalApi(format!(
+                "Raydium quote error: {}",
+                error_text
+            )));
+        }
+
+        let quote_text = quote_response.text().await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to read Raydium quote: {}", e)))?;
+
+        // First check if Raydium returned an error (success: false)
+        if let Ok(api_response) = serde_json::from_str::<RaydiumApiResponse>(&quote_text) {
+            if api_response.success == Some(false) {
+                let error_msg = api_response.msg.unwrap_or_else(|| "Unknown error".to_string());
+                return Err(AppError::ExternalApi(format!(
+                    "Raydium quote failed: {}",
+                    error_msg
+                )));
+            }
+        }
+
+        let quote: RaydiumQuoteResponse = serde_json::from_str(&quote_text)
+            .map_err(|e| AppError::ExternalApi(format!(
+                "Failed to parse Raydium quote (response: {}): {}",
+                &quote_text[..200.min(quote_text.len())],
+                e
+            )))?;
+
+        let swap_url = format!("{}/transaction/swap-base-in", RAYDIUM_API_URL);
+        let swap_request = RaydiumSwapRequest {
+            swap_response: quote.clone(),
+            wallet: params.user_wallet.clone(),
+            tx_version: "V0".to_string(),
+            wrap_sol: true,
+            unwrap_sol: true,
+            compute_unit_price_micro_lamports: self.priority_fee_micro_lamports,
+        };
+
+        let swap_response = client
+            .post(&swap_url)
+            .json(&swap_request)
+            .send()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Raydium swap request failed: {}", e)))?;
+
+        if !swap_response.status().is_success() {
+            let error_text = swap_response.text().await.unwrap_or_default();
+            return Err(AppError::ExternalApi(format!(
+                "Raydium swap error: {}",
+                error_text
+            )));
+        }
+
+        let swap_result: RaydiumSwapResponse = swap_response
+            .json()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Raydium swap: {}", e)))?;
+
+        let transaction = swap_result.transaction
+            .or_else(|| swap_result.msg.clone())
+            .ok_or_else(|| AppError::ExternalApi(
+                "Raydium returned no transaction data".to_string()
+            ))?;
+
+        let expected_sol_out: u64 = quote.out_amount.parse().unwrap_or(0);
+        let price_impact: f64 = quote.price_impact_pct.unwrap_or(0.0);
+
+        Ok(PostGraduationSellResult {
+            transaction_base64: transaction,
+            expected_sol_out,
+            price_impact_percent: price_impact,
+            route_label: "Raydium".to_string(),
+        })
+    }
+
     /// Build a Jupiter swap transaction for buying a token after graduation (SOL -> Token)
     pub async fn build_post_graduation_buy(
         &self,
@@ -723,6 +1026,24 @@ impl CurveTransactionBuilder {
         user_wallet: &str,
         jupiter_api_url: &str,
     ) -> AppResult<PostGraduationBuyResult> {
+        // Validate non-zero SOL amount to prevent wasting network fees
+        if sol_amount_lamports == 0 {
+            return Err(AppError::Validation(
+                "Cannot buy with zero SOL amount".to_string(),
+            ));
+        }
+
+        // Minimum 0.001 SOL to prevent dust transactions
+        const MIN_SOL_LAMPORTS: u64 = 1_000_000; // 0.001 SOL
+        if sol_amount_lamports < MIN_SOL_LAMPORTS {
+            return Err(AppError::Validation(
+                format!(
+                    "SOL amount {} lamports below minimum {} (0.001 SOL)",
+                    sol_amount_lamports, MIN_SOL_LAMPORTS
+                ),
+            ));
+        }
+
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()
@@ -752,10 +1073,27 @@ impl CurveTransactionBuilder {
             )));
         }
 
-        let quote: JupiterQuoteResponse = quote_response
-            .json()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter quote: {}", e)))?;
+        // Get the response text first so we can try parsing as error or success
+        let response_text = quote_response.text().await
+            .map_err(|e| AppError::ExternalApi(format!("Failed to read Jupiter quote response: {}", e)))?;
+
+        // First try to parse as an error response (Jupiter returns 200 with error JSON for some errors)
+        if let Ok(error_response) = serde_json::from_str::<JupiterErrorResponse>(&response_text) {
+            let error_code = error_response.error_code.unwrap_or_else(|| "UNKNOWN".to_string());
+            return Err(AppError::ExternalApi(format!(
+                "Jupiter error ({}): {}",
+                error_code,
+                error_response.error
+            )));
+        }
+
+        // Parse as successful quote response
+        let quote: JupiterQuoteResponse = serde_json::from_str(&response_text)
+            .map_err(|e| AppError::ExternalApi(format!(
+                "Failed to parse Jupiter quote (response: {}): {}",
+                &response_text[..200.min(response_text.len())],
+                e
+            )))?;
 
         let swap_url = format!("{}/swap", jupiter_api_url);
         let swap_request = serde_json::json!({

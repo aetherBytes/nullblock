@@ -41,6 +41,7 @@
 # ArbFarm (Solana MEV)
 
 - [Quickstart Guide](./arb-farm/quickstart.md)
+- [Trading Strategies](./arb-farm/strategies.md)
 - [Strategy Flow](./arb-farm/strategy-flow.md)
 - [Implementation Plan](./arb-farm/plan.md)
 - [Service Architecture](./arb-farm/service.md)
@@ -50,6 +51,7 @@
 - [Frontend Dashboard](./arb-farm/frontend.md)
 - [Research Module](./arb-farm/research.md)
 - [Bonding Curves](./arb-farm/curves.md)
+- [Raydium Reference](./arb-farm/raydium-reference.md)
 - [KOL Tracking](./arb-farm/kol.md)
 - [Threat Detection](./arb-farm/threat.md)
 - [Engram System](./arb-farm/engram.md)

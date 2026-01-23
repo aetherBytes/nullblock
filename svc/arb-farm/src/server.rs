@@ -80,6 +80,7 @@ pub struct AppState {
     pub realtime_monitor: Arc<RealtimePositionMonitor>,
     pub graduation_tracker: Arc<GraduationTracker>,
     pub graduation_sniper: Arc<GraduationSniper>,
+    pub wallet_max_position_sol: Arc<RwLock<f64>>,
 }
 
 impl AppState {
@@ -330,15 +331,15 @@ impl AppState {
                 require_consensus: false,               // No consensus required for autonomous
                 require_confirmation: false,            // NO confirmation needed
                 staleness_threshold_hours: 24,
-                stop_loss_percent: Some(15.0),          // 15% stop loss
-                take_profit_percent: Some(50.0),        // 50% take profit
-                trailing_stop_percent: Some(5.0),       // 5% trailing stop
-                time_limit_minutes: Some(60),           // 1 hour max hold
+                stop_loss_percent: Some(30.0),          // 30% - allow curve volatility
+                take_profit_percent: Some(100.0),       // 100% (2x) - first major target
+                trailing_stop_percent: Some(20.0),      // 20% trailing for moon bag
+                time_limit_minutes: Some(15),           // 15 min - let winners run
                 base_currency: "sol".to_string(),
                 max_capital_allocation_percent: 25.0,   // 25% allocation
                 concurrent_positions: Some(5),          // Max 5 positions at a time
-                momentum_adaptive_exits: false,         // Disabled by default
-                let_winners_run: false,
+                momentum_adaptive_exits: true,          // Enable momentum tracking
+                let_winners_run: true,                  // Let profitable positions run
             },
         ).await {
             strategy_engine.add_strategy(curve_strategy).await;
@@ -393,10 +394,10 @@ impl AppState {
                 require_consensus: false,               // No consensus for time-sensitive snipes
                 require_confirmation: false,            // No confirmation needed
                 staleness_threshold_hours: 1,          // Short staleness window
-                stop_loss_percent: Some(15.0),          // Wider stop loss for volatility
-                take_profit_percent: Some(30.0),        // Target 30% on graduation
-                trailing_stop_percent: Some(8.0),       // Wider trailing stop
-                time_limit_minutes: Some(30),           // Max 30 min hold (graduation should happen)
+                stop_loss_percent: Some(30.0),          // 30% - allow volatility
+                take_profit_percent: Some(100.0),       // 100% (2x) - first major target
+                trailing_stop_percent: Some(20.0),      // 20% trailing for moon bag
+                time_limit_minutes: Some(15),           // 15 min - let winners run
                 base_currency: "sol".to_string(),
                 max_capital_allocation_percent: 5.0,    // Conservative 5% allocation
                 concurrent_positions: Some(3),          // Up to 3 snipe positions
@@ -703,6 +704,61 @@ impl AppState {
                 "  └─ Strategy state"
             );
         }
+
+        // Reconcile curve strategies to be ACTIVE by default (unless no-snipe flag)
+        // This ensures sniper strategies are ready to execute immediately on startup
+        let sniper_disabled = std::path::Path::new("/tmp/arb-no-snipe").exists();
+        if !sniper_disabled {
+            let strategies_to_activate: Vec<_> = strategies.iter()
+                .filter(|s| (s.strategy_type == "graduation_snipe" || s.strategy_type == "curve_arb")
+                    && !s.is_active)
+                .map(|s| s.id)
+                .collect();
+
+            for strategy_id in strategies_to_activate {
+                if let Some(strategy) = strategies.iter().find(|s| s.id == strategy_id) {
+                    tracing::info!(
+                        strategy_id = %strategy_id,
+                        strategy_name = %strategy.name,
+                        strategy_type = %strategy.strategy_type,
+                        "🔫 Activating curve strategy (default behavior)"
+                    );
+
+                    use crate::database::repositories::strategies::UpdateStrategyRecord;
+                    if let Err(e) = strategy_repo.update(strategy_id, UpdateStrategyRecord {
+                        name: None,
+                        venue_types: None,
+                        execution_mode: None,
+                        risk_params: None,
+                        is_active: Some(true),
+                    }).await {
+                        tracing::warn!(error = %e, "Failed to activate curve strategy");
+                    } else {
+                        let _ = strategy_engine.toggle_strategy(strategy_id, true).await;
+
+                        // Persist to engrams so the active state survives restarts
+                        let risk_params_json = serde_json::to_value(&strategy.risk_params).unwrap_or_default();
+                        if let Err(e) = engrams_client.save_strategy_full(
+                            &default_wallet,
+                            &strategy.id.to_string(),
+                            &strategy.name,
+                            &strategy.strategy_type,
+                            &strategy.venue_types,
+                            &strategy.execution_mode,
+                            &risk_params_json,
+                            true, // is_active = true
+                        ).await {
+                            tracing::warn!(error = %e, "Failed to persist curve strategy activation to engrams");
+                        }
+                    }
+                }
+            }
+        } else {
+            tracing::info!("ℹ️ Sniper disabled via /tmp/arb-no-snipe - skipping curve strategy activation");
+        }
+
+        // Refresh strategies list after activation
+        let strategies = strategy_engine.list_strategies().await;
 
         // Reconcile curve strategies to have auto_execute_enabled=true
         // This ensures both graduation_snipe AND curve_arb are ready for autonomous execution
@@ -1029,8 +1085,10 @@ impl AppState {
             .with_jupiter_api_url(config.jupiter_api_url.clone())
             .with_strategy_engine(strategy_engine.clone())
             .with_transaction_support(dev_signer.clone(), helius_sender.clone())
+            .with_position_manager(position_manager.clone())
+            .with_risk_config(risk_config.clone())
         );
-        tracing::info!("✅ Graduation Sniper initialized (strategy engine + Jupiter for post-graduation buys/sells)");
+        tracing::info!("✅ Graduation Sniper initialized (strategy engine + Jupiter + PositionManager + RiskConfig for exit monitoring)");
 
         Ok(Self {
             config,
@@ -1079,6 +1137,7 @@ impl AppState {
             realtime_monitor,
             graduation_tracker,
             graduation_sniper,
+            wallet_max_position_sol: Arc::new(RwLock::new(10.0)),
         })
     }
 

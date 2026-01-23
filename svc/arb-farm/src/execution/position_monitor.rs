@@ -46,10 +46,10 @@ pub struct MonitorConfig {
 impl Default for MonitorConfig {
     fn default() -> Self {
         Self {
-            price_check_interval_secs: 2, // Reduced from 3s for faster response to price movements
-            exit_slippage_bps: 1000,      // 10% - curves are highly volatile, price moves fast
+            price_check_interval_secs: 2,
+            exit_slippage_bps: 1500,      // 15% - pump.fun curves are extremely volatile
             max_exit_retries: 3,
-            emergency_slippage_bps: 1200, // 12% - reduced from 15% for better profit retention
+            emergency_slippage_bps: 2500, // 25% - prioritize getting out over profit retention
             bundle_timeout_secs: 60,
         }
     }
@@ -91,9 +91,21 @@ impl PositionMonitor {
     }
 
     fn calculate_profit_aware_slippage(&self, position: &OpenPosition, signal: &ExitSignal) -> u16 {
-        const MIN_SLIPPAGE_BPS: u16 = 150;  // 1.5% floor - reduced from 3% to retain more profit
-        const MAX_SLIPPAGE_BPS: u16 = 1200; // 12% cap - reduced from 15% for better profit retention
-        const PROFIT_SACRIFICE_RATIO: f64 = 0.15; // Willing to give up 15% of profits (reduced from 20%)
+        const MIN_SLIPPAGE_BPS: u16 = 500;  // 5% floor - pump.fun curves move 10-20% in seconds
+        const MAX_SLIPPAGE_BPS: u16 = 2000; // 20% cap - prioritize execution over profit retention
+        const SALVAGE_SLIPPAGE_BPS: u16 = 9000; // 90% for dead token salvage - any recovery is better than zero
+        const PROFIT_SACRIFICE_RATIO: f64 = 0.25; // 25% of profits - better to capture 75% than 0%
+
+        let is_dead_token = signal.reason == ExitReason::Salvage
+            || position.exit_config.custom_exit_instructions
+                .as_ref()
+                .map(|s| s.contains("DEAD TOKEN"))
+                .unwrap_or(false);
+
+        if is_dead_token {
+            info!("💀 Dead token exit: using salvage slippage {}bps (90%)", SALVAGE_SLIPPAGE_BPS);
+            return SALVAGE_SLIPPAGE_BPS;
+        }
 
         let pnl_percent = if position.entry_price > 0.0 {
             ((signal.current_price - position.entry_price) / position.entry_price) * 100.0
@@ -102,18 +114,15 @@ impl PositionMonitor {
         };
 
         let calculated_slippage = if pnl_percent > 0.0 {
-            // Profitable: slippage = 15% of profit (e.g., 50% profit -> 7.5% slippage)
             let profit_based = (pnl_percent * PROFIT_SACRIFICE_RATIO * 100.0) as u16;
             profit_based.max(MIN_SLIPPAGE_BPS)
         } else {
-            // Losing or break-even: use minimum slippage
             MIN_SLIPPAGE_BPS
         };
 
-        // Apply urgency multiplier for critical exits (reduced to preserve more profit)
         let urgency_multiplier = match signal.urgency {
-            ExitUrgency::Critical => 1.5,  // Was 2.0
-            ExitUrgency::High => 1.25,     // Was 1.5
+            ExitUrgency::Critical => 1.5,
+            ExitUrgency::High => 1.25,
             _ => 1.0,
         };
 
@@ -191,10 +200,21 @@ impl PositionMonitor {
             self.config.price_check_interval_secs
         );
 
+        let mut pending_exit_retry_counter: u64 = 0;
+
         loop {
             // Process HIGH PRIORITY exits first (failed sells that need immediate retry)
             if let Err(e) = self.process_priority_exits(&signer).await {
                 error!("Priority exit processing error: {}", e);
+            }
+
+            // Retry pending exits every ~30 seconds (positions that failed to sell)
+            pending_exit_retry_counter += 1;
+            if pending_exit_retry_counter >= 10 {
+                pending_exit_retry_counter = 0;
+                if let Err(e) = self.retry_pending_exits(&signer).await {
+                    error!("Pending exit retry error: {}", e);
+                }
             }
 
             // Then check regular exit conditions
@@ -206,6 +226,121 @@ impl PositionMonitor {
             let interval = self.calculate_adaptive_interval().await;
             tokio::time::sleep(Duration::from_secs(interval)).await;
         }
+    }
+
+    async fn retry_pending_exits(&self, signer: &DevWalletSigner) -> AppResult<()> {
+        // Get positions that are stuck in PendingExit (may have lost their signals on restart)
+        let pending_exit_positions = self.position_manager.get_pending_exit_positions().await;
+
+        if pending_exit_positions.is_empty() {
+            return Ok(());
+        }
+
+        // Rate limit: Only retry ONE position per cycle to avoid API rate limits
+        // With 30-second retry cycles, this means each position gets retried every ~3 minutes
+        // if there are 6 positions (6 * 30s = 180s = 3 minutes)
+        let retry_index = self.position_manager.get_and_increment_retry_index().await;
+        let position_index = retry_index % pending_exit_positions.len();
+        let position = &pending_exit_positions[position_index];
+
+        info!(
+            "🔄 Retrying PendingExit {}/{} for {} (cycle {})",
+            position_index + 1,
+            pending_exit_positions.len(),
+            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+            retry_index
+        );
+
+        // Check if token is dead (zero liquidity) - skip retries for dead tokens
+        let (current_price, is_dead_token) = if let Some(ref curve_builder) = self.curve_builder {
+            match curve_builder.get_curve_state(&position.token_mint).await {
+                Ok(state) if state.virtual_token_reserves > 0 && state.virtual_sol_reserves > 0 => {
+                    let price = state.virtual_sol_reserves as f64 / state.virtual_token_reserves as f64;
+                    (price, false)
+                }
+                Ok(state) if state.is_complete => {
+                    // Token graduated, try Jupiter price
+                    match self.tx_builder.get_token_price(&position.token_mint, BaseCurrency::Sol).await {
+                        Ok(price) if price > 1e-10 => (price, false),
+                        Ok(_) => {
+                            // Price near zero = dead token
+                            warn!(
+                                "💀 DEAD TOKEN DETECTED (graduated, zero price): {} - skipping retries",
+                                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                            );
+                            (0.0, true)
+                        }
+                        Err(_) => {
+                            // No Jupiter price for graduated token = likely dead
+                            warn!(
+                                "💀 DEAD TOKEN DETECTED (graduated, no DEX price): {} - skipping retries",
+                                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                            );
+                            (0.0, true)
+                        }
+                    }
+                }
+                Ok(state) if state.virtual_token_reserves == 0 || state.virtual_sol_reserves == 0 => {
+                    // Zero reserves = dead token on curve
+                    warn!(
+                        "💀 DEAD TOKEN DETECTED (zero reserves): {} - skipping retries",
+                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                    );
+                    (0.0, true)
+                }
+                _ => (position.current_price, false),
+            }
+        } else {
+            (position.current_price, false)
+        };
+
+        let (reason, urgency) = if is_dead_token {
+            warn!(
+                "💀 Dead token {} - attempting salvage sell with maximum slippage",
+                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+            );
+            (ExitReason::Salvage, ExitUrgency::Critical)
+        } else {
+            (ExitReason::Emergency, ExitUrgency::High)
+        };
+
+        let signal = ExitSignal {
+            position_id: position.id,
+            reason,
+            exit_percent: 100.0,
+            current_price: if is_dead_token { position.entry_price } else { current_price },
+            triggered_at: chrono::Utc::now(),
+            urgency,
+        };
+
+        info!(
+            "🔄 Retrying {} for {} | Price: {:.10} | Entry: {:.10}",
+            if is_dead_token { "Salvage" } else { "PendingExit" },
+            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+            signal.current_price,
+            position.entry_price
+        );
+
+        if let Err(e) = self.process_exit_signal(&signal, signer).await {
+            if is_dead_token {
+                warn!(
+                    "💀 Salvage sell failed for {}: {} - marking as orphaned",
+                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                    e
+                );
+                if let Err(e) = self.position_manager.mark_position_orphaned(position.id).await {
+                    error!("Failed to mark dead token position as orphaned: {}", e);
+                }
+            } else {
+                warn!(
+                    "Pending exit retry failed for {}: {}",
+                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                    e
+                );
+            }
+        }
+
+        Ok(())
     }
 
     async fn calculate_adaptive_interval(&self) -> u64 {
@@ -249,41 +384,92 @@ impl PositionMonitor {
                 }
             };
 
-            // Fetch current price for the position
-            let current_price = if let Some(curve_builder) = &self.curve_builder {
+            // Check if token is dead (zero liquidity) - skip priority retries for dead tokens
+            let (current_price, is_dead_token) = if let Some(curve_builder) = &self.curve_builder {
                 match curve_builder.get_curve_state(&position.token_mint).await {
-                    Ok(state) if state.virtual_token_reserves > 0 => {
-                        state.virtual_sol_reserves as f64 / state.virtual_token_reserves as f64
+                    Ok(state) if state.virtual_token_reserves > 0 && state.virtual_sol_reserves > 0 => {
+                        let price = state.virtual_sol_reserves as f64 / state.virtual_token_reserves as f64;
+                        (price, false)
                     }
-                    _ => position.current_price,
+                    Ok(state) if state.is_complete => {
+                        // Graduated - check DEX price
+                        match self.tx_builder.get_token_price(&position.token_mint, BaseCurrency::Sol).await {
+                            Ok(price) if price > 1e-10 => (price, false),
+                            _ => {
+                                warn!(
+                                    "💀 DEAD TOKEN (priority): {} - graduated but no DEX liquidity",
+                                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                                );
+                                (0.0, true)
+                            }
+                        }
+                    }
+                    Ok(_) => {
+                        // Zero reserves
+                        warn!(
+                            "💀 DEAD TOKEN (priority): {} - zero reserves",
+                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                        );
+                        (0.0, true)
+                    }
+                    Err(_) => (position.current_price, false),
                 }
             } else {
-                position.current_price
+                (position.current_price, false)
             };
 
-            // Create a CRITICAL urgency signal for priority exits
+            let (reason, price_to_use, log_prefix) = if is_dead_token {
+                warn!(
+                    "💀 Dead token {} in priority queue - attempting salvage sell",
+                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                );
+                (ExitReason::Salvage, position.entry_price, "SALVAGE")
+            } else {
+                (ExitReason::Emergency, current_price, "PRIORITY RETRY")
+            };
+
             let signal = ExitSignal {
                 position_id,
-                reason: ExitReason::Emergency,
+                reason,
                 exit_percent: 100.0,
-                current_price,
+                current_price: price_to_use,
                 triggered_at: chrono::Utc::now(),
                 urgency: ExitUrgency::Critical,
             };
 
             info!(
-                "🔥 PRIORITY RETRY: {} | Using EMERGENCY slippage ({}bps)",
+                "🔥 {}: {} | Using {} slippage",
+                log_prefix,
                 position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
-                self.config.emergency_slippage_bps
+                if is_dead_token { "SALVAGE (90%)" } else { "EMERGENCY" }
             );
 
             if let Err(e) = self.process_exit_signal(&signal, signer).await {
-                error!(
-                    "🔴 Priority exit retry failed for {}: {}",
-                    position_id, e
-                );
-                // Re-queue for another attempt
-                self.position_manager.queue_priority_exit(position_id).await;
+                let error_msg = e.to_string();
+                let is_rate_limited = error_msg.contains("429")
+                    || error_msg.contains("rate limit")
+                    || error_msg.contains("Rate limit");
+
+                if is_dead_token {
+                    error!(
+                        "💀 Salvage sell failed for {}: {} - marking as orphaned",
+                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                        e
+                    );
+                    if let Err(e) = self.position_manager.mark_position_orphaned(position_id).await {
+                        error!("Failed to mark priority dead token as orphaned: {}", e);
+                    }
+                } else {
+                    error!(
+                        "🔴 Priority exit retry failed for {}: {}{}",
+                        position_id,
+                        e,
+                        if is_rate_limited { " [RATE LIMITED]" } else { "" }
+                    );
+                    self.position_manager
+                        .record_priority_exit_failure(position_id, is_rate_limited)
+                        .await;
+                }
             }
         }
 
@@ -341,6 +527,34 @@ impl PositionMonitor {
                             debug!(mint = %mint, error = %e, "Failed to fetch curve state for price");
                         }
                     }
+                }
+            }
+        }
+
+        // For dead tokens (no price from Jupiter or curve), use fallback price
+        // This ensures time-based exits still trigger even when prices aren't available
+        for position in &positions {
+            if !prices.contains_key(&position.token_mint) {
+                // Check if this is a dead token (has salvage sell instruction)
+                let is_dead_token = position.exit_config.custom_exit_instructions
+                    .as_ref()
+                    .map(|s| s.contains("DEAD TOKEN"))
+                    .unwrap_or(false);
+
+                if is_dead_token {
+                    // Use entry price as fallback - we just need to trigger time-based exit
+                    info!(
+                        "💀 Using fallback price for dead token {} (no market price available)",
+                        &position.token_mint[..12]
+                    );
+                    prices.insert(position.token_mint.clone(), position.entry_price);
+                } else if position.exit_config.time_limit_minutes.is_some() {
+                    // Non-dead token with time limit but no price - still need to check time exit
+                    debug!(
+                        "Using fallback price for {} (time limit exit pending)",
+                        &position.token_mint[..12]
+                    );
+                    prices.insert(position.token_mint.clone(), position.current_price);
                 }
             }
         }
@@ -425,9 +639,9 @@ impl PositionMonitor {
                 Ok(state) => {
                     if !state.is_complete {
                         info!(
-                            "📈 Token {} still on bonding curve ({}% progress), using curve sell",
+                            "📈 Token {} still on bonding curve ({:.2}% progress), using curve sell",
                             &position.token_mint[..8],
-                            state.graduation_progress() * 100.0
+                            state.graduation_progress()
                         );
                         true
                     } else {
@@ -456,26 +670,89 @@ impl PositionMonitor {
             return self.execute_curve_exit(&position, signal, signer, &user_wallet, slippage).await;
         }
 
-        // Standard DEX exit path
-        let exit_build = self
-            .tx_builder
-            .build_exit_swap(&position, signal, &user_wallet, slippage)
-            .await?;
+        // Graduated token DEX exit path - try Raydium first, then Jupiter fallback
+        let (exit_tx_base64, expected_base_out, token_amount_in, route_label) =
+            if let Some(ref curve_builder) = self.curve_builder {
+                // Get actual token balance for the sell
+                let token_balance = self.tx_builder.get_token_balance(&user_wallet, &position.token_mint).await?;
+                let exit_amount = if signal.exit_percent >= 100.0 {
+                    token_balance
+                } else {
+                    ((token_balance as f64) * (signal.exit_percent / 100.0)) as u64
+                };
+
+                let sell_params = CurveSellParams {
+                    mint: position.token_mint.clone(),
+                    token_amount: exit_amount,
+                    slippage_bps: slippage,
+                    user_wallet: user_wallet.clone(),
+                };
+
+                info!(
+                    "🎓 Graduated token exit for {} - trying Raydium first",
+                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                );
+
+                match curve_builder.build_raydium_sell(&sell_params).await {
+                    Ok(raydium_result) => {
+                        info!(
+                            "📤 Built Raydium exit tx for {}: expected {} SOL, impact {:.2}%",
+                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                            raydium_result.expected_sol_out as f64 / 1e9,
+                            raydium_result.price_impact_percent
+                        );
+                        (
+                            raydium_result.transaction_base64,
+                            raydium_result.expected_sol_out,
+                            exit_amount,
+                            "Raydium".to_string(),
+                        )
+                    }
+                    Err(raydium_err) => {
+                        warn!(
+                            "⚠️ Raydium exit failed for {}: {}, falling back to Jupiter",
+                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                            raydium_err
+                        );
+                        let exit_build = self.tx_builder
+                            .build_exit_swap(&position, signal, &user_wallet, slippage)
+                            .await?;
+                        (
+                            exit_build.transaction_base64,
+                            exit_build.expected_base_out,
+                            exit_build.token_amount_in,
+                            "Jupiter".to_string(),
+                        )
+                    }
+                }
+            } else {
+                // No curve_builder, fall back to Jupiter directly
+                let exit_build = self.tx_builder
+                    .build_exit_swap(&position, signal, &user_wallet, slippage)
+                    .await?;
+                (
+                    exit_build.transaction_base64,
+                    exit_build.expected_base_out,
+                    exit_build.token_amount_in,
+                    "Jupiter".to_string(),
+                )
+            };
 
         let sign_request = SignRequest {
-            transaction_base64: exit_build.transaction_base64.clone(),
-            estimated_amount_lamports: exit_build.token_amount_in,
+            transaction_base64: exit_tx_base64.clone(),
+            estimated_amount_lamports: expected_base_out,
             estimated_profit_lamports: None,
             edge_id: Some(position.edge_id),
             description: format!(
-                "Exit {} {} -> {} ({})",
+                "Exit {} {} -> {} ({}) via {}",
                 position
                     .token_symbol
                     .as_deref()
                     .unwrap_or(&position.token_mint[..8]),
-                exit_build.token_amount_in,
+                token_amount_in,
                 position.exit_config.base_currency.symbol(),
-                format!("{:?}", signal.reason)
+                format!("{:?}", signal.reason),
+                route_label
             ),
         };
 
@@ -501,18 +778,112 @@ impl PositionMonitor {
         let tip = 10_000; // 0.00001 SOL tip for exits
         let tx_base58 = base64_to_base58(&signed_tx)?;
 
-        let bundle_result = self.jito_client.send_bundle(vec![tx_base58], tip).await?;
-        let bundle_id = bundle_result.id.to_string();
+        // Try Jito first, fall back to Helius on failure
+        let mut use_helius_fallback = false;
+        let mut helius_signature: Option<String> = None;
 
-        info!("📦 Exit bundle submitted: {}", bundle_id);
+        match self.jito_client.send_bundle(vec![tx_base58], tip).await {
+            Ok(bundle_result) => {
+                let bundle_id = bundle_result.id.to_string();
+                info!("📦 Exit bundle submitted: {}", bundle_id);
 
-        let status = self
-            .jito_client
-            .wait_for_bundle(&bundle_id, self.config.bundle_timeout_secs)
-            .await?;
+                match self.jito_client.wait_for_bundle(&bundle_id, self.config.bundle_timeout_secs).await {
+                    Ok(status) => {
+                        match status.status {
+                            BundleState::Landed => {
+                                // Success - continue to position close logic below
+                            }
+                            BundleState::Failed | BundleState::Dropped | BundleState::Pending => {
+                                warn!("🔴 Jito bundle {} status: {:?} - trying Helius fallback", bundle_id, status.status);
+                                use_helius_fallback = true;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        warn!("🔴 Jito bundle wait failed: {} - trying Helius fallback", e);
+                        use_helius_fallback = true;
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("🔴 Jito bundle send failed: {} - trying Helius fallback", e);
+                use_helius_fallback = true;
+            }
+        }
 
-        match status.status {
-            BundleState::Landed => {
+        // Helius fallback for graduated tokens when Jito fails
+        if use_helius_fallback {
+            if let Some(helius_sender) = &self.helius_sender {
+                info!("📤 Sending DEX exit via Helius fallback...");
+                let confirmation_timeout = std::time::Duration::from_secs(60); // Increased from 30s
+                match helius_sender.send_and_confirm(&signed_tx, confirmation_timeout).await {
+                    Ok(sig) => {
+                        info!("✅ DEX exit confirmed via Helius: {}", sig);
+                        helius_signature = Some(sig);
+                    }
+                    Err(e) => {
+                        let error_str = e.to_string();
+
+                        // Check if this is a timeout - the sell may have actually succeeded
+                        if error_str.contains("Timeout") || error_str.contains("timeout") {
+                            // Check wallet balance to see if tokens are actually gone
+                            // user_wallet is already defined at the top of process_exit_signal
+                            match self.tx_builder.get_token_balance(&user_wallet, &position.token_mint).await {
+                                Ok(balance) => {
+                                    // If balance is essentially 0 (< 1000 raw units = dust), the sell succeeded
+                                    if balance < 1000 {
+                                        info!("✅ Confirmation timed out but tokens are gone - treating as successful exit for {}",
+                                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]));
+                                        // Proceed to close position as if successful
+                                        helius_signature = Some("timeout-verified-success".to_string());
+                                    } else {
+                                        warn!("⚠️ Confirmation timed out and {} tokens still in wallet - will retry", balance);
+                                        self.emit_exit_failed_event(&position, signal, &error_str).await;
+                                        if let Err(reset_err) = self.position_manager.reset_position_status(signal.position_id).await {
+                                            error!("Failed to reset position status: {}", reset_err);
+                                        } else {
+                                            self.position_manager.queue_priority_exit(signal.position_id).await;
+                                            info!("🔥 Position {} queued for HIGH PRIORITY retry", signal.position_id);
+                                        }
+                                        return Ok(());
+                                    }
+                                }
+                                Err(balance_err) => {
+                                    warn!("Could not verify balance after timeout: {} - will retry", balance_err);
+                                    self.emit_exit_failed_event(&position, signal, &error_str).await;
+                                    if let Err(reset_err) = self.position_manager.reset_position_status(signal.position_id).await {
+                                        error!("Failed to reset position status: {}", reset_err);
+                                    } else {
+                                        self.position_manager.queue_priority_exit(signal.position_id).await;
+                                        info!("🔥 Position {} queued for HIGH PRIORITY retry", signal.position_id);
+                                    }
+                                    return Ok(());
+                                }
+                            }
+                        } else {
+                            // Non-timeout error - proceed with normal retry
+                            error!("❌ Helius fallback also failed: {}", error_str);
+                            self.emit_exit_failed_event(&position, signal, &error_str).await;
+                            if let Err(reset_err) = self.position_manager.reset_position_status(signal.position_id).await {
+                                error!("Failed to reset position status: {}", reset_err);
+                            } else {
+                                self.position_manager.queue_priority_exit(signal.position_id).await;
+                                info!("🔥 Position {} queued for HIGH PRIORITY retry", signal.position_id);
+                            }
+                            return Ok(());
+                        }
+                    }
+                }
+            } else {
+                error!("❌ No Helius sender available for fallback");
+                self.emit_exit_failed_event(&position, signal, "No Helius fallback available").await;
+                return Ok(());
+            }
+        }
+
+        // Exit succeeded (either via Jito or Helius)
+        let final_signature = helius_signature.or(sign_result.signature.clone());
+        {
                 let exit_price = signal.current_price;
                 let pnl_percent = (exit_price - position.entry_price) / position.entry_price;
                 let exit_reason = format!("{:?}", signal.reason);
@@ -536,7 +907,7 @@ impl PositionMonitor {
                             signal.exit_percent,
                             exit_price,
                             realized_pnl_sol,
-                            sign_result.signature.clone(),
+                            final_signature.clone(),
                             &exit_reason,
                         )
                         .await?;
@@ -545,7 +916,7 @@ impl PositionMonitor {
                         &position,
                         signal,
                         realized_pnl_sol,
-                        sign_result.signature.as_deref(),
+                        final_signature.as_deref(),
                     )
                     .await;
 
@@ -566,7 +937,7 @@ impl PositionMonitor {
                         &position,
                         signal,
                         realized_pnl_sol,
-                        sign_result.signature.as_deref(),
+                        final_signature.as_deref(),
                         &user_wallet,
                     )
                     .await;
@@ -579,7 +950,7 @@ impl PositionMonitor {
                             exit_price,
                             realized_pnl_sol,
                             &exit_reason,
-                            sign_result.signature.clone(),
+                            final_signature.clone(),
                         )
                         .await?;
 
@@ -587,7 +958,7 @@ impl PositionMonitor {
                         &position,
                         signal,
                         realized_pnl_sol,
-                        sign_result.signature.as_deref(),
+                        final_signature.as_deref(),
                     )
                     .await;
 
@@ -607,42 +978,11 @@ impl PositionMonitor {
                         &position,
                         signal,
                         realized_pnl_sol,
-                        sign_result.signature.as_deref(),
+                        final_signature.as_deref(),
                         &user_wallet,
                     )
                     .await;
                 }
-            }
-            BundleState::Failed | BundleState::Dropped => {
-                warn!(
-                    "🔴 Exit bundle {} failed: {:?} - IMMEDIATE RETRY QUEUED",
-                    bundle_id, status.status
-                );
-
-                self.emit_exit_failed_event(&position, signal, &format!("{:?}", status.status))
-                    .await;
-
-                // Reset position and mark for high-priority retry
-                if let Err(e) = self.position_manager.reset_position_status(signal.position_id).await {
-                    error!("Failed to reset position status for retry: {}", e);
-                } else {
-                    // Queue immediate high-priority retry with higher slippage
-                    self.position_manager.queue_priority_exit(signal.position_id).await;
-                    info!("🔥 Position {} queued for HIGH PRIORITY immediate retry", signal.position_id);
-                }
-            }
-            BundleState::Pending => {
-                warn!("🔴 Exit bundle {} timed out - IMMEDIATE RETRY QUEUED", bundle_id);
-
-                // Reset position and mark for high-priority retry
-                if let Err(e) = self.position_manager.reset_position_status(signal.position_id).await {
-                    error!("Failed to reset position status for retry: {}", e);
-                } else {
-                    // Queue immediate high-priority retry with higher slippage
-                    self.position_manager.queue_priority_exit(signal.position_id).await;
-                    info!("🔥 Position {} queued for HIGH PRIORITY immediate retry after timeout", signal.position_id);
-                }
-            }
         }
 
         Ok(())
@@ -752,8 +1092,68 @@ impl PositionMonitor {
                 Ok(r) => r,
                 Err(e) => {
                     last_error = e.to_string();
-                    warn!("Build failed: {}", last_error);
-                    continue;
+
+                    // If token graduated mid-exit, switch to Raydium/Jupiter path immediately
+                    if last_error.contains("graduated") || last_error.contains("is_complete") {
+                        warn!(
+                            "🎓 Token {} graduated mid-exit, switching to DEX path",
+                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                        );
+
+                        // Try Raydium first
+                        match curve_builder.build_raydium_sell(&sell_params).await {
+                            Ok(raydium_result) => {
+                                info!(
+                                    "📤 Built Raydium sell for graduated {}: expected {} SOL",
+                                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                                    raydium_result.expected_sol_out as f64 / 1e9
+                                );
+                                // Use a simple struct to pass the result
+                                super::curve_builder::CurveBuildResult {
+                                    transaction_base64: raydium_result.transaction_base64,
+                                    expected_tokens_out: None,
+                                    expected_sol_out: Some(raydium_result.expected_sol_out),
+                                    min_tokens_out: None,
+                                    min_sol_out: None,
+                                    price_impact_percent: raydium_result.price_impact_percent,
+                                    fee_lamports: 0,
+                                    compute_units: 200_000,
+                                    priority_fee_lamports: 0,
+                                }
+                            }
+                            Err(raydium_err) => {
+                                warn!(
+                                    "⚠️ Raydium failed for graduated {}: {}, falling back to Jupiter",
+                                    position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                                    raydium_err
+                                );
+                                // Fall back to Jupiter via tx_builder
+                                match self.tx_builder.build_exit_swap(position, signal, user_wallet, current_slippage).await {
+                                    Ok(jupiter_result) => {
+                                        super::curve_builder::CurveBuildResult {
+                                            transaction_base64: jupiter_result.transaction_base64,
+                                            expected_tokens_out: None,
+                                            expected_sol_out: Some(jupiter_result.expected_base_out),
+                                            min_tokens_out: None,
+                                            min_sol_out: None,
+                                            price_impact_percent: jupiter_result.price_impact_bps as f64 / 100.0,
+                                            fee_lamports: 0,
+                                            compute_units: 200_000,
+                                            priority_fee_lamports: 0,
+                                        }
+                                    }
+                                    Err(jupiter_err) => {
+                                        last_error = format!("Raydium: {} | Jupiter: {}", raydium_err, jupiter_err);
+                                        warn!("Both DEX paths failed: {}", last_error);
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        warn!("Build failed: {}", last_error);
+                        continue;
+                    }
                 }
             };
 
@@ -803,7 +1203,7 @@ impl PositionMonitor {
             info!("📤 Sending curve sell via Helius (attempt {}) - waiting for confirmation...", attempt + 1);
 
             // Use send_and_confirm to wait for transaction to land before closing position
-            let confirmation_timeout = Duration::from_secs(30);
+            let confirmation_timeout = Duration::from_secs(60); // Increased from 30s
             match helius_sender.send_and_confirm(&signed_tx, confirmation_timeout).await {
                 Ok(signature) => {
                     let exit_price = signal.current_price;
@@ -917,6 +1317,71 @@ impl PositionMonitor {
                     last_error = e.to_string();
                     let is_slippage_error = last_error.contains("6003")
                         || last_error.to_lowercase().contains("slippage");
+                    let is_timeout_error = last_error.contains("Timeout") || last_error.contains("timeout");
+
+                    // On timeout, check if the sell actually succeeded
+                    if is_timeout_error {
+                        match self.tx_builder.get_token_balance(user_wallet, &position.token_mint).await {
+                            Ok(balance) => {
+                                if balance < 1000 {
+                                    info!("✅ Curve sell confirmation timed out but tokens are gone - treating as successful exit for {}",
+                                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]));
+                                    // Calculate P&L and close position
+                                    let exit_price = signal.current_price;
+                                    let pnl_percent = (exit_price - position.entry_price) / position.entry_price;
+                                    let exit_reason = format!("{:?}", signal.reason);
+                                    let effective_base = if position.remaining_amount_base > 0.0 {
+                                        position.remaining_amount_base
+                                    } else {
+                                        position.entry_amount_base
+                                    };
+                                    let realized_pnl_sol = effective_base * pnl_percent;
+
+                                    let _ = self.position_manager
+                                        .close_position(
+                                            signal.position_id,
+                                            exit_price,
+                                            realized_pnl_sol,
+                                            &exit_reason,
+                                            Some("timeout-verified-success".to_string()),
+                                        )
+                                        .await;
+
+                                    self.emit_exit_completed_event(
+                                        position,
+                                        signal,
+                                        realized_pnl_sol,
+                                        Some("timeout-verified"),
+                                    )
+                                    .await;
+
+                                    info!(
+                                        "✅ Curve exit completed (timeout-verified): {} | P&L: {:.6} SOL ({:.2}%) | Reason: {:?}",
+                                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                                        realized_pnl_sol,
+                                        pnl_percent * 100.0,
+                                        signal.reason
+                                    );
+
+                                    self.save_exit_to_engrams(
+                                        position,
+                                        signal,
+                                        realized_pnl_sol,
+                                        Some("timeout-verified"),
+                                        user_wallet,
+                                    )
+                                    .await;
+
+                                    return Ok(());
+                                } else {
+                                    warn!("⚠️ Curve sell timed out and {} tokens still in wallet - will retry", balance);
+                                }
+                            }
+                            Err(balance_err) => {
+                                warn!("Could not verify balance after curve sell timeout: {}", balance_err);
+                            }
+                        }
+                    }
 
                     if is_slippage_error && attempt < max_retries {
                         warn!(
