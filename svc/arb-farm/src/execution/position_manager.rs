@@ -110,13 +110,14 @@ pub struct ExitConfig {
 
 impl Default for ExitConfig {
     fn default() -> Self {
+        // Use unified curve bonding config as default for consistency
         Self {
             base_currency: BaseCurrency::Sol,
             exit_mode: ExitMode::Default,
-            stop_loss_percent: Some(20.0),       // 20% stop loss - matches curve volatility
-            take_profit_percent: Some(15.0),     // 15% take profit - above break-even after costs
-            trailing_stop_percent: Some(12.0),   // 12% trailing stop - protect gains
-            time_limit_minutes: Some(7),         // 7 min max hold - force exit before momentum dies
+            stop_loss_percent: Some(30.0),       // 30% stop loss - allow curve volatility
+            take_profit_percent: Some(100.0),    // 100% (2x) - tiered exit starts here
+            trailing_stop_percent: Some(20.0),   // 20% trailing stop for moon bag
+            time_limit_minutes: Some(15),        // 15 min - let winners run
             partial_take_profit: None,
             custom_exit_instructions: None,
             momentum_adaptive: None,
@@ -185,6 +186,7 @@ impl ExitConfig {
         }
     }
 
+    #[deprecated(since = "0.1.0", note = "Use for_curve_bonding() for live tokens or for_dead_token() for dead tokens")]
     pub fn for_discovered_token() -> Self {
         Self {
             base_currency: BaseCurrency::Sol,
@@ -205,6 +207,24 @@ impl ExitConfig {
         }
     }
 
+    /// Exit config for dead/stale tokens that need immediate salvage sell
+    /// Uses 0% stop loss to trigger immediate exit and high slippage tolerance
+    pub fn for_dead_token() -> Self {
+        Self {
+            base_currency: BaseCurrency::Sol,
+            exit_mode: ExitMode::Default,
+            stop_loss_percent: Some(100.0), // Already underwater - just sell
+            take_profit_percent: Some(0.1), // Any gain is a win
+            trailing_stop_percent: None,
+            time_limit_minutes: Some(1), // Immediate exit
+            partial_take_profit: None,
+            custom_exit_instructions: Some("DEAD TOKEN - salvage sell".to_string()),
+            momentum_adaptive: None,
+            adaptive_partial_tp: None,
+        }
+    }
+
+    #[deprecated(since = "0.1.0", note = "Use for_curve_bonding() for live tokens or for_dead_token() for dead tokens")]
     pub fn for_discovered_with_metrics(volume_24h_sol: f64, holder_count: u32) -> Self {
         let (sl, tp, trailing, time_limit) = if volume_24h_sol > 100.0 && holder_count > 100 {
             (20.0, 40.0, Some(10.0), 360u32) // Extended from 180 to 360 min for high-metrics tokens
@@ -241,29 +261,30 @@ impl ExitConfig {
     }
 
     /// Exit config optimized for bonding curve (pump.fun/moonshot) trading
-    /// OPTIMIZED based on trade history analysis:
-    /// - 20% stop loss matches curve volatility (was 10% - triggered too often)
-    /// - 12% take profit is achievable target (was 25% - rarely hit)
-    /// - 8% trailing stop protects gains while allowing swings (was 5%)
-    /// - 12 min time limit forces exit before momentum dies (was 30 min)
-    /// - Partial TP at 6%/40% and 12%/60% for earlier profit capture
+    /// TIERED EXIT STRATEGY (2026 best practices):
+    /// - Phase 1: At 2x (100% gain) - sell 50% to recover initial capital
+    /// - Phase 2: At 150% (pre-migration) - sell 25% to lock in profits
+    /// - Phase 3: Trailing stop on remaining 25% "moon bag"
+    /// - Stop loss at 30% to handle curve volatility
+    /// - Time limit extended to allow winners to run
+    /// - Momentum tracking enabled to adapt exits dynamically
     pub fn for_curve_bonding() -> Self {
         Self {
             base_currency: BaseCurrency::Sol,
             exit_mode: ExitMode::Default,
-            stop_loss_percent: Some(20.0),      // -20% stop loss (matches volatility)
-            take_profit_percent: Some(15.0),    // +15% take profit (above break-even after costs)
-            trailing_stop_percent: Some(12.0),  // 12% trailing stop (allow volatility)
-            time_limit_minutes: Some(7),        // 7 min max hold - force exit if nothing else triggers
+            stop_loss_percent: Some(30.0),      // -30% stop loss (allow curve volatility)
+            take_profit_percent: Some(100.0),   // +100% (2x) - first major TP target
+            trailing_stop_percent: Some(20.0),  // 20% trailing stop for moon bag
+            time_limit_minutes: Some(15),       // 15 min - extended to let winners run
             partial_take_profit: Some(PartialTakeProfit {
-                first_target_percent: 8.0,      // Sell 35% at +8% (above ~5% break-even)
-                first_exit_percent: 35.0,       // Sell 35% (preserve upside)
-                second_target_percent: 15.0,    // Sell remaining 65% at +15%
-                second_exit_percent: 65.0,
+                first_target_percent: 100.0,    // 2x - sell 50% to recover capital
+                first_exit_percent: 50.0,
+                second_target_percent: 150.0,   // Pre-migration - sell 25%
+                second_exit_percent: 25.0,
             }),
             custom_exit_instructions: None,
-            momentum_adaptive: None,
-            adaptive_partial_tp: None,
+            momentum_adaptive: Some(MomentumAdaptiveConfig::default()),  // Enable momentum tracking
+            adaptive_partial_tp: Some(AdaptivePartialTakeProfit::default()),
         }
     }
 
@@ -284,21 +305,11 @@ impl ExitConfig {
     }
 
     /// Exit config with momentum-adaptive exits for curve bonding
-    /// Strong momentum = sell less and let winners run
-    /// Weak/reversing momentum = exit quickly to protect profits
+    /// DEPRECATED: Now just delegates to for_curve_bonding() for unified config
+    /// All curve positions use the same tiered exit strategy with momentum tracking
     pub fn for_curve_bonding_momentum_adaptive() -> Self {
-        Self {
-            base_currency: BaseCurrency::Sol,
-            exit_mode: ExitMode::Default,
-            stop_loss_percent: Some(20.0),      // -20% stop loss (matches volatility)
-            take_profit_percent: Some(15.0),    // +15% take profit (above break-even)
-            trailing_stop_percent: Some(12.0),  // 12% trailing stop (allow volatility)
-            time_limit_minutes: Some(7),        // 7 min max hold - momentum adapts within this
-            partial_take_profit: None,          // Replaced by adaptive_partial_tp
-            custom_exit_instructions: None,
-            momentum_adaptive: Some(MomentumAdaptiveConfig::default()),
-            adaptive_partial_tp: Some(AdaptivePartialTakeProfit::default()),
-        }
+        // Single source of truth - all curve trades use the same config
+        Self::for_curve_bonding()
     }
 }
 
@@ -641,6 +652,7 @@ pub enum ExitReason {
     MomentumAdaptivePartial,  // Partial exit scaled by momentum strength
     MomentumReversal,  // Immediate exit due to momentum reversal while profitable
     ExtendedTakeProfit,  // Extended target hit due to strong momentum
+    Salvage,  // Dead token salvage sell with maximum slippage tolerance
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -715,12 +727,12 @@ pub struct AdaptivePartialTakeProfit {
 impl Default for AdaptivePartialTakeProfit {
     fn default() -> Self {
         Self {
-            first_target_percent: 6.0,   // Achievable first target (was 10%)
-            first_exit_percent: 40.0,    // Capture 40% of profits early
-            second_target_percent: 12.0, // Main TP target (was 25%)
-            second_exit_percent: 60.0,   // Exit most of remaining
-            third_target_percent: 25.0,  // Extended target for strong momentum (was 50%)
-            third_exit_percent: 100.0,
+            first_target_percent: 100.0,  // 2x = recover initial capital
+            first_exit_percent: 50.0,     // Sell 50% to lock in breakeven
+            second_target_percent: 150.0, // Pre-migration level (near curve completion)
+            second_exit_percent: 25.0,    // Sell 25% more, keep 25% moon bag
+            third_target_percent: 300.0,  // Extended moon target (3x+)
+            third_exit_percent: 100.0,    // Exit remaining on extended target or trailing stop
             enable_extended_targets: true,
         }
     }
@@ -745,14 +757,62 @@ pub enum ExitUrgency {
     Critical,
 }
 
+#[derive(Debug, Clone)]
+pub struct PriorityExitEntry {
+    pub position_id: Uuid,
+    pub failed_attempts: u32,
+    pub next_retry_at: DateTime<Utc>,
+    pub is_rate_limited: bool,
+}
+
+impl PriorityExitEntry {
+    pub fn new(position_id: Uuid) -> Self {
+        Self {
+            position_id,
+            failed_attempts: 0,
+            next_retry_at: Utc::now(),
+            is_rate_limited: false,
+        }
+    }
+
+    pub fn backoff_and_retry(&mut self, is_rate_limited: bool) {
+        self.failed_attempts += 1;
+        self.is_rate_limited = is_rate_limited;
+
+        let base_delay_secs = if is_rate_limited {
+            10 // Start with 10 second delay for rate limits
+        } else {
+            3 // 3 seconds for other failures
+        };
+
+        // Exponential backoff: 10s, 20s, 40s, 80s (max 2 min) for rate limits
+        // Or: 3s, 6s, 12s, 24s (max 30s) for other failures
+        let delay_secs = base_delay_secs * (1 << self.failed_attempts.min(3));
+        let max_delay = if is_rate_limited { 120 } else { 30 };
+        let actual_delay = delay_secs.min(max_delay);
+
+        self.next_retry_at = Utc::now() + chrono::Duration::seconds(actual_delay as i64);
+    }
+
+    pub fn is_ready_for_retry(&self) -> bool {
+        Utc::now() >= self.next_retry_at
+    }
+
+    pub fn should_give_up(&self) -> bool {
+        // Give up after 10 attempts (about 10+ minutes of trying)
+        self.failed_attempts >= 10
+    }
+}
+
 pub struct PositionManager {
     positions: Arc<RwLock<HashMap<Uuid, OpenPosition>>>,
     positions_by_edge: Arc<RwLock<HashMap<Uuid, Uuid>>>,
     positions_by_token: Arc<RwLock<HashMap<String, Vec<Uuid>>>>,
     exit_signals: Arc<RwLock<Vec<ExitSignal>>>,
-    priority_exits: Arc<RwLock<Vec<Uuid>>>,
+    priority_exits: Arc<RwLock<HashMap<Uuid, PriorityExitEntry>>>,
     stats: Arc<RwLock<PositionManagerStats>>,
     position_repo: Option<Arc<PositionRepository>>,
+    pending_exit_retry_index: Arc<RwLock<usize>>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -774,9 +834,10 @@ impl PositionManager {
             positions_by_edge: Arc::new(RwLock::new(HashMap::new())),
             positions_by_token: Arc::new(RwLock::new(HashMap::new())),
             exit_signals: Arc::new(RwLock::new(Vec::new())),
-            priority_exits: Arc::new(RwLock::new(Vec::new())),
+            priority_exits: Arc::new(RwLock::new(HashMap::new())),
             stats: Arc::new(RwLock::new(PositionManagerStats::default())),
             position_repo: None,
+            pending_exit_retry_index: Arc::new(RwLock::new(0)),
         }
     }
 
@@ -786,9 +847,10 @@ impl PositionManager {
             positions_by_edge: Arc::new(RwLock::new(HashMap::new())),
             positions_by_token: Arc::new(RwLock::new(HashMap::new())),
             exit_signals: Arc::new(RwLock::new(Vec::new())),
-            priority_exits: Arc::new(RwLock::new(Vec::new())),
+            priority_exits: Arc::new(RwLock::new(HashMap::new())),
             stats: Arc::new(RwLock::new(PositionManagerStats::default())),
             position_repo: Some(position_repo),
+            pending_exit_retry_index: Arc::new(RwLock::new(0)),
         }
     }
 
@@ -1347,6 +1409,36 @@ impl PositionManager {
             }
         }
 
+        // NEW: Exit if momentum is slowing AND we're profitable after fees
+        // This captures profits on positions where TP won't be reached but we're still in the green
+        // Fees: ~1% entry + ~1% exit + ~1-2% slippage = ~4% break-even
+        let profitable_after_fees = position.unrealized_pnl_percent > 5.0;
+        let momentum_slowing = position.momentum.velocity < 0.5  // Not strongly positive
+            && (position.momentum.momentum_decay_count >= 2     // Some decay observed
+                || position.momentum.velocity.abs() < 0.3       // Velocity stalled
+                || position.momentum.consecutive_negative_readings >= 2); // Recent negatives
+
+        if profitable_after_fees && momentum_slowing && hold_time_mins >= 3 {
+            tracing::info!(
+                position_id = %position_id,
+                pnl_pct = position.unrealized_pnl_percent,
+                velocity = position.momentum.velocity,
+                decay_count = position.momentum.momentum_decay_count,
+                consecutive_neg = position.momentum.consecutive_negative_readings,
+                hold_mins = hold_time_mins,
+                "💰 Momentum slowing while profitable after fees - securing gains"
+            );
+            position.status = PositionStatus::PendingExit;
+            return Some(ExitSignal {
+                position_id,
+                reason: ExitReason::MomentumDecay,
+                exit_percent: 100.0,
+                current_price,
+                triggered_at: now,
+                urgency: ExitUrgency::High,
+            });
+        }
+
         // Check momentum decay - exit if momentum has stalled or reversed
         // Only check if we're not already profitable (don't exit winners early)
         if position.unrealized_pnl_percent < 10.0 {
@@ -1425,11 +1517,37 @@ impl PositionManager {
 
     pub async fn get_open_positions(&self) -> Vec<OpenPosition> {
         let positions = self.positions.read().await;
-        positions
+        let all_count = positions.len();
+        info!("🔍 get_open_positions called: {} positions in memory", all_count);
+        let result: Vec<OpenPosition> = positions
             .values()
             .filter(|p| p.status == PositionStatus::Open)
             .cloned()
-            .collect()
+            .collect();
+
+        if result.is_empty() && all_count > 0 {
+            // Log status distribution for debugging
+            let status_counts: std::collections::HashMap<&str, usize> = positions
+                .values()
+                .map(|p| match p.status {
+                    PositionStatus::Open => "open",
+                    PositionStatus::PendingExit => "pending_exit",
+                    PositionStatus::PartiallyExited => "partially_exited",
+                    PositionStatus::Closed => "closed",
+                    PositionStatus::Failed => "failed",
+                    PositionStatus::Orphaned => "orphaned",
+                })
+                .fold(std::collections::HashMap::new(), |mut acc, s| {
+                    *acc.entry(s).or_insert(0) += 1;
+                    acc
+                });
+            info!(
+                "📊 get_open_positions: {} total in memory, 0 with status=Open. Status distribution: {:?}",
+                all_count, status_counts
+            );
+        }
+
+        result
     }
 
     pub async fn has_open_position_for_mint(&self, mint: &str) -> bool {
@@ -1450,6 +1568,22 @@ impl PositionManager {
     pub async fn get_pending_exit_signals(&self) -> Vec<ExitSignal> {
         let signals = self.exit_signals.read().await;
         signals.clone()
+    }
+
+    pub async fn get_pending_exit_positions(&self) -> Vec<OpenPosition> {
+        let positions = self.positions.read().await;
+        positions
+            .values()
+            .filter(|p| p.status == PositionStatus::PendingExit)
+            .cloned()
+            .collect()
+    }
+
+    pub async fn get_and_increment_retry_index(&self) -> usize {
+        let mut index = self.pending_exit_retry_index.write().await;
+        let current = *index;
+        *index = current.wrapping_add(1);
+        current
     }
 
     pub async fn clear_exit_signal(&self, position_id: Uuid) {
@@ -1581,8 +1715,8 @@ impl PositionManager {
 
     pub async fn queue_priority_exit(&self, position_id: Uuid) {
         let mut priority_exits = self.priority_exits.write().await;
-        if !priority_exits.contains(&position_id) {
-            priority_exits.push(position_id);
+        if !priority_exits.contains_key(&position_id) {
+            priority_exits.insert(position_id, PriorityExitEntry::new(position_id));
             info!(
                 "🔥 Position {} added to HIGH PRIORITY exit queue (queue size: {})",
                 position_id,
@@ -1591,18 +1725,78 @@ impl PositionManager {
         }
     }
 
+    pub async fn record_priority_exit_failure(&self, position_id: Uuid, is_rate_limited: bool) {
+        let mut priority_exits = self.priority_exits.write().await;
+
+        if let Some(entry) = priority_exits.get_mut(&position_id) {
+            entry.backoff_and_retry(is_rate_limited);
+
+            if entry.should_give_up() {
+                warn!(
+                    "🔥❌ Position {} removed from priority queue after {} failed attempts",
+                    position_id, entry.failed_attempts
+                );
+                priority_exits.remove(&position_id);
+            } else {
+                let delay_secs = (entry.next_retry_at - Utc::now()).num_seconds();
+                info!(
+                    "🔥⏳ Position {} backoff: attempt {}, retry in {}s{}",
+                    position_id,
+                    entry.failed_attempts,
+                    delay_secs,
+                    if is_rate_limited { " (rate limited)" } else { "" }
+                );
+            }
+        } else {
+            // Position wasn't in queue, add it with failure count
+            let mut entry = PriorityExitEntry::new(position_id);
+            entry.backoff_and_retry(is_rate_limited);
+            priority_exits.insert(position_id, entry);
+            info!(
+                "🔥 Position {} added to HIGH PRIORITY exit queue with backoff (queue size: {})",
+                position_id,
+                priority_exits.len()
+            );
+        }
+    }
+
     pub async fn drain_priority_exits(&self) -> Vec<Uuid> {
         let mut priority_exits = self.priority_exits.write().await;
-        let exits: Vec<Uuid> = priority_exits.drain(..).collect();
-        if !exits.is_empty() {
-            info!("🔥 Draining {} positions from HIGH PRIORITY exit queue", exits.len());
+
+        // Only return positions that are ready for retry
+        let ready_exits: Vec<Uuid> = priority_exits
+            .iter()
+            .filter(|(_, entry)| entry.is_ready_for_retry())
+            .map(|(id, _)| *id)
+            .collect();
+
+        // Remove the ready ones from the map (they'll be re-added if they fail)
+        for id in &ready_exits {
+            priority_exits.remove(id);
         }
-        exits
+
+        if !ready_exits.is_empty() {
+            let pending_count = priority_exits.len();
+            info!(
+                "🔥 Draining {} positions from HIGH PRIORITY exit queue ({} still backing off)",
+                ready_exits.len(),
+                pending_count
+            );
+        }
+
+        ready_exits
     }
 
     pub async fn has_priority_exits(&self) -> bool {
         let priority_exits = self.priority_exits.read().await;
-        !priority_exits.is_empty()
+        priority_exits.values().any(|e| e.is_ready_for_retry())
+    }
+
+    pub async fn priority_queue_status(&self) -> (usize, usize) {
+        let priority_exits = self.priority_exits.read().await;
+        let ready = priority_exits.values().filter(|e| e.is_ready_for_retry()).count();
+        let backing_off = priority_exits.len() - ready;
+        (ready, backing_off)
     }
 
     pub async fn get_stats(&self) -> PositionManagerStats {
@@ -1748,6 +1942,7 @@ impl Clone for PositionManager {
             priority_exits: self.priority_exits.clone(),
             stats: self.stats.clone(),
             position_repo: self.position_repo.clone(),
+            pending_exit_retry_index: self.pending_exit_retry_index.clone(),
         }
     }
 }
@@ -1791,9 +1986,17 @@ impl PositionManager {
                     continue;
                 }
 
-                // Lower threshold to capture tokens with fractional balances
-                // 0.0001 filters dust while allowing small positions
+                // Check if this is a dust token (< 0.0001 balance)
+                // These are too small to economically sell - tx fee exceeds value
                 if holding.balance < 0.0001 {
+                    if holding.balance > 0.0 && !tracked_mints.contains(&holding.mint) {
+                        warn!(
+                            "🧹 Dust token in wallet: {} ({}) - {:.9} tokens (too small to sell economically)",
+                            holding.symbol.as_deref().unwrap_or("Unknown"),
+                            &holding.mint[..8],
+                            holding.balance
+                        );
+                    }
                     continue;
                 }
 
@@ -1996,6 +2199,24 @@ impl PositionManager {
     }
 
     pub async fn mark_position_orphaned(&self, position_id: Uuid) -> AppResult<()> {
+        // Check if position exists and needs status transition (read-only first)
+        let should_decrement = {
+            let positions = self.positions.read().await;
+            positions.get(&position_id)
+                .map(|p| p.status == PositionStatus::Open)
+                .unwrap_or(false)
+        };
+
+        // Decrement stats if transitioning from Open (before acquiring positions write lock)
+        if should_decrement {
+            let mut stats = self.stats.write().await;
+            if stats.active_positions > 0 {
+                stats.active_positions -= 1;
+                debug!("📊 Stats decremented: active_positions now {}", stats.active_positions);
+            }
+        }
+
+        // Now update the position status
         let mut positions = self.positions.write().await;
         if let Some(position) = positions.get_mut(&position_id) {
             position.status = PositionStatus::Orphaned;

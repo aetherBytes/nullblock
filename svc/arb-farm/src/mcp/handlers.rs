@@ -1003,12 +1003,18 @@ async fn engram_apply_recommendation(state: &AppState, args: Value) -> McpToolRe
             } else if target.starts_with("risk.") {
                 let field = target.strip_prefix("risk.").unwrap_or(target);
                 if !dry_run {
+                    let wallet_max = *state.wallet_max_position_sol.read().await;
                     let mut config = state.risk_config.write().await;
                     match field {
                         "max_position_sol" => {
                             if let Some(v) = new_value.as_f64() {
-                                config.max_position_sol = v;
-                                changes_made.push(format!("Set risk.max_position_sol to {}", v));
+                                let capped = v.min(wallet_max);
+                                config.max_position_sol = capped;
+                                if capped < v {
+                                    changes_made.push(format!("Set risk.max_position_sol to {} (capped from {} by wallet limit)", capped, v));
+                                } else {
+                                    changes_made.push(format!("Set risk.max_position_sol to {}", capped));
+                                }
                             }
                         }
                         "daily_loss_limit_sol" => {
@@ -1071,17 +1077,22 @@ async fn engram_apply_recommendation(state: &AppState, args: Value) -> McpToolRe
             }
         }
         crate::engrams::SuggestedActionType::RiskAdjustment => {
-            // Similar to ConfigChange but specifically for risk params
             let target = &action.target;
             let new_value = &action.suggested_value;
 
             if !dry_run {
+                let wallet_max = *state.wallet_max_position_sol.read().await;
                 let mut config = state.risk_config.write().await;
                 match target.as_str() {
                     "max_position_sol" => {
                         if let Some(v) = new_value.as_f64() {
-                            config.max_position_sol = v;
-                            changes_made.push(format!("Set max_position_sol to {}", v));
+                            let capped = v.min(wallet_max);
+                            config.max_position_sol = capped;
+                            if capped < v {
+                                changes_made.push(format!("Set max_position_sol to {} (capped from {} by wallet limit)", capped, v));
+                            } else {
+                                changes_made.push(format!("Set max_position_sol to {}", capped));
+                            }
                         }
                     }
                     "daily_loss_limit_sol" => {

@@ -42,6 +42,7 @@
 
 - [Quickstart Guide](./arb-farm/quickstart.md)
 - [Trading Strategies](./arb-farm/strategies.md)
+- [Profit Strategy Deep Dive](./arb-farm/profit-strategy.md)
 - [Strategy Flow](./arb-farm/strategy-flow.md)
 - [Implementation Plan](./arb-farm/plan.md)
 - [Service Architecture](./arb-farm/service.md)

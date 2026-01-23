@@ -507,6 +507,25 @@ impl AutonomousExecutor {
 
         let sol_amount_lamports = (capped_sol * 1_000_000_000.0) as u64;
 
+        // Validate non-zero and minimum SOL amount to prevent wasting network fees
+        const MIN_SOL_LAMPORTS: u64 = 1_000_000; // 0.001 SOL
+        if sol_amount_lamports < MIN_SOL_LAMPORTS {
+            tracing::warn!(
+                edge_id = %edge_id,
+                mint = %mint,
+                sol_amount_lamports = sol_amount_lamports,
+                capped_sol = capped_sol,
+                base_sol = base_sol,
+                velocity_multiplier = velocity_multiplier,
+                "⏭️ Skipping: calculated SOL amount {} lamports below minimum {} (base_sol={}, mult={:.2})",
+                sol_amount_lamports,
+                MIN_SOL_LAMPORTS,
+                base_sol,
+                velocity_multiplier
+            );
+            return Ok(());
+        }
+
         let curve_state = match curve_builder.get_curve_state(&mint).await {
             Ok(state) => state,
             Err(e) => {

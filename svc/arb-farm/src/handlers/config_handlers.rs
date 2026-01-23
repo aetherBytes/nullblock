@@ -59,10 +59,10 @@ pub async fn set_risk_level(
             max_position_sol: 10.0,
             max_concurrent_positions: 20,
             max_liquidity_contribution_pct: 50.0,
-            stop_loss_pct: 25.0,        // Was 50.0
-            take_profit_pct: 20.0,      // Was 100.0
-            trailing_stop_pct: 15.0,
-            time_limit_minutes: 10,
+            stop_loss_pct: 30.0,        // 30% - allow curve volatility
+            take_profit_pct: 100.0,     // 100% (2x) - tiered exit starts here
+            trailing_stop_pct: 20.0,    // 20% trailing for moon bag
+            time_limit_minutes: 15,     // 15 min - let winners run
             daily_loss_limit_sol: 5.0,
         },
         "conservative" => RiskLevelParams {
@@ -81,10 +81,10 @@ pub async fn set_risk_level(
             max_position_sol: 0.3,
             max_concurrent_positions: 10,
             max_liquidity_contribution_pct: 10.0,
-            stop_loss_pct: 20.0,        // Was 15.0 - match for_curve_bonding
-            take_profit_pct: 15.0,      // Was 50.0 - match for_curve_bonding
-            trailing_stop_pct: 12.0,
-            time_limit_minutes: 7,
+            stop_loss_pct: 30.0,        // 30% - allow curve volatility
+            take_profit_pct: 100.0,     // 100% (2x) - tiered exit starts here
+            trailing_stop_pct: 20.0,    // 20% trailing for moon bag
+            time_limit_minutes: 15,     // 15 min - let winners run
             daily_loss_limit_sol: 1.0,
         },
     };

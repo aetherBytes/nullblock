@@ -38,8 +38,13 @@ pub struct PositionStatsResponse {
 pub async fn get_positions(
     State(state): State<AppState>,
 ) -> Result<Json<PositionsResponse>, AppError> {
-    let positions = state.position_manager.get_open_positions().await;
+    let mut positions = state.position_manager.get_open_positions().await;
     let stats = state.position_manager.get_stats().await;
+
+    // Sort by P&L: most profitable first, biggest losses last
+    positions.sort_by(|a, b| {
+        b.unrealized_pnl_percent.partial_cmp(&a.unrealized_pnl_percent).unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     Ok(Json(PositionsResponse {
         positions,
@@ -1310,7 +1315,7 @@ pub async fn get_pnl_summary(
 
     // Get active positions with their strategies
     let open_positions = state.position_manager.get_open_positions().await;
-    let active_strategies: Vec<ActiveStrategy> = open_positions.into_iter().map(|p| {
+    let mut active_strategies: Vec<ActiveStrategy> = open_positions.into_iter().map(|p| {
         let hold_time_mins = (chrono::Utc::now() - p.entry_time).num_minutes();
         ActiveStrategy {
             symbol: p.token_symbol.unwrap_or_else(|| p.token_mint[..8].to_string()),
@@ -1324,6 +1329,11 @@ pub async fn get_pnl_summary(
             hold_time_mins,
         }
     }).collect();
+
+    // Sort by P&L: most profitable first, biggest losses last
+    active_strategies.sort_by(|a, b| {
+        b.current_pnl_percent.partial_cmp(&a.current_pnl_percent).unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     Ok(Json(PnLSummary {
         today_sol: db_stats.today_pnl,
@@ -1446,37 +1456,29 @@ pub async fn reconcile_wallet(
             token.balance
         );
 
-        let estimated_price = match state.on_chain_fetcher.get_bonding_curve_state(&token.mint).await {
+        let (estimated_price, is_dead_token) = match state.on_chain_fetcher.get_bonding_curve_state(&token.mint).await {
             Ok(curve_state) => {
                 if curve_state.virtual_token_reserves > 0 {
                     let price = curve_state.virtual_sol_reserves as f64 / curve_state.virtual_token_reserves as f64;
                     info!("   💰 On-chain price: {:.12} SOL/token", price);
-                    price
+                    (price, false)
                 } else {
-                    info!("   ⚠️ Zero token reserves, using estimate");
-                    0.0000001
+                    info!("   💀 Zero token reserves - dead token");
+                    (0.0000001, true)
                 }
             }
             Err(_) => {
-                info!("   ⚠️ Could not fetch price, using estimate");
-                0.0000001
+                info!("   💀 Could not fetch price - dead token");
+                (0.0000001, true)
             }
         };
 
-        let exit_config = match state.metrics_collector.calculate_metrics(&token.mint, "pump_fun").await {
-            Ok(metrics) => {
-                let volume = metrics.volume_24h;
-                let holders = metrics.holder_count;
-                info!(
-                    "   📊 Metrics: vol={:.2} SOL, holders={}",
-                    volume, holders
-                );
-                crate::execution::ExitConfig::for_discovered_with_metrics(volume, holders)
-            }
-            Err(_) => {
-                info!("   ⚠️ No metrics available, using default exit strategy");
-                crate::execution::ExitConfig::for_discovered_token()
-            }
+        let exit_config = if is_dead_token {
+            info!("   🔴 Using dead token exit strategy (immediate salvage sell)");
+            crate::execution::ExitConfig::for_dead_token()
+        } else {
+            info!("   ✅ Using standard curve bonding exit strategy");
+            crate::execution::ExitConfig::for_curve_bonding()
         };
 
         if let Some(orphaned_position) = state.position_manager.get_orphaned_position_by_mint(&token.mint).await {
