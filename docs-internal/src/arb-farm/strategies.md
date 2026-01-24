@@ -1,6 +1,6 @@
 # ArbFarm Trading Strategies
 
-> Last Updated: 2026-01-23 (Raydium integration)
+> Last Updated: 2026-01-24 (Fixed metrics collection from venue APIs)
 
 This document describes how ArbFarm's trading strategies work - from token discovery through position management and exit execution.
 
@@ -50,6 +50,55 @@ ArbFarm operates as an autonomous multi-agent system with the following componen
 
 ---
 
+## Strategy Isolation
+
+Scanner and Sniper strategies operate **independently** - they can hold positions in the same token without blocking each other.
+
+### Per-Strategy Budget Allocation
+
+At startup, wallet balance is divided between active strategies:
+
+```
+Available SOL ÷ Active Strategy Count = Per-Strategy Budget
+```
+
+Example with 2 SOL available and 2 active strategies:
+- Scanner: 1.0 SOL max position
+- Sniper: 1.0 SOL max position
+
+### Independent Position Tracking
+
+Position checks are **per-strategy**, not global:
+
+| Scenario | Before | After |
+|----------|--------|-------|
+| Scanner buys at 40% | ✅ Works | ✅ Works |
+| Sniper buys at 85% (scanner has position) | ❌ Blocked | ✅ Works |
+| Same mint, different strategies | Blocked | Independent |
+
+### Strategy-Specific Exit Configs
+
+| Strategy | Take Profit | Stop Loss | Time Limit | Use Case |
+|----------|-------------|-----------|------------|----------|
+| Scanner (curve_arb) | 15% | 20% | 7 min | Quick flips at 30-70% progress |
+| Sniper (graduation_snipe) | 100% | 30% | 15 min | Let winners run post-graduation |
+
+### Momentum Toggle API
+
+```bash
+# Enable momentum-adaptive exits for scanner
+curl -X POST localhost:9007/strategies/{id}/momentum \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true}'
+
+# Disable momentum for faster exits
+curl -X POST localhost:9007/strategies/{id}/momentum \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}'
+```
+
+---
+
 ## Strategy 1: Bonding Curve Scanner
 
 **File:** `src/agents/scanner.rs`
@@ -90,6 +139,65 @@ The Scanner Agent continuously monitors pump.fun bonding curves for entry opport
 90%+ progress + positive velocity → 0.75 confidence
 Below 90%                         → 0.60 confidence
 ```
+
+### Metrics Collection
+
+**Files:** `src/agents/curve_metrics.rs`, `src/handlers/curves.rs`
+
+The metrics collector populates detailed token metrics from venue APIs (DexScreener):
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         DATA SOURCES                              │
+├─────────────────────────────────────────────────────────────────┤
+│  DexScreener API        pump.fun API         On-Chain RPC       │
+│  (Volume, Price)        (Holder stats)       (Curve state)      │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   CurveMetricsCollector                           │
+├─────────────────────────────────────────────────────────────────┤
+│  populate_from_pump_fun()  │  Merges venue data with on-chain   │
+│  populate_from_moonshot()  │  Caches for scorer consumption     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Populated Metrics:**
+
+| Metric | Source | Fallback |
+|--------|--------|----------|
+| `volume_24h` | DexScreener | 0.0 |
+| `volume_1h` | Estimated (24h/24) | 0.0 |
+| `holder_count` | pump.fun API | Helius largest accounts count |
+| `top_10_concentration` | pump.fun API | Helius calculation |
+| `price_momentum_24h` | DexScreener | 0.0 |
+| `graduation_progress` | On-chain RPC | Estimated from market cap |
+| `market_cap_sol` | On-chain RPC | DexScreener estimate |
+| `liquidity_depth_sol` | On-chain RPC | 0.0 |
+
+### Opportunity Scoring
+
+**File:** `src/agents/curve_scorer.rs`
+
+The scorer combines metrics into an actionable recommendation:
+
+| Score Range | Recommendation | Action |
+|-------------|----------------|--------|
+| 80-100 | StrongBuy | Auto-execute |
+| 60-79 | Buy | Auto-execute |
+| 40-59 | Hold | Skip |
+| 0-39 | Avoid | Skip |
+
+**Scoring Weights (Default):**
+
+| Factor | Weight | Description |
+|--------|--------|-------------|
+| Graduation | 30% | Progress toward graduation |
+| Volume | 20% | Trading activity |
+| Holders | 20% | Distribution quality |
+| Momentum | 15% | Price/velocity trends |
+| Risk | 15% | Penalty for red flags |
 
 ### Buy Execution
 
@@ -259,9 +367,32 @@ struct OpenPosition {
 
 **File:** `src/execution/position_monitor.rs`
 
-### Primary Exit Config: Tiered Exit (for_curve_bonding)
+### Exit Config: Scanner (for_scanner)
 
-Used for scanner-discovered positions:
+Used for scanner-discovered positions at 30-70% progress:
+
+```
+Phase 1: At 8% gain
+  → Sell 35% to recover partial capital
+
+Phase 2: At 15% gain
+  → Sell remaining 65%
+  → Quick exit, no moon bag
+```
+
+**Configuration:**
+
+| Parameter | Value |
+|-----------|-------|
+| Stop Loss | 20% |
+| Take Profit (Phase 1) | 8% |
+| Take Profit (Phase 2) | 15% |
+| Trailing Stop | 12% |
+| Time Limit | 7 minutes |
+
+### Exit Config: Sniper (for_curve_bonding)
+
+Used for graduation snipe positions at 85%+ progress:
 
 ```
 Phase 1: At 2x (100% gain)
@@ -319,13 +450,19 @@ struct MomentumData {
 
 **Momentum Exit Rules:**
 
-| Hold Time | Velocity Threshold | Momentum Threshold |
-|-----------|-------------------|-------------------|
-| < 5 min | < -5.0%/min | < -60 |
-| 5-10 min | < -3.0%/min | < -40 |
-| > 10 min | < -2.5%/min | < -35 |
+| Hold Time | Velocity Threshold | Momentum Threshold | Decay Count Min |
+|-----------|-------------------|-------------------|-----------------|
+| < 5 min | < -5.0%/min | < -60 | 11 |
+| 5-10 min | < -3.0%/min | < -40 | 8 |
+| > 10 min | < -2.5%/min | < -35 | 7 |
 
-Or: 8+ consecutive momentum declines triggers exit.
+**Profitable Position Reversal:** Requires `decay_count >= 4` with `velocity < -0.5` and `momentum_score < -10`.
+
+**Momentum Slowing Exit:** Requires `decay_count >= 3` (or velocity stalled or 2+ consecutive negatives).
+
+**Peak Drop Protection:** If position is profitable and has dropped 6%+ from peak P&L, exit to protect gains. This is independent of trailing stop and triggers earlier to prevent giving back profits.
+
+*Note: Decay thresholds were increased ~30% on 2026-01-24 to reduce premature exits. Peak drop was increased from 3% to 6% to allow more volatility.*
 
 ### Slippage Calculation
 
@@ -487,6 +624,8 @@ just dev-mac "no-scan no-snipe"  # Without both
 | `/sniper/start` | POST | Start sniper |
 | `/sniper/stop` | POST | Stop sniper |
 | `/config/risk` | GET/POST | Risk configuration |
+| `/strategies` | GET | List all strategies |
+| `/strategies/{id}/momentum` | POST | Toggle momentum-adaptive exits |
 
 ### Environment Variables
 
@@ -507,8 +646,10 @@ just dev-mac "no-scan no-snipe"  # Without both
 - Raydium Trade API integration (post-graduation sells)
 - Position manager with P&L tracking
 - Position monitor with adaptive exits
+- Strategy isolation (per-strategy budgets + position tracking)
+- Strategy-specific exit configs (scanner vs sniper)
 - Tiered exit strategy
-- Momentum-based exits
+- Momentum-based exits (with API toggle)
 - Risk management
 - Engrams integration
 - Dead token salvage

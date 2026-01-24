@@ -88,6 +88,12 @@ just docs       # Serve internal docs at :3001
 
 ## Golden Rules
 
+### Documentation Sync
+- **ALWAYS** update [Trading Strategies](docs-internal/src/arb-farm/strategies.md) when modifying ArbFarm trading logic
+- Strategy changes = doc changes in the **same commit**
+- Includes: entry/exit logic, slippage, risk config, position management, new strategies
+- Run `just docs` to verify changes render correctly
+
 ### Erebus Router
 - **ALL** frontend → Erebus (3000) - NO EXCEPTIONS
 - **ALL** user CRUD → `/api/users/*` - NO direct DB access
@@ -133,7 +139,7 @@ Von Neumann-class vessel AI. Default model: `cognitivecomputations/dolphin3.0-mi
 | `/mcp/*` | MCP Protocol (2025-11-25) |
 | `/a2a/*` | A2A Protocol |
 
-## ArbFarm Production Status (Audit: 2026-01-19)
+## ArbFarm Production Status (Audit: 2026-01-24)
 
 **Overall**: 95% Production Ready
 
@@ -144,6 +150,12 @@ Von Neumann-class vessel AI. Default model: `cognitivecomputations/dolphin3.0-mi
 - ✅ Wallet funding validated at startup (blocks if < 0.05 SOL)
 - ✅ Position monitor auto-starts with curve support + engrams
 - ✅ Frontend service methods deduplicated
+- ✅ Momentum exits fully implemented (position_manager.rs:1403-1500)
+- ✅ Copy trading connected (server.rs:1048)
+- ✅ Engram recommendations applied to config
+- ✅ Dead token salvage working
+- ✅ Per-strategy capital allocation working
+- ✅ Tiered exit strategy and Raydium Trade API for post-graduation sells
 
 ### Stubbed Features (Generate Warnings - Safe to Ignore)
 These features are scaffolded but not implemented. Warnings are expected:
@@ -155,6 +167,10 @@ These features are scaffolded but not implemented. Warnings are expected:
 | `venues/dex/raydium.rs` | 8 | Raydium integration (stubbed) |
 | `consensus/providers/*` | 14 | Anthropic/OpenAI direct providers (using OpenRouter) |
 | `agents/graduation_tracker.rs` | 8 | Graduation tracking (stubbed) |
+
+### Not Implemented (Non-Blocking)
+- ❌ Research/DD Agent (Phase 6)
+- ❌ Threat Detection (Phase 8)
 
 ### Next Implementation Priorities
 1. **Crossroads Integration** - Marketplace listing for ArbFarm COW
