@@ -20,6 +20,8 @@ import type {
   DailyStats,
   ScannerStatus,
   Signal,
+  BehavioralStrategy,
+  BehavioralStrategiesResponse,
   SwarmStatus,
   SwarmHealth,
   AgentStatus,
@@ -218,14 +220,14 @@ class ArbFarmService {
   // ============================================================================
 
   async getDashboardSummary(): Promise<ArbFarmServiceResponse<DashboardSummary>> {
-    // Aggregate multiple endpoints for dashboard view
     try {
-      const [statsRes, swarmRes, edgesRes, tradesRes, alertsRes] = await Promise.all([
+      const [statsRes, swarmRes, edgesRes, tradesRes, alertsRes, pnlRes] = await Promise.all([
         this.getTradeStats(),
         this.getSwarmHealth(),
         this.listEdges({ status: ['detected', 'pending_approval'], limit: 5 }),
         this.listTrades(5),
         this.getThreatAlerts(5),
+        this.getPnLSummary(),
       ]);
 
       if (!statsRes.success || !swarmRes.success) {
@@ -233,15 +235,16 @@ class ArbFarmService {
       }
 
       const stats = statsRes.data!;
+      const pnl = pnlRes.data;
       const summary: DashboardSummary = {
-        total_profit_sol: stats.net_profit_sol,
-        today_profit_sol: 0, // Would need daily endpoint
-        week_profit_sol: 0,
-        win_rate: stats.win_rate,
+        total_profit_sol: pnl?.total_sol ?? stats.net_profit_sol,
+        today_profit_sol: pnl?.today_sol ?? 0,
+        week_profit_sol: pnl?.week_sol ?? 0,
+        win_rate: pnl?.win_rate ?? stats.win_rate,
         active_opportunities: edgesRes.data?.filter((e) => e.status === 'detected').length || 0,
         pending_approvals:
           edgesRes.data?.filter((e) => e.status === 'pending_approval').length || 0,
-        executed_today: stats.successful_trades,
+        executed_today: pnl?.total_trades ?? stats.successful_trades,
         swarm_health: swarmRes.data!,
         top_opportunities: edgesRes.data || [],
         recent_trades: tradesRes.data || [],
@@ -466,6 +469,37 @@ class ArbFarmService {
       console.warn('Scanner SSE connection error, will retry...');
     };
     return () => eventSource.close();
+  }
+
+  // ============================================================================
+  // Behavioral Strategies (Scanner-driven)
+  // ============================================================================
+
+  async listBehavioralStrategies(): Promise<ArbFarmServiceResponse<BehavioralStrategiesResponse>> {
+    return this.makeRequest('/scanner/strategies');
+  }
+
+  async getBehavioralStrategy(name: string): Promise<ArbFarmServiceResponse<BehavioralStrategy>> {
+    return this.makeRequest(`/scanner/strategies/${encodeURIComponent(name)}`);
+  }
+
+  async toggleBehavioralStrategy(
+    name: string,
+    active: boolean,
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; name: string; is_active: boolean; message: string }>> {
+    return this.makeRequest(`/scanner/strategies/${encodeURIComponent(name)}/toggle`, {
+      method: 'POST',
+      body: JSON.stringify({ active }),
+    });
+  }
+
+  async toggleAllBehavioralStrategies(
+    active: boolean,
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; toggled_count: number; is_active: boolean; message: string }>> {
+    return this.makeRequest('/scanner/strategies/toggle-all', {
+      method: 'POST',
+      body: JSON.stringify({ active }),
+    });
   }
 
   // ============================================================================
@@ -2720,6 +2754,146 @@ class ArbFarmService {
       method: 'GET',
     });
   }
+
+  // Internet Research Methods
+  async webSearch(query: string, options?: {
+    numResults?: number;
+    searchType?: 'search' | 'news';
+    timeRange?: 'day' | 'week' | 'month' | 'year';
+  }): Promise<ArbFarmServiceResponse<WebSearchResponse>> {
+    return this.request<WebSearchResponse>('/mcp/call', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'web_search',
+        arguments: {
+          query,
+          num_results: options?.numResults ?? 5,
+          search_type: options?.searchType ?? 'search',
+          ...(options?.timeRange && { time_range: options.timeRange }),
+        },
+      }),
+    });
+  }
+
+  async webFetch(url: string, options?: {
+    extractMode?: 'full' | 'article' | 'summary';
+    maxLength?: number;
+  }): Promise<ArbFarmServiceResponse<WebFetchResponse>> {
+    return this.request<WebFetchResponse>('/mcp/call', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'web_fetch',
+        arguments: {
+          url,
+          extract_mode: options?.extractMode ?? 'article',
+          max_length: options?.maxLength ?? 10000,
+        },
+      }),
+    });
+  }
+
+  async webSummarize(content: string, url: string, options?: {
+    focus?: 'strategy' | 'alpha' | 'risk' | 'token_analysis' | 'general';
+    saveAsEngram?: boolean;
+  }): Promise<ArbFarmServiceResponse<WebSummarizeResponse>> {
+    return this.request<WebSummarizeResponse>('/mcp/call', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'web_summarize',
+        arguments: {
+          content,
+          url,
+          focus: options?.focus ?? 'general',
+          save_as_engram: options?.saveAsEngram ?? true,
+        },
+      }),
+    });
+  }
+
+  async getWebResearch(limit?: number, focus?: string): Promise<ArbFarmServiceResponse<WebResearchListResponse>> {
+    return this.request<WebResearchListResponse>('/mcp/call', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'web_research_list',
+        arguments: {
+          limit: limit ?? 20,
+          ...(focus && { focus }),
+        },
+      }),
+    });
+  }
+}
+
+// Web Research Types
+export interface WebSearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+  position: number;
+}
+
+export interface WebSearchResponse {
+  query: string;
+  search_type: string;
+  total_results: number;
+  search_time_ms: number;
+  results: WebSearchResult[];
+}
+
+export interface WebFetchResponse {
+  id: string;
+  url: string;
+  title?: string;
+  author?: string;
+  content_type: string;
+  word_count: number;
+  extracted_tokens: string[];
+  extracted_addresses: string[];
+  content: string;
+  fetched_at: string;
+}
+
+export interface ExtractedStrategyInsight {
+  strategy_name?: string;
+  description: string;
+  entry_criteria: string[];
+  exit_criteria: string[];
+  risk_notes: string[];
+  confidence: number;
+}
+
+export interface WebSummarizeResponse {
+  research_id: string;
+  url: string;
+  source_type: string;
+  analysis_focus: string;
+  summary: string;
+  key_insights: string[];
+  extracted_strategies: ExtractedStrategyInsight[];
+  extracted_tokens: string[];
+  confidence: number;
+  engram_saved: boolean;
+  analyzed_at: string;
+}
+
+export interface WebResearchItem {
+  research_id: string;
+  source_url: string;
+  source_type: string;
+  title?: string;
+  summary: string;
+  analysis_focus: string;
+  confidence: number;
+  insights_count: number;
+  strategies_count: number;
+  tokens: string[];
+  analyzed_at: string;
+}
+
+export interface WebResearchListResponse {
+  wallet: string;
+  total_count: number;
+  research: WebResearchItem[];
 }
 
 export const arbFarmService = new ArbFarmService();
