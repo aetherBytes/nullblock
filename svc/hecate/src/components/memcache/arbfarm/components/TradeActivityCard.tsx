@@ -52,16 +52,10 @@ const TradeActivityCard: React.FC<TradeActivityCardProps> = ({
     const now = new Date();
     const diff = now.getTime() - date.getTime();
 
-    if (diff < 60000) return 'Just now';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    if (diff < 60000) return 'now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
     return date.toLocaleDateString();
-  };
-
-  const getTradeTypeIcon = (trade: LiveTrade): string => {
-    if (trade.venue === 'pump_fun') return '🎰';
-    if (trade.venue === 'moonshot') return '🌙';
-    return '⚡';
   };
 
   const filteredRecentTrades = recentTrades.filter(t =>
@@ -72,136 +66,85 @@ const TradeActivityCard: React.FC<TradeActivityCardProps> = ({
   return (
     <div className={styles.activityCard}>
       <div className={styles.activityCardHeader}>
-        <h3 className={styles.activityCardTitle}>
+        <div className={styles.activityCardTitle}>
+          {liveTrades.length > 0 && <span className={styles.liveIndicator} />}
+          <span>Trades</span>
+        </div>
+        <div className={styles.activityHeaderStats}>
           {liveTrades.length > 0 && (
-            <span className={styles.liveIndicator} />
+            <span className={styles.activityBadge}>{liveTrades.length} active</span>
           )}
-          Trade Activity
-        </h3>
-        {liveTrades.length > 0 && (
-          <span className={styles.activityBadge}>{liveTrades.length} live</span>
-        )}
+          {filteredRecentTrades.length > 0 && (
+            <span className={styles.activityCount}>{filteredRecentTrades.length} closed</span>
+          )}
+        </div>
       </div>
 
       <div className={styles.activityCardContent}>
         {!hasActivity ? (
           <div className={styles.activityEmptyState}>
-            <span className={styles.activityEmptyIcon}>📊</span>
-            <span>No trade activity yet</span>
-            <span className={styles.activityEmptyHint}>Trades will appear here as they execute</span>
+            <span className={styles.activityEmptyText}>No trades yet</span>
           </div>
         ) : (
-          <>
-            {liveTrades.length > 0 && (
-              <div className={styles.activitySection}>
-                <div className={styles.activitySectionHeader}>
-                  <span className={styles.activitySectionLabel}>Live Trades</span>
-                  <span className={styles.activitySectionCount}>{liveTrades.length}</span>
+          <div className={styles.activityList}>
+            {liveTrades.slice(0, 15).map((trade) => (
+              <div
+                key={trade.id}
+                className={`${styles.tradeRow} ${styles.liveRow} ${newTradeIds.has(trade.id) ? styles.newRow : ''}`}
+                onClick={() => onTradeClick?.(trade, true)}
+              >
+                <div className={styles.tradeLeft}>
+                  <span className={styles.tradeSymbol}>
+                    {trade.token_symbol || trade.id.slice(0, 6)}
+                  </span>
+                  <span className={styles.tradeMeta}>
+                    {trade.tx_signature ? (
+                      <a
+                        href={`https://solscan.io/tx/${trade.tx_signature}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className={styles.txLink}
+                      >
+                        {trade.tx_signature.slice(0, 6)}...
+                      </a>
+                    ) : (
+                      'pending'
+                    )}
+                  </span>
                 </div>
-                <div className={`${styles.activityItems} ${styles.activityItemsScrollable}`}>
-                  {liveTrades.slice(0, 20).map((trade) => (
-                    <div
-                      key={trade.id}
-                      className={`${styles.activityItem} ${styles.liveItem} ${newTradeIds.has(trade.id) ? styles.newItem : ''}`}
-                      onClick={() => onTradeClick?.(trade, true)}
-                    >
-                      <div className={styles.activityItemLeft}>
-                        <span className={styles.activityIcon}>{getTradeTypeIcon(trade)}</span>
-                        <div className={styles.activityItemInfo}>
-                          <span className={styles.activityItemTitle}>
-                            {trade.token_symbol || (trade.edge_id ? trade.edge_id.slice(0, 8) : trade.id.slice(0, 8))}
-                          </span>
-                          <span className={styles.activityItemMeta}>
-                            {trade.tx_signature ? (
-                              <a
-                                href={`https://solscan.io/tx/${trade.tx_signature}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className={styles.txLink}
-                              >
-                                {trade.tx_signature.slice(0, 8)}...
-                              </a>
-                            ) : (
-                              'Pending confirmation'
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                      <div className={styles.activityItemRight}>
-                        <span className={styles.activityItemValue}>
-                          {(trade.entry_price ?? 0) > 0 ? `${(trade.entry_price ?? 0).toFixed(4)} SOL` : '--'}
-                        </span>
-                        <span className={styles.activityItemTime}>{formatTime(trade.executed_at)}</span>
-                        {trade.token_mint && onViewPosition && (
-                          <button
-                            className={styles.activityViewBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onViewPosition(trade.token_mint!);
-                            }}
-                            title="View position details"
-                          >
-                            📊
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                <div className={styles.tradeRight}>
+                  <span className={styles.tradeAmount}>
+                    {(trade.entry_price ?? 0) > 0 ? `${(trade.entry_price ?? 0).toFixed(4)}` : '--'}
+                  </span>
+                  <span className={styles.tradeTime}>{formatTime(trade.executed_at)}</span>
                 </div>
               </div>
-            )}
+            ))}
 
-            {filteredRecentTrades.length > 0 && (
-              <div className={styles.activitySection}>
-                <div className={styles.activitySectionHeader}>
-                  <span className={styles.activitySectionLabel}>Completed Trades</span>
-                  <span className={styles.activitySectionCount}>{filteredRecentTrades.length}</span>
+            {filteredRecentTrades.slice(0, 30).map((trade, idx) => (
+              <div
+                key={trade.id || `trade-${idx}`}
+                className={`${styles.tradeRow} ${styles.closedRow}`}
+                onClick={() => onTradeClick?.(trade, false)}
+              >
+                <div className={styles.tradeLeft}>
+                  <span className={styles.tradeSymbol}>{trade.symbol || '???'}</span>
+                  <span className={styles.tradeMeta}>
+                    {trade.exit_type || 'closed'} · {trade.time_ago || '--'}
+                  </span>
                 </div>
-                <div className={`${styles.activityItems} ${styles.activityItemsScrollable}`}>
-                  {filteredRecentTrades.slice(0, 50).map((trade, idx) => (
-                    <div
-                      key={trade.id || `trade-${idx}`}
-                      className={`${styles.activityItem} ${styles.completedItem}`}
-                      onClick={() => onTradeClick?.(trade, false)}
-                    >
-                      <div className={styles.activityItemLeft}>
-                        <span className={`${styles.activityIcon} ${(trade.pnl ?? 0) >= 0 ? styles.profitIcon : styles.lossIcon}`}>
-                          {(trade.pnl ?? 0) >= 0 ? '📈' : '📉'}
-                        </span>
-                        <div className={styles.activityItemInfo}>
-                          <span className={styles.activityItemTitle}>{trade.symbol || 'Unknown'}</span>
-                          <span className={styles.activityItemMeta}>
-                            {trade.exit_type || 'Closed'} • {trade.time_ago || '--'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className={styles.activityItemRight}>
-                        <span className={`${styles.activityItemPnl} ${(trade.pnl ?? 0) >= 0 ? styles.profit : styles.loss}`}>
-                          {(trade.pnl ?? 0) >= 0 ? '+' : ''}{(trade.pnl ?? 0).toFixed(4)} SOL
-                        </span>
-                        <span className={`${styles.activityItemPercent} ${(trade.pnl_percent ?? 0) >= 0 ? styles.profit : styles.loss}`}>
-                          {(trade.pnl_percent ?? 0) >= 0 ? '+' : ''}{(trade.pnl_percent ?? 0).toFixed(1)}%
-                        </span>
-                        {trade.mint && onViewPosition && (
-                          <button
-                            className={styles.activityViewBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onViewPosition(trade.mint!);
-                            }}
-                            title="View token details"
-                          >
-                            📊
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                <div className={styles.tradeRight}>
+                  <span className={`${styles.tradePnl} ${(trade.pnl ?? 0) >= 0 ? styles.profit : styles.loss}`}>
+                    {(trade.pnl ?? 0) >= 0 ? '+' : ''}{(trade.pnl ?? 0).toFixed(4)}
+                  </span>
+                  <span className={`${styles.tradePercent} ${(trade.pnl_percent ?? 0) >= 0 ? styles.profit : styles.loss}`}>
+                    {(trade.pnl_percent ?? 0) >= 0 ? '+' : ''}{(trade.pnl_percent ?? 0).toFixed(1)}%
+                  </span>
                 </div>
               </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
       </div>
     </div>
