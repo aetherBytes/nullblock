@@ -20,6 +20,8 @@ $color-info: #3b82f6;
 $color-info-dim: rgba(59, 130, 246, 0.2);
 $color-purple: #8b5cf6;
 $color-purple-dim: rgba(139, 92, 246, 0.2);
+$color-primary: #00d4ff;
+$color-bg-darker: #050508;
 
 $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
@@ -6704,13 +6706,30 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
 // Position Card
 .curvePositionCard {
-  background: $color-bg-card;
-  border: 1px solid $color-border;
-  border-radius: 8px;
-  padding: 1rem;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 12px;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    background: rgba(30, 41, 59, 0.45);
+  }
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      border-color: rgba(139, 92, 246, 0.5);
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15);
+      transform: translateY(-2px);
+    }
+  }
 }
 
 .positionHeader {
@@ -6963,6 +6982,284 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
 .positionTime {
   color: $color-text-muted;
+}
+
+// ============================================
+// Log-Style Position Cards
+// ============================================
+
+.logPositionCard {
+  background: rgba(10, 10, 15, 0.8);
+  border: 1px solid rgba(42, 42, 58, 0.6);
+  border-left: 3px solid $color-purple;
+  border-radius: 4px;
+  padding: 0.75rem;
+  font-family: $font-mono;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &:hover,
+  &.logCardHovered {
+    background: rgba(18, 18, 26, 0.9);
+    border-color: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.15);
+  }
+}
+
+.logHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.logTimestamp {
+  color: $color-text-dim;
+  font-size: 0.7rem;
+  min-width: 60px;
+}
+
+.logTag {
+  padding: 0.15rem 0.4rem;
+  border-radius: 2px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &.logTagSnipe {
+    background: rgba(239, 68, 68, 0.25);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+  }
+
+  &.logTagScan {
+    background: rgba(59, 130, 246, 0.25);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+  }
+
+  &.logTagDisc {
+    background: rgba(139, 92, 246, 0.25);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.4);
+  }
+}
+
+.logStatus {
+  font-size: 0.75rem;
+  font-weight: bold;
+
+  &.logStatusOpen {
+    color: $color-success;
+  }
+
+  &.logStatusPending {
+    color: $color-warning;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  &.logStatusClosed {
+    color: $color-text-dim;
+  }
+
+  &.logStatusUnknown {
+    color: $color-text-muted;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.logSymbol {
+  color: $color-text;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.logPnl {
+  margin-left: auto;
+  font-weight: 700;
+  font-size: 0.9rem;
+
+  &.logPnlPositive {
+    color: $color-success;
+  }
+
+  &.logPnlNegative {
+    color: $color-danger;
+  }
+}
+
+.logBody {
+  padding-left: 68px;
+}
+
+.logStats {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  color: $color-text-muted;
+  font-size: 0.75rem;
+}
+
+.logStat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.logStatLabel {
+  color: $color-text-dim;
+}
+
+.logStatValue {
+  color: $color-text;
+
+  &.logValueUp {
+    color: $color-success;
+  }
+
+  &.logValueDown {
+    color: $color-danger;
+  }
+}
+
+.logStatSep {
+  color: $color-text-dim;
+  margin: 0 0.1rem;
+}
+
+.logStatDivider {
+  color: rgba(42, 42, 58, 0.8);
+  margin: 0 0.2rem;
+}
+
+.logReason {
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  color: $color-text-dim;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.logConfig {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-left: 68px;
+  flex-wrap: wrap;
+}
+
+.logConfigItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: rgba(42, 42, 58, 0.4);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+}
+
+.logConfigLabel {
+  color: $color-text-dim;
+  font-weight: 500;
+}
+
+.logConfigValue {
+  color: $color-text;
+}
+
+.logMint {
+  margin-left: auto;
+  color: $color-text-dim;
+  font-size: 0.65rem;
+  opacity: 0.7;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 1;
+    color: $color-text-muted;
+  }
+}
+
+.logActions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-left: 68px;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(42, 42, 58, 0.5);
+  margin-top: 0.25rem;
+}
+
+.logActionBtn {
+  padding: 0.3rem 0.6rem;
+  background: rgba(42, 42, 58, 0.6);
+  border: 1px solid $color-border;
+  border-radius: 3px;
+  color: $color-text-muted;
+  font-family: $font-mono;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: $color-info;
+    color: $color-info;
+  }
+
+  &.logActionDanger {
+    &:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: $color-danger;
+      color: $color-danger;
+    }
+  }
+}
+
+.logActionBtnSecondary {
+  padding: 0.3rem 0.5rem;
+  background: transparent;
+  border: 1px solid rgba(42, 42, 58, 0.6);
+  border-radius: 3px;
+  color: $color-text-dim;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: $color-text-muted;
+    color: $color-text-muted;
+  }
+}
+
+.logSelling {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: $color-warning;
+  font-size: 0.75rem;
+  font-family: $font-mono;
+}
+
+.logSpinner {
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 // View Headers
@@ -11613,6 +11910,374 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 }
 
 // ============================================
+// Scanner Signals Panel
+// ============================================
+
+.signalsStream {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.signalItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(18, 18, 26, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(26, 26, 38, 0.8);
+  }
+}
+
+.signalIcon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.signalContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.signalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.signalType {
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: $color-text;
+  text-transform: capitalize;
+}
+
+.signalTime {
+  font-size: 0.7rem;
+  color: $color-text-muted;
+}
+
+.signalDetails {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.signalMint {
+  font-family: $font-mono;
+  font-size: 0.7rem;
+  color: $color-text-dim;
+}
+
+.signalConfidence {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-weight: 500;
+
+  &.sigCritical {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+  }
+
+  &.sigHigh {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+  }
+
+  &.sigMedium {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+
+  &.sigLow {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+  }
+}
+
+.signalProfit {
+  font-size: 0.7rem;
+  color: $color-success;
+  font-weight: 600;
+}
+
+.badgeActive {
+  background: rgba(34, 197, 94, 0.15);
+  color: $color-success;
+}
+
+.badgeInactive {
+  background: rgba(107, 114, 128, 0.15);
+  color: $color-text-muted;
+}
+
+// ============================================
+// Behavioral Strategies Panel
+// ============================================
+
+.scannerControl {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(26, 26, 36, 0.5);
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  border: 1px solid $color-border;
+}
+
+.scannerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.statusActive {
+  color: $color-success;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.statusInactive {
+  color: $color-danger;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.scannerStats {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+  font-family: $font-mono;
+}
+
+.warningBanner {
+  padding: 0.75rem 1rem;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  color: $color-warning;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.errorBanner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: $color-danger;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.dismissBtn {
+  background: transparent;
+  border: none;
+  color: $color-danger;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0;
+  line-height: 1;
+}
+
+.bulkActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.strategyList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.strategyItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: $color-bg-card;
+  border-radius: 8px;
+  border: 1px solid $color-border;
+  transition: all 0.2s ease;
+
+  &.active {
+    border-color: rgba(34, 197, 94, 0.3);
+    background: rgba(34, 197, 94, 0.05);
+  }
+
+  &.inactive {
+    opacity: 0.7;
+  }
+}
+
+.strategyInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.strategyIcon {
+  font-size: 1.25rem;
+}
+
+.strategyDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.strategyName {
+  font-weight: 500;
+  color: $color-text;
+  font-size: 0.9rem;
+}
+
+.strategyMeta {
+  font-size: 0.75rem;
+  color: $color-text-muted;
+}
+
+.strategyActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.statusBadgeActive {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  background: rgba(34, 197, 94, 0.15);
+  color: $color-success;
+}
+
+.statusBadgeInactive {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  background: rgba(107, 114, 128, 0.15);
+  color: $color-text-muted;
+}
+
+.btnSuccess {
+  padding: 0.375rem 0.75rem;
+  background: $color-success;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: darken($color-success, 8%);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btnDanger {
+  padding: 0.375rem 0.75rem;
+  background: $color-danger;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: darken($color-danger, 8%);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btnSecondary {
+  padding: 0.375rem 0.75rem;
+  background: transparent;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: $color-bg-card;
+    color: $color-text;
+    border-color: $color-text-muted;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.infoBox {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: $color-text-muted;
+
+  strong {
+    color: $color-info;
+  }
+
+  ul {
+    margin: 0.5rem 0;
+    padding-left: 1.25rem;
+  }
+
+  li {
+    margin: 0.25rem 0;
+  }
+
+  p {
+    margin: 0.5rem 0 0;
+    font-style: italic;
+  }
+}
+
+.emptyState {
+  padding: 2rem;
+  text-align: center;
+  color: $color-text-muted;
+  font-size: 0.9rem;
+}
+
+// ============================================
 // Activity Detail Modal
 // ============================================
 
@@ -12887,5 +13552,733 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 
   &:hover:not(:disabled) {
     background: rgba($color-danger, 0.15);
+  }
+}
+
+// Web Research Panel
+.webResearchPanel {
+  padding: 1rem;
+
+  .researchSection {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: rgba($color-bg-elevated, 0.5);
+    border-radius: 8px;
+    border: 1px solid $color-border;
+
+    h4 {
+      margin: 0 0 1rem 0;
+      font-size: 0.95rem;
+      color: $color-text;
+      font-weight: 600;
+    }
+  }
+
+  .searchForm {
+    .searchRow {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .searchInput {
+      flex: 1;
+      min-width: 200px;
+      padding: 0.6rem 0.9rem;
+      background: rgba($color-bg-card, 0.6);
+      border: 1px solid $color-border;
+      border-radius: 6px;
+      color: $color-text;
+      font-size: 0.85rem;
+
+      &::placeholder {
+        color: $color-text-dim;
+      }
+
+      &:focus {
+        outline: none;
+        border-color: $color-info;
+      }
+    }
+
+    .typeSelect {
+      padding: 0.6rem 0.9rem;
+      background: rgba($color-bg-card, 0.6);
+      border: 1px solid $color-border;
+      border-radius: 6px;
+      color: $color-text;
+      font-size: 0.85rem;
+      cursor: pointer;
+
+      &:focus {
+        outline: none;
+        border-color: $color-info;
+      }
+    }
+
+    .searchButton {
+      padding: 0.6rem 1.25rem;
+      background: $color-info;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover:not(:disabled) {
+        background: lighten($color-info, 8%);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  .searchResults {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .searchResultCard {
+    padding: 1rem;
+    background: rgba($color-bg-card, 0.5);
+    border-radius: 6px;
+    border: 1px solid $color-border;
+
+    .resultTitle {
+      font-size: 0.95rem;
+      color: $color-text;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .resultUrl {
+      font-size: 0.75rem;
+      color: $color-text-dim;
+      margin-bottom: 0.5rem;
+    }
+
+    .resultSnippet {
+      font-size: 0.85rem;
+      color: $color-text-muted;
+      line-height: 1.5;
+      margin-bottom: 0.75rem;
+    }
+
+    .analyzeButton {
+      padding: 0.5rem 1rem;
+      background: transparent;
+      border: 1px solid $color-info;
+      border-radius: 6px;
+      color: $color-info;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover:not(:disabled) {
+        background: $color-info-dim;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  .analysisResultCard {
+    padding: 1.25rem;
+    background: rgba($color-bg-card, 0.5);
+    border-radius: 8px;
+    border: 1px solid $color-border;
+
+    .analysisHeader {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .focusBadge {
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: white;
+    }
+
+    .confidence {
+      font-size: 0.8rem;
+      color: $color-text-muted;
+    }
+
+    .savedBadge {
+      padding: 0.2rem 0.5rem;
+      background: $color-success-dim;
+      color: $color-success;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+
+    .summarySection,
+    .insightsSection,
+    .tokensSection,
+    .strategiesSection {
+      margin-bottom: 1rem;
+
+      h5 {
+        font-size: 0.85rem;
+        color: $color-text;
+        font-weight: 600;
+        margin: 0 0 0.5rem 0;
+      }
+
+      p {
+        font-size: 0.85rem;
+        color: $color-text-muted;
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 1.25rem;
+
+        li {
+          font-size: 0.85rem;
+          color: $color-text-muted;
+          margin-bottom: 0.25rem;
+        }
+      }
+    }
+
+    .tokensList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .tokenBadge {
+      padding: 0.2rem 0.5rem;
+      background: $color-info-dim;
+      color: $color-info;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+  }
+
+  .savedResearchList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .savedResearchCard {
+    padding: 1rem;
+    background: rgba($color-bg-card, 0.4);
+    border-radius: 6px;
+    border: 1px solid $color-border;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba($color-bg-card, 0.6);
+      border-color: $color-border-active;
+    }
+
+    .savedHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .savedTitle {
+      font-size: 0.9rem;
+      color: $color-text;
+      font-weight: 500;
+      margin-bottom: 0.35rem;
+    }
+
+    .savedSummary {
+      font-size: 0.8rem;
+      color: $color-text-muted;
+      line-height: 1.5;
+      margin-bottom: 0.5rem;
+    }
+
+    .savedMeta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.75rem;
+      color: $color-text-dim;
+      margin-bottom: 0.5rem;
+    }
+
+    .savedTokens {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+  }
+
+  .emptyState {
+    text-align: center;
+    padding: 2rem;
+    color: $color-text-muted;
+    font-size: 0.9rem;
+  }
+
+  .errorMessage {
+    padding: 0.75rem 1rem;
+    background: $color-danger-dim;
+    border: 1px solid rgba($color-danger, 0.3);
+    border-radius: 6px;
+    color: $color-danger;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+}
+
+// ============================================================================
+// Position Detail Modal - Split Panel Layout
+// ============================================================================
+
+.positionModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10100;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.positionModalContent {
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  width: 95vw;
+  max-width: 1400px;
+  height: 85vh;
+  max-height: 900px;
+  overflow: hidden;
+  position: relative;
+  animation: scaleIn 0.2s ease-out;
+}
+
+.positionModalLayout {
+  display: flex;
+  height: 100%;
+}
+
+// Left Panel - Position Details
+.positionDetailsPanel {
+  width: 380px;
+  min-width: 380px;
+  height: 100%;
+  overflow-y: auto;
+  padding: 1.25rem;
+  border-right: 1px solid $color-border;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.positionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-right: 2rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    color: $color-text;
+  }
+}
+
+.headerBadges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.pnlBadgeLarge {
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.positionMetricsCompact {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.metricRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba($color-border, 0.5);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .metricLabel {
+    font-size: 0.8rem;
+    color: $color-text-muted;
+  }
+
+  .metricValue {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: $color-text;
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+.exitConfigCompact {
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.exitHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+
+  .exitLabel {
+    font-size: 0.8rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+  }
+}
+
+.editExitButtonSmall {
+  background: transparent;
+  border: 1px solid $color-border;
+  color: $color-text-muted;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color-primary;
+    color: $color-primary;
+  }
+}
+
+.exitBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.exitBadgeSL {
+  background: rgba($color-danger, 0.15);
+  color: $color-danger;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.exitBadgeTP {
+  background: rgba($color-success, 0.15);
+  color: $color-success;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.exitBadgeTS {
+  background: rgba($color-warning, 0.15);
+  color: $color-warning;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.exitBadgeTL {
+  background: rgba($color-info, 0.15);
+  color: $color-info;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.saveButtonSmall {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: $color-primary;
+  border: none;
+  border-radius: 6px;
+  color: #000;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:hover {
+    background: darken($color-primary, 5%);
+  }
+}
+
+.marketMetricsCompact {
+  h4 {
+    font-size: 0.8rem;
+    color: $color-text-muted;
+    text-transform: uppercase;
+    margin: 0 0 0.5rem 0;
+  }
+}
+
+.metricsGridCompact {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+
+  .metricItem {
+    background: $color-bg-card;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    padding: 0.5rem;
+    text-align: center;
+
+    .metricLabel {
+      font-size: 0.65rem;
+      color: $color-text-muted;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    .metricValue {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: $color-text;
+    }
+  }
+}
+
+.addressCompact {
+  position: relative;
+}
+
+.mintAddressSmall {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  color: $color-text-muted;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color-primary;
+    color: $color-text;
+  }
+}
+
+.copiedBadge {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: $color-success;
+  color: #000;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.linksCompact {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.linkButtonSmall {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-bg-card;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  text-decoration: none;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: $color-primary;
+    transform: translateY(-2px);
+  }
+}
+
+.sellActionsCompact {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+.sellButton25,
+.sellButton50,
+.sellButton75 {
+  padding: 0.6rem 0.25rem;
+  background: rgba($color-warning, 0.15);
+  border: 1px solid rgba($color-warning, 0.3);
+  border-radius: 6px;
+  color: $color-warning;
+  font-weight: 600;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba($color-warning, 0.25);
+    border-color: $color-warning;
+  }
+}
+
+.sellButtonAll {
+  padding: 0.6rem 0.25rem;
+  background: rgba($color-danger, 0.15);
+  border: 1px solid rgba($color-danger, 0.3);
+  border-radius: 6px;
+  color: $color-danger;
+  font-weight: 700;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba($color-danger, 0.3);
+    border-color: $color-danger;
+  }
+}
+
+// Right Panel - Chart
+.positionChartPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: $color-bg-darker;
+}
+
+.chartProviderTabs {
+  display: flex;
+  gap: 0;
+  padding: 0.5rem;
+  background: $color-bg;
+  border-bottom: 1px solid $color-border;
+}
+
+.chartTab {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  color: $color-text-muted;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    color: $color-text;
+    background: $color-bg-card;
+  }
+}
+
+.chartTabActive {
+  background: $color-bg-card;
+  border-color: $color-border;
+  color: $color-primary;
+  font-weight: 600;
+}
+
+.chartContainer {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.chartIframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: $color-bg-darker;
+}
+
+// Responsive adjustments
+@media (max-width: 1200px) {
+  .positionModalContent {
+    width: 98vw;
+    height: 90vh;
+  }
+
+  .positionDetailsPanel {
+    width: 340px;
+    min-width: 340px;
+  }
+}
+
+@media (max-width: 900px) {
+  .positionModalLayout {
+    flex-direction: column;
+  }
+
+  .positionDetailsPanel {
+    width: 100%;
+    min-width: unset;
+    height: auto;
+    max-height: 50vh;
+    border-right: none;
+    border-bottom: 1px solid $color-border;
+  }
+
+  .positionChartPanel {
+    flex: 1;
+    min-height: 300px;
   }
 }
