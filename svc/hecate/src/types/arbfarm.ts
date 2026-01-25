@@ -205,6 +205,23 @@ export interface Signal {
 }
 
 // ============================================================================
+// Behavioral Strategy Types (Scanner-driven strategies)
+// ============================================================================
+
+export interface BehavioralStrategy {
+  name: string;
+  strategy_type: string;
+  is_active: boolean;
+  supported_venues: string[];
+}
+
+export interface BehavioralStrategiesResponse {
+  strategies: BehavioralStrategy[];
+  total: number;
+  active_count: number;
+}
+
+// ============================================================================
 // Swarm Health Types
 // ============================================================================
 
@@ -1637,6 +1654,7 @@ export interface OpenPosition {
   edge_id?: string;
   token_mint?: string;
   token_symbol?: string;
+  token_image_uri?: string;
   venue?: string;
   signal_source?: string;
   strategy_id?: string;
