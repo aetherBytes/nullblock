@@ -5024,15 +5024,15 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     );
   };
 
-  const NAV_ITEMS: Array<{ id: ArbFarmView; icon: string; label: string; section?: string }> = [
-    { id: 'dashboard', icon: '📊', label: 'Dashboard', section: 'Main' },
-    { id: 'curves', icon: '📈', label: 'Curve Bonding', section: 'Main' },
-    { id: 'strategies', icon: '🎯', label: 'Strategies', section: 'Trading' },
-    { id: 'kol-tracker', icon: '👥', label: 'KOL Tracker', section: 'Trading' },
-    { id: 'analysis', icon: '🔍', label: 'Analysis', section: 'Learning' },
-    { id: 'recommendations', icon: '💡', label: 'Recommendations', section: 'Learning' },
-    { id: 'engrams', icon: '🧠', label: 'Engrams', section: 'Learning' },
-    { id: 'settings', icon: '⚙️', label: 'Settings', section: 'System' },
+  const NAV_ITEMS: Array<{ id: ArbFarmView; label: string; section?: string }> = [
+    { id: 'dashboard', label: 'Dashboard', section: 'Main' },
+    { id: 'curves', label: 'Curve Bonding', section: 'Main' },
+    { id: 'strategies', label: 'Strategies', section: 'Trading' },
+    { id: 'kol-tracker', label: 'KOL Tracker', section: 'Trading' },
+    { id: 'analysis', label: 'Analysis', section: 'Learning' },
+    { id: 'recommendations', label: 'Recommendations', section: 'Learning' },
+    { id: 'engrams', label: 'Engrams', section: 'Learning' },
+    { id: 'settings', label: 'Settings', section: 'System' },
   ];
 
   const renderSidebar = () => {
@@ -5054,7 +5054,6 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
                 className={`${styles.arbfarmNavButton} ${activeView === item.id ? styles.active : ''}`}
                 onClick={() => onViewChange(item.id)}
               >
-                <span className={styles.arbfarmNavIcon}>{item.icon}</span>
                 <span className={styles.arbfarmNavLabel}>{item.label}</span>
               </button>
             ))}
@@ -5089,7 +5088,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
           className={`${styles.arbfarmMobileButton} ${activeView === item.id ? styles.active : ''}`}
           onClick={() => onViewChange(item.id)}
         >
-          {item.icon} {item.label}
+          {item.label}
         </button>
       ))}
     </div>

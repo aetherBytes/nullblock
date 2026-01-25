@@ -9388,6 +9388,231 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
 // Home Tab Styles
 // ============================================
 
+.topRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.controlPanelCard {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 12px;
+  padding: 1.25rem;
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.controlPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.userSection {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.userAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 2px solid rgba(139, 92, 246, 0.4);
+}
+
+.avatarImg {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.userName {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.userWallet {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.8);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.userBadge {
+  font-size: 0.65rem;
+  padding: 0.25rem 0.5rem;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(168, 85, 247, 0.3));
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 4px;
+  color: #c4b5fd;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.controlPanelStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 8px;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.statValue {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: $color-text;
+
+  &.profit {
+    color: $color-success;
+  }
+
+  &.loss {
+    color: $color-danger;
+  }
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.controlPanelQuickStats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 8px;
+}
+
+.quickStatRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quickStatLabel {
+  font-size: 0.8rem;
+  color: rgba(148, 163, 184, 0.8);
+}
+
+.quickStatValue {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: $color-text;
+  font-family: 'JetBrains Mono', monospace;
+
+  &.running {
+    color: $color-success;
+  }
+
+  &.stopped {
+    color: rgba(148, 163, 184, 0.6);
+  }
+}
+
+.controlPanelActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.controlButton {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.5);
+  color: $color-text;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(100, 116, 139, 0.5);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.primary {
+    background: rgba(139, 92, 246, 0.3);
+    border-color: rgba(139, 92, 246, 0.5);
+
+    &:hover:not(:disabled) {
+      background: rgba(139, 92, 246, 0.5);
+    }
+  }
+
+  &.danger {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+
+    &:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.35);
+    }
+  }
+}
+
+.positionsSection {
+  margin-bottom: 1.25rem;
+  padding: 1.25rem;
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+
+  .sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    h3 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: $color-text;
+    }
+  }
+}
+
 .positionsHeader {
   margin-bottom: 1.5rem;
   padding: 1.25rem;

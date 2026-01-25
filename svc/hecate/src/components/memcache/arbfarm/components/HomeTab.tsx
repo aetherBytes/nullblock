@@ -197,26 +197,114 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
 
   return (
     <div className={styles.dashboardView}>
-      {/* Active Positions - Always at top */}
-      <div className={styles.positionsHeader}>
-        <div className={styles.sectionHeader}>
-          <h3>📊 Active Positions ({realPositions.length})</h3>
-          <div className={styles.positionsActions}>
+      {/* Row 1: Control Panel + Trade Activity */}
+      <div className={styles.topRow}>
+        {/* Control Panel Card */}
+        <div className={styles.controlPanelCard}>
+          <div className={styles.controlPanelHeader}>
+            <div className={styles.userSection}>
+              <div className={styles.userAvatar}>
+                <img src="/nb-logo.svg" alt="User" className={styles.avatarImg} />
+              </div>
+              <div className={styles.userInfo}>
+                <span className={styles.userName}>Operator</span>
+                <span className={styles.userWallet}>
+                  {walletBalance?.wallet_address
+                    ? `${walletBalance.wallet_address.slice(0, 4)}...${walletBalance.wallet_address.slice(-4)}`
+                    : 'Not connected'}
+                </span>
+              </div>
+              <span className={styles.userBadge}>Early Adopter</span>
+            </div>
+          </div>
+
+          <div className={styles.controlPanelStats}>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>{realPositions.length}</span>
+              <span className={styles.statLabel}>Active</span>
+            </div>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>{pnlSummary?.total_trades ?? 0}</span>
+              <span className={styles.statLabel}>Trades</span>
+            </div>
+            <div className={styles.statItem}>
+              <span className={`${styles.statValue} ${(pnlSummary?.win_rate ?? 0) >= 50 ? styles.profit : styles.loss}`}>
+                {(pnlSummary?.win_rate ?? 0).toFixed(0)}%
+              </span>
+              <span className={styles.statLabel}>Win Rate</span>
+            </div>
+            <div className={styles.statItem}>
+              <span className={`${styles.statValue} ${(pnlSummary?.total_sol ?? 0) >= 0 ? styles.profit : styles.loss}`}>
+                {(pnlSummary?.total_sol ?? 0) >= 0 ? '+' : ''}{(pnlSummary?.total_sol ?? 0).toFixed(3)}
+              </span>
+              <span className={styles.statLabel}>Total PnL</span>
+            </div>
+          </div>
+
+          <div className={styles.controlPanelQuickStats}>
+            <div className={styles.quickStatRow}>
+              <span className={styles.quickStatLabel}>Balance</span>
+              <span className={styles.quickStatValue}>{(walletBalance?.balance_sol ?? 0).toFixed(4)} SOL</span>
+            </div>
+            <div className={styles.quickStatRow}>
+              <span className={styles.quickStatLabel}>Exposure</span>
+              <span className={styles.quickStatValue}>{(exposure?.total_exposure_sol ?? 0).toFixed(4)} SOL</span>
+            </div>
+            <div className={styles.quickStatRow}>
+              <span className={styles.quickStatLabel}>Monitor</span>
+              <span className={`${styles.quickStatValue} ${monitorStatus?.monitoring_active ? styles.running : styles.stopped}`}>
+                {monitorStatus?.monitoring_active ? 'Running' : 'Stopped'}
+              </span>
+            </div>
+          </div>
+
+          <div className={styles.controlPanelActions}>
             <button
-              className={styles.actionButton}
+              className={`${styles.controlButton} ${styles.primary}`}
+              onClick={handleToggleMonitor}
+            >
+              {monitorStatus?.monitoring_active ? 'Pause Monitor' : 'Start Monitor'}
+            </button>
+            <button
+              className={styles.controlButton}
               onClick={handleReconcile}
               disabled={reconciling}
             >
               {reconciling ? 'Syncing...' : 'Sync Wallet'}
             </button>
             <button
-              className={`${styles.actionButton} ${styles.danger}`}
+              className={`${styles.controlButton} ${styles.danger}`}
               onClick={handleSellAll}
               disabled={sellingAll || realPositions.length === 0}
             >
               {sellingAll ? 'Selling...' : 'Sell All'}
             </button>
           </div>
+        </div>
+
+        {/* Trade Activity Card */}
+        <TradeActivityCard
+          liveTrades={liveTrades}
+          recentTrades={pnlSummary?.recent_trades}
+          onTradeClick={(trade, isLive) => {
+            setSelectedDetailItem(trade);
+            setSelectedDetailType(isLive ? 'live_trade' : 'completed_trade');
+          }}
+          onViewPosition={(tokenMint) => {
+            const position = realPositions.find(p => p.token_mint === tokenMint);
+            if (position) {
+              setSelectedPosition(position);
+            } else {
+              setSelectedMetricsToken({ mint: tokenMint, venue: 'pump_fun', symbol: tokenMint.slice(0, 6) });
+            }
+          }}
+        />
+      </div>
+
+      {/* Row 2: Active Positions */}
+      <div className={styles.positionsSection}>
+        <div className={styles.sectionHeader}>
+          <h3>Open Positions ({realPositions.length})</h3>
         </div>
         {realPositions.length === 0 ? (
           <div className={styles.emptyState}>No open positions</div>
@@ -236,27 +324,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
         )}
       </div>
 
-      {/* Activity Cards */}
-      <div className={styles.activityRow}>
-        <TradeActivityCard
-          liveTrades={liveTrades}
-          recentTrades={pnlSummary?.recent_trades}
-          onTradeClick={(trade, isLive) => {
-            setSelectedDetailItem(trade);
-            setSelectedDetailType(isLive ? 'live_trade' : 'completed_trade');
-          }}
-          onViewPosition={(tokenMint) => {
-            const position = realPositions.find(p => p.token_mint === tokenMint);
-            if (position) {
-              setSelectedPosition(position);
-            } else {
-              setSelectedMetricsToken({ mint: tokenMint, venue: 'pump_fun', symbol: tokenMint.slice(0, 6) });
-            }
-          }}
-        />
-      </div>
-
-      {/* Status Cards Row - Full width centered */}
+      {/* Row 3: Additional Stats */}
       <div className={styles.statusCardsRow}>
         {/* Wallet Balance Card */}
         <div className={styles.statusCard}>
