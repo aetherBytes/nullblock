@@ -3,11 +3,10 @@ import styles from '../arbfarm.module.scss';
 import { arbFarmService } from '../../../../common/services/arbfarm-service';
 import DashboardPositionCard from './DashboardPositionCard';
 import TradeActivityCard from './TradeActivityCard';
-import RecentActivityCard from './RecentActivityCard';
+import BehavioralStrategiesPanel from './behavioral-strategies-panel';
 import ActivityDetailModal from './ActivityDetailModal';
 import PositionDetailModal from './PositionDetailModal';
 import CurveMetricsPanel from './CurveMetricsPanel';
-import type { ActivityEvent } from './RecentActivityCard';
 import type {
   PnLSummary,
   OpenPosition,
@@ -30,21 +29,12 @@ interface LiveTrade {
 }
 
 interface HomeTabProps {
-  positions: Array<{
-    id: string;
-    token_mint: string;
-    token_symbol?: string;
-    entry_sol_amount: number;
-    unrealized_pnl?: number;
-    status: string;
-  }>;
-  recentEvents: ActivityEvent[];
   liveTrades?: LiveTrade[];
 }
 
-type DetailItemType = 'live_trade' | 'completed_trade' | 'event' | null;
+type DetailItemType = 'live_trade' | 'completed_trade' | null;
 
-const HomeTab: React.FC<HomeTabProps> = ({ recentEvents, liveTrades }) => {
+const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
   const [pnlSummary, setPnlSummary] = useState<PnLSummary | null>(null);
   const [realPositions, setRealPositions] = useState<OpenPosition[]>([]);
   const [positionStats, setPositionStats] = useState<PositionStats | null>(null);
@@ -54,7 +44,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents, liveTrades }) => {
   const [loading, setLoading] = useState(true);
   const [closingPosition, setClosingPosition] = useState<string | null>(null);
   const [editingExitConfig, setEditingExitConfig] = useState<string | null>(null);
-  const [selectedDetailItem, setSelectedDetailItem] = useState<LiveTrade | RecentTradeInfo | ActivityEvent | null>(null);
+  const [selectedDetailItem, setSelectedDetailItem] = useState<LiveTrade | RecentTradeInfo | null>(null);
   const [selectedDetailType, setSelectedDetailType] = useState<DetailItemType>(null);
   const [selectedPosition, setSelectedPosition] = useState<OpenPosition | null>(null);
   const [exitConfigForm, setExitConfigForm] = useState({
@@ -64,7 +54,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents, liveTrades }) => {
   });
   const [sellingAll, setSellingAll] = useState(false);
   const [reconciling, setReconciling] = useState(false);
-  const [lastPositionRefresh, setLastPositionRefresh] = useState<number>(0);
   const [selectedMetricsToken, setSelectedMetricsToken] = useState<{
     mint: string;
     venue: string;
@@ -111,30 +100,20 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents, liveTrades }) => {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  useEffect(() => {
-    const positionEvents = recentEvents.filter(e =>
-      e.event_type.includes('position') ||
-      e.event_type.includes('edge_executed') ||
-      e.event_type.includes('auto_execution')
-    );
-    if (positionEvents.length > 0) {
-      const latestEventTime = Math.max(...positionEvents.map(e => new Date(e.timestamp).getTime()));
-      if (latestEventTime > lastPositionRefresh) {
-        setLastPositionRefresh(latestEventTime);
-        fetchData();
-      }
-    }
-  }, [recentEvents, fetchData, lastPositionRefresh]);
 
-  const handleClosePosition = async (positionId: string, exitPercent: number = 100) => {
+  const handleClosePosition = async (positionId: string, exitPercent: number = 100): Promise<boolean> => {
     setClosingPosition(positionId);
     try {
       const res = await arbFarmService.closePosition(positionId, exitPercent);
       if (res.success) {
         await fetchData();
+        return true;
       }
+      console.error('Sell failed:', res.error);
+      return false;
     } catch (error) {
       console.error('Failed to close position:', error);
+      return false;
     } finally {
       setClosingPosition(null);
     }
@@ -204,28 +183,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents, liveTrades }) => {
     return `${formatted} SOL`;
   };
 
-  const formatTime = (timestamp: string): string => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const getEventDescription = (event: { event_type: string; payload?: Record<string, unknown> }): string => {
-    const eventType = event.event_type.replace(/_/g, ' ');
-    const mint = (event.payload?.mint as string)?.slice(0, 8) || '';
-    const action = event.payload?.action as string || '';
-
-    if (mint) {
-      return `${eventType} - ${mint}...`;
-    }
-    if (action) {
-      return `${eventType} - ${action}`;
-    }
-    return eventType;
-  };
-
   if (loading) {
     return (
       <div className={styles.dashboardView}>
@@ -270,9 +227,10 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents, liveTrades }) => {
               <DashboardPositionCard
                 key={position.id}
                 position={position}
-                onQuickSell={(positionId, percent) => handleClosePosition(positionId, percent)}
+                onQuickSell={handleClosePosition}
                 onViewDetails={(pos) => setSelectedPosition(pos)}
                 onViewMetrics={(mint, venue, symbol) => setSelectedMetricsToken({ mint, venue, symbol })}
+                isSelling={closingPosition === position.id}
               />
             ))}
           </div>
@@ -288,14 +246,16 @@ const HomeTab: React.FC<HomeTabProps> = ({ recentEvents, liveTrades }) => {
             setSelectedDetailItem(trade);
             setSelectedDetailType(isLive ? 'live_trade' : 'completed_trade');
           }}
-        />
-        <RecentActivityCard
-          events={recentEvents}
-          onEventClick={(event) => {
-            setSelectedDetailItem(event);
-            setSelectedDetailType('event');
+          onViewPosition={(tokenMint) => {
+            const position = realPositions.find(p => p.token_mint === tokenMint);
+            if (position) {
+              setSelectedPosition(position);
+            } else {
+              setSelectedMetricsToken({ mint: tokenMint, venue: 'pump_fun', symbol: tokenMint.slice(0, 6) });
+            }
           }}
         />
+        <BehavioralStrategiesPanel compact />
       </div>
 
       {/* Status Cards Row - Full width centered */}
