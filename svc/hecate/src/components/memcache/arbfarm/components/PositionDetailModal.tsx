@@ -30,6 +30,7 @@ const PositionDetailModal: React.FC<PositionDetailModalProps> = ({
   const [metrics, setMetrics] = useState<DetailedCurveMetrics | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(true);
   const [chartProvider, setChartProvider] = useState<ChartProvider>('birdeye');
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -141,11 +142,18 @@ const PositionDetailModal: React.FC<PositionDetailModalProps> = ({
     }
   };
 
-  const getVenueIcon = (venue: string | undefined): string => {
-    if (venue === 'pump_fun') return '🎰';
-    if (venue === 'moonshot') return '🌙';
-    return '📈';
+  const getTokenImageUrl = (): string => {
+    if (position.token_image_uri) {
+      return position.token_image_uri;
+    }
+    const mint = position.token_mint ?? '';
+    if (position.venue === 'pump_fun' && mint) {
+      return `https://pump.fun/coin/${mint}/image/256x256`;
+    }
+    return '/nb-logo.svg';
   };
+
+  const NB_LOGO_FALLBACK = '/nb-logo.svg';
 
   const isSnipe = position.signal_source === 'graduation_sniper';
 
@@ -173,9 +181,12 @@ const PositionDetailModal: React.FC<PositionDetailModalProps> = ({
             {/* Header */}
             <div className={styles.positionHeader}>
               <div className={styles.tokenIdentity}>
-                <span className={styles.venueIconLarge}>
-                  {getVenueIcon(position.venue)}
-                </span>
+                <img
+                  src={imageError ? NB_LOGO_FALLBACK : getTokenImageUrl()}
+                  alt={symbol}
+                  className={styles.tokenImage}
+                  onError={() => setImageError(true)}
+                />
                 <div>
                   <h2>{isSnipe && '🔫 '}${symbol}</h2>
                   <span className={styles.tokenFullName}>
@@ -355,8 +366,13 @@ const PositionDetailModal: React.FC<PositionDetailModalProps> = ({
 
             {/* Quick Links */}
             <div className={styles.linksCompact}>
-              <a href={getVenueUrl()} target="_blank" rel="noopener noreferrer" className={styles.linkButtonSmall}>
-                {position.venue === 'pump_fun' ? '🎰' : position.venue === 'moonshot' ? '🌙' : '📈'}
+              <a href={getVenueUrl()} target="_blank" rel="noopener noreferrer" className={styles.linkButtonSmall} title={position.venue === 'pump_fun' ? 'pump.fun' : position.venue === 'moonshot' ? 'Moonshot' : 'Trade'}>
+                <img
+                  src={imageError ? NB_LOGO_FALLBACK : getTokenImageUrl()}
+                  alt=""
+                  className={styles.linkButtonImage}
+                  onError={() => setImageError(true)}
+                />
               </a>
               <a href={`https://solscan.io/token/${position.token_mint}`} target="_blank" rel="noopener noreferrer" className={styles.linkButtonSmall}>
                 🔍

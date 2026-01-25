@@ -8641,6 +8641,22 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   font-size: 2.5rem;
 }
 
+.tokenImage {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: $color-bg-card;
+  border: 2px solid $color-border;
+}
+
+.linkButtonImage {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .tokenFullName {
   font-size: 0.9rem;
   color: $color-text-muted;
