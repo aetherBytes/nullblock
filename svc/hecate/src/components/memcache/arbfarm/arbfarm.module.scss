@@ -11717,6 +11717,46 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   gap: 0.5rem;
 }
 
+.activityItemsScrollable {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.4);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(100, 116, 139, 0.6);
+    }
+  }
+}
+
+.activityViewBtn {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: 0.5rem;
+
+  &:hover {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: rgba(0, 212, 255, 0.5);
+  }
+}
+
 .activityItem {
   display: flex;
   justify-content: space-between;

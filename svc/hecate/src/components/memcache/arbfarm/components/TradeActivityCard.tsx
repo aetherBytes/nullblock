@@ -17,12 +17,14 @@ interface TradeActivityCardProps {
   liveTrades?: LiveTrade[];
   recentTrades?: RecentTradeInfo[];
   onTradeClick?: (trade: LiveTrade | RecentTradeInfo, isLive: boolean) => void;
+  onViewPosition?: (tokenMint: string) => void;
 }
 
 const TradeActivityCard: React.FC<TradeActivityCardProps> = ({
   liveTrades = [],
   recentTrades = [],
   onTradeClick,
+  onViewPosition,
 }) => {
   const [newTradeIds, setNewTradeIds] = useState<Set<string>>(new Set());
   const prevTradesRef = useRef<string[]>([]);
@@ -96,8 +98,8 @@ const TradeActivityCard: React.FC<TradeActivityCardProps> = ({
                   <span className={styles.activitySectionLabel}>Live Trades</span>
                   <span className={styles.activitySectionCount}>{liveTrades.length}</span>
                 </div>
-                <div className={styles.activityItems}>
-                  {liveTrades.slice(0, 5).map((trade) => (
+                <div className={`${styles.activityItems} ${styles.activityItemsScrollable}`}>
+                  {liveTrades.slice(0, 20).map((trade) => (
                     <div
                       key={trade.id}
                       className={`${styles.activityItem} ${styles.liveItem} ${newTradeIds.has(trade.id) ? styles.newItem : ''}`}
@@ -131,6 +133,18 @@ const TradeActivityCard: React.FC<TradeActivityCardProps> = ({
                           {(trade.entry_price ?? 0) > 0 ? `${(trade.entry_price ?? 0).toFixed(4)} SOL` : '--'}
                         </span>
                         <span className={styles.activityItemTime}>{formatTime(trade.executed_at)}</span>
+                        {trade.token_mint && onViewPosition && (
+                          <button
+                            className={styles.activityViewBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewPosition(trade.token_mint!);
+                            }}
+                            title="View position details"
+                          >
+                            📊
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -144,8 +158,8 @@ const TradeActivityCard: React.FC<TradeActivityCardProps> = ({
                   <span className={styles.activitySectionLabel}>Completed Trades</span>
                   <span className={styles.activitySectionCount}>{filteredRecentTrades.length}</span>
                 </div>
-                <div className={styles.activityItems}>
-                  {filteredRecentTrades.slice(0, 5).map((trade, idx) => (
+                <div className={`${styles.activityItems} ${styles.activityItemsScrollable}`}>
+                  {filteredRecentTrades.slice(0, 50).map((trade, idx) => (
                     <div
                       key={trade.id || `trade-${idx}`}
                       className={`${styles.activityItem} ${styles.completedItem}`}
@@ -169,6 +183,18 @@ const TradeActivityCard: React.FC<TradeActivityCardProps> = ({
                         <span className={`${styles.activityItemPercent} ${(trade.pnl_percent ?? 0) >= 0 ? styles.profit : styles.loss}`}>
                           {(trade.pnl_percent ?? 0) >= 0 ? '+' : ''}{(trade.pnl_percent ?? 0).toFixed(1)}%
                         </span>
+                        {trade.mint && onViewPosition && (
+                          <button
+                            className={styles.activityViewBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewPosition(trade.mint!);
+                            }}
+                            title="View token details"
+                          >
+                            📊
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
