@@ -3,7 +3,7 @@ import styles from '../arbfarm.module.scss';
 import { arbFarmService } from '../../../../common/services/arbfarm-service';
 import DashboardPositionCard from './DashboardPositionCard';
 import TradeActivityCard from './TradeActivityCard';
-import ActivityDetailModal from './ActivityDetailModal';
+import TradeDetailModal from './TradeDetailModal';
 import PositionDetailModal from './PositionDetailModal';
 import CurveMetricsPanel from './CurveMetricsPanel';
 import type {
@@ -297,15 +297,17 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
       </div>
 
 
-      {/* Activity Detail Modal */}
-      <ActivityDetailModal
-        item={selectedDetailItem}
-        itemType={selectedDetailType}
-        onClose={() => {
-          setSelectedDetailItem(null);
-          setSelectedDetailType(null);
-        }}
-      />
+      {/* Trade Detail Modal */}
+      {selectedDetailItem && selectedDetailType && (
+        <TradeDetailModal
+          trade={selectedDetailItem}
+          isLive={selectedDetailType === 'live_trade'}
+          onClose={() => {
+            setSelectedDetailItem(null);
+            setSelectedDetailType(null);
+          }}
+        />
+      )}
 
       {/* Position Detail Modal */}
       {selectedPosition && (
