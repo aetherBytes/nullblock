@@ -1600,10 +1600,20 @@ export interface BestWorstTrade {
 export interface RecentTradeInfo {
   id: string;
   symbol?: string;
+  mint?: string;
+  venue?: string;
   pnl?: number;
   pnl_percent?: number;
   exit_type?: string;
   time_ago?: string;
+  entry_price?: number;
+  exit_price?: number;
+  entry_amount_sol?: number;
+  entry_time?: string;
+  exit_time?: string;
+  entry_tx?: string;
+  exit_tx?: string;
+  hold_duration_mins?: number;
 }
 
 export interface ActiveStrategy {
@@ -1674,6 +1684,7 @@ export interface OpenPosition {
   opened_at?: string;
   remaining_amount_base?: number;
   remaining_token_amount?: number;
+  auto_exit_enabled?: boolean;
 }
 
 export interface PositionStats {
@@ -1690,6 +1701,12 @@ export interface PositionStats {
 export interface PositionsResponse {
   positions: OpenPosition[];
   stats: PositionStats;
+}
+
+export interface AutoExitStats {
+  total_positions: number;
+  auto_exit_enabled: number;
+  manual_mode: number;
 }
 
 // ============================================================================

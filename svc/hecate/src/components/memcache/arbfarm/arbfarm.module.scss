@@ -12251,6 +12251,80 @@ $font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
   opacity: 0.8;
 }
 
+// Trade Detail Modal Specific Styles
+.tradePnlDisplay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.tradePnlAmount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.tradePnlPercent {
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  opacity: 0.9;
+}
+
+.tradeTransactions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(100, 116, 139, 0.15);
+
+  h4 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(148, 163, 184, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 0.75rem 0;
+  }
+}
+
+.txRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba(100, 116, 139, 0.1);
+  }
+}
+
+.txLabel {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.6);
+}
+
+.statusLive {
+  color: $color-success;
+}
+
+.noChartPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: rgba(148, 163, 184, 0.5);
+  gap: 0.5rem;
+}
+
+.noChartHint {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
 // Activity Stream (for Recent Activity)
 .activityStream {
   display: flex;
