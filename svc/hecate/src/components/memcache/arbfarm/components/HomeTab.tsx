@@ -3,7 +3,6 @@ import styles from '../arbfarm.module.scss';
 import { arbFarmService } from '../../../../common/services/arbfarm-service';
 import DashboardPositionCard from './DashboardPositionCard';
 import TradeActivityCard from './TradeActivityCard';
-import BehavioralStrategiesPanel from './behavioral-strategies-panel';
 import ActivityDetailModal from './ActivityDetailModal';
 import PositionDetailModal from './PositionDetailModal';
 import CurveMetricsPanel from './CurveMetricsPanel';
@@ -237,7 +236,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
         )}
       </div>
 
-      {/* Activity Cards - Wide layout */}
+      {/* Activity Cards */}
       <div className={styles.activityRow}>
         <TradeActivityCard
           liveTrades={liveTrades}
@@ -255,7 +254,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
             }
           }}
         />
-        <BehavioralStrategiesPanel compact />
       </div>
 
       {/* Status Cards Row - Full width centered */}

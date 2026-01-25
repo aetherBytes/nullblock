@@ -50,6 +50,7 @@ import WipTab from './components/WipTab';
 import AnalysisTab from './components/AnalysisTab';
 import EngramBrowserTab from './components/EngramBrowserTab';
 import RecommendationsTab from './components/RecommendationsTab';
+import WebResearchPanel from './components/WebResearchPanel';
 
 export type ArbFarmView =
   | 'dashboard'
@@ -81,15 +82,6 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-
-  // Recent activity events collected from SSE
-  const [recentEvents, setRecentEvents] = useState<Array<{
-    id: string;
-    event_type: string;
-    timestamp: string;
-    payload?: Record<string, unknown>;
-  }>>([]);
-
   const [opportunitiesFilter, setOpportunitiesFilter] = useState<string>('all');
   const [threatTokenInput, setThreatTokenInput] = useState('');
   const [threatCheckResult, setThreatCheckResult] = useState<any>(null);
@@ -142,7 +134,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
   const [discoveries, setDiscoveries] = useState<any[]>([]);
   const [monitorSources, setMonitorSources] = useState<any[]>([]);
   const [monitorStats, setMonitorStats] = useState<any>(null);
-  const [researchTab, setResearchTab] = useState<'inject' | 'discoveries' | 'sources' | 'consensus'>('inject');
+  const [researchTab, setResearchTab] = useState<'inject' | 'discoveries' | 'sources' | 'consensus' | 'web-research'>('inject');
 
   // Signals state
   const [signals, setSignals] = useState<any[]>([]);
@@ -265,19 +257,6 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
 
     return () => sse.disconnect();
   }, []);
-
-  // Collect SSE events for Recent Activity display
-  useEffect(() => {
-    if (sse.lastEvent) {
-      const newEvent = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        event_type: sse.lastEvent.topic.replace(/^arb\./, '').replace(/\./g, '_'),
-        timestamp: new Date().toISOString(),
-        payload: sse.lastEvent.payload as Record<string, unknown>,
-      };
-      setRecentEvents((prev) => [newEvent, ...prev].slice(0, 50));
-    }
-  }, [sse.lastEvent]);
 
   useEffect(() => {
     edges.refresh();
@@ -4574,6 +4553,12 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
           >
             🤝 Consensus
           </button>
+          <button
+            className={`${styles.tabButton} ${researchTab === 'web-research' ? styles.active : ''}`}
+            onClick={() => setResearchTab('web-research')}
+          >
+            🌐 Web Research
+          </button>
         </div>
 
         {researchLoading ? (
@@ -4584,6 +4569,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
             {researchTab === 'discoveries' && renderDiscoveriesTab()}
             {researchTab === 'sources' && renderSourcesTab()}
             {researchTab === 'consensus' && renderConsensusTab()}
+            {researchTab === 'web-research' && <WebResearchPanel />}
           </div>
         )}
       </div>
@@ -5041,6 +5027,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
   const NAV_ITEMS: Array<{ id: ArbFarmView; icon: string; label: string; section?: string }> = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard', section: 'Main' },
     { id: 'curves', icon: '📈', label: 'Curve Bonding', section: 'Main' },
+    { id: 'strategies', icon: '🎯', label: 'Strategies', section: 'Trading' },
     { id: 'kol-tracker', icon: '👥', label: 'KOL Tracker', section: 'Trading' },
     { id: 'analysis', icon: '🔍', label: 'Analysis', section: 'Learning' },
     { id: 'recommendations', icon: '💡', label: 'Recommendations', section: 'Learning' },
@@ -5113,15 +5100,6 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
       case 'dashboard':
         return (
           <HomeTab
-            positions={edges.data?.filter(e => e.status === 'executed').map(e => ({
-              id: e.id,
-              token_mint: e.route_data?.input_token || '',
-              token_symbol: undefined,
-              entry_sol_amount: (e.estimated_profit_lamports || 0) / 1e9,
-              unrealized_pnl: 0,
-              status: 'open',
-            })) || []}
-            recentEvents={recentEvents}
             liveTrades={trades.data?.slice(0, 10)}
           />
         );
@@ -5157,15 +5135,6 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
       default:
         return (
           <HomeTab
-            positions={edges.data?.filter(e => e.status === 'executed').map(e => ({
-              id: e.id,
-              token_mint: e.route_data?.input_token || '',
-              token_symbol: undefined,
-              entry_sol_amount: (e.estimated_profit_lamports || 0) / 1e9,
-              unrealized_pnl: 0,
-              status: 'open',
-            })) || []}
-            recentEvents={recentEvents}
             liveTrades={trades.data?.slice(0, 10)}
           />
         );
