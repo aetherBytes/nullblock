@@ -6,8 +6,9 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
-use crate::database::PositionRepository;
+use crate::database::{PositionRepository, PendingExitSignalRow};
 use crate::error::{AppError, AppResult};
+use tracing::error;
 
 pub const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 pub const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -114,7 +115,7 @@ impl Default for ExitConfig {
         Self {
             base_currency: BaseCurrency::Sol,
             exit_mode: ExitMode::Default,
-            stop_loss_percent: Some(30.0),       // 30% stop loss - allow curve volatility
+            stop_loss_percent: Some(40.0),       // 40% stop loss - allow curve volatility (increased from 30% per LLM consensus)
             take_profit_percent: Some(100.0),    // 100% (2x) - tiered exit starts here
             trailing_stop_percent: Some(20.0),   // 20% trailing stop for moon bag
             time_limit_minutes: Some(15),        // 15 min - let winners run
@@ -265,14 +266,14 @@ impl ExitConfig {
     /// - Phase 1: At 2x (100% gain) - sell 50% to recover initial capital
     /// - Phase 2: At 150% (pre-migration) - sell 25% to lock in profits
     /// - Phase 3: Trailing stop on remaining 25% "moon bag"
-    /// - Stop loss at 30% to handle curve volatility
+    /// - Stop loss at 40% to handle curve volatility (increased from 30% per LLM consensus)
     /// - Time limit extended to allow winners to run
     /// - Momentum tracking enabled to adapt exits dynamically
     pub fn for_curve_bonding() -> Self {
         Self {
             base_currency: BaseCurrency::Sol,
             exit_mode: ExitMode::Default,
-            stop_loss_percent: Some(30.0),      // -30% stop loss (allow curve volatility)
+            stop_loss_percent: Some(40.0),      // -40% stop loss (allow curve volatility, increased from 30%)
             take_profit_percent: Some(100.0),   // +100% (2x) - first major TP target
             trailing_stop_percent: Some(20.0),  // 20% trailing stop for moon bag
             time_limit_minutes: Some(15),       // 15 min - extended to let winners run
@@ -311,6 +312,47 @@ impl ExitConfig {
         // Single source of truth - all curve trades use the same config
         Self::for_curve_bonding()
     }
+
+    /// Exit config for scanner strategy - tighter, faster exits
+    /// Scanner targets tokens at 30-70% progress, needs quick exits
+    /// momentum_enabled: toggleable via API for dynamic adaptation
+    /// Updated per LLM consensus: reduced time limit to 3 min, increased TP to 25%
+    pub fn for_scanner(momentum_enabled: bool) -> Self {
+        Self {
+            base_currency: BaseCurrency::Sol,
+            exit_mode: ExitMode::Default,
+            stop_loss_percent: Some(20.0),      // 20% stop loss (tighter than sniper)
+            take_profit_percent: Some(25.0),    // 25% take profit (increased from 15% for better TP/SL ratio)
+            trailing_stop_percent: Some(12.0),  // 12% trailing stop
+            time_limit_minutes: Some(3),        // 3 min max hold (reduced from 7 - winning trades avg 2.1 min)
+            partial_take_profit: Some(PartialTakeProfit {
+                first_target_percent: 10.0,     // 10% first target (increased from 8%)
+                first_exit_percent: 35.0,       // Sell 35%
+                second_target_percent: 25.0,    // 25% second target (increased from 15%)
+                second_exit_percent: 65.0,      // Sell remaining
+            }),
+            custom_exit_instructions: None,
+            momentum_adaptive: if momentum_enabled {
+                Some(MomentumAdaptiveConfig::default())
+            } else {
+                None
+            },
+            adaptive_partial_tp: if momentum_enabled {
+                // Scanner-specific adaptive TP: lower targets for quick flips
+                Some(AdaptivePartialTakeProfit {
+                    first_target_percent: 10.0,   // 10% first target (quick partial)
+                    first_exit_percent: 35.0,     // Sell 35%
+                    second_target_percent: 25.0,  // 25% second target
+                    second_exit_percent: 65.0,    // Sell remaining 65%
+                    third_target_percent: 50.0,   // Extended target if strong momentum
+                    third_exit_percent: 100.0,    // Exit all
+                    enable_extended_targets: false, // Scanner doesn't use extended targets
+                })
+            } else {
+                None
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -338,6 +380,10 @@ pub struct MomentumData {
     pub consecutive_negative_readings: u32,  // For reversal confirmation
     #[serde(default)]
     pub peak_velocity: f64,       // Track maximum velocity achieved
+    #[serde(default)]
+    pub initial_price: Option<f64>,  // Preserve initial entry price context (not lost when history window rolls)
+    #[serde(default)]
+    pub initial_timestamp: Option<DateTime<Utc>>,  // When momentum tracking started
 }
 
 impl MomentumData {
@@ -347,6 +393,12 @@ impl MomentumData {
 
     pub fn update(&mut self, price: f64, entry_price: f64, take_profit_pct: Option<f64>) {
         let now = Utc::now();
+
+        // Preserve initial price context on first update (won't be lost when history rolls)
+        if self.initial_price.is_none() {
+            self.initial_price = Some(entry_price);
+            self.initial_timestamp = Some(now);
+        }
 
         // Track previous velocity for decay detection
         let prev_velocity = self.velocity;
@@ -515,6 +567,11 @@ impl MomentumData {
             return None;
         }
 
+        // Guard against division by zero
+        if entry_price <= 0.0 {
+            return None;
+        }
+
         // Current P&L %
         let current_pnl_pct = ((current_price - entry_price) / entry_price) * 100.0;
 
@@ -546,11 +603,11 @@ impl MomentumData {
         // TUNED: Less sensitive thresholds to avoid premature exits
         // Curve volatility is high - normal 10-30% swings shouldn't trigger exits
         let (velocity_threshold, score_threshold, decay_count_min) = if hold_time_mins < 5 {
-            (-5.0, -60.0, 8u32)  // Very strict in first 5 min - allow high volatility (was -3, -50, 6)
+            (-5.0, -60.0, 11u32)  // Very strict in first 5 min - allow high volatility (was 8, reduced sensitivity 30%)
         } else if hold_time_mins < 10 {
-            (-3.0, -40.0, 6u32)  // Moderate strictness for 5-10 min hold
+            (-3.0, -40.0, 8u32)  // Moderate strictness for 5-10 min hold (was 6, reduced sensitivity 30%)
         } else {
-            (-2.5, -35.0, 5u32)  // Standard after 10 min (was -2, -30, 5)
+            (-2.5, -35.0, 7u32)  // Standard after 10 min (was 5, reduced sensitivity 30%)
         };
 
         // Exit if momentum has been consistently declining
@@ -653,6 +710,7 @@ pub enum ExitReason {
     MomentumReversal,  // Immediate exit due to momentum reversal while profitable
     ExtendedTakeProfit,  // Extended target hit due to strong momentum
     Salvage,  // Dead token salvage sell with maximum slippage tolerance
+    CopyTradeSell,  // Exit triggered by KOL copy trading signal
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -908,6 +966,49 @@ impl PositionManager {
         Ok(count)
     }
 
+    pub async fn load_pending_exits_from_db(&self) -> AppResult<usize> {
+        let repo = match &self.position_repo {
+            Some(r) => r,
+            None => {
+                debug!("No position repository configured - pending exits will not be restored");
+                return Ok(0);
+            }
+        };
+
+        let pending_exits = repo.get_pending_exits().await?;
+        let count = pending_exits.len();
+
+        if count == 0 {
+            return Ok(0);
+        }
+
+        info!("🔄 Loading {} pending exit signals from database...", count);
+
+        let mut priority_exits = self.priority_exits.write().await;
+
+        for signal in pending_exits {
+            let entry = PriorityExitEntry {
+                position_id: signal.position_id,
+                failed_attempts: signal.failed_attempts,
+                next_retry_at: signal.next_retry_at,
+                is_rate_limited: signal.is_rate_limited,
+            };
+
+            info!(
+                "  ↳ Restored pending exit: {} | attempts: {} | next_retry: {}",
+                signal.position_id,
+                signal.failed_attempts,
+                signal.next_retry_at
+            );
+
+            priority_exits.insert(signal.position_id, entry);
+        }
+
+        info!("✅ Restored {} pending exit signals from database", count);
+
+        Ok(count)
+    }
+
     pub async fn open_position(
         &self,
         edge_id: Uuid,
@@ -922,6 +1023,28 @@ impl PositionManager {
         venue: Option<String>,
         signal_source: Option<String>,
     ) -> AppResult<OpenPosition> {
+        // Validate entry price to prevent corrupted P&L calculations
+        if !entry_price.is_finite() || entry_price <= 0.0 {
+            return Err(crate::error::AppError::Validation(format!(
+                "Invalid entry price {} for {} - must be positive finite number",
+                entry_price, &token_mint[..12.min(token_mint.len())]
+            )));
+        }
+
+        // Validate entry amounts
+        if !entry_amount_base.is_finite() || entry_amount_base < 0.0 {
+            return Err(crate::error::AppError::Validation(format!(
+                "Invalid entry_amount_base {} for {}",
+                entry_amount_base, &token_mint[..12.min(token_mint.len())]
+            )));
+        }
+        if !entry_token_amount.is_finite() || entry_token_amount < 0.0 {
+            return Err(crate::error::AppError::Validation(format!(
+                "Invalid entry_token_amount {} for {}",
+                entry_token_amount, &token_mint[..12.min(token_mint.len())]
+            )));
+        }
+
         // Check for existing open position to prevent duplicates (race condition with reconciler)
         {
             let by_token = self.positions_by_token.read().await;
@@ -983,6 +1106,23 @@ impl PositionManager {
             signal_source,
         };
 
+        // Persist to database FIRST before updating in-memory state
+        // This ensures we never have positions that exist only in memory
+        if let Some(repo) = &self.position_repo {
+            if let Err(e) = repo.save_position(&position).await {
+                error!(
+                    "❌ CRITICAL: Failed to persist position {} to database: {} - ABORTING position open",
+                    position_id, e
+                );
+                return Err(crate::error::AppError::Database(format!(
+                    "Position persistence failed: {}. Position NOT opened to prevent orphaned state.",
+                    e
+                )));
+            }
+            debug!("Position {} persisted to database", position_id);
+        }
+
+        // Only update in-memory state AFTER successful persistence
         {
             let mut positions = self.positions.write().await;
             positions.insert(position_id, position.clone());
@@ -1005,14 +1145,6 @@ impl PositionManager {
             let mut stats = self.stats.write().await;
             stats.total_positions_opened += 1;
             stats.active_positions += 1;
-        }
-
-        if let Some(repo) = &self.position_repo {
-            if let Err(e) = repo.save_position(&position).await {
-                warn!("Failed to persist position to database: {}", e);
-            } else {
-                debug!("Position {} persisted to database", position_id);
-            }
         }
 
         info!(
@@ -1076,7 +1208,19 @@ impl PositionManager {
 
         if !signals.is_empty() {
             let mut exit_signals = self.exit_signals.write().await;
-            exit_signals.extend(signals.clone());
+            // Prevent duplicate exit signals for the same position (race condition fix)
+            for signal in signals.iter() {
+                let already_has_signal = exit_signals.iter()
+                    .any(|s| s.position_id == signal.position_id);
+                if already_has_signal {
+                    debug!(
+                        position_id = %signal.position_id,
+                        "Skipping duplicate exit signal (already queued)"
+                    );
+                } else {
+                    exit_signals.push(signal.clone());
+                }
+            }
         }
 
         signals
@@ -1119,6 +1263,25 @@ impl PositionManager {
         } else {
             position.entry_amount_base
         };
+
+        // Validate partial exit tracking consistency
+        // Sum of partial exit percentages should roughly match (entry - remaining) / entry
+        if !position.partial_exits.is_empty() && position.entry_amount_base > 0.0 {
+            let total_exited_pct: f64 = position.partial_exits.iter().map(|e| e.exit_percent).sum();
+            let expected_remaining_pct = 100.0 - total_exited_pct;
+            let actual_remaining_pct = (position.remaining_amount_base / position.entry_amount_base) * 100.0;
+
+            // Allow 5% tolerance for rounding
+            if (expected_remaining_pct - actual_remaining_pct).abs() > 5.0 {
+                warn!(
+                    position_id = %position_id,
+                    expected_remaining_pct = expected_remaining_pct,
+                    actual_remaining_pct = actual_remaining_pct,
+                    "⚠️ P&L tracking divergence detected - partial exits don't match remaining amount"
+                );
+            }
+        }
+
         position.unrealized_pnl = effective_base * (position.unrealized_pnl_percent / 100.0);
 
         // Current value is remaining amount plus unrealized P&L
@@ -1143,6 +1306,27 @@ impl PositionManager {
         let config = &position.exit_config;
         let now = Utc::now();
         let hold_time_mins = (now - position.entry_time).num_minutes();
+
+        // EMERGENCY EXIT CIRCUIT BREAKER: Protect against catastrophic losses (rugs, crashes)
+        // Triggers at -50% regardless of configured stop loss to prevent -84%+ losses
+        const EMERGENCY_EXIT_THRESHOLD: f64 = -50.0;
+        if position.unrealized_pnl_percent <= EMERGENCY_EXIT_THRESHOLD {
+            tracing::warn!(
+                position_id = %position_id,
+                pnl_pct = position.unrealized_pnl_percent,
+                threshold = EMERGENCY_EXIT_THRESHOLD,
+                "🚨 EMERGENCY EXIT - catastrophic loss circuit breaker triggered"
+            );
+            position.status = PositionStatus::PendingExit;
+            return Some(ExitSignal {
+                position_id,
+                reason: ExitReason::Emergency,
+                exit_percent: 100.0,
+                current_price,
+                triggered_at: now,
+                urgency: ExitUrgency::Critical,
+            });
+        }
 
         if let Some(stop_loss) = config.stop_loss_percent {
             if position.unrealized_pnl_percent <= -stop_loss {
@@ -1361,7 +1545,7 @@ impl PositionManager {
             // Exit if velocity turns strongly negative while profitable (requires stronger reversal confirmation)
             // Require: velocity < -0.5 (actual decline), decay_count >= 3 (sustained), momentum_score < -10 (confirmed negative)
             if position.momentum.velocity < -0.5
-               && position.momentum.momentum_decay_count >= 3
+               && position.momentum.momentum_decay_count >= 4  // was 3, reduced sensitivity 30%
                && position.momentum.momentum_score < -10.0
             {
                 tracing::info!(
@@ -1384,7 +1568,11 @@ impl PositionManager {
             }
 
             // Calculate peak PnL from high water mark
-            let peak_pnl_percent = ((position.high_water_mark - position.entry_price) / position.entry_price) * 100.0;
+            let peak_pnl_percent = if position.entry_price > 0.0 {
+                ((position.high_water_mark - position.entry_price) / position.entry_price) * 100.0
+            } else {
+                0.0
+            };
             let pnl_drop_from_peak = peak_pnl_percent - position.unrealized_pnl_percent;
 
             // Exit if dropped 6% from peak while still profitable (was 3%, allow more volatility)
@@ -1414,7 +1602,7 @@ impl PositionManager {
         // Fees: ~1% entry + ~1% exit + ~1-2% slippage = ~4% break-even
         let profitable_after_fees = position.unrealized_pnl_percent > 5.0;
         let momentum_slowing = position.momentum.velocity < 0.5  // Not strongly positive
-            && (position.momentum.momentum_decay_count >= 2     // Some decay observed
+            && (position.momentum.momentum_decay_count >= 3     // Some decay observed (was 2, reduced sensitivity 30%)
                 || position.momentum.velocity.abs() < 0.3       // Velocity stalled
                 || position.momentum.consecutive_negative_readings >= 2); // Recent negatives
 
@@ -1557,6 +1745,15 @@ impl PositionManager {
             .any(|p| matches!(p.status, PositionStatus::Open | PositionStatus::PendingExit | PositionStatus::PartiallyExited) && p.token_mint == mint)
     }
 
+    pub async fn has_open_position_for_mint_and_strategy(&self, mint: &str, strategy_id: &Uuid) -> bool {
+        let positions = self.positions.read().await;
+        positions.values().any(|p|
+            matches!(p.status, PositionStatus::Open | PositionStatus::PendingExit | PositionStatus::PartiallyExited)
+            && p.token_mint == mint
+            && p.strategy_id == *strategy_id
+        )
+    }
+
     pub async fn get_open_position_for_mint(&self, mint: &str) -> Option<OpenPosition> {
         let positions = self.positions.read().await;
         positions
@@ -1582,13 +1779,34 @@ impl PositionManager {
     pub async fn get_and_increment_retry_index(&self) -> usize {
         let mut index = self.pending_exit_retry_index.write().await;
         let current = *index;
-        *index = current.wrapping_add(1);
+        let next = current.wrapping_add(1);
+
+        // Log when index wraps around (helpful for debugging long-running instances)
+        if next < current {
+            tracing::debug!(
+                "📊 Pending exit retry index wrapped around from {} to {}",
+                current, next
+            );
+        }
+
+        *index = next;
         current
     }
 
     pub async fn clear_exit_signal(&self, position_id: Uuid) {
         let mut signals = self.exit_signals.write().await;
         signals.retain(|s| s.position_id != position_id);
+
+        // Also remove from priority queue
+        let mut priority_exits = self.priority_exits.write().await;
+        priority_exits.remove(&position_id);
+
+        // Persist removal to database
+        if let Some(repo) = &self.position_repo {
+            if let Err(e) = repo.remove_pending_exit(position_id).await {
+                warn!("Failed to remove pending exit from database: {}", e);
+            }
+        }
     }
 
     pub async fn update_position_exit_config(
@@ -1634,31 +1852,26 @@ impl PositionManager {
         exit_reason: &str,
         tx_signature: Option<String>,
     ) -> AppResult<OpenPosition> {
-        let mut positions = self.positions.write().await;
-        let position = positions
-            .get_mut(&position_id)
-            .ok_or_else(|| AppError::NotFound(format!("Position {} not found", position_id)))?;
-
-        position.status = PositionStatus::Closed;
-        position.current_price = exit_price;
-        position.unrealized_pnl = 0.0;
-
-        let closed_position = position.clone();
-
+        // CRITICAL: Use CAS to prevent double-close race condition
+        // Only one caller can transition from Open/PendingExit/PartiallyExited to Closed
         {
-            let mut stats = self.stats.write().await;
-            stats.total_positions_closed += 1;
-            stats.active_positions = stats.active_positions.saturating_sub(1);
-            stats.total_realized_pnl += realized_pnl;
+            let positions = self.positions.read().await;
+            let position = positions
+                .get(&position_id)
+                .ok_or_else(|| AppError::NotFound(format!("Position {} not found", position_id)))?;
 
-            match exit_reason {
-                "StopLoss" => stats.stop_losses_triggered += 1,
-                "TakeProfit" => stats.take_profits_triggered += 1,
-                "TimeLimit" => stats.time_exits_triggered += 1,
-                _ => {}
+            // Check if already closed - early exit without write lock
+            if position.status == PositionStatus::Closed {
+                debug!(
+                    position_id = %position_id,
+                    "Position already closed, skipping duplicate close"
+                );
+                return Ok(position.clone());
             }
         }
 
+        // Persist to database FIRST before updating in-memory state
+        // This ensures we don't have in-memory/DB inconsistency on failure
         if let Some(repo) = &self.position_repo {
             if let Err(e) = repo
                 .close_position(
@@ -1670,9 +1883,53 @@ impl PositionManager {
                 )
                 .await
             {
-                warn!("Failed to persist position close to database: {}", e);
-            } else {
-                debug!("Position {} close persisted to database", position_id);
+                // DB persistence failed - don't update in-memory state
+                error!(
+                    "Failed to persist position close to database: {} - aborting close",
+                    e
+                );
+                return Err(AppError::Database(format!(
+                    "Failed to close position in database: {}",
+                    e
+                )));
+            }
+            debug!("Position {} close persisted to database", position_id);
+        }
+
+        // Now safe to update in-memory state
+        let closed_position = {
+            let mut positions = self.positions.write().await;
+            let position = positions
+                .get_mut(&position_id)
+                .ok_or_else(|| AppError::NotFound(format!("Position {} not found after DB update", position_id)))?;
+
+            // Double-check status hasn't changed (another thread may have closed it)
+            if position.status == PositionStatus::Closed {
+                debug!(
+                    position_id = %position_id,
+                    "Position closed by another thread during DB persist"
+                );
+                return Ok(position.clone());
+            }
+
+            position.status = PositionStatus::Closed;
+            position.current_price = exit_price;
+            position.unrealized_pnl = 0.0;
+            position.clone()
+        };
+
+        // Update stats
+        {
+            let mut stats = self.stats.write().await;
+            stats.total_positions_closed += 1;
+            stats.active_positions = stats.active_positions.saturating_sub(1);
+            stats.total_realized_pnl += realized_pnl;
+
+            match exit_reason {
+                "StopLoss" => stats.stop_losses_triggered += 1,
+                "TakeProfit" => stats.take_profits_triggered += 1,
+                "TimeLimit" => stats.time_exits_triggered += 1,
+                _ => {}
             }
         }
 
@@ -1713,6 +1970,48 @@ impl PositionManager {
         Ok(())
     }
 
+    pub async fn compare_and_swap_status(
+        &self,
+        position_id: Uuid,
+        expected: PositionStatus,
+        new_status: PositionStatus,
+    ) -> Result<bool, AppError> {
+        let mut positions = self.positions.write().await;
+        let position = positions
+            .get_mut(&position_id)
+            .ok_or_else(|| AppError::NotFound(format!("Position {} not found", position_id)))?;
+
+        if position.status == expected {
+            position.status = new_status;
+            debug!(
+                position_id = %position_id,
+                old_status = ?expected,
+                new_status = ?new_status,
+                "Position status CAS succeeded"
+            );
+            Ok(true)
+        } else {
+            debug!(
+                position_id = %position_id,
+                expected = ?expected,
+                actual = ?position.status,
+                "Position status CAS failed - status already changed"
+            );
+            Ok(false)
+        }
+    }
+
+    pub async fn transition_to_pending_exit(&self, position_id: Uuid) -> bool {
+        match self.compare_and_swap_status(
+            position_id,
+            PositionStatus::Open,
+            PositionStatus::PendingExit
+        ).await {
+            Ok(success) => success,
+            Err(_) => false,
+        }
+    }
+
     pub async fn queue_priority_exit(&self, position_id: Uuid) {
         let mut priority_exits = self.priority_exits.write().await;
         if !priority_exits.contains_key(&position_id) {
@@ -1728,7 +2027,7 @@ impl PositionManager {
     pub async fn record_priority_exit_failure(&self, position_id: Uuid, is_rate_limited: bool) {
         let mut priority_exits = self.priority_exits.write().await;
 
-        if let Some(entry) = priority_exits.get_mut(&position_id) {
+        let (should_persist, failed_attempts, next_retry_at, should_remove) = if let Some(entry) = priority_exits.get_mut(&position_id) {
             entry.backoff_and_retry(is_rate_limited);
 
             if entry.should_give_up() {
@@ -1736,7 +2035,7 @@ impl PositionManager {
                     "🔥❌ Position {} removed from priority queue after {} failed attempts",
                     position_id, entry.failed_attempts
                 );
-                priority_exits.remove(&position_id);
+                (false, entry.failed_attempts, entry.next_retry_at, true)
             } else {
                 let delay_secs = (entry.next_retry_at - Utc::now()).num_seconds();
                 info!(
@@ -1746,17 +2045,51 @@ impl PositionManager {
                     delay_secs,
                     if is_rate_limited { " (rate limited)" } else { "" }
                 );
+                (true, entry.failed_attempts, entry.next_retry_at, false)
             }
         } else {
             // Position wasn't in queue, add it with failure count
             let mut entry = PriorityExitEntry::new(position_id);
             entry.backoff_and_retry(is_rate_limited);
+            let attempts = entry.failed_attempts;
+            let next_retry = entry.next_retry_at;
             priority_exits.insert(position_id, entry);
             info!(
                 "🔥 Position {} added to HIGH PRIORITY exit queue with backoff (queue size: {})",
                 position_id,
                 priority_exits.len()
             );
+            (true, attempts, next_retry, false)
+        };
+
+        if should_remove {
+            priority_exits.remove(&position_id);
+        }
+
+        // Persist to database
+        if let Some(repo) = &self.position_repo {
+            if should_persist {
+                // Create or update pending exit signal
+                let signal = PendingExitSignalRow {
+                    position_id,
+                    reason: "PriorityRetry".to_string(),
+                    exit_percent: 100.0,
+                    current_price: 0.0,
+                    triggered_at: Utc::now(),
+                    urgency: "high".to_string(),
+                    failed_attempts,
+                    next_retry_at,
+                    is_rate_limited,
+                };
+                if let Err(e) = repo.save_pending_exit(&signal).await {
+                    error!("Failed to persist pending exit signal: {}", e);
+                }
+            } else if should_remove {
+                // Remove from database when giving up
+                if let Err(e) = repo.remove_pending_exit(position_id).await {
+                    warn!("Failed to remove pending exit from database: {}", e);
+                }
+            }
         }
     }
 
@@ -1845,36 +2178,62 @@ impl PositionManager {
         tx_signature: Option<String>,
         reason: &str,
     ) -> AppResult<OpenPosition> {
-        let mut positions = self.positions.write().await;
-        let position = positions
-            .get_mut(&position_id)
-            .ok_or_else(|| AppError::NotFound(format!("Position {} not found", position_id)))?;
+        // Build the updated position state first (read-only)
+        let updated_position = {
+            let positions = self.positions.read().await;
+            let position = positions
+                .get(&position_id)
+                .ok_or_else(|| AppError::NotFound(format!("Position {} not found", position_id)))?;
 
-        let exited_amount_base = position.remaining_amount_base * (exit_percent / 100.0);
-        let exited_tokens = position.remaining_token_amount * (exit_percent / 100.0);
+            let mut updated = position.clone();
+            let exited_amount_base = updated.remaining_amount_base * (exit_percent / 100.0);
+            let exited_tokens = updated.remaining_token_amount * (exit_percent / 100.0);
 
-        position.remaining_amount_base -= exited_amount_base;
-        position.remaining_token_amount -= exited_tokens;
+            updated.remaining_amount_base -= exited_amount_base;
+            updated.remaining_token_amount -= exited_tokens;
 
-        if position.remaining_amount_base < 0.0 {
-            position.remaining_amount_base = 0.0;
-        }
-        if position.remaining_token_amount < 0.0 {
-            position.remaining_token_amount = 0.0;
-        }
+            if updated.remaining_amount_base < 0.0 {
+                updated.remaining_amount_base = 0.0;
+            }
+            if updated.remaining_token_amount < 0.0 {
+                updated.remaining_token_amount = 0.0;
+            }
 
-        let partial_exit = PartialExit {
-            exit_time: Utc::now(),
-            exit_percent,
-            exit_price,
-            profit_base: profit_sol,
-            tx_signature,
-            reason: reason.to_string(),
+            let partial_exit = PartialExit {
+                exit_time: Utc::now(),
+                exit_percent,
+                exit_price,
+                profit_base: profit_sol,
+                tx_signature,
+                reason: reason.to_string(),
+            };
+            updated.partial_exits.push(partial_exit);
+
+            if updated.status == PositionStatus::Open {
+                updated.status = PositionStatus::PartiallyExited;
+            }
+
+            updated
         };
-        position.partial_exits.push(partial_exit);
 
-        if position.status == PositionStatus::Open {
-            position.status = PositionStatus::PartiallyExited;
+        // Persist to DB FIRST (source of truth) - fail if this fails
+        if let Some(repo) = &self.position_repo {
+            if let Err(e) = repo.save_position(&updated_position).await {
+                error!(
+                    "❌ CRITICAL: Failed to persist partial exit to database for position {}: {} - on-chain tx succeeded but DB not updated!",
+                    position_id, e
+                );
+                // Don't propagate error - transaction already happened on-chain
+                // Log at error level so it's visible for manual reconciliation
+            }
+        }
+
+        // Now update in-memory state
+        {
+            let mut positions = self.positions.write().await;
+            if let Some(position) = positions.get_mut(&position_id) {
+                *position = updated_position.clone();
+            }
         }
 
         info!(
@@ -1882,18 +2241,12 @@ impl PositionManager {
             position_id,
             exit_percent,
             exit_price,
-            position.remaining_amount_base,
-            position.remaining_token_amount,
+            updated_position.remaining_amount_base,
+            updated_position.remaining_token_amount,
             reason
         );
 
-        if let Some(repo) = &self.position_repo {
-            if let Err(e) = repo.save_position(position).await {
-                warn!("Failed to persist partial exit to database: {}", e);
-            }
-        }
-
-        Ok(position.clone())
+        Ok(updated_position)
     }
 
     pub async fn emergency_close_all(&self) -> Vec<ExitSignal> {
@@ -2018,11 +2371,27 @@ impl PositionManager {
                         .any(|t| t.mint == position.token_mint && t.balance >= 0.0001);
 
                     if !wallet_has_token {
+                        // Don't orphan positions less than 5 minutes old - give exit logic time to run
+                        let position_age_secs = (chrono::Utc::now() - position.entry_time).num_seconds();
+                        const MIN_TRACKING_SECS: i64 = 300; // 5 minutes
+
+                        if position_age_secs < MIN_TRACKING_SECS {
+                            tracing::debug!(
+                                "⏳ Position {} ({}) is only {}s old - skipping orphan check (min {}s)",
+                                position.id,
+                                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                                position_age_secs,
+                                MIN_TRACKING_SECS
+                            );
+                            continue;
+                        }
+
                         warn!(
-                            "⚠️ Position {} ({}) [status: {:?}] has no corresponding wallet balance - may have been sold externally",
+                            "⚠️ Position {} ({}) [status: {:?}] has no corresponding wallet balance (age: {}s) - may have been sold externally",
                             position.id,
                             position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
-                            position.status
+                            position.status,
+                            position_age_secs
                         );
                         orphaned_positions.push(position.id);
                     }
@@ -2133,6 +2502,18 @@ impl PositionManager {
         estimated_entry_sol: f64,
         exit_config: ExitConfig,
     ) -> AppResult<OpenPosition> {
+        // Validate entry price - orphaned positions with very low prices will have inaccurate P&L
+        const MIN_VALID_ENTRY_PRICE: f64 = 0.000001; // 1 microSOL per token minimum
+        let validated_entry_price = if estimated_entry_price < MIN_VALID_ENTRY_PRICE {
+            warn!(
+                mint = %holding.mint[..12.min(holding.mint.len())],
+                estimated_price = estimated_entry_price,
+                "⚠️ Orphaned position has very low entry price - P&L will be unreliable"
+            );
+            MIN_VALID_ENTRY_PRICE // Use minimum to avoid division issues
+        } else {
+            estimated_entry_price
+        };
         // Check for existing position to prevent duplicates (race condition with autonomous executor)
         {
             let by_token = self.positions_by_token.read().await;
@@ -2179,7 +2560,7 @@ impl PositionManager {
                 holding.symbol.clone(),
                 estimated_entry_sol,
                 holding.balance,
-                estimated_entry_price,
+                validated_entry_price,
                 exit_config,
                 Some("discovered_with_strategy".to_string()),
                 None,
@@ -2192,7 +2573,7 @@ impl PositionManager {
             holding.symbol.as_deref().unwrap_or("Unknown"),
             &holding.mint[..8],
             holding.balance,
-            estimated_entry_price
+            validated_entry_price
         );
 
         Ok(position)

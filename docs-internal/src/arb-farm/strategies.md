@@ -1,6 +1,6 @@
 # ArbFarm Trading Strategies
 
-> Last Updated: 2026-01-24 (Fixed metrics collection from venue APIs)
+> Last Updated: 2026-01-25 (LLM consensus optimizations: emergency exit circuit breaker, SL 30%→40%, scanner time 7→3 min, scanner TP 15%→25%)
 
 This document describes how ArbFarm's trading strategies work - from token discovery through position management and exit execution.
 
@@ -28,7 +28,7 @@ ArbFarm operates as an autonomous multi-agent system with the following componen
 │                         DISCOVERY LAYER                          │
 ├─────────────────────────────────────────────────────────────────┤
 │  Scanner Agent          Graduation Sniper        KOL Discovery  │
-│  (Curve monitoring)     (Graduation events)      (Stubbed)      │
+│  (Curve monitoring)     (Graduation events)      (Copy trading) │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -80,8 +80,10 @@ Position checks are **per-strategy**, not global:
 
 | Strategy | Take Profit | Stop Loss | Time Limit | Use Case |
 |----------|-------------|-----------|------------|----------|
-| Scanner (curve_arb) | 15% | 20% | 7 min | Quick flips at 30-70% progress |
-| Sniper (graduation_snipe) | 100% | 30% | 15 min | Let winners run post-graduation |
+| Scanner (curve_arb) | 25% | 20% | 3 min | Quick flips at 30-70% progress |
+| Sniper (graduation_snipe) | 100% | 40% | 15 min | Let winners run post-graduation |
+
+> **Note:** Stop loss increased from 30% to 40% (LLM consensus - reduces premature exits on recoverable dips). Scanner time reduced from 7 to 3 min (winning trades avg 2.1 min). Scanner TP increased from 15% to 25% (improves TP/SL ratio from 0.75 to 1.25). Scanner now uses its own adaptive TP targets (10%/25%) instead of sniper defaults (100%/150%).
 
 ### Momentum Toggle API
 
@@ -295,6 +297,124 @@ just dev-mac no-snipe    # Start without sniper
 
 ---
 
+## Strategy 3: KOL Copy Trading
+
+**Files:**
+- `src/agents/kol_discovery.rs` - KOL wallet discovery and trust scoring
+- `src/execution/copy_executor.rs` - Copy trade execution
+- `src/handlers/webhooks.rs` - Helius webhook handler for trade detection
+
+> **⚠️ Requires Public URL:** KOL copy trading depends on Helius webhooks pushing wallet activity to ArbFarm. This only works when deployed with a publicly accessible URL (not localhost). See CLAUDE.md "AWS Deployment TODO" section for setup instructions.
+
+### Signal Flow
+
+```
+Helius Webhook (swap detected)
+    │
+    ▼
+webhooks.rs: Look up KOL entity by wallet
+    │
+    ├── Not tracked → Skip
+    │
+    ▼
+Record KOL trade in DB (arb_kol_trades)
+    │
+    ▼
+Emit event: kol_topics::TRADE_DETECTED
+    │
+    ▼
+autonomous_executor.rs: handle_kol_trade()
+    │
+    ▼
+copy_executor.rs: execute_copy()
+    │
+    ├── Buy → Build pump.fun tx, sign, submit
+    │
+    └── Sell → Queue priority exit via PositionManager
+```
+
+### KOL Discovery
+
+KOL Discovery Agent scans pump.fun and DexScreener every 60 seconds for profitable traders:
+
+**Discovery Criteria:**
+- Win rate ≥ 65%
+- Profitability ≥ 20% APE
+- Minimum 3 trades tracked
+
+**Trust Score (0-100):**
+- Based on win rate, profitability, trade count
+- Consecutive wins bonus
+- Minimum 60 trust score required for copy trading
+
+### Copy Trade Execution
+
+**Buy Execution:**
+1. Fetch curve state, check if token graduated
+2. Build pump.fun buy transaction with 500 bps slippage
+3. Sign with dev wallet
+4. Submit via Helius sender
+
+**Sell Execution:**
+1. Get open position from position manager
+2. Queue priority exit
+3. Poll for 30 seconds waiting for position monitor to close
+4. **Emergency fallback:** If not closed after 30s, force direct market sell with 25% slippage (EMERGENCY_SLIPPAGE_BPS = 2500)
+5. Try Raydium if curve sell fails (graduated tokens)
+
+### Security
+
+**Webhook Authentication (REQUIRED for production):**
+
+Set `HELIUS_WEBHOOK_AUTH_TOKEN` environment variable to secure the webhook endpoint:
+
+```bash
+export HELIUS_WEBHOOK_AUTH_TOKEN="your-secret-token-here"
+```
+
+When registering webhooks with Helius, set the same token as the `auth_header`:
+```json
+{
+  "webhookURL": "https://your-domain/api/arb/webhooks/helius",
+  "authHeader": "your-secret-token-here"
+}
+```
+
+Without this, anyone can POST fake trade signals and drain your wallet.
+
+### Configuration
+
+**CopyExecutorConfig defaults** (global executor settings):
+- `enabled`: true
+- `default_copy_percentage`: 50% (copy 50% of KOL trade amount)
+- `max_position_sol`: 0.5 SOL cap per trade
+- `min_trust_score`: 60.0 threshold
+- `copy_delay_ms`: 500ms delay before execution
+
+**CopyTradeConfig** (per-KOL settings stored in DB):
+- `copy_percentage`: 50% (matches executor default)
+- `max_position_sol`: 0.5 SOL
+- `token_whitelist`: Optional list of allowed tokens
+- `token_blacklist`: Optional list of blocked tokens
+
+### API Endpoints
+
+```bash
+# Add KOL for tracking (registers Helius webhook)
+POST /api/arb/kols
+
+# Enable copy trading for a KOL
+PUT /api/arb/kols/{id}/copy-trading/enable
+
+# Get copy trade history
+GET /api/arb/kols/{id}/copy-history
+
+# Start KOL discovery scan
+POST /api/arb/discovery/start
+```
+
+---
+
 ## Position Management
 
 **File:** `src/execution/position_manager.rs`
@@ -372,23 +492,23 @@ struct OpenPosition {
 Used for scanner-discovered positions at 30-70% progress:
 
 ```
-Phase 1: At 8% gain
+Phase 1: At 10% gain
   → Sell 35% to recover partial capital
 
-Phase 2: At 15% gain
+Phase 2: At 25% gain
   → Sell remaining 65%
   → Quick exit, no moon bag
 ```
 
 **Configuration:**
 
-| Parameter | Value |
-|-----------|-------|
-| Stop Loss | 20% |
-| Take Profit (Phase 1) | 8% |
-| Take Profit (Phase 2) | 15% |
-| Trailing Stop | 12% |
-| Time Limit | 7 minutes |
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| Stop Loss | 20% | |
+| Take Profit (Phase 1) | 10% | Increased from 8% |
+| Take Profit (Phase 2) | 25% | Increased from 15% (better TP/SL ratio) |
+| Trailing Stop | 12% | |
+| Time Limit | 3 minutes | Reduced from 7 min (winning trades avg 2.1 min) |
 
 ### Exit Config: Sniper (for_curve_bonding)
 
@@ -410,13 +530,13 @@ Phase 3: Moon bag with trailing stop
 
 **Configuration:**
 
-| Parameter | Value |
-|-----------|-------|
-| Stop Loss | 30% |
-| Take Profit (Phase 1) | 100% |
-| Take Profit (Phase 2) | 150% |
-| Trailing Stop | 20% |
-| Time Limit | 15 minutes |
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| Stop Loss | 40% | Increased from 30% (LLM consensus - reduces premature exits) |
+| Take Profit (Phase 1) | 100% | |
+| Take Profit (Phase 2) | 150% | |
+| Trailing Stop | 20% | |
+| Time Limit | 15 minutes | |
 
 ### Exit Triggers
 
@@ -424,10 +544,11 @@ The Position Monitor checks these conditions every 2 seconds:
 
 ```rust
 enum ExitReason {
-    StopLoss,           // Price dropped below -30%
+    Emergency,          // CIRCUIT BREAKER: -50% catastrophic loss protection
+    StopLoss,           // Price dropped below configured SL (40% for sniper, 20% for scanner)
     TakeProfit,         // Hit take profit target
     TrailingStop,       // Dropped 20% from peak
-    TimeLimit,          // Held > 15 minutes
+    TimeLimit,          // Held > time limit (3 min scanner, 15 min sniper)
     PartialTakeProfit,  // Tiered exit phase
     MomentumDecay,      // Velocity declining sustained
     MomentumReversal,   // Strong reversal detected
@@ -435,6 +556,19 @@ enum ExitReason {
     Manual,             // User-triggered exit
 }
 ```
+
+### Emergency Exit Circuit Breaker
+
+**Added 2026-01-25** - Prevents catastrophic losses from rug pulls and crashes.
+
+```
+If unrealized_pnl_percent <= -50%:
+  → IMMEDIATELY exit at Critical urgency
+  → Bypasses all other exit logic
+  → Would have prevented -84% and -91% losses seen in trade history
+```
+
+This circuit breaker triggers regardless of the configured stop loss, providing a hard floor to limit maximum single-position loss.
 
 ### Momentum-Based Exits
 
@@ -530,12 +664,14 @@ Token graduated?
 struct RiskConfig {
     max_position_sol: f64,           // 0.30 SOL default
     daily_loss_limit_sol: f64,       // 1.0 SOL default
-    max_drawdown_percent: f64,       // 30% default
+    max_drawdown_percent: f64,       // 40% default (increased from 30% per LLM consensus)
     max_concurrent_positions: u32,   // 10 default
     cooldown_after_loss_ms: u64,     // 5000ms default
     auto_pause_on_drawdown: bool,    // true default
 }
 ```
+
+> **Note:** `max_drawdown_percent` increased from 30% to 40% based on LLM consensus analysis showing tokens often recover from 30%+ dips. Emergency circuit breaker at -50% provides catastrophic loss protection.
 
 ### Risk Checks (Before Every Buy)
 
@@ -544,6 +680,44 @@ struct RiskConfig {
 3. **Concurrent Positions** - Limit active positions
 4. **Loss Cooldown** - Pause 5s after each loss
 5. **Risk Score** - Higher risk = smaller position
+6. **Signal Deduplication** - Prevents duplicate buy attempts for same signal
+7. **Mint Cooldown** - 5 min cooldown per token (only applied AFTER successful buy)
+
+### Signal Deduplication
+
+**File:** `src/agents/strategy_engine.rs`
+
+The StrategyEngine tracks processed signal IDs to prevent duplicate buy attempts:
+
+```rust
+// In process_signals(), before matching:
+if processed_signals.contains(&signal.id) {
+    continue;  // Skip already-processed signal
+}
+
+// After creating edge:
+processed_signals.insert(signal.id);
+
+// Auto-cleanup when cache exceeds 10,000 entries
+if processed_signals.len() > 10_000 {
+    processed_signals.clear();
+}
+```
+
+This prevents the same signal from triggering multiple buy attempts if it matches multiple strategies or is processed multiple times.
+
+### Mint Cooldown Fix
+
+**File:** `src/agents/autonomous_executor.rs`
+
+The mint cooldown is only applied AFTER a successful transaction:
+
+```
+BEFORE (Bug): Cooldown inserted before buy → failed TXs block retries for 5 min
+AFTER (Fixed): Cooldown inserted after success → failed TXs can be retried immediately
+```
+
+This allows immediate retry of failed transactions while still preventing rapid-fire buys of successful tokens.
 
 ### Volatility-Adjusted Sizing
 
@@ -664,4 +838,3 @@ just dev-mac "no-scan no-snipe"  # Without both
 
 - Threat detection (rug pulls)
 - Research/DD agent
-- KOL copy trading execution

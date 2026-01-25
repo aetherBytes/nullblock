@@ -10,10 +10,11 @@ use crate::consensus::{ConsensusConfig, ConsensusEngine, format_edge_context};
 use crate::engrams::client::EngramsClient;
 use crate::engrams::schemas::{TransactionSummary, TransactionAction, TransactionMetadata, ExecutionError, ExecutionErrorType, ErrorContext};
 use crate::error::{AppError, AppResult};
-use crate::events::{edge as edge_topics, ArbEvent, AgentType, EventSource};
-use crate::execution::{CurveBuyParams, CurveTransactionBuilder, ExitConfig, PositionManager};
+use crate::events::{edge as edge_topics, kol as kol_topics, ArbEvent, AgentType, EventSource};
+use crate::execution::{CurveBuyParams, CurveTransactionBuilder, ExitConfig, PositionManager, CopyTradeExecutor};
 use crate::execution::risk::RiskConfig;
 use crate::helius::HeliusSender;
+use crate::models::Signal;
 use crate::wallet::DevWalletSigner;
 use crate::wallet::turnkey::SignRequest;
 
@@ -22,6 +23,49 @@ const EXECUTION_COOLDOWN_MS: u64 = 1000;
 const MINT_COOLDOWN_SECONDS: i64 = 300;
 const MIN_PROFIT_THRESHOLD_LAMPORTS: u64 = 500_000;
 const ESTIMATED_GAS_COST_LAMPORTS: u64 = 250_000;
+const EVENT_RETRY_ATTEMPTS: u32 = 3;
+const EVENT_RETRY_DELAY_MS: u64 = 50;
+const MAX_RECENT_MINTS_SIZE: usize = 10_000;
+
+async fn send_event(tx: &broadcast::Sender<ArbEvent>, event: ArbEvent) {
+    send_event_with_retry(tx, event, false).await;
+}
+
+async fn send_critical_event(tx: &broadcast::Sender<ArbEvent>, event: ArbEvent) {
+    send_event_with_retry(tx, event, true).await;
+}
+
+async fn send_event_with_retry(tx: &broadcast::Sender<ArbEvent>, event: ArbEvent, is_critical: bool) {
+    let max_attempts = if is_critical { EVENT_RETRY_ATTEMPTS } else { EVENT_RETRY_ATTEMPTS };
+
+    for attempt in 0..max_attempts {
+        match tx.send(event.clone()) {
+            Ok(_) => return,
+            Err(_e) => {
+                if attempt < max_attempts - 1 {
+                    tokio::time::sleep(std::time::Duration::from_millis(EVENT_RETRY_DELAY_MS)).await;
+                } else {
+                    if is_critical {
+                        tracing::error!(
+                            event_type = %event.event_type,
+                            topic = %event.topic,
+                            attempts = max_attempts,
+                            "❌ CRITICAL event broadcast failed after {} attempts",
+                            max_attempts
+                        );
+                    } else {
+                        tracing::warn!(
+                            event_type = %event.event_type,
+                            topic = %event.topic,
+                            "⚠️ Event broadcast failed after {} attempts (no receivers or channel full)",
+                            max_attempts
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutoExecutionRecord {
@@ -74,6 +118,7 @@ pub struct AutonomousExecutor {
     is_running: Arc<RwLock<bool>>,
     default_wallet: String,
     default_slippage_bps: u16,
+    copy_executor: Arc<RwLock<Option<Arc<CopyTradeExecutor>>>>,
 }
 
 impl AutonomousExecutor {
@@ -113,7 +158,14 @@ impl AutonomousExecutor {
             is_running: Arc::new(RwLock::new(false)),
             default_wallet,
             default_slippage_bps: 500,
+            copy_executor: Arc::new(RwLock::new(None)),
         }
+    }
+
+    pub async fn set_copy_executor(&self, executor: Arc<CopyTradeExecutor>) {
+        let mut ce = self.copy_executor.write().await;
+        *ce = Some(executor);
+        tracing::info!("🔗 Autonomous executor: Copy trade executor connected");
     }
 
     pub async fn start(&self) {
@@ -149,6 +201,7 @@ impl AutonomousExecutor {
         let is_running = self.is_running.clone();
         let default_wallet = self.default_wallet.clone();
         let default_slippage_bps = self.default_slippage_bps;
+        let copy_executor = self.copy_executor.clone();
 
         tokio::spawn(async move {
             tracing::info!("🤖 Autonomous executor event loop started, waiting for events...");
@@ -203,6 +256,15 @@ impl AutonomousExecutor {
                                     ).await {
                                         tracing::warn!("Auto-execution failed: {}", e);
                                     }
+                                } else if event.topic == kol_topics::TRADE_DETECTED {
+                                    if let Err(e) = Self::handle_kol_trade(
+                                        &event,
+                                        &copy_executor,
+                                        &event_tx,
+                                        &stats,
+                                    ).await {
+                                        tracing::warn!("KOL copy trade failed: {}", e);
+                                    }
                                 }
                             }
                             Err(broadcast::error::RecvError::Lagged(skipped)) => {
@@ -241,6 +303,10 @@ impl AutonomousExecutor {
 
     pub async fn list_executions(&self) -> Vec<AutoExecutionRecord> {
         self.executions.read().await.values().cloned().collect()
+    }
+
+    pub fn get_recent_mints(&self) -> Arc<RwLock<HashMap<String, DateTime<Utc>>>> {
+        self.recent_mints.clone()
     }
 
     async fn handle_edge_detected(
@@ -347,7 +413,7 @@ impl AutonomousExecutor {
                                 reasoning = %result.reasoning_summary,
                                 "🚫 Edge rejected by consensus - skipping execution"
                             );
-                            let _ = event_tx.send(ArbEvent::new(
+                            send_event(&event_tx,ArbEvent::new(
                                 "consensus.rejected",
                                 EventSource::Agent(AgentType::Executor),
                                 "arb.edge.rejected",
@@ -357,7 +423,7 @@ impl AutonomousExecutor {
                                     "agreement_score": result.agreement_score,
                                     "reasoning": result.reasoning_summary,
                                 }),
-                            ));
+                            )).await;
                             return Ok(());
                         }
                         tracing::info!(
@@ -423,11 +489,13 @@ impl AutonomousExecutor {
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        if position_manager.has_open_position_for_mint(&mint).await {
+        if position_manager.has_open_position_for_mint_and_strategy(&mint, &strategy_id).await {
             tracing::info!(
                 edge_id = %edge_id,
                 mint = %mint,
-                "⏭️ Skipping: already have open position for this mint"
+                strategy_id = %strategy_id,
+                strategy_name = %strategy.name,
+                "⏭️ Skipping: already have open position for this mint in this strategy"
             );
             return Ok(());
         }
@@ -437,7 +505,23 @@ impl AutonomousExecutor {
             let cooldown = Duration::seconds(MINT_COOLDOWN_SECONDS);
             let mut mints = recent_mints.write().await;
 
+            // Time-based cleanup: remove expired entries
             mints.retain(|_, last_exec| now.signed_duration_since(*last_exec) < cooldown);
+
+            // Size-based cleanup: if still over limit, evict oldest entries
+            if mints.len() >= MAX_RECENT_MINTS_SIZE {
+                let mut entries: Vec<_> = mints.iter().map(|(k, v)| (k.clone(), *v)).collect();
+                entries.sort_by(|a, b| a.1.cmp(&b.1)); // Sort by timestamp (oldest first)
+                let to_remove = entries.len() - MAX_RECENT_MINTS_SIZE / 2; // Remove half
+                for (mint_to_remove, _) in entries.into_iter().take(to_remove) {
+                    mints.remove(&mint_to_remove);
+                }
+                tracing::debug!(
+                    "🗑️ Evicted {} oldest entries from recent_mints (size: {})",
+                    to_remove,
+                    mints.len()
+                );
+            }
 
             if let Some(last_exec) = mints.get(&mint) {
                 let elapsed = now.signed_duration_since(*last_exec);
@@ -451,6 +535,8 @@ impl AutonomousExecutor {
                 );
                 return Ok(());
             }
+            // Note: cooldown insert moved to AFTER successful transaction to avoid
+            // blocking retries on failed transactions (see line ~848)
         }
 
         let global_max_sol = risk_config.read().await.max_position_sol;
@@ -611,17 +697,25 @@ impl AutonomousExecutor {
         }
 
         // ENTRY FILTER 2: Anti-FOMO check - don't buy after big spike
-        // Tightened from 25% to 15% max recent pump
-        let max_recent_pump = 15.0;
+        // Strategy-dependent thresholds:
+        // - Graduation snipes WANT momentum - tokens often pump 20%+ at graduation
+        // - Regular curve_arb: tighter filter to avoid chasing pumps
+        let max_recent_pump = if is_graduation_snipe {
+            50.0  // Allow up to 50% pump for graduation snipes (momentum is desired)
+        } else {
+            15.0  // Conservative 15% for regular curve_arb (avoid FOMO entries)
+        };
         if price_change_1m > max_recent_pump {
             tracing::info!(
                 edge_id = %edge_id,
                 mint = %mint,
                 price_change_1m = price_change_1m,
                 max_allowed = max_recent_pump,
-                "⏭️ Skipping: already pumped {:.1}% in last minute (max {:.0}%)",
+                is_snipe = is_graduation_snipe,
+                "⏭️ Skipping: already pumped {:.1}% in last minute (max {:.0}% for {})",
                 price_change_1m,
-                max_recent_pump
+                max_recent_pump,
+                if is_graduation_snipe { "snipe" } else { "curve_arb" }
             );
             return Ok(());
         }
@@ -675,7 +769,7 @@ impl AutonomousExecutor {
             s.executions_attempted += 1;
         }
 
-        let _ = event_tx.send(ArbEvent::new(
+        send_event(&event_tx,ArbEvent::new(
             "auto_execution_started",
             EventSource::Agent(AgentType::Executor),
             edge_topics::EXECUTING,
@@ -686,7 +780,7 @@ impl AutonomousExecutor {
                 "sol_amount": sol_amount_lamports as f64 / 1e9,
                 "mode": "autonomous",
             }),
-        ));
+        )).await;
 
         let result = Self::execute_curve_buy(
             &mint,
@@ -730,7 +824,7 @@ impl AutonomousExecutor {
                     .and_then(|v| v.as_str())
                     .unwrap_or("???");
 
-                let _ = event_tx.send(ArbEvent::new(
+                send_critical_event(&event_tx, ArbEvent::new(
                     "auto_execution_succeeded",
                     EventSource::Agent(AgentType::Executor),
                     edge_topics::EXECUTED,
@@ -746,7 +840,7 @@ impl AutonomousExecutor {
                         "signal_source": signal_source,
                         "significance": "critical",
                     }),
-                ));
+                )).await;
 
                 {
                     let mut mints = recent_mints.write().await;
@@ -756,16 +850,35 @@ impl AutonomousExecutor {
                 let tokens_received = tokens_out.unwrap_or(0);
                 if tokens_received > 0 {
                     let entry_price = sol_amount_lamports as f64 / tokens_received as f64;
-                    // Use momentum-adaptive exit config if enabled, otherwise standard curve config
-                    let exit_config = if strategy.risk_params.momentum_adaptive_exits {
-                        tracing::info!(
-                            edge_id = %edge_id,
-                            "🎯 Using momentum-adaptive exit config (let_winners_run={})",
-                            strategy.risk_params.let_winners_run
-                        );
-                        ExitConfig::for_curve_bonding_momentum_adaptive()
-                    } else {
-                        ExitConfig::for_curve_bonding()
+                    // Select exit config based on strategy type
+                    // Scanner (curve_arb): tighter, faster exits (15% TP, 7min)
+                    // Sniper (graduation_snipe): let winners run (100% TP, 40% SL, 15min)
+                    let exit_config = match strategy.strategy_type.as_str() {
+                        "curve_arb" => {
+                            tracing::info!(
+                                edge_id = %edge_id,
+                                strategy_type = "curve_arb",
+                                momentum_enabled = strategy.risk_params.momentum_adaptive_exits,
+                                "🔍 Using SCANNER exit config (25% TP, 3min limit)"
+                            );
+                            ExitConfig::for_scanner(strategy.risk_params.momentum_adaptive_exits)
+                        },
+                        "graduation_snipe" => {
+                            tracing::info!(
+                                edge_id = %edge_id,
+                                strategy_type = "graduation_snipe",
+                                let_winners_run = strategy.risk_params.let_winners_run,
+                                "🔫 Using SNIPER exit config (100% TP, 40% SL, 15min limit)"
+                            );
+                            ExitConfig::for_curve_bonding()
+                        },
+                        _ => {
+                            if strategy.risk_params.momentum_adaptive_exits {
+                                ExitConfig::for_curve_bonding_momentum_adaptive()
+                            } else {
+                                ExitConfig::for_curve_bonding()
+                            }
+                        }
                     };
 
                     let venue = route_data.get("venue")
@@ -863,7 +976,7 @@ impl AutonomousExecutor {
                     s.executions_failed += 1;
                 }
 
-                let _ = event_tx.send(ArbEvent::new(
+                send_critical_event(&event_tx, ArbEvent::new(
                     "auto_execution_failed",
                     EventSource::Agent(AgentType::Executor),
                     edge_topics::FAILED,
@@ -873,7 +986,7 @@ impl AutonomousExecutor {
                         "mint": mint,
                         "error": e.to_string(),
                     }),
-                ));
+                )).await;
 
                 // Save execution error to engrams
                 let error_str = e.to_string();
@@ -974,6 +1087,119 @@ impl AutonomousExecutor {
         let signature = helius_sender.send_transaction(&signed_tx, true).await?;
 
         Ok((signature, build_result.expected_tokens_out))
+    }
+
+    async fn handle_kol_trade(
+        event: &ArbEvent,
+        copy_executor: &Arc<RwLock<Option<Arc<CopyTradeExecutor>>>>,
+        event_tx: &broadcast::Sender<ArbEvent>,
+        stats: &Arc<RwLock<AutoExecutorStats>>,
+    ) -> AppResult<()> {
+        let copy_exec_guard = copy_executor.read().await;
+        let copy_exec = match copy_exec_guard.as_ref() {
+            Some(exec) => exec.clone(),
+            None => {
+                tracing::warn!(
+                    "⚠️ KOL trade detected but copy executor not initialized! \
+                    Copy trading will not work. Set copy_executor on AutonomousExecutor to enable."
+                );
+                return Ok(());
+            }
+        };
+        drop(copy_exec_guard);
+
+        let kol_id = event.payload.get("kol_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| AppError::Validation("Missing kol_id in event".into()))?;
+
+        let token_mint = event.payload.get("token_mint")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| AppError::Validation("Missing token_mint in event".into()))?;
+
+        let trade_type = event.payload.get("trade_type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("buy");
+
+        tracing::info!(
+            kol_id = %kol_id,
+            token_mint = %token_mint,
+            trade_type = %trade_type,
+            "🔗 Processing KOL trade for copy execution"
+        );
+
+        let signal = Signal {
+            id: Uuid::new_v4(),
+            signal_type: crate::models::SignalType::KolTrade,
+            venue_id: Uuid::nil(),
+            venue_type: crate::models::VenueType::BondingCurve,
+            token_mint: Some(token_mint.to_string()),
+            pool_address: None,
+            estimated_profit_bps: 100,
+            confidence: event.payload.get("kol_trust_score")
+                .and_then(|v| v.as_f64())
+                .map(|s| s / 100.0)
+                .unwrap_or(0.7),
+            significance: crate::events::Significance::High,
+            metadata: event.payload.clone(),
+            detected_at: chrono::Utc::now(),
+            expires_at: chrono::Utc::now() + chrono::Duration::minutes(2),
+        };
+
+        {
+            let mut s = stats.write().await;
+            s.executions_attempted += 1;
+        }
+
+        match copy_exec.execute_copy(&signal).await {
+            Ok(result) => {
+                tracing::info!(
+                    kol_id = %kol_id,
+                    token_mint = %token_mint,
+                    copy_trade_id = %result.copy_trade_id,
+                    tx_signature = ?result.tx_signature,
+                    latency_ms = result.latency_ms,
+                    "✅ KOL copy trade executed successfully"
+                );
+
+                {
+                    let mut s = stats.write().await;
+                    s.executions_succeeded += 1;
+                    s.total_sol_deployed += result.sol_amount;
+                }
+
+                send_critical_event(&event_tx, ArbEvent::new(
+                    "kol_trade_copied",
+                    EventSource::Agent(AgentType::Executor),
+                    kol_topics::TRADE_COPIED,
+                    serde_json::json!({
+                        "kol_id": kol_id,
+                        "token_mint": token_mint,
+                        "trade_type": trade_type,
+                        "copy_trade_id": result.copy_trade_id,
+                        "sol_amount": result.sol_amount,
+                        "tx_signature": result.tx_signature,
+                        "latency_ms": result.latency_ms,
+                    }),
+                )).await;
+
+                Ok(())
+            }
+            Err(e) => {
+                tracing::error!(
+                    kol_id = %kol_id,
+                    token_mint = %token_mint,
+                    error = %e,
+                    "❌ KOL copy trade failed"
+                );
+
+                {
+                    let mut s = stats.write().await;
+                    s.executions_failed += 1;
+                }
+
+                Err(e)
+            }
+        }
     }
 }
 
