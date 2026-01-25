@@ -29,7 +29,7 @@ const PositionDetailModal: React.FC<PositionDetailModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [metrics, setMetrics] = useState<DetailedCurveMetrics | null>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(true);
-  const [chartProvider, setChartProvider] = useState<ChartProvider>('dexscreener');
+  const [chartProvider, setChartProvider] = useState<ChartProvider>('birdeye');
 
   useEffect(() => {
     const fetchMetrics = async () => {
