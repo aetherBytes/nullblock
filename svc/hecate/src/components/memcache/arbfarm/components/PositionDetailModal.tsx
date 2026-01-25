@@ -89,7 +89,7 @@ const PositionDetailModal: React.FC<PositionDetailModalProps> = ({
   const getJupiterUrl = (): string => {
     const SOL_MINT = 'So11111111111111111111111111111111111111112';
     const tokenMint = position.token_mint ?? '';
-    return `https://jup.ag/swap?inputMint=${SOL_MINT}&outputMint=${tokenMint}`;
+    return `https://jup.ag/swap?sell=${tokenMint}&buy=${SOL_MINT}`;
   };
 
   const copyMint = () => {

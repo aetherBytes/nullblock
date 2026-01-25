@@ -269,7 +269,7 @@ const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
           <a href={`https://dexscreener.com/solana/${token.mint}`} target="_blank" rel="noopener noreferrer" className={styles.linkButton}>
             📊 DEX Screener
           </a>
-          <a href={`https://jup.ag/swap?inputMint=So11111111111111111111111111111111111111112&outputMint=${token.mint}`} target="_blank" rel="noopener noreferrer" className={styles.linkButton}>
+          <a href={`https://jup.ag/swap?sell=${token.mint}&buy=So11111111111111111111111111111111111111112`} target="_blank" rel="noopener noreferrer" className={styles.linkButton}>
             🪐 Jupiter
           </a>
         </div>
