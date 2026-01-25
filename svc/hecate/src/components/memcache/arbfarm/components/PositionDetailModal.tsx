@@ -96,7 +96,7 @@ const PositionDetailModal: React.FC<PositionDetailModalProps> = ({
       case 'dexscreener':
         return `https://dexscreener.com/solana/${mint}?embed=1&theme=dark&trades=0&info=0`;
       case 'birdeye':
-        return `https://birdeye.so/token/${mint}?chain=solana&embed=1`;
+        return `https://birdeye.so/tv-widget/${mint}?chain=solana&viewMode=pair&chartInterval=15&chartType=candle&chartTimezone=America%2FLos_Angeles&chartLeftToolbar=show&theme=dark`;
       case 'defined':
         return `https://www.defined.fi/sol/${mint}?embedded=1&hideTxTable=1&hideChart=0&hideChartEmptyBars=1`;
       default:
