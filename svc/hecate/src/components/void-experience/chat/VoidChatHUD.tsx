@@ -138,7 +138,8 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   const [showTooltip, setShowTooltip] = useState(false);
   const [hasAcknowledgedFirst, setHasAcknowledgedFirst] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(hasOverlappingPanels);
+  const [userExpandedChat, setUserExpandedChat] = useState(false);
 
   // Slash command state
   const [showCommandDropdown, setShowCommandDropdown] = useState(false);
@@ -241,6 +242,21 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
     // Clear backend conversation on fresh session (paranoid cleanup)
     agentService.clearConversation('hecate').catch(() => {});
   }, []);
+
+  // Auto-collapse chat when memcache/crossroads panels are open
+  // Only auto-expand if user hasn't manually expanded while panel was open
+  useEffect(() => {
+    if (hasOverlappingPanels) {
+      // Collapse chat when memcache/crossroads opens (unless user is actively using it)
+      if (!isProcessing && !userExpandedChat) {
+        setIsCollapsed(true);
+        setShowHistory(false);
+      }
+    } else {
+      // Panel closed - reset user expansion state
+      setUserExpandedChat(false);
+    }
+  }, [hasOverlappingPanels, isProcessing]);
 
   // Handle the actual API call after charging/firing animation
   const executeTransmission = useCallback(async () => {
@@ -568,10 +584,14 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
   // Expand chat when there are unread messages or user interacts
   const handleExpand = useCallback(() => {
     setIsCollapsed(false);
+    // Track that user manually expanded while overlapping panel is open
+    if (hasOverlappingPanels) {
+      setUserExpandedChat(true);
+    }
     if (messages.length > 0) {
       setShowHistory(true);
     }
-  }, [messages.length]);
+  }, [messages.length, hasOverlappingPanels]);
 
   // Use portal to render at body level, escaping VoidExperience's stacking context
   const chatContent = (
