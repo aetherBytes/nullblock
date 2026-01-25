@@ -214,7 +214,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
                     : 'Not connected'}
                 </span>
               </div>
-              <span className={styles.userBadge}>Early Adopter</span>
+              <span className={`${styles.userBadge} ${styles.architectBadge}`}>Architect</span>
             </div>
           </div>
 
