@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -12,6 +13,7 @@ pub struct RiskManager {
     config: RiskConfig,
     daily_stats: Arc<RwLock<DailyStats>>,
     position_tracker: Arc<RwLock<PositionTracker>>,
+    db_pool: Option<PgPool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,7 +45,7 @@ impl Default for RiskConfig {
         Self {
             max_position_sol: 0.3,              // 0.3 SOL per position (medium risk)
             daily_loss_limit_sol: 1.0,          // 1 SOL daily loss limit
-            max_drawdown_percent: 30.0,         // 30% stop loss - allow curve volatility
+            max_drawdown_percent: 40.0,         // 40% stop loss - allow curve volatility (increased from 30% per LLM consensus)
             max_concurrent_positions: 10,       // 10 concurrent positions
             max_position_per_token_sol: 0.3,    // Same as max_position
             cooldown_after_loss_ms: 5000,
@@ -78,7 +80,7 @@ impl RiskConfig {
         Self {
             max_position_sol: 5.0,
             daily_loss_limit_sol: 2.0,
-            max_drawdown_percent: 30.0,         // Same 30% stop loss
+            max_drawdown_percent: 40.0,         // 40% stop loss (matches default)
             max_concurrent_positions: 10,
             max_position_per_token_sol: 2.0,
             cooldown_after_loss_ms: 2000,
@@ -115,7 +117,7 @@ impl RiskConfig {
         Self {
             max_position_sol: 10.0,
             daily_loss_limit_sol: 5.0,
-            max_drawdown_percent: 30.0,         // Same 30% stop loss
+            max_drawdown_percent: 40.0,         // 40% stop loss (matches default)
             max_concurrent_positions: 20,
             max_position_per_token_sol: 5.0,
             cooldown_after_loss_ms: 1000,
@@ -130,6 +132,7 @@ impl RiskConfig {
 
 #[derive(Debug, Clone, Default)]
 struct DailyStats {
+    db_id: Option<Uuid>,
     date: chrono::NaiveDate,
     total_profit_lamports: i64,
     total_loss_lamports: i64,
@@ -183,6 +186,113 @@ impl RiskManager {
             config,
             daily_stats: Arc::new(RwLock::new(DailyStats::default())),
             position_tracker: Arc::new(RwLock::new(PositionTracker::default())),
+            db_pool: None,
+        }
+    }
+
+    pub fn with_db_pool(mut self, pool: PgPool) -> Self {
+        self.db_pool = Some(pool);
+        self
+    }
+
+    pub async fn load_daily_stats_from_db(&self) -> AppResult<()> {
+        let Some(pool) = &self.db_pool else {
+            return Ok(());
+        };
+
+        let today = chrono::Utc::now().date_naive();
+
+        let row: Option<(Uuid, chrono::NaiveDate, i64, i64, i32, i32, i32, Option<chrono::DateTime<chrono::Utc>>)> = sqlx::query_as(
+            r#"
+            SELECT id, date, total_profit_lamports, total_loss_lamports,
+                   trade_count, winning_trades, losing_trades, last_loss_at
+            FROM daily_risk_stats
+            WHERE date = $1
+            "#,
+        )
+        .bind(today)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to load daily stats: {}", e)))?;
+
+        if let Some((id, date, profit, loss, trades, wins, losses, last_loss)) = row {
+            let mut stats = self.daily_stats.write().await;
+            stats.db_id = Some(id);
+            stats.date = date;
+            stats.total_profit_lamports = profit;
+            stats.total_loss_lamports = loss;
+            stats.trade_count = trades as u32;
+            stats.winning_trades = wins as u32;
+            stats.losing_trades = losses as u32;
+            stats.last_loss_at = last_loss;
+
+            let net_pnl = (profit - loss.abs()) as f64 / 1e9;
+            tracing::info!(
+                "📊 Loaded daily risk stats from DB: date={}, net_pnl={:.4} SOL, trades={}, wins={}, losses={}",
+                date, net_pnl, trades, wins, losses
+            );
+        }
+
+        Ok(())
+    }
+
+    async fn persist_daily_stats(&self, stats: &DailyStats) {
+        let Some(pool) = &self.db_pool else {
+            return;
+        };
+
+        let result = if let Some(id) = stats.db_id {
+            sqlx::query(
+                r#"
+                UPDATE daily_risk_stats
+                SET total_profit_lamports = $2,
+                    total_loss_lamports = $3,
+                    trade_count = $4,
+                    winning_trades = $5,
+                    losing_trades = $6,
+                    last_loss_at = $7,
+                    updated_at = NOW()
+                WHERE id = $1
+                "#,
+            )
+            .bind(id)
+            .bind(stats.total_profit_lamports)
+            .bind(stats.total_loss_lamports)
+            .bind(stats.trade_count as i32)
+            .bind(stats.winning_trades as i32)
+            .bind(stats.losing_trades as i32)
+            .bind(stats.last_loss_at)
+            .execute(pool)
+            .await
+        } else {
+            sqlx::query(
+                r#"
+                INSERT INTO daily_risk_stats (date, total_profit_lamports, total_loss_lamports,
+                                               trade_count, winning_trades, losing_trades, last_loss_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (date) DO UPDATE SET
+                    total_profit_lamports = EXCLUDED.total_profit_lamports,
+                    total_loss_lamports = EXCLUDED.total_loss_lamports,
+                    trade_count = EXCLUDED.trade_count,
+                    winning_trades = EXCLUDED.winning_trades,
+                    losing_trades = EXCLUDED.losing_trades,
+                    last_loss_at = EXCLUDED.last_loss_at,
+                    updated_at = NOW()
+                "#,
+            )
+            .bind(stats.date)
+            .bind(stats.total_profit_lamports)
+            .bind(stats.total_loss_lamports)
+            .bind(stats.trade_count as i32)
+            .bind(stats.winning_trades as i32)
+            .bind(stats.losing_trades as i32)
+            .bind(stats.last_loss_at)
+            .execute(pool)
+            .await
+        };
+
+        if let Err(e) = result {
+            tracing::warn!("Failed to persist daily risk stats: {}", e);
         }
     }
 
@@ -243,7 +353,8 @@ impl RiskManager {
         }
 
         // Check 6: Minimum profit threshold
-        let profit_bps = edge.estimated_profit_lamports.map(|p| (p / 10000) as u16).unwrap_or(0);
+        // Use proper rounding: (p + 5000) / 10000 to avoid truncation bias
+        let profit_bps = edge.estimated_profit_lamports.map(|p| ((p + 5000) / 10000) as u16).unwrap_or(0);
         if profit_bps < strategy_params.min_profit_bps {
             violations.push(RiskViolation {
                 rule: "min_profit".to_string(),
@@ -282,11 +393,27 @@ impl RiskManager {
     }
 
     async fn check_daily_loss_limit(&self) -> Option<RiskViolation> {
-        let stats = self.daily_stats.read().await;
+        // Use write lock to atomically check date and reset if needed
+        // This prevents race conditions at midnight UTC where one thread
+        // could check old limits while another resets
+        let mut stats = self.daily_stats.write().await;
         let today = chrono::Utc::now().date_naive();
 
+        // Atomically reset if new day - prevents race condition at day boundary
         if stats.date != today {
-            return None; // Stats not for today, will be reset
+            let old_date = stats.date;
+            *stats = DailyStats {
+                db_id: None,
+                date: today,
+                ..Default::default()
+            };
+            tracing::info!(
+                old_date = %old_date,
+                new_date = %today,
+                "📊 Daily risk stats reset for new day"
+            );
+            // After reset, no losses yet today
+            return None;
         }
 
         let net_pnl_sol = (stats.total_profit_lamports - stats.total_loss_lamports.abs()) as f64 / 1e9;
@@ -366,27 +493,35 @@ impl RiskManager {
     }
 
     pub async fn record_trade_result(&self, profit_lamports: i64) {
-        let mut stats = self.daily_stats.write().await;
-        let today = chrono::Utc::now().date_naive();
+        let stats_clone = {
+            let mut stats = self.daily_stats.write().await;
+            let today = chrono::Utc::now().date_naive();
 
-        // Reset stats if new day
-        if stats.date != today {
-            *stats = DailyStats {
-                date: today,
-                ..Default::default()
-            };
-        }
+            // Reset stats if new day
+            if stats.date != today {
+                *stats = DailyStats {
+                    db_id: None, // New day, no DB record yet
+                    date: today,
+                    ..Default::default()
+                };
+            }
 
-        stats.trade_count += 1;
+            stats.trade_count += 1;
 
-        if profit_lamports >= 0 {
-            stats.total_profit_lamports += profit_lamports;
-            stats.winning_trades += 1;
-        } else {
-            stats.total_loss_lamports += profit_lamports.abs();
-            stats.losing_trades += 1;
-            stats.last_loss_at = Some(chrono::Utc::now());
-        }
+            if profit_lamports >= 0 {
+                stats.total_profit_lamports += profit_lamports;
+                stats.winning_trades += 1;
+            } else {
+                stats.total_loss_lamports += profit_lamports.abs();
+                stats.losing_trades += 1;
+                stats.last_loss_at = Some(chrono::Utc::now());
+            }
+
+            stats.clone()
+        };
+
+        // Persist to DB (fire-and-forget, don't block trading)
+        self.persist_daily_stats(&stats_clone).await;
     }
 
     pub async fn open_position(&self, edge_id: Uuid, token_mint: Option<String>, size_sol: f64) {
