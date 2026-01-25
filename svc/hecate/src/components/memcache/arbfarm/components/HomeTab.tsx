@@ -9,7 +9,6 @@ import CurveMetricsPanel from './CurveMetricsPanel';
 import type {
   PnLSummary,
   OpenPosition,
-  PositionStats,
   WalletBalanceResponse,
   PositionExposure,
   MonitorStatus,
@@ -36,21 +35,14 @@ type DetailItemType = 'live_trade' | 'completed_trade' | null;
 const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
   const [pnlSummary, setPnlSummary] = useState<PnLSummary | null>(null);
   const [realPositions, setRealPositions] = useState<OpenPosition[]>([]);
-  const [positionStats, setPositionStats] = useState<PositionStats | null>(null);
   const [walletBalance, setWalletBalance] = useState<WalletBalanceResponse | null>(null);
   const [exposure, setExposure] = useState<PositionExposure | null>(null);
   const [monitorStatus, setMonitorStatus] = useState<MonitorStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [closingPosition, setClosingPosition] = useState<string | null>(null);
-  const [editingExitConfig, setEditingExitConfig] = useState<string | null>(null);
   const [selectedDetailItem, setSelectedDetailItem] = useState<LiveTrade | RecentTradeInfo | null>(null);
   const [selectedDetailType, setSelectedDetailType] = useState<DetailItemType>(null);
   const [selectedPosition, setSelectedPosition] = useState<OpenPosition | null>(null);
-  const [exitConfigForm, setExitConfigForm] = useState({
-    stop_loss_percent: 10,
-    take_profit_percent: 50,
-    trailing_stop_percent: 0,
-  });
   const [sellingAll, setSellingAll] = useState(false);
   const [reconciling, setReconciling] = useState(false);
   const [selectedMetricsToken, setSelectedMetricsToken] = useState<{
@@ -74,7 +66,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
       }
       if (positionsRes.success && positionsRes.data) {
         setRealPositions(positionsRes.data.positions || []);
-        setPositionStats(positionsRes.data.stats || null);
       }
       if (balanceRes.success && balanceRes.data) {
         setWalletBalance(balanceRes.data);
@@ -115,20 +106,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
       return false;
     } finally {
       setClosingPosition(null);
-    }
-  };
-
-  const handleUpdateExitConfig = async (positionId: string) => {
-    try {
-      await arbFarmService.updatePositionExitConfig(positionId, {
-        stop_loss_percent: exitConfigForm.stop_loss_percent,
-        take_profit_percent: exitConfigForm.take_profit_percent,
-        trailing_stop_percent: exitConfigForm.trailing_stop_percent || undefined,
-      });
-      setEditingExitConfig(null);
-      await fetchData();
-    } catch (error) {
-      console.error('Failed to update exit config:', error);
     }
   };
 
@@ -174,12 +151,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
     } catch (error) {
       console.error('Failed to toggle monitor:', error);
     }
-  };
-
-  const formatPnL = (value: number | null | undefined): string => {
-    const safeValue = value ?? 0;
-    const formatted = safeValue >= 0 ? `+${safeValue.toFixed(4)}` : safeValue.toFixed(4);
-    return `${formatted} SOL`;
   };
 
   if (loading) {
@@ -276,6 +247,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
               className={`${styles.controlButton} ${styles.danger}`}
               onClick={handleSellAll}
               disabled={sellingAll || realPositions.length === 0}
+              title="Dumps all tokens to SOL (USDC excluded)"
             >
               {sellingAll ? 'Selling...' : 'Sell All'}
             </button>
@@ -324,159 +296,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
         )}
       </div>
 
-      {/* Row 3: Additional Stats */}
-      <div className={styles.statusCardsRow}>
-        {/* Wallet Balance Card */}
-        <div className={styles.statusCard}>
-          <h3 className={styles.cardTitle}>Wallet Balance</h3>
-          <div className={styles.balanceDisplay}>
-            <span className={styles.balanceAmount}>
-              {(walletBalance?.balance_sol ?? 0).toFixed(4)} SOL
-            </span>
-          </div>
-        </div>
-
-        {/* Capital Exposure Card */}
-        <div className={styles.statusCard}>
-          <h3 className={styles.cardTitle}>Capital Exposure</h3>
-          {exposure ? (
-            <>
-              <div className={styles.exposureGrid}>
-                <div className={styles.exposureItem}>
-                  <span className={styles.exposureLabel}>SOL</span>
-                  <span className={styles.exposureValue}>{(exposure.sol_exposure ?? 0).toFixed(4)}</span>
-                </div>
-                <div className={styles.exposureItem}>
-                  <span className={styles.exposureLabel}>USDC</span>
-                  <span className={styles.exposureValue}>{(exposure.usdc_exposure ?? 0).toFixed(2)}</span>
-                </div>
-                <div className={styles.exposureItem}>
-                  <span className={styles.exposureLabel}>USDT</span>
-                  <span className={styles.exposureValue}>{(exposure.usdt_exposure ?? 0).toFixed(2)}</span>
-                </div>
-              </div>
-              <div className={styles.exposureBreakdown}>
-                <span className={styles.breakdownTitle}>Total (in SOL):</span>
-                <span>{(exposure.total_exposure_sol ?? 0).toFixed(4)} SOL</span>
-              </div>
-            </>
-          ) : (
-            <div className={styles.emptyState}>No exposure data</div>
-          )}
-        </div>
-
-        {/* Monitor Status Card */}
-        <div className={styles.statusCard}>
-          <h3 className={styles.cardTitle}>Position Monitor</h3>
-          <div className={styles.monitorStatus}>
-            <span className={`${styles.statusIndicator} ${monitorStatus?.monitoring_active ? styles.running : styles.stopped}`}>
-              {monitorStatus?.monitoring_active ? '● Running' : '○ Stopped'}
-            </span>
-            <button
-              className={`${styles.actionButton} ${monitorStatus?.monitoring_active ? styles.warning : styles.primary}`}
-              onClick={handleToggleMonitor}
-            >
-              {monitorStatus?.monitoring_active ? 'Stop' : 'Start'}
-            </button>
-          </div>
-          {monitorStatus && (
-            <div className={styles.monitorStats}>
-              <div className={styles.monitorStatItem}>
-                <span className={styles.monitorStatLabel}>Active</span>
-                <span className={styles.monitorStatValue}>{monitorStatus.active_positions}</span>
-              </div>
-              <div className={styles.monitorStatItem}>
-                <span className={styles.monitorStatLabel}>Pending</span>
-                <span className={styles.monitorStatValue}>{monitorStatus.pending_exit_signals}</span>
-              </div>
-              <div className={styles.monitorStatItem}>
-                <span className={styles.monitorStatLabel}>Interval</span>
-                <span className={styles.monitorStatValue}>{monitorStatus.price_check_interval_secs}s</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Performance Card */}
-      <div className={styles.homeGrid}>
-        <div className={styles.homeCard}>
-          <h3 className={styles.cardTitle}>Performance</h3>
-          <div className={styles.performanceGrid}>
-            <div className={styles.pnlSection}>
-              <div className={styles.pnlGrid}>
-                <div className={styles.pnlItem}>
-                  <span className={styles.pnlLabel}>Today</span>
-                  <span
-                    className={`${styles.pnlValue} ${
-                      (pnlSummary?.today_sol ?? 0) >= 0 ? styles.profit : styles.loss
-                    }`}
-                  >
-                    {formatPnL(pnlSummary?.today_sol ?? 0)}
-                  </span>
-                </div>
-                <div className={styles.pnlItem}>
-                  <span className={styles.pnlLabel}>Week</span>
-                  <span
-                    className={`${styles.pnlValue} ${
-                      (pnlSummary?.week_sol ?? 0) >= 0 ? styles.profit : styles.loss
-                    }`}
-                  >
-                    {formatPnL(pnlSummary?.week_sol ?? 0)}
-                  </span>
-                </div>
-                <div className={styles.pnlItem}>
-                  <span className={styles.pnlLabel}>Total</span>
-                  <span
-                    className={`${styles.pnlValue} ${
-                      (pnlSummary?.total_sol ?? 0) >= 0 ? styles.profit : styles.loss
-                    }`}
-                  >
-                    {formatPnL(pnlSummary?.total_sol ?? 0)}
-                  </span>
-                </div>
-                {positionStats && (
-                  <div className={styles.pnlItem}>
-                    <span className={styles.pnlLabel}>Unrealized</span>
-                    <span className={`${styles.pnlValue} ${positionStats.total_unrealized_pnl >= 0 ? styles.profit : styles.loss}`}>
-                      {formatPnL(positionStats.total_unrealized_pnl)}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className={styles.pnlStats}>
-                <span>
-                  Win Rate: {(pnlSummary?.win_rate ?? 0).toFixed(0)}% ({pnlSummary?.wins ?? 0}/{pnlSummary?.total_trades ?? 0})
-                </span>
-                {pnlSummary?.avg_hold_minutes != null && (
-                  <span>Avg Hold: {(pnlSummary.avg_hold_minutes ?? 0).toFixed(0)}min</span>
-                )}
-                {positionStats && (
-                  <>
-                    <span>SL: {positionStats.stop_losses_triggered}</span>
-                    <span>TP: {positionStats.take_profits_triggered}</span>
-                  </>
-                )}
-              </div>
-            </div>
-            {positionStats && (
-              <div className={styles.positionStatsSection}>
-                <div className={styles.miniStatsRow}>
-                  <span className={styles.miniStat}>
-                    <strong>{positionStats.active_positions}</strong> Active
-                  </span>
-                  <span className={styles.miniStat}>
-                    <strong>{positionStats.total_positions_opened}</strong> Opened
-                  </span>
-                  <span className={styles.miniStat}>
-                    <strong>{positionStats.total_positions_closed}</strong> Closed
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
       {/* Activity Detail Modal */}
       <ActivityDetailModal
