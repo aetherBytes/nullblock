@@ -18,7 +18,7 @@ impl VolumeHunterStrategy {
     pub fn new() -> Self {
         Self {
             name: "Volume Hunter".to_string(),
-            is_active: AtomicBool::new(false),
+            is_active: AtomicBool::new(true), // Active by default for observation
             min_progress: 30.0,
             max_progress: 85.0,
             min_volume_sol: 1.0,
