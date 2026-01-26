@@ -34,26 +34,26 @@ pub struct RiskConfig {
     pub time_limit_minutes: u32,
 }
 
-// Unified defaults - matches ExitConfig::for_curve_bonding()
-fn default_take_profit() -> f64 { 100.0 }  // 100% (2x) - tiered exit starts here
-fn default_trailing_stop() -> f64 { 20.0 } // 20% trailing for moon bag
-fn default_time_limit() -> u32 { 15 }      // 15 min - let winners run
+// DEFENSIVE defaults - matches ExitConfig::for_defensive()
+fn default_take_profit() -> f64 { 15.0 }   // DEFENSIVE: 15% TP (strong momentum extends)
+fn default_trailing_stop() -> f64 { 8.0 }  // DEFENSIVE: 8% trailing stop
+fn default_time_limit() -> u32 { 5 }       // DEFENSIVE: 5 min
 
 impl Default for RiskConfig {
     fn default() -> Self {
-        // Unified config - matches ExitConfig::for_curve_bonding()
+        // DEFENSIVE config - 15% TP, strong momentum can run
         Self {
-            max_position_sol: 0.3,              // 0.3 SOL per position (medium risk)
+            max_position_sol: 0.08,             // 0.08 SOL per position
             daily_loss_limit_sol: 1.0,          // 1 SOL daily loss limit
-            max_drawdown_percent: 40.0,         // 40% stop loss - allow curve volatility (increased from 30% per LLM consensus)
+            max_drawdown_percent: 10.0,         // DEFENSIVE: 10% tight stop loss
             max_concurrent_positions: 10,       // 10 concurrent positions
-            max_position_per_token_sol: 0.3,    // Same as max_position
+            max_position_per_token_sol: 0.08,   // Same as max_position
             cooldown_after_loss_ms: 5000,
             volatility_scaling_enabled: true,
             auto_pause_on_drawdown: true,
-            take_profit_percent: 100.0,         // 100% (2x) - tiered exit starts here
-            trailing_stop_percent: 20.0,        // 20% trailing for moon bag
-            time_limit_minutes: 15,             // 15 min - let winners run
+            take_profit_percent: 15.0,          // DEFENSIVE: 15% TP (strong momentum extends)
+            trailing_stop_percent: 8.0,         // DEFENSIVE: 8% trailing stop
+            time_limit_minutes: 5,              // DEFENSIVE: 5 min
         }
     }
 }
@@ -80,15 +80,15 @@ impl RiskConfig {
         Self {
             max_position_sol: 5.0,
             daily_loss_limit_sol: 2.0,
-            max_drawdown_percent: 40.0,         // 40% stop loss (matches default)
+            max_drawdown_percent: 10.0,         // DEFENSIVE: 10% stop loss
             max_concurrent_positions: 10,
             max_position_per_token_sol: 2.0,
             cooldown_after_loss_ms: 2000,
             volatility_scaling_enabled: true,
             auto_pause_on_drawdown: false,
-            take_profit_percent: 100.0,         // Same tiered exit
-            trailing_stop_percent: 20.0,        // Same trailing
-            time_limit_minutes: 15,             // Same time limit
+            take_profit_percent: 15.0,          // DEFENSIVE: 15% TP
+            trailing_stop_percent: 8.0,         // DEFENSIVE: 8% trailing
+            time_limit_minutes: 5,              // DEFENSIVE: 5 min
         }
     }
 

@@ -32,7 +32,12 @@ while true; do
   echo "💰 Wallet"
   curl -s http://localhost:9007/wallet/balance 2>/dev/null | jq -r '"Balance: \(.balance_sol) SOL"' || echo "Unknown"
   echo ""
-  echo "🔒 Risk Config"
-  curl -s http://localhost:9007/config/risk 2>/dev/null | jq -r '"Max: \(.max_position_sol) SOL | SL: \(.max_drawdown_percent)% | TP: \(.take_profit_percent)% | Trail: \(.trailing_stop_percent)% | Time: \(.time_limit_minutes)min"' || true
+  echo "🔒 Strategy Configs"
+  curl -s http://localhost:9007/strategies 2>/dev/null | jq -r '
+    .strategies[]? |
+    select(.strategy_type == "curve_arb" or .strategy_type == "graduation_snipe") |
+    (if .strategy_type == "curve_arb" then "🔍 Scanner" else "🔫 Sniper " end) + ": " +
+    "SL:\(.risk_params.stop_loss_percent // 0)% TP:\(.risk_params.take_profit_percent // 0)% Trail:\(.risk_params.trailing_stop_percent // 0)% Time:\(.risk_params.time_limit_minutes // 0)m"
+  ' || echo "Failed to get strategies"
   sleep 5
 done

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{broadcast, RwLock};
+use std::time::Instant;
+use tokio::sync::{broadcast, RwLock, Mutex};
 use tokio::time::{interval, Duration};
 use uuid::Uuid;
 
@@ -9,6 +10,40 @@ use crate::events::{ArbEvent, AgentType, EventSource, scanner as scanner_topics,
 use crate::models::{Signal, SignalType, VenueType};
 use crate::venues::MevVenue;
 use super::{GraduationTracker, StrategyEngine};
+use super::strategies::{BehavioralStrategy, StrategyRegistry, VenueSnapshot, TokenData};
+
+pub struct VenueRateLimiter {
+    last_request: Mutex<HashMap<Uuid, Instant>>,
+    min_interval_ms: u64,
+}
+
+impl VenueRateLimiter {
+    pub fn new(min_interval_ms: u64) -> Self {
+        Self {
+            last_request: Mutex::new(HashMap::new()),
+            min_interval_ms,
+        }
+    }
+
+    pub async fn wait_for_venue(&self, venue_id: Uuid) {
+        let mut last_requests = self.last_request.lock().await;
+        let now = Instant::now();
+
+        if let Some(last) = last_requests.get(&venue_id) {
+            let elapsed = now.duration_since(*last);
+            let min_interval = Duration::from_millis(self.min_interval_ms);
+
+            if elapsed < min_interval {
+                let wait_time = min_interval - elapsed;
+                drop(last_requests); // Release lock during sleep
+                tokio::time::sleep(wait_time).await;
+                last_requests = self.last_request.lock().await;
+            }
+        }
+
+        last_requests.insert(venue_id, Instant::now());
+    }
+}
 
 pub struct ScannerAgent {
     id: Uuid,
@@ -19,6 +54,8 @@ pub struct ScannerAgent {
     stats: Arc<RwLock<ScannerStats>>,
     strategy_engine: Arc<RwLock<Option<Arc<StrategyEngine>>>>,
     graduation_tracker: Arc<RwLock<Option<Arc<GraduationTracker>>>>,
+    behavioral_strategies: Arc<StrategyRegistry>,
+    rate_limiter: Arc<VenueRateLimiter>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -49,6 +86,8 @@ pub struct VenueStatus {
     pub is_healthy: bool,
 }
 
+const DEFAULT_RATE_LIMIT_INTERVAL_MS: u64 = 150; // 150ms minimum between venue API calls (~6.7 req/sec)
+
 impl ScannerAgent {
     pub fn new(event_tx: broadcast::Sender<ArbEvent>, scan_interval_ms: u64) -> Self {
         Self {
@@ -60,7 +99,26 @@ impl ScannerAgent {
             stats: Arc::new(RwLock::new(ScannerStats::default())),
             strategy_engine: Arc::new(RwLock::new(None)),
             graduation_tracker: Arc::new(RwLock::new(None)),
+            behavioral_strategies: Arc::new(StrategyRegistry::new()),
+            rate_limiter: Arc::new(VenueRateLimiter::new(DEFAULT_RATE_LIMIT_INTERVAL_MS)),
         }
+    }
+
+    pub fn with_rate_limit_ms(mut self, min_interval_ms: u64) -> Self {
+        self.rate_limiter = Arc::new(VenueRateLimiter::new(min_interval_ms));
+        self
+    }
+
+    pub fn get_strategy_registry(&self) -> Arc<StrategyRegistry> {
+        Arc::clone(&self.behavioral_strategies)
+    }
+
+    pub async fn register_behavioral_strategy(&self, strategy: Arc<dyn BehavioralStrategy>) {
+        self.behavioral_strategies.register(strategy).await;
+        tracing::info!(
+            "📡 Scanner: Registered behavioral strategy (total: {})",
+            self.behavioral_strategies.count().await
+        );
     }
 
     pub fn id(&self) -> Uuid {
@@ -87,14 +145,16 @@ impl ScannerAgent {
         let mut stats = self.stats.write().await;
         stats.total_venues += 1;
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        if let Err(e) = self.event_tx.send(ArbEvent::new(
             "venue_added",
             EventSource::Agent(AgentType::Scanner),
             scanner_topics::VENUE_ADDED,
             serde_json::json!({
                 "venue_id": venue_id,
             }),
-        ));
+        )) {
+            tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
+        }
     }
 
     pub async fn remove_venue(&self, venue_id: Uuid) -> bool {
@@ -149,8 +209,10 @@ impl ScannerAgent {
         let scan_interval = self.scan_interval_ms;
         let strategy_engine = Arc::clone(&self.strategy_engine);
         let graduation_tracker = Arc::clone(&self.graduation_tracker);
+        let behavioral_strategies = Arc::clone(&self.behavioral_strategies);
+        let rate_limiter = Arc::clone(&self.rate_limiter);
 
-        let _ = event_tx.send(ArbEvent::new(
+        if let Err(e) = event_tx.send(ArbEvent::new(
             "scanner_started",
             EventSource::Agent(AgentType::Scanner),
             swarm_topics::AGENT_STARTED,
@@ -158,7 +220,9 @@ impl ScannerAgent {
                 "agent_type": "scanner",
                 "scan_interval_ms": scan_interval,
             }),
-        ));
+        )) {
+            tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
+        }
 
         tokio::spawn(async move {
             let mut ticker = interval(Duration::from_millis(scan_interval));
@@ -178,10 +242,13 @@ impl ScannerAgent {
                     if venue.is_healthy().await {
                         healthy_count += 1;
 
+                        // Rate limit API calls to avoid hitting venue rate limits
+                        rate_limiter.wait_for_venue(venue.venue_id()).await;
+
                         match venue.scan_for_signals().await {
                             Ok(signals) => {
                                 for signal in signals {
-                                    let _ = event_tx.send(ArbEvent::new(
+                                    if let Err(e) = event_tx.send(ArbEvent::new(
                                         "signal_detected",
                                         EventSource::Agent(AgentType::Scanner),
                                         scanner_topics::SIGNAL_DETECTED,
@@ -197,7 +264,9 @@ impl ScannerAgent {
                                             "pool_address": signal.pool_address,
                                             "metadata": signal.metadata,
                                         }),
-                                    ));
+                                    )) {
+                                        tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
+                                    }
                                     all_signals.push(signal);
                                 }
                             }
@@ -208,7 +277,7 @@ impl ScannerAgent {
                                     error = %e,
                                     "⚠️ Scanner error for venue"
                                 );
-                                let _ = event_tx.send(ArbEvent::new(
+                                if let Err(send_err) = event_tx.send(ArbEvent::new(
                                     "scan_error",
                                     EventSource::Agent(AgentType::Scanner),
                                     "arb.scanner.error",
@@ -217,13 +286,107 @@ impl ScannerAgent {
                                         "venue_name": venue.name(),
                                         "error": e.to_string(),
                                     }),
-                                ));
+                                )) {
+                                    tracing::warn!("Event broadcast failed (channel full/closed): {}", send_err);
+                                }
                             }
                         }
                     }
                 }
 
                 drop(venues_guard);
+
+                // Run behavioral strategies to generate additional signals
+                let active_strategies = behavioral_strategies.get_active().await;
+                if !active_strategies.is_empty() {
+                    // Build venue snapshot from collected signals
+                    let snapshot = VenueSnapshot {
+                        venue_id: Uuid::nil(),
+                        venue_type: VenueType::BondingCurve, // Primary venue type
+                        venue_name: "pump_fun".to_string(),
+                        tokens: all_signals.iter().filter_map(|s| {
+                            s.token_mint.as_ref().map(|mint| {
+                                TokenData {
+                                    mint: mint.clone(),
+                                    symbol: s.metadata.get("token_symbol")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("???")
+                                        .to_string(),
+                                    name: s.metadata.get("token_name")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("Unknown")
+                                        .to_string(),
+                                    graduation_progress: s.metadata.get("progress_percent")
+                                        .and_then(|v| v.as_f64())
+                                        .unwrap_or(0.0),
+                                    bonding_curve_address: s.metadata.get("bonding_curve")
+                                        .and_then(|v| v.as_str())
+                                        .map(|s| s.to_string()),
+                                    market_cap_sol: s.metadata.get("market_cap_sol")
+                                        .and_then(|v| v.as_f64())
+                                        .unwrap_or(0.0),
+                                    volume_24h_sol: s.metadata.get("volume_24h_sol")
+                                        .and_then(|v| v.as_f64())
+                                        .unwrap_or(0.0),
+                                    holder_count: s.metadata.get("holder_count")
+                                        .and_then(|v| v.as_u64())
+                                        .map(|v| v as u32)
+                                        .unwrap_or(0),
+                                    created_at: chrono::Utc::now(),
+                                    last_trade_at: None,
+                                    metadata: s.metadata.clone(),
+                                }
+                            })
+                        }).collect(),
+                        raw_signals: all_signals.clone(),
+                        timestamp: chrono::Utc::now(),
+                        is_healthy: true,
+                    };
+
+                    for strategy in active_strategies {
+                        match strategy.scan(&snapshot).await {
+                            Ok(strategy_signals) => {
+                                if !strategy_signals.is_empty() {
+                                    tracing::info!(
+                                        "📊 {} generated {} signals",
+                                        strategy.name(),
+                                        strategy_signals.len()
+                                    );
+                                    for signal in strategy_signals {
+                                        if let Err(e) = event_tx.send(ArbEvent::new(
+                                            "signal_detected",
+                                            EventSource::Agent(AgentType::Scanner),
+                                            scanner_topics::SIGNAL_DETECTED,
+                                            serde_json::json!({
+                                                "signal_id": signal.id,
+                                                "signal_type": format!("{:?}", signal.signal_type),
+                                                "venue_id": signal.venue_id,
+                                                "venue_type": format!("{:?}", signal.venue_type),
+                                                "estimated_profit_bps": signal.estimated_profit_bps,
+                                                "confidence": signal.confidence,
+                                                "significance": format!("{:?}", signal.significance),
+                                                "token_mint": signal.token_mint,
+                                                "pool_address": signal.pool_address,
+                                                "metadata": signal.metadata,
+                                                "strategy_source": strategy.name(),
+                                            }),
+                                        )) {
+                                            tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
+                                        }
+                                        all_signals.push(signal);
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                tracing::warn!(
+                                    strategy = %strategy.name(),
+                                    error = %e,
+                                    "⚠️ Behavioral strategy scan error"
+                                );
+                            }
+                        }
+                    }
+                }
 
                 let mut stats_guard = stats.write().await;
                 stats_guard.total_scans += 1;
@@ -308,14 +471,16 @@ impl ScannerAgent {
         let mut is_running = self.is_running.write().await;
         *is_running = false;
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        if let Err(e) = self.event_tx.send(ArbEvent::new(
             "scanner_stopped",
             EventSource::Agent(AgentType::Scanner),
             swarm_topics::AGENT_STOPPED,
             serde_json::json!({
                 "agent_type": "scanner",
             }),
-        ));
+        )) {
+            tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
+        }
     }
 
     pub async fn scan_once(&self) -> AppResult<Vec<Signal>> {

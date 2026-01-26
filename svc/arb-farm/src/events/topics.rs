@@ -40,9 +40,11 @@ pub mod kol {
     pub const ALL: &str = "arb.kol.*";
     pub const TRADE_DETECTED: &str = "arb.kol.trade.detected";
     pub const TRADE_COPIED: &str = "arb.kol.trade.copied";
+    pub const TRADE_COPY_FAILED: &str = "arb.kol.trade.copy_failed";
     pub const TRUST_UPDATED: &str = "arb.kol.trust.updated";
     pub const ADDED: &str = "arb.kol.added";
     pub const REMOVED: &str = "arb.kol.removed";
+    pub const PROMOTED: &str = "arb.kol.promoted";
 }
 
 pub mod threat {
@@ -112,6 +114,13 @@ pub mod position {
     pub const MOMENTUM_EXIT: &str = "arb.position.momentum_exit";
     pub const EMERGENCY_EXIT: &str = "arb.position.emergency_exit";
     pub const BULK_CLEARED: &str = "arb.position.bulk_cleared";
+}
+
+pub mod curve {
+    pub const ALL: &str = "arb.curve.*";
+    pub const PROGRESS_MILESTONE: &str = "arb.curve.progress.milestone";
+    pub const GRADUATION_IMMINENT: &str = "arb.curve.graduation_imminent";
+    pub const GRADUATED: &str = "arb.curve.graduated";
 }
 
 pub mod helius {

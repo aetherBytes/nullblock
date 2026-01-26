@@ -248,6 +248,44 @@ impl HeliusWebhookClient {
         Ok(registrations)
     }
 
+    pub async fn find_webhook_for_address(&self, address: &str) -> AppResult<Option<String>> {
+        let webhooks = self.list_webhooks().await?;
+
+        for webhook in webhooks {
+            if webhook.wallet_address == address {
+                return Ok(Some(webhook.webhook_id));
+            }
+        }
+
+        // Also check the raw webhook list for multiple addresses per webhook
+        let api_key = self.api_key.as_ref().ok_or_else(|| {
+            AppError::Configuration("Helius API key not configured".to_string())
+        })?;
+
+        let url = format!("{}/webhooks?api-key={}", self.api_url, api_key);
+
+        let response = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| AppError::ExternalApi(format!("Helius webhook list failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Ok(None);
+        }
+
+        let webhooks: Vec<HeliusWebhook> = response.json().await.unwrap_or_default();
+
+        for webhook in webhooks {
+            if webhook.account_addresses.contains(&address.to_string()) {
+                return Ok(Some(webhook.webhook_id));
+            }
+        }
+
+        Ok(None)
+    }
+
     pub async fn add_addresses_to_webhook(
         &self,
         webhook_id: &str,

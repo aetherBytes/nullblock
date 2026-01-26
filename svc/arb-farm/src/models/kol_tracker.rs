@@ -44,6 +44,11 @@ impl KOLTracker {
         );
     }
 
+    pub async fn remove_kol(&self, address: &str) {
+        let mut kols = self.kols.write().await;
+        kols.remove(address);
+    }
+
     pub async fn get_kol_name(&self, address: &str) -> Option<String> {
         let kols = self.kols.read().await;
         kols.get(address).and_then(|k| k.name.clone())

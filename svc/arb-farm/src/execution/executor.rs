@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
@@ -111,6 +112,15 @@ impl ExecutorAgent {
             event_tx,
             pending_executions: Arc::new(RwLock::new(HashMap::new())),
         }
+    }
+
+    pub fn with_db_pool(mut self, pool: PgPool) -> Self {
+        self.risk_manager = RiskManager::new(Default::default()).with_db_pool(pool);
+        self
+    }
+
+    pub async fn load_risk_stats(&self) -> AppResult<()> {
+        self.risk_manager.load_daily_stats_from_db().await
     }
 
     pub async fn execute_edge(
@@ -460,7 +470,9 @@ impl ExecutorAgent {
             }),
         );
 
-        let _ = self.event_tx.send(event);
+        if let Err(e) = self.event_tx.send(event) {
+            tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
+        }
     }
 
     async fn emit_approval_needed_event(&self, edge: &Edge, strategy: &Strategy) {
@@ -478,7 +490,9 @@ impl ExecutorAgent {
             }),
         );
 
-        let _ = self.event_tx.send(event);
+        if let Err(e) = self.event_tx.send(event) {
+            tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
+        }
     }
 
     pub async fn approve_edge(&self, edge_id: Uuid) -> AppResult<()> {
@@ -511,7 +525,9 @@ impl ExecutorAgent {
                 }),
             );
 
-            let _ = self.event_tx.send(event);
+            if let Err(e) = self.event_tx.send(event) {
+            tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
+        }
             return Ok(());
         }
         Err(AppError::NotFound(format!("Edge {} not found", edge_id)))

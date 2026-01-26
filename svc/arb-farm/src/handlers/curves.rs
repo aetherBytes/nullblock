@@ -2,7 +2,11 @@ use axum::{
     extract::{Path, Query, State},
     Json,
 };
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::RwLock;
+use std::time::{Duration, Instant};
 
 use crate::agents::{
     DetailedCurveMetrics, OpportunityScore, Recommendation, ScoringWeights, ScoringThresholds,
@@ -886,10 +890,56 @@ pub async fn get_curve_metrics(
     let venue = query.venue.as_deref().unwrap_or("pump_fun");
     let max_age = query.max_age_seconds.unwrap_or(300);
 
-    let metrics = state
-        .metrics_collector
-        .get_or_calculate_metrics(&mint, venue, max_age)
-        .await?;
+    if let Some(cached) = state.metrics_collector.get_cached_metrics(&mint).await {
+        if !cached.is_stale(max_age) {
+            return Ok(Json(cached.into()));
+        }
+    }
+
+    let mut metrics = match venue {
+        "pump_fun" | "pumpfun" => {
+            let token_result = state.pump_fun_venue.get_token_info(&mint).await;
+            let holder_result = state.pump_fun_venue.get_holder_stats(&mint).await;
+
+            match (token_result, holder_result) {
+                (Ok(token), Ok(holder_stats)) => {
+                    state.metrics_collector.populate_from_pump_fun(&mint, &token, &holder_stats)
+                }
+                _ => {
+                    state.metrics_collector.get_or_calculate_metrics(&mint, venue, max_age).await?
+                }
+            }
+        }
+        "moonshot" => {
+            let token_result = state.moonshot_venue.get_token_info(&mint).await;
+            let holder_result = state.moonshot_venue.get_holder_stats(&mint).await;
+
+            match (token_result, holder_result) {
+                (Ok(token), Ok(holder_stats)) => {
+                    state.metrics_collector.populate_from_moonshot(
+                        &mint,
+                        &token,
+                        holder_stats.total_holders,
+                        holder_stats.top_10_concentration,
+                    )
+                }
+                _ => {
+                    state.metrics_collector.get_or_calculate_metrics(&mint, venue, max_age).await?
+                }
+            }
+        }
+        _ => {
+            state.metrics_collector.get_or_calculate_metrics(&mint, venue, max_age).await?
+        }
+    };
+
+    if let Ok(on_chain) = state.on_chain_fetcher.get_bonding_curve_state(&mint).await {
+        metrics.graduation_progress = on_chain.graduation_progress();
+        metrics.market_cap_sol = on_chain.market_cap_sol();
+        metrics.liquidity_depth_sol = on_chain.real_sol_reserves as f64 / 1e9;
+    }
+
+    state.metrics_collector.cache_metrics(&mint, metrics.clone()).await;
 
     Ok(Json(metrics.into()))
 }
@@ -960,6 +1010,7 @@ impl From<HolderDistribution> for HolderAnalysisResponse {
 pub struct HolderAnalysisQuery {
     pub creator: Option<String>,
     pub max_age_seconds: Option<i64>,
+    pub venue: Option<String>,
 }
 
 pub async fn get_holder_analysis(
@@ -968,10 +1019,21 @@ pub async fn get_holder_analysis(
     Query(query): Query<HolderAnalysisQuery>,
 ) -> AppResult<Json<HolderAnalysisResponse>> {
     let max_age = query.max_age_seconds.unwrap_or(600);
+    let venue = query.venue.as_deref().unwrap_or("pump_fun");
+
+    let venue_holder_count = match venue {
+        "pump_fun" | "pumpfun" => {
+            state.pump_fun_venue.get_holder_stats(&mint).await.ok().map(|s| s.total_holders)
+        }
+        "moonshot" => {
+            state.moonshot_venue.get_holder_stats(&mint).await.ok().map(|s| s.total_holders)
+        }
+        _ => None,
+    };
 
     let distribution = state
         .holder_analyzer
-        .get_or_analyze(&mint, query.creator.as_deref(), max_age)
+        .get_or_analyze_with_count(&mint, query.creator.as_deref(), max_age, venue_holder_count)
         .await?;
 
     Ok(Json(distribution.into()))
@@ -1225,4 +1287,295 @@ pub async fn get_scoring_config(
             min_unique_buyers_1h: thresholds.min_unique_buyers_1h,
         },
     }))
+}
+
+const MARKET_DATA_CACHE_TTL_SECS: u64 = 30;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DexScreenerPair {
+    #[serde(rename = "chainId")]
+    pub chain_id: Option<String>,
+    #[serde(rename = "dexId")]
+    pub dex_id: Option<String>,
+    #[serde(rename = "pairAddress")]
+    pub pair_address: Option<String>,
+    #[serde(rename = "baseToken")]
+    pub base_token: Option<DexScreenerToken>,
+    #[serde(rename = "quoteToken")]
+    pub quote_token: Option<DexScreenerToken>,
+    #[serde(rename = "priceNative")]
+    pub price_native: Option<String>,
+    #[serde(rename = "priceUsd")]
+    pub price_usd: Option<String>,
+    pub txns: Option<DexScreenerTxns>,
+    pub volume: Option<DexScreenerVolume>,
+    #[serde(rename = "priceChange")]
+    pub price_change: Option<DexScreenerPriceChange>,
+    pub liquidity: Option<DexScreenerLiquidity>,
+    pub fdv: Option<f64>,
+    #[serde(rename = "marketCap")]
+    pub market_cap: Option<f64>,
+    #[serde(rename = "pairCreatedAt")]
+    pub pair_created_at: Option<i64>,
+    pub info: Option<DexScreenerInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DexScreenerToken {
+    pub address: Option<String>,
+    pub name: Option<String>,
+    pub symbol: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DexScreenerTxns {
+    pub m5: Option<DexScreenerTxnPeriod>,
+    pub h1: Option<DexScreenerTxnPeriod>,
+    pub h6: Option<DexScreenerTxnPeriod>,
+    pub h24: Option<DexScreenerTxnPeriod>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DexScreenerTxnPeriod {
+    pub buys: Option<u64>,
+    pub sells: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DexScreenerVolume {
+    pub m5: Option<f64>,
+    pub h1: Option<f64>,
+    pub h6: Option<f64>,
+    pub h24: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DexScreenerPriceChange {
+    pub m5: Option<f64>,
+    pub h1: Option<f64>,
+    pub h6: Option<f64>,
+    pub h24: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DexScreenerLiquidity {
+    pub usd: Option<f64>,
+    pub base: Option<f64>,
+    pub quote: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DexScreenerInfo {
+    #[serde(rename = "imageUrl")]
+    pub image_url: Option<String>,
+    pub websites: Option<Vec<DexScreenerWebsite>>,
+    pub socials: Option<Vec<DexScreenerSocial>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DexScreenerWebsite {
+    pub url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DexScreenerSocial {
+    #[serde(rename = "type")]
+    pub social_type: Option<String>,
+    pub url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct DexScreenerResponse {
+    pairs: Option<Vec<DexScreenerPair>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MarketDataResponse {
+    pub mint: String,
+    pub symbol: Option<String>,
+    pub name: Option<String>,
+    pub price_usd: f64,
+    pub price_native: f64,
+    pub market_cap: f64,
+    pub fdv: f64,
+    pub liquidity: MarketDataLiquidity,
+    pub volume: MarketDataVolume,
+    pub price_change: MarketDataPriceChange,
+    pub txns: MarketDataTxns,
+    pub pair_created_at: Option<i64>,
+    pub dex_id: Option<String>,
+    pub image_url: Option<String>,
+    pub cached_at: i64,
+    pub cache_ttl_secs: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MarketDataLiquidity {
+    pub usd: f64,
+    pub base: f64,
+    pub quote: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MarketDataVolume {
+    pub m5: f64,
+    pub h1: f64,
+    pub h6: f64,
+    pub h24: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MarketDataPriceChange {
+    pub m5: f64,
+    pub h1: f64,
+    pub h6: f64,
+    pub h24: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MarketDataTxns {
+    pub m5: MarketDataTxnPeriod,
+    pub h1: MarketDataTxnPeriod,
+    pub h6: MarketDataTxnPeriod,
+    pub h24: MarketDataTxnPeriod,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MarketDataTxnPeriod {
+    pub buys: u64,
+    pub sells: u64,
+}
+
+struct CachedMarketData {
+    data: MarketDataResponse,
+    fetched_at: Instant,
+}
+
+lazy_static! {
+    static ref MARKET_DATA_CACHE: RwLock<HashMap<String, CachedMarketData>> = RwLock::new(HashMap::new());
+}
+
+pub async fn get_market_data(
+    Path(mint): Path<String>,
+) -> AppResult<Json<MarketDataResponse>> {
+    let cache_ttl = Duration::from_secs(MARKET_DATA_CACHE_TTL_SECS);
+
+    {
+        let cache = MARKET_DATA_CACHE.read().map_err(|_| {
+            AppError::Internal("Cache lock poisoned".to_string())
+        })?;
+
+        if let Some(cached) = cache.get(&mint) {
+            if cached.fetched_at.elapsed() < cache_ttl {
+                tracing::debug!(mint = %mint, "Returning cached market data");
+                return Ok(Json(cached.data.clone()));
+            }
+        }
+    }
+
+    tracing::info!(mint = %mint, "Fetching fresh market data from DexScreener");
+
+    let client = reqwest::Client::new();
+    let url = format!("https://api.dexscreener.com/latest/dex/tokens/{}", mint);
+
+    let response = client
+        .get(&url)
+        .timeout(Duration::from_secs(10))
+        .send()
+        .await
+        .map_err(|e| AppError::ExternalApi(format!("DexScreener request failed: {}", e)))?;
+
+    if !response.status().is_success() {
+        return Err(AppError::ExternalApi(format!(
+            "DexScreener returned error: {}",
+            response.status()
+        )));
+    }
+
+    let dex_response: DexScreenerResponse = response
+        .json()
+        .await
+        .map_err(|e| AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e)))?;
+
+    let pair = dex_response.pairs
+        .and_then(|pairs| pairs.into_iter().next())
+        .ok_or_else(|| AppError::NotFound(format!("No pair found for {}", mint)))?;
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    let market_data = MarketDataResponse {
+        mint: mint.clone(),
+        symbol: pair.base_token.as_ref().and_then(|t| t.symbol.clone()),
+        name: pair.base_token.as_ref().and_then(|t| t.name.clone()),
+        price_usd: pair.price_usd.as_ref().and_then(|p| p.parse().ok()).unwrap_or(0.0),
+        price_native: pair.price_native.as_ref().and_then(|p| p.parse().ok()).unwrap_or(0.0),
+        market_cap: pair.market_cap.unwrap_or(0.0),
+        fdv: pair.fdv.unwrap_or(0.0),
+        liquidity: MarketDataLiquidity {
+            usd: pair.liquidity.as_ref().and_then(|l| l.usd).unwrap_or(0.0),
+            base: pair.liquidity.as_ref().and_then(|l| l.base).unwrap_or(0.0),
+            quote: pair.liquidity.as_ref().and_then(|l| l.quote).unwrap_or(0.0),
+        },
+        volume: MarketDataVolume {
+            m5: pair.volume.as_ref().and_then(|v| v.m5).unwrap_or(0.0),
+            h1: pair.volume.as_ref().and_then(|v| v.h1).unwrap_or(0.0),
+            h6: pair.volume.as_ref().and_then(|v| v.h6).unwrap_or(0.0),
+            h24: pair.volume.as_ref().and_then(|v| v.h24).unwrap_or(0.0),
+        },
+        price_change: MarketDataPriceChange {
+            m5: pair.price_change.as_ref().and_then(|p| p.m5).unwrap_or(0.0),
+            h1: pair.price_change.as_ref().and_then(|p| p.h1).unwrap_or(0.0),
+            h6: pair.price_change.as_ref().and_then(|p| p.h6).unwrap_or(0.0),
+            h24: pair.price_change.as_ref().and_then(|p| p.h24).unwrap_or(0.0),
+        },
+        txns: MarketDataTxns {
+            m5: MarketDataTxnPeriod {
+                buys: pair.txns.as_ref().and_then(|t| t.m5.as_ref()).and_then(|p| p.buys).unwrap_or(0),
+                sells: pair.txns.as_ref().and_then(|t| t.m5.as_ref()).and_then(|p| p.sells).unwrap_or(0),
+            },
+            h1: MarketDataTxnPeriod {
+                buys: pair.txns.as_ref().and_then(|t| t.h1.as_ref()).and_then(|p| p.buys).unwrap_or(0),
+                sells: pair.txns.as_ref().and_then(|t| t.h1.as_ref()).and_then(|p| p.sells).unwrap_or(0),
+            },
+            h6: MarketDataTxnPeriod {
+                buys: pair.txns.as_ref().and_then(|t| t.h6.as_ref()).and_then(|p| p.buys).unwrap_or(0),
+                sells: pair.txns.as_ref().and_then(|t| t.h6.as_ref()).and_then(|p| p.sells).unwrap_or(0),
+            },
+            h24: MarketDataTxnPeriod {
+                buys: pair.txns.as_ref().and_then(|t| t.h24.as_ref()).and_then(|p| p.buys).unwrap_or(0),
+                sells: pair.txns.as_ref().and_then(|t| t.h24.as_ref()).and_then(|p| p.sells).unwrap_or(0),
+            },
+        },
+        pair_created_at: pair.pair_created_at,
+        dex_id: pair.dex_id,
+        image_url: pair.info.and_then(|i| i.image_url),
+        cached_at: now,
+        cache_ttl_secs: MARKET_DATA_CACHE_TTL_SECS,
+    };
+
+    {
+        let mut cache = MARKET_DATA_CACHE.write().map_err(|_| {
+            AppError::Internal("Cache lock poisoned".to_string())
+        })?;
+
+        cache.insert(mint.clone(), CachedMarketData {
+            data: market_data.clone(),
+            fetched_at: Instant::now(),
+        });
+
+        let expired_keys: Vec<String> = cache
+            .iter()
+            .filter(|(_, v)| v.fetched_at.elapsed() > Duration::from_secs(300))
+            .map(|(k, _)| k.clone())
+            .collect();
+
+        for key in expired_keys {
+            cache.remove(&key);
+        }
+    }
+
+    Ok(Json(market_data))
 }

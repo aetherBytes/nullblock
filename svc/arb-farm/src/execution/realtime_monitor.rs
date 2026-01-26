@@ -79,10 +79,53 @@ impl RealtimePositionMonitor {
 
         self.start_update_listener().await;
         self.start_event_listener().await;
+        self.start_connection_monitor().await;
 
         info!("🔭 Real-time position monitor fully started");
 
         Ok(())
+    }
+
+    async fn start_connection_monitor(&self) {
+        let laserstream = self.laserstream.clone();
+        let subscribed_positions = self.subscribed_positions.clone();
+
+        tokio::spawn(async move {
+            const CHECK_INTERVAL_SECS: u64 = 30;
+            const DISCONNECT_WARNING_THRESHOLD_SECS: u64 = 30;
+            let mut consecutive_disconnected_checks = 0u32;
+
+            loop {
+                tokio::time::sleep(tokio::time::Duration::from_secs(CHECK_INTERVAL_SECS)).await;
+
+                let status = laserstream.get_status().await;
+                let sub_count = subscribed_positions.read().await.len();
+
+                match status {
+                    LaserStreamStatus::Connected => {
+                        if consecutive_disconnected_checks > 0 {
+                            info!("✅ LaserStream reconnected - real-time monitoring resumed ({} subscriptions)", sub_count);
+                        }
+                        consecutive_disconnected_checks = 0;
+                    }
+                    LaserStreamStatus::Disconnected | LaserStreamStatus::Reconnecting => {
+                        consecutive_disconnected_checks += 1;
+                        let disconnected_secs = consecutive_disconnected_checks as u64 * CHECK_INTERVAL_SECS;
+
+                        if disconnected_secs >= DISCONNECT_WARNING_THRESHOLD_SECS {
+                            warn!(
+                                "⚠️ LaserStream disconnected for {}s - falling back to polling-based price updates ({} positions affected)",
+                                disconnected_secs,
+                                sub_count
+                            );
+                        }
+                    }
+                    LaserStreamStatus::Connecting => {
+                        debug!("LaserStream connecting...");
+                    }
+                }
+            }
+        });
     }
 
     pub async fn subscribe_position(&self, position: &OpenPosition) -> AppResult<()> {

@@ -15,6 +15,7 @@ use crate::resilience::CircuitBreakerRegistry;
 use crate::config::Config;
 use crate::consensus::{ConsensusConfig, ConsensusEngine};
 use crate::database::{EdgeRepository, PositionRepository, StrategyRepository, TradeRepository};
+use crate::database::repositories::KolRepository;
 use crate::database::repositories::ConsensusRepository;
 use crate::engrams::EngramsClient;
 use crate::events::{ArbEvent, EventBus};
@@ -24,13 +25,21 @@ use crate::execution::risk::RiskConfig;
 use crate::helius::{HeliusClient, DasClient, HeliusSender, LaserStreamClient, priority_fee::PriorityFeeMonitor};
 use crate::models::KOLTracker;
 use crate::venues::curves::{MoonshotVenue, PumpFunVenue};
-use crate::venues::dex::{JupiterVenue, RaydiumVenue};
+use crate::venues::dex::JupiterVenue;
 use crate::wallet::turnkey::{TurnkeySigner, TurnkeyConfig};
 use crate::wallet::DevWalletSigner;
 use crate::webhooks::helius::HeliusWebhookClient;
+use nullblock_mcp_client::McpClient;
 
-pub const EVENT_CHANNEL_CAPACITY: usize = 1024;
+pub const DEFAULT_EVENT_CHANNEL_CAPACITY: usize = 1024;
 pub const DEFAULT_SCAN_INTERVAL_MS: u64 = 5000;
+
+pub fn get_event_channel_capacity() -> usize {
+    std::env::var("ARB_EVENT_CHANNEL_CAPACITY")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_EVENT_CHANNEL_CAPACITY)
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -46,7 +55,6 @@ pub struct AppState {
     pub strategy_repo: Arc<StrategyRepository>,
     pub trade_repo: Arc<TradeRepository>,
     pub jupiter_venue: Arc<JupiterVenue>,
-    pub raydium_venue: Arc<RaydiumVenue>,
     pub pump_fun_venue: Arc<PumpFunVenue>,
     pub moonshot_venue: Arc<MoonshotVenue>,
     pub turnkey_signer: Arc<TurnkeySigner>,
@@ -63,6 +71,7 @@ pub struct AppState {
     pub engrams_client: Arc<EngramsClient>,
     pub position_repo: Arc<PositionRepository>,
     pub consensus_repo: Arc<ConsensusRepository>,
+    pub kol_repo: Arc<KolRepository>,
     pub laserstream_client: Arc<LaserStreamClient>,
     pub kol_discovery: Arc<KolDiscoveryAgent>,
     pub dev_signer: Arc<DevWalletSigner>,
@@ -86,32 +95,32 @@ pub struct AppState {
 impl AppState {
     pub async fn new(config: Config) -> anyhow::Result<Self> {
         let db_pool = PgPoolOptions::new()
-            .max_connections(20)
+            .max_connections(30)  // Consolidated with database/mod.rs
+            .acquire_timeout(std::time::Duration::from_secs(30))
             .connect(&config.database_url)
             .await?;
 
         tracing::info!("✅ Database connection pool created");
         tracing::info!("✅ Database ready (migrations handled externally)");
 
-        let (event_tx, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
+        let channel_capacity = get_event_channel_capacity();
+        let (event_tx, _) = broadcast::channel(channel_capacity);
         let event_bus = Arc::new(EventBus::new(event_tx.clone(), db_pool.clone()));
-        tracing::info!("✅ Event bus initialized (capacity: {})", EVENT_CHANNEL_CAPACITY);
+        tracing::info!("✅ Event bus initialized (capacity: {})", channel_capacity);
 
         let scanner = Arc::new(ScannerAgent::new(event_tx.clone(), DEFAULT_SCAN_INTERVAL_MS));
 
         // Initialize venues (shared between scanner and direct access)
         let jupiter_venue = Arc::new(JupiterVenue::new(config.jupiter_api_url.clone()));
-        let raydium_venue = Arc::new(RaydiumVenue::new(config.raydium_api_url.clone()));
         let pump_fun_venue = Arc::new(PumpFunVenue::new(config.pump_fun_api_url.clone()));
         let moonshot_venue = Arc::new(MoonshotVenue::new(config.moonshot_api_url.clone()));
 
         // Add venues to scanner (cloning the Arc)
         scanner.add_venue(Box::new(JupiterVenue::new(config.jupiter_api_url.clone()))).await;
-        scanner.add_venue(Box::new(RaydiumVenue::new(config.raydium_api_url.clone()))).await;
         scanner.add_venue(Box::new(PumpFunVenue::new(config.pump_fun_api_url.clone()))).await;
         scanner.add_venue(Box::new(MoonshotVenue::new(config.moonshot_api_url.clone()))).await;
 
-        tracing::info!("✅ Scanner agent initialized with 4 venues (Jupiter, Raydium, pump.fun, moonshot)");
+        tracing::info!("✅ Scanner agent initialized with 3 venues (Jupiter, pump.fun, moonshot)");
 
         // Initialize repositories
         let edge_repo = Arc::new(EdgeRepository::new(db_pool.clone()));
@@ -124,7 +133,7 @@ impl AppState {
         let tx_builder = Arc::new(TransactionBuilder::new(
             config.jupiter_api_url.clone(),
             config.rpc_url.clone(),
-        ));
+        )?);
         let executor = Arc::new(ExecutorAgent::new(
             config.jito_block_engine_url.clone(),
             config.rpc_url.clone(),
@@ -308,9 +317,8 @@ impl AppState {
             }
         }
 
-        // Bonding Curve Strategy - Default to manual mode (safe by default)
-        // Users can toggle to autonomous in the UI
-        // Risk appetite configured separately via UI
+        // Bonding Curve Scanner Strategy - Fast exits for 30-70% progress tokens
+        // Tighter TP/SL for quick position turnover, allows sniper to operate independently
         if let Some(curve_strategy) = get_or_create_strategy(
             &strategy_repo,
             "Curve Graduation",
@@ -319,8 +327,8 @@ impl AppState {
             vec!["bondingcurve".to_string(), "BondingCurve".to_string()],
             "autonomous",  // Autonomous execution enabled
             RiskParams {
-                // MEDIUM risk profile - matches global RiskConfig::medium()
-                max_position_sol: 0.3,                  // Matches global default
+                // SCANNER profile - tighter exits for faster turnover
+                max_position_sol: 0.3,                  // Will be overwritten by per-strategy budget
                 daily_loss_limit_sol: 1.0,              // Matches global default
                 min_profit_bps: 50,                     // Require 0.5% min profit
                 max_slippage_bps: 150,                  // 1.5% max slippage
@@ -331,15 +339,15 @@ impl AppState {
                 require_consensus: false,               // No consensus required for autonomous
                 require_confirmation: false,            // NO confirmation needed
                 staleness_threshold_hours: 24,
-                stop_loss_percent: Some(30.0),          // 30% - allow curve volatility
-                take_profit_percent: Some(100.0),       // 100% (2x) - first major target
-                trailing_stop_percent: Some(20.0),      // 20% trailing for moon bag
-                time_limit_minutes: Some(15),           // 15 min - let winners run
+                stop_loss_percent: Some(10.0),          // DEFENSIVE: 10% tight stop
+                take_profit_percent: Some(15.0),        // DEFENSIVE: 15% TP (strong momentum extends)
+                trailing_stop_percent: Some(8.0),       // DEFENSIVE: 8% trailing stop
+                time_limit_minutes: Some(5),            // DEFENSIVE: 5 min
                 base_currency: "sol".to_string(),
                 max_capital_allocation_percent: 25.0,   // 25% allocation
                 concurrent_positions: Some(5),          // Max 5 positions at a time
                 momentum_adaptive_exits: true,          // Enable momentum tracking
-                let_winners_run: true,                  // Let profitable positions run
+                let_winners_run: false,                 // Take profits quickly
             },
         ).await {
             strategy_engine.add_strategy(curve_strategy).await;
@@ -394,10 +402,10 @@ impl AppState {
                 require_consensus: false,               // No consensus for time-sensitive snipes
                 require_confirmation: false,            // No confirmation needed
                 staleness_threshold_hours: 1,          // Short staleness window
-                stop_loss_percent: Some(30.0),          // 30% - allow volatility
-                take_profit_percent: Some(100.0),       // 100% (2x) - first major target
-                trailing_stop_percent: Some(20.0),      // 20% trailing for moon bag
-                time_limit_minutes: Some(15),           // 15 min - let winners run
+                stop_loss_percent: Some(10.0),          // DEFENSIVE: 10% tight stop
+                take_profit_percent: Some(15.0),        // DEFENSIVE: 15% TP (strong momentum extends)
+                trailing_stop_percent: Some(8.0),       // DEFENSIVE: 8% trailing stop
+                time_limit_minutes: Some(5),            // DEFENSIVE: 5 min
                 base_currency: "sol".to_string(),
                 max_capital_allocation_percent: 5.0,    // Conservative 5% allocation
                 concurrent_positions: Some(3),          // Up to 3 snipe positions
@@ -489,21 +497,62 @@ impl AppState {
         let consensus_engine = if let Some(ref api_key) = openrouter_api_key {
             tracing::info!("🔍 Discovering best reasoning models from OpenRouter...");
             let discovered_models = crate::consensus::discover_best_reasoning_models(api_key).await;
-            if !discovered_models.is_empty() {
+
+            let base_engine = if !discovered_models.is_empty() {
                 let model_ids: Vec<String> = discovered_models.iter().map(|m| m.model_id.clone()).collect();
                 tracing::info!("✅ Discovered {} best reasoning models:", discovered_models.len());
                 for model in &discovered_models {
                     tracing::info!("   - {} (weight: {:.1})", model.display_name, model.weight);
                 }
-                Arc::new(ConsensusEngine::new(api_key.clone()).with_models(model_ids))
+                ConsensusEngine::new(api_key.clone())
+                    .with_models(model_ids)
+                    .with_event_tx(event_tx.clone())
             } else {
-                Arc::new(ConsensusEngine::new(api_key.clone()))
-            }
+                ConsensusEngine::new(api_key.clone())
+                    .with_event_tx(event_tx.clone())
+            };
+
+            // Try to initialize MCP client for agentic tool calling (read-only tools)
+            let mcp_url = "http://localhost:9007/mcp/jsonrpc";
+            let mcp_client = McpClient::new(mcp_url);
+            let engine_with_mcp = match mcp_client.connect().await {
+                Ok(_) => {
+                    match mcp_client.list_tools().await {
+                        Ok(tools) => {
+                            let read_only_count = nullblock_mcp_client::filter_read_only(tools.clone()).len();
+                            tracing::info!(
+                                "✅ MCP client connected ({} tools, {} read-only for consensus)",
+                                tools.len(),
+                                read_only_count
+                            );
+                            base_engine.with_mcp_client(Arc::new(mcp_client), tools)
+                        }
+                        Err(e) => {
+                            tracing::warn!("⚠️ MCP tools fetch failed: {} - consensus will operate without tool calling", e);
+                            base_engine
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("⚠️ MCP client connection failed: {} - consensus will operate without tool calling", e);
+                    base_engine
+                }
+            };
+
+            Arc::new(engine_with_mcp)
         } else {
-            Arc::new(ConsensusEngine::new(""))
+            tracing::error!("⚠️⚠️⚠️ NO OPENROUTER API KEY CONFIGURED ⚠️⚠️⚠️");
+            tracing::error!("Consensus engine will be DISABLED. LLM analysis and recommendations will NOT work.");
+            tracing::error!("To enable: Set OPENROUTER_API_KEY env var or add key to agent_api_keys table in Erebus DB");
+            Arc::new(ConsensusEngine::new_disabled())
         };
+
         if openrouter_api_key.is_some() {
-            tracing::info!("✅ Consensus engine initialized (OpenRouter multi-LLM with auto-discovered models)");
+            if consensus_engine.is_agentic_enabled() {
+                tracing::info!("✅ Consensus engine initialized (OpenRouter + agentic tool calling enabled)");
+            } else {
+                tracing::info!("✅ Consensus engine initialized (OpenRouter multi-LLM, tool calling disabled)");
+            }
         } else {
             tracing::warn!("⚠️ OpenRouter API key not configured - consensus disabled");
         }
@@ -705,9 +754,11 @@ impl AppState {
             );
         }
 
-        // Reconcile curve strategies to be ACTIVE by default (unless no-snipe flag)
+        // Reconcile curve strategies to be ACTIVE by default (unless sniper disabled)
         // This ensures sniper strategies are ready to execute immediately on startup
-        let sniper_disabled = std::path::Path::new("/tmp/arb-no-snipe").exists();
+        let sniper_disabled_env = std::env::var("ARBFARM_DISABLE_SNIPER").map(|v| v == "1" || v.to_lowercase() == "true").unwrap_or(false);
+        let sniper_disabled_file = std::path::Path::new("/tmp/arb-no-snipe").exists();
+        let sniper_disabled = sniper_disabled_env || sniper_disabled_file;
         if !sniper_disabled {
             let strategies_to_activate: Vec<_> = strategies.iter()
                 .filter(|s| (s.strategy_type == "graduation_snipe" || s.strategy_type == "curve_arb")
@@ -754,7 +805,8 @@ impl AppState {
                 }
             }
         } else {
-            tracing::info!("ℹ️ Sniper disabled via /tmp/arb-no-snipe - skipping curve strategy activation");
+            let reason = if sniper_disabled_env { "ARBFARM_DISABLE_SNIPER=1" } else { "/tmp/arb-no-snipe" };
+            tracing::warn!("⚠️ Sniper DISABLED ({}) - skipping curve strategy activation", reason);
         }
 
         // Refresh strategies list after activation
@@ -870,6 +922,9 @@ impl AppState {
         let consensus_repo = Arc::new(ConsensusRepository::new(db_pool.clone()));
         tracing::info!("✅ Consensus repository initialized (persisting to PostgreSQL)");
 
+        let kol_repo = Arc::new(KolRepository::new(db_pool.clone()));
+        tracing::info!("✅ KOL repository initialized (PostgreSQL persistence)");
+
         // Restore any open positions from database
         match position_manager.load_positions_from_db().await {
             Ok(count) => {
@@ -881,6 +936,18 @@ impl AppState {
             }
             Err(e) => {
                 tracing::warn!("⚠️ Position Manager initialized but failed to load prior positions: {}", e);
+            }
+        }
+
+        // Restore any pending exit signals from database (critical for exit recovery)
+        match position_manager.load_pending_exits_from_db().await {
+            Ok(count) => {
+                if count > 0 {
+                    tracing::info!("✅ Restored {} pending exit signals for retry", count);
+                }
+            }
+            Err(e) => {
+                tracing::warn!("⚠️ Failed to load pending exit signals: {}", e);
             }
         }
 
@@ -915,7 +982,23 @@ impl AppState {
         tracing::info!("✅ Hecate Notifier spawned (listening for approval events)");
 
         // Initialize Capital Manager for per-strategy allocation tracking
-        let capital_manager = Arc::new(CapitalManager::new());
+        let capital_manager = Arc::new(
+            CapitalManager::new()
+                .with_db_pool(db_pool.clone())
+        );
+
+        // Load existing reservations from database (recovery after restart)
+        match capital_manager.load_reservations_from_db().await {
+            Ok(count) if count > 0 => {
+                tracing::info!("✅ Capital Manager loaded {} existing reservations from DB", count);
+            }
+            Ok(_) => {
+                tracing::debug!("Capital Manager: no existing reservations to load");
+            }
+            Err(e) => {
+                tracing::warn!("⚠️ Failed to load capital reservations from DB: {} - starting fresh", e);
+            }
+        }
 
         // Register each strategy with capital manager
         for strategy in strategy_engine.list_strategies().await {
@@ -926,7 +1009,7 @@ impl AppState {
                 max_positions,
             ).await;
         }
-        tracing::info!("✅ Capital Manager initialized (per-strategy allocation tracking)");
+        tracing::info!("✅ Capital Manager initialized (per-strategy allocation tracking + DB persistence)");
 
         // Initialize on-chain fetcher and curve transaction builder for bonding curve operations
         let on_chain_fetcher = Arc::new(OnChainFetcher::new(&config.rpc_url));
@@ -936,13 +1019,14 @@ impl AppState {
         );
         tracing::info!("✅ Curve execution engine initialized (on-chain state + tx builder)");
 
-        // Add curve support and engrams to position monitor and wrap in Arc
+        // Add curve support, engrams, and capital manager to position monitor and wrap in Arc
         let position_monitor = Arc::new(
             position_monitor_base
                 .with_curve_support(curve_builder.clone(), helius_sender.clone())
                 .with_engrams(engrams_client.clone())
+                .with_capital_manager(capital_manager.clone())
         );
-        tracing::info!("✅ Position Monitor initialized with curve support + engrams (auto-exit: SL/TP/trailing/time-based + curve sell + exit engrams)");
+        tracing::info!("✅ Position Monitor initialized with curve support + engrams + capital tracking (auto-exit: SL/TP/trailing/time-based + curve sell + exit engrams)");
 
         // Initialize curve metrics collector, holder analyzer, and opportunity scorer
         let metrics_collector = Arc::new(CurveMetricsCollector::new(on_chain_fetcher.clone()));
@@ -953,6 +1037,41 @@ impl AppState {
             on_chain_fetcher.clone(),
         ));
         tracing::info!("✅ Curve scoring engine initialized (metrics + holders + scorer)");
+
+        // Register behavioral strategies with the scanner for the Strategy Factory pattern
+        // These strategies generate signals independently and share capital equally
+        // Note: Strategies are registered but execution requires enabling via UI or env vars
+        use crate::agents::strategies::{KolCopyStrategy, VolumeHunterStrategy, GraduationSniperStrategy};
+        use crate::execution::CopyTradeExecutor;
+
+        let kol_copy_strategy = Arc::new(KolCopyStrategy::new(kol_repo.clone()));
+        let graduation_sniper_strategy = Arc::new(GraduationSniperStrategy::new());
+
+        scanner.register_behavioral_strategy(kol_copy_strategy.clone()).await;
+        scanner.register_behavioral_strategy(graduation_sniper_strategy).await;
+
+        // Volume Hunter is always registered but starts INACTIVE by default
+        // Users can enable it via the UI behavioral strategies panel
+        let volume_hunter_strategy = Arc::new(VolumeHunterStrategy::new());
+        scanner.register_behavioral_strategy(volume_hunter_strategy).await;
+        tracing::info!("✅ Behavioral strategies registered (KOL Copy, Graduation Sniper, Volume Hunter [inactive])");
+
+        // Rebalance capital manager to give all strategies equal allocation
+        capital_manager.rebalance_equal().await;
+        tracing::info!("✅ Capital allocation rebalanced: all strategies have equal share");
+
+        // Create CopyTradeExecutor for KOL copy trading
+        let copy_executor = Arc::new(CopyTradeExecutor::new(
+            kol_repo.clone(),
+            curve_builder.clone(),
+            dev_signer.clone(),
+            helius_sender.clone(),
+            position_manager.clone(),
+            engrams_client.clone(),
+            event_tx.clone(),
+            default_wallet.clone(),
+        ));
+        tracing::info!("✅ Copy Trade Executor initialized");
 
         // Create Autonomous Executor (does NOT auto-start - respects user preference)
         let default_wallet_for_executor = config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
@@ -970,43 +1089,24 @@ impl AppState {
             default_wallet_for_executor,
         );
 
-        // Check if any strategy has auto_execute_enabled - only then start the executor
-        // IMPORTANT: Also verify execution_mode matches, as executor skips non-autonomous edges
-        let strategies_for_check = strategy_engine.list_strategies().await;
-        let qualifying_strategies: Vec<_> = strategies_for_check.iter()
-            .filter(|s| s.risk_params.auto_execute_enabled && s.is_active)
-            .collect();
+        // Connect CopyTradeExecutor to AutonomousExecutor for KOL copy trading
+        autonomous_executor.set_copy_executor(copy_executor.clone()).await;
+        tracing::info!("✅ Copy Trade Executor connected to Autonomous Executor");
 
-        let should_start_executor = !qualifying_strategies.is_empty();
+        // SAFETY: Executor is OFF by default on every restart
+        // User must explicitly enable via UI or ARBFARM_ENABLE_EXECUTOR=1 env var
+        // This prevents accidental automated trading after restarts
+        let executor_enabled_env = std::env::var("ARBFARM_ENABLE_EXECUTOR")
+            .map(|v| v == "1" || v.to_lowercase() == "true")
+            .unwrap_or(false);
 
-        tracing::info!("🔍 Executor startup check:");
-        for strategy in &qualifying_strategies {
-            tracing::info!(
-                strategy_id = %strategy.id,
-                strategy_name = %strategy.name,
-                execution_mode = %strategy.execution_mode,
-                auto_execute_enabled = strategy.risk_params.auto_execute_enabled,
-                is_active = strategy.is_active,
-                "  └─ Qualifies for auto-execution"
-            );
-
-            // CRITICAL: Warn if there's a mismatch that will cause silent failures
-            if strategy.execution_mode != "autonomous" {
-                tracing::warn!(
-                    strategy_id = %strategy.id,
-                    "  ⚠️ WARNING: auto_execute_enabled=true but execution_mode='{}' - edges will be SKIPPED!",
-                    strategy.execution_mode
-                );
-            }
-        }
-
-        if should_start_executor {
+        if executor_enabled_env {
             start_autonomous_executor(autonomous_executor.clone());
-            // Sync ApprovalManager's global config with strategy state
             approval_manager.toggle_execution(true).await;
-            tracing::info!("✅ Autonomous Executor started (user has auto-execution enabled)");
+            tracing::info!("✅ Autonomous Executor started (ARBFARM_ENABLE_EXECUTOR=1)");
         } else {
-            tracing::info!("✅ Autonomous Executor initialized (auto-execution disabled - waiting for user to enable)");
+            tracing::info!("✅ Autonomous Executor initialized but OFF by default");
+            tracing::info!("   Enable: set ARBFARM_ENABLE_EXECUTOR=1 or use UI toggle");
         }
 
         // Initialize Real-time Position Monitor for websocket-based price updates
@@ -1103,7 +1203,6 @@ impl AppState {
             strategy_repo,
             trade_repo,
             jupiter_venue,
-            raydium_venue,
             pump_fun_venue,
             moonshot_venue,
             turnkey_signer,
@@ -1120,6 +1219,7 @@ impl AppState {
             engrams_client,
             position_repo,
             consensus_repo,
+            kol_repo,
             laserstream_client,
             kol_discovery,
             dev_signer,

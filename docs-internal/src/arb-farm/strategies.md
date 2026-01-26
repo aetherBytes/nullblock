@@ -1,6 +1,6 @@
 # ArbFarm Trading Strategies
 
-> Last Updated: 2026-01-25 (LLM consensus optimizations: emergency exit circuit breaker, SL 30%→40%, scanner time 7→3 min, scanner TP 15%→25%)
+> Last Updated: 2026-01-25 (Added per-position auto_exit_enabled toggle for manual trading. DEFENSIVE MODE default: 15% TP for all strategies, strong momentum extends to 30%+. Quick exit on momentum decay.)
 
 This document describes how ArbFarm's trading strategies work - from token discovery through position management and exit execution.
 
@@ -78,12 +78,21 @@ Position checks are **per-strategy**, not global:
 
 ### Strategy-Specific Exit Configs
 
-| Strategy | Take Profit | Stop Loss | Time Limit | Use Case |
-|----------|-------------|-----------|------------|----------|
-| Scanner (curve_arb) | 25% | 20% | 3 min | Quick flips at 30-70% progress |
-| Sniper (graduation_snipe) | 100% | 40% | 15 min | Let winners run post-graduation |
+**DEFENSIVE MODE (Default):** All strategies now use the defensive config for capital preservation.
 
-> **Note:** Stop loss increased from 30% to 40% (LLM consensus - reduces premature exits on recoverable dips). Scanner time reduced from 7 to 3 min (winning trades avg 2.1 min). Scanner TP increased from 15% to 25% (improves TP/SL ratio from 0.75 to 1.25). Scanner now uses its own adaptive TP targets (10%/25%) instead of sniper defaults (100%/150%).
+| Mode | Take Profit | Stop Loss | Trailing | Time Limit | Momentum Behavior |
+|------|-------------|-----------|----------|------------|-------------------|
+| **Defensive (DEFAULT)** | 15% | 10% | 8% | 5 min | Strong: extends to 30%+, Weak: exit at 7.5% |
+
+> **Note (2026-01-25):** Switched to defensive mode as default. 15% base TP covers fees (~4%) plus profit. If momentum is **Strong**, targets extend to 30%/50%+ and only partial exits. On any momentum decay (velocity slowing, negative readings), exit ASAP to protect gains. Stop loss tightened to 10% to protect capital.
+
+**Legacy Configs (Available via API):**
+
+| Config | Take Profit | Stop Loss | Time Limit | Use Case |
+|--------|-------------|-----------|------------|----------|
+| `for_scanner()` | 25% | 20% | 3 min | Quick flips at 30-70% progress |
+| `for_graduation_sniper()` | 50% | 40% | 15 min | Conservative baseline, momentum extends |
+| `for_curve_bonding()` | 100% | 40% | 15 min | Let winners run to 2x |
 
 ### Momentum Toggle API
 
@@ -207,13 +216,13 @@ The scorer combines metrics into an actionable recommendation:
 2. Sign with Turnkey DevWallet
 3. Send via Jito bundle (priority) or Helius fallback
 4. On success → Register position with `PositionManager`
-5. Apply `ExitConfig::for_curve_bonding()` (tiered exit strategy)
+5. Apply `ExitConfig::for_defensive()` (15% TP, strong momentum extends)
 
 ### Entry Parameters (from Global Risk Config)
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `max_position_sol` | 0.30 SOL | Maximum buy amount |
+| `max_position_sol` | 0.08 SOL | Maximum buy amount (reduced from 0.30 per LLM consensus - 18% win rate = smaller bets) |
 | `slippage_bps` | 1500 (15%) | Bonding curve slippage |
 
 ---
@@ -478,6 +487,7 @@ struct OpenPosition {
     // Exit configuration
     exit_config: ExitConfig,
     status: PositionStatus,
+    auto_exit_enabled: bool,    // When false, position monitor skips auto-exit checks
 }
 ```
 
@@ -487,56 +497,53 @@ struct OpenPosition {
 
 **File:** `src/execution/position_monitor.rs`
 
-### Exit Config: Scanner (for_scanner)
+### Exit Config: Defensive (DEFAULT)
 
-Used for scanner-discovered positions at 30-70% progress:
-
-```
-Phase 1: At 10% gain
-  → Sell 35% to recover partial capital
-
-Phase 2: At 25% gain
-  → Sell remaining 65%
-  → Quick exit, no moon bag
-```
-
-**Configuration:**
-
-| Parameter | Value | Notes |
-|-----------|-------|-------|
-| Stop Loss | 20% | |
-| Take Profit (Phase 1) | 10% | Increased from 8% |
-| Take Profit (Phase 2) | 25% | Increased from 15% (better TP/SL ratio) |
-| Trailing Stop | 12% | |
-| Time Limit | 3 minutes | Reduced from 7 min (winning trades avg 2.1 min) |
-
-### Exit Config: Sniper (for_curve_bonding)
-
-Used for graduation snipe positions at 85%+ progress:
+**All strategies now use defensive mode.** Take profits at 15% unless momentum is strong.
 
 ```
-Phase 1: At 2x (100% gain)
-  → Sell 50% to recover capital
-  → Capital is now "free"
+Normal/Weak Momentum:
+  → Exit at 15% (or 7.5% for weak)
+  → Full exit, no partials
+  → Quick protection of gains
 
-Phase 2: At 2.5x (150% gain from remaining)
-  → Sell 25% to lock profits
-  → Still holding 25%
-
-Phase 3: Moon bag with trailing stop
-  → Remaining 25% rides with 20% trailing stop
-  → Let winners run
+Strong Momentum:
+  → Target extends to 30% (100% extension)
+  → Partial exit: 30% at first target
+  → Remaining 70% rides to 50%+ extended target
+  → Exit ASAP on any momentum decay
 ```
 
 **Configuration:**
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
-| Stop Loss | 40% | Increased from 30% (LLM consensus - reduces premature exits) |
-| Take Profit (Phase 1) | 100% | |
-| Take Profit (Phase 2) | 150% | |
-| Trailing Stop | 20% | |
-| Time Limit | 15 minutes | |
+| Stop Loss | 10% | Tight capital protection |
+| Take Profit (Base) | 15% | Covers ~4% fees + profit |
+| Take Profit (Strong) | 30%+ | Extended with strong momentum |
+| Trailing Stop | 8% | Tight protection |
+| Time Limit | 5 minutes | Quick exits |
+
+**Momentum-Adaptive Logic:**
+- **Strong momentum:** targets extend by 100% (15% → 30%), exits reduced to 30%
+- **Normal momentum:** exit at base 15% target
+- **Weak momentum:** target reduced by 50% (15% → 7.5%), exit aggressively
+- **Reversal:** immediate full exit to protect any profit
+
+**Why Defensive Mode:**
+- Fees are ~4% round-trip (entry + exit + slippage)
+- 15% profit = ~11% after fees
+- Strong momentum can still run (targets extend significantly)
+- Quick exit on decay protects capital
+- Tight 10% stop loss prevents large drawdowns
+
+### Legacy Exit Configs
+
+These configs are preserved and can be used via direct API calls:
+
+**Scanner (for_scanner):** 25% TP, 20% SL, 3 min
+**Sniper (for_graduation_sniper):** 50% TP, 40% SL, 15 min
+**Curve Bonding (for_curve_bonding):** 100% TP, 40% SL, 15 min
 
 ### Exit Triggers
 
@@ -642,6 +649,35 @@ fn calculate_profit_aware_slippage(position, signal) -> u16 {
 7. Record to engrams
 ```
 
+### Jupiter Rate Limit Handling
+
+**Added 2026-01-25** - Automatic retry with exponential backoff for Jupiter API rate limits.
+
+```
+Jupiter quote/swap request
+  └─► 429 or "Rate limit" error?
+        └─► Retry up to 3 times with exponential backoff:
+              Attempt 1: immediate
+              Attempt 2: 500ms delay
+              Attempt 3: 1000ms delay
+              Attempt 4: 2000ms delay
+        └─► Still failing? Return error
+```
+
+**Configuration:**
+- `JUPITER_RATE_LIMIT_RETRIES`: 4 attempts
+- `JUPITER_RATE_LIMIT_BACKOFF_MS`: 500ms base (doubles each retry)
+
+### Error Filtering
+
+**"Already Sold" Errors:**
+Errors indicating a token was already sold are expected states for positions closed via partial TP or inferred exits. These are now filtered from engram error logging to reduce noise:
+- "already sold"
+- "zero on-chain balance"
+- "balance" + "0"
+
+These errors still appear in logs but don't pollute the learning engrams.
+
 **Post-Graduation Sell Routing:**
 ```
 Token graduated?
@@ -662,7 +698,7 @@ Token graduated?
 
 ```rust
 struct RiskConfig {
-    max_position_sol: f64,           // 0.30 SOL default
+    max_position_sol: f64,           // 0.08 SOL default (reduced from 0.30 per LLM consensus)
     daily_loss_limit_sol: f64,       // 1.0 SOL default
     max_drawdown_percent: f64,       // 40% default (increased from 30% per LLM consensus)
     max_concurrent_positions: u32,   // 10 default
@@ -671,7 +707,7 @@ struct RiskConfig {
 }
 ```
 
-> **Note:** `max_drawdown_percent` increased from 30% to 40% based on LLM consensus analysis showing tokens often recover from 30%+ dips. Emergency circuit breaker at -50% provides catastrophic loss protection.
+> **Note:** `max_position_sol` reduced from 0.30 to 0.08 SOL based on LLM consensus analysis of 18% win rate - smaller bets reduce drawdown on losing streaks. `max_drawdown_percent` increased from 30% to 40% to reduce premature exits on recoverable dips. Emergency circuit breaker at -50% provides catastrophic loss protection.
 
 ### Risk Checks (Before Every Buy)
 
@@ -792,11 +828,14 @@ just dev-mac "no-scan no-snipe"  # Without both
 | `/positions` | GET | List open positions |
 | `/positions/{id}` | GET | Get position details |
 | `/positions/{id}/exit` | POST | Manual exit |
+| `/positions/{id}/auto-exit` | PATCH | Toggle auto-exit for position |
+| `/positions/auto-exit-stats` | GET | Get auto-exit stats (auto vs manual count) |
 | `/pnl/summary` | GET | P&L summary |
 | `/scanner/start` | POST | Start scanner |
 | `/scanner/stop` | POST | Stop scanner |
 | `/sniper/start` | POST | Start sniper |
 | `/sniper/stop` | POST | Stop sniper |
+| `/execution/toggle` | POST | Enable/disable execution engine |
 | `/config/risk` | GET/POST | Risk configuration |
 | `/strategies` | GET | List all strategies |
 | `/strategies/{id}/momentum` | POST | Toggle momentum-adaptive exits |

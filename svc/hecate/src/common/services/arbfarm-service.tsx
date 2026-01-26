@@ -1024,6 +1024,12 @@ class ArbFarmService {
     return this.makeRequest(`/curves/${mint}/score`);
   }
 
+  async getMarketData(
+    mint: string,
+  ): Promise<ArbFarmServiceResponse<import('../../types/arbfarm').MarketData>> {
+    return this.makeRequest(`/curves/${mint}/market-data`);
+  }
+
   async getTopOpportunities(
     limit?: number,
   ): Promise<ArbFarmServiceResponse<import('../../types/arbfarm').TopOpportunitiesResponse>> {
@@ -1148,7 +1154,7 @@ class ArbFarmService {
   // Graduation Sniper Operations
   // ============================================================================
 
-  async getSniperStats(): Promise<ArbFarmServiceResponse<SniperStats>> {
+  async getSniperStats(): Promise<ArbFarmServiceResponse<{ stats: SniperStats }>> {
     return this.makeRequest('/sniper/stats');
   }
 
@@ -2448,6 +2454,26 @@ class ArbFarmService {
   async reconcilePositions(): Promise<ArbFarmServiceResponse<ReconcileResult>> {
     return this.request<ReconcileResult>('/positions/reconcile', {
       method: 'POST',
+    });
+  }
+
+  // ============================================================================
+  // Position Auto-Exit Controls
+  // ============================================================================
+
+  async togglePositionAutoExit(
+    positionId: string,
+    enabled: boolean
+  ): Promise<ArbFarmServiceResponse<{ success: boolean; position_id: string; auto_exit_enabled: boolean; message: string }>> {
+    return this.request(`/positions/${positionId}/auto-exit`, {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled }),
+    });
+  }
+
+  async getAutoExitStats(): Promise<ArbFarmServiceResponse<{ total_positions: number; auto_exit_enabled: number; manual_mode: number }>> {
+    return this.request('/positions/auto-exit-stats', {
+      method: 'GET',
     });
   }
 

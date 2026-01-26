@@ -19,16 +19,18 @@ struct CachedBlockhash {
 }
 
 impl BlockhashCache {
-    pub fn new(rpc_url: String) -> Self {
-        Self {
-            client: reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
-                .build()
-                .expect("Failed to create HTTP client"),
+    pub fn new(rpc_url: String) -> AppResult<Self> {
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(10))
+            .build()
+            .map_err(|e| AppError::Internal(format!("Failed to create HTTP client: {}", e)))?;
+
+        Ok(Self {
+            client,
             rpc_url,
             cached: Arc::new(RwLock::new(CachedBlockhash::default())),
             ttl: Duration::from_secs(10), // Blockhashes are valid for ~60 seconds, refresh every 10
-        }
+        })
     }
 
     pub fn with_ttl(mut self, ttl: Duration) -> Self {
@@ -115,6 +117,57 @@ impl BlockhashCache {
     pub async fn invalidate(&self) {
         let mut cached = self.cached.write().await;
         cached.fetched_at = None;
+        drop(cached);
+
+        // Trigger background refresh to avoid race condition
+        // where multiple threads see stale cache between invalidation and next fetch
+        self.refresh_in_background();
+    }
+
+    pub async fn invalidate_and_refresh(&self) -> AppResult<RecentBlockhash> {
+        {
+            let mut cached = self.cached.write().await;
+            cached.fetched_at = None;
+        }
+        self.get_blockhash().await
+    }
+
+    fn refresh_in_background(&self) {
+        let client = self.client.clone();
+        let rpc_url = self.rpc_url.clone();
+        let cached = Arc::clone(&self.cached);
+
+        tokio::spawn(async move {
+            let request = serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "getLatestBlockhash",
+                "params": [{"commitment": "confirmed"}]
+            });
+
+            match client
+                .post(&rpc_url)
+                .header("Content-Type", "application/json")
+                .json(&request)
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    if let Ok(rpc_response) = response.json::<RpcBlockhashResponse>().await {
+                        if let Some(result) = rpc_response.result {
+                            let mut cache = cached.write().await;
+                            cache.blockhash = result.value.blockhash;
+                            cache.last_valid_block_height = result.value.last_valid_block_height;
+                            cache.fetched_at = Some(Instant::now());
+                            tracing::debug!("Background blockhash refresh completed");
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Background blockhash refresh failed: {}", e);
+                }
+            }
+        });
     }
 }
 
@@ -154,7 +207,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_blockhash_cache_creation() {
-        let cache = BlockhashCache::new("https://api.mainnet-beta.solana.com".to_string());
+        let cache = BlockhashCache::new("https://api.mainnet-beta.solana.com".to_string()).unwrap();
         // Just verify it can be created without panic
         assert_eq!(cache.ttl, Duration::from_secs(10));
     }
@@ -162,6 +215,7 @@ mod tests {
     #[tokio::test]
     async fn test_cache_with_custom_ttl() {
         let cache = BlockhashCache::new("https://api.mainnet-beta.solana.com".to_string())
+            .unwrap()
             .with_ttl(Duration::from_secs(5));
         assert_eq!(cache.ttl, Duration::from_secs(5));
     }

@@ -34,3 +34,7 @@ async-stream = "0.3"
 async-trait = "0.1"
 tokio-stream = "0.1"
 strip-ansi-escapes = "0.2"
+
+# Shared MCP client for external server connections
+nullblock-mcp-client = { path = "../../lib/nullblock-mcp-client", features = ["config-file"] }
+toml = "0.8"

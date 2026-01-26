@@ -74,6 +74,9 @@ redis = { version = "0.25", features = ["tokio-comp"], optional = true }
 # Kafka for event streaming
 rdkafka = { version = "0.36", features = ["cmake-build", "tokio"] }
 
+# Shared MCP client
+nullblock-mcp-client = { path = "../../lib/nullblock-mcp-client" }
+
 [features]
 default = ["postgres", "redis", "prometheus"]
 postgres = ["sqlx"]

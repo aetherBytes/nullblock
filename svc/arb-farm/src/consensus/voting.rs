@@ -24,6 +24,8 @@ pub struct ConsensusResult {
 pub struct VotingEngine {
     min_agreement: f64,
     min_weighted_confidence: f64,
+    min_quorum: usize,
+    expected_models: usize,
 }
 
 impl Default for VotingEngine {
@@ -31,6 +33,8 @@ impl Default for VotingEngine {
         Self {
             min_agreement: 0.5,
             min_weighted_confidence: 0.6,
+            min_quorum: 1,       // Minimum 1 model for any consensus (graceful degradation)
+            expected_models: 3,  // Expect 3 models for full confidence
         }
     }
 }
@@ -40,7 +44,15 @@ impl VotingEngine {
         Self {
             min_agreement: min_agreement.clamp(0.0, 1.0),
             min_weighted_confidence: min_weighted_confidence.clamp(0.0, 1.0),
+            min_quorum: 1,
+            expected_models: 3,
         }
+    }
+
+    pub fn with_quorum(mut self, min_quorum: usize, expected_models: usize) -> Self {
+        self.min_quorum = min_quorum.max(1);
+        self.expected_models = expected_models.max(min_quorum);
+        self
     }
 
     pub fn calculate_consensus(&self, votes: Vec<ModelVote>) -> ConsensusResult {
@@ -71,8 +83,34 @@ impl VotingEngine {
             .sum::<f64>()
             / total_weight;
 
-        let approved = agreement_score >= self.min_agreement
-            && weighted_confidence >= self.min_weighted_confidence;
+        // Apply quorum penalty: reduce confidence if fewer than expected models responded
+        let quorum_ratio = (votes.len() as f64) / (self.expected_models as f64);
+        let adjusted_confidence = weighted_confidence * quorum_ratio.min(1.0);
+
+        // Check if we meet minimum quorum (graceful degradation)
+        let meets_quorum = votes.len() >= self.min_quorum;
+        if !meets_quorum {
+            tracing::warn!(
+                "Consensus quorum not met: {} votes < {} required",
+                votes.len(),
+                self.min_quorum
+            );
+        }
+
+        // Log degraded consensus warning
+        if votes.len() < self.expected_models {
+            tracing::warn!(
+                "⚠️ Degraded consensus: only {}/{} models responded (confidence adjusted from {:.2} to {:.2})",
+                votes.len(),
+                self.expected_models,
+                weighted_confidence,
+                adjusted_confidence
+            );
+        }
+
+        let approved = meets_quorum
+            && agreement_score >= self.min_agreement
+            && adjusted_confidence >= self.min_weighted_confidence;
 
         let total_latency_ms = votes.iter().map(|v| v.latency_ms).max().unwrap_or(0);
 

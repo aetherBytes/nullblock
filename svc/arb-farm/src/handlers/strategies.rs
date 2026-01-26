@@ -433,3 +433,77 @@ pub async fn kill_strategy(
         }))).into_response(),
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct MomentumToggleRequest {
+    pub enabled: bool,
+}
+
+pub async fn toggle_strategy_momentum(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(request): Json<MomentumToggleRequest>,
+) -> impl IntoResponse {
+    use crate::database::repositories::strategies::UpdateStrategyRecord;
+
+    match state.strategy_engine.get_strategy(id).await {
+        Some(strategy) => {
+            let mut updated_params = strategy.risk_params.clone();
+            updated_params.momentum_adaptive_exits = request.enabled;
+
+            // Update in-memory
+            if let Err(e) = state.strategy_engine.set_risk_params(id, updated_params.clone()).await {
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
+                    "success": false,
+                    "error": format!("Failed to update strategy: {}", e)
+                }))).into_response();
+            }
+
+            // Persist to database
+            if let Err(e) = state.strategy_repo.update(id, UpdateStrategyRecord {
+                name: None,
+                venue_types: None,
+                execution_mode: None,
+                risk_params: Some(updated_params.clone()),
+                is_active: None,
+            }).await {
+                tracing::warn!(strategy_id = %id, error = %e, "Failed to persist momentum toggle to database");
+            }
+
+            // Persist to engrams
+            let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+            let risk_params_json = serde_json::to_value(&updated_params).unwrap_or_default();
+            if let Err(e) = state.engrams_client.save_strategy_full(
+                &wallet,
+                &strategy.id.to_string(),
+                &strategy.name,
+                &strategy.strategy_type,
+                &strategy.venue_types,
+                &strategy.execution_mode,
+                &risk_params_json,
+                strategy.is_active,
+            ).await {
+                tracing::warn!(strategy_id = %id, error = %e, "Failed to persist momentum toggle to engrams");
+            }
+
+            tracing::info!(
+                strategy_id = %id,
+                strategy_name = %strategy.name,
+                momentum_enabled = request.enabled,
+                "🔄 Momentum {} for strategy",
+                if request.enabled { "enabled" } else { "disabled" }
+            );
+
+            (StatusCode::OK, Json(serde_json::json!({
+                "success": true,
+                "id": id,
+                "strategy_name": strategy.name,
+                "momentum_enabled": request.enabled
+            }))).into_response()
+        },
+        None => (StatusCode::NOT_FOUND, Json(serde_json::json!({
+            "success": false,
+            "error": "Strategy not found"
+        }))).into_response(),
+    }
+}

@@ -269,7 +269,12 @@ impl MoonshotCurve {
     }
 
     pub fn graduation_progress(&self) -> f64 {
-        let market_cap_sol = self.get_market_cap_sol();
+        // Calculate base price without curve multiplier to avoid infinite recursion
+        // (get_current_price() calls graduation_progress() which would cause stack overflow)
+        let base_price = self.params.base_params.virtual_sol_reserves as f64
+            / self.params.base_params.virtual_token_reserves as f64;
+        let total_supply = 1_000_000_000_000_000.0;
+        let market_cap_sol = base_price * total_supply;
         let market_cap_usd = market_cap_sol * self.params.sol_price_usd;
         (market_cap_usd / self.params.graduation_threshold_usd).min(1.0) * 100.0
     }

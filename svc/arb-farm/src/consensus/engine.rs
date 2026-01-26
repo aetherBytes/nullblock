@@ -1,13 +1,20 @@
 use chrono::Utc;
 use futures::future::join_all;
+use std::sync::Arc;
+use tokio::sync::broadcast;
 use uuid::Uuid;
 
+use nullblock_mcp_client::{filter_read_only, McpClient, McpTool};
+
 use super::{
-    openrouter::{get_default_models, get_model_weight, OpenRouterClient},
+    openrouter::{
+        get_default_models, get_model_weight, mcp_tools_to_openrouter, ChatMessage,
+        OpenRouterClient, RawToolCall, ToolDefinition, ToolModelResponseType,
+    },
     voting::{
-        generate_trade_prompt, parse_trade_approval, ConsensusResult, ModelVote, VotingEngine,
-        AnalysisContext, AnalysisVote, ParsedRecommendation, generate_analysis_prompt, parse_analysis_response,
-        TradeAnalysisItem, PatternSummary,
+        generate_analysis_prompt, generate_trade_prompt, parse_analysis_response,
+        parse_trade_approval, AnalysisContext, AnalysisVote, ConsensusResult, ModelVote,
+        ParsedRecommendation, PatternSummary, TradeAnalysisItem, VotingEngine,
     },
 };
 use crate::{
@@ -19,11 +26,21 @@ use crate::{
     },
 };
 
+const DEFAULT_MAX_ITERATIONS: usize = 5;
+const AGENTIC_MAX_TOKENS: u32 = 4096;
+
 pub struct ConsensusEngine {
     openrouter: OpenRouterClient,
     voting_engine: VotingEngine,
     default_models: Vec<String>,
     timeout_ms: u64,
+    mcp_client: Option<Arc<McpClient>>,
+    read_only_tools: Vec<McpTool>,
+    openrouter_tools: Vec<ToolDefinition>,
+    agentic_enabled: bool,
+    max_iterations: usize,
+    disabled: bool,
+    event_tx: Option<broadcast::Sender<ArbEvent>>,
 }
 
 impl ConsensusEngine {
@@ -33,7 +50,56 @@ impl ConsensusEngine {
             voting_engine: VotingEngine::default(),
             default_models: get_default_models(),
             timeout_ms: 30000,
+            mcp_client: None,
+            read_only_tools: Vec::new(),
+            openrouter_tools: Vec::new(),
+            agentic_enabled: false,
+            max_iterations: DEFAULT_MAX_ITERATIONS,
+            disabled: false,
+            event_tx: None,
         }
+    }
+
+    pub fn with_event_tx(mut self, event_tx: broadcast::Sender<ArbEvent>) -> Self {
+        self.event_tx = Some(event_tx);
+        self
+    }
+
+    pub fn new_disabled() -> Self {
+        tracing::warn!("Creating DISABLED ConsensusEngine - no API key configured");
+        Self {
+            openrouter: OpenRouterClient::new(""),
+            voting_engine: VotingEngine::default(),
+            default_models: Vec::new(),
+            timeout_ms: 30000,
+            mcp_client: None,
+            read_only_tools: Vec::new(),
+            openrouter_tools: Vec::new(),
+            agentic_enabled: false,
+            max_iterations: DEFAULT_MAX_ITERATIONS,
+            disabled: true,
+            event_tx: None,
+        }
+    }
+
+    pub fn is_disabled(&self) -> bool {
+        self.disabled
+    }
+
+    pub fn with_mcp_client(mut self, client: Arc<McpClient>, all_tools: Vec<McpTool>) -> Self {
+        let read_only = filter_read_only(all_tools);
+        let openrouter_tools = mcp_tools_to_openrouter(&read_only);
+
+        tracing::info!(
+            read_only_count = read_only.len(),
+            "ConsensusEngine configured with MCP tools"
+        );
+
+        self.mcp_client = Some(client);
+        self.read_only_tools = read_only;
+        self.openrouter_tools = openrouter_tools;
+        self.agentic_enabled = true;
+        self
     }
 
     pub fn with_models(mut self, models: Vec<String>) -> Self {
@@ -51,14 +117,35 @@ impl ConsensusEngine {
         self
     }
 
-    pub async fn is_ready(&self) -> bool {
-        !self.default_models.is_empty()
+    pub fn with_max_iterations(mut self, max_iterations: usize) -> Self {
+        self.max_iterations = max_iterations;
+        self
     }
 
-    pub async fn request_analysis(
-        &self,
-        context: AnalysisContext,
-    ) -> AppResult<AnalysisResult> {
+    pub fn enable_agentic(mut self, enabled: bool) -> Self {
+        self.agentic_enabled = enabled && self.mcp_client.is_some();
+        self
+    }
+
+    pub async fn is_ready(&self) -> bool {
+        !self.disabled && !self.default_models.is_empty()
+    }
+
+    pub fn is_agentic_enabled(&self) -> bool {
+        self.agentic_enabled && self.mcp_client.is_some()
+    }
+
+    pub fn available_tools(&self) -> &[McpTool] {
+        &self.read_only_tools
+    }
+
+    pub async fn request_analysis(&self, context: AnalysisContext) -> AppResult<AnalysisResult> {
+        if self.disabled {
+            return Err(AppError::ConsensusFailed(
+                "Consensus engine is disabled - no OpenRouter API key configured".to_string(),
+            ));
+        }
+
         let models_to_query = self.default_models.clone();
         let prompt = generate_analysis_prompt(&context);
 
@@ -70,20 +157,27 @@ impl ConsensusEngine {
             time_period = %context.time_period,
             total_trades = context.total_trades,
             models = ?models_to_query,
+            agentic = self.is_agentic_enabled(),
             "Starting consensus analysis"
         );
 
-        let futures: Vec<_> = models_to_query
-            .iter()
-            .map(|model| self.query_analysis_model(model, &prompt, system_prompt))
-            .collect();
+        let agentic = self.is_agentic_enabled();
+        let results: Vec<AppResult<AnalysisModelVote>> = if agentic {
+            let futures: Vec<_> = models_to_query
+                .iter()
+                .map(|model| self.query_analysis_model_agentic(model, &prompt, system_prompt))
+                .collect();
+            join_all(futures).await
+        } else {
+            let futures: Vec<_> = models_to_query
+                .iter()
+                .map(|model| self.query_analysis_model(model, &prompt, system_prompt))
+                .collect();
+            join_all(futures).await
+        };
 
-        let results = join_all(futures).await;
-
-        let model_votes: Vec<AnalysisModelVote> = results
-            .into_iter()
-            .filter_map(|r| r.ok())
-            .collect();
+        let model_votes: Vec<AnalysisModelVote> =
+            results.into_iter().filter_map(|r| r.ok()).collect();
 
         if model_votes.is_empty() {
             return Err(AppError::ConsensusFailed(
@@ -98,10 +192,165 @@ impl ConsensusEngine {
             risk_alerts_count = aggregated.risk_alerts.len(),
             avg_confidence = aggregated.avg_confidence,
             models_responded = model_votes.len(),
+            tools_used = aggregated.tools_called,
             "Consensus analysis completed"
         );
 
         Ok(aggregated)
+    }
+
+    async fn query_analysis_model_agentic(
+        &self,
+        model: &str,
+        prompt: &str,
+        system_prompt: Option<&str>,
+    ) -> AppResult<AnalysisModelVote> {
+        let mcp_client = self.mcp_client.as_ref().ok_or_else(|| {
+            AppError::Internal("MCP client not configured".to_string())
+        })?;
+
+        let agentic_system_prompt = format!(
+            "{}\n\nYou have access to MCP tools for gathering additional data. Use them when you need more context about trades, errors, or learning recommendations. Available tools: {}",
+            system_prompt.unwrap_or(""),
+            self.read_only_tools.iter().map(|t| t.name.as_str()).collect::<Vec<_>>().join(", ")
+        );
+
+        let mut messages = vec![
+            ChatMessage::text("system", &agentic_system_prompt),
+            ChatMessage::text("user", prompt),
+        ];
+
+        let mut total_latency_ms = 0u64;
+        let mut tools_called = 0usize;
+
+        for iteration in 0..self.max_iterations {
+            let timeout = tokio::time::Duration::from_millis(self.timeout_ms);
+
+            let result = tokio::time::timeout(
+                timeout,
+                self.openrouter.query_model_with_tools(
+                    model,
+                    messages.clone(),
+                    &self.openrouter_tools,
+                    AGENTIC_MAX_TOKENS,
+                ),
+            )
+            .await
+            .map_err(|_| AppError::Timeout(format!("Agentic model {} timed out", model)))?;
+
+            let response = result?;
+            total_latency_ms += response.latency_ms;
+
+            match response.response {
+                ToolModelResponseType::Text(text) => {
+                    tracing::debug!(
+                        model = model,
+                        iteration = iteration,
+                        tools_called = tools_called,
+                        "Agentic analysis completed with text response"
+                    );
+
+                    let vote = parse_analysis_response(&text).ok_or_else(|| {
+                        AppError::ExternalApi(format!(
+                            "Failed to parse agentic analysis vote from {}: {}",
+                            model,
+                            &text[..text.len().min(200)]
+                        ))
+                    })?;
+
+                    return Ok(AnalysisModelVote {
+                        model: model.to_string(),
+                        vote,
+                        latency_ms: total_latency_ms,
+                        tools_called,
+                    });
+                }
+                ToolModelResponseType::ToolUse(tool_calls) => {
+                    tracing::debug!(
+                        model = model,
+                        iteration = iteration,
+                        tool_count = tool_calls.len(),
+                        "Model requested tool calls"
+                    );
+
+                    let mut raw_tool_calls: Vec<RawToolCall> = Vec::new();
+                    let mut tool_results: Vec<(String, String)> = Vec::new();
+
+                    for call in &tool_calls {
+                        tracing::info!(
+                            tool = %call.name,
+                            "Consensus LLM calling MCP tool"
+                        );
+
+                        tools_called += 1;
+
+                        raw_tool_calls.push(RawToolCall::new(
+                            &call.id,
+                            &call.name,
+                            &call.arguments,
+                        ));
+
+                        let result = mcp_client.call_tool_json(&call.name, call.arguments.clone()).await;
+
+                        let result_text = match result {
+                            Ok(tool_result) => {
+                                if tool_result.is_error() {
+                                    format!("Error: {}", tool_result.text_content())
+                                } else {
+                                    tool_result.text_content()
+                                }
+                            }
+                            Err(e) => {
+                                format!("Tool call failed: {}", e)
+                            }
+                        };
+
+                        tool_results.push((call.id.clone(), result_text));
+                    }
+
+                    messages.push(ChatMessage::assistant_with_tool_calls(raw_tool_calls));
+
+                    for (call_id, result_text) in tool_results {
+                        // Prune large tool results to prevent context explosion
+                        // Keep first 4KB of result, summarize if larger
+                        let pruned_result = if result_text.len() > 4096 {
+                            tracing::debug!(
+                                tool_call = call_id,
+                                original_len = result_text.len(),
+                                "Pruning large tool result"
+                            );
+                            format!(
+                                "{}... [TRUNCATED: {} more chars]",
+                                &result_text[..4096],
+                                result_text.len() - 4096
+                            )
+                        } else {
+                            result_text
+                        };
+                        messages.push(ChatMessage::tool_result(&call_id, &pruned_result));
+                    }
+
+                    // Prune old tool call/result pairs if context is getting too large
+                    // Keep system, user prompt, and last 3 tool interactions
+                    const MAX_MESSAGES: usize = 10; // system + user + up to 4 tool cycles
+                    if messages.len() > MAX_MESSAGES {
+                        let keep_start = 2; // Keep system and user messages
+                        let remove_count = messages.len() - MAX_MESSAGES;
+                        tracing::debug!(
+                            message_count = messages.len(),
+                            removing = remove_count,
+                            "Pruning old messages to prevent context overflow"
+                        );
+                        messages.drain(keep_start..(keep_start + remove_count));
+                    }
+                }
+            }
+        }
+
+        Err(AppError::ConsensusFailed(format!(
+            "Agentic analysis for {} reached max iterations ({})",
+            model, self.max_iterations
+        )))
     }
 
     async fn query_analysis_model(
@@ -133,6 +382,7 @@ impl ConsensusEngine {
             model: model.to_string(),
             vote,
             latency_ms: response.latency_ms,
+            tools_called: 0,
         })
     }
 
@@ -148,11 +398,13 @@ impl ConsensusEngine {
         let mut total_weight = 0.0;
         let mut all_trade_analyses: Vec<TradeAnalysisItem> = Vec::new();
         let mut aggregated_pattern_summary: Option<PatternSummary> = None;
+        let mut total_tools_called = 0usize;
 
         for vote in votes {
             let weight = get_model_weight(&vote.model);
             total_weight += weight;
             total_confidence += vote.vote.confidence * weight;
+            total_tools_called += vote.tools_called;
 
             for rec in &vote.vote.recommendations {
                 all_recommendations.push((rec.clone(), weight));
@@ -166,14 +418,15 @@ impl ConsensusEngine {
 
             assessments.push(vote.vote.overall_assessment.clone());
 
-            // Collect trade analyses (dedup by position_id)
             for analysis in &vote.vote.trade_analyses {
-                if !all_trade_analyses.iter().any(|a| a.position_id == analysis.position_id) {
+                if !all_trade_analyses
+                    .iter()
+                    .any(|a| a.position_id == analysis.position_id)
+                {
                     all_trade_analyses.push(analysis.clone());
                 }
             }
 
-            // Use the first non-empty pattern summary
             if aggregated_pattern_summary.is_none() {
                 if let Some(summary) = &vote.vote.pattern_summary {
                     aggregated_pattern_summary = Some(summary.clone());
@@ -187,7 +440,9 @@ impl ConsensusEngine {
         all_recommendations.sort_by(|a, b| {
             let weighted_conf_a = a.0.confidence * a.1;
             let weighted_conf_b = b.0.confidence * b.1;
-            weighted_conf_b.partial_cmp(&weighted_conf_a).unwrap_or(std::cmp::Ordering::Equal)
+            weighted_conf_b
+                .partial_cmp(&weighted_conf_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         for (rec, _weight) in all_recommendations {
@@ -216,11 +471,16 @@ impl ConsensusEngine {
             recommendations: deduped_recommendations,
             risk_alerts: all_risk_alerts,
             overall_assessment: combined_assessment,
-            avg_confidence: if total_weight > 0.0 { total_confidence / total_weight } else { 0.0 },
+            avg_confidence: if total_weight > 0.0 {
+                total_confidence / total_weight
+            } else {
+                0.0
+            },
             model_votes: votes.iter().map(|v| v.model.clone()).collect(),
             total_latency_ms,
             trade_analyses: all_trade_analyses,
             pattern_summary: aggregated_pattern_summary,
+            tools_called: total_tools_called,
         }
     }
 
@@ -230,6 +490,24 @@ impl ConsensusEngine {
         edge_context: &str,
         models: Option<Vec<String>>,
     ) -> AppResult<ConsensusResult> {
+        if self.disabled {
+            return Err(AppError::ConsensusFailed(
+                "Consensus engine is disabled - no OpenRouter API key configured".to_string(),
+            ));
+        }
+
+        if let Some(ref tx) = self.event_tx {
+            let _ = tx.send(ArbEvent::new(
+                "consensus.requested",
+                EventSource::Agent(AgentType::StrategyEngine),
+                "arb.consensus.requested",
+                serde_json::json!({
+                    "edge_id": edge_id,
+                    "timestamp": Utc::now(),
+                }),
+            ).with_correlation(edge_id));
+        }
+
         let models_to_query = models.unwrap_or_else(|| self.default_models.clone());
         let prompt = generate_trade_prompt(edge_context);
 
@@ -244,18 +522,42 @@ impl ConsensusEngine {
 
         let results = join_all(futures).await;
 
-        let votes: Vec<ModelVote> = results
-            .into_iter()
-            .filter_map(|r| r.ok())
-            .collect();
+        let votes: Vec<ModelVote> = results.into_iter().filter_map(|r| r.ok()).collect();
 
         if votes.is_empty() {
+            if let Some(ref tx) = self.event_tx {
+                let _ = tx.send(ArbEvent::new(
+                    "consensus.failed",
+                    EventSource::Agent(AgentType::StrategyEngine),
+                    "arb.consensus.failed",
+                    serde_json::json!({
+                        "edge_id": edge_id,
+                        "reason": "All model queries failed",
+                        "timestamp": Utc::now(),
+                    }),
+                ).with_correlation(edge_id));
+            }
             return Err(AppError::ConsensusFailed(
                 "All model queries failed".to_string(),
             ));
         }
 
         let consensus = self.voting_engine.calculate_consensus(votes);
+
+        if let Some(ref tx) = self.event_tx {
+            let _ = tx.send(ArbEvent::new(
+                "consensus.completed",
+                EventSource::Agent(AgentType::StrategyEngine),
+                "arb.consensus.completed",
+                serde_json::json!({
+                    "edge_id": edge_id,
+                    "approved": consensus.approved,
+                    "agreement_score": consensus.agreement_score,
+                    "models_responded": consensus.model_votes.len(),
+                    "timestamp": Utc::now(),
+                }),
+            ).with_correlation(edge_id));
+        }
 
         tracing::info!(
             edge_id = %edge_id,
@@ -374,6 +676,7 @@ pub struct AnalysisModelVote {
     pub model: String,
     pub vote: AnalysisVote,
     pub latency_ms: u64,
+    pub tools_called: usize,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -386,6 +689,7 @@ pub struct AnalysisResult {
     pub total_latency_ms: u64,
     pub trade_analyses: Vec<TradeAnalysisItem>,
     pub pattern_summary: Option<PatternSummary>,
+    pub tools_called: usize,
 }
 
 #[derive(Debug, Clone)]

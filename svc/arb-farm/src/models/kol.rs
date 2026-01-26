@@ -94,10 +94,10 @@ pub struct CopyTradeConfig {
 impl Default for CopyTradeConfig {
     fn default() -> Self {
         Self {
-            max_position_sol: Decimal::new(5, 1),
+            max_position_sol: Decimal::new(5, 1),      // 0.5 SOL
             delay_ms: 500,
-            min_trust_score: Decimal::new(600, 1),
-            copy_percentage: Decimal::new(10, 1),
+            min_trust_score: Decimal::new(600, 1),    // 60.0
+            copy_percentage: Decimal::new(5, 1),       // 0.5 = 50% (matches CopyExecutorConfig)
             token_whitelist: None,
             token_blacklist: None,
         }

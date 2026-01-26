@@ -1559,6 +1559,57 @@ export interface ScoringConfig {
   thresholds: ScoringThresholds;
 }
 
+export interface MarketDataLiquidity {
+  usd: number;
+  base: number;
+  quote: number;
+}
+
+export interface MarketDataVolume {
+  m5: number;
+  h1: number;
+  h6: number;
+  h24: number;
+}
+
+export interface MarketDataPriceChange {
+  m5: number;
+  h1: number;
+  h6: number;
+  h24: number;
+}
+
+export interface MarketDataTxnPeriod {
+  buys: number;
+  sells: number;
+}
+
+export interface MarketDataTxns {
+  m5: MarketDataTxnPeriod;
+  h1: MarketDataTxnPeriod;
+  h6: MarketDataTxnPeriod;
+  h24: MarketDataTxnPeriod;
+}
+
+export interface MarketData {
+  mint: string;
+  symbol?: string;
+  name?: string;
+  price_usd: number;
+  price_native: number;
+  market_cap: number;
+  fdv: number;
+  liquidity: MarketDataLiquidity;
+  volume: MarketDataVolume;
+  price_change: MarketDataPriceChange;
+  txns: MarketDataTxns;
+  pair_created_at?: number;
+  dex_id?: string;
+  image_url?: string;
+  cached_at: number;
+  cache_ttl_secs: number;
+}
+
 export interface TopOpportunity {
   mint: string;
   venue: string;
@@ -1613,6 +1664,7 @@ export interface RecentTradeInfo {
   exit_time?: string;
   entry_tx?: string;
   exit_tx?: string;
+  momentum_at_exit?: number;
   hold_duration_mins?: number;
 }
 
@@ -1685,6 +1737,11 @@ export interface OpenPosition {
   remaining_amount_base?: number;
   remaining_token_amount?: number;
   auto_exit_enabled?: boolean;
+  momentum?: {
+    momentum_score: number;
+    velocity: number;
+    momentum_decay_count: number;
+  };
 }
 
 export interface PositionStats {

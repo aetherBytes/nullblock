@@ -232,7 +232,7 @@ impl KolDiscoveryAgent {
         let discovered = self.discovered.read().await;
         let mut kols: Vec<_> = discovered.clone();
 
-        kols.sort_by(|a, b| b.trust_score.partial_cmp(&a.trust_score).unwrap());
+        kols.sort_by(|a, b| b.trust_score.partial_cmp(&a.trust_score).unwrap_or(std::cmp::Ordering::Equal));
 
         if let Some(limit) = limit {
             kols.truncate(limit);

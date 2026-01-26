@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
@@ -12,6 +12,7 @@ pub struct StrategyEngine {
     id: Uuid,
     strategies: Arc<RwLock<HashMap<Uuid, Strategy>>>,
     event_tx: broadcast::Sender<ArbEvent>,
+    processed_signals: Arc<RwLock<HashSet<Uuid>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -30,6 +31,7 @@ impl StrategyEngine {
             id: Uuid::new_v4(),
             strategies: Arc::new(RwLock::new(HashMap::new())),
             event_tx,
+            processed_signals: Arc::new(RwLock::new(HashSet::new())),
         }
     }
 
@@ -139,6 +141,11 @@ impl StrategyEngine {
     pub async fn list_strategies(&self) -> Vec<Strategy> {
         let strategies = self.strategies.read().await;
         strategies.values().cloned().collect()
+    }
+
+    pub async fn get_strategy_by_type(&self, strategy_type: &str) -> Option<Strategy> {
+        let strategies = self.strategies.read().await;
+        strategies.values().find(|s| s.strategy_type == strategy_type).cloned()
     }
 
     pub async fn update_strategy(&self, strategy_id: Uuid, request: crate::models::UpdateStrategyRequest) -> AppResult<Strategy> {
@@ -291,10 +298,31 @@ impl StrategyEngine {
 
     fn signal_matches_strategy(&self, signal: &Signal, strategy: &Strategy) -> bool {
         let signal_venue_str = format!("{:?}", signal.venue_type).to_lowercase();
-        strategy.venue_types.iter().any(|vt| {
+        let venue_matches = strategy.venue_types.iter().any(|vt| {
             vt.to_lowercase() == signal_venue_str ||
             vt.to_lowercase().contains(&signal_venue_str)
-        })
+        });
+
+        if !venue_matches {
+            return false;
+        }
+
+        // For bonding curve strategies, differentiate scanner vs sniper by progress
+        let progress = signal.metadata.get("progress_percent")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+
+        match strategy.strategy_type.as_str() {
+            "curve_arb" => {
+                // Scanner: only match pre-graduation signals (< 85%)
+                progress < 85.0
+            },
+            "graduation_snipe" => {
+                // Sniper: only match graduation-ready signals (>= 85%)
+                progress >= 85.0
+            },
+            _ => true, // Other strategies match any progress
+        }
     }
 
     fn check_risk_params(&self, signal: &Signal, risk_params: &RiskParams) -> bool {
@@ -338,9 +366,44 @@ impl StrategyEngine {
 
     pub async fn process_signals(&self, signals: Vec<Signal>) -> Vec<MatchResult> {
         let mut results = Vec::new();
+        let now = chrono::Utc::now();
 
         for signal in signals {
+            // Skip stale/expired signals - don't execute on outdated market data
+            if signal.expires_at < now {
+                tracing::debug!(
+                    signal_id = %signal.id,
+                    expires_at = %signal.expires_at,
+                    now = %now,
+                    "⏭️ Skipping stale signal (expired {}s ago)",
+                    (now - signal.expires_at).num_seconds()
+                );
+                continue;
+            }
+
+            // Skip already-processed signals to prevent duplicate buy attempts
+            {
+                let processed = self.processed_signals.read().await;
+                if processed.contains(&signal.id) {
+                    tracing::debug!(
+                        signal_id = %signal.id,
+                        "⏭️ Skipping already-processed signal"
+                    );
+                    continue;
+                }
+            }
+
             if let Some(result) = self.match_signal(&signal).await {
+                // Mark signal as processed after creating edge
+                {
+                    let mut processed = self.processed_signals.write().await;
+                    processed.insert(signal.id);
+                    // Cleanup old entries if > 10000 to prevent unbounded growth
+                    if processed.len() > 10_000 {
+                        processed.clear();
+                        tracing::debug!("🗑️ Cleared processed_signals cache (exceeded 10k entries)");
+                    }
+                }
                 results.push(result);
             }
         }

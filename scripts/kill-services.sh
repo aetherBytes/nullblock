@@ -104,6 +104,8 @@ kill_services() {
     lsof -ti:8002 | xargs kill -9 2>/dev/null || true  # Orchestration
     lsof -ti:9001 | xargs kill -9 2>/dev/null || true  # General Agents
     lsof -ti:9003 | xargs kill -9 2>/dev/null || true  # Hecate Agent (Rust)
+    lsof -ti:9004 | xargs kill -9 2>/dev/null || true  # Engrams
+    lsof -ti:9007 | xargs kill -9 2>/dev/null || true  # ArbFarm
     lsof -ti:3000 | xargs kill -9 2>/dev/null || true  # Erebus
     lsof -ti:5173 | xargs kill -9 2>/dev/null || true  # Vite dev server
     lsof -ti:1234 | xargs kill -9 2>/dev/null || true  # LM Studio

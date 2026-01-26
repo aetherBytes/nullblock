@@ -89,6 +89,7 @@ pub enum SignalType {
     DexArb,
     JitLiquidity,
     Backrun,
+    KolTrade,
 }
 
 impl std::fmt::Display for SignalType {
@@ -105,6 +106,7 @@ impl std::fmt::Display for SignalType {
             SignalType::DexArb => write!(f, "dex_arb"),
             SignalType::JitLiquidity => write!(f, "jit_liquidity"),
             SignalType::Backrun => write!(f, "backrun"),
+            SignalType::KolTrade => write!(f, "kol_trade"),
         }
     }
 }

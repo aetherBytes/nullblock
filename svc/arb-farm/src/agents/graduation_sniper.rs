@@ -196,30 +196,32 @@ impl GraduationSniper {
         const MIN_SLIPPAGE_BPS: u32 = 500;  // 5% floor - post-grad markets can be volatile
         const MAX_SLIPPAGE_BPS: u32 = 2000; // 20% cap - prioritize execution
         const POST_GRAD_SLIPPAGE_BPS: u32 = 1500; // 15% for post-graduation sells (thin liquidity)
-        const PROFIT_SACRIFICE_RATIO: f64 = 0.25; // 25% of profits
 
         if is_post_graduation {
             tracing::info!("🎓 Post-graduation sell: using base slippage {}bps (15%)", POST_GRAD_SLIPPAGE_BPS);
             return POST_GRAD_SLIPPAGE_BPS;
         }
 
-        let pnl_percent = if position.entry_price_sol > 0.0 {
-            let current_value_estimate = position.entry_price_sol; // Use entry as baseline since we don't track current
-            ((current_value_estimate - position.entry_price_sol) / position.entry_price_sol) * 100.0
+        // NOTE: SnipePosition doesn't track current price, so we cannot calculate
+        // profit-aware slippage for pre-graduation context. Fall back to minimum.
+        // If pnl_sol is available from a completed partial sell, use that.
+        let calculated_slippage = if let Some(pnl) = position.pnl_sol {
+            if pnl > 0.0 && position.entry_price_sol > 0.0 {
+                // Calculate slippage based on realized profit (allow sacrificing 25% of profits)
+                let pnl_percent = (pnl / position.entry_price_sol) * 100.0;
+                let profit_based = (pnl_percent * 0.25 * 100.0) as u32;
+                profit_based.max(MIN_SLIPPAGE_BPS)
+            } else {
+                MIN_SLIPPAGE_BPS
+            }
         } else {
-            0.0
-        };
-
-        let calculated_slippage = if pnl_percent > 0.0 {
-            let profit_based = (pnl_percent * PROFIT_SACRIFICE_RATIO * 100.0) as u32;
-            profit_based.max(MIN_SLIPPAGE_BPS)
-        } else {
+            // No PnL data available - use floor slippage
             MIN_SLIPPAGE_BPS
         };
 
         tracing::info!(
-            "📊 Sniper slippage: entry={:.6} SOL | base={}bps | final={}bps",
-            position.entry_price_sol, calculated_slippage, calculated_slippage.min(MAX_SLIPPAGE_BPS)
+            "📊 Sniper slippage: entry={:.6} SOL | realized_pnl={:?} | base={}bps | final={}bps",
+            position.entry_price_sol, position.pnl_sol, calculated_slippage, calculated_slippage.min(MAX_SLIPPAGE_BPS)
         );
 
         calculated_slippage.min(MAX_SLIPPAGE_BPS)
@@ -564,10 +566,20 @@ impl GraduationSniper {
                                         let in_flight_sells_clone = in_flight_sells.clone();
 
                                         tokio::spawn(async move {
-                                            let _permit = match semaphore_clone.acquire().await {
-                                                Ok(p) => p,
-                                                Err(_) => {
+                                            // Timeout for semaphore acquisition to prevent indefinite blocking
+                                            const SEMAPHORE_TIMEOUT_SECS: u64 = 30;
+                                            let _permit = match tokio::time::timeout(
+                                                tokio::time::Duration::from_secs(SEMAPHORE_TIMEOUT_SECS),
+                                                semaphore_clone.acquire()
+                                            ).await {
+                                                Ok(Ok(p)) => p,
+                                                Ok(Err(_)) => {
                                                     tracing::error!("Semaphore closed, cannot execute sell for {}", mint_owned);
+                                                    in_flight_sells_clone.write().await.remove(&mint_owned);
+                                                    return;
+                                                }
+                                                Err(_) => {
+                                                    tracing::error!("⚠️ Semaphore timeout after {}s for {} - too many concurrent sells", SEMAPHORE_TIMEOUT_SECS, mint_owned);
                                                     in_flight_sells_clone.write().await.remove(&mint_owned);
                                                     return;
                                                 }
@@ -695,6 +707,15 @@ impl GraduationSniper {
                                             continue;
                                         }
 
+                                        // Get sniper strategy ID for proper attribution
+                                        let sniper_strategy_id = if let Some(ref engine) = strategy_engine {
+                                            engine.get_strategy_by_type("graduation_snipe").await
+                                                .map(|s| s.id)
+                                                .unwrap_or(Uuid::nil())
+                                        } else {
+                                            Uuid::nil()
+                                        };
+
                                         // Spawn the actual buy execution with retry logic
                                         let mint_owned = mint.to_string();
                                         let symbol_owned = symbol.to_string();
@@ -704,8 +725,6 @@ impl GraduationSniper {
                                         let wallet_clone = default_wallet.clone();
                                         let jupiter_url_clone = jupiter_api_url.clone();
                                         let slippage_bps = current_config.slippage_bps;
-                                        let take_profit = current_config.post_graduation_take_profit;
-                                        let stop_loss = current_config.post_graduation_stop_loss;
                                         let position_manager_clone = position_manager.clone();
                                         let in_flight_buys_clone = in_flight_buys.clone();
 
@@ -722,8 +741,7 @@ impl GraduationSniper {
                                                 &jupiter_url_clone,
                                                 entry_sol,
                                                 slippage_bps as u16,
-                                                take_profit,
-                                                stop_loss,
+                                                sniper_strategy_id,
                                                 position_manager_clone.as_ref(),
                                                 &in_flight_buys_clone,
                                             ).await;
@@ -796,10 +814,19 @@ impl GraduationSniper {
                                 tokio::spawn(async move {
                                     tokio::time::sleep(tokio::time::Duration::from_millis(backoff_ms)).await;
 
-                                    let _permit = match semaphore_clone.acquire().await {
-                                        Ok(p) => p,
-                                        Err(_) => {
+                                    // Timeout for semaphore acquisition to prevent indefinite blocking
+                                    const SEMAPHORE_TIMEOUT_SECS: u64 = 30;
+                                    let _permit = match tokio::time::timeout(
+                                        tokio::time::Duration::from_secs(SEMAPHORE_TIMEOUT_SECS),
+                                        semaphore_clone.acquire()
+                                    ).await {
+                                        Ok(Ok(p)) => p,
+                                        Ok(Err(_)) => {
                                             tracing::error!("Semaphore closed, cannot retry sell for {}", mint);
+                                            return;
+                                        }
+                                        Err(_) => {
+                                            tracing::error!("⚠️ Semaphore timeout after {}s for retry of {} - too many concurrent sells", SEMAPHORE_TIMEOUT_SECS, mint);
                                             return;
                                         }
                                     };
@@ -914,7 +941,8 @@ impl GraduationSniper {
         // Calculate exit percentage based on momentum
         let exit_percent = Self::calculate_momentum_exit_percent(momentum_data, momentum_config);
         let token_amount_to_sell = if exit_percent < 100.0 {
-            ((position.entry_tokens as f64) * (exit_percent / 100.0)) as u64
+            // Round to nearest token, capped at actual balance
+            ((position.entry_tokens as f64) * (exit_percent / 100.0)).round().min(position.entry_tokens as f64) as u64
         } else {
             position.entry_tokens
         };
@@ -1216,6 +1244,13 @@ impl GraduationSniper {
             Significance::Medium
         };
 
+        // Guard against division by zero in PnL percent calculation
+        let pnl_percent = if position.entry_price_sol > 0.0 {
+            (pnl_sol / position.entry_price_sol) * 100.0
+        } else {
+            0.0
+        };
+
         let payload = serde_json::json!({
             "mint": position.mint,
             "symbol": position.symbol,
@@ -1224,7 +1259,7 @@ impl GraduationSniper {
             "entry_price_sol": position.entry_price_sol,
             "exit_sol": exit_sol,
             "pnl_sol": pnl_sol,
-            "pnl_percent": (pnl_sol / position.entry_price_sol) * 100.0,
+            "pnl_percent": pnl_percent,
             "tx_signature": tx_signature,
             "hold_time_seconds": (Utc::now() - position.entry_time).num_seconds(),
             "significance": format!("{:?}", significance),
@@ -1298,8 +1333,7 @@ impl GraduationSniper {
         jupiter_api_url: &str,
         entry_sol: f64,
         slippage_bps: u16,
-        take_profit: f64,
-        stop_loss: f64,
+        strategy_id: Uuid,
         position_manager: Option<&Arc<PositionManager>>,
         in_flight_buys: &Arc<RwLock<HashSet<String>>>,
     ) {
@@ -1328,8 +1362,7 @@ impl GraduationSniper {
                 jupiter_api_url,
                 entry_sol,
                 slippage_bps,
-                take_profit,
-                stop_loss,
+                strategy_id,
                 position_manager,
             ).await;
 
@@ -1397,8 +1430,7 @@ impl GraduationSniper {
         jupiter_api_url: &str,
         entry_sol: f64,
         slippage_bps: u16,
-        take_profit: f64,
-        stop_loss: f64,
+        strategy_id: Uuid,
         position_manager: Option<&Arc<PositionManager>>,
     ) -> Result<(), AppError> {
         tracing::info!(
@@ -1503,7 +1535,7 @@ impl GraduationSniper {
             }
         }
 
-        // FIX #1: Register with PositionManager for exit monitoring (TP/SL triggers)
+        // Register with PositionManager for exit monitoring using sniper strategy exit config
         if let Some(pm) = position_manager {
             // Pump.fun tokens have 6 decimals - convert raw amount to actual tokens
             let actual_tokens = tokens_received as f64 / 1e6;
@@ -1513,17 +1545,20 @@ impl GraduationSniper {
                 0.0
             };
 
-            let exit_config = ExitConfig {
-                stop_loss_percent: Some(stop_loss),
-                take_profit_percent: Some(take_profit),
-                trailing_stop_percent: Some(8.0),
-                time_limit_minutes: Some(30),
-                ..Default::default()
-            };
+            // DEFENSIVE MODE: 15% TP, strong momentum can run
+            let exit_config = ExitConfig::for_defensive();
+
+            tracing::info!(
+                "🛡️ Using DEFENSIVE exit config: TP:{:?}% (strong momentum extends) SL:{:?}% Trail:{:?}% Time:{:?}m",
+                exit_config.take_profit_percent,
+                exit_config.stop_loss_percent,
+                exit_config.trailing_stop_percent,
+                exit_config.time_limit_minutes
+            );
 
             match pm.open_position(
                 edge_id,
-                Uuid::nil(),
+                strategy_id,
                 mint.to_string(),
                 Some(symbol.to_string()),
                 entry_sol,
@@ -1536,9 +1571,10 @@ impl GraduationSniper {
             ).await {
                 Ok(pos) => {
                     tracing::info!(
-                        "🎯 Post-grad position registered with PositionManager: {} (pos_id={})",
+                        "🎯 Post-grad position registered with PositionManager: {} (pos_id={}, strategy_id={})",
                         symbol,
-                        pos.id
+                        pos.id,
+                        strategy_id
                     );
                 }
                 Err(e) => {
@@ -1557,12 +1593,10 @@ impl GraduationSniper {
         }
 
         tracing::info!(
-            "✅ Post-graduation BUY executed for {} | {} tokens @ {} SOL | TP={:.1}% SL={:.1}% | sig={}",
+            "✅ Post-graduation BUY executed for {} | {} tokens @ {} SOL | DEFENSIVE (TP:15% SL:10%) | sig={}",
             symbol,
             tokens_received,
             entry_sol,
-            take_profit,
-            stop_loss,
             &signature[..16.min(signature.len())]
         );
 
@@ -1576,8 +1610,9 @@ impl GraduationSniper {
                 "symbol": symbol,
                 "tokens_received": tokens_received,
                 "entry_sol": entry_sol,
-                "take_profit_percent": take_profit,
-                "stop_loss_percent": stop_loss,
+                "take_profit_percent": 15.0,  // DEFENSIVE
+                "stop_loss_percent": 10.0,    // DEFENSIVE
+                "strategy_id": strategy_id.to_string(),
                 "tx_signature": signature,
                 "price_impact_percent": buy_result.price_impact_percent,
                 "route": buy_result.route_label,

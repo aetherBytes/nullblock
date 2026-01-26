@@ -102,19 +102,19 @@ fn get_risk_presets() -> Vec<RiskPreset> {
         },
         RiskPreset {
             name: "medium".to_string(),
-            description: "Balanced (DEFAULT). SL: 20%, TP: 15%, Trail: 12%, Time: 7min".to_string(),
+            description: "DEFENSIVE (DEFAULT). SL: 10%, TP: 15% (strong momentum extends), Trail: 8%, Time: 5min".to_string(),
             config: RiskConfigDto {
                 max_position_sol: 0.3,
                 daily_loss_limit_sol: 1.0,
-                max_drawdown_percent: 20.0,
+                max_drawdown_percent: 10.0,     // DEFENSIVE: 10% tight stop
                 max_concurrent_positions: 10,
                 max_position_per_token_sol: 0.3,
                 cooldown_after_loss_ms: 3000,
                 volatility_scaling_enabled: true,
                 auto_pause_on_drawdown: true,
-                take_profit_percent: 15.0,
-                trailing_stop_percent: 12.0,
-                time_limit_minutes: 7,
+                take_profit_percent: 15.0,      // DEFENSIVE: 15% TP
+                trailing_stop_percent: 8.0,     // DEFENSIVE: 8% trailing
+                time_limit_minutes: 5,          // DEFENSIVE: 5 min
             },
         },
         RiskPreset {
@@ -251,18 +251,25 @@ pub async fn update_risk_settings(
         new_config.time_limit_minutes
     );
 
-    // Sync ALL strategies with global risk config (overwrites all strategy risk params)
+    // Sync strategies with global risk config
+    // NOTE: curve_arb and graduation_snipe have strategy-specific exit params - only sync position sizing
     let strategies = state.strategy_engine.list_strategies().await;
     let mut synced_count = 0;
     for strategy in &strategies {
         let mut updated_params = strategy.risk_params.clone();
         updated_params.max_position_sol = new_config.max_position_sol;
         updated_params.daily_loss_limit_sol = new_config.daily_loss_limit_sol;
-        updated_params.stop_loss_percent = Some(new_config.max_drawdown_percent);
-        updated_params.take_profit_percent = Some(new_config.take_profit_percent);
-        updated_params.trailing_stop_percent = Some(new_config.trailing_stop_percent);
-        updated_params.time_limit_minutes = Some(new_config.time_limit_minutes);
         updated_params.concurrent_positions = Some(new_config.max_concurrent_positions);
+
+        // Only sync exit params for non-curve strategies
+        // curve_arb and graduation_snipe have their own strategy-specific exit configs
+        let is_curve_strategy = strategy.strategy_type == "curve_arb" || strategy.strategy_type == "graduation_snipe";
+        if !is_curve_strategy {
+            updated_params.stop_loss_percent = Some(new_config.max_drawdown_percent);
+            updated_params.take_profit_percent = Some(new_config.take_profit_percent);
+            updated_params.trailing_stop_percent = Some(new_config.trailing_stop_percent);
+            updated_params.time_limit_minutes = Some(new_config.time_limit_minutes);
+        }
 
         if let Err(e) = state.strategy_engine.set_risk_params(strategy.id, updated_params.clone()).await {
             tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to sync strategy risk params");
@@ -282,7 +289,7 @@ pub async fn update_risk_settings(
         synced_count += 1;
     }
 
-    tracing::info!("✅ Synced {} strategies with new risk settings", synced_count);
+    tracing::info!("✅ Synced {} strategies with new risk settings (curve strategies preserve exit params)", synced_count);
 
     (StatusCode::OK, Json(serde_json::json!({
         "success": true,

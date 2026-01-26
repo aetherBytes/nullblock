@@ -122,28 +122,37 @@ const TradeActivityCard: React.FC<TradeActivityCardProps> = ({
               </div>
             ))}
 
-            {filteredRecentTrades.slice(0, 30).map((trade, idx) => (
-              <div
-                key={trade.id || `trade-${idx}`}
-                className={`${styles.tradeRow} ${styles.closedRow}`}
-                onClick={() => onTradeClick?.(trade, false)}
-              >
-                <div className={styles.tradeLeft}>
-                  <span className={styles.tradeSymbol}>{trade.symbol || '???'}</span>
-                  <span className={styles.tradeMeta}>
-                    {trade.exit_type || 'closed'} · {trade.time_ago || '--'}
-                  </span>
+            {filteredRecentTrades.slice(0, 30).map((trade, idx) => {
+              const mom = trade.momentum_at_exit ?? 0;
+              const momEmoji = mom >= 30 ? '🚀' : mom >= 0 ? '📈' : mom >= -30 ? '📉' : '💀';
+              return (
+                <div
+                  key={trade.id || `trade-${idx}`}
+                  className={`${styles.tradeRow} ${styles.closedRow}`}
+                  onClick={() => onTradeClick?.(trade, false)}
+                >
+                  <div className={styles.tradeLeft}>
+                    <span className={styles.tradeSymbol}>{trade.symbol || '???'}</span>
+                    <span className={styles.tradeMeta}>
+                      {trade.exit_type || 'closed'} · {trade.time_ago || '--'}
+                      {trade.momentum_at_exit !== undefined && trade.momentum_at_exit !== null && (
+                        <span className={styles.tradeMomentum} title={`Momentum at exit: ${mom.toFixed(0)}`}>
+                          {' '}· {mom.toFixed(0)}{momEmoji}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className={styles.tradeRight}>
+                    <span className={`${styles.tradePnl} ${(trade.pnl ?? 0) >= 0 ? styles.profit : styles.loss}`}>
+                      {(trade.pnl ?? 0) >= 0 ? '+' : ''}{(trade.pnl ?? 0).toFixed(4)}
+                    </span>
+                    <span className={`${styles.tradePercent} ${(trade.pnl_percent ?? 0) >= 0 ? styles.profit : styles.loss}`}>
+                      {(trade.pnl_percent ?? 0) >= 0 ? '+' : ''}{(trade.pnl_percent ?? 0).toFixed(1)}%
+                    </span>
+                  </div>
                 </div>
-                <div className={styles.tradeRight}>
-                  <span className={`${styles.tradePnl} ${(trade.pnl ?? 0) >= 0 ? styles.profit : styles.loss}`}>
-                    {(trade.pnl ?? 0) >= 0 ? '+' : ''}{(trade.pnl ?? 0).toFixed(4)}
-                  </span>
-                  <span className={`${styles.tradePercent} ${(trade.pnl_percent ?? 0) >= 0 ? styles.profit : styles.loss}`}>
-                    {(trade.pnl_percent ?? 0) >= 0 ? '+' : ''}{(trade.pnl_percent ?? 0).toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

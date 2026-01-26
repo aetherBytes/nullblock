@@ -187,7 +187,7 @@ impl PumpFunVenue {
             token_amount: tokens_out,
             price_per_token,
             price_impact_percent: price_impact,
-            fee_sol: sol_amount * 0.01, // 1% fee estimate
+            fee_sol: sol_amount * 0.02, // 2% fee for BUYS (pump.fun actual fee structure)
         })
     }
 
@@ -215,7 +215,7 @@ impl PumpFunVenue {
             token_amount,
             price_per_token,
             price_impact_percent: price_impact,
-            fee_sol: sol_out * 0.01,
+            fee_sol: sol_out * 0.01, // 1% fee for SELLS (pump.fun actual fee structure)
         })
     }
 

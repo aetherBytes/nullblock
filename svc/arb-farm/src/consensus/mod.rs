@@ -15,5 +15,5 @@ pub use model_discovery::{
     discover_best_reasoning_models, get_discovered_models, get_fallback_models,
     refresh_models, get_discovery_status, ModelDiscoveryStatus,
 };
-pub use openrouter::{get_default_models, get_model_weight, OpenRouterClient, AVAILABLE_MODELS};
+pub use openrouter::{get_default_models, get_model_weight, OpenRouterClient, AVAILABLE_MODELS, quick_llm_call};
 pub use voting::*;

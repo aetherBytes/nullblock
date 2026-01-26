@@ -17,6 +17,7 @@ edit-url-template = "https://github.com/aetherBytes/nullblock/edit/main/{path}"
 site-url = "/nullblock-docs/"
 cname = ""
 additional-css = ["custom.css"]
+additional-js = ["theme/copy-page.js"]
 
 [output.html.fold]
 enable = true

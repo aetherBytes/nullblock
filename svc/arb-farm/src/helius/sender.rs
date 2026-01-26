@@ -12,6 +12,8 @@ use crate::events::{topics, ArbEvent, EventBus, EventSource};
 use super::client::HeliusClient;
 use super::types::{SenderStats, SenderTxEvent, TxStatus};
 
+const RPC_REQUEST_TIMEOUT_SECS: u64 = 5;
+
 pub struct HeliusSender {
     client: Arc<HeliusClient>,
     event_bus: Arc<EventBus>,
@@ -50,7 +52,15 @@ impl HeliusSender {
             }
         ]);
 
-        let signature: String = self.client.rpc_call("sendTransaction", params).await?;
+        let signature: String = tokio::time::timeout(
+            Duration::from_secs(RPC_REQUEST_TIMEOUT_SECS),
+            self.client.rpc_call("sendTransaction", params)
+        )
+        .await
+        .map_err(|_| AppError::Timeout(format!(
+            "sendTransaction RPC timeout after {}s",
+            RPC_REQUEST_TIMEOUT_SECS
+        )))??;
 
         let latency_ms = start.elapsed().as_millis() as u64;
 
@@ -97,11 +107,17 @@ impl HeliusSender {
                 {
                     let mut stats = self.stats.write().await;
                     stats.total_confirmed += 1;
-                    stats.success_rate =
-                        stats.total_confirmed as f64 / stats.total_sent as f64 * 100.0;
+                    stats.success_rate = if stats.total_sent > 0 {
+                        stats.total_confirmed as f64 / stats.total_sent as f64 * 100.0
+                    } else {
+                        0.0
+                    };
                     let total = stats.total_confirmed;
-                    stats.avg_landing_ms =
-                        (stats.avg_landing_ms * (total - 1) as f64 + latency_ms as f64) / total as f64;
+                    stats.avg_landing_ms = if total > 0 {
+                        (stats.avg_landing_ms * (total - 1) as f64 + latency_ms as f64) / total as f64
+                    } else {
+                        latency_ms as f64
+                    };
                 }
 
                 let event = SenderTxEvent {
@@ -126,8 +142,11 @@ impl HeliusSender {
                 {
                     let mut stats = self.stats.write().await;
                     stats.total_failed += 1;
-                    stats.success_rate =
-                        stats.total_confirmed as f64 / stats.total_sent as f64 * 100.0;
+                    stats.success_rate = if stats.total_sent > 0 {
+                        stats.total_confirmed as f64 / stats.total_sent as f64 * 100.0
+                    } else {
+                        0.0
+                    };
                 }
 
                 let event = SenderTxEvent {
@@ -168,13 +187,15 @@ impl HeliusSender {
                 value: Vec<Option<SignatureStatus>>,
             }
 
-            let response: ValueWrapper = self
-                .client
-                .rpc_call(
+            let response: ValueWrapper = tokio::time::timeout(
+                Duration::from_secs(RPC_REQUEST_TIMEOUT_SECS),
+                self.client.rpc_call(
                     "getSignatureStatuses",
                     json!([[signature], {"searchTransactionHistory": false}]),
                 )
-                .await?;
+            )
+            .await
+            .map_err(|_| AppError::Timeout("getSignatureStatuses timeout".into()))??;
 
             if let Some(Some(status)) = response.value.first() {
                 if let Some(ref err) = status.err {
@@ -200,7 +221,12 @@ impl HeliusSender {
 
     pub async fn ping(&self) -> AppResult<u64> {
         let start = Instant::now();
-        let _slot: u64 = self.client.rpc_call("getSlot", json!([])).await?;
+        let _slot: u64 = tokio::time::timeout(
+            Duration::from_secs(RPC_REQUEST_TIMEOUT_SECS),
+            self.client.rpc_call("getSlot", json!([]))
+        )
+        .await
+        .map_err(|_| AppError::Timeout("ping timeout".into()))??;
         Ok(start.elapsed().as_millis() as u64)
     }
 

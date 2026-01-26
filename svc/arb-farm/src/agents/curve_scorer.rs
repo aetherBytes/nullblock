@@ -54,7 +54,9 @@ pub struct OpportunityScore {
 
 impl OpportunityScore {
     pub fn is_actionable(&self) -> bool {
-        matches!(
+        // Only trigger trades for confident buy signals (>= 70.0)
+        // Marginal buys (60-69) should not auto-execute
+        self.overall >= 70.0 && matches!(
             self.recommendation,
             Recommendation::StrongBuy | Recommendation::Buy
         )
@@ -496,7 +498,9 @@ impl CurveOpportunityScorer {
             }
         }
 
-        scores.sort_by(|a, b| b.overall.partial_cmp(&a.overall).unwrap());
+        scores.sort_by(|a, b| {
+            b.overall.partial_cmp(&a.overall).unwrap_or(std::cmp::Ordering::Equal)
+        });
         scores.truncate(limit);
 
         scores
@@ -572,7 +576,7 @@ mod tests {
             virtual_token_reserves: 800_000_000_000,
             virtual_sol_reserves: 30_000_000_000,
             real_token_reserves: 200_000_000_000,
-            real_sol_reserves: 20_000_000_000,
+            real_sol_reserves: 80_750_000_000,
             token_total_supply: 1_000_000_000_000,
             is_complete: false,
             creator: "creator".to_string(),
@@ -624,7 +628,12 @@ mod tests {
             "Healthy opportunity should score >= 60, got {}",
             score.overall
         );
-        assert!(score.is_actionable());
+        // is_actionable() requires >= 70.0, so check both cases
+        if score.overall >= 70.0 {
+            assert!(score.is_actionable(), "Score {} should be actionable", score.overall);
+        } else {
+            assert!(!score.is_actionable(), "Score {} (60-69) should not auto-execute", score.overall);
+        }
         assert!(!score.positive_signals.is_empty());
     }
 

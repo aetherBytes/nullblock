@@ -1,16 +1,19 @@
 use axum::{
     extract::{Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     Json,
 };
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
+use crate::database::repositories::kol::{CreateKolTradeRecord};
 use crate::error::{AppError, AppResult};
-use crate::events::ArbEvent;
+use crate::events::{kol as kol_topics, ArbEvent};
+use crate::models::KolTradeType;
 use crate::server::AppState;
 use crate::webhooks::helius::{
     EnhancedTransactionEvent, HeliusWebhookPayload, TransactionType, WebhookConfig, WebhookType,
@@ -163,8 +166,34 @@ pub async fn delete_webhook(
 
 pub async fn receive_helius_webhook(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<Vec<EnhancedTransactionEvent>>,
 ) -> StatusCode {
+    // Verify webhook authentication if configured
+    if let Some(expected_token) = &state.config.helius_webhook_auth_token {
+        let auth_header = headers
+            .get("authorization")
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.trim_start_matches("Bearer ").trim());
+
+        match auth_header {
+            Some(token) if token == expected_token => {
+                // Auth successful
+            }
+            Some(_) => {
+                tracing::warn!("🔒 Webhook auth failed: invalid token");
+                return StatusCode::UNAUTHORIZED;
+            }
+            None => {
+                tracing::warn!("🔒 Webhook auth failed: no Authorization header");
+                return StatusCode::UNAUTHORIZED;
+            }
+        }
+    } else {
+        tracing::error!("🔒 HELIUS_WEBHOOK_AUTH_TOKEN not configured - rejecting webhook");
+        return StatusCode::UNAUTHORIZED;
+    }
+
     tracing::info!("Received Helius webhook with {} events", payload.len());
 
     for event in payload {
@@ -178,38 +207,113 @@ pub async fn receive_helius_webhook(
                     swap.output_amount
                 );
 
-                let kol_name = state
-                    .kol_tracker
-                    .get_kol_name(&swap.wallet_address)
-                    .await;
-                let trust_score = state
-                    .kol_tracker
-                    .get_trust_score(&swap.wallet_address)
-                    .await
-                    .unwrap_or(0.5);
+                // Look up the KOL entity from DB by wallet address
+                let kol_entity = match state.kol_repo.get_by_identifier(&swap.wallet_address).await {
+                    Ok(Some(entity)) => entity,
+                    Ok(None) => {
+                        tracing::debug!(
+                            wallet = %swap.wallet_address,
+                            "Swap from untracked wallet, skipping copy trade event"
+                        );
+                        // Still record in memory tracker for stats
+                        if let Err(e) = state.kol_tracker.record_trade(swap).await {
+                            tracing::error!("Failed to record KOL trade: {}", e);
+                        }
+                        continue;
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to lookup KOL entity: {}", e);
+                        continue;
+                    }
+                };
 
-                let signal = KOLTradeSignal::from_swap(swap.clone(), kol_name.clone(), trust_score);
+                // Determine trade type: buy if SOL input, sell if SOL output
+                let (trade_type, token_mint) = if swap.is_native_input {
+                    (KolTradeType::Buy, swap.output_mint.clone())
+                } else if swap.is_native_output {
+                    (KolTradeType::Sell, swap.input_mint.clone())
+                } else {
+                    tracing::debug!(
+                        signature = %swap.signature,
+                        "Token-to-token swap (no SOL), skipping"
+                    );
+                    continue;
+                };
 
-                let event = ArbEvent::new(
+                let value_sol = TransactionParser::calculate_swap_value_sol(&swap);
+
+                // Record the KOL trade in DB to get kol_trade_id
+                let kol_trade = match state.kol_repo.record_trade(CreateKolTradeRecord {
+                    entity_id: kol_entity.id,
+                    tx_signature: swap.signature.clone(),
+                    trade_type: trade_type.clone(),
+                    token_mint: token_mint.clone(),
+                    token_symbol: None,
+                    amount_sol: Decimal::from_f64_retain(value_sol).unwrap_or_default(),
+                    token_amount: if trade_type == KolTradeType::Buy {
+                        Some(Decimal::from(swap.output_amount))
+                    } else {
+                        Some(Decimal::from(swap.input_amount))
+                    },
+                    price_at_trade: None,
+                }).await {
+                    Ok(trade) => trade,
+                    Err(e) => {
+                        tracing::error!("Failed to record KOL trade in DB: {}", e);
+                        continue;
+                    }
+                };
+
+                let trade_type_str = match trade_type {
+                    KolTradeType::Buy => "buy",
+                    KolTradeType::Sell => "sell",
+                };
+
+                let trust_score: f64 = kol_entity.trust_score.try_into().unwrap_or(50.0);
+                let copy_recommended = kol_entity.copy_trading_enabled && trust_score >= 60.0;
+
+                tracing::info!(
+                    kol_id = %kol_entity.id,
+                    kol_name = ?kol_entity.display_name,
+                    trade_type = trade_type_str,
+                    token_mint = %token_mint,
+                    value_sol = value_sol,
+                    trust_score = trust_score,
+                    copy_enabled = kol_entity.copy_trading_enabled,
+                    copy_recommended = copy_recommended,
+                    "🔗 KOL trade detected, emitting copy trade event"
+                );
+
+                // Emit event with correct topic and all required fields
+                let arb_event = ArbEvent::new(
                     "kol.trade_detected",
                     crate::events::EventSource::Agent(crate::events::AgentType::Scanner),
-                    "arb.kol.trade",
+                    kol_topics::TRADE_DETECTED,
                     serde_json::json!({
-                        "kol_address": signal.kol_address,
-                        "kol_name": signal.kol_name,
-                        "signature": signal.swap.signature,
-                        "input_mint": signal.swap.input_mint,
-                        "output_mint": signal.swap.output_mint,
-                        "value_sol": signal.value_sol,
-                        "copy_recommended": signal.copy_recommended,
-                        "dex": signal.swap.dex_source,
+                        "kol_id": kol_entity.id.to_string(),
+                        "kol_trade_id": kol_trade.id.to_string(),
+                        "kol_address": swap.wallet_address,
+                        "kol_name": kol_entity.display_name,
+                        "token_mint": token_mint,
+                        "trade_type": trade_type_str,
+                        "kol_trust_score": trust_score,
+                        "signature": swap.signature,
+                        "input_mint": swap.input_mint,
+                        "output_mint": swap.output_mint,
+                        "value_sol": value_sol,
+                        "copy_recommended": copy_recommended,
+                        "copy_trading_enabled": kol_entity.copy_trading_enabled,
+                        "dex": swap.dex_source,
                     }),
                 );
 
-                let _ = state.event_tx.send(event);
+                if let Err(e) = state.event_tx.send(arb_event) {
+                    tracing::error!("Failed to send KOL trade event: {}", e);
+                }
 
+                // Also record in memory tracker for quick lookups
                 if let Err(e) = state.kol_tracker.record_trade(swap).await {
-                    tracing::error!("Failed to record KOL trade: {}", e);
+                    tracing::error!("Failed to record KOL trade in memory: {}", e);
                 }
             }
         }

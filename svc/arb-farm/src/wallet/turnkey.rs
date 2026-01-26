@@ -252,13 +252,13 @@ impl TurnkeySigner {
             match (&self.config.api_public_key, &self.config.api_private_key) {
                 (Some(pub_key), Some(priv_key)) => (pub_key.clone(), priv_key.clone()),
                 _ => {
-                    // Return mock success for development/testing when keys not configured
-                    tracing::warn!("Turnkey API keys not configured - returning mock sign result");
+                    // API keys not configured - return error instead of fake success
+                    tracing::error!("❌ CRITICAL: Turnkey API keys not configured - cannot sign transactions");
                     return Ok(SignResult {
-                        success: true,
-                        signed_transaction_base64: Some(transaction_base64.to_string()),
-                        signature: Some(format!("mock_sig_{}", uuid::Uuid::new_v4())),
-                        error: None,
+                        success: false,
+                        signed_transaction_base64: None,
+                        signature: None,
+                        error: Some("Turnkey API keys not configured - cannot sign transactions. Set TURNKEY_API_PUBLIC_KEY and TURNKEY_API_PRIVATE_KEY.".to_string()),
                         policy_violation: None,
                     });
                 }

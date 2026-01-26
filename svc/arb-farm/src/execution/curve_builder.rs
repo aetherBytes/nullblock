@@ -20,9 +20,11 @@ use crate::venues::curves::math::{
 use crate::venues::curves::on_chain::{derive_pump_fun_bonding_curve, OnChainCurveState, OnChainFetcher};
 
 const DEFAULT_COMPUTE_UNITS: u32 = 200_000;
-const DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS: u64 = 1_000_000;
+const DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS: u64 = 10_000_000; // 10x increase for reliable exits (~0.002 SOL per tx)
 const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 const RAYDIUM_API_URL: &str = "https://transaction-v1.raydium.io";
+const HIGH_SLIPPAGE_WARNING_BPS: u16 = 1500; // 15% - warn above this
+const EXTREME_SLIPPAGE_WARNING_BPS: u16 = 3000; // 30% - warn strongly above this
 
 fn deserialize_string_or_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
 where
@@ -540,6 +542,23 @@ impl CurveTransactionBuilder {
         let simulation = self.simulate_sell(params).await?;
         let min_sol = simulation.min_output;
 
+        // Warn about high slippage settings
+        if params.slippage_bps >= EXTREME_SLIPPAGE_WARNING_BPS {
+            tracing::warn!(
+                "⚠️ EXTREME SLIPPAGE on curve sell: {}bps ({}%) for {} - consider reducing",
+                params.slippage_bps,
+                params.slippage_bps as f64 / 100.0,
+                &params.mint[..12.min(params.mint.len())]
+            );
+        } else if params.slippage_bps >= HIGH_SLIPPAGE_WARNING_BPS {
+            tracing::warn!(
+                "⚠️ High slippage on curve sell: {}bps ({}%) for {}",
+                params.slippage_bps,
+                params.slippage_bps as f64 / 100.0,
+                &params.mint[..12.min(params.mint.len())]
+            );
+        }
+
         // Detect which token program this mint uses (Token-2022 or standard SPL Token)
         let is_token_2022 = self.on_chain_fetcher.is_token_2022(&params.mint).await?;
         let token_program = if is_token_2022 {
@@ -686,7 +705,8 @@ impl CurveTransactionBuilder {
             amount: min_tokens_out,
             max_sol_cost: sol_amount,
         };
-        data.extend(borsh::to_vec(&args).unwrap());
+        data.extend(borsh::to_vec(&args)
+            .map_err(|e| AppError::Internal(format!("Failed to serialize buy args: {}", e)))?);
 
         let buy_ix = Instruction {
             program_id,
@@ -795,7 +815,8 @@ impl CurveTransactionBuilder {
             amount: token_amount,
             min_sol_output: min_sol_out,
         };
-        data.extend(borsh::to_vec(&args).unwrap());
+        data.extend(borsh::to_vec(&args)
+            .map_err(|e| AppError::Internal(format!("Failed to serialize sell args: {}", e)))?);
 
         let sell_ix = Instruction {
             program_id,
@@ -834,6 +855,23 @@ impl CurveTransactionBuilder {
         params: &CurveSellParams,
         jupiter_api_url: &str,
     ) -> AppResult<PostGraduationSellResult> {
+        // Warn about high slippage settings
+        if params.slippage_bps >= EXTREME_SLIPPAGE_WARNING_BPS {
+            tracing::warn!(
+                "⚠️ EXTREME SLIPPAGE on Jupiter sell: {}bps ({}%) for {} - consider reducing",
+                params.slippage_bps,
+                params.slippage_bps as f64 / 100.0,
+                &params.mint[..12.min(params.mint.len())]
+            );
+        } else if params.slippage_bps >= HIGH_SLIPPAGE_WARNING_BPS {
+            tracing::warn!(
+                "⚠️ High slippage on Jupiter sell: {}bps ({}%) for {}",
+                params.slippage_bps,
+                params.slippage_bps as f64 / 100.0,
+                &params.mint[..12.min(params.mint.len())]
+            );
+        }
+
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()
@@ -875,7 +913,7 @@ impl CurveTransactionBuilder {
             "useSharedAccounts": false,
             "computeUnitPriceMicroLamports": self.priority_fee_micro_lamports,
             "priorityLevelWithMaxLamports": {
-                "maxLamports": 1_000_000u64
+                "maxLamports": 5_000_000u64
             },
             "asLegacyTransaction": false,
             "dynamicComputeUnitLimit": true,
@@ -902,8 +940,33 @@ impl CurveTransactionBuilder {
             .await
             .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter swap: {}", e)))?;
 
-        let expected_sol_out: u64 = quote.out_amount.parse().unwrap_or(0);
+        // CRITICAL: Fail if parsing fails to prevent zero-output trades
+        let expected_sol_out: u64 = quote.out_amount.parse().map_err(|e| {
+            AppError::ExternalApi(format!(
+                "Failed to parse Jupiter quote out_amount '{}': {}",
+                quote.out_amount, e
+            ))
+        })?;
+
+        // Validate we're getting a reasonable output amount
+        if expected_sol_out == 0 {
+            return Err(AppError::ExternalApi(
+                "Jupiter quote returned zero SOL output - quote invalid".to_string()
+            ));
+        }
+
         let price_impact: f64 = quote.price_impact_pct.unwrap_or(0.0);
+
+        // Enforce slippage limit - reject if actual price impact exceeds requested slippage
+        let max_allowed_impact = params.slippage_bps as f64 / 100.0; // Convert bps to percent
+        if price_impact.abs() > max_allowed_impact {
+            return Err(AppError::ExternalApi(format!(
+                "Jupiter sell quote price impact {:.2}% exceeds max allowed {:.2}% ({}bps) - rejecting trade",
+                price_impact,
+                max_allowed_impact,
+                params.slippage_bps
+            )));
+        }
 
         Ok(PostGraduationSellResult {
             transaction_base64: swap_result.swap_transaction,
@@ -919,6 +982,23 @@ impl CurveTransactionBuilder {
         &self,
         params: &CurveSellParams,
     ) -> AppResult<PostGraduationSellResult> {
+        // Warn about high slippage settings
+        if params.slippage_bps >= EXTREME_SLIPPAGE_WARNING_BPS {
+            tracing::warn!(
+                "⚠️ EXTREME SLIPPAGE on Raydium sell: {}bps ({}%) for {} - consider reducing",
+                params.slippage_bps,
+                params.slippage_bps as f64 / 100.0,
+                &params.mint[..12.min(params.mint.len())]
+            );
+        } else if params.slippage_bps >= HIGH_SLIPPAGE_WARNING_BPS {
+            tracing::warn!(
+                "⚠️ High slippage on Raydium sell: {}bps ({}%) for {}",
+                params.slippage_bps,
+                params.slippage_bps as f64 / 100.0,
+                &params.mint[..12.min(params.mint.len())]
+            );
+        }
+
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(15))
             .build()
@@ -1006,8 +1086,33 @@ impl CurveTransactionBuilder {
                 "Raydium returned no transaction data".to_string()
             ))?;
 
-        let expected_sol_out: u64 = quote.out_amount.parse().unwrap_or(0);
+        // CRITICAL: Fail if parsing fails to prevent zero-output trades
+        let expected_sol_out: u64 = quote.out_amount.parse().map_err(|e| {
+            AppError::ExternalApi(format!(
+                "Failed to parse Raydium quote out_amount '{}': {}",
+                quote.out_amount, e
+            ))
+        })?;
+
+        // Validate we're getting a reasonable output amount
+        if expected_sol_out == 0 {
+            return Err(AppError::ExternalApi(
+                "Raydium quote returned zero SOL output - quote invalid".to_string()
+            ));
+        }
+
         let price_impact: f64 = quote.price_impact_pct.unwrap_or(0.0);
+
+        // Enforce slippage limit - reject if actual price impact exceeds requested slippage
+        let max_allowed_impact = params.slippage_bps as f64 / 100.0; // Convert bps to percent
+        if price_impact.abs() > max_allowed_impact {
+            return Err(AppError::ExternalApi(format!(
+                "Raydium sell quote price impact {:.2}% exceeds max allowed {:.2}% ({}bps) - rejecting trade",
+                price_impact,
+                max_allowed_impact,
+                params.slippage_bps
+            )));
+        }
 
         Ok(PostGraduationSellResult {
             transaction_base64: transaction,
@@ -1103,7 +1208,7 @@ impl CurveTransactionBuilder {
             "useSharedAccounts": false,
             "computeUnitPriceMicroLamports": self.priority_fee_micro_lamports,
             "priorityLevelWithMaxLamports": {
-                "maxLamports": 1_000_000u64
+                "maxLamports": 5_000_000u64
             },
             "asLegacyTransaction": false,
             "dynamicComputeUnitLimit": true,
@@ -1130,7 +1235,21 @@ impl CurveTransactionBuilder {
             .await
             .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter swap: {}", e)))?;
 
-        let expected_tokens_out: u64 = quote.out_amount.parse().unwrap_or(0);
+        // CRITICAL: Fail if parsing fails to prevent zero-output trades
+        let expected_tokens_out: u64 = quote.out_amount.parse().map_err(|e| {
+            AppError::ExternalApi(format!(
+                "Failed to parse Jupiter quote out_amount '{}': {}",
+                quote.out_amount, e
+            ))
+        })?;
+
+        // Validate we're getting a reasonable output amount
+        if expected_tokens_out == 0 {
+            return Err(AppError::ExternalApi(
+                "Jupiter quote returned zero token output - quote invalid".to_string()
+            ));
+        }
+
         let price_impact: f64 = quote.price_impact_pct.unwrap_or(0.0);
 
         Ok(PostGraduationBuyResult {

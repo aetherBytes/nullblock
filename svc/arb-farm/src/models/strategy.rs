@@ -118,10 +118,10 @@ impl Default for RiskParams {
             require_consensus: false,
             require_confirmation: true,
             staleness_threshold_hours: 24,
-            stop_loss_percent: Some(30.0),     // 30% - allow curve volatility
-            take_profit_percent: Some(100.0),  // 100% (2x) - first major target
-            trailing_stop_percent: Some(20.0), // 20% trailing for moon bag
-            time_limit_minutes: Some(15),      // 15 min - let winners run
+            stop_loss_percent: Some(10.0),     // DEFENSIVE: 10% tight stop
+            take_profit_percent: Some(15.0),   // DEFENSIVE: 15% TP (strong momentum extends)
+            trailing_stop_percent: Some(8.0),  // DEFENSIVE: 8% trailing stop
+            time_limit_minutes: Some(5),       // DEFENSIVE: 5 min
             base_currency: "sol".to_string(),
             max_capital_allocation_percent: 25.0,
             concurrent_positions: Some(1),
@@ -286,10 +286,10 @@ impl RiskParams {
             require_consensus: false,
             require_confirmation: true,
             staleness_threshold_hours: 48,
-            stop_loss_percent: Some(20.0),
-            take_profit_percent: Some(100.0),
-            trailing_stop_percent: Some(15.0),
-            time_limit_minutes: Some(240),
+            stop_loss_percent: Some(10.0),     // DEFENSIVE
+            take_profit_percent: Some(15.0),   // DEFENSIVE
+            trailing_stop_percent: Some(8.0),  // DEFENSIVE
+            time_limit_minutes: Some(5),       // DEFENSIVE
             base_currency: "sol".to_string(),
             max_capital_allocation_percent: 40.0,
             concurrent_positions: Some(5),

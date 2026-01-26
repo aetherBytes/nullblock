@@ -278,6 +278,65 @@ pub async fn update_all_positions_exit_config(
     })))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ToggleAutoExitRequest {
+    pub enabled: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ToggleAutoExitResponse {
+    pub success: bool,
+    pub position_id: Uuid,
+    pub auto_exit_enabled: bool,
+    pub message: String,
+}
+
+pub async fn toggle_position_auto_exit(
+    State(state): State<AppState>,
+    Path(position_id): Path<Uuid>,
+    Json(request): Json<ToggleAutoExitRequest>,
+) -> Result<Json<ToggleAutoExitResponse>, AppError> {
+    let updated = state
+        .position_manager
+        .update_position_auto_exit(position_id, request.enabled)
+        .await?;
+
+    let mode = if request.enabled { "AUTO" } else { "MANUAL" };
+    let message = format!(
+        "Position {} set to {} mode",
+        &updated.token_symbol.as_deref().unwrap_or(&updated.token_mint[..8]),
+        mode
+    );
+
+    info!(
+        position_id = %position_id,
+        enabled = request.enabled,
+        "🔧 Auto-exit toggled"
+    );
+
+    Ok(Json(ToggleAutoExitResponse {
+        success: true,
+        position_id,
+        auto_exit_enabled: updated.auto_exit_enabled,
+        message,
+    }))
+}
+
+/// Get count of positions with auto-exit enabled/disabled
+pub async fn get_auto_exit_stats(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let positions = state.position_manager.get_open_positions().await;
+    let auto_enabled = positions.iter().filter(|p| p.auto_exit_enabled).count();
+    let manual = positions.len() - auto_enabled;
+
+    Ok(Json(serde_json::json!({
+        "total_positions": positions.len(),
+        "auto_exit_enabled": auto_enabled,
+        "manual_mode": manual,
+    })))
+}
+
 #[derive(Debug, Serialize)]
 pub struct EmergencyExitResponse {
     pub positions_exited: usize,
@@ -412,6 +471,7 @@ pub async fn force_clear_all_positions(
             0.0, // Unknown PnL since sold externally
             "ForceClear",
             None,
+            Some(position.momentum.momentum_score),
         ).await {
             tracing::warn!("Failed to clear position {}: {}", position.id, e);
         } else {
@@ -650,6 +710,7 @@ pub async fn sell_all_wallet_tokens(
                         pnl,
                         "ManualSellAll",
                         Some(signature.clone()),
+                        Some(position.momentum.momentum_score),
                     ).await {
                         tracing::warn!("Failed to close position {} after sell: {}", position.id, e);
                     } else {
@@ -735,26 +796,37 @@ pub async fn sell_all_wallet_tokens(
                     ExecutionErrorType::TxFailed
                 };
 
-                let exec_error = ExecutionError {
-                    error_type,
-                    message: e.to_string(),
-                    context: ErrorContext {
-                        action: Some("sell".to_string()),
-                        token_mint: Some(token.mint.clone()),
-                        attempted_amount_sol: Some(token.ui_amount),
-                        venue: Some("pump_fun".to_string()),
-                        strategy_id: None,
-                        edge_id: None,
-                    },
-                    stack_trace: None,
-                    recoverable: true,
-                    timestamp: Utc::now(),
-                };
+                // Skip logging "already sold" errors to engrams - these are expected states
+                // for positions that were closed via partial TP or inferred exits
+                let error_msg = e.to_string();
+                let is_already_sold = error_msg.contains("already sold")
+                    || error_msg.contains("zero on-chain balance")
+                    || (error_msg.contains("balance") && error_msg.contains("0"));
 
-                if let Err(save_err) = state.engrams_client.save_execution_error(&wallet_address, &exec_error).await {
-                    tracing::warn!("Failed to save execution error engram: {}", save_err);
+                if !is_already_sold {
+                    let exec_error = ExecutionError {
+                        error_type,
+                        message: error_msg.clone(),
+                        context: ErrorContext {
+                            action: Some("sell".to_string()),
+                            token_mint: Some(token.mint.clone()),
+                            attempted_amount_sol: Some(token.ui_amount),
+                            venue: Some("pump_fun".to_string()),
+                            strategy_id: None,
+                            edge_id: None,
+                        },
+                        stack_trace: None,
+                        recoverable: true,
+                        timestamp: Utc::now(),
+                    };
+
+                    if let Err(save_err) = state.engrams_client.save_execution_error(&wallet_address, &exec_error).await {
+                        tracing::warn!("Failed to save execution error engram: {}", save_err);
+                    } else {
+                        tracing::debug!("📝 Saved execution error engram for failed sell of {}", &token.mint[..12]);
+                    }
                 } else {
-                    tracing::debug!("📝 Saved execution error engram for failed sell of {}", &token.mint[..12]);
+                    tracing::debug!("⏭️ Skipping error engram for already-sold token {}", &token.mint[..12]);
                 }
 
                 results.push(SellTokenResult {
@@ -912,7 +984,20 @@ async fn sell_token_to_sol(
         Ok(curve_state) if !curve_state.is_complete => {
             // Token is still on bonding curve - sell via curve
             info!("   📈 Token on bonding curve, selling via pump.fun");
-            sell_via_bonding_curve(state, mint, raw_amount, wallet_address).await
+            match sell_via_bonding_curve(state, mint, raw_amount, wallet_address).await {
+                Ok(result) => Ok(result),
+                Err(e) => {
+                    let error_str = e.to_string();
+                    // Error 6023 = bonding curve completed (graduated during our attempt)
+                    // Fall back to Jupiter for graduated tokens
+                    if error_str.contains("6023") {
+                        info!("   🔄 Pump.fun returned 6023 (graduated) - falling back to Jupiter");
+                        sell_via_jupiter(state, mint, raw_amount, wallet_address).await
+                    } else {
+                        Err(e)
+                    }
+                }
+            }
         }
         Ok(_) => {
             // Token has graduated - sell via Jupiter
@@ -1243,10 +1328,16 @@ pub struct BestWorstTrade {
 pub struct RecentTradeInfo {
     pub id: String,
     pub symbol: String,
+    pub mint: String,
+    pub venue: String,
     pub pnl: f64,
     pub pnl_percent: f64,
     pub exit_type: String,
     pub time_ago: String,
+    pub entry_price: Option<f64>,
+    pub exit_price: Option<f64>,
+    pub entry_amount_sol: f64,
+    pub momentum_at_exit: Option<f64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1306,10 +1397,16 @@ pub async fn get_pnl_summary(
         RecentTradeInfo {
             id: t.id,
             symbol: t.symbol,
+            mint: t.mint,
+            venue: t.venue,
             pnl: t.pnl,
             pnl_percent,
             exit_type: t.reason,
             time_ago,
+            entry_price: t.entry_price,
+            exit_price: t.exit_price,
+            entry_amount_sol: t.entry_sol,
+            momentum_at_exit: t.momentum_at_exit,
         }
     }).collect();
 

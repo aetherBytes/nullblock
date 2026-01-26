@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn};
@@ -13,6 +14,7 @@ use crate::helius::HeliusSender;
 use crate::wallet::turnkey::SignRequest;
 use crate::wallet::DevWalletSigner;
 
+use super::capital_manager::CapitalManager;
 use super::curve_builder::{CurveSellParams, CurveTransactionBuilder};
 use super::jito::{BundleState, JitoClient};
 use super::position_manager::{
@@ -22,6 +24,10 @@ use super::position_manager::{
 use super::transaction_builder::TransactionBuilder;
 
 const MIN_PROFIT_LAMPORTS: i64 = 500_000;
+const PRICE_FETCH_TIMEOUT_SECS: u64 = 10;
+const GLOBAL_PRICE_FETCH_TIMEOUT_SECS: u64 = 60; // Max 60s for entire price fetch cycle
+const MAX_STALE_PRICE_SECS: u64 = 300; // 5 minutes - warn if using price older than this
+const MIN_DUST_VALUE_SOL: f64 = 0.0001; // Dust threshold: 0.0001 SOL (~$0.02)
 
 pub struct PositionMonitor {
     position_manager: Arc<PositionManager>,
@@ -32,6 +38,10 @@ pub struct PositionMonitor {
     curve_builder: Option<Arc<CurveTransactionBuilder>>,
     helius_sender: Option<Arc<HeliusSender>>,
     engrams_client: Option<Arc<EngramsClient>>,
+    capital_manager: Option<Arc<CapitalManager>>,
+    rate_limit_backoff_until: std::sync::Arc<tokio::sync::RwLock<Option<std::time::Instant>>>,
+    consecutive_rate_limits: std::sync::Arc<tokio::sync::RwLock<u32>>,
+    shutdown_flag: Arc<AtomicBool>,
 }
 
 #[derive(Debug, Clone)]
@@ -72,7 +82,20 @@ impl PositionMonitor {
             curve_builder: None,
             helius_sender: None,
             engrams_client: None,
+            capital_manager: None,
+            rate_limit_backoff_until: std::sync::Arc::new(tokio::sync::RwLock::new(None)),
+            consecutive_rate_limits: std::sync::Arc::new(tokio::sync::RwLock::new(0)),
+            shutdown_flag: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    pub fn get_shutdown_flag(&self) -> Arc<AtomicBool> {
+        self.shutdown_flag.clone()
+    }
+
+    pub fn request_shutdown(&self) {
+        self.shutdown_flag.store(true, Ordering::SeqCst);
+        info!("🛑 Position monitor shutdown requested");
     }
 
     pub fn with_curve_support(
@@ -90,10 +113,69 @@ impl PositionMonitor {
         self
     }
 
+    pub fn with_capital_manager(mut self, capital_manager: Arc<CapitalManager>) -> Self {
+        self.capital_manager = Some(capital_manager);
+        self
+    }
+
+    async fn is_rate_limited(&self) -> bool {
+        self.is_rate_limited_for_urgency(ExitUrgency::Low).await
+    }
+
+    async fn is_rate_limited_for_urgency(&self, urgency: ExitUrgency) -> bool {
+        // Critical and High urgency exits bypass rate limiting to prevent losses
+        if matches!(urgency, ExitUrgency::Critical | ExitUrgency::High) {
+            return false;
+        }
+
+        let backoff_until = self.rate_limit_backoff_until.read().await;
+        if let Some(until) = *backoff_until {
+            if std::time::Instant::now() < until {
+                return true;
+            }
+        }
+        false
+    }
+
+    async fn record_rate_limit(&self) {
+        const MAX_CONSECUTIVE_RATE_LIMITS: u32 = 10; // Cap counter to prevent unbounded growth
+        const MAX_BACKOFF_SECS: u64 = 60;
+
+        let mut consecutive = self.consecutive_rate_limits.write().await;
+        *consecutive = (*consecutive + 1).min(MAX_CONSECUTIVE_RATE_LIMITS);
+
+        // Exponential backoff: 5s, 10s, 20s, 40s, max 60s
+        let backoff_secs = (5u64 * (1 << (*consecutive - 1).min(4))).min(MAX_BACKOFF_SECS);
+
+        // Add jitter (0-20%) to prevent thundering herd
+        let jitter = (backoff_secs as f64 * 0.2 * rand::random::<f64>()) as u64;
+        let final_backoff = backoff_secs + jitter;
+
+        let mut backoff_until = self.rate_limit_backoff_until.write().await;
+        *backoff_until = Some(std::time::Instant::now() + Duration::from_secs(final_backoff));
+
+        warn!(
+            "🚦 Rate limit detected (consecutive: {}/{}) - backing off for {}s (with jitter)",
+            *consecutive, MAX_CONSECUTIVE_RATE_LIMITS, final_backoff
+        );
+    }
+
+    async fn clear_rate_limit(&self) {
+        let mut consecutive = self.consecutive_rate_limits.write().await;
+        if *consecutive > 0 {
+            debug!("🚦 Rate limit cleared after {} consecutive rate limits", *consecutive);
+            *consecutive = 0;
+        }
+
+        let mut backoff_until = self.rate_limit_backoff_until.write().await;
+        *backoff_until = None;
+    }
+
     fn calculate_profit_aware_slippage(&self, position: &OpenPosition, signal: &ExitSignal) -> u16 {
         const MIN_SLIPPAGE_BPS: u16 = 500;  // 5% floor - pump.fun curves move 10-20% in seconds
         const MAX_SLIPPAGE_BPS: u16 = 2000; // 20% cap - prioritize execution over profit retention
-        const SALVAGE_SLIPPAGE_BPS: u16 = 9000; // 90% for dead token salvage - any recovery is better than zero
+        const SALVAGE_SLIPPAGE_BPS: u16 = 5000; // 50% for dead token salvage (reduced from 90%)
+        const ABSOLUTE_MAX_SLIPPAGE_BPS: u16 = 5000; // 50% absolute max - never exceed this
         const PROFIT_SACRIFICE_RATIO: f64 = 0.25; // 25% of profits - better to capture 75% than 0%
 
         let is_dead_token = signal.reason == ExitReason::Salvage
@@ -103,8 +185,10 @@ impl PositionMonitor {
                 .unwrap_or(false);
 
         if is_dead_token {
-            info!("💀 Dead token exit: using salvage slippage {}bps (90%)", SALVAGE_SLIPPAGE_BPS);
-            return SALVAGE_SLIPPAGE_BPS;
+            // Even salvage sells are capped at absolute max
+            let salvage_slippage = SALVAGE_SLIPPAGE_BPS.min(ABSOLUTE_MAX_SLIPPAGE_BPS);
+            info!("💀 Dead token exit: using salvage slippage {}bps ({}%)", salvage_slippage, salvage_slippage as f64 / 100.0);
+            return salvage_slippage;
         }
 
         let pnl_percent = if position.entry_price > 0.0 {
@@ -201,25 +285,74 @@ impl PositionMonitor {
         );
 
         let mut pending_exit_retry_counter: u64 = 0;
+        let mut successful_cycles: u32 = 0;
 
         loop {
-            // Process HIGH PRIORITY exits first (failed sells that need immediate retry)
-            if let Err(e) = self.process_priority_exits(&signer).await {
-                error!("Priority exit processing error: {}", e);
+            // Check shutdown flag at start of each cycle
+            if self.shutdown_flag.load(Ordering::SeqCst) {
+                info!("🛑 Position monitor shutting down gracefully");
+                break;
             }
 
-            // Retry pending exits every ~30 seconds (positions that failed to sell)
-            pending_exit_retry_counter += 1;
-            if pending_exit_retry_counter >= 10 {
-                pending_exit_retry_counter = 0;
-                if let Err(e) = self.retry_pending_exits(&signer).await {
-                    error!("Pending exit retry error: {}", e);
+            // Check global rate limit backoff (but still process priority exits)
+            let is_rate_limited = self.is_rate_limited().await;
+
+            let mut had_rate_limit = false;
+
+            // Process HIGH PRIORITY exits first - these bypass rate limits
+            // Critical exits must execute even during rate limiting to prevent losses
+            match self.process_priority_exits(&signer).await {
+                Ok(_) => {}
+                Err(e) => {
+                    let error_str = e.to_string();
+                    if error_str.contains("429") || error_str.to_lowercase().contains("rate limit") {
+                        had_rate_limit = true;
+                    }
+                    error!("Priority exit processing error: {}", e);
                 }
             }
 
-            // Then check regular exit conditions
-            if let Err(e) = self.check_and_process_exits(&signer).await {
-                error!("Position monitor error: {}", e);
+            // Retry pending exits every ~30 seconds (positions that failed to sell)
+            // Skip if globally rate limited or had rate limit this cycle
+            pending_exit_retry_counter += 1;
+            if pending_exit_retry_counter >= 10 && !had_rate_limit && !is_rate_limited {
+                pending_exit_retry_counter = 0;
+                match self.retry_pending_exits(&signer).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        let error_str = e.to_string();
+                        if error_str.contains("429") || error_str.to_lowercase().contains("rate limit") {
+                            had_rate_limit = true;
+                        }
+                        error!("Pending exit retry error: {}", e);
+                    }
+                }
+            }
+
+            // Then check regular exit conditions (skip if rate limited globally or this cycle)
+            if !had_rate_limit && !is_rate_limited {
+                match self.check_and_process_exits(&signer).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        let error_str = e.to_string();
+                        if error_str.contains("429") || error_str.to_lowercase().contains("rate limit") {
+                            had_rate_limit = true;
+                        }
+                        error!("Position monitor error: {}", e);
+                    }
+                }
+            }
+
+            // Update rate limit state
+            if had_rate_limit {
+                self.record_rate_limit().await;
+                successful_cycles = 0;
+            } else {
+                successful_cycles += 1;
+                // Clear rate limit state after 3 successful cycles
+                if successful_cycles >= 3 {
+                    self.clear_rate_limit().await;
+                }
             }
 
             // Use adaptive interval based on position risk profile
@@ -493,25 +626,45 @@ impl PositionMonitor {
             .into_iter()
             .collect();
 
-        // Try Jupiter first, then fallback to bonding curve for pre-graduation tokens
-        let mut prices = match self
-            .tx_builder
-            .get_multiple_token_prices(&unique_mints, BaseCurrency::Sol)
-            .await
-        {
-            Ok(p) => p,
-            Err(e) => {
+        // Try Jupiter first with timeout, then fallback to bonding curve for pre-graduation tokens
+        let mut prices = match tokio::time::timeout(
+            Duration::from_secs(PRICE_FETCH_TIMEOUT_SECS),
+            self.tx_builder.get_multiple_token_prices(&unique_mints, BaseCurrency::Sol)
+        ).await {
+            Ok(Ok(p)) => p,
+            Ok(Err(e)) => {
                 debug!("Jupiter price fetch failed (expected for pre-grad tokens): {}", e);
+                std::collections::HashMap::new()
+            }
+            Err(_) => {
+                warn!("Jupiter price fetch timed out after {}s", PRICE_FETCH_TIMEOUT_SECS);
                 std::collections::HashMap::new()
             }
         };
 
-        // For mints without Jupiter prices, try fetching from bonding curve
+        // For mints without Jupiter prices, try fetching from bonding curve (with timeout)
+        // Use global timeout to prevent the entire cycle from taking too long
         if let Some(curve_builder) = &self.curve_builder {
+            let curve_fetch_start = std::time::Instant::now();
+            let global_deadline = curve_fetch_start + Duration::from_secs(GLOBAL_PRICE_FETCH_TIMEOUT_SECS);
+
             for mint in &unique_mints {
+                // Check global timeout - don't start new fetches if we're past deadline
+                if std::time::Instant::now() > global_deadline {
+                    warn!(
+                        "⚠️ Global price fetch timeout reached after {}s - {} mints may have stale prices",
+                        GLOBAL_PRICE_FETCH_TIMEOUT_SECS,
+                        unique_mints.len() - prices.len()
+                    );
+                    break;
+                }
+
                 if !prices.contains_key(mint) {
-                    match curve_builder.get_curve_state(mint).await {
-                        Ok(state) => {
+                    match tokio::time::timeout(
+                        Duration::from_secs(PRICE_FETCH_TIMEOUT_SECS),
+                        curve_builder.get_curve_state(mint)
+                    ).await {
+                        Ok(Ok(state)) => {
                             // Calculate price from curve state: virtual_sol_reserves / virtual_token_reserves
                             if state.virtual_token_reserves > 0 {
                                 let price = state.virtual_sol_reserves as f64 / state.virtual_token_reserves as f64;
@@ -523,8 +676,11 @@ impl PositionMonitor {
                                 prices.insert(mint.clone(), price);
                             }
                         }
-                        Err(e) => {
+                        Ok(Err(e)) => {
                             debug!(mint = %mint, error = %e, "Failed to fetch curve state for price");
+                        }
+                        Err(_) => {
+                            debug!(mint = %mint, "Curve state fetch timed out");
                         }
                     }
                 }
@@ -541,6 +697,10 @@ impl PositionMonitor {
                     .map(|s| s.contains("DEAD TOKEN"))
                     .unwrap_or(false);
 
+                // Calculate how old the position's current_price might be
+                let position_age_secs = (Utc::now() - position.entry_time).num_seconds() as u64;
+                let price_is_stale = position_age_secs > MAX_STALE_PRICE_SECS;
+
                 if is_dead_token {
                     // Use entry price as fallback - we just need to trigger time-based exit
                     info!(
@@ -550,11 +710,27 @@ impl PositionMonitor {
                     prices.insert(position.token_mint.clone(), position.entry_price);
                 } else if position.exit_config.time_limit_minutes.is_some() {
                     // Non-dead token with time limit but no price - still need to check time exit
-                    debug!(
-                        "Using fallback price for {} (time limit exit pending)",
-                        &position.token_mint[..12]
-                    );
+                    if price_is_stale {
+                        warn!(
+                            "⚠️ Using STALE fallback price for {} (position {}s old, no fresh price) - only time exits will trigger",
+                            &position.token_mint[..12],
+                            position_age_secs
+                        );
+                    } else {
+                        debug!(
+                            "Using fallback price for {} (time limit exit pending)",
+                            &position.token_mint[..12]
+                        );
+                    }
                     prices.insert(position.token_mint.clone(), position.current_price);
+                } else if price_is_stale {
+                    // No time limit and stale price - log warning but don't use fallback
+                    // This prevents stop-loss/take-profit decisions on stale data
+                    warn!(
+                        "⚠️ Skipping {} - no fresh price available (position {}s old) and no time limit set",
+                        &position.token_mint[..12],
+                        position_age_secs
+                    );
                 }
             }
         }
@@ -580,17 +756,26 @@ impl PositionMonitor {
             self.emit_exit_signal_event(&signal).await;
 
             if let Err(e) = self.process_exit_signal(&signal, signer).await {
+                let error_msg = e.to_string();
+                let is_rate_limited = error_msg.contains("429")
+                    || error_msg.contains("rate limit")
+                    || error_msg.contains("Rate limit");
+
                 error!(
-                    "Failed to process exit for position {}: {}",
-                    signal.position_id, e
+                    "Failed to process exit for position {}: {}{}",
+                    signal.position_id, e,
+                    if is_rate_limited { " [RATE LIMITED]" } else { "" }
                 );
 
-                if signal.urgency == ExitUrgency::Critical {
-                    warn!(
-                        "Critical exit failed, will retry with higher slippage: {}",
-                        signal.position_id
-                    );
-                }
+                // Queue failed exit for retry with backoff
+                self.position_manager
+                    .record_priority_exit_failure(signal.position_id, is_rate_limited)
+                    .await;
+
+                warn!(
+                    "🔄 Exit signal for {} queued for priority retry",
+                    signal.position_id
+                );
             }
         }
 
@@ -610,12 +795,52 @@ impl PositionMonitor {
             }
         };
 
+        // Atomic status transition to prevent double-exits
+        // Try transitioning from Open or PartiallyExited to PendingExit
+        let cas_succeeded = match position.status {
+            PositionStatus::Open => {
+                self.position_manager.transition_to_pending_exit(signal.position_id).await
+            }
+            PositionStatus::PartiallyExited => {
+                match self.position_manager.compare_and_swap_status(
+                    signal.position_id,
+                    PositionStatus::PartiallyExited,
+                    PositionStatus::PendingExit,
+                ).await {
+                    Ok(success) => success,
+                    Err(_) => false,
+                }
+            }
+            PositionStatus::PendingExit => {
+                debug!("Position {} already in PendingExit, proceeding with exit", signal.position_id);
+                true
+            }
+            PositionStatus::Closed | PositionStatus::Failed | PositionStatus::Orphaned => {
+                debug!("Position {} already closed/failed/orphaned, skipping exit", signal.position_id);
+                return Ok(());
+            }
+        };
+
+        if !cas_succeeded {
+            warn!(
+                "Position {} status CAS failed - another thread is handling this exit",
+                signal.position_id
+            );
+            return Ok(());
+        }
+
         let wallet_status = signer.get_status().await;
         let user_wallet = match &wallet_status.wallet_address {
             Some(addr) => addr.clone(),
             None => {
-                error!("No wallet configured for exit");
-                return Ok(());
+                error!(
+                    position_id = %signal.position_id,
+                    token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                    "No wallet configured for exit - cannot process exit signal"
+                );
+                return Err(AppError::Internal(
+                    "No wallet configured for exit - position exit cannot proceed".to_string()
+                ));
             }
         };
 
@@ -675,11 +900,52 @@ impl PositionMonitor {
             if let Some(ref curve_builder) = self.curve_builder {
                 // Get actual token balance for the sell
                 let token_balance = self.tx_builder.get_token_balance(&user_wallet, &position.token_mint).await?;
+
+                // Dust validation: use SOL value threshold instead of raw token count
+                // This handles tokens with varying decimals (6-18) correctly
+                let token_value_sol = token_balance as f64 * signal.current_price;
+                if token_value_sol < MIN_DUST_VALUE_SOL {
+                    warn!(
+                        "⚠️ Skipping exit for {} - value {:.6} SOL below dust threshold {:.4} SOL (balance: {} tokens)",
+                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                        token_value_sol,
+                        MIN_DUST_VALUE_SOL,
+                        token_balance
+                    );
+                    // Mark position as closed with dust loss
+                    self.position_manager
+                        .close_position(
+                            signal.position_id,
+                            signal.current_price,
+                            -position.entry_amount_base, // Full loss (dust is worthless)
+                            "DustBalance",
+                            None,
+                            Some(position.momentum.momentum_score),
+                        )
+                        .await?;
+                    return Ok(());
+                }
+
                 let exit_amount = if signal.exit_percent >= 100.0 {
                     token_balance
                 } else {
-                    ((token_balance as f64) * (signal.exit_percent / 100.0)) as u64
+                    // Round to nearest token, capped at actual balance
+                    ((token_balance as f64) * (signal.exit_percent / 100.0)).round().min(token_balance as f64) as u64
                 };
+
+                // Validate calculated exit amount has meaningful SOL value
+                let exit_value_sol = exit_amount as f64 * signal.current_price;
+                if exit_value_sol < MIN_DUST_VALUE_SOL {
+                    warn!(
+                        "⚠️ Calculated exit value {:.6} SOL below dust threshold for {}",
+                        exit_value_sol,
+                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                    );
+                    return Err(AppError::Execution(format!(
+                        "Exit value {:.6} SOL below dust threshold {:.4} SOL",
+                        exit_value_sol, MIN_DUST_VALUE_SOL
+                    )));
+                }
 
                 let sell_params = CurveSellParams {
                     mint: position.token_mint.clone(),
@@ -763,15 +1029,24 @@ impl PositionMonitor {
                 .error
                 .or_else(|| sign_result.policy_violation.map(|v| v.message))
                 .unwrap_or_else(|| "Unknown signing error".to_string());
-            error!("Exit signing failed: {}", error_msg);
-            return Ok(());
+            error!(
+                position_id = %signal.position_id,
+                token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                reason = ?signal.reason,
+                "Exit signing failed: {}", error_msg
+            );
+            return Err(crate::error::AppError::ExternalApi(format!("Signing failed: {}", error_msg)));
         }
 
         let signed_tx = match sign_result.signed_transaction_base64 {
             Some(tx) => tx,
             None => {
-                error!("No signed transaction returned for exit");
-                return Ok(());
+                error!(
+                    position_id = %signal.position_id,
+                    token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                    "No signed transaction returned for exit"
+                );
+                return Err(crate::error::AppError::ExternalApi("No signed transaction returned".to_string()));
             }
         };
 
@@ -800,13 +1075,22 @@ impl PositionMonitor {
                         }
                     }
                     Err(e) => {
-                        warn!("🔴 Jito bundle wait failed: {} - trying Helius fallback", e);
+                        warn!(
+                            position_id = %signal.position_id,
+                            token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                            bundle_id = %bundle_id,
+                            "🔴 Jito bundle wait failed: {} - trying Helius fallback", e
+                        );
                         use_helius_fallback = true;
                     }
                 }
             }
             Err(e) => {
-                warn!("🔴 Jito bundle send failed: {} - trying Helius fallback", e);
+                warn!(
+                    position_id = %signal.position_id,
+                    token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                    "🔴 Jito bundle send failed: {} - trying Helius fallback", e
+                );
                 use_helius_fallback = true;
             }
         }
@@ -815,7 +1099,7 @@ impl PositionMonitor {
         if use_helius_fallback {
             if let Some(helius_sender) = &self.helius_sender {
                 info!("📤 Sending DEX exit via Helius fallback...");
-                let confirmation_timeout = std::time::Duration::from_secs(60); // Increased from 30s
+                let confirmation_timeout = std::time::Duration::from_secs(30); // Reduced for faster exit
                 match helius_sender.send_and_confirm(&signed_tx, confirmation_timeout).await {
                     Ok(sig) => {
                         info!("✅ DEX exit confirmed via Helius: {}", sig);
@@ -830,54 +1114,103 @@ impl PositionMonitor {
                             // user_wallet is already defined at the top of process_exit_signal
                             match self.tx_builder.get_token_balance(&user_wallet, &position.token_mint).await {
                                 Ok(balance) => {
-                                    // If balance is essentially 0 (< 1000 raw units = dust), the sell succeeded
+                                    // If balance is essentially 0 (< 1000 raw units = dust), the sell likely succeeded
                                     if balance < 1000 {
-                                        info!("✅ Confirmation timed out but tokens are gone - treating as successful exit for {}",
-                                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]));
-                                        // Proceed to close position as if successful
-                                        helius_signature = Some("timeout-verified-success".to_string());
+                                        // Wait briefly and recheck to confirm exit (avoid false positive on timing)
+                                        tokio::time::sleep(Duration::from_secs(2)).await;
+                                        let recheck_balance = self.tx_builder
+                                            .get_token_balance(&user_wallet, &position.token_mint)
+                                            .await
+                                            .unwrap_or(0);
+
+                                        if recheck_balance < 1000 {
+                                            // Confirmed: balance is still 0 after recheck
+                                            warn!(
+                                                "⚠️ Exit confirmation timed out but token balance is 0 for {} (verified twice) - inferring successful exit (NO REAL SIGNATURE)",
+                                                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                                            );
+                                            // Use a clearly-marked inferred signature that:
+                                            // 1. Won't pass Solana signature validation (not 88 base58 chars)
+                                            // 2. Is clearly marked as inferred
+                                            // 3. Contains timestamp and position info for debugging
+                                            helius_signature = Some(format!(
+                                                "INFERRED_EXIT_{}_{}_balance_zero",
+                                                signal.position_id.to_string()[..8].to_string(),
+                                                chrono::Utc::now().timestamp()
+                                            ));
+                                        } else {
+                                            // Balance changed between checks - something weird, queue for retry
+                                            warn!("⚠️ Balance changed between checks ({} -> {}) - queuing for retry", balance, recheck_balance);
+                                            self.emit_exit_failed_event(&position, signal, "Balance inconsistent").await;
+                                            if let Err(reset_err) = self.position_manager.reset_position_status(signal.position_id).await {
+                                                error!("Failed to reset position status: {}", reset_err);
+                                            } else {
+                                                self.position_manager.queue_priority_exit(signal.position_id).await;
+                                            }
+                                            return Err(crate::error::AppError::ExternalApi("Balance inconsistent between checks".to_string()));
+                                        }
                                     } else {
-                                        warn!("⚠️ Confirmation timed out and {} tokens still in wallet - will retry", balance);
+                                        warn!(
+                                            position_id = %signal.position_id,
+                                            token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                                            remaining_balance = balance,
+                                            "⚠️ Confirmation timed out and tokens still in wallet - will retry"
+                                        );
                                         self.emit_exit_failed_event(&position, signal, &error_str).await;
                                         if let Err(reset_err) = self.position_manager.reset_position_status(signal.position_id).await {
-                                            error!("Failed to reset position status: {}", reset_err);
+                                            error!(position_id = %signal.position_id, "Failed to reset position status: {}", reset_err);
                                         } else {
                                             self.position_manager.queue_priority_exit(signal.position_id).await;
                                             info!("🔥 Position {} queued for HIGH PRIORITY retry", signal.position_id);
                                         }
-                                        return Ok(());
+                                        return Err(crate::error::AppError::ExternalApi(format!("Sell timed out, tokens still in wallet ({})", balance)));
                                     }
                                 }
                                 Err(balance_err) => {
-                                    warn!("Could not verify balance after timeout: {} - will retry", balance_err);
+                                    warn!(
+                                        position_id = %signal.position_id,
+                                        token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                                        "Could not verify balance after timeout: {} - will retry", balance_err
+                                    );
                                     self.emit_exit_failed_event(&position, signal, &error_str).await;
                                     if let Err(reset_err) = self.position_manager.reset_position_status(signal.position_id).await {
-                                        error!("Failed to reset position status: {}", reset_err);
+                                        error!(position_id = %signal.position_id, "Failed to reset position status: {}", reset_err);
                                     } else {
                                         self.position_manager.queue_priority_exit(signal.position_id).await;
                                         info!("🔥 Position {} queued for HIGH PRIORITY retry", signal.position_id);
                                     }
-                                    return Ok(());
+                                    return Err(crate::error::AppError::ExternalApi(format!("Sell timed out, could not verify: {}", balance_err)));
                                 }
                             }
                         } else {
                             // Non-timeout error - proceed with normal retry
-                            error!("❌ Helius fallback also failed: {}", error_str);
+                            error!(
+                                position_id = %signal.position_id,
+                                token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                                "❌ Helius fallback also failed: {}", error_str
+                            );
                             self.emit_exit_failed_event(&position, signal, &error_str).await;
                             if let Err(reset_err) = self.position_manager.reset_position_status(signal.position_id).await {
-                                error!("Failed to reset position status: {}", reset_err);
+                                error!(
+                                    position_id = %signal.position_id,
+                                    "Failed to reset position status: {}", reset_err
+                                );
                             } else {
                                 self.position_manager.queue_priority_exit(signal.position_id).await;
                                 info!("🔥 Position {} queued for HIGH PRIORITY retry", signal.position_id);
                             }
-                            return Ok(());
+                            return Err(crate::error::AppError::ExternalApi(format!("Helius fallback failed: {}", error_str)));
                         }
                     }
                 }
             } else {
-                error!("❌ No Helius sender available for fallback");
+                error!(
+                    position_id = %signal.position_id,
+                    token = %position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                    "❌ No Helius sender available for fallback"
+                );
                 self.emit_exit_failed_event(&position, signal, "No Helius fallback available").await;
-                return Ok(());
+                return Err(crate::error::AppError::ExternalApi("No Helius sender available for fallback".to_string()));
             }
         }
 
@@ -885,7 +1218,11 @@ impl PositionMonitor {
         let final_signature = helius_signature.or(sign_result.signature.clone());
         {
                 let exit_price = signal.current_price;
-                let pnl_percent = (exit_price - position.entry_price) / position.entry_price;
+                let pnl_percent = if position.entry_price > 0.0 {
+                    (exit_price - position.entry_price) / position.entry_price
+                } else {
+                    0.0
+                };
                 let exit_reason = format!("{:?}", signal.reason);
 
                 // Use remaining amount for P&L calculation (fixed for partial exit bug)
@@ -911,6 +1248,18 @@ impl PositionMonitor {
                             &exit_reason,
                         )
                         .await?;
+
+                    // Release partial capital proportional to exit percent
+                    if let Some(capital_mgr) = &self.capital_manager {
+                        if let Some(released) = capital_mgr.release_partial_capital(signal.position_id, signal.exit_percent).await {
+                            debug!(
+                                "Released {} SOL partial capital for position {} ({}% exit)",
+                                released as f64 / 1_000_000_000.0,
+                                signal.position_id,
+                                signal.exit_percent
+                            );
+                        }
+                    }
 
                     self.emit_exit_completed_event(
                         &position,
@@ -951,6 +1300,7 @@ impl PositionMonitor {
                             realized_pnl_sol,
                             &exit_reason,
                             final_signature.clone(),
+                            Some(position.momentum.momentum_score),
                         )
                         .await?;
 
@@ -1022,11 +1372,26 @@ impl PositionMonitor {
             };
             let estimated_pnl = effective_base * pnl_percent;
 
+            // NOTE: This is an INFERRED close - we didn't verify an on-chain transaction.
+            // The tokens are gone but we don't know the actual sale price.
+            // PnL is estimated based on current market price.
             warn!(
-                "⚠️ Token {} has zero on-chain balance - already sold or transferred. Closing position with estimated PnL: {:.6} SOL ({:.2}%)",
-                &position.token_mint[..8],
+                "⚠️ INFERRED CLOSE: Token {} has zero on-chain balance - sold externally or transferred.",
+                &position.token_mint[..8]
+            );
+            warn!(
+                "⚠️ Estimated PnL: {:.6} SOL ({:.2}%) - actual may differ. Entry: {:.6} SOL, Current price: {:.10}",
                 estimated_pnl,
-                pnl_percent * 100.0
+                pnl_percent * 100.0,
+                position.entry_amount_base,
+                position.current_price
+            );
+
+            // Use a descriptive signature to indicate this was inferred
+            let inferred_sig = format!(
+                "INFERRED_CLOSE_{}_{}",
+                position.token_mint[..8].to_string(),
+                chrono::Utc::now().timestamp()
             );
 
             self.position_manager
@@ -1034,15 +1399,19 @@ impl PositionMonitor {
                     position.id,
                     position.current_price,
                     estimated_pnl,
-                    "AlreadySold",
-                    None,
+                    "AlreadySold-Inferred",
+                    Some(inferred_sig),
+                    Some(position.momentum.momentum_score),
                 )
                 .await?;
             return Ok(());
         }
 
-        // Use actual on-chain balance, applying exit percent
-        let token_amount = (actual_balance as f64 * (signal.exit_percent / 100.0)) as u64;
+        // Use actual on-chain balance, applying exit percent with proper rounding
+        // Round to nearest token to avoid systematic rounding-down bias across partial exits
+        let token_amount = (actual_balance as f64 * (signal.exit_percent / 100.0)).round() as u64;
+        // Ensure we don't exceed actual balance due to rounding
+        let token_amount = token_amount.min(actual_balance);
 
         info!(
             "📊 Actual on-chain balance: {} tokens (tracked: {:.0})",
@@ -1203,11 +1572,15 @@ impl PositionMonitor {
             info!("📤 Sending curve sell via Helius (attempt {}) - waiting for confirmation...", attempt + 1);
 
             // Use send_and_confirm to wait for transaction to land before closing position
-            let confirmation_timeout = Duration::from_secs(60); // Increased from 30s
+            let confirmation_timeout = Duration::from_secs(30); // Reduced for faster exit
             match helius_sender.send_and_confirm(&signed_tx, confirmation_timeout).await {
                 Ok(signature) => {
                     let exit_price = signal.current_price;
-                    let pnl_percent = (exit_price - position.entry_price) / position.entry_price;
+                    let pnl_percent = if position.entry_price > 0.0 {
+                        (exit_price - position.entry_price) / position.entry_price
+                    } else {
+                        0.0
+                    };
                     let exit_reason = format!("{:?}", signal.reason);
 
                     // Handle partial vs full exit differently
@@ -1233,6 +1606,18 @@ impl PositionMonitor {
                                 &exit_reason,
                             )
                             .await?;
+
+                        // Release partial capital proportional to exit percent
+                        if let Some(capital_mgr) = &self.capital_manager {
+                            if let Some(released) = capital_mgr.release_partial_capital(signal.position_id, signal.exit_percent).await {
+                                debug!(
+                                    "Released {} SOL partial capital for position {} ({}% exit)",
+                                    released as f64 / 1_000_000_000.0,
+                                    signal.position_id,
+                                    signal.exit_percent
+                                );
+                            }
+                        }
 
                         self.emit_exit_completed_event(
                             position,
@@ -1279,6 +1664,7 @@ impl PositionMonitor {
                                 realized_pnl_sol,
                                 &exit_reason,
                                 Some(signature.clone()),
+                                Some(position.momentum.momentum_score),
                             )
                             .await?;
 
@@ -1324,11 +1710,18 @@ impl PositionMonitor {
                         match self.tx_builder.get_token_balance(user_wallet, &position.token_mint).await {
                             Ok(balance) => {
                                 if balance < 1000 {
-                                    info!("✅ Curve sell confirmation timed out but tokens are gone - treating as successful exit for {}",
-                                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]));
+                                    // Log with WARN since we're inferring success without a real signature
+                                    warn!(
+                                        "⚠️ Curve sell confirmation timed out but token balance is 0 for {} - inferring successful exit (NO REAL SIGNATURE)",
+                                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                                    );
                                     // Calculate P&L and close position
                                     let exit_price = signal.current_price;
-                                    let pnl_percent = (exit_price - position.entry_price) / position.entry_price;
+                                    let pnl_percent = if position.entry_price > 0.0 {
+                                        (exit_price - position.entry_price) / position.entry_price
+                                    } else {
+                                        0.0
+                                    };
                                     let exit_reason = format!("{:?}", signal.reason);
                                     let effective_base = if position.remaining_amount_base > 0.0 {
                                         position.remaining_amount_base
@@ -1337,26 +1730,39 @@ impl PositionMonitor {
                                     };
                                     let realized_pnl_sol = effective_base * pnl_percent;
 
-                                    let _ = self.position_manager
+                                    // Use a clearly-marked inferred signature that won't pass validation
+                                    let inferred_sig = format!(
+                                        "INFERRED_EXIT_{}_{}_balance_zero",
+                                        signal.position_id.to_string()[..8].to_string(),
+                                        chrono::Utc::now().timestamp()
+                                    );
+
+                                    if let Err(e) = self.position_manager
                                         .close_position(
                                             signal.position_id,
                                             exit_price,
                                             realized_pnl_sol,
                                             &exit_reason,
-                                            Some("timeout-verified-success".to_string()),
+                                            Some(inferred_sig.clone()),
+                                            Some(position.momentum.momentum_score),
                                         )
-                                        .await;
+                                        .await {
+                                        error!(
+                                            "❌ CRITICAL: Curve exit inferred successful but failed to close position {} in DB: {}",
+                                            signal.position_id, e
+                                        );
+                                    }
 
                                     self.emit_exit_completed_event(
                                         position,
                                         signal,
                                         realized_pnl_sol,
-                                        Some("timeout-verified"),
+                                        Some(&inferred_sig),
                                     )
                                     .await;
 
                                     info!(
-                                        "✅ Curve exit completed (timeout-verified): {} | P&L: {:.6} SOL ({:.2}%) | Reason: {:?}",
+                                        "⚠️ Curve exit completed (INFERRED - no real signature): {} | P&L: {:.6} SOL ({:.2}%) | Reason: {:?}",
                                         position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
                                         realized_pnl_sol,
                                         pnl_percent * 100.0,
@@ -1367,7 +1773,7 @@ impl PositionMonitor {
                                         position,
                                         signal,
                                         realized_pnl_sol,
-                                        Some("timeout-verified"),
+                                        Some(&inferred_sig),
                                         user_wallet,
                                     )
                                     .await;
@@ -1383,6 +1789,17 @@ impl PositionMonitor {
                         }
                     }
 
+                    // Check if error 6023 = token graduated during transaction
+                    let is_graduated_error = last_error.contains("6023");
+                    if is_graduated_error {
+                        warn!(
+                            "🎓 Error 6023 (graduated) during tx - switching to DEX path for {}",
+                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+                        );
+                        // Fall through to end of retry loop - will be handled by DEX fallback below
+                        break;
+                    }
+
                     if is_slippage_error && attempt < max_retries {
                         warn!(
                             "⚠️ Slippage error on attempt {}, will retry: {}",
@@ -1395,6 +1812,183 @@ impl PositionMonitor {
                     }
                 }
             }
+        }
+
+        // Check if error was 6023 (graduated) - try DEX fallback before giving up
+        if last_error.contains("6023") {
+            warn!(
+                "🔄 Curve sell failed with 6023 - attempting DEX fallback for {}",
+                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
+            );
+
+            // Get actual token balance for DEX sell
+            let token_balance = match self.tx_builder.get_token_balance(user_wallet, &position.token_mint).await {
+                Ok(b) => b,
+                Err(e) => {
+                    error!("Failed to get token balance for DEX fallback: {}", e);
+                    return Err(AppError::ExternalApi(format!("DEX fallback failed: {}", e)));
+                }
+            };
+
+            if token_balance == 0 {
+                warn!("Token balance is 0 - position may have been sold externally");
+                if let Err(e) = self.position_manager.close_position(
+                    signal.position_id,
+                    signal.current_price,
+                    0.0,
+                    "AlreadySold",
+                    None,
+                    Some(position.momentum.momentum_score),
+                ).await {
+                    error!(
+                        "❌ CRITICAL: Failed to close already-sold position {} in database: {}",
+                        signal.position_id, e
+                    );
+                }
+                return Ok(());
+            }
+
+            let exit_amount = if signal.exit_percent >= 100.0 {
+                token_balance
+            } else {
+                // Round to nearest token, capped at actual balance
+                ((token_balance as f64) * (signal.exit_percent / 100.0)).round().min(token_balance as f64) as u64
+            };
+
+            let sell_params = CurveSellParams {
+                mint: position.token_mint.clone(),
+                token_amount: exit_amount,
+                slippage_bps: self.config.emergency_slippage_bps,
+                user_wallet: user_wallet.to_string(),
+            };
+
+            // Try Raydium first
+            if let Some(ref curve_builder) = self.curve_builder {
+                match curve_builder.build_raydium_sell(&sell_params).await {
+                    Ok(raydium_result) => {
+                        info!("📤 Built Raydium fallback sell: expected {} SOL", raydium_result.expected_sol_out as f64 / 1e9);
+
+                        let sign_request = SignRequest {
+                            transaction_base64: raydium_result.transaction_base64,
+                            estimated_amount_lamports: raydium_result.expected_sol_out,
+                            estimated_profit_lamports: None,
+                            edge_id: Some(position.edge_id),
+                            description: format!("Raydium fallback exit {}", &position.token_mint[..8]),
+                        };
+
+                        if let Ok(sign_result) = signer.sign_transaction(sign_request).await {
+                            if sign_result.success {
+                                if let Some(signed_tx) = sign_result.signed_transaction_base64 {
+                                    if let Some(ref helius_sender) = self.helius_sender {
+                                        if let Ok(signature) = helius_sender.send_and_confirm(&signed_tx, Duration::from_secs(60)).await {
+                                            let exit_price = signal.current_price;
+                                            let pnl_percent = if position.entry_price > 0.0 {
+                                                (exit_price - position.entry_price) / position.entry_price
+                                            } else {
+                                                0.0
+                                            };
+                                            let effective_base = if position.remaining_amount_base > 0.0 {
+                                                position.remaining_amount_base
+                                            } else {
+                                                position.entry_amount_base
+                                            };
+                                            let realized_pnl_sol = effective_base * pnl_percent;
+
+                                            if let Err(e) = self.position_manager.close_position(
+                                                signal.position_id,
+                                                exit_price,
+                                                realized_pnl_sol,
+                                                &format!("{:?}-raydium-fallback", signal.reason),
+                                                Some(signature.clone()),
+                                                Some(position.momentum.momentum_score),
+                                            ).await {
+                                                error!(
+                                                    "❌ CRITICAL: Raydium exit confirmed (sig: {}) but failed to close position {} in DB: {}",
+                                                    &signature[..16], signal.position_id, e
+                                                );
+                                            }
+
+                                            info!(
+                                                "✅ Raydium fallback exit succeeded: {} | P&L: {:.6} SOL | Sig: {}",
+                                                position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                                                realized_pnl_sol,
+                                                &signature[..16]
+                                            );
+                                            return Ok(());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Raydium fallback failed: {} - trying Jupiter", e);
+                    }
+                }
+            }
+
+            // Jupiter fallback
+            match self.tx_builder.build_exit_swap(position, signal, user_wallet, self.config.emergency_slippage_bps).await {
+                Ok(jupiter_result) => {
+                    let sign_request = SignRequest {
+                        transaction_base64: jupiter_result.transaction_base64,
+                        estimated_amount_lamports: jupiter_result.expected_base_out,
+                        estimated_profit_lamports: None,
+                        edge_id: Some(position.edge_id),
+                        description: format!("Jupiter fallback exit {}", &position.token_mint[..8]),
+                    };
+
+                    if let Ok(sign_result) = signer.sign_transaction(sign_request).await {
+                        if sign_result.success {
+                            if let Some(signed_tx) = sign_result.signed_transaction_base64 {
+                                if let Some(ref helius_sender) = self.helius_sender {
+                                    if let Ok(signature) = helius_sender.send_and_confirm(&signed_tx, Duration::from_secs(60)).await {
+                                        let exit_price = signal.current_price;
+                                        let pnl_percent = if position.entry_price > 0.0 {
+                                            (exit_price - position.entry_price) / position.entry_price
+                                        } else {
+                                            0.0
+                                        };
+                                        let effective_base = if position.remaining_amount_base > 0.0 {
+                                            position.remaining_amount_base
+                                        } else {
+                                            position.entry_amount_base
+                                        };
+                                        let realized_pnl_sol = effective_base * pnl_percent;
+
+                                        if let Err(e) = self.position_manager.close_position(
+                                            signal.position_id,
+                                            exit_price,
+                                            realized_pnl_sol,
+                                            &format!("{:?}-jupiter-fallback", signal.reason),
+                                            Some(signature.clone()),
+                                            Some(position.momentum.momentum_score),
+                                        ).await {
+                                            error!(
+                                                "❌ CRITICAL: Jupiter exit confirmed (sig: {}) but failed to close position {} in DB: {}",
+                                                &signature[..16], signal.position_id, e
+                                            );
+                                        }
+
+                                        info!(
+                                            "✅ Jupiter fallback exit succeeded: {} | P&L: {:.6} SOL | Sig: {}",
+                                            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+                                            realized_pnl_sol,
+                                            &signature[..16]
+                                        );
+                                        return Ok(());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    warn!("Jupiter fallback also failed: {}", e);
+                }
+            }
+
+            warn!("All DEX fallbacks failed for graduated token - queuing for retry");
         }
 
         // All retries exhausted - queue for high priority retry
@@ -1412,7 +2006,7 @@ impl PositionMonitor {
             info!("🔥 Position {} queued for HIGH PRIORITY retry after curve exit failure", signal.position_id);
         }
 
-        Ok(())
+        Err(AppError::ExternalApi(format!("Curve exit failed after {} attempts: {}", max_retries + 1, last_error)))
     }
 
     async fn emit_exit_signal_event(&self, signal: &ExitSignal) {
@@ -1430,7 +2024,9 @@ impl PositionMonitor {
             }),
         );
 
-        let _ = self.event_tx.send(event);
+        if let Err(e) = self.event_tx.send(event) {
+            tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
+        }
     }
 
     async fn emit_exit_completed_event(
@@ -1467,7 +2063,9 @@ impl PositionMonitor {
             }),
         );
 
-        let _ = self.event_tx.send(event);
+        if let Err(e) = self.event_tx.send(event) {
+            tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
+        }
     }
 
     async fn emit_exit_failed_event(
@@ -1488,7 +2086,9 @@ impl PositionMonitor {
             }),
         );
 
-        let _ = self.event_tx.send(event);
+        if let Err(e) = self.event_tx.send(event) {
+            tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
+        }
     }
 
     pub async fn trigger_manual_exit(
