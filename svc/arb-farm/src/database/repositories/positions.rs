@@ -34,6 +34,8 @@ pub struct PositionRow {
     pub exit_reason: Option<String>,
     pub remaining_amount_base: Option<Decimal>,
     pub remaining_token_amount: Option<Decimal>,
+    pub is_inferred_exit: bool,
+    pub auto_exit_enabled: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -90,18 +92,41 @@ impl From<PositionRow> for OpenPosition {
             remaining_token_amount,
             venue: None,
             signal_source: None,
+            auto_exit_enabled: row.auto_exit_enabled,
         }
     }
 }
 
 fn decimal_to_f64(d: Decimal) -> f64 {
+    use rust_decimal::prelude::ToPrimitive;
     use std::str::FromStr;
-    f64::from_str(&d.to_string()).unwrap_or(0.0)
+    // Use ToPrimitive for direct conversion, fallback to string parsing if needed
+    // Note: f64 has ~15-17 significant decimal digits, Decimal has 28
+    // For financial values < 1 billion with 9 decimal places, f64 is sufficient
+    d.to_f64().unwrap_or_else(|| {
+        // Fallback: parse via string (handles edge cases)
+        f64::from_str(&d.to_string()).unwrap_or(0.0)
+    })
 }
 
 fn f64_to_decimal(f: f64) -> Decimal {
+    use rust_decimal::prelude::FromPrimitive;
     use std::str::FromStr;
-    Decimal::from_str(&format!("{:.18}", f)).unwrap_or(Decimal::ZERO)
+    // Try direct conversion first, then string parsing for edge cases (NaN, Inf)
+    if f.is_finite() {
+        Decimal::from_f64(f).unwrap_or_else(|| {
+            Decimal::from_str(&format!("{:.18}", f)).unwrap_or(Decimal::ZERO)
+        })
+    } else {
+        // Handle NaN/Inf gracefully - never panic, just log and return ZERO
+        // This prevents crashing the trading loop on edge case calculations
+        tracing::error!(
+            "⚠️ Non-finite f64 ({}) to Decimal conversion - returning ZERO. \
+            This indicates an upstream calculation bug (division by zero, overflow, etc.)",
+            f
+        );
+        Decimal::ZERO
+    }
 }
 
 pub struct PositionRepository {
@@ -134,8 +159,8 @@ impl PositionRepository {
                 id, edge_id, strategy_id, token_mint, token_symbol,
                 entry_amount_base, entry_token_amount, entry_price, entry_time, entry_tx_signature,
                 current_price, current_value_base, unrealized_pnl, unrealized_pnl_percent, high_water_mark,
-                exit_config, partial_exits, status, remaining_amount_base, remaining_token_amount
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                exit_config, partial_exits, status, remaining_amount_base, remaining_token_amount, auto_exit_enabled
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
             ON CONFLICT (id) DO UPDATE SET
                 current_price = EXCLUDED.current_price,
                 current_value_base = EXCLUDED.current_value_base,
@@ -146,6 +171,7 @@ impl PositionRepository {
                 status = EXCLUDED.status,
                 remaining_amount_base = EXCLUDED.remaining_amount_base,
                 remaining_token_amount = EXCLUDED.remaining_token_amount,
+                auto_exit_enabled = EXCLUDED.auto_exit_enabled,
                 updated_at = NOW()
         "#)
             .bind(position.id)
@@ -168,6 +194,7 @@ impl PositionRepository {
             .bind(status)
             .bind(f64_to_decimal(position.remaining_amount_base))
             .bind(f64_to_decimal(position.remaining_token_amount))
+            .bind(position.auto_exit_enabled)
             .execute(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
@@ -182,8 +209,24 @@ impl PositionRepository {
         realized_pnl: f64,
         exit_reason: &str,
         exit_tx_signature: Option<&str>,
+        momentum_at_exit: Option<f64>,
     ) -> AppResult<()> {
-        sqlx::query(r#"
+        // Detect inferred exits - these are exits where we detected tokens left wallet
+        // but didn't capture the actual on-chain transaction signature
+        let is_inferred = exit_tx_signature
+            .map(|sig| sig.starts_with("INFERRED_EXIT_"))
+            .unwrap_or(false);
+
+        if is_inferred {
+            tracing::debug!(
+                position_id = %position_id,
+                signature = ?exit_tx_signature,
+                "Flagging exit as inferred (no real on-chain signature)"
+            );
+        }
+
+        // Use CAS-style update: only update if NOT already closed (prevents double-close race)
+        let result = sqlx::query(r#"
             UPDATE arb_positions
             SET status = 'closed',
                 exit_price = $2,
@@ -191,17 +234,28 @@ impl PositionRepository {
                 exit_tx_signature = $3,
                 realized_pnl = $4,
                 exit_reason = $5,
+                is_inferred_exit = $6,
+                momentum_at_exit = $7,
                 updated_at = NOW()
-            WHERE id = $1
+            WHERE id = $1 AND status != 'closed'
         "#)
             .bind(position_id)
             .bind(f64_to_decimal(exit_price))
             .bind(exit_tx_signature)
             .bind(f64_to_decimal(realized_pnl))
             .bind(exit_reason)
+            .bind(is_inferred)
+            .bind(momentum_at_exit.map(f64_to_decimal))
             .execute(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
+
+        if result.rows_affected() == 0 {
+            tracing::debug!(
+                position_id = %position_id,
+                "Position already closed in DB (CAS prevented duplicate close)"
+            );
+        }
 
         Ok(())
     }
@@ -309,6 +363,22 @@ impl PositionRepository {
         "#)
             .bind(position_id)
             .bind(status)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(())
+    }
+
+    pub async fn update_auto_exit_enabled(&self, position_id: Uuid, enabled: bool) -> AppResult<()> {
+        sqlx::query(r#"
+            UPDATE arb_positions
+            SET auto_exit_enabled = $2,
+                updated_at = NOW()
+            WHERE id = $1
+        "#)
+            .bind(position_id)
+            .bind(enabled)
             .execute(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
@@ -430,14 +500,19 @@ impl PositionRepository {
             id: Uuid,
             token_symbol: Option<String>,
             token_mint: String,
+            venue: Option<String>,
             realized_pnl: Option<Decimal>,
             exit_reason: Option<String>,
             exit_time: Option<DateTime<Utc>>,
             entry_amount_base: Decimal,
+            entry_price: Option<Decimal>,
+            exit_price: Option<Decimal>,
+            momentum_at_exit: Option<Decimal>,
         }
 
         let rows: Vec<TradeRow> = sqlx::query_as(
-            r#"SELECT id, token_symbol, token_mint, realized_pnl, exit_reason, exit_time, entry_amount_base
+            r#"SELECT id, token_symbol, token_mint, venue, realized_pnl, exit_reason, exit_time,
+                      entry_amount_base, entry_price, exit_price, momentum_at_exit
                FROM arb_positions
                WHERE status = 'closed' AND exit_time IS NOT NULL
                ORDER BY exit_time DESC
@@ -451,10 +526,15 @@ impl PositionRepository {
         Ok(rows.into_iter().map(|r| RecentTrade {
             id: r.id.to_string(),
             symbol: r.token_symbol.unwrap_or_else(|| r.token_mint[..8].to_string()),
+            mint: r.token_mint.clone(),
+            venue: r.venue.unwrap_or_else(|| "pump_fun".to_string()),
             pnl: decimal_to_f64(r.realized_pnl.unwrap_or(Decimal::ZERO)),
             reason: r.exit_reason.unwrap_or_else(|| "Unknown".to_string()),
             time: r.exit_time,
             entry_sol: decimal_to_f64(r.entry_amount_base),
+            entry_price: r.entry_price.map(decimal_to_f64),
+            exit_price: r.exit_price.map(decimal_to_f64),
+            momentum_at_exit: r.momentum_at_exit.map(decimal_to_f64),
         }).collect())
     }
 
@@ -550,9 +630,23 @@ impl PositionRepository {
 
         Ok(rows.into_iter().map(|r| {
             let entry_sol = decimal_to_f64(r.entry_amount_base);
-            let pnl_sol = r.realized_pnl.map(decimal_to_f64).unwrap_or(0.0);
-            let exit_sol = entry_sol + pnl_sol;
-            let pnl_percent = if entry_sol > 0.0 { (pnl_sol / entry_sol) * 100.0 } else { 0.0 };
+
+            // Handle P&L calculation - warn if realized_pnl is missing for closed position
+            let (pnl_sol, exit_sol, pnl_percent) = if let Some(realized_pnl) = r.realized_pnl {
+                let pnl = decimal_to_f64(realized_pnl);
+                let exit = entry_sol + pnl;
+                let pct = if entry_sol > 0.0 { (pnl / entry_sol) * 100.0 } else { 0.0 };
+                (pnl, exit, pct)
+            } else {
+                // realized_pnl is NULL - this shouldn't happen for properly closed positions
+                // Log warning for debugging (only in debug builds to avoid log spam)
+                #[cfg(debug_assertions)]
+                tracing::warn!(
+                    position_id = %r.id,
+                    "Closed position has NULL realized_pnl - P&L will show as 0"
+                );
+                (0.0, entry_sol, 0.0)
+            };
 
             let exit_time = r.exit_time.unwrap_or_else(chrono::Utc::now);
             let hold_minutes = (exit_time - r.entry_time).num_seconds() as f64 / 60.0;
@@ -577,6 +671,122 @@ impl PositionRepository {
             }
         }).collect())
     }
+
+    // ========== PENDING EXIT SIGNALS PERSISTENCE ==========
+
+    pub async fn save_pending_exit(&self, signal: &PendingExitSignalRow) -> AppResult<()> {
+        sqlx::query(r#"
+            INSERT INTO pending_exit_signals (
+                position_id, reason, exit_percent, current_price, triggered_at,
+                urgency, failed_attempts, next_retry_at, is_rate_limited
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ON CONFLICT (position_id) DO UPDATE SET
+                reason = EXCLUDED.reason,
+                exit_percent = EXCLUDED.exit_percent,
+                current_price = EXCLUDED.current_price,
+                triggered_at = EXCLUDED.triggered_at,
+                urgency = EXCLUDED.urgency,
+                failed_attempts = EXCLUDED.failed_attempts,
+                next_retry_at = EXCLUDED.next_retry_at,
+                is_rate_limited = EXCLUDED.is_rate_limited,
+                updated_at = NOW()
+        "#)
+            .bind(signal.position_id)
+            .bind(&signal.reason)
+            .bind(f64_to_decimal(signal.exit_percent))
+            .bind(f64_to_decimal(signal.current_price))
+            .bind(signal.triggered_at)
+            .bind(&signal.urgency)
+            .bind(signal.failed_attempts as i32)
+            .bind(signal.next_retry_at)
+            .bind(signal.is_rate_limited)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(())
+    }
+
+    pub async fn get_pending_exits(&self) -> AppResult<Vec<PendingExitSignalRow>> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            position_id: Uuid,
+            reason: String,
+            exit_percent: Decimal,
+            current_price: Decimal,
+            triggered_at: DateTime<Utc>,
+            urgency: String,
+            failed_attempts: i32,
+            next_retry_at: DateTime<Utc>,
+            is_rate_limited: bool,
+        }
+
+        let rows: Vec<Row> = sqlx::query_as(
+            r#"SELECT position_id, reason, exit_percent, current_price, triggered_at,
+                      urgency, failed_attempts, next_retry_at, is_rate_limited
+               FROM pending_exit_signals
+               WHERE failed_attempts < 10
+               ORDER BY next_retry_at ASC"#
+        )
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(rows.into_iter().map(|r| PendingExitSignalRow {
+            position_id: r.position_id,
+            reason: r.reason,
+            exit_percent: decimal_to_f64(r.exit_percent),
+            current_price: decimal_to_f64(r.current_price),
+            triggered_at: r.triggered_at,
+            urgency: r.urgency,
+            failed_attempts: r.failed_attempts as u32,
+            next_retry_at: r.next_retry_at,
+            is_rate_limited: r.is_rate_limited,
+        }).collect())
+    }
+
+    pub async fn remove_pending_exit(&self, position_id: Uuid) -> AppResult<()> {
+        sqlx::query("DELETE FROM pending_exit_signals WHERE position_id = $1")
+            .bind(position_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(())
+    }
+
+    pub async fn update_pending_exit_retry(&self, position_id: Uuid, failed_attempts: u32, next_retry_at: DateTime<Utc>, is_rate_limited: bool) -> AppResult<()> {
+        sqlx::query(r#"
+            UPDATE pending_exit_signals
+            SET failed_attempts = $2,
+                next_retry_at = $3,
+                is_rate_limited = $4,
+                updated_at = NOW()
+            WHERE position_id = $1
+        "#)
+            .bind(position_id)
+            .bind(failed_attempts as i32)
+            .bind(next_retry_at)
+            .bind(is_rate_limited)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PendingExitSignalRow {
+    pub position_id: Uuid,
+    pub reason: String,
+    pub exit_percent: f64,
+    pub current_price: f64,
+    pub triggered_at: DateTime<Utc>,
+    pub urgency: String,
+    pub failed_attempts: u32,
+    pub next_retry_at: DateTime<Utc>,
+    pub is_rate_limited: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -623,8 +833,13 @@ pub struct PnLStats {
 pub struct RecentTrade {
     pub id: String,
     pub symbol: String,
+    pub mint: String,
+    pub venue: String,
     pub pnl: f64,
     pub reason: String,
     pub time: Option<DateTime<Utc>>,
     pub entry_sol: f64,
+    pub entry_price: Option<f64>,
+    pub exit_price: Option<f64>,
+    pub momentum_at_exit: Option<f64>,
 }

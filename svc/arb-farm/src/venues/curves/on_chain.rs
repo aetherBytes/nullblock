@@ -185,11 +185,21 @@ impl OnChainFetcher {
             )));
         }
 
-        let virtual_token_reserves = u64::from_le_bytes(account_data[8..16].try_into().unwrap());
-        let virtual_sol_reserves = u64::from_le_bytes(account_data[16..24].try_into().unwrap());
-        let real_token_reserves = u64::from_le_bytes(account_data[24..32].try_into().unwrap());
-        let real_sol_reserves = u64::from_le_bytes(account_data[32..40].try_into().unwrap());
-        let token_total_supply = u64::from_le_bytes(account_data[40..48].try_into().unwrap());
+        let virtual_token_reserves = u64::from_le_bytes(
+            account_data[8..16].try_into().expect("validated len >= 89")
+        );
+        let virtual_sol_reserves = u64::from_le_bytes(
+            account_data[16..24].try_into().expect("validated len >= 89")
+        );
+        let real_token_reserves = u64::from_le_bytes(
+            account_data[24..32].try_into().expect("validated len >= 89")
+        );
+        let real_sol_reserves = u64::from_le_bytes(
+            account_data[32..40].try_into().expect("validated len >= 89")
+        );
+        let token_total_supply = u64::from_le_bytes(
+            account_data[40..48].try_into().expect("validated len >= 89")
+        );
         let is_complete = account_data[48] != 0;
 
         // Creator pubkey is at bytes 49-80 (32 bytes), need at least 81 bytes
@@ -374,12 +384,14 @@ impl OnChainFetcher {
 
         Ok(PumpFunGlobalState {
             initialized: account_data[8] != 0,
-            fee_basis_points: u64::from_le_bytes(account_data[16..24].try_into().unwrap()),
+            fee_basis_points: u64::from_le_bytes(
+                account_data[16..24].try_into().expect("validated len >= 40")
+            ),
             initial_virtual_token_reserves: u64::from_le_bytes(
-                account_data[24..32].try_into().unwrap(),
+                account_data[24..32].try_into().expect("validated len >= 40"),
             ),
             initial_virtual_sol_reserves: u64::from_le_bytes(
-                account_data[32..40].try_into().unwrap(),
+                account_data[32..40].try_into().expect("validated len >= 40"),
             ),
         })
     }

@@ -51,7 +51,6 @@ pub enum EventSource {
 pub enum AgentType {
     Scanner,
     Refiner,
-    MevHunter,
     Executor,
     StrategyEngine,
     ResearchDd,
@@ -67,7 +66,6 @@ impl std::fmt::Display for AgentType {
         match self {
             AgentType::Scanner => write!(f, "scanner"),
             AgentType::Refiner => write!(f, "refiner"),
-            AgentType::MevHunter => write!(f, "mev_hunter"),
             AgentType::Executor => write!(f, "executor"),
             AgentType::StrategyEngine => write!(f, "strategy_engine"),
             AgentType::ResearchDd => write!(f, "research_dd"),

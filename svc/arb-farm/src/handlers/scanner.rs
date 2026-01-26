@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -276,4 +276,129 @@ pub async fn process_signals(
             "error": e.to_string()
         }))).into_response(),
     }
+}
+
+// ============================================================================
+// Behavioral Strategies
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct BehavioralStrategyResponse {
+    pub name: String,
+    pub strategy_type: String,
+    pub is_active: bool,
+    pub supported_venues: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BehavioralStrategiesListResponse {
+    pub strategies: Vec<BehavioralStrategyResponse>,
+    pub total: usize,
+    pub active_count: usize,
+}
+
+pub async fn list_behavioral_strategies(
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let registry = state.scanner.get_strategy_registry();
+    let strategies = registry.list().await;
+    let active_count = registry.active_count().await;
+
+    let strategy_list: Vec<BehavioralStrategyResponse> = strategies
+        .iter()
+        .map(|s| BehavioralStrategyResponse {
+            name: s.name().to_string(),
+            strategy_type: s.strategy_type().to_string(),
+            is_active: s.is_active(),
+            supported_venues: s.supported_venues().iter().map(|v| format!("{:?}", v)).collect(),
+        })
+        .collect();
+
+    let total = strategy_list.len();
+
+    Json(BehavioralStrategiesListResponse {
+        strategies: strategy_list,
+        total,
+        active_count,
+    })
+}
+
+pub async fn get_behavioral_strategy(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+) -> impl IntoResponse {
+    let registry = state.scanner.get_strategy_registry();
+    let strategies = registry.list().await;
+
+    if let Some(strategy) = strategies.iter().find(|s| s.name() == name) {
+        Json(serde_json::json!({
+            "name": strategy.name(),
+            "strategy_type": strategy.strategy_type(),
+            "is_active": strategy.is_active(),
+            "supported_venues": strategy.supported_venues().iter().map(|v| format!("{:?}", v)).collect::<Vec<_>>(),
+        })).into_response()
+    } else {
+        (StatusCode::NOT_FOUND, Json(serde_json::json!({
+            "error": format!("Behavioral strategy '{}' not found", name)
+        }))).into_response()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ToggleBehavioralStrategyRequest {
+    pub active: bool,
+}
+
+pub async fn toggle_behavioral_strategy(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+    Json(body): Json<ToggleBehavioralStrategyRequest>,
+) -> impl IntoResponse {
+    let registry = state.scanner.get_strategy_registry();
+
+    if registry.toggle(&name, body.active).await {
+        tracing::info!(
+            strategy = %name,
+            active = body.active,
+            "Toggled behavioral strategy"
+        );
+        Json(serde_json::json!({
+            "success": true,
+            "name": name,
+            "is_active": body.active,
+            "message": format!("Behavioral strategy '{}' is now {}", name, if body.active { "active" } else { "inactive" })
+        })).into_response()
+    } else {
+        (StatusCode::NOT_FOUND, Json(serde_json::json!({
+            "error": format!("Behavioral strategy '{}' not found", name)
+        }))).into_response()
+    }
+}
+
+pub async fn toggle_all_behavioral_strategies(
+    State(state): State<AppState>,
+    Json(body): Json<ToggleBehavioralStrategyRequest>,
+) -> impl IntoResponse {
+    let registry = state.scanner.get_strategy_registry();
+    let strategies = registry.list().await;
+
+    let mut toggled = 0;
+    for strategy in &strategies {
+        if registry.toggle(strategy.name(), body.active).await {
+            toggled += 1;
+        }
+    }
+
+    tracing::info!(
+        count = toggled,
+        active = body.active,
+        "Toggled all behavioral strategies"
+    );
+
+    Json(serde_json::json!({
+        "success": true,
+        "toggled_count": toggled,
+        "is_active": body.active,
+        "message": format!("Toggled {} behavioral strategies to {}", toggled, if body.active { "active" } else { "inactive" })
+    }))
 }

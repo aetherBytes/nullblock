@@ -19,3 +19,5 @@ pub use strategy::*;
 pub use threat::*;
 pub use trade::*;
 pub use venue::*;
+
+pub use crate::events::Significance as SignalSignificance;

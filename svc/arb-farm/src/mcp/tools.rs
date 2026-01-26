@@ -1080,8 +1080,8 @@ pub fn get_research_tools() -> Vec<McpTool> {
 pub fn get_kol_tools() -> Vec<McpTool> {
     vec![
         McpTool {
-            name: "kol_track".to_string(),
-            description: "Start tracking a KOL wallet or social handle".to_string(),
+            name: "kol_add".to_string(),
+            description: "Add a new KOL wallet or social handle to track (persisted to PostgreSQL)".to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -1105,7 +1105,7 @@ pub fn get_kol_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "kol_list".to_string(),
-            description: "List tracked KOLs with trust scores".to_string(),
+            description: "List tracked KOLs with trust scores (from PostgreSQL)".to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -1132,6 +1132,66 @@ pub fn get_kol_tools() -> Vec<McpTool> {
             tags: None,
         },
         McpTool {
+            name: "kol_get".to_string(),
+            description: "Get a specific KOL by ID".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "kol_id": {
+                        "type": "string",
+                        "description": "UUID of the KOL"
+                    }
+                },
+                "required": ["kol_id"]
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
+        },
+        McpTool {
+            name: "kol_update".to_string(),
+            description: "Update KOL settings (display_name, linked_wallet, is_active)".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "kol_id": {
+                        "type": "string",
+                        "description": "UUID of the KOL"
+                    },
+                    "display_name": {
+                        "type": "string",
+                        "description": "New display name"
+                    },
+                    "linked_wallet": {
+                        "type": "string",
+                        "description": "Link a wallet address"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "description": "Set active/inactive"
+                    }
+                },
+                "required": ["kol_id"]
+            }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
+        },
+        McpTool {
+            name: "kol_delete".to_string(),
+            description: "Delete a KOL and all associated trades/copies".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "kol_id": {
+                        "type": "string",
+                        "description": "UUID of the KOL to delete"
+                    }
+                },
+                "required": ["kol_id"]
+            }),
+            annotations: Some(McpToolAnnotations::destructive()),
+            tags: None,
+        },
+        McpTool {
             name: "kol_stats".to_string(),
             description: "Get detailed KOL performance statistics".to_string(),
             input_schema: serde_json::json!({
@@ -1149,7 +1209,7 @@ pub fn get_kol_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "kol_trades".to_string(),
-            description: "Get recent trades made by a KOL".to_string(),
+            description: "Get trade history for a KOL".to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -1169,28 +1229,12 @@ pub fn get_kol_tools() -> Vec<McpTool> {
                 },
                 "required": ["kol_id"]
             }),
-            annotations: Some(McpToolAnnotations::write()),
-            tags: None,
-        },
-        McpTool {
-            name: "kol_trust_breakdown".to_string(),
-            description: "Get detailed trust score breakdown for a KOL".to_string(),
-            input_schema: serde_json::json!({
-                "type": "object",
-                "properties": {
-                    "kol_id": {
-                        "type": "string",
-                        "description": "UUID of the KOL"
-                    }
-                },
-                "required": ["kol_id"]
-            }),
             annotations: Some(McpToolAnnotations::read_only()),
             tags: None,
         },
         McpTool {
-            name: "copy_enable".to_string(),
-            description: "Enable copy trading for a KOL".to_string(),
+            name: "kol_enable_copy".to_string(),
+            description: "Enable copy trading for a KOL with configuration".to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -1225,7 +1269,7 @@ pub fn get_kol_tools() -> Vec<McpTool> {
             tags: None,
         },
         McpTool {
-            name: "copy_disable".to_string(),
+            name: "kol_disable_copy".to_string(),
             description: "Disable copy trading for a KOL".to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
@@ -1241,29 +1285,7 @@ pub fn get_kol_tools() -> Vec<McpTool> {
             tags: None,
         },
         McpTool {
-            name: "copy_active".to_string(),
-            description: "List currently active copy positions".to_string(),
-            input_schema: serde_json::json!({
-                "type": "object",
-                "properties": {},
-                "required": []
-            }),
-            annotations: Some(McpToolAnnotations::write()),
-            tags: None,
-        },
-        McpTool {
-            name: "copy_stats".to_string(),
-            description: "Get copy trading statistics".to_string(),
-            input_schema: serde_json::json!({
-                "type": "object",
-                "properties": {},
-                "required": []
-            }),
-            annotations: Some(McpToolAnnotations::read_only()),
-            tags: None,
-        },
-        McpTool {
-            name: "copy_history".to_string(),
+            name: "kol_copy_history".to_string(),
             description: "Get copy trade history for a KOL".to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
@@ -1285,6 +1307,61 @@ pub fn get_kol_tools() -> Vec<McpTool> {
                 "required": ["kol_id"]
             }),
             annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
+        },
+        McpTool {
+            name: "kol_copy_stats".to_string(),
+            description: "Get aggregated copy trading statistics".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
+        },
+        McpTool {
+            name: "kol_discovery_status".to_string(),
+            description: "Get KOL discovery agent status".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
+        },
+        McpTool {
+            name: "kol_discovery_start".to_string(),
+            description: "Start the KOL discovery agent".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
+        },
+        McpTool {
+            name: "kol_discovery_stop".to_string(),
+            description: "Stop the KOL discovery agent".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::write()),
+            tags: None,
+        },
+        McpTool {
+            name: "kol_scan_now".to_string(),
+            description: "Trigger an immediate KOL discovery scan".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::write()),
             tags: None,
         },
     ]
@@ -2139,6 +2216,127 @@ pub fn get_approval_tools() -> Vec<McpTool> {
     ]
 }
 
+pub fn get_internet_tools() -> Vec<McpTool> {
+    vec![
+        McpTool {
+            name: "web_search".to_string(),
+            description: "Search the web for trading strategies, token info, and market research. Requires SERPER_API_KEY to be configured.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query (e.g., 'solana pump.fun trading strategy')"
+                    },
+                    "num_results": {
+                        "type": "integer",
+                        "description": "Number of results to return (1-10)",
+                        "default": 5,
+                        "minimum": 1,
+                        "maximum": 10
+                    },
+                    "search_type": {
+                        "type": "string",
+                        "enum": ["search", "news"],
+                        "description": "Type of search (general or news)",
+                        "default": "search"
+                    },
+                    "time_range": {
+                        "type": "string",
+                        "enum": ["day", "week", "month", "year"],
+                        "description": "Limit results to a time range"
+                    }
+                },
+                "required": ["query"]
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
+        },
+        McpTool {
+            name: "web_fetch".to_string(),
+            description: "Fetch content from a URL and extract readable text. Works without API key. Useful for analyzing articles, tweets, documentation, and trading alpha.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "URL to fetch"
+                    },
+                    "extract_mode": {
+                        "type": "string",
+                        "enum": ["full", "article", "summary"],
+                        "description": "Content extraction mode (full, article-focused, or summary)",
+                        "default": "article"
+                    },
+                    "max_length": {
+                        "type": "integer",
+                        "description": "Maximum content length to return",
+                        "default": 10000,
+                        "minimum": 100,
+                        "maximum": 50000
+                    }
+                },
+                "required": ["url"]
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
+        },
+        McpTool {
+            name: "web_summarize".to_string(),
+            description: "Summarize web content with a trading focus and optionally save as engram. Uses the consensus LLM to extract key insights, strategies, and token mentions.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "description": "Content to summarize (typically from web_fetch)"
+                    },
+                    "url": {
+                        "type": "string",
+                        "description": "Source URL for attribution"
+                    },
+                    "focus": {
+                        "type": "string",
+                        "enum": ["strategy", "alpha", "risk", "token_analysis", "general"],
+                        "description": "Analysis focus area",
+                        "default": "general"
+                    },
+                    "save_as_engram": {
+                        "type": "boolean",
+                        "description": "Whether to persist the analysis as an engram",
+                        "default": true
+                    }
+                },
+                "required": ["content", "url"]
+            }),
+            annotations: Some(McpToolAnnotations::idempotent_write()),
+            tags: None,
+        },
+        McpTool {
+            name: "web_research_list".to_string(),
+            description: "List saved web research engrams. Returns summaries of previously analyzed web content.".to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of results",
+                        "default": 20
+                    },
+                    "focus": {
+                        "type": "string",
+                        "enum": ["strategy", "alpha", "risk", "token_analysis", "general"],
+                        "description": "Filter by analysis focus"
+                    }
+                },
+                "required": []
+            }),
+            annotations: Some(McpToolAnnotations::read_only()),
+            tags: None,
+        },
+    ]
+}
+
 pub fn get_all_tools() -> Vec<McpTool> {
     let mut tools = Vec::new();
     tools.extend(get_scanner_tools());
@@ -2154,6 +2352,7 @@ pub fn get_all_tools() -> Vec<McpTool> {
     tools.extend(get_consensus_tools());
     tools.extend(get_swarm_tools());
     tools.extend(get_approval_tools());
+    tools.extend(get_internet_tools());
     tools
 }
 

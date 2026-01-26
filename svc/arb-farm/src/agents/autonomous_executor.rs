@@ -850,36 +850,14 @@ impl AutonomousExecutor {
                 let tokens_received = tokens_out.unwrap_or(0);
                 if tokens_received > 0 {
                     let entry_price = sol_amount_lamports as f64 / tokens_received as f64;
-                    // Select exit config based on strategy type
-                    // Scanner (curve_arb): tighter, faster exits (15% TP, 7min)
-                    // Sniper (graduation_snipe): let winners run (100% TP, 40% SL, 15min)
-                    let exit_config = match strategy.strategy_type.as_str() {
-                        "curve_arb" => {
-                            tracing::info!(
-                                edge_id = %edge_id,
-                                strategy_type = "curve_arb",
-                                momentum_enabled = strategy.risk_params.momentum_adaptive_exits,
-                                "🔍 Using SCANNER exit config (25% TP, 3min limit)"
-                            );
-                            ExitConfig::for_scanner(strategy.risk_params.momentum_adaptive_exits)
-                        },
-                        "graduation_snipe" => {
-                            tracing::info!(
-                                edge_id = %edge_id,
-                                strategy_type = "graduation_snipe",
-                                let_winners_run = strategy.risk_params.let_winners_run,
-                                "🔫 Using SNIPER exit config (100% TP, 40% SL, 15min limit)"
-                            );
-                            ExitConfig::for_curve_bonding()
-                        },
-                        _ => {
-                            if strategy.risk_params.momentum_adaptive_exits {
-                                ExitConfig::for_curve_bonding_momentum_adaptive()
-                            } else {
-                                ExitConfig::for_curve_bonding()
-                            }
-                        }
-                    };
+                    // DEFENSIVE MODE (default): 15% TP, strong momentum can run
+                    // All strategies now use defensive config for capital preservation
+                    let exit_config = ExitConfig::for_defensive();
+                    tracing::info!(
+                        edge_id = %edge_id,
+                        strategy_type = %strategy.strategy_type,
+                        "🛡️ Using DEFENSIVE exit config (15% TP, strong momentum extends)"
+                    );
 
                     let venue = route_data.get("venue")
                         .and_then(|v| v.as_str())

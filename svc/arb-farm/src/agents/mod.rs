@@ -7,9 +7,9 @@ pub mod graduation_tracker;
 pub mod hecate_notifier;
 pub mod kol_discovery;
 pub mod metrics_aggregator;
-pub mod mev_hunter;
 pub mod overseer;
 pub mod scanner;
+pub mod strategies;
 pub mod strategy_engine;
 
 pub use autonomous_executor::{
@@ -25,10 +25,13 @@ pub use graduation_sniper::{GraduationSniper, SnipePosition, SnipeStatus, Sniper
 pub use graduation_tracker::{GraduationTracker, GraduationTrackerStats, TrackedState, TrackedToken, TrackerConfig};
 pub use hecate_notifier::{HecateNotifier, spawn_hecate_notifier};
 pub use kol_discovery::{DiscoveredKol, KolDiscoveryAgent, KolDiscoveryStats};
-pub use mev_hunter::{MevHunter, MevHunterConfig, MevHunterStats};
 pub use overseer::{
     AgentHealth, AgentStatus, OverseerConfig, OverseerStats, ResilienceOverseer, SwarmHealth,
 };
 pub use scanner::{ScannerAgent, ScannerStats, ScannerStatus, VenueStatus};
+pub use strategies::{
+    BehavioralStrategy, GraduationSniperStrategy, KolCopyStrategy, StrategyRegistry,
+    TokenData, VenueSnapshot, VolumeHunterStrategy,
+};
 pub use strategy_engine::{MatchResult, StrategyEngine};
 pub use metrics_aggregator::{MetricsAggregator, start_daily_metrics_scheduler};

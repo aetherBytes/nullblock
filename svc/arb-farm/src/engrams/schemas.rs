@@ -299,6 +299,61 @@ pub const WATCHLIST_TAG: &str = "watchlist";
 pub const TRADE_ANALYSIS_TAG: &str = "arbFarm.tradeAnalysis";
 pub const PATTERN_SUMMARY_TAG: &str = "arbFarm.patternSummary";
 pub const RECOMMENDATION_TAG: &str = "arbFarm.recommendation";
+pub const WEB_RESEARCH_TAG: &str = "arbFarm.webResearch";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebResearchEngram {
+    pub research_id: Uuid,
+    pub source_url: String,
+    pub source_type: WebSourceType,
+    pub title: Option<String>,
+    pub author: Option<String>,
+    pub content_summary: String,
+    pub key_insights: Vec<String>,
+    pub extracted_strategies: Vec<ExtractedStrategyInsight>,
+    pub extracted_tokens: Vec<String>,
+    pub analysis_focus: AnalysisFocus,
+    pub confidence: f64,
+    pub fetched_at: DateTime<Utc>,
+    pub analyzed_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WebSourceType {
+    SearchResult,
+    DirectUrl,
+    Tweet,
+    Article,
+    Documentation,
+    News,
+    Forum,
+    Blog,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AnalysisFocus {
+    Strategy,
+    Alpha,
+    Risk,
+    TokenAnalysis,
+    General,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractedStrategyInsight {
+    pub strategy_name: Option<String>,
+    pub description: String,
+    pub entry_criteria: Vec<String>,
+    pub exit_criteria: Vec<String>,
+    pub risk_notes: Vec<String>,
+    pub confidence: f64,
+}
+
+pub fn generate_web_research_key(research_id: &Uuid) -> String {
+    format!("arb.research.web.{}", research_id)
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeAnalysis {

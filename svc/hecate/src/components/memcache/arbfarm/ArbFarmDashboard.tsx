@@ -5024,18 +5024,22 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     );
   };
 
-  const NAV_ITEMS: Array<{ id: ArbFarmView; label: string; section?: string }> = [
-    { id: 'dashboard', label: 'Dashboard', section: 'Main' },
-    { id: 'curves', label: 'Curve Bonding', section: 'Main' },
-    { id: 'strategies', label: 'Strategies', section: 'Trading' },
-    { id: 'kol-tracker', label: 'KOL Tracker', section: 'Trading' },
-    { id: 'analysis', label: 'Analysis', section: 'Learning' },
-    { id: 'recommendations', label: 'Recommendations', section: 'Learning' },
-    { id: 'engrams', label: 'Engrams', section: 'Learning' },
-    { id: 'settings', label: 'Settings', section: 'System' },
+  const NAV_ITEMS: Array<{ id: ArbFarmView; label: string; icon: string; section?: string }> = [
+    { id: 'dashboard', label: 'Dashboard', icon: '◉', section: 'Trading' },
+    { id: 'curves', label: 'Scanner', icon: '◎', section: 'Trading' },
+    { id: 'strategies', label: 'Strategies', icon: '⚡', section: 'Trading' },
+    { id: 'kol-tracker', label: 'KOL Tracker', icon: '👁', section: 'Trading' },
+    { id: 'analysis', label: 'Analysis', icon: '📊', section: 'Learning' },
+    { id: 'recommendations', label: 'Recommendations', icon: '💡', section: 'Learning' },
+    { id: 'engrams', label: 'Engrams', icon: '🧠', section: 'Learning' },
+    { id: 'settings', label: 'Settings', icon: '⚙', section: 'System' },
   ];
 
-  const renderSidebar = () => {
+  const MOBILE_NAV_ITEMS = NAV_ITEMS.filter(item =>
+    ['dashboard', 'curves', 'strategies', 'analysis', 'settings'].includes(item.id)
+  );
+
+  const renderNavigationRail = () => {
     const sections = NAV_ITEMS.reduce((acc, item) => {
       const section = item.section || 'Other';
       if (!acc[section]) acc[section] = [];
@@ -5044,55 +5048,86 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     }, {} as Record<string, typeof NAV_ITEMS>);
 
     return (
-      <aside className={styles.arbfarmSidebar}>
+      <nav className={styles.navigationRail}>
         {Object.entries(sections).map(([sectionName, items]) => (
-          <div key={sectionName} className={styles.arbfarmSidebarSection}>
-            <div className={styles.arbfarmSidebarTitle}>{sectionName}</div>
+          <div key={sectionName} className={styles.railSection}>
+            <div className={styles.railSectionTitle}>{sectionName}</div>
             {items.map((item) => (
               <button
                 key={item.id}
-                className={`${styles.arbfarmNavButton} ${activeView === item.id ? styles.active : ''}`}
+                className={`${styles.navItem} ${activeView === item.id ? styles.active : ''}`}
                 onClick={() => onViewChange(item.id)}
               >
-                <span className={styles.arbfarmNavLabel}>{item.label}</span>
+                <span className={styles.navItemIcon}>{item.icon}</span>
+                <span className={styles.navItemLabel}>{item.label}</span>
               </button>
             ))}
           </div>
         ))}
-
-        <div className={styles.arbfarmSidebarSection}>
-          <div className={styles.arbfarmSidebarTitle}>Status</div>
-          <div className={styles.sidebarStatus}>
-            <span className={styles.lastRefreshTime}>
-              Last refresh: {lastRefresh.toLocaleTimeString()}
-            </span>
-            <button
-              className={`${styles.refreshButton} ${isRefreshing ? styles.spinning : ''}`}
-              onClick={handleRefreshAll}
-              disabled={isRefreshing}
-              title="Refresh all data"
-            >
-              ↻ Refresh
-            </button>
-          </div>
-        </div>
-      </aside>
+      </nav>
     );
   };
 
-  const renderMobileNav = () => (
-    <div className={styles.arbfarmMobileNav}>
-      {NAV_ITEMS.map((item) => (
+  const renderMobileBottomNav = () => (
+    <nav className={styles.mobileBottomNav}>
+      {MOBILE_NAV_ITEMS.map((item) => (
         <button
           key={item.id}
-          className={`${styles.arbfarmMobileButton} ${activeView === item.id ? styles.active : ''}`}
+          className={`${styles.mobileNavItem} ${activeView === item.id ? styles.active : ''}`}
           onClick={() => onViewChange(item.id)}
         >
-          {item.label}
+          <span className={styles.mobileNavIcon}>{item.icon}</span>
+          <span className={styles.mobileNavLabel}>{item.label}</span>
         </button>
       ))}
-    </div>
+    </nav>
   );
+
+  const renderStatusBar = () => {
+    const pnl = dashboard.summary?.total_profit_sol ?? 0;
+    const winRate = dashboard.summary?.win_rate ?? 0;
+    const isLive = executionConfig?.auto_execution_enabled;
+    const activeEdges = dashboard.summary?.active_opportunities ?? 0;
+
+    return (
+      <header className={styles.hudStatusBar}>
+        <div className={styles.hudStatusLeft}>
+          <span className={styles.hudLogo}>ArbFarm</span>
+          <span className={`${styles.hudLiveIndicator} ${isLive ? styles.live : styles.paused}`}>
+            {isLive ? 'LIVE' : 'PAUSED'}
+          </span>
+        </div>
+        <div className={styles.hudStatusMetrics}>
+          <div className={styles.hudMetric}>
+            <span className={styles.hudMetricLabel}>PnL</span>
+            <span className={`${styles.hudMetricValue} ${pnl >= 0 ? styles.profit : styles.loss}`}>
+              {pnl >= 0 ? '+' : ''}{pnl.toFixed(3)} SOL
+            </span>
+          </div>
+          <div className={styles.hudMetric}>
+            <span className={styles.hudMetricLabel}>Win</span>
+            <span className={`${styles.hudMetricValue} ${winRate >= 50 ? styles.profit : styles.loss}`}>
+              {winRate.toFixed(0)}%
+            </span>
+          </div>
+          <div className={styles.hudMetric}>
+            <span className={styles.hudMetricLabel}>Active</span>
+            <span className={styles.hudMetricValue}>{activeEdges}</span>
+          </div>
+        </div>
+        <div className={styles.hudStatusRight}>
+          <button
+            className={`${styles.hudRefreshBtn} ${isRefreshing ? styles.spinning : ''}`}
+            onClick={handleRefreshAll}
+            disabled={isRefreshing}
+            title={`Last refresh: ${lastRefresh.toLocaleTimeString()}`}
+          >
+            ↻
+          </button>
+        </div>
+      </header>
+    );
+  };
 
   const renderContent = () => {
     switch (activeView) {
@@ -5141,11 +5176,16 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
   };
 
   return (
-    <div className={styles.arbfarmLayout}>
-      {renderSidebar()}
-      {renderMobileNav()}
-      <div className={styles.arbfarmContent}>
-        {renderContent()}
+    <div className={styles.arbfarmHudWrapper}>
+      <div className={styles.arbfarmHud}>
+        {renderNavigationRail()}
+        <div className={styles.hudMain}>
+          {renderStatusBar()}
+          <main className={styles.hudContent}>
+            {renderContent()}
+          </main>
+          {renderMobileBottomNav()}
+        </div>
       </div>
     </div>
   );

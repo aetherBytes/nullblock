@@ -12,8 +12,8 @@ use super::blockhash::BlockhashCache;
 use super::position_manager::{BaseCurrency, ExitSignal, OpenPosition, SOL_MINT, USDC_MINT, USDT_MINT};
 
 const PRICE_CACHE_TTL_SECS: u64 = 10;
-const JUPITER_RATE_LIMIT_RETRIES: u32 = 3;
-const JUPITER_RATE_LIMIT_BACKOFF_MS: u64 = 2000;
+const JUPITER_RATE_LIMIT_RETRIES: u32 = 4;
+const JUPITER_RATE_LIMIT_BACKOFF_MS: u64 = 500;
 const JUPITER_MAX_CONCURRENT_REQUESTS: usize = 2;
 const JUPITER_MIN_REQUEST_INTERVAL_MS: u64 = 500;
 
@@ -63,27 +63,32 @@ pub struct RouteInfo {
 }
 
 impl TransactionBuilder {
-    pub fn new(jupiter_api_url: String, rpc_url: String) -> Self {
-        Self {
-            client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(30))
-                .build()
-                .expect("Failed to create HTTP client"),
+    pub fn new(jupiter_api_url: String, rpc_url: String) -> AppResult<Self> {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| AppError::Internal(format!("Failed to create HTTP client: {}", e)))?;
+
+        let blockhash_cache = BlockhashCache::new(rpc_url.clone())?;
+
+        Ok(Self {
+            client,
             jupiter_api_url,
-            rpc_url: rpc_url.clone(),
-            blockhash_cache: BlockhashCache::new(rpc_url),
+            rpc_url,
+            blockhash_cache,
             price_cache: Arc::new(RwLock::new(HashMap::new())),
             jupiter_semaphore: Arc::new(Semaphore::new(JUPITER_MAX_CONCURRENT_REQUESTS)),
             last_jupiter_request: Arc::new(AtomicU64::new(0)),
-        }
+        })
     }
 
-    async fn rate_limit_jupiter(&self) {
-        let _permit = self.jupiter_semaphore.acquire().await.expect("Semaphore closed");
+    async fn rate_limit_jupiter(&self) -> AppResult<()> {
+        let _permit = self.jupiter_semaphore.acquire().await
+            .map_err(|_| AppError::Internal("Jupiter rate limiter semaphore closed".to_string()))?;
 
         let now_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_default()
             .as_millis() as u64;
 
         let last_request = self.last_jupiter_request.load(Ordering::Relaxed);
@@ -97,10 +102,11 @@ impl TransactionBuilder {
         self.last_jupiter_request.store(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or_default()
                 .as_millis() as u64,
             Ordering::Relaxed
         );
+        Ok(())
     }
 
     pub async fn build_swap(
@@ -137,9 +143,47 @@ impl TransactionBuilder {
         // Step 3: Get recent blockhash for reference
         let blockhash = self.blockhash_cache.get_blockhash().await?;
 
-        // Extract amounts from quote
-        let in_amount: u64 = quote.in_amount.parse().unwrap_or(params.amount_lamports);
-        let out_amount: u64 = quote.out_amount.parse().unwrap_or(0);
+        // Extract amounts from quote - CRITICAL: Fail if parsing fails to prevent zero-output trades
+        let in_amount: u64 = quote.in_amount.parse().map_err(|e| {
+            AppError::ExternalApi(format!(
+                "Failed to parse Jupiter quote in_amount '{}': {}",
+                quote.in_amount, e
+            ))
+        })?;
+        let out_amount: u64 = quote.out_amount.parse().map_err(|e| {
+            AppError::ExternalApi(format!(
+                "Failed to parse Jupiter quote out_amount '{}': {}",
+                quote.out_amount, e
+            ))
+        })?;
+
+        // Validate we're getting a reasonable output amount
+        if out_amount == 0 {
+            return Err(AppError::ExternalApi(
+                "Jupiter quote returned zero output amount - quote invalid".to_string()
+            ));
+        }
+
+        // Validate slippage - price impact should not exceed slippage tolerance
+        let price_impact_bps = (quote.price_impact_pct.unwrap_or(0.0) * 100.0) as i32;
+        let slippage_bps_i32 = params.slippage_bps as i32;
+
+        if price_impact_bps > slippage_bps_i32 {
+            tracing::warn!(
+                "⚠️ SLIPPAGE WARNING: Price impact {}bps exceeds slippage tolerance {}bps for {} -> {}",
+                price_impact_bps,
+                slippage_bps_i32,
+                &params.input_mint[..8],
+                &params.output_mint[..8]
+            );
+            // Return error if price impact is more than 2x slippage tolerance (clearly bad trade)
+            if price_impact_bps > slippage_bps_i32 * 2 {
+                return Err(AppError::ExternalApi(format!(
+                    "Price impact {}bps is dangerously high (>2x slippage tolerance {}bps) - aborting trade",
+                    price_impact_bps, slippage_bps_i32
+                )));
+            }
+        }
 
         Ok(BuildResult {
             edge_id,
@@ -159,8 +203,6 @@ impl TransactionBuilder {
     }
 
     async fn get_jupiter_quote(&self, params: &SwapParams) -> AppResult<JupiterQuoteResponse> {
-        self.rate_limit_jupiter().await;
-
         let url = format!(
             "{}/quote?inputMint={}&outputMint={}&amount={}&slippageBps={}&onlyDirectRoutes=false",
             self.jupiter_api_url,
@@ -170,25 +212,54 @@ impl TransactionBuilder {
             params.slippage_bps
         );
 
-        let response = self
-            .client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Jupiter quote request failed: {}", e)))?;
+        let mut last_error = String::new();
+        for attempt in 0..JUPITER_RATE_LIMIT_RETRIES {
+            self.rate_limit_jupiter().await?;
 
-        if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(AppError::ExternalApi(format!(
-                "Jupiter quote error: {}",
-                error_text
-            )));
+            if attempt > 0 {
+                let backoff_ms = JUPITER_RATE_LIMIT_BACKOFF_MS * (1 << (attempt - 1));
+                warn!(
+                    "Jupiter quote retry {}/{} after {}ms backoff",
+                    attempt + 1, JUPITER_RATE_LIMIT_RETRIES, backoff_ms
+                );
+                tokio::time::sleep(tokio::time::Duration::from_millis(backoff_ms)).await;
+            }
+
+            let response = match self.client.get(&url).send().await {
+                Ok(r) => r,
+                Err(e) => {
+                    last_error = format!("Jupiter quote request failed: {}", e);
+                    continue;
+                }
+            };
+
+            let status = response.status();
+            if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                last_error = "Jupiter rate limited (429)".to_string();
+                warn!("⚠️ Jupiter quote rate limited (429), attempt {}/{}", attempt + 1, JUPITER_RATE_LIMIT_RETRIES);
+                continue;
+            }
+
+            if !status.is_success() {
+                let error_text = response.text().await.unwrap_or_default();
+                if error_text.contains("Rate limit") || error_text.contains("rate limit") {
+                    last_error = format!("Jupiter quote rate limited: {}", error_text);
+                    warn!("⚠️ Jupiter quote rate limited, attempt {}/{}", attempt + 1, JUPITER_RATE_LIMIT_RETRIES);
+                    continue;
+                }
+                return Err(AppError::ExternalApi(format!("Jupiter quote error: {}", error_text)));
+            }
+
+            return response
+                .json::<JupiterQuoteResponse>()
+                .await
+                .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter quote: {}", e)));
         }
 
-        response
-            .json::<JupiterQuoteResponse>()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter quote: {}", e)))
+        Err(AppError::ExternalApi(format!(
+            "Jupiter quote failed after {} retries: {}",
+            JUPITER_RATE_LIMIT_RETRIES, last_error
+        )))
     }
 
     async fn get_jupiter_swap_transaction(
@@ -205,9 +276,9 @@ impl TransactionBuilder {
             use_shared_accounts: false, // Must be false for graduated pump.fun tokens (simple AMMs)
             fee_account: None,
             tracking_account: None,
-            compute_unit_price_micro_lamports: Some(100_000), // 0.1 lamports per CU
+            compute_unit_price_micro_lamports: Some(10_000_000), // 10 lamports per CU for reliable exits
             priority_level_with_max_lamports: Some(PriorityLevel {
-                max_lamports: Some(1_000_000), // Max 0.001 SOL priority fee
+                max_lamports: Some(5_000_000), // Max 0.005 SOL priority fee for reliable exits
                 priority_level: None,
             }),
             as_legacy_transaction: false,
@@ -218,27 +289,53 @@ impl TransactionBuilder {
             dynamic_slippage: None,
         };
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&request)
-            .send()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Jupiter swap request failed: {}", e)))?;
+        let mut last_error = String::new();
+        for attempt in 0..JUPITER_RATE_LIMIT_RETRIES {
+            if attempt > 0 {
+                let backoff_ms = JUPITER_RATE_LIMIT_BACKOFF_MS * (1 << (attempt - 1));
+                warn!(
+                    "Jupiter swap retry {}/{} after {}ms backoff",
+                    attempt + 1, JUPITER_RATE_LIMIT_RETRIES, backoff_ms
+                );
+                tokio::time::sleep(tokio::time::Duration::from_millis(backoff_ms)).await;
+            }
 
-        if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(AppError::ExternalApi(format!(
-                "Jupiter swap error: {}",
-                error_text
-            )));
+            let response = match self.client.post(&url).json(&request).send().await {
+                Ok(r) => r,
+                Err(e) => {
+                    last_error = format!("Jupiter swap request failed: {}", e);
+                    continue;
+                }
+            };
+
+            let status = response.status();
+            if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                last_error = "Jupiter rate limited (429)".to_string();
+                warn!("⚠️ Jupiter swap rate limited (429), attempt {}/{}", attempt + 1, JUPITER_RATE_LIMIT_RETRIES);
+                continue;
+            }
+
+            if !status.is_success() {
+                let error_text = response.text().await.unwrap_or_default();
+                if error_text.contains("Rate limit") || error_text.contains("rate limit") {
+                    last_error = format!("Jupiter swap rate limited: {}", error_text);
+                    warn!("⚠️ Jupiter swap rate limited, attempt {}/{}", attempt + 1, JUPITER_RATE_LIMIT_RETRIES);
+                    continue;
+                }
+                return Err(AppError::ExternalApi(format!("Jupiter swap error: {}", error_text)));
+            }
+
+            let response_text = response.text().await
+                .map_err(|e| AppError::ExternalApi(format!("Failed to read Jupiter swap response: {}", e)))?;
+
+            return serde_json::from_str::<JupiterSwapResponse>(&response_text)
+                .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter swap: {} | Response: {}", e, &response_text[..response_text.len().min(500)])));
         }
 
-        let response_text = response.text().await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to read Jupiter swap response: {}", e)))?;
-
-        serde_json::from_str::<JupiterSwapResponse>(&response_text)
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter swap: {} | Response: {}", e, &response_text[..response_text.len().min(500)])))
+        Err(AppError::ExternalApi(format!(
+            "Jupiter swap build failed after {} retries: {}",
+            JUPITER_RATE_LIMIT_RETRIES, last_error
+        )))
     }
 
     fn extract_swap_mints(&self, edge: &Edge) -> AppResult<(String, String)> {
@@ -314,7 +411,8 @@ impl TransactionBuilder {
         let exit_amount = if exit_signal.exit_percent >= 100.0 {
             token_balance
         } else {
-            ((token_balance as f64) * (exit_signal.exit_percent / 100.0)) as u64
+            // Round to nearest token, capped at actual balance
+            ((token_balance as f64) * (exit_signal.exit_percent / 100.0)).round().min(token_balance as f64) as u64
         };
 
         let base_mint = position.exit_config.base_currency.mint().to_string();
@@ -380,6 +478,11 @@ impl TransactionBuilder {
             .map_err(|e| AppError::ExternalApi(format!("Failed to parse RPC response: {}", e)))?;
 
         if let Some(result) = rpc_response.result {
+            if result.value.is_empty() {
+                debug!("No token accounts found for {} in wallet", token_mint);
+                return Ok(0);
+            }
+
             for account in result.value {
                 if let Some(parsed) = account.account.data.get("parsed") {
                     if let Some(info) = parsed.get("info") {
@@ -388,11 +491,26 @@ impl TransactionBuilder {
                                 return amount_str.parse().map_err(|e| {
                                     AppError::Internal(format!("Failed to parse token amount: {}", e))
                                 });
+                            } else {
+                                warn!("Token account missing 'amount' field for {}", token_mint);
                             }
+                        } else {
+                            warn!("Token account missing 'tokenAmount' field for {}", token_mint);
                         }
+                    } else {
+                        warn!("Token account missing 'info' field for {}", token_mint);
                     }
+                } else {
+                    warn!("Token account missing 'parsed' field for {}", token_mint);
                 }
             }
+
+            warn!(
+                "Token accounts exist but failed to extract balance for {} - returning 0",
+                token_mint
+            );
+        } else {
+            debug!("RPC returned no result for token balance query: {}", token_mint);
         }
 
         Ok(0)
@@ -492,7 +610,7 @@ impl TransactionBuilder {
         }
 
         // Rate limit before fetching from Jupiter
-        self.rate_limit_jupiter().await;
+        self.rate_limit_jupiter().await?;
 
         // Fetch remaining prices from Jupiter with retry logic
         let ids = mints_to_fetch.join(",");

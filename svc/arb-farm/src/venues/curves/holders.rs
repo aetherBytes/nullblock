@@ -128,6 +128,15 @@ impl HolderAnalyzer {
         mint: &str,
         creator_address: Option<&str>,
     ) -> AppResult<HolderDistribution> {
+        self.analyze_holders_with_count(mint, creator_address, None).await
+    }
+
+    pub async fn analyze_holders_with_count(
+        &self,
+        mint: &str,
+        creator_address: Option<&str>,
+        venue_holder_count: Option<u32>,
+    ) -> AppResult<HolderDistribution> {
         let holders_response = self.helius_client.get_token_largest_accounts(mint).await?;
 
         let suspicious_wallets = self.known_suspicious_wallets.read().await;
@@ -184,9 +193,11 @@ impl HolderAnalyzer {
 
         let wash_trade_likelihood = self.estimate_wash_trading(&holders).await;
 
+        let total_holders = venue_holder_count.unwrap_or(holders.len() as u32);
+
         let distribution = HolderDistribution {
             mint: mint.to_string(),
-            total_holders: holders.len() as u32,
+            total_holders,
             total_supply,
             circulating_supply: total_supply,
             top_10_holders: holders.iter().take(10).cloned().collect(),
@@ -223,7 +234,7 @@ impl HolderAnalyzer {
         }
 
         let mut sorted_balances: Vec<f64> = holders.iter().map(|h| h.balance as f64).collect();
-        sorted_balances.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted_balances.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let mut cumsum = 0.0;
         let mut sum_of_ranks = 0.0;
@@ -300,6 +311,16 @@ impl HolderAnalyzer {
     }
 
     pub async fn get_or_analyze(&self, mint: &str, creator: Option<&str>, max_age_seconds: i64) -> AppResult<HolderDistribution> {
+        self.get_or_analyze_with_count(mint, creator, max_age_seconds, None).await
+    }
+
+    pub async fn get_or_analyze_with_count(
+        &self,
+        mint: &str,
+        creator: Option<&str>,
+        max_age_seconds: i64,
+        venue_holder_count: Option<u32>,
+    ) -> AppResult<HolderDistribution> {
         if let Some(cached) = self.get_cached_distribution(mint).await {
             let age = (Utc::now() - cached.analyzed_at).num_seconds();
             if age < max_age_seconds {
@@ -307,7 +328,7 @@ impl HolderAnalyzer {
             }
         }
 
-        self.analyze_holders(mint, creator).await
+        self.analyze_holders_with_count(mint, creator, venue_holder_count).await
     }
 
     pub async fn analyze_wash_trading_detailed(&self, mint: &str) -> AppResult<WashTradeAnalysis> {

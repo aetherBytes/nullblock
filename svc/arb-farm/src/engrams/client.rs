@@ -1744,6 +1744,82 @@ impl EngramsClient {
         let summaries = self.get_pattern_summaries(wallet, Some(1)).await?;
         Ok(summaries.into_iter().next())
     }
+
+    pub async fn save_web_research(
+        &self,
+        wallet: &str,
+        research: &crate::engrams::schemas::WebResearchEngram,
+    ) -> Result<Engram, String> {
+        let key = crate::engrams::schemas::generate_web_research_key(&research.research_id);
+        let content = serde_json::to_string(research)
+            .map_err(|e| format!("Failed to serialize web research: {}", e))?;
+
+        let source_type_str = serde_json::to_string(&research.source_type)
+            .unwrap_or_else(|_| "unknown".to_string())
+            .trim_matches('"')
+            .to_string();
+
+        let focus_str = serde_json::to_string(&research.analysis_focus)
+            .unwrap_or_else(|_| "general".to_string())
+            .trim_matches('"')
+            .to_string();
+
+        let metadata = serde_json::json!({
+            "type": "web_research",
+            "a2a_discoverable": true,
+            "schema_version": "1.0",
+            "content_type": "web_research",
+            "source_type": source_type_str,
+            "source_url": research.source_url,
+            "focus": focus_str,
+            "confidence": research.confidence,
+            "insights_count": research.key_insights.len(),
+            "strategies_count": research.extracted_strategies.len(),
+            "tokens_found": research.extracted_tokens,
+        });
+
+        let request = CreateEngramRequest {
+            wallet_address: wallet.to_string(),
+            engram_type: "knowledge".to_string(),
+            key,
+            content,
+            metadata: Some(metadata),
+            tags: Some(vec![
+                "arb".to_string(),
+                crate::engrams::schemas::A2A_TAG_LEARNING.to_string(),
+                crate::engrams::schemas::WEB_RESEARCH_TAG.to_string(),
+                format!("source.{}", source_type_str),
+                format!("focus.{}", focus_str),
+            ]),
+            is_public: Some(false),
+        };
+
+        self.create_engram(request).await
+    }
+
+    pub async fn get_web_research(
+        &self,
+        wallet: &str,
+        limit: Option<i64>,
+    ) -> Result<Vec<crate::engrams::schemas::WebResearchEngram>, String> {
+        let search = SearchRequest {
+            wallet_address: Some(wallet.to_string()),
+            engram_type: Some("knowledge".to_string()),
+            query: None,
+            tags: Some(vec![crate::engrams::schemas::WEB_RESEARCH_TAG.to_string()]),
+            limit: limit.or(Some(50)),
+            offset: None,
+        };
+
+        let engrams = self.search_engrams(search).await?;
+
+        let research: Vec<crate::engrams::schemas::WebResearchEngram> = engrams
+            .into_iter()
+            .filter_map(|e| serde_json::from_str(&e.content).ok())
+            .collect();
+
+        Ok(research)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

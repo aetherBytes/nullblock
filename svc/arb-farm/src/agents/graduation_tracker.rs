@@ -99,7 +99,7 @@ impl TrackedToken {
         }
     }
 
-    pub fn update_progress(&mut self, new_progress: f64) {
+    pub fn update_progress(&mut self, new_progress: f64) -> Option<f64> {
         let time_delta = (Utc::now() - self.last_checked_at).num_seconds().max(1) as f64;
         let progress_delta = new_progress - self.progress;
 
@@ -108,6 +108,18 @@ impl TrackedToken {
         self.progress = new_progress;
         self.last_checked_at = Utc::now();
         self.check_count += 1;
+
+        Self::detect_milestone_crossing(self.last_progress, new_progress)
+    }
+
+    fn detect_milestone_crossing(old_progress: f64, new_progress: f64) -> Option<f64> {
+        const MILESTONES: [f64; 5] = [50.0, 75.0, 85.0, 90.0, 95.0];
+        for &milestone in &MILESTONES {
+            if old_progress < milestone && new_progress >= milestone {
+                return Some(milestone);
+            }
+        }
+        None
     }
 
     pub fn transition_to(&mut self, new_state: TrackedState) {
@@ -468,7 +480,11 @@ impl GraduationTracker {
                                 }
 
                                 let progress = status.progress();
-                                token.update_progress(progress);
+                                let milestone = token.update_progress(progress);
+
+                                if let Some(ms) = milestone {
+                                    Self::emit_milestone_event(&event_tx, token, ms);
+                                }
 
                                 let new_state = Self::determine_state_from_status(
                                     &status,
@@ -609,6 +625,39 @@ impl GraduationTracker {
         mint: &str,
     ) -> AppResult<GraduationStatus> {
         on_chain_fetcher.is_token_graduated(mint).await
+    }
+
+    fn emit_milestone_event(
+        event_tx: &broadcast::Sender<ArbEvent>,
+        token: &TrackedToken,
+        milestone: f64,
+    ) {
+        let payload = serde_json::json!({
+            "mint": token.mint,
+            "symbol": token.symbol,
+            "milestone": milestone,
+            "progress": token.progress,
+            "velocity": token.progress_velocity,
+            "time_tracking_seconds": (Utc::now() - token.started_tracking_at).num_seconds(),
+        });
+
+        let event = ArbEvent::new(
+            "arb.curve.progress.milestone",
+            EventSource::Agent(AgentType::Scanner),
+            "arb.curve.progress.milestone",
+            payload,
+        );
+
+        if let Err(e) = event_tx.send(event) {
+            tracing::warn!("Failed to send milestone event: {}", e);
+        }
+
+        tracing::info!(
+            "🏁 {} crossed {}% milestone (velocity: {:.2}%/min)",
+            token.symbol,
+            milestone,
+            token.progress_velocity
+        );
     }
 
     fn emit_state_change_event(

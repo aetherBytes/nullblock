@@ -1,10 +1,14 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::Instant;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use tokio::sync::{broadcast, mpsc, RwLock};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use tracing::{debug, error, info, warn};
+
+const HEALTH_CHECK_INTERVAL_SECS: u64 = 30;
+const CONNECTION_TIMEOUT_SECS: u64 = 120;
 
 use crate::events::{ArbEvent, EventBus, EventSource};
 
@@ -99,6 +103,7 @@ pub struct LaserStreamClient {
     subscription_ids: Arc<RwLock<HashMap<String, u64>>>,
     command_tx: Arc<RwLock<Option<mpsc::Sender<WebSocketCommand>>>>,
     account_update_tx: broadcast::Sender<AccountUpdate>,
+    last_message_time: Arc<RwLock<Option<Instant>>>,
 }
 
 #[derive(Debug)]
@@ -120,6 +125,7 @@ impl LaserStreamClient {
             subscription_ids: Arc::new(RwLock::new(HashMap::new())),
             command_tx: Arc::new(RwLock::new(None)),
             account_update_tx,
+            last_message_time: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -148,7 +154,11 @@ impl LaserStreamClient {
             *status = LaserStreamStatus::Connecting;
         }
 
-        let ws_url = format!("{}/?api-key={}", self.endpoint.trim_end_matches('/'), self.api_key.as_ref().unwrap());
+        let ws_url = format!(
+            "{}/?api-key={}",
+            self.endpoint.trim_end_matches('/'),
+            self.api_key.as_ref().expect("is_configured() verified api_key.is_some()")
+        );
         info!("🔌 Connecting to Helius WebSocket: {}...", &ws_url[..ws_url.len().min(50)]);
 
         let (ws_stream, _) = connect_async(&ws_url)
@@ -175,6 +185,13 @@ impl LaserStreamClient {
         let subscription_ids = self.subscription_ids.clone();
         let account_update_tx = self.account_update_tx.clone();
         let event_bus = self.event_bus.clone();
+        let last_message_time = self.last_message_time.clone();
+
+        // Initialize last_message_time on connect
+        {
+            let mut lmt = last_message_time.write().await;
+            *lmt = Some(Instant::now());
+        }
 
         // Spawn message handler
         tokio::spawn(async move {
@@ -187,6 +204,11 @@ impl LaserStreamClient {
                     msg = read.next() => {
                         match msg {
                             Some(Ok(Message::Text(text))) => {
+                                // Update last_message_time on any received message
+                                {
+                                    let mut lmt = last_message_time.write().await;
+                                    *lmt = Some(Instant::now());
+                                }
                                 debug!("📨 WS message received: {}", &text[..text.len().min(200)]);
 
                                 // Parse as generic JSON first to route correctly
@@ -248,6 +270,11 @@ impl LaserStreamClient {
                                 }
                             }
                             Some(Ok(Message::Ping(data))) => {
+                                // Update last_message_time on ping
+                                {
+                                    let mut lmt = last_message_time.write().await;
+                                    *lmt = Some(Instant::now());
+                                }
                                 if let Err(e) = write.send(Message::Pong(data)).await {
                                     error!("Failed to send pong: {}", e);
                                 }
@@ -369,9 +396,41 @@ impl LaserStreamClient {
         let client = Arc::clone(self);
         tokio::spawn(async move {
             loop {
-                tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(HEALTH_CHECK_INTERVAL_SECS)).await;
 
                 let status = client.get_status().await;
+
+                // Check for stale connection (Connected but no messages for too long)
+                if status == LaserStreamStatus::Connected {
+                    let needs_reconnect = {
+                        let lmt = client.last_message_time.read().await;
+                        if let Some(last_time) = *lmt {
+                            let elapsed = last_time.elapsed().as_secs();
+                            if elapsed > CONNECTION_TIMEOUT_SECS {
+                                warn!(
+                                    "⚠️ WebSocket connection appears stale - no messages in {}s (threshold: {}s)",
+                                    elapsed, CONNECTION_TIMEOUT_SECS
+                                );
+                                true
+                            } else {
+                                debug!("✅ WebSocket healthy - last message {}s ago", elapsed);
+                                false
+                            }
+                        } else {
+                            false // No last_message_time yet, connection just started
+                        }
+                    };
+
+                    if needs_reconnect {
+                        warn!("🔄 Triggering reconnection due to stale connection");
+                        // Disconnect and trigger reconnection
+                        client.disconnect().await;
+                        let mut s = client.status.write().await;
+                        *s = LaserStreamStatus::Reconnecting;
+                        continue;
+                    }
+                }
+
                 if status == LaserStreamStatus::Reconnecting {
                     info!("🔄 Attempting WebSocket reconnection...");
 

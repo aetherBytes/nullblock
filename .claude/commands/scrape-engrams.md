@@ -130,7 +130,58 @@ Each recommendation contains actionable suggestions from LLM consensus:
 - Identify systemic issues requiring code changes
 - Note frequency of recoverable vs fatal errors
 
-### 3. Cross-Reference with Codebase
+### 3. Read Strategy Code Context
+
+Read the actual implementation code to understand current strategy logic and risk parameters:
+
+**Required Code Reads:**
+```bash
+# Read the strategy engine - understand entry/exit logic
+Read svc/arb-farm/src/agents/strategy_engine.rs
+
+# Read risk management - understand SL/TP calculations
+Read svc/arb-farm/src/execution/risk.rs
+
+# Read strategies documentation
+Read docs-internal/src/arb-farm/strategies.md
+```
+
+**Extract from code:**
+- Current stop-loss and take-profit percentages
+- Position sizing logic
+- Entry criteria and filters
+- Exit strategy implementation
+
+### 4. Fetch Web Research (if available)
+
+Check for saved web research engrams that may contain external trading insights:
+
+```bash
+# Fetch saved web research engrams
+curl -s -X POST "http://localhost:9007/mcp/call" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"web_research_list","arguments":{"limit":10}}'
+```
+
+**Optionally search for new external insights:**
+```bash
+# Search for recent pump.fun trading strategies
+curl -s -X POST "http://localhost:9007/mcp/call" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"web_search","arguments":{"query":"solana pump.fun trading strategy 2026","num_results":3}}'
+
+# Fetch and analyze a relevant result
+curl -s -X POST "http://localhost:9007/mcp/call" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"web_fetch","arguments":{"url":"<url from search>","extract_mode":"article"}}'
+
+# Summarize with trading focus
+curl -s -X POST "http://localhost:9007/mcp/call" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"web_summarize","arguments":{"content":"<fetched content>","url":"<url>","focus":"strategy","save_as_engram":true}}'
+```
+
+### 5. Cross-Reference with Codebase
 
 Read relevant configuration files to understand current settings:
 
@@ -140,7 +191,7 @@ Read relevant configuration files to understand current settings:
 - `svc/arb-farm/src/consensus/config.rs` - Consensus configuration
 - `svc/arb-farm/src/agents/autonomous_executor.rs` - Auto-execution logic
 
-### 4. Generate Optimization Plan
+### 6. Generate Optimization Plan
 
 Present findings in this format:
 
@@ -154,6 +205,7 @@ Present findings in this format:
 - Total PnL: X SOL
 - Errors recorded: X
 - Pending recommendations: X
+- Web research engrams: X
 
 ### Engrams Retrieved
 
@@ -162,6 +214,20 @@ Present findings in this format:
 | `abc-123` | arb.learning.recommendation.xyz | arbFarm.learning | Recommendation |
 | `def-456` | arb.learning.trade_analysis.xyz | arbFarm.tradeAnalysis | Trade Analysis |
 | `ghi-789` | arb.learning.pattern_summary.xyz | arbFarm.patternSummary | Pattern Summary |
+| `jkl-012` | arb.research.web.xyz | arbFarm.webResearch | Web Research |
+
+### Code Implementation Context
+
+**Current Strategy Configuration (from code):**
+```rust
+// From svc/arb-farm/src/execution/risk.rs
+stop_loss_percent: X%
+take_profit_percent: X%
+max_position_sol: X
+```
+
+**Exit Strategy Logic:**
+[Summarize key logic from strategy_engine.rs]
 
 ### Trade Analysis Insights
 
@@ -190,6 +256,16 @@ Present findings in this format:
 - [Recommendation 1 from config_recommendations]
 - [Recommendation 2]
 
+### External Research Insights
+
+**From Saved Web Research:**
+| Source | Focus | Key Insight | Confidence |
+|--------|-------|-------------|------------|
+| [URL] | Strategy | [insight] | X% |
+
+**Relevant External Strategies:**
+- [Strategy from web research with source]
+
 ### Top LLM Consensus Recommendations
 
 1. [HIGH/MEDIUM/LOW CONFIDENCE: X.XX] Title
@@ -209,19 +285,28 @@ Present findings in this format:
 
 ### Implementation Plan
 
-Based on the above analysis, here are recommended code changes:
+Based on the above analysis (trade data + patterns + web research + code context), here are recommended code changes:
 
 1. **[Change Title]** (from trade analysis + pattern summary)
    - File: `path/to/file.rs`
    - Change: [description]
+   - Code snippet showing current vs proposed:
+     ```rust
+     // Current:
+     stop_loss_percent: 0.05
+
+     // Proposed:
+     stop_loss_percent: 0.08
+     ```
    - Evidence: [cite specific trade analyses and patterns]
+   - External support: [cite web research if applicable]
    - Expected Impact: [profit improvement estimate]
    - Related Engrams: `uuid1`, `uuid2`
 
 2. ...
 ```
 
-### 5. Offer to Implement
+### 7. Offer to Implement
 
 After presenting the analysis, ask if the user wants to:
 - Implement the top recommendation
@@ -229,10 +314,11 @@ After presenting the analysis, ask if the user wants to:
 - Just acknowledge recommendations (mark as reviewed)
 - Take no action
 - **Focus on specific engrams**: Provide UUID(s) to analyze in detail
+- **Search for more external insights**: Run web searches on specific topics
 
 If implementing, use the Edit tool to make changes and run tests to verify.
 
-### 6. Acknowledge Recommendations
+### 8. Acknowledge Recommendations
 
 After implementing or reviewing, acknowledge processed recommendations:
 
@@ -255,6 +341,15 @@ The following endpoints are available for learning analysis:
 | `GET /consensus/recommendations?status=&limit=` | LLM consensus recommendations (filter by status) |
 | `PUT /consensus/recommendations/:id/status` | Update recommendation status |
 | `GET /consensus/learning` | Learning summary stats |
+
+**Web Research MCP Tools:**
+
+| Tool | Description |
+|------|-------------|
+| `web_search` | Search the web (requires SERPER_API_KEY) |
+| `web_fetch` | Fetch and extract content from a URL |
+| `web_summarize` | Summarize content with LLM, optionally save as engram |
+| `web_research_list` | List saved web research engrams |
 
 ## Data Flow
 

@@ -4,6 +4,6 @@ pub mod curves;
 pub mod lending;
 
 pub use traits::*;
-pub use dex::{JupiterVenue, RaydiumVenue};
+pub use dex::JupiterVenue;
 pub use curves::{MoonshotVenue, PumpFunVenue};
 pub use lending::{KaminoVenue, MarginfiVenue};

@@ -1,5 +1,7 @@
 use std::env;
 use std::net::SocketAddr;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use axum::{routing::{get, post}, Router};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -152,6 +154,15 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::from_env()?;
     info!("🔧 Configuration loaded: {}", config.service_name);
 
+    // Validate configuration
+    if let Err(errors) = config.validate() {
+        for error in &errors {
+            tracing::error!("❌ Config validation error: {}", error);
+        }
+        anyhow::bail!("Configuration validation failed with {} errors", errors.len());
+    }
+    info!("✅ Configuration validated");
+
     let state = server::AppState::new(config.clone()).await?;
 
     // Print comprehensive startup summary for tmuxinator pane
@@ -208,17 +219,29 @@ async fn main() -> anyhow::Result<()> {
                             *wallet_max = dynamic_max_position;
                         }
                         info!(
-                            "💰 Dynamic max position set: {:.2} SOL (1/{} of {:.2} SOL, tier: {}, cap: {} SOL)",
+                            "💰 Global dynamic max position: {:.2} SOL (1/{} of {:.2} SOL, tier: {}, cap: {} SOL)",
                             dynamic_max_position, divisor as u32, available_for_trading, tier_name, MAX_POSITION_CAP_SOL
                         );
 
-                        // Sync all active strategies with the dynamic max position (in-memory + database)
+                        // Per-strategy budget allocation
+                        // Divide wallet balance between active strategies so they can operate independently
                         use crate::database::repositories::strategies::UpdateStrategyRecord;
                         let strategies = state.strategy_engine.list_strategies().await;
+                        let active_strategies: Vec<_> = strategies.iter().filter(|s| s.is_active).collect();
+                        let strategy_count = active_strategies.len().max(1);
+                        let per_strategy_budget = available_for_trading / strategy_count as f64;
+                        let per_strategy_max = (per_strategy_budget / divisor).min(MAX_POSITION_CAP_SOL);
+                        let per_strategy_max = (per_strategy_max * 100.0).round() / 100.0;
+
+                        info!(
+                            "💰 Per-strategy budget allocation: {:.2} SOL per strategy ({} active strategies)",
+                            per_strategy_max, strategy_count
+                        );
+
                         let mut synced = 0;
-                        for strategy in strategies.iter().filter(|s| s.is_active) {
+                        for strategy in active_strategies {
                             let mut params = strategy.risk_params.clone();
-                            params.max_position_sol = dynamic_max_position;
+                            params.max_position_sol = per_strategy_max;
 
                             // Update in-memory
                             if state.strategy_engine.set_risk_params(strategy.id, params.clone()).await.is_ok() {
@@ -230,13 +253,17 @@ async fn main() -> anyhow::Result<()> {
                                     risk_params: Some(params),
                                     is_active: None,
                                 }).await {
-                                    warn!("Failed to persist dynamic max position to DB for strategy {}: {}", strategy.id, e);
+                                    warn!("Failed to persist per-strategy budget to DB for strategy {}: {}", strategy.id, e);
                                 }
                                 synced += 1;
+                                info!(
+                                    "  └─ {} ({}): {:.2} SOL max position",
+                                    strategy.name, strategy.strategy_type, per_strategy_max
+                                );
                             }
                         }
                         if synced > 0 {
-                            info!("✅ Synced {} strategies with dynamic max position: {:.2} SOL (persisted to DB)", synced, dynamic_max_position);
+                            info!("✅ Synced {} strategies with per-strategy budget: {:.2} SOL each (persisted to DB)", synced, per_strategy_max);
                         }
                     }
                 }
@@ -246,6 +273,10 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     }
+
+    // Create shutdown flag for graceful shutdown
+    let shutdown_flag = Arc::new(AtomicBool::new(false));
+    let shutdown_flag_for_handler = shutdown_flag.clone();
 
     // Clone state components for auto-start task BEFORE passing state to router
     let scanner_for_autostart = state.scanner.clone();
@@ -270,6 +301,15 @@ async fn main() -> anyhow::Result<()> {
     let position_repo_for_metrics = state.position_repo.clone();
     let engrams_client_for_metrics = state.engrams_client.clone();
     let dev_signer_for_metrics = state.dev_signer.clone();
+    let recent_mints_for_autostart = executor_for_autostart.get_recent_mints();
+    let capital_manager_for_autostart = state.capital_manager.clone();
+    let rpc_url_for_balance = state.config.rpc_url.clone();
+
+    // Clone components for graceful shutdown
+    let scanner_for_shutdown = state.scanner.clone();
+    let executor_for_shutdown = state.autonomous_executor.clone();
+    let position_monitor_for_shutdown = state.position_monitor.clone();
+    let position_manager_for_shutdown = state.position_manager.clone();
 
     let app = create_router(state);
 
@@ -326,14 +366,30 @@ async fn main() -> anyhow::Result<()> {
             info!("   Start manually: curl -X POST localhost:9007/scanner/start");
         }
 
-        // Autonomous executor startup is handled in AppState::new() based on strategy config
-        // It should NOT be unconditionally started here - only start if user has enabled auto-execution
+        // Executor is OFF by default for safety - user must enable via UI
         let executor_stats = executor_for_autostart.get_stats().await;
         if executor_stats.is_running {
-            info!("✅ Autonomous executor already running (auto-execution enabled)");
+            info!("✅ Autonomous executor running (ARBFARM_ENABLE_EXECUTOR=1)");
         } else {
-            info!("ℹ️ Autonomous executor NOT started (auto-execution disabled in strategy config)");
-            info!("   Enable via: curl -X POST localhost:9007/execution/toggle -d '{{\"enabled\":true}}'");
+            info!("ℹ️ Execution Engine OFF by default (safety)");
+            info!("   Enable: ARBFARM_ENABLE_EXECUTOR=1 or UI toggle");
+        }
+
+        // Queue any PendingExit positions from previous session for immediate retry
+        let pending_exits = position_manager_for_autostart.get_pending_exit_positions().await;
+        if !pending_exits.is_empty() {
+            info!(
+                "🔄 Found {} positions in PendingExit from previous session - queueing for retry",
+                pending_exits.len()
+            );
+            for pos in &pending_exits {
+                position_manager_for_autostart.queue_priority_exit(pos.id).await;
+                info!(
+                    "   📋 Queued {} ({}) for priority retry",
+                    pos.token_symbol.as_deref().unwrap_or(&pos.token_mint[..8]),
+                    pos.id
+                );
+            }
         }
 
         // Start position monitor
@@ -358,14 +414,16 @@ async fn main() -> anyhow::Result<()> {
         graduation_tracker_for_autostart.start().await;
         info!("✅ Graduation tracker started (monitoring tracked tokens)");
 
-        // Start sniper (unless /tmp/arb-no-snipe exists)
-        let sniper_auto_start = !std::path::Path::new("/tmp/arb-no-snipe").exists();
-        if sniper_auto_start {
+        // Sniper is OFF by default - must be explicitly enabled via ARBFARM_ENABLE_SNIPER=1 or UI
+        let sniper_enabled_env = std::env::var("ARBFARM_ENABLE_SNIPER")
+            .map(|v| v == "1" || v.to_lowercase() == "true")
+            .unwrap_or(false);
+        if sniper_enabled_env {
             graduation_sniper_for_autostart.start().await;
-            info!("✅ Graduation sniper started (listening for graduation events)");
+            info!("✅ Graduation sniper started (ARBFARM_ENABLE_SNIPER=1)");
         } else {
-            info!("ℹ️ Graduation sniper NOT auto-started (/tmp/arb-no-snipe exists)");
-            info!("   Start manually: curl -X POST localhost:9007/sniper/start");
+            info!("ℹ️ Graduation sniper OFF by default");
+            info!("   Enable: set ARBFARM_ENABLE_SNIPER=1 or use UI toggle");
         }
 
         // Run wallet reconciliation to pick up orphaned positions
@@ -395,9 +453,25 @@ async fn main() -> anyhow::Result<()> {
 
                     if !result.discovered_tokens.is_empty() {
                         info!("🔍 Discovered {} untracked tokens in wallet - auto-creating exit strategies:", result.discovered_tokens.len());
+
+                        // Get current position count and max limit to prevent exceeding limits
+                        let max_concurrent = risk_config_for_autostart.read().await.max_concurrent_positions as usize;
+                        let current_positions = position_manager_for_autostart.get_stats().await.active_positions as usize;
+                        let mut positions_created = 0usize;
+
                         for token in &result.discovered_tokens {
                             if crate::execution::BaseCurrency::is_base_currency(&token.mint) {
                                 continue;
+                            }
+
+                            // Check position limit before creating
+                            if current_positions + positions_created >= max_concurrent {
+                                warn!(
+                                    "⚠️ Skipping remaining {} discovered tokens - max concurrent positions ({}) reached",
+                                    result.discovered_tokens.len() - positions_created,
+                                    max_concurrent
+                                );
+                                break;
                             }
 
                             let (estimated_price, is_dead_token) = match on_chain_fetcher_for_autostart.get_bonding_curve_state(&token.mint).await {
@@ -457,6 +531,7 @@ async fn main() -> anyhow::Result<()> {
                                 exit_config,
                             ).await {
                                 Ok(position) => {
+                                    positions_created += 1;
                                     info!(
                                         "   ✅ {} ({:.6}) - created position {} with SL:{:?}%/TP:{:?}%",
                                         &token.mint[..12],
@@ -487,6 +562,15 @@ async fn main() -> anyhow::Result<()> {
 
         info!("🎯 All workers auto-started");
 
+        // Start periodic balance refresh for capital manager
+        if let Some(wallet_addr) = dev_signer_for_autostart.get_address() {
+            capital_manager_for_autostart.start_balance_refresh(
+                rpc_url_for_balance,
+                wallet_addr.to_string(),
+                60, // Refresh every 60 seconds
+            ).await;
+        }
+
         // Start periodic wallet reconciliation (every 10 seconds) to catch orphaned tokens
         let periodic_wallet = dev_signer_for_autostart.get_address().map(|s| s.to_string());
         let periodic_helius = helius_das_for_autostart.clone();
@@ -495,6 +579,7 @@ async fn main() -> anyhow::Result<()> {
         let periodic_metrics = metrics_collector_for_autostart.clone();
         let periodic_jupiter = jupiter_venue_for_autostart.clone();
         let periodic_risk_config = risk_config_for_autostart.clone();
+        let periodic_recent_mints = recent_mints_for_autostart.clone();
 
         if periodic_wallet.is_some() {
             tokio::spawn(async move {
@@ -527,15 +612,41 @@ async fn main() -> anyhow::Result<()> {
                                 }
                             }
 
+                            // Configurable dust threshold (defaults match MIN_DUST_VALUE_SOL in position_monitor)
+                            let dust_balance_threshold: f64 = std::env::var("RECONCILE_DUST_BALANCE_THRESHOLD")
+                                .ok()
+                                .and_then(|v| v.parse().ok())
+                                .unwrap_or(0.001); // 0.001 tokens (decimal-adjusted)
+                            let dust_sol_value_threshold: f64 = std::env::var("RECONCILE_DUST_SOL_VALUE_THRESHOLD")
+                                .ok()
+                                .and_then(|v| v.parse().ok())
+                                .unwrap_or(0.0001); // 0.0001 SOL
+
                             // Create positions for discovered tokens
                             for token in &result.discovered_tokens {
                                 if crate::execution::BaseCurrency::is_base_currency(&token.mint) {
                                     continue;
                                 }
 
-                                // Skip dust amounts
-                                if token.balance < 0.001 {
+                                // Skip dust amounts (by token balance)
+                                if token.balance < dust_balance_threshold {
+                                    tracing::debug!(
+                                        "[Periodic] Skipping {} - balance {:.6} below dust threshold {:.6}",
+                                        &token.mint[..12], token.balance, dust_balance_threshold
+                                    );
                                     continue;
+                                }
+
+                                // Skip if recently bought by executor (within 60s) - let executor create proper position
+                                {
+                                    let recent = periodic_recent_mints.read().await;
+                                    if let Some(buy_time) = recent.get(&token.mint) {
+                                        let age_secs = (chrono::Utc::now() - *buy_time).num_seconds();
+                                        if age_secs < 60 {
+                                            info!("[Periodic] ⏭️ Skipping {} - recently bought by executor {}s ago", &token.mint[..12], age_secs);
+                                            continue;
+                                        }
+                                    }
                                 }
 
                                 let (estimated_price, is_dead_token) = match periodic_on_chain.get_bonding_curve_state(&token.mint).await {
@@ -569,6 +680,16 @@ async fn main() -> anyhow::Result<()> {
                                     }
                                 };
 
+                                // SOL-value-based dust check (more accurate than token balance alone)
+                                let estimated_sol_value = token.balance * estimated_price;
+                                if !is_dead_token && estimated_sol_value < dust_sol_value_threshold && estimated_sol_value > 0.0 {
+                                    tracing::debug!(
+                                        "[Periodic] Skipping {} - SOL value {:.6} below dust threshold {:.6}",
+                                        &token.mint[..12], estimated_sol_value, dust_sol_value_threshold
+                                    );
+                                    continue;
+                                }
+
                                 let exit_config = if is_dead_token {
                                     crate::execution::ExitConfig::for_dead_token()
                                 } else {
@@ -577,14 +698,26 @@ async fn main() -> anyhow::Result<()> {
 
                                 // Use current risk config for discovered position entry estimates
                                 let max_position_sol = periodic_risk_config.read().await.max_position_sol;
-                                let raw_estimated_entry = token.balance * estimated_price;
+                                let raw_estimated_entry = estimated_sol_value;
+
+                                // Validate entry amount - skip positions with unreasonable values
+                                const MIN_TRACKABLE_ENTRY_SOL: f64 = 0.001; // 0.001 SOL minimum
                                 let estimated_entry_sol = if raw_estimated_entry > max_position_sol {
                                     // Estimated value exceeds max position - cap at max (likely price moved)
+                                    warn!(
+                                        "[Periodic] {} estimated value {:.4} SOL exceeds max {:.4} SOL - capping",
+                                        &token.mint[..12], raw_estimated_entry, max_position_sol
+                                    );
                                     max_position_sol
-                                } else if raw_estimated_entry < 0.001 {
-                                    // Too small to estimate, use max as conservative default
-                                    max_position_sol
+                                } else if raw_estimated_entry < MIN_TRACKABLE_ENTRY_SOL && !is_dead_token {
+                                    // Too small to track meaningfully - skip unless it's a dead token salvage
+                                    info!(
+                                        "[Periodic] ⏭️ Skipping {} - estimated value {:.6} SOL below tracking minimum {:.4} SOL",
+                                        &token.mint[..12], raw_estimated_entry, MIN_TRACKABLE_ENTRY_SOL
+                                    );
+                                    continue;
                                 } else {
+                                    // Use actual estimated value (even if small for dead tokens)
                                     raw_estimated_entry
                                 };
 
@@ -989,8 +1122,87 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    axum::serve(listener, app).await?;
+    // Graceful shutdown handling
+    let shutdown_signal = async move {
+        let ctrl_c = async {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("Failed to install Ctrl+C handler");
+        };
 
+        #[cfg(unix)]
+        let terminate = async {
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                .expect("Failed to install SIGTERM handler")
+                .recv()
+                .await;
+        };
+
+        #[cfg(not(unix))]
+        let terminate = std::future::pending::<()>();
+
+        tokio::select! {
+            _ = ctrl_c => {
+                info!("🛑 Received Ctrl+C, initiating graceful shutdown...");
+            }
+            _ = terminate => {
+                info!("🛑 Received SIGTERM, initiating graceful shutdown...");
+            }
+        }
+
+        // Set shutdown flag to prevent new trades
+        shutdown_flag_for_handler.store(true, Ordering::SeqCst);
+        info!("⏸️ Shutdown flag set - no new trades will be accepted");
+
+        // Phase 1: Stop accepting new work
+        info!("📋 Phase 1: Stopping workers...");
+        scanner_for_shutdown.stop().await;
+        info!("   ✓ Scanner stopped");
+        executor_for_shutdown.stop().await;
+        info!("   ✓ Autonomous executor stopped");
+
+        // Phase 2: Wait for in-flight transactions
+        info!("📋 Phase 2: Waiting for in-flight transactions (60s timeout)...");
+        let inflight_wait_start = std::time::Instant::now();
+        const INFLIGHT_TIMEOUT_SECS: u64 = 60;
+
+        loop {
+            let pending_exits = position_manager_for_shutdown.get_pending_exit_signals().await;
+            let open_positions = position_manager_for_shutdown.get_open_positions().await;
+            let has_priority_exits = position_manager_for_shutdown.has_priority_exits().await;
+
+            if pending_exits.is_empty() && !has_priority_exits {
+                info!("   ✓ All pending exits completed");
+                break;
+            }
+
+            if inflight_wait_start.elapsed().as_secs() >= INFLIGHT_TIMEOUT_SECS {
+                warn!(
+                    "   ⚠️ Timeout waiting for {} pending exits, {} priority exits - proceeding with shutdown",
+                    pending_exits.len(),
+                    if has_priority_exits { "some" } else { "no" }
+                );
+                break;
+            }
+
+            info!(
+                "   ⏳ Waiting for {} pending exits, {} open positions...",
+                pending_exits.len(), open_positions.len()
+            );
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        }
+
+        // Note: Position monitor runs as a spawned task and will be cancelled on server shutdown
+        info!("📋 Phase 3: Server shutdown initiated, monitors will be cancelled...");
+
+        info!("✅ Graceful shutdown complete - safe to exit");
+    };
+
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal)
+        .await?;
+
+    info!("👋 ArbFarm server shut down cleanly");
     Ok(())
 }
 
@@ -1017,6 +1229,11 @@ fn create_router(state: server::AppState) -> Router {
         .route("/scanner/stop", post(scanner::stop_scanner))
         .route("/scanner/signals", get(scanner::get_signals))
         .route("/scanner/process", post(scanner::process_signals))
+        // Behavioral Strategies (scanner-driven)
+        .route("/scanner/strategies", get(scanner::list_behavioral_strategies))
+        .route("/scanner/strategies/:name", get(scanner::get_behavioral_strategy))
+        .route("/scanner/strategies/:name/toggle", post(scanner::toggle_behavioral_strategy))
+        .route("/scanner/strategies/toggle-all", post(scanner::toggle_all_behavioral_strategies))
         // Edges (Opportunities)
         .route("/edges", get(edges::list_edges))
         .route("/edges/atomic", get(edges::list_atomic_edges))
@@ -1035,6 +1252,7 @@ fn create_router(state: server::AppState) -> Router {
         .route("/strategies/:id/toggle", post(strategies::toggle_strategy))
         .route("/strategies/:id/risk-profile", post(strategies::set_risk_profile))
         .route("/strategies/:id/kill", post(strategies::kill_strategy))
+        .route("/strategies/:id/momentum", post(strategies::toggle_strategy_momentum))
         .route("/strategies/:id/reset-stats", post(strategies::reset_strategy_stats))
         .route("/strategies/batch-toggle", post(strategies::batch_toggle_strategies))
         .route("/strategies/save-to-engrams", post(strategies::save_strategies_to_engrams))
@@ -1061,6 +1279,7 @@ fn create_router(state: server::AppState) -> Router {
         .route("/curves/:mint/metrics", get(curves::get_curve_metrics))
         .route("/curves/:mint/holder-analysis", get(curves::get_holder_analysis))
         .route("/curves/:mint/score", get(curves::get_opportunity_score))
+        .route("/curves/:mint/market-data", get(curves::get_market_data))
         .route("/curves/top-opportunities", get(curves::get_top_opportunities))
         .route("/curves/scoring-config", get(curves::get_scoring_config))
         // Graduation Tracker (Token Watchlist with Engram Persistence)
@@ -1241,6 +1460,8 @@ fn create_router(state: server::AppState) -> Router {
         .route("/positions/:id", get(position_handlers::get_position))
         .route("/positions/:id/close", post(position_handlers::close_position))
         .route("/positions/:id/exit-config", axum::routing::put(position_handlers::update_position_exit_config))
+        .route("/positions/:id/auto-exit", axum::routing::patch(position_handlers::toggle_position_auto_exit))
+        .route("/positions/auto-exit-stats", get(position_handlers::get_auto_exit_stats))
         // Approvals (Execution Controls)
         .route("/approvals", get(approval_handlers::list_approvals))
         .route("/approvals/pending", get(approval_handlers::list_pending_approvals))

@@ -6,6 +6,8 @@ use tokio::sync::RwLock;
 
 use crate::error::AppResult;
 use crate::venues::curves::OnChainFetcher;
+use crate::venues::curves::pump_fun::{PumpFunToken, HolderStats as PumpFunHolderStats};
+use crate::venues::curves::moonshot::MoonshotToken;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetailedCurveMetrics {
@@ -258,6 +260,14 @@ impl CurveMetricsCollector {
         let samples = self.samples.read().await;
         let token_samples = samples.get(mint);
 
+        let has_samples = token_samples.map(|s| !s.is_empty()).unwrap_or(false);
+
+        if !has_samples {
+            if let Some(cached) = self.get_cached_metrics(mint).await {
+                return Ok(cached);
+            }
+        }
+
         let mut metrics = DetailedCurveMetrics::new(mint.to_string(), venue.to_string());
 
         if let Ok(state) = self.on_chain_fetcher.get_bonding_curve_state(mint).await {
@@ -352,6 +362,110 @@ impl CurveMetricsCollector {
         }
 
         self.calculate_metrics(mint, venue).await
+    }
+
+    pub fn populate_from_pump_fun(
+        &self,
+        mint: &str,
+        token: &PumpFunToken,
+        holder_stats: &PumpFunHolderStats,
+    ) -> DetailedCurveMetrics {
+        let volume_24h = token.volume_24h;
+        let volume_1h = volume_24h / 24.0;
+        let price_change_24h = token.price_change_24h.unwrap_or(0.0);
+        let price_momentum_1h = price_change_24h / 24.0;
+
+        let avg_trade_size = if volume_24h > 0.0 {
+            (volume_24h / 100.0).max(0.01)
+        } else {
+            0.0
+        };
+
+        let top_20_concentration = if holder_stats.top_holders.len() >= 20 {
+            holder_stats.top_holders.iter().take(20).map(|h| h.percentage).sum()
+        } else {
+            holder_stats.top_10_concentration * 1.3
+        };
+
+        let creator_holdings = holder_stats.top_holders.first()
+            .map(|h| h.percentage)
+            .unwrap_or(0.0);
+
+        DetailedCurveMetrics {
+            mint: mint.to_string(),
+            venue: "pump_fun".to_string(),
+            volume_1h,
+            volume_24h,
+            volume_velocity: volume_1h / 10.0,
+            trade_count_1h: 0,
+            trade_count_24h: 0,
+            unique_buyers_1h: 0,
+            unique_buyers_24h: 0,
+            holder_count: holder_stats.total_holders,
+            holder_growth_1h: 0,
+            holder_growth_24h: 0,
+            top_10_concentration: holder_stats.top_10_concentration,
+            top_20_concentration,
+            creator_holdings_percent: creator_holdings,
+            price_momentum_1h,
+            price_momentum_24h: price_change_24h,
+            buy_sell_ratio_1h: 1.0,
+            avg_trade_size_sol: avg_trade_size,
+            graduation_progress: 0.0,
+            market_cap_sol: token.market_cap / 200.0,
+            liquidity_depth_sol: 0.0,
+            last_updated: Utc::now(),
+        }
+    }
+
+    pub fn populate_from_moonshot(
+        &self,
+        mint: &str,
+        token: &MoonshotToken,
+        holder_count: u32,
+        top_10_concentration: f64,
+    ) -> DetailedCurveMetrics {
+        let volume_24h = token.volume_24h_usd / 200.0;
+        let volume_1h = volume_24h / 24.0;
+        let price_change_24h = token.price_change_24h.unwrap_or(0.0);
+        let price_momentum_1h = price_change_24h / 24.0;
+
+        let avg_trade_size = if volume_24h > 0.0 {
+            (volume_24h / 100.0).max(0.01)
+        } else {
+            0.0
+        };
+
+        DetailedCurveMetrics {
+            mint: mint.to_string(),
+            venue: "moonshot".to_string(),
+            volume_1h,
+            volume_24h,
+            volume_velocity: volume_1h / 10.0,
+            trade_count_1h: 0,
+            trade_count_24h: 0,
+            unique_buyers_1h: 0,
+            unique_buyers_24h: 0,
+            holder_count,
+            holder_growth_1h: 0,
+            holder_growth_24h: 0,
+            top_10_concentration,
+            top_20_concentration: top_10_concentration * 1.3,
+            creator_holdings_percent: 0.0,
+            price_momentum_1h,
+            price_momentum_24h: price_change_24h,
+            buy_sell_ratio_1h: 1.0,
+            avg_trade_size_sol: avg_trade_size,
+            graduation_progress: 0.0,
+            market_cap_sol: token.market_cap_usd / 200.0,
+            liquidity_depth_sol: 0.0,
+            last_updated: Utc::now(),
+        }
+    }
+
+    pub async fn cache_metrics(&self, mint: &str, metrics: DetailedCurveMetrics) {
+        let mut cache = self.metrics_cache.write().await;
+        cache.insert(mint.to_string(), metrics);
     }
 
     pub async fn get_samples(&self, mint: &str) -> Vec<MetricsSample> {

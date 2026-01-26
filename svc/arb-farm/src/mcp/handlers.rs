@@ -86,6 +86,19 @@ pub async fn execute_tool(state: &AppState, name: &str, args: Value) -> McpToolR
         // KOL tools
         "kol_list" => kol_list(state, args).await,
         "kol_stats" => kol_stats(state, args).await,
+        "kol_add" => kol_add(state, args).await,
+        "kol_get" => kol_get(state, args).await,
+        "kol_update" => kol_update(state, args).await,
+        "kol_delete" => kol_delete(state, args).await,
+        "kol_trades" => kol_trades(state, args).await,
+        "kol_enable_copy" => kol_enable_copy(state, args).await,
+        "kol_disable_copy" => kol_disable_copy(state, args).await,
+        "kol_copy_history" => kol_copy_history(state, args).await,
+        "kol_copy_stats" => kol_copy_stats(state).await,
+        "kol_discovery_status" => kol_discovery_status(state).await,
+        "kol_discovery_start" => kol_discovery_start(state).await,
+        "kol_discovery_stop" => kol_discovery_stop(state).await,
+        "kol_scan_now" => kol_scan_now(state).await,
 
         // Swarm tools
         "swarm_status" => swarm_status(state).await,
@@ -131,6 +144,12 @@ pub async fn execute_tool(state: &AppState, name: &str, args: Value) -> McpToolR
         "consensus_models_list" => consensus_models_list_mcp(state).await,
         "consensus_models_discovered" => consensus_models_discovered_mcp(state).await,
         "consensus_learning_summary" => consensus_learning_summary_mcp(state).await,
+
+        // Internet tools
+        "web_search" => web_search(state, args).await,
+        "web_fetch" => web_fetch(state, args).await,
+        "web_summarize" => web_summarize(state, args).await,
+        "web_research_list" => web_research_list(state, args).await,
 
         _ => McpToolResult::error(format!("Unknown tool: {}", name)),
     }
@@ -376,14 +395,271 @@ async fn curve_venues_health(state: &AppState) -> McpToolResult {
 
 // KOL tool implementations
 async fn kol_list(state: &AppState, args: Value) -> McpToolResult {
-    let limit = args.get("limit").and_then(|v| v.as_u64()).map(|l| l as usize);
-    let kols = state.kol_discovery.get_discovered_kols(limit).await;
-    McpToolResult::success(serde_json::to_string_pretty(&kols).unwrap_or_default())
+    let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(50);
+    let is_active = args.get("is_active").and_then(|v| v.as_bool());
+    let copy_enabled = args.get("copy_enabled").and_then(|v| v.as_bool());
+    let min_trust = args.get("min_trust_score").and_then(|v| v.as_f64());
+
+    match state.kol_repo.list_entities(is_active, copy_enabled, min_trust, limit, 0).await {
+        Ok(kols) => McpToolResult::success(serde_json::to_string_pretty(&kols).unwrap_or_default()),
+        Err(e) => McpToolResult::error(format!("Failed to list KOLs: {}", e)),
+    }
 }
 
-async fn kol_stats(state: &AppState, _args: Value) -> McpToolResult {
+async fn kol_stats(state: &AppState, args: Value) -> McpToolResult {
+    let kol_id = match args.get("kol_id").and_then(|v| v.as_str()) {
+        Some(id) => match uuid::Uuid::parse_str(id) {
+            Ok(uuid) => uuid,
+            Err(_) => return McpToolResult::error("Invalid kol_id format"),
+        },
+        None => return McpToolResult::error("kol_id is required"),
+    };
+
+    match state.kol_repo.get_entity_stats(kol_id).await {
+        Ok(Some(stats)) => McpToolResult::success(serde_json::to_string_pretty(&stats).unwrap_or_default()),
+        Ok(None) => McpToolResult::error("KOL not found"),
+        Err(e) => McpToolResult::error(format!("Failed to get KOL stats: {}", e)),
+    }
+}
+
+async fn kol_add(state: &AppState, args: Value) -> McpToolResult {
+    use crate::database::repositories::kol::CreateKolEntityRecord;
+    use crate::models::KolEntityType;
+
+    let wallet = args.get("wallet_address").and_then(|v| v.as_str()).map(String::from);
+    let twitter = args.get("twitter_handle").and_then(|v| v.as_str()).map(String::from);
+    let display_name = args.get("display_name").and_then(|v| v.as_str()).map(String::from);
+
+    let (entity_type, identifier, linked_wallet) = match (&wallet, &twitter) {
+        (Some(w), _) => (KolEntityType::Wallet, w.clone(), Some(w.clone())),
+        (None, Some(t)) => {
+            let handle = if t.starts_with('@') { t.clone() } else { format!("@{}", t) };
+            (KolEntityType::TwitterHandle, handle, None)
+        }
+        (None, None) => return McpToolResult::error("Either wallet_address or twitter_handle is required"),
+    };
+
+    let record = CreateKolEntityRecord {
+        entity_type,
+        identifier,
+        display_name,
+        linked_wallet,
+        discovery_source: Some("mcp_tool".to_string()),
+    };
+
+    match state.kol_repo.create_entity(record).await {
+        Ok(kol) => McpToolResult::success(serde_json::to_string_pretty(&kol).unwrap_or_default()),
+        Err(e) => McpToolResult::error(format!("Failed to add KOL: {}", e)),
+    }
+}
+
+async fn kol_get(state: &AppState, args: Value) -> McpToolResult {
+    let kol_id = match args.get("kol_id").and_then(|v| v.as_str()) {
+        Some(id) => match uuid::Uuid::parse_str(id) {
+            Ok(uuid) => uuid,
+            Err(_) => return McpToolResult::error("Invalid kol_id format"),
+        },
+        None => return McpToolResult::error("kol_id is required"),
+    };
+
+    match state.kol_repo.get_entity(kol_id).await {
+        Ok(Some(kol)) => McpToolResult::success(serde_json::to_string_pretty(&kol).unwrap_or_default()),
+        Ok(None) => McpToolResult::error("KOL not found"),
+        Err(e) => McpToolResult::error(format!("Failed to get KOL: {}", e)),
+    }
+}
+
+async fn kol_update(state: &AppState, args: Value) -> McpToolResult {
+    use crate::database::repositories::kol::UpdateKolEntityRecord;
+
+    let kol_id = match args.get("kol_id").and_then(|v| v.as_str()) {
+        Some(id) => match uuid::Uuid::parse_str(id) {
+            Ok(uuid) => uuid,
+            Err(_) => return McpToolResult::error("Invalid kol_id format"),
+        },
+        None => return McpToolResult::error("kol_id is required"),
+    };
+
+    let update = UpdateKolEntityRecord {
+        display_name: args.get("display_name").and_then(|v| v.as_str()).map(String::from),
+        linked_wallet: args.get("linked_wallet").and_then(|v| v.as_str()).map(String::from),
+        is_active: args.get("is_active").and_then(|v| v.as_bool()),
+        ..Default::default()
+    };
+
+    match state.kol_repo.update_entity(kol_id, update).await {
+        Ok(kol) => McpToolResult::success(serde_json::to_string_pretty(&kol).unwrap_or_default()),
+        Err(e) => McpToolResult::error(format!("Failed to update KOL: {}", e)),
+    }
+}
+
+async fn kol_delete(state: &AppState, args: Value) -> McpToolResult {
+    let kol_id = match args.get("kol_id").and_then(|v| v.as_str()) {
+        Some(id) => match uuid::Uuid::parse_str(id) {
+            Ok(uuid) => uuid,
+            Err(_) => return McpToolResult::error("Invalid kol_id format"),
+        },
+        None => return McpToolResult::error("kol_id is required"),
+    };
+
+    match state.kol_repo.delete_entity(kol_id).await {
+        Ok(_) => McpToolResult::success(r#"{"deleted": true}"#.to_string()),
+        Err(e) => McpToolResult::error(format!("Failed to delete KOL: {}", e)),
+    }
+}
+
+async fn kol_trades(state: &AppState, args: Value) -> McpToolResult {
+    let kol_id = match args.get("kol_id").and_then(|v| v.as_str()) {
+        Some(id) => match uuid::Uuid::parse_str(id) {
+            Ok(uuid) => uuid,
+            Err(_) => return McpToolResult::error("Invalid kol_id format"),
+        },
+        None => return McpToolResult::error("kol_id is required"),
+    };
+
+    let trade_type = args.get("trade_type").and_then(|v| v.as_str()).map(|t| {
+        match t.to_lowercase().as_str() {
+            "buy" => crate::models::KolTradeType::Buy,
+            "sell" => crate::models::KolTradeType::Sell,
+            _ => crate::models::KolTradeType::Buy,
+        }
+    });
+    let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(50);
+
+    match state.kol_repo.get_trades(kol_id, trade_type, limit, 0).await {
+        Ok(trades) => McpToolResult::success(serde_json::to_string_pretty(&trades).unwrap_or_default()),
+        Err(e) => McpToolResult::error(format!("Failed to get KOL trades: {}", e)),
+    }
+}
+
+async fn kol_enable_copy(state: &AppState, args: Value) -> McpToolResult {
+    use crate::database::repositories::kol::UpdateKolEntityRecord;
+    use crate::models::CopyTradeConfig;
+    use rust_decimal::Decimal;
+
+    let kol_id = match args.get("kol_id").and_then(|v| v.as_str()) {
+        Some(id) => match uuid::Uuid::parse_str(id) {
+            Ok(uuid) => uuid,
+            Err(_) => return McpToolResult::error("Invalid kol_id format"),
+        },
+        None => return McpToolResult::error("kol_id is required"),
+    };
+
+    let current = match state.kol_repo.get_entity(kol_id).await {
+        Ok(Some(r)) => r,
+        Ok(None) => return McpToolResult::error("KOL not found"),
+        Err(e) => return McpToolResult::error(format!("Database error: {}", e)),
+    };
+
+    let mut config = current.copy_config_parsed();
+    if let Some(max_pos) = args.get("max_position_sol").and_then(|v| v.as_f64()) {
+        config.max_position_sol = Decimal::from_f64_retain(max_pos).unwrap_or(config.max_position_sol);
+    }
+    if let Some(delay) = args.get("delay_ms").and_then(|v| v.as_u64()) {
+        config.delay_ms = delay;
+    }
+    if let Some(min_trust) = args.get("min_trust_score").and_then(|v| v.as_f64()) {
+        config.min_trust_score = Decimal::from_f64_retain(min_trust).unwrap_or(config.min_trust_score);
+    }
+    if let Some(pct) = args.get("copy_percentage").and_then(|v| v.as_f64()) {
+        config.copy_percentage = Decimal::from_f64_retain(pct).unwrap_or(config.copy_percentage);
+    }
+
+    let update = UpdateKolEntityRecord {
+        copy_trading_enabled: Some(true),
+        copy_config: Some(config),
+        ..Default::default()
+    };
+
+    match state.kol_repo.update_entity(kol_id, update).await {
+        Ok(kol) => McpToolResult::success(serde_json::to_string_pretty(&kol).unwrap_or_default()),
+        Err(e) => McpToolResult::error(format!("Failed to enable copy trading: {}", e)),
+    }
+}
+
+async fn kol_disable_copy(state: &AppState, args: Value) -> McpToolResult {
+    use crate::database::repositories::kol::UpdateKolEntityRecord;
+
+    let kol_id = match args.get("kol_id").and_then(|v| v.as_str()) {
+        Some(id) => match uuid::Uuid::parse_str(id) {
+            Ok(uuid) => uuid,
+            Err(_) => return McpToolResult::error("Invalid kol_id format"),
+        },
+        None => return McpToolResult::error("kol_id is required"),
+    };
+
+    let update = UpdateKolEntityRecord {
+        copy_trading_enabled: Some(false),
+        ..Default::default()
+    };
+
+    match state.kol_repo.update_entity(kol_id, update).await {
+        Ok(kol) => McpToolResult::success(serde_json::to_string_pretty(&kol).unwrap_or_default()),
+        Err(e) => McpToolResult::error(format!("Failed to disable copy trading: {}", e)),
+    }
+}
+
+async fn kol_copy_history(state: &AppState, args: Value) -> McpToolResult {
+    let kol_id = match args.get("kol_id").and_then(|v| v.as_str()) {
+        Some(id) => match uuid::Uuid::parse_str(id) {
+            Ok(uuid) => uuid,
+            Err(_) => return McpToolResult::error("Invalid kol_id format"),
+        },
+        None => return McpToolResult::error("kol_id is required"),
+    };
+
+    let status = args.get("status").and_then(|v| v.as_str()).map(|s| {
+        match s.to_lowercase().as_str() {
+            "pending" => crate::models::CopyTradeStatus::Pending,
+            "executing" => crate::models::CopyTradeStatus::Executing,
+            "executed" => crate::models::CopyTradeStatus::Executed,
+            "failed" => crate::models::CopyTradeStatus::Failed,
+            "skipped" => crate::models::CopyTradeStatus::Skipped,
+            _ => crate::models::CopyTradeStatus::Pending,
+        }
+    });
+    let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(50);
+
+    match state.kol_repo.get_copy_history(kol_id, status, limit, 0).await {
+        Ok(copies) => McpToolResult::success(serde_json::to_string_pretty(&copies).unwrap_or_default()),
+        Err(e) => McpToolResult::error(format!("Failed to get copy history: {}", e)),
+    }
+}
+
+async fn kol_copy_stats(state: &AppState) -> McpToolResult {
+    match state.kol_repo.get_copy_stats().await {
+        Ok(stats) => McpToolResult::success(serde_json::to_string_pretty(&stats).unwrap_or_default()),
+        Err(e) => McpToolResult::error(format!("Failed to get copy stats: {}", e)),
+    }
+}
+
+async fn kol_discovery_status(state: &AppState) -> McpToolResult {
     let stats = state.kol_discovery.get_stats().await;
     McpToolResult::success(serde_json::to_string_pretty(&stats).unwrap_or_default())
+}
+
+async fn kol_discovery_start(state: &AppState) -> McpToolResult {
+    state.kol_discovery.start().await;
+    McpToolResult::success(r#"{"status": "started", "message": "KOL discovery agent started"}"#.to_string())
+}
+
+async fn kol_discovery_stop(state: &AppState) -> McpToolResult {
+    state.kol_discovery.stop().await;
+    McpToolResult::success(r#"{"status": "stopped", "message": "KOL discovery agent stopped"}"#.to_string())
+}
+
+async fn kol_scan_now(state: &AppState) -> McpToolResult {
+    match state.kol_discovery.scan_once().await {
+        Ok(discovered) => {
+            let result = serde_json::json!({
+                "discovered": discovered,
+                "count": discovered.len(),
+                "message": format!("Discovered {} new KOLs", discovered.len())
+            });
+            McpToolResult::success(result.to_string())
+        }
+        Err(e) => McpToolResult::error(format!("Failed to scan for KOLs: {}", e)),
+    }
 }
 
 // Swarm tool implementations
@@ -1003,12 +1279,19 @@ async fn engram_apply_recommendation(state: &AppState, args: Value) -> McpToolRe
             } else if target.starts_with("risk.") {
                 let field = target.strip_prefix("risk.").unwrap_or(target);
                 if !dry_run {
+                    // ATOMIC: Acquire both locks together to prevent race conditions
+                    // Order: wallet_max first, then risk_config to maintain consistent lock ordering
                     let wallet_max = *state.wallet_max_position_sol.read().await;
                     let mut config = state.risk_config.write().await;
+                    // Re-read wallet_max inside the write lock to ensure consistency
+                    // (in case it changed between our read and acquiring the write lock)
+                    let current_wallet_max = *state.wallet_max_position_sol.read().await;
+                    let effective_wallet_max = wallet_max.min(current_wallet_max);
+
                     match field {
                         "max_position_sol" => {
                             if let Some(v) = new_value.as_f64() {
-                                let capped = v.min(wallet_max);
+                                let capped = v.min(effective_wallet_max);
                                 config.max_position_sol = capped;
                                 if capped < v {
                                     changes_made.push(format!("Set risk.max_position_sol to {} (capped from {} by wallet limit)", capped, v));
@@ -1398,7 +1681,14 @@ async fn engram_request_analysis(state: &AppState, args: Value) -> McpToolResult
                         created_at: chrono::Utc::now(),
                         applied_at: None,
                     };
-                    let _ = state.engrams_client.save_recommendation(&wallet, &recommendation).await;
+                    if let Err(e) = state.engrams_client.save_recommendation(&wallet, &recommendation).await {
+                        tracing::error!(
+                            "⚠️ FAILED to save recommendation engram for {}: {} - recommendation {} will be LOST",
+                            wallet, e, rec.title
+                        );
+                    } else {
+                        tracing::debug!("Saved recommendation engram: {}", rec.title);
+                    }
                 }
 
                 // Save the full consensus analysis as an engram
@@ -1763,4 +2053,294 @@ async fn consensus_learning_summary_mcp(state: &AppState) -> McpToolResult {
     });
 
     McpToolResult::success(serde_json::to_string_pretty(&result).unwrap_or_default())
+}
+
+// Internet tool implementations
+async fn web_search(state: &AppState, args: Value) -> McpToolResult {
+    use crate::research::SerperClient;
+
+    let query = match args.get("query").and_then(|v| v.as_str()) {
+        Some(q) => q,
+        None => return McpToolResult::error("Missing required parameter: query"),
+    };
+
+    let num_results = args.get("num_results").and_then(|v| v.as_u64()).unwrap_or(5) as u32;
+    let search_type = args.get("search_type").and_then(|v| v.as_str()).unwrap_or("search");
+    let time_range = args.get("time_range").and_then(|v| v.as_str());
+
+    let client = SerperClient::new(
+        state.config.serper_api_url.clone(),
+        state.config.serper_api_key.clone(),
+    );
+
+    if !client.is_configured() {
+        return McpToolResult::error(
+            "Serper API key not configured. Set SERPER_API_KEY environment variable.\n\
+            You can still use web_fetch to fetch content from URLs directly."
+        );
+    }
+
+    match client.search(query, num_results, search_type, time_range).await {
+        Ok(response) => {
+            let result = serde_json::json!({
+                "query": response.query,
+                "search_type": response.search_type,
+                "total_results": response.total_results,
+                "search_time_ms": response.search_time_ms,
+                "results": response.results.iter().map(|r| serde_json::json!({
+                    "title": r.title,
+                    "url": r.url,
+                    "snippet": r.snippet,
+                    "position": r.position
+                })).collect::<Vec<_>>()
+            });
+            McpToolResult::success(serde_json::to_string_pretty(&result).unwrap_or_default())
+        }
+        Err(e) => McpToolResult::error(e),
+    }
+}
+
+async fn web_fetch(state: &AppState, args: Value) -> McpToolResult {
+    use crate::research::{WebClient, ExtractMode};
+
+    let url = match args.get("url").and_then(|v| v.as_str()) {
+        Some(u) => u,
+        None => return McpToolResult::error("Missing required parameter: url"),
+    };
+
+    let extract_mode = match args.get("extract_mode").and_then(|v| v.as_str()).unwrap_or("article") {
+        "full" => ExtractMode::Full,
+        "summary" => ExtractMode::Summary,
+        _ => ExtractMode::Article,
+    };
+
+    let max_length = args.get("max_length").and_then(|v| v.as_u64()).unwrap_or(10000) as usize;
+
+    let client = WebClient::new();
+
+    match client.fetch(url, extract_mode, max_length).await {
+        Ok(result) => {
+            let response = serde_json::json!({
+                "id": result.id.to_string(),
+                "url": result.url,
+                "title": result.title,
+                "author": result.author,
+                "content_type": result.content_type,
+                "word_count": result.word_count,
+                "extracted_tokens": result.extracted_tokens,
+                "extracted_addresses": result.extracted_addresses,
+                "content": result.content,
+                "fetched_at": result.fetched_at.to_rfc3339()
+            });
+            McpToolResult::success(serde_json::to_string_pretty(&response).unwrap_or_default())
+        }
+        Err(e) => McpToolResult::error(e),
+    }
+}
+
+async fn web_summarize(state: &AppState, args: Value) -> McpToolResult {
+    use crate::engrams::schemas::{
+        WebResearchEngram, WebSourceType, AnalysisFocus, ExtractedStrategyInsight
+    };
+    use crate::research::WebContentType;
+    use chrono::Utc;
+    use uuid::Uuid;
+
+    let content = match args.get("content").and_then(|v| v.as_str()) {
+        Some(c) => c,
+        None => return McpToolResult::error("Missing required parameter: content"),
+    };
+
+    let url = match args.get("url").and_then(|v| v.as_str()) {
+        Some(u) => u,
+        None => return McpToolResult::error("Missing required parameter: url"),
+    };
+
+    let focus = args.get("focus").and_then(|v| v.as_str()).unwrap_or("general");
+    let save_as_engram = args.get("save_as_engram").and_then(|v| v.as_bool()).unwrap_or(true);
+
+    let analysis_focus = match focus {
+        "strategy" => AnalysisFocus::Strategy,
+        "alpha" => AnalysisFocus::Alpha,
+        "risk" => AnalysisFocus::Risk,
+        "token_analysis" => AnalysisFocus::TokenAnalysis,
+        _ => AnalysisFocus::General,
+    };
+
+    let web_content_type = WebContentType::from_url(url);
+    let source_type = match web_content_type {
+        WebContentType::Tweet => WebSourceType::Tweet,
+        WebContentType::Article => WebSourceType::Article,
+        WebContentType::Documentation => WebSourceType::Documentation,
+        WebContentType::News => WebSourceType::News,
+        WebContentType::Forum => WebSourceType::Forum,
+        WebContentType::Blog => WebSourceType::Article,
+        _ => WebSourceType::DirectUrl,
+    };
+
+    let prompt = format!(
+        r#"Analyze this web content with a focus on trading/crypto insights.
+
+URL: {}
+Content:
+{}
+
+Analysis Focus: {}
+
+Please provide:
+1. A concise summary (2-3 sentences)
+2. Key insights as a JSON array of strings
+3. Any trading strategies mentioned (as JSON array with fields: strategy_name, description, entry_criteria, exit_criteria, risk_notes, confidence)
+4. Mentioned tokens/tickers as a JSON array
+5. Confidence score (0.0-1.0) for the quality/reliability of this content
+
+Format your response as JSON:
+{{
+  "summary": "...",
+  "key_insights": ["insight1", "insight2"],
+  "extracted_strategies": [...],
+  "extracted_tokens": ["SOL", "BONK"],
+  "confidence": 0.75
+}}"#,
+        url,
+        &content[..content.len().min(6000)],
+        focus
+    );
+
+    let summary;
+    let key_insights;
+    let extracted_strategies;
+    let extracted_tokens;
+    let confidence;
+
+    if state.config.openrouter_api_key.is_some() {
+        match crate::consensus::quick_llm_call(&prompt).await {
+            Ok(response) => {
+                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&response) {
+                    summary = parsed.get("summary").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    key_insights = parsed.get("key_insights")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                        .unwrap_or_default();
+                    extracted_strategies = parsed.get("extracted_strategies")
+                        .and_then(|v| serde_json::from_value::<Vec<ExtractedStrategyInsight>>(v.clone()).ok())
+                        .unwrap_or_default();
+                    extracted_tokens = parsed.get("extracted_tokens")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                        .unwrap_or_default();
+                    confidence = parsed.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.5);
+                } else {
+                    summary = response[..response.len().min(500)].to_string();
+                    key_insights = vec![];
+                    extracted_strategies = vec![];
+                    extracted_tokens = vec![];
+                    confidence = 0.5;
+                }
+            }
+            Err(e) => {
+                summary = format!("LLM analysis failed: {}. Content excerpt: {}", e, &content[..content.len().min(300)]);
+                key_insights = vec![];
+                extracted_strategies = vec![];
+                extracted_tokens = vec![];
+                confidence = 0.3;
+            }
+        }
+    } else {
+        summary = content[..content.len().min(500)].to_string();
+        key_insights = vec!["LLM not configured - showing raw content excerpt".to_string()];
+        extracted_strategies = vec![];
+        extracted_tokens = vec![];
+        confidence = 0.3;
+    }
+
+    let research_id = Uuid::new_v4();
+    let now = Utc::now();
+
+    let research = WebResearchEngram {
+        research_id,
+        source_url: url.to_string(),
+        source_type: source_type.clone(),
+        title: None,
+        author: None,
+        content_summary: summary.clone(),
+        key_insights: key_insights.clone(),
+        extracted_strategies: extracted_strategies.clone(),
+        extracted_tokens: extracted_tokens.clone(),
+        analysis_focus: analysis_focus.clone(),
+        confidence,
+        fetched_at: now,
+        analyzed_at: now,
+    };
+
+    let mut engram_saved = false;
+    if save_as_engram && state.engrams_client.is_configured() {
+        let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+        if let Ok(_) = state.engrams_client.save_web_research(&wallet, &research).await {
+            engram_saved = true;
+        }
+    }
+
+    let result = serde_json::json!({
+        "research_id": research_id.to_string(),
+        "url": url,
+        "source_type": source_type,
+        "analysis_focus": analysis_focus,
+        "summary": summary,
+        "key_insights": key_insights,
+        "extracted_strategies": extracted_strategies,
+        "extracted_tokens": extracted_tokens,
+        "confidence": confidence,
+        "engram_saved": engram_saved,
+        "analyzed_at": now.to_rfc3339()
+    });
+
+    McpToolResult::success(serde_json::to_string_pretty(&result).unwrap_or_default())
+}
+
+async fn web_research_list(state: &AppState, args: Value) -> McpToolResult {
+    if !state.engrams_client.is_configured() {
+        return McpToolResult::error("Engrams service not configured");
+    }
+
+    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(20);
+    let focus_filter = args.get("focus").and_then(|v| v.as_str());
+
+    match state.engrams_client.get_web_research(&wallet, Some(limit)).await {
+        Ok(research_list) => {
+            let filtered: Vec<_> = if let Some(focus) = focus_filter {
+                research_list.into_iter().filter(|r| {
+                    let focus_str = serde_json::to_string(&r.analysis_focus)
+                        .unwrap_or_default()
+                        .trim_matches('"')
+                        .to_lowercase();
+                    focus_str == focus.to_lowercase()
+                }).collect()
+            } else {
+                research_list
+            };
+
+            let result = serde_json::json!({
+                "wallet": wallet,
+                "total_count": filtered.len(),
+                "research": filtered.iter().map(|r| serde_json::json!({
+                    "research_id": r.research_id.to_string(),
+                    "source_url": r.source_url,
+                    "source_type": r.source_type,
+                    "title": r.title,
+                    "summary": r.content_summary,
+                    "analysis_focus": r.analysis_focus,
+                    "confidence": r.confidence,
+                    "insights_count": r.key_insights.len(),
+                    "strategies_count": r.extracted_strategies.len(),
+                    "tokens": r.extracted_tokens,
+                    "analyzed_at": r.analyzed_at.to_rfc3339()
+                })).collect::<Vec<_>>()
+            });
+
+            McpToolResult::success(serde_json::to_string_pretty(&result).unwrap_or_default())
+        }
+        Err(e) => McpToolResult::error(format!("Failed to list web research: {}", e)),
+    }
 }

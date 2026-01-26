@@ -211,7 +211,6 @@ impl From<EventRow> for ArbEvent {
                 let agent_type = match row.source_id.as_str() {
                     "scanner" => super::AgentType::Scanner,
                     "refiner" => super::AgentType::Refiner,
-                    "mev_hunter" => super::AgentType::MevHunter,
                     "executor" => super::AgentType::Executor,
                     "strategy_engine" => super::AgentType::StrategyEngine,
                     "research_dd" => super::AgentType::ResearchDd,

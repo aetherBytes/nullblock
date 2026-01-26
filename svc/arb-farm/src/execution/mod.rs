@@ -1,5 +1,6 @@
 pub mod approval_manager;
 pub mod capital_manager;
+pub mod copy_executor;
 pub mod curve_builder;
 pub mod jito;
 pub mod simulation;
@@ -14,6 +15,7 @@ pub mod realtime_monitor;
 
 pub use approval_manager::ApprovalManager;
 pub use capital_manager::{CapitalManager, CapitalError, CapitalReservation, StrategyAllocation, StrategyUsage, GlobalCapitalUsage};
+pub use copy_executor::{CopyTradeExecutor, CopyExecutorConfig, CopyTradeResult};
 pub use curve_builder::{CurveTransactionBuilder, CurveBuildResult, CurveBuyParams, CurveSellParams, SimulatedTrade, PostGraduationSellResult};
 pub use jito::{JitoClient, BundleSubmission, BundleStatus};
 pub use simulation::{SimulationResult, TransactionSimulator};

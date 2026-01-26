@@ -261,6 +261,42 @@ impl ExitConfig {
         }
     }
 
+    /// Exit config for graduation sniper - 50% TP baseline with momentum extension
+    /// SNIPER STRATEGY (conservative baseline, momentum can extend):
+    /// - Phase 1: At 50% gain - sell 50% to recover capital (conservative)
+    /// - Phase 2: At 100% (2x) - sell 25% more if momentum holds
+    /// - Phase 3: At 150% - extended target for strong momentum only
+    /// - Stop loss at 40% to handle curve volatility
+    /// - Trailing stop activates after first partial
+    /// - Strong momentum can ride to higher targets, weak momentum exits at 50%
+    pub fn for_graduation_sniper() -> Self {
+        Self {
+            base_currency: BaseCurrency::Sol,
+            exit_mode: ExitMode::Default,
+            stop_loss_percent: Some(40.0),      // -40% stop loss (allow curve volatility)
+            take_profit_percent: Some(50.0),    // +50% base TP (conservative default)
+            trailing_stop_percent: Some(20.0),  // 20% trailing stop for moon bag
+            time_limit_minutes: Some(15),       // 15 min - let winners run
+            partial_take_profit: Some(PartialTakeProfit {
+                first_target_percent: 50.0,     // 50% - sell 50% to recover capital faster
+                first_exit_percent: 50.0,
+                second_target_percent: 100.0,   // 2x - sell 25% more if momentum holds
+                second_exit_percent: 25.0,
+            }),
+            custom_exit_instructions: None,
+            momentum_adaptive: Some(MomentumAdaptiveConfig::default()),
+            adaptive_partial_tp: Some(AdaptivePartialTakeProfit {
+                first_target_percent: 50.0,     // 50% first target (conservative)
+                first_exit_percent: 50.0,       // Sell 50% to lock in gains
+                second_target_percent: 100.0,   // 2x second target (if momentum holds)
+                second_exit_percent: 25.0,      // Sell 25% more
+                third_target_percent: 150.0,    // Extended target for strong momentum
+                third_exit_percent: 100.0,      // Exit remaining on extended target
+                enable_extended_targets: true,  // Strong momentum can ride higher
+            }),
+        }
+    }
+
     /// Exit config optimized for bonding curve (pump.fun/moonshot) trading
     /// TIERED EXIT STRATEGY (2026 best practices):
     /// - Phase 1: At 2x (100% gain) - sell 50% to recover initial capital
@@ -351,6 +387,34 @@ impl ExitConfig {
             } else {
                 None
             },
+        }
+    }
+
+    /// DEFENSIVE STRATEGY - 15% TP unless momentum is strong
+    /// - Take profits at 15% (covers fees + profit)
+    /// - If momentum is Strong: let it run until decay
+    /// - Exit ASAP on any momentum slowdown
+    /// - Tight 10% stop loss to protect capital
+    pub fn for_defensive() -> Self {
+        Self {
+            base_currency: BaseCurrency::Sol,
+            exit_mode: ExitMode::Default,
+            stop_loss_percent: Some(10.0),      // -10% tight stop loss
+            take_profit_percent: Some(15.0),    // +15% base TP (after fees = ~11% profit)
+            trailing_stop_percent: Some(8.0),   // 8% trailing stop (tight protection)
+            time_limit_minutes: Some(5),        // 5 min max hold
+            partial_take_profit: None,          // No partial - full exit strategy
+            custom_exit_instructions: Some("DEFENSIVE: 15% TP, strong momentum can run".to_string()),
+            momentum_adaptive: Some(MomentumAdaptiveConfig::defensive()),
+            adaptive_partial_tp: Some(AdaptivePartialTakeProfit {
+                first_target_percent: 15.0,     // 15% - base target
+                first_exit_percent: 100.0,      // Exit 100% at base (unless strong)
+                second_target_percent: 30.0,    // Strong momentum: ride to 30%
+                second_exit_percent: 100.0,     // Then exit all
+                third_target_percent: 50.0,     // Extended for very strong momentum
+                third_exit_percent: 100.0,      // Exit remaining
+                enable_extended_targets: true,  // Let strong momentum run!
+            }),
         }
     }
 }
@@ -672,6 +736,12 @@ pub struct OpenPosition {
     pub venue: Option<String>,
     #[serde(default)]
     pub signal_source: Option<String>,
+    #[serde(default = "default_auto_exit_enabled")]
+    pub auto_exit_enabled: bool,
+}
+
+fn default_auto_exit_enabled() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -767,6 +837,36 @@ impl Default for MomentumAdaptiveConfig {
             reversal_confirmation_count: 4,      // Was 2 - require more confirmations before reversal exit
             reversal_immediate_exit: true,
             min_profit_for_momentum_exit: 5.0,   // Was 3.0 - only apply momentum exits above break-even
+        }
+    }
+}
+
+impl MomentumAdaptiveConfig {
+    /// Defensive config: quick to detect decay, let strong momentum run
+    /// - Lower thresholds for weak/reversing detection (exit faster)
+    /// - Strong momentum still extends targets (let winners run)
+    /// - Minimal profit threshold (exit profitable positions ASAP on decay)
+    pub fn defensive() -> Self {
+        Self {
+            strong_velocity_threshold: 1.5,       // Slightly easier to qualify as strong
+            weak_velocity_threshold: 0.5,         // Higher threshold = more sensitive to slowdown
+            reversal_velocity_threshold: -0.2,    // Detect reversal earlier
+
+            strong_momentum_score: 25.0,          // Easier to qualify as strong
+            weak_momentum_score: 10.0,            // Higher = classify more as weak (trigger exit)
+            reversal_momentum_score: -15.0,       // Detect reversal earlier
+
+            strong_exit_multiplier: 0.3,          // Strong momentum: sell even less (let it run!)
+            normal_exit_multiplier: 1.0,
+            weak_exit_multiplier: 2.0,            // Weak: exit aggressively
+            reversing_exit_multiplier: 2.0,       // Reversing: full exit immediately
+
+            strong_target_extension_percent: 100.0, // Strong: extend target significantly (let winners run)
+            weak_target_reduction_percent: 50.0,    // Weak: reduce target aggressively (exit sooner)
+
+            reversal_confirmation_count: 2,       // Fewer confirmations needed (exit faster)
+            reversal_immediate_exit: true,
+            min_profit_for_momentum_exit: 3.0,    // Lower threshold (exit at smaller profits on decay)
         }
     }
 }
@@ -1104,6 +1204,7 @@ impl PositionManager {
             remaining_token_amount: entry_token_amount,
             venue,
             signal_source,
+            auto_exit_enabled: true,
         };
 
         // Persist to database FIRST before updating in-memory state
@@ -1235,6 +1336,16 @@ impl PositionManager {
         let position = positions.get_mut(&position_id)?;
 
         if position.status != PositionStatus::Open {
+            return None;
+        }
+
+        // Skip automatic exit checks for positions with auto_exit disabled (manual mode)
+        if !position.auto_exit_enabled {
+            debug!(
+                position_id = %position_id,
+                mint = %position.token_mint[..8.min(position.token_mint.len())],
+                "Skipping auto-exit check (manual mode enabled)"
+            );
             return None;
         }
 
@@ -1844,6 +1955,46 @@ impl PositionManager {
         Ok(position.clone())
     }
 
+    pub async fn update_position_auto_exit(
+        &self,
+        position_id: Uuid,
+        enabled: bool,
+    ) -> AppResult<OpenPosition> {
+        let mut positions = self.positions.write().await;
+        let position = positions
+            .get_mut(&position_id)
+            .ok_or_else(|| AppError::NotFound(format!("Position {} not found", position_id)))?;
+
+        let old_enabled = position.auto_exit_enabled;
+        position.auto_exit_enabled = enabled;
+
+        // Persist to database
+        if let Some(repo) = &self.position_repo {
+            if let Err(e) = repo.update_auto_exit_enabled(position_id, enabled).await {
+                tracing::warn!(
+                    position_id = %position_id,
+                    error = %e,
+                    "Failed to persist auto_exit_enabled to database"
+                );
+                // Rollback in-memory change
+                position.auto_exit_enabled = old_enabled;
+                return Err(AppError::Database(format!("Failed to update auto_exit: {}", e)));
+            }
+        }
+
+        let mode = if enabled { "AUTO" } else { "MANUAL" };
+        tracing::info!(
+            position_id = %position_id,
+            mint = %position.token_mint[..8.min(position.token_mint.len())],
+            old = old_enabled,
+            new = enabled,
+            "🔧 Position exit mode changed to {}",
+            mode
+        );
+
+        Ok(position.clone())
+    }
+
     pub async fn close_position(
         &self,
         position_id: Uuid,
@@ -1851,6 +2002,7 @@ impl PositionManager {
         realized_pnl: f64,
         exit_reason: &str,
         tx_signature: Option<String>,
+        momentum_at_exit: Option<f64>,
     ) -> AppResult<OpenPosition> {
         // CRITICAL: Use CAS to prevent double-close race condition
         // Only one caller can transition from Open/PendingExit/PartiallyExited to Closed
@@ -1880,6 +2032,7 @@ impl PositionManager {
                     realized_pnl,
                     exit_reason,
                     tx_signature.as_deref(),
+                    momentum_at_exit,
                 )
                 .await
             {

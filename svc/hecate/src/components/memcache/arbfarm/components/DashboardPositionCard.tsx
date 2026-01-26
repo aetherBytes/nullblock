@@ -9,14 +9,14 @@ interface TokenMetadata {
   image?: string;
 }
 
-// Simple cache for token metadata to avoid repeated fetches
 const metadataCache = new Map<string, TokenMetadata>();
 
 interface DashboardPositionCardProps {
   position: OpenPosition;
-  onQuickSell: (positionId: string, percent: number) => void;
+  onQuickSell: (positionId: string, percent: number) => Promise<boolean>;
   onViewDetails: (position: OpenPosition) => void;
   onViewMetrics?: (mint: string, venue: string, symbol: string) => void;
+  isSelling?: boolean;
 }
 
 const DashboardPositionCard: React.FC<DashboardPositionCardProps> = ({
@@ -24,20 +24,22 @@ const DashboardPositionCard: React.FC<DashboardPositionCardProps> = ({
   onQuickSell,
   onViewDetails,
   onViewMetrics,
+  isSelling = false,
 }) => {
   const [metadata, setMetadata] = useState<TokenMetadata | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [localSelling, setLocalSelling] = useState<number | null>(null);
+  const [autoExitEnabled, setAutoExitEnabled] = useState(position.auto_exit_enabled ?? true);
+  const [togglingAutoExit, setTogglingAutoExit] = useState(false);
 
   useEffect(() => {
     const fetchMetadata = async () => {
       if (!position.token_mint) return;
-
-      // Check cache first
       const cached = metadataCache.get(position.token_mint);
       if (cached) {
         setMetadata(cached);
         return;
       }
-
       try {
         const res = await arbFarmService.lookupTokenMetadata(position.token_mint);
         if (res.success && res.data) {
@@ -50,43 +52,46 @@ const DashboardPositionCard: React.FC<DashboardPositionCardProps> = ({
           setMetadata(meta);
         }
       } catch (e) {
-        // Silently fail - we'll just show the mint address
+        // Silently fail
       }
     };
-
     fetchMetadata();
   }, [position.token_mint]);
 
   const formatSol = (sol: number | undefined | null): string => {
     const value = sol ?? 0;
     if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+    if (value >= 1) return value.toFixed(3);
     return value.toFixed(4);
   };
 
-  const getPnlBadge = (): { label: string; class: string } => {
-    const pnl = position.unrealized_pnl_percent ?? 0;
-    if (pnl >= 100) return { label: `+${pnl.toFixed(0)}%`, class: styles.recBuy };
-    if (pnl >= 20) return { label: `+${pnl.toFixed(0)}%`, class: styles.recBuy };
-    if (pnl >= 0) return { label: `+${pnl.toFixed(1)}%`, class: styles.recHold };
-    if (pnl >= -20) return { label: `${pnl.toFixed(1)}%`, class: styles.recSell };
-    return { label: `${pnl.toFixed(0)}%`, class: styles.recSell };
-  };
-
-  const getVenueIcon = (venue: string): string => {
-    if (venue === 'pump_fun') return '🎰';
-    if (venue === 'moonshot') return '🌙';
-    return '📈';
-  };
-
   const isSnipe = position.signal_source === 'graduation_sniper';
+  const isScanner = position.strategy_id && position.strategy_id !== '00000000-0000-0000-0000-000000000000' && !isSnipe;
 
-  const getStatusClass = (status: string): string => {
+  const getStrategyTag = (): { label: string; className: string } => {
+    if (isSnipe) return { label: 'SNIPE', className: styles.logTagSnipe };
+    if (isScanner) return { label: 'SCAN', className: styles.logTagScan };
+    return { label: 'DISC', className: styles.logTagDisc };
+  };
+
+  const getStatusIndicator = (status: string): { symbol: string; className: string } => {
     switch (status) {
-      case 'open': return styles.momentumHigh;
-      case 'pending_exit': return styles.momentumMedium;
-      case 'closed': return styles.momentumLow;
-      default: return '';
+      case 'open':
+        return { symbol: '●', className: styles.logStatusOpen };
+      case 'pending_exit':
+        return { symbol: '◐', className: styles.logStatusPending };
+      case 'closed':
+        return { symbol: '○', className: styles.logStatusClosed };
+      default:
+        return { symbol: '?', className: styles.logStatusUnknown };
     }
+  };
+
+  const getVenueTag = (venue: string): string => {
+    if (venue === 'pump_fun') return 'pump';
+    if (venue === 'moonshot') return 'moon';
+    if (venue === 'raydium') return 'ray';
+    return venue?.slice(0, 4) || '???';
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
@@ -97,143 +102,241 @@ const DashboardPositionCard: React.FC<DashboardPositionCardProps> = ({
     onViewDetails(position);
   };
 
-  const pnlBadge = getPnlBadge();
+  const handleToggleAutoExit = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!position.id || togglingAutoExit) return;
+    setTogglingAutoExit(true);
+    try {
+      const newEnabled = !autoExitEnabled;
+      const res = await arbFarmService.togglePositionAutoExit(position.id, newEnabled);
+      if (res.success && res.data) {
+        setAutoExitEnabled(res.data.auto_exit_enabled);
+      }
+    } catch (error) {
+      console.error('Failed to toggle auto-exit:', error);
+    } finally {
+      setTogglingAutoExit(false);
+    }
+  };
+
   const openedTime = position.opened_at ?? position.entry_time ?? new Date().toISOString();
-  const holdTime = Math.floor((Date.now() - new Date(openedTime).getTime()) / 60000);
+  const holdTimeMins = Math.floor((Date.now() - new Date(openedTime).getTime()) / 60000);
   const entryAmount = position.entry_amount_sol ?? position.entry_amount_base ?? 0;
   const entryPrice = position.entry_price ?? 1;
   const currentValue = position.current_value_base ?? (position.current_price
     ? (entryAmount / entryPrice) * position.current_price
     : entryAmount);
+  const pnlPercent = position.unrealized_pnl_percent ?? 0;
+  const pnlSol = currentValue - entryAmount;
+
+  const formatTimestamp = (iso: string): string => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  };
+
+  const formatHoldTime = (mins: number): string => {
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}h${m > 0 ? m + 'm' : ''}`;
+  };
+
+  const formatPrice = (price: number | undefined | null): string => {
+    const p = price ?? 0;
+    if (p === 0) return '???';
+    if (p >= 1) return p.toFixed(4);
+    if (p >= 0.0001) return p.toFixed(6);
+    if (p >= 0.00000001) return p.toExponential(2);
+    return p.toExponential(2);
+  };
+
+  const getSourceReason = (): string => {
+    if (isSnipe) return 'Graduation detected at ~85% progress';
+    if (isScanner) return 'Scanner signal: momentum + volume spike';
+    return 'Discovered in wallet reconciliation';
+  };
+
+  const strategyTag = getStrategyTag();
+  const statusIndicator = getStatusIndicator(position.status ?? 'unknown');
+  const symbol = metadata?.symbol || position.token_symbol || (position.token_mint ?? '').slice(0, 6) || 'UNKN';
+  const exitConfig = position.exit_config;
+  const currentPrice = position.current_price ?? entryPrice;
 
   return (
     <div
-      className={`${styles.dashboardPositionCard} ${styles.clickable}`}
+      className={`${styles.logPositionCard} ${isHovered ? styles.logCardHovered : ''}`}
       onClick={handleCardClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <div className={styles.candidateHeader}>
-        <div className={styles.candidateToken}>
-          {metadata?.image ? (
-            <img
-              src={metadata.image}
-              alt={metadata.symbol}
-              className={styles.tokenImage}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-                (e.target as HTMLImageElement).nextElementSibling?.classList.remove(styles.hidden);
-              }}
-            />
-          ) : null}
-          <span className={`${styles.venueIcon} ${metadata?.image ? styles.hidden : ''}`}>
-            {getVenueIcon(position.venue ?? 'unknown')}
+      {/* Log Header Line */}
+      <div className={styles.logHeader}>
+        <span className={styles.logTimestamp}>{formatTimestamp(openedTime)}</span>
+        <span className={`${styles.logTag} ${strategyTag.className}`}>{strategyTag.label}</span>
+        <span className={`${styles.logStatus} ${statusIndicator.className}`}>{statusIndicator.symbol}</span>
+        <span className={styles.logSymbol}>${symbol}</span>
+        <span className={`${styles.logPnl} ${pnlPercent >= 0 ? styles.logPnlPositive : styles.logPnlNegative}`}>
+          {pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%
+        </span>
+        <button
+          className={`${styles.autoExitToggle} ${autoExitEnabled ? styles.autoExitOn : styles.autoExitOff}`}
+          onClick={handleToggleAutoExit}
+          disabled={togglingAutoExit}
+          title={autoExitEnabled ? 'Auto-exit enabled - click to switch to manual' : 'Manual mode - click to enable auto-exit'}
+        >
+          {togglingAutoExit ? '...' : autoExitEnabled ? 'AUTO' : 'MANUAL'}
+        </button>
+      </div>
+
+      {/* Log Body - Stats Line */}
+      <div className={styles.logBody}>
+        <div className={styles.logStats}>
+          <span className={styles.logStat}>
+            <span className={styles.logStatLabel}>in:</span>
+            <span className={styles.logStatValue}>{formatSol(entryAmount)} SOL</span>
           </span>
-          <div className={styles.tokenInfo}>
-            <span className={styles.tokenSymbol}>
-              {isSnipe && '🔫 '}${metadata?.symbol || position.token_symbol || (position.token_mint ?? '').slice(0, 6) || 'UNKN'}
-              <span className={`${styles.recBadge} ${pnlBadge.class}`}>
-                {pnlBadge.label}
+          <span className={styles.logStatSep}>→</span>
+          <span className={styles.logStat}>
+            <span className={styles.logStatLabel}>now:</span>
+            <span className={`${styles.logStatValue} ${pnlSol >= 0 ? styles.logValueUp : styles.logValueDown}`}>
+              {formatSol(currentValue)} SOL
+            </span>
+          </span>
+          <span className={styles.logStatDivider}>│</span>
+          <span className={styles.logStat}>
+            <span className={styles.logStatLabel}>hold:</span>
+            <span className={styles.logStatValue}>{formatHoldTime(holdTimeMins)}</span>
+          </span>
+          <span className={styles.logStatDivider}>│</span>
+          <span className={styles.logStat}>
+            <span className={styles.logStatLabel}>venue:</span>
+            <span className={styles.logStatValue}>{getVenueTag(position.venue ?? 'unknown')}</span>
+          </span>
+          <span className={styles.logStatDivider}>│</span>
+          <span className={styles.logStat}>
+            <span className={styles.logStatLabel}>mom:</span>
+            <span className={`${styles.logStatValue} ${(position.momentum?.momentum_score ?? 0) >= 0 ? styles.logValueUp : styles.logValueDown}`}>
+              {(position.momentum?.momentum_score ?? 0).toFixed(0)}
+              {(position.momentum?.momentum_score ?? 0) >= 30 ? '🚀' : (position.momentum?.momentum_score ?? 0) >= 0 ? '📈' : (position.momentum?.momentum_score ?? 0) >= -30 ? '📉' : '💀'}
+            </span>
+          </span>
+        </div>
+        <div className={styles.logStats} style={{ marginTop: '0.25rem' }}>
+          <span className={styles.logStat}>
+            <span className={styles.logStatLabel}>entry@</span>
+            <span className={styles.logStatValue}>{formatPrice(entryPrice)}</span>
+          </span>
+          <span className={styles.logStatSep}>→</span>
+          <span className={styles.logStat}>
+            <span className={styles.logStatLabel}>now@</span>
+            <span className={`${styles.logStatValue} ${currentPrice >= entryPrice ? styles.logValueUp : styles.logValueDown}`}>
+              {formatPrice(currentPrice)}
+            </span>
+          </span>
+          {position.high_water_mark && position.high_water_mark > currentPrice && (
+            <>
+              <span className={styles.logStatDivider}>│</span>
+              <span className={styles.logStat}>
+                <span className={styles.logStatLabel}>high:</span>
+                <span className={styles.logStatValue}>{formatPrice(position.high_water_mark)}</span>
               </span>
-            </span>
-            <span className={styles.tokenName}>
-              {metadata?.name || (position.venue ?? 'unknown').replace('_', '.')} • {holdTime < 60 ? `${holdTime}m` : `${Math.floor(holdTime / 60)}h ${holdTime % 60}m`}
-            </span>
-          </div>
-        </div>
-        <div className={styles.candidateScores}>
-          <span className={`${styles.scoreBadge} ${getStatusClass(position.status ?? 'unknown')}`}>
-            {position.status === 'open' ? 'OPEN' : (position.status ?? 'UNKNOWN').toUpperCase()}
-          </span>
-        </div>
-      </div>
-
-      <div className={styles.candidateMetrics}>
-        <div className={styles.candidateMetric}>
-          <span className={styles.metricLabel}>Entry</span>
-          <span className={styles.metricValue}>{formatSol(entryAmount)} SOL</span>
-        </div>
-        <div className={styles.candidateMetric}>
-          <span className={styles.metricLabel}>Current</span>
-          <span className={styles.metricValue}>{formatSol(currentValue)} SOL</span>
-        </div>
-        <div className={styles.candidateMetric}>
-          <span className={styles.metricLabel}>P&L</span>
-          <span className={`${styles.metricValue} ${(position.unrealized_pnl ?? 0) >= 0 ? styles.positive : styles.negative}`}>
-            {formatSol(position.unrealized_pnl ?? 0)} SOL
-          </span>
-        </div>
-        <div className={styles.candidateMetric}>
-          <span className={styles.metricLabel}>Entry Price</span>
-          <span className={styles.metricValue}>{entryPrice.toFixed(6)}</span>
-        </div>
-      </div>
-
-
-      <div className={styles.candidateActions}>
-        <div className={styles.actionButtonsRow}>
-          <button
-            className={styles.trackButton}
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewDetails(position);
-            }}
-          >
-            Details
-          </button>
-          {onViewMetrics && position.token_mint && (
-            <button
-              className={styles.metricsButton}
-              onClick={(e) => {
-                e.stopPropagation();
-                const symbol = metadata?.symbol || position.token_symbol || position.token_mint!.slice(0, 6);
-                const venue = position.venue || 'pump_fun';
-                onViewMetrics(position.token_mint!, venue, symbol);
-              }}
-            >
-              Metrics
-            </button>
+            </>
           )}
         </div>
-        {position.status === 'open' && position.id && (
-          <div className={styles.quickBuyButtons}>
-            <button
-              className={`${styles.quickBuyButton} ${styles.sellButton}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuickSell(position.id, 25);
-              }}
-            >
-              Sell 25%
-            </button>
-            <button
-              className={`${styles.quickBuyButton} ${styles.sellButton}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuickSell(position.id, 50);
-              }}
-            >
-              Sell 50%
-            </button>
-            <button
-              className={`${styles.quickBuyButton} ${styles.sellButtonAll}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuickSell(position.id, 100);
-              }}
-            >
-              Sell All
-            </button>
-          </div>
-        )}
+        <div className={styles.logReason}>
+          {getSourceReason()}
+        </div>
       </div>
 
-      <div className={styles.candidateFooter}>
-        <span className={styles.mintAddress} title={position.token_mint ?? ''}>
-          {(position.token_mint ?? '').slice(0, 8) || '???'}...{(position.token_mint ?? '').slice(-6) || '???'}
+      {/* Log Config Line */}
+      <div className={styles.logConfig}>
+        <span className={styles.logConfigItem}>
+          <span className={styles.logConfigLabel}>TP</span>
+          <span className={styles.logConfigValue}>{exitConfig?.take_profit_percent ?? '?'}%</span>
         </span>
-        <span className={styles.candidateVenue}>
-          {new Date(openedTime).toLocaleTimeString()}
+        <span className={styles.logConfigItem}>
+          <span className={styles.logConfigLabel}>SL</span>
+          <span className={styles.logConfigValue}>{exitConfig?.stop_loss_percent ?? '?'}%</span>
+        </span>
+        <span className={styles.logConfigItem}>
+          <span className={styles.logConfigLabel}>TTL</span>
+          <span className={styles.logConfigValue}>{exitConfig?.time_limit_minutes ?? '?'}m</span>
+        </span>
+        {exitConfig?.trailing_stop_percent && exitConfig.trailing_stop_percent > 0 && (
+          <span className={styles.logConfigItem}>
+            <span className={styles.logConfigLabel}>TS</span>
+            <span className={styles.logConfigValue}>{exitConfig.trailing_stop_percent}%</span>
+          </span>
+        )}
+        <span className={styles.logMint} title={position.token_mint ?? ''}>
+          {(position.token_mint ?? '').slice(0, 6)}...{(position.token_mint ?? '').slice(-4)}
         </span>
       </div>
+
+      {/* Log Actions - Show on hover or always for open positions */}
+      {position.status === 'open' && position.id && (
+        <div className={styles.logActions}>
+          {(isSelling || localSelling !== null) ? (
+            <span className={styles.logSelling}>
+              <span className={styles.logSpinner}>◠</span>
+              Selling {localSelling ?? ''}%...
+            </span>
+          ) : (
+            <>
+              <button
+                className={styles.logActionBtn}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setLocalSelling(25);
+                  const success = await onQuickSell(position.id, 25);
+                  if (!success) setLocalSelling(null);
+                }}
+              >
+                25%
+              </button>
+              <button
+                className={styles.logActionBtn}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setLocalSelling(50);
+                  const success = await onQuickSell(position.id, 50);
+                  if (!success) setLocalSelling(null);
+                }}
+              >
+                50%
+              </button>
+              <button
+                className={`${styles.logActionBtn} ${styles.logActionDanger}`}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setLocalSelling(100);
+                  const success = await onQuickSell(position.id, 100);
+                  if (!success) setLocalSelling(null);
+                }}
+              >
+                SELL
+              </button>
+              <button
+                className={styles.logActionBtnSecondary}
+                onClick={(e) => { e.stopPropagation(); onViewDetails(position); }}
+              >
+                ···
+              </button>
+              {onViewMetrics && position.token_mint && (
+                <button
+                  className={styles.logActionBtnSecondary}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewMetrics(position.token_mint!, position.venue || 'pump_fun', symbol);
+                  }}
+                >
+                  📊
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -294,6 +294,34 @@ wipe-db:
     @echo ""
     @echo "💡 Run 'just start' to create fresh databases with migrations"
 
+# Clear ArbFarm strategy engrams (keeps trade history)
+arb-clear-strategies:
+    @echo "🗑️  Clearing ArbFarm strategy engrams..."
+    @docker exec nullblock-postgres-agents psql -U postgres -d agents -c "DELETE FROM engrams WHERE engram_type = 'strategy';" || echo "⚠️  Could not clear engrams (is postgres running?)"
+    @docker exec nullblock-postgres-agents psql -U postgres -d agents -c "UPDATE arb_strategies SET is_active = false;" || echo "⚠️  Could not deactivate strategies"
+    @echo "✅ Strategy engrams cleared, arb_strategies deactivated"
+    @echo "💡 ArbFarm will start fresh without auto-buying from saved strategies"
+
+# Clear all ArbFarm data (strategies, positions, trades - DANGEROUS)
+arb-wipe-all:
+    @echo "⚠️  WARNING: This will DELETE ALL ARBFARM DATA!"
+    @echo "⚠️  Including: strategies, positions, trades, edges, consensus"
+    @echo ""
+    @docker exec nullblock-postgres-agents psql -U postgres -d agents -c "DELETE FROM engrams WHERE engram_type = 'strategy';"
+    @docker exec nullblock-postgres-agents psql -U postgres -d agents -c "TRUNCATE arb_strategies, arb_positions, arb_trades, arb_edges, arb_consensus CASCADE;"
+    @echo "✅ All ArbFarm data wiped"
+
+# Show ArbFarm strategy status
+arb-strategy-status:
+    @echo "📊 ArbFarm Strategy Status"
+    @echo "========================="
+    @echo ""
+    @echo "Strategy Engrams:"
+    @docker exec nullblock-postgres-agents psql -U postgres -d agents -c "SELECT engram_type, COUNT(*) FROM engrams WHERE engram_type = 'strategy' GROUP BY engram_type;" || echo "  (database not running)"
+    @echo ""
+    @echo "Active Strategies:"
+    @docker exec nullblock-postgres-agents psql -U postgres -d agents -c "SELECT name, is_active FROM arb_strategies ORDER BY is_active DESC;" || echo "  (database not running)"
+
 # Setup development environment
 dev-setup:
     @echo "⚙️ Setting up development environment..."
@@ -364,12 +392,34 @@ dev-tmux:
     ./scripts/dev-tmux
 
 # Launch development environment with tmuxinator (macOS)
-# Usage: just dev-mac [no-scan]
+# Usage: just dev-mac [mode]
 #   no-scan: Start with scanner disabled (positions still sell, no new buys)
+#   no-snipe: Start with graduation sniper disabled (no post-grad quick-flip buys)
+#   clean-strat: Flush stale strategy engrams before starting (prevents unwanted auto-buys)
+#   Can combine: just dev-mac "no-scan no-snipe clean-strat"
 dev-mac mode="":
-    @if [ "{{mode}}" = "no-scan" ]; then \
+    @if echo "{{mode}}" | grep -q "no-scan"; then \
         echo "🚫 No-scan mode: scanner will not auto-start"; \
         touch /tmp/arb-no-scan; \
+    else \
+        rm -f /tmp/arb-no-scan; \
+    fi
+    @if echo "{{mode}}" | grep -q "no-snipe"; then \
+        echo "🚫 No-snipe mode: graduation sniper will not auto-start"; \
+        touch /tmp/arb-no-snipe; \
+    else \
+        rm -f /tmp/arb-no-snipe; \
+    fi
+    @if echo "{{mode}}" | grep -q "clean-strat"; then \
+        echo "🗑️  Flushing stale ArbFarm strategies..."; \
+        docker exec nullblock-postgres-agents psql -U postgres -d agents -c "DELETE FROM engrams WHERE engram_type = 'strategy';" 2>/dev/null || echo "  (starting infrastructure first...)"; \
+        if [ $$? -ne 0 ]; then \
+            just start-mac 2>/dev/null; \
+            sleep 5; \
+            docker exec nullblock-postgres-agents psql -U postgres -d agents -c "DELETE FROM engrams WHERE engram_type = 'strategy';" 2>/dev/null || true; \
+        fi; \
+        docker exec nullblock-postgres-agents psql -U postgres -d agents -c "UPDATE arb_strategies SET is_active = false;" 2>/dev/null || true; \
+        echo "✅ Strategy engrams cleared"; \
     fi
     @echo "🍎 Launching macOS development environment..."
     ./scripts/dev-mac
@@ -665,6 +715,30 @@ arb-scanner-start:
     @echo "🚀 Starting scanner only..."
     @curl -s -X POST http://localhost:9007/scanner/start | jq -c '.'
     @echo "✅ Scanner started"
+
+# Stop graduation sniper (no new post-grad buys, existing positions still sell)
+arb-sniper-stop:
+    @echo "🛑 Stopping graduation sniper..."
+    @curl -s -X POST http://localhost:9007/sniper/stop | jq -c '.'
+    @echo "✅ Sniper stopped - existing positions will continue to exit"
+
+# Start graduation sniper (resume post-graduation quick-flip buying)
+arb-sniper-start:
+    @echo "🚀 Starting graduation sniper..."
+    @curl -s -X POST http://localhost:9007/sniper/start | jq -c '.'
+    @echo "✅ Sniper started"
+
+# Get graduation sniper status
+arb-sniper-status:
+    @echo "🔫 Graduation Sniper Status"
+    @echo "============================"
+    @curl -s http://localhost:9007/sniper/stats | jq '.' 2>/dev/null || echo "❌ Sniper not available"
+
+# Get graduation sniper config
+arb-sniper-config:
+    @echo "⚙️ Sniper Config"
+    @echo "================"
+    @curl -s http://localhost:9007/sniper/config | jq '.' 2>/dev/null || echo "❌ Sniper not available"
 
 # ArbFarm emergency sell all tracked positions
 arb-emergency-sell:
