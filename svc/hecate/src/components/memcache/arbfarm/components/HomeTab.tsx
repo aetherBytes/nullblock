@@ -458,6 +458,11 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
         <TradeActivityCard
           liveTrades={liveTrades}
           recentTrades={pnlSummary?.recent_trades}
+          onSignalClick={(signal) => {
+            if (signal.token_mint) {
+              setSelectedToken({ mint: signal.token_mint, venue: 'pump_fun', symbol: signal.token_mint.slice(0, 6) });
+            }
+          }}
           onTradeClick={(trade, isLive) => {
             const tokenMint = isLive
               ? (trade as LiveTrade).token_mint

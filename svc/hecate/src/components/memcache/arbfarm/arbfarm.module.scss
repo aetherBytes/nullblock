@@ -13011,6 +13011,64 @@ $hud-grid-color: rgba(0, 212, 255, 0.03);
   border-bottom: 1px solid rgba(100, 116, 139, 0.15);
 }
 
+.activityTabHeader {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.15);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.activityTab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.75rem 0.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: $color-text-muted;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: $color-text;
+    background: rgba($hud-cyan, 0.05);
+  }
+
+  &.activeTab {
+    color: $hud-cyan;
+    border-bottom-color: $hud-cyan;
+    background: rgba($hud-cyan, 0.08);
+  }
+}
+
+.tabBadge {
+  font-size: 0.6rem;
+  padding: 0.125rem 0.375rem;
+  background: rgba($hud-cyan, 0.2);
+  color: $hud-cyan;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.embeddedPanel {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  > * {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    height: 100%;
+  }
+}
+
 .activityCardTitle {
   margin: 0;
   font-size: 0.95rem;
