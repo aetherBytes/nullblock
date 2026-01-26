@@ -5,6 +5,8 @@ import DashboardPositionCard from './DashboardPositionCard';
 import TradeActivityCard from './TradeActivityCard';
 import TokenDetailModal from './TokenDetailModal';
 import CurveMetricsPanel from './CurveMetricsPanel';
+import BehavioralStrategiesPanel from './behavioral-strategies-panel';
+import ScannerSignalsPanel from './ScannerSignalsPanel';
 import type {
   PnLSummary,
   OpenPosition,
@@ -492,6 +494,19 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
             setSelectedToken({ mint: tokenMint, venue: 'pump_fun', symbol: tokenMint.slice(0, 6) });
           }}
         />
+
+        {/* Scanner & Strategies Column */}
+        <div className={styles.hudScannerColumn}>
+          <ScannerSignalsPanel
+            onSignalClick={(signal) => {
+              if (signal.token_mint) {
+                setSelectedToken({ mint: signal.token_mint, venue: 'pump_fun', symbol: signal.token_mint.slice(0, 6) });
+              }
+            }}
+            maxSignals={10}
+          />
+          <BehavioralStrategiesPanel compact={true} />
+        </div>
       </div>
 
       {/* Metrics Panel Overlay */}
