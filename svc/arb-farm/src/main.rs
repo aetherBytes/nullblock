@@ -371,8 +371,9 @@ async fn main() -> anyhow::Result<()> {
         if executor_stats.is_running {
             info!("✅ Autonomous executor running (ARBFARM_ENABLE_EXECUTOR=1)");
         } else {
-            info!("ℹ️ Execution Engine OFF by default (safety)");
-            info!("   Enable: ARBFARM_ENABLE_EXECUTOR=1 or UI toggle");
+            info!("👁️ OBSERVATION MODE - Execution Engine OFF (no trades will execute)");
+            info!("   All scanners/strategies active - signals visible in dashboard");
+            info!("   Enable execution: UI toggle or ARBFARM_ENABLE_EXECUTOR=1");
         }
 
         // Queue any PendingExit positions from previous session for immediate retry
@@ -414,16 +415,15 @@ async fn main() -> anyhow::Result<()> {
         graduation_tracker_for_autostart.start().await;
         info!("✅ Graduation tracker started (monitoring tracked tokens)");
 
-        // Sniper is OFF by default - must be explicitly enabled via ARBFARM_ENABLE_SNIPER=1 or UI
-        let sniper_enabled_env = std::env::var("ARBFARM_ENABLE_SNIPER")
-            .map(|v| v == "1" || v.to_lowercase() == "true")
+        // Sniper is ON by default (for observation) - disable with ARBFARM_ENABLE_SNIPER=0
+        let sniper_disabled_env = std::env::var("ARBFARM_ENABLE_SNIPER")
+            .map(|v| v == "0" || v.to_lowercase() == "false")
             .unwrap_or(false);
-        if sniper_enabled_env {
+        if !sniper_disabled_env {
             graduation_sniper_for_autostart.start().await;
-            info!("✅ Graduation sniper started (ARBFARM_ENABLE_SNIPER=1)");
+            info!("✅ Graduation sniper started (observation mode - execution OFF)");
         } else {
-            info!("ℹ️ Graduation sniper OFF by default");
-            info!("   Enable: set ARBFARM_ENABLE_SNIPER=1 or use UI toggle");
+            info!("ℹ️ Graduation sniper disabled (ARBFARM_ENABLE_SNIPER=0)");
         }
 
         // Run wallet reconciliation to pick up orphaned positions
