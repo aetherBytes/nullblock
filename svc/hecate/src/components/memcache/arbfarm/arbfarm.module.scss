@@ -837,19 +837,42 @@ $hud-grid-color: rgba(0, 212, 255, 0.03);
 
 .hudMainArea {
   display: grid;
-  grid-template-columns: minmax(300px, 1fr) minmax(280px, 400px);
+  grid-template-columns: minmax(300px, 1fr) minmax(260px, 350px) minmax(280px, 380px);
   gap: 0.875rem;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 
-  @media (min-width: 1600px) {
-    grid-template-columns: minmax(300px, 1fr) minmax(280px, 400px) minmax(280px, 350px);
+  @media (max-width: 1400px) {
+    grid-template-columns: minmax(300px, 1fr) minmax(280px, 400px);
   }
 
   @media (max-width: 1100px) {
     grid-template-columns: 1fr;
     overflow-y: auto;
+  }
+}
+
+.hudScannerColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba($hud-cyan, 0.3);
+    border-radius: 2px;
+  }
+
+  @media (max-width: 1400px) {
+    display: none;
   }
 }
 
