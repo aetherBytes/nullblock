@@ -3,8 +3,7 @@ import styles from '../arbfarm.module.scss';
 import { arbFarmService } from '../../../../common/services/arbfarm-service';
 import DashboardPositionCard from './DashboardPositionCard';
 import TradeActivityCard from './TradeActivityCard';
-import TradeDetailModal from './TradeDetailModal';
-import PositionDetailModal from './PositionDetailModal';
+import TokenDetailModal from './TokenDetailModal';
 import CurveMetricsPanel from './CurveMetricsPanel';
 import type {
   PnLSummary,
@@ -13,6 +12,10 @@ import type {
   PositionExposure,
   MonitorStatus,
   RecentTradeInfo,
+  ScannerStatus,
+  SniperStats,
+  TopOpportunity,
+  CurveToken,
 } from '../../../../types/arbfarm';
 
 interface LiveTrade {
@@ -30,7 +33,20 @@ interface HomeTabProps {
   liveTrades?: LiveTrade[];
 }
 
-type DetailItemType = 'live_trade' | 'completed_trade' | null;
+interface SelectedToken {
+  mint: string;
+  symbol?: string;
+  venue?: string;
+  closedTrade?: {
+    pnl?: number;
+    pnl_percent?: number;
+    entry_price?: number;
+    exit_price?: number;
+    entry_amount_sol?: number;
+    exit_type?: string;
+    time_ago?: string;
+  };
+}
 
 const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
   const [pnlSummary, setPnlSummary] = useState<PnLSummary | null>(null);
@@ -40,9 +56,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
   const [monitorStatus, setMonitorStatus] = useState<MonitorStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [closingPosition, setClosingPosition] = useState<string | null>(null);
-  const [selectedDetailItem, setSelectedDetailItem] = useState<LiveTrade | RecentTradeInfo | null>(null);
-  const [selectedDetailType, setSelectedDetailType] = useState<DetailItemType>(null);
-  const [selectedPosition, setSelectedPosition] = useState<OpenPosition | null>(null);
+  const [selectedToken, setSelectedToken] = useState<SelectedToken | null>(null);
   const [sellingAll, setSellingAll] = useState(false);
   const [reconciling, setReconciling] = useState(false);
   const [selectedMetricsToken, setSelectedMetricsToken] = useState<{
@@ -51,14 +65,31 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
     symbol: string;
   } | null>(null);
 
+  // Automation state
+  const [scannerStatus, setScannerStatus] = useState<ScannerStatus | null>(null);
+  const [sniperStats, setSniperStats] = useState<SniperStats | null>(null);
+  const [executionEnabled, setExecutionEnabled] = useState<boolean | null>(null);
+  const [autoExitStats, setAutoExitStats] = useState<{ total_positions: number; auto_exit_enabled: number; manual_mode: number } | null>(null);
+
+  // Command bar state
+  const [topOpportunities, setTopOpportunities] = useState<TopOpportunity[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<CurveToken[]>([]);
+  const [searchFocused, setSearchFocused] = useState(false);
+
   const fetchData = useCallback(async () => {
     try {
-      const [pnlRes, positionsRes, balanceRes, exposureRes, monitorRes] = await Promise.all([
+      const [pnlRes, positionsRes, balanceRes, exposureRes, monitorRes, scannerRes, sniperRes, execRes, autoExitRes, opportunitiesRes] = await Promise.all([
         arbFarmService.getPnLSummary(),
         arbFarmService.getPositions(),
         arbFarmService.getWalletBalance(),
         arbFarmService.getPositionExposure(),
         arbFarmService.getMonitorStatus(),
+        arbFarmService.getScannerStatus(),
+        arbFarmService.getSniperStats(),
+        arbFarmService.getExecutionConfig(),
+        arbFarmService.getAutoExitStats(),
+        arbFarmService.getTopOpportunities(5),
       ]);
 
       if (pnlRes.success && pnlRes.data) {
@@ -76,6 +107,21 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
       if (monitorRes.success && monitorRes.data) {
         setMonitorStatus(monitorRes.data);
       }
+      if (scannerRes.success && scannerRes.data) {
+        setScannerStatus(scannerRes.data);
+      }
+      if (sniperRes.success && sniperRes.data?.stats) {
+        setSniperStats(sniperRes.data.stats);
+      }
+      if (execRes.success && execRes.data) {
+        setExecutionEnabled(execRes.data.auto_execution_enabled);
+      }
+      if (autoExitRes.success && autoExitRes.data) {
+        setAutoExitStats(autoExitRes.data);
+      }
+      if (opportunitiesRes.success && opportunitiesRes.data) {
+        setTopOpportunities(opportunitiesRes.data.opportunities || []);
+      }
     } catch (error) {
       console.error('Failed to fetch home tab data:', error);
     } finally {
@@ -89,6 +135,25 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
     const interval = setInterval(fetchData, 15000);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  // Search handler with debounce
+  useEffect(() => {
+    if (searchQuery.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const res = await arbFarmService.listCurveTokens(undefined, 50);
+      if (res.success && res.data) {
+        const filtered = res.data.filter((t: CurveToken) =>
+          t.symbol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          t.mint.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        setSearchResults(filtered.slice(0, 5));
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
 
   const handleClosePosition = async (positionId: string, exitPercent: number = 100): Promise<boolean> => {
@@ -153,9 +218,53 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
     }
   };
 
+  const handleToggleScanner = async () => {
+    try {
+      if (scannerStatus?.is_running) {
+        await arbFarmService.stopScanner();
+      } else {
+        await arbFarmService.startScanner();
+      }
+      const res = await arbFarmService.getScannerStatus();
+      if (res.success && res.data) {
+        setScannerStatus(res.data);
+      }
+    } catch (error) {
+      console.error('Failed to toggle scanner:', error);
+    }
+  };
+
+  const handleToggleSniper = async () => {
+    try {
+      if (sniperStats?.is_running) {
+        await arbFarmService.stopSniper();
+      } else {
+        await arbFarmService.startSniper();
+      }
+      const res = await arbFarmService.getSniperStats();
+      if (res.success && res.data?.stats) {
+        setSniperStats(res.data.stats);
+      }
+    } catch (error) {
+      console.error('Failed to toggle sniper:', error);
+    }
+  };
+
+  const handleToggleExecution = async () => {
+    try {
+      const newEnabled = !executionEnabled;
+      const res = await arbFarmService.toggleExecution(newEnabled);
+      if (res.success && res.data) {
+        setExecutionEnabled(res.data.enabled);
+      }
+    } catch (error) {
+      console.error('Failed to toggle execution:', error);
+    }
+  };
+
   if (loading) {
     return (
-      <div className={styles.dashboardView}>
+      <div className={styles.hudDashboard}>
         <div className={styles.loadingContainer}>
           <div className={styles.loadingSpinner}>
             <div className={styles.spinnerRing}></div>
@@ -166,85 +275,174 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
     );
   }
 
+  if (selectedToken) {
+    return (
+      <div className={styles.hudDashboard}>
+        <TokenDetailModal
+          mint={selectedToken.mint}
+          symbol={selectedToken.symbol}
+          venue={selectedToken.venue}
+          closedTrade={selectedToken.closedTrade}
+          onClose={() => setSelectedToken(null)}
+          onRefresh={fetchData}
+          asPanel={true}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className={styles.dashboardView}>
-      {/* Row 1: Control Panel + Trade Activity */}
-      <div className={styles.topRow}>
-        {/* Control Panel Card */}
-        <div className={styles.controlPanelCard}>
-          <div className={styles.controlPanelHeader}>
-            <div className={styles.userSection}>
-              <div className={styles.userAvatar}>
-                <img src="/nb-logo.svg" alt="User" className={styles.avatarImg} />
+    <div className={styles.hudDashboard}>
+      {/* Command Bar */}
+      <div className={styles.hudCommandBar}>
+        {/* Next Picks - Top 3 opportunities */}
+        <div className={styles.nextPicksWidget}>
+          <span className={styles.widgetLabel}>NEXT PICKS</span>
+          <div className={styles.picksList}>
+            {topOpportunities.slice(0, 3).map((opp, i) => (
+              <div
+                key={opp.mint}
+                className={styles.pickItem}
+                onClick={() => setSelectedToken({ mint: opp.mint, symbol: opp.symbol, venue: opp.venue })}
+              >
+                <span className={styles.pickRank}>#{i + 1}</span>
+                <span className={styles.pickSymbol}>{opp.symbol}</span>
+                <span className={styles.pickScore}>{opp.score.overall_score.toFixed(0)}</span>
+                <div className={styles.pickMomentum} style={{ width: `${opp.metrics.graduation_progress}%` }} />
               </div>
-              <div className={styles.userInfo}>
-                <span className={styles.userName}>Operator</span>
-                <span className={styles.userWallet}>
-                  {walletBalance?.wallet_address
-                    ? `${walletBalance.wallet_address.slice(0, 4)}...${walletBalance.wallet_address.slice(-4)}`
-                    : 'Not connected'}
-                </span>
+            ))}
+            {topOpportunities.length === 0 && (
+              <span className={styles.emptyPicks}>No picks available</span>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Search */}
+        <div className={styles.searchWidget}>
+          <input
+            type="text"
+            placeholder="Search token or mint..."
+            className={styles.searchInput}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+          />
+          {searchFocused && searchResults.length > 0 && (
+            <div className={styles.searchResults}>
+              {searchResults.map((token) => (
+                <div
+                  key={token.mint}
+                  className={styles.searchResultItem}
+                  onClick={() => {
+                    setSelectedToken({ mint: token.mint, symbol: token.symbol, venue: token.venue });
+                    setSearchQuery('');
+                  }}
+                >
+                  <span className={styles.resultSymbol}>{token.symbol}</span>
+                  <span className={styles.resultMint}>{token.mint.slice(0, 8)}...</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Signal Counter */}
+        <div className={styles.signalWidget}>
+          <span className={styles.widgetLabel}>SIGNALS</span>
+          <span className={styles.signalCount}>{scannerStatus?.stats?.total_signals ?? 0}</span>
+          <span className={styles.signalSub}>detected</span>
+        </div>
+
+        {/* Best Trade Badge */}
+        <div className={styles.bestTradeWidget}>
+          <span className={styles.widgetLabel}>BEST TRADE</span>
+          <span className={styles.bestSymbol}>{pnlSummary?.best_trade?.symbol || '-'}</span>
+          <span className={`${styles.bestPnl} ${(pnlSummary?.best_trade?.pnl ?? 0) >= 0 ? styles.profit : ''}`}>
+            {pnlSummary?.best_trade?.pnl ? `+${pnlSummary.best_trade.pnl.toFixed(3)} SOL` : '-'}
+          </span>
+        </div>
+
+        {/* Quick Actions */}
+        <div className={styles.quickActions}>
+          <button onClick={handleToggleScanner} className={styles.quickBtn}>
+            {scannerStatus?.is_running ? '\u23F8' : '\u25B6'} Scanner
+          </button>
+          <button onClick={handleToggleSniper} className={styles.quickBtn}>
+            {sniperStats?.is_running ? '\u23F8' : '\u25B6'} Sniper
+          </button>
+        </div>
+      </div>
+
+      {/* Main Area: Positions + Activity */}
+      <div className={styles.hudMainArea}>
+        {/* Positions Panel */}
+        <div className={styles.hudPanel}>
+          <div className={styles.hudPanelHeader}>
+            <h3 className={styles.hudPanelTitle}>Open Positions ({realPositions.length})</h3>
+          </div>
+          <div className={styles.hudAutomationRow}>
+            <div className={styles.hudToggle} onClick={handleToggleExecution}>
+              <span className={styles.hudToggleLabel}>Execution</span>
+              <span className={`${styles.hudToggleSwitch} ${executionEnabled ? styles.on : styles.off}`}>
+                {executionEnabled ? 'ON' : 'OFF'}
+              </span>
+            </div>
+            <div className={styles.hudToggle} onClick={handleToggleScanner}>
+              <span className={styles.hudToggleLabel}>Scanner</span>
+              <span className={`${styles.hudToggleSwitch} ${scannerStatus?.is_running ? styles.on : styles.off}`}>
+                {scannerStatus?.is_running ? 'ON' : 'OFF'}
+              </span>
+            </div>
+            <div className={styles.hudToggle} onClick={handleToggleSniper}>
+              <span className={styles.hudToggleLabel}>Sniper</span>
+              <span className={`${styles.hudToggleSwitch} ${sniperStats?.is_running ? styles.on : styles.off}`}>
+                {sniperStats?.is_running ? 'ON' : 'OFF'}
+              </span>
+            </div>
+            <div className={styles.hudToggle}>
+              <span className={styles.hudToggleLabel}>Auto-Exits</span>
+              <span className={styles.hudToggleSwitch}>
+                {autoExitStats ? `${autoExitStats.auto_exit_enabled}/${autoExitStats.total_positions}` : '-'}
+              </span>
+            </div>
+          </div>
+          <div className={styles.hudPanelContent}>
+            {realPositions.length === 0 ? (
+              <div className={styles.emptyState}>No open positions</div>
+            ) : (
+              <div className={styles.hudPositionsGrid}>
+                {realPositions.map((position) => (
+                  <DashboardPositionCard
+                    key={position.id}
+                    position={position}
+                    onQuickSell={handleClosePosition}
+                    onViewDetails={(pos) => {
+                      setSelectedToken({ mint: pos.token_mint, symbol: pos.token_symbol, venue: pos.venue });
+                    }}
+                    onViewMetrics={(mint, venue, symbol) => setSelectedMetricsToken({ mint, venue, symbol })}
+                    isSelling={closingPosition === position.id}
+                  />
+                ))}
               </div>
-              <span className={`${styles.userBadge} ${styles.architectBadge}`}>Architect</span>
-            </div>
+            )}
           </div>
-
-          <div className={styles.controlPanelStats}>
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{realPositions.length}</span>
-              <span className={styles.statLabel}>Active</span>
-            </div>
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{pnlSummary?.total_trades ?? 0}</span>
-              <span className={styles.statLabel}>Trades</span>
-            </div>
-            <div className={styles.statItem}>
-              <span className={`${styles.statValue} ${(pnlSummary?.win_rate ?? 0) >= 50 ? styles.profit : styles.loss}`}>
-                {(pnlSummary?.win_rate ?? 0).toFixed(0)}%
-              </span>
-              <span className={styles.statLabel}>Win Rate</span>
-            </div>
-            <div className={styles.statItem}>
-              <span className={`${styles.statValue} ${(pnlSummary?.total_sol ?? 0) >= 0 ? styles.profit : styles.loss}`}>
-                {(pnlSummary?.total_sol ?? 0) >= 0 ? '+' : ''}{(pnlSummary?.total_sol ?? 0).toFixed(3)}
-              </span>
-              <span className={styles.statLabel}>Total PnL</span>
-            </div>
-          </div>
-
-          <div className={styles.controlPanelQuickStats}>
-            <div className={styles.quickStatRow}>
-              <span className={styles.quickStatLabel}>Balance</span>
-              <span className={styles.quickStatValue}>{(walletBalance?.balance_sol ?? 0).toFixed(4)} SOL</span>
-            </div>
-            <div className={styles.quickStatRow}>
-              <span className={styles.quickStatLabel}>Exposure</span>
-              <span className={styles.quickStatValue}>{(exposure?.total_exposure_sol ?? 0).toFixed(4)} SOL</span>
-            </div>
-            <div className={styles.quickStatRow}>
-              <span className={styles.quickStatLabel}>Monitor</span>
-              <span className={`${styles.quickStatValue} ${monitorStatus?.monitoring_active ? styles.running : styles.stopped}`}>
-                {monitorStatus?.monitoring_active ? 'Running' : 'Stopped'}
-              </span>
-            </div>
-          </div>
-
-          <div className={styles.controlPanelActions}>
+          <div className={styles.hudControlsRow}>
             <button
-              className={`${styles.controlButton} ${styles.primary}`}
+              className={`${styles.hudControlBtn} ${styles.primary}`}
               onClick={handleToggleMonitor}
             >
               {monitorStatus?.monitoring_active ? 'Pause Monitor' : 'Start Monitor'}
             </button>
             <button
-              className={styles.controlButton}
+              className={styles.hudControlBtn}
               onClick={handleReconcile}
               disabled={reconciling}
             >
               {reconciling ? 'Syncing...' : 'Sync Wallet'}
             </button>
             <button
-              className={`${styles.controlButton} ${styles.danger}`}
+              className={`${styles.hudControlBtn} ${styles.danger}`}
               onClick={handleSellAll}
               disabled={sellingAll || realPositions.length === 0}
               title="Dumps all tokens to SOL (USDC excluded)"
@@ -254,80 +452,47 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
           </div>
         </div>
 
-        {/* Trade Activity Card */}
+        {/* Trade Activity Panel */}
         <TradeActivityCard
           liveTrades={liveTrades}
           recentTrades={pnlSummary?.recent_trades}
           onTradeClick={(trade, isLive) => {
-            setSelectedDetailItem(trade);
-            setSelectedDetailType(isLive ? 'live_trade' : 'completed_trade');
+            const tokenMint = isLive
+              ? (trade as LiveTrade).token_mint
+              : (trade as RecentTradeInfo).mint;
+            const tokenSymbol = isLive
+              ? (trade as LiveTrade).token_symbol
+              : (trade as RecentTradeInfo).symbol;
+            const tokenVenue = isLive
+              ? (trade as LiveTrade).venue
+              : (trade as RecentTradeInfo).venue || 'pump_fun';
+            if (tokenMint) {
+              if (isLive) {
+                setSelectedToken({ mint: tokenMint, symbol: tokenSymbol, venue: tokenVenue });
+              } else {
+                const closedTrade = trade as RecentTradeInfo;
+                setSelectedToken({
+                  mint: tokenMint,
+                  symbol: tokenSymbol,
+                  venue: tokenVenue,
+                  closedTrade: {
+                    pnl: closedTrade.pnl,
+                    pnl_percent: closedTrade.pnl_percent,
+                    entry_price: closedTrade.entry_price,
+                    exit_price: closedTrade.exit_price,
+                    entry_amount_sol: closedTrade.entry_amount_sol,
+                    exit_type: closedTrade.exit_type,
+                    time_ago: closedTrade.time_ago,
+                  },
+                });
+              }
+            }
           }}
           onViewPosition={(tokenMint) => {
-            const position = realPositions.find(p => p.token_mint === tokenMint);
-            if (position) {
-              setSelectedPosition(position);
-            } else {
-              setSelectedMetricsToken({ mint: tokenMint, venue: 'pump_fun', symbol: tokenMint.slice(0, 6) });
-            }
+            setSelectedToken({ mint: tokenMint, venue: 'pump_fun', symbol: tokenMint.slice(0, 6) });
           }}
         />
       </div>
-
-      {/* Row 2: Active Positions */}
-      <div className={styles.positionsSection}>
-        <div className={styles.sectionHeader}>
-          <h3>Open Positions ({realPositions.length})</h3>
-        </div>
-        {realPositions.length === 0 ? (
-          <div className={styles.emptyState}>No open positions</div>
-        ) : (
-          <div className={styles.openPositionsGrid}>
-            {realPositions.map((position) => (
-              <DashboardPositionCard
-                key={position.id}
-                position={position}
-                onQuickSell={handleClosePosition}
-                onViewDetails={(pos) => setSelectedPosition(pos)}
-                onViewMetrics={(mint, venue, symbol) => setSelectedMetricsToken({ mint, venue, symbol })}
-                isSelling={closingPosition === position.id}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-
-      {/* Trade Detail Modal */}
-      {selectedDetailItem && selectedDetailType && (
-        <TradeDetailModal
-          trade={selectedDetailItem}
-          isLive={selectedDetailType === 'live_trade'}
-          onClose={() => {
-            setSelectedDetailItem(null);
-            setSelectedDetailType(null);
-          }}
-        />
-      )}
-
-      {/* Position Detail Modal */}
-      {selectedPosition && (
-        <PositionDetailModal
-          position={selectedPosition}
-          onClose={() => setSelectedPosition(null)}
-          onQuickSell={(positionId, percent) => {
-            handleClosePosition(positionId, percent);
-            setSelectedPosition(null);
-          }}
-          onUpdateExitConfig={async (positionId, config) => {
-            try {
-              await arbFarmService.updatePositionExitConfig(positionId, config);
-              await fetchData();
-            } catch (error) {
-              console.error('Failed to update exit config:', error);
-            }
-          }}
-        />
-      )}
 
       {/* Metrics Panel Overlay */}
       {selectedMetricsToken && (
