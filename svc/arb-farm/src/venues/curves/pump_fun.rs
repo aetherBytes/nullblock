@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::error::{AppError, AppResult};
 use crate::models::{Signal, SignalType, VenueType};
 use crate::events::Significance;
-use crate::venues::{MevVenue, ProfitEstimate, Quote, QuoteParams};
+use crate::venues::{MevVenue, ProfitEstimate, Quote, QuoteParams, VenueTokenData};
 
 pub struct PumpFunVenue {
     id: Uuid,
@@ -219,9 +219,9 @@ impl PumpFunVenue {
         })
     }
 
-    pub async fn detect_graduation_opportunities(&self) -> AppResult<Vec<Signal>> {
+    pub async fn get_all_token_data(&self) -> AppResult<Vec<VenueTokenData>> {
         let tokens = self.get_new_tokens(100).await?;
-        let mut signals = Vec::new();
+        let mut result = Vec::new();
 
         for token in tokens {
             if token.bonding_curve_complete {
@@ -230,40 +230,22 @@ impl PumpFunVenue {
 
             let progress = (token.market_cap / token.graduation_threshold.unwrap_or(69000.0)) * 100.0;
 
-            // Look for tokens approaching graduation (30-98% progress - more inclusive)
-            // Lower threshold captures earlier opportunities, higher ceiling catches late-stage tokens
-            if progress >= 30.0 && progress < 98.0 {
-                let significance = if progress >= 85.0 {
-                    Significance::High
-                } else {
-                    Significance::Medium
-                };
-
-                signals.push(Signal {
-                    id: Uuid::new_v4(),
-                    signal_type: SignalType::CurveGraduation,
-                    venue_id: self.id,
-                    venue_type: VenueType::BondingCurve,
-                    token_mint: Some(token.mint.clone()),
-                    pool_address: None,
-                    estimated_profit_bps: ((100.0 - progress) * 10.0) as i32, // Rough estimate
-                    confidence: progress / 100.0,
-                    significance,
-                    metadata: serde_json::json!({
-                        "token_name": token.name,
-                        "token_symbol": token.symbol,
-                        "progress_percent": progress,
-                        "market_cap": token.market_cap,
-                        "volume_24h": token.volume_24h,
-                        "graduation_threshold": token.graduation_threshold,
-                    }),
-                    detected_at: chrono::Utc::now(),
-                    expires_at: chrono::Utc::now() + chrono::Duration::minutes(5),
-                });
-            }
+            result.push(VenueTokenData {
+                mint: token.mint,
+                name: token.name,
+                symbol: token.symbol,
+                graduation_progress: progress,
+                bonding_curve_address: None,
+                market_cap_usd: token.market_cap,
+                volume_24h_usd: token.volume_24h,
+                holder_count: 0,
+                metadata: serde_json::json!({
+                    "graduation_threshold": token.graduation_threshold,
+                }),
+            });
         }
 
-        Ok(signals)
+        Ok(result)
     }
 }
 
@@ -282,7 +264,45 @@ impl MevVenue for PumpFunVenue {
     }
 
     async fn scan_for_signals(&self) -> AppResult<Vec<Signal>> {
-        self.detect_graduation_opportunities().await
+        let token_data = self.scan_for_token_data().await?;
+        let mut signals = Vec::new();
+
+        for td in token_data {
+            if td.graduation_progress >= 30.0 && td.graduation_progress < 98.0 {
+                let significance = if td.graduation_progress >= 85.0 {
+                    Significance::High
+                } else {
+                    Significance::Medium
+                };
+
+                signals.push(Signal {
+                    id: Uuid::new_v4(),
+                    signal_type: SignalType::CurveGraduation,
+                    venue_id: self.id,
+                    venue_type: VenueType::BondingCurve,
+                    token_mint: Some(td.mint.clone()),
+                    pool_address: None,
+                    estimated_profit_bps: ((100.0 - td.graduation_progress) * 10.0) as i32,
+                    confidence: td.graduation_progress / 100.0,
+                    significance,
+                    metadata: serde_json::json!({
+                        "token_name": td.name,
+                        "token_symbol": td.symbol,
+                        "progress_percent": td.graduation_progress,
+                        "market_cap": td.market_cap_usd,
+                        "volume_24h": td.volume_24h_usd,
+                    }),
+                    detected_at: chrono::Utc::now(),
+                    expires_at: chrono::Utc::now() + chrono::Duration::minutes(5),
+                });
+            }
+        }
+
+        Ok(signals)
+    }
+
+    async fn scan_for_token_data(&self) -> AppResult<Vec<VenueTokenData>> {
+        self.get_all_token_data().await
     }
 
     async fn estimate_profit(&self, signal: &Signal) -> AppResult<ProfitEstimate> {

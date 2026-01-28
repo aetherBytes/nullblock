@@ -56,8 +56,13 @@ const ScannerSignalsPanel: React.FC<ScannerSignalsPanelProps> = ({
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const getSignalIcon = (signalType: string): string => {
-    const type = signalType.toLowerCase();
+  const getSignalIcon = (signal: Signal): string => {
+    const source = (signal.metadata as Record<string, unknown>)?.signal_source as string | undefined;
+    if (source) {
+      if (source.includes('graduation_sniper')) return '🎓';
+      if (source.includes('volume_hunter')) return '📊';
+    }
+    const type = signal.signal_type.toLowerCase();
     if (type.includes('graduation')) return '🎓';
     if (type.includes('volume')) return '📊';
     if (type.includes('momentum')) return '🚀';
@@ -67,6 +72,12 @@ const ScannerSignalsPanel: React.FC<ScannerSignalsPanelProps> = ({
     return '📡';
   };
 
+  const getSignalSource = (signal: Signal): string | null => {
+    const source = (signal.metadata as Record<string, unknown>)?.signal_source as string | undefined;
+    if (!source) return null;
+    return source.replace(/_/g, ' ');
+  };
+
   const getSignificanceColor = (confidence: number): string => {
     if (confidence >= 80) return styles.sigCritical;
     if (confidence >= 60) return styles.sigHigh;
@@ -74,7 +85,7 @@ const ScannerSignalsPanel: React.FC<ScannerSignalsPanelProps> = ({
     return styles.sigLow;
   };
 
-  const isActive = status?.scanner_active;
+  const isActive = status?.is_running;
 
   if (loading) {
     return (
@@ -126,13 +137,18 @@ const ScannerSignalsPanel: React.FC<ScannerSignalsPanelProps> = ({
                 onClick={() => onSignalClick?.(signal)}
               >
                 <div className={styles.signalIcon}>
-                  <span>{getSignalIcon(signal.signal_type)}</span>
+                  <span>{getSignalIcon(signal)}</span>
                 </div>
                 <div className={styles.signalContent}>
                   <div className={styles.signalHeader}>
                     <span className={styles.signalType}>
                       {signal.signal_type.replace(/_/g, ' ')}
                     </span>
+                    {getSignalSource(signal) && (
+                      <span className={styles.signalSourceBadge}>
+                        {getSignalSource(signal)}
+                      </span>
+                    )}
                     <span className={styles.signalTime}>{formatTime(signal.detected_at)}</span>
                   </div>
                   <div className={styles.signalDetails}>
