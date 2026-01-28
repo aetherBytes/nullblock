@@ -1,12 +1,10 @@
 pub mod venue_snapshot;
 pub mod volume_hunter;
 pub mod graduation_sniper_strategy;
-pub mod kol_copy;
 
 pub use venue_snapshot::{TokenData, VenueSnapshot};
 pub use volume_hunter::VolumeHunterStrategy;
 pub use graduation_sniper_strategy::GraduationSniperStrategy;
-pub use kol_copy::KolCopyStrategy;
 
 use async_trait::async_trait;
 use std::sync::Arc;

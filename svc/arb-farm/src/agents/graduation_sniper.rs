@@ -10,12 +10,10 @@ use crate::events::{ArbEvent, AgentType, EventSource, Significance};
 use crate::execution::{CurveTransactionBuilder, CurveSellParams, ExitConfig, JitoClient, MomentumAdaptiveConfig, MomentumData, MomentumStrength, PositionManager};
 use crate::execution::risk::RiskConfig;
 use crate::helius::HeliusSender;
-use crate::models::{Signal, SignalType, VenueType};
 use crate::venues::curves::OnChainFetcher;
 use crate::wallet::DevWalletSigner;
 use crate::wallet::turnkey::SignRequest;
 
-use super::graduation_tracker::GraduationTracker;
 use super::strategy_engine::StrategyEngine;
 
 const DEFAULT_JUPITER_API_URL: &str = "https://lite-api.jup.ag/swap/v1";
@@ -27,7 +25,6 @@ const DEFAULT_SLIPPAGE_BPS: u32 = 300;
 const DEFAULT_MAX_CONCURRENT_POSITIONS: u32 = 5;
 const DEFAULT_TAKE_PROFIT_PERCENT: f64 = 12.0;  // Achievable target (was 30%)
 const DEFAULT_STOP_LOSS_PERCENT: f64 = 20.0;   // Matches volatility (was 15%)
-const MIN_ENTRY_VELOCITY: f64 = 0.0;           // Minimum velocity for entry (% per min)
 
 const DEFAULT_POST_GRAD_ENTRY_SOL: f64 = 0.15;  // Conservative entry for post-grad quick flip
 const DEFAULT_POST_GRAD_TAKE_PROFIT: f64 = 8.0; // 8% quick flip target
@@ -60,7 +57,7 @@ impl Default for SniperConfig {
             take_profit_percent: DEFAULT_TAKE_PROFIT_PERCENT,
             stop_loss_percent: DEFAULT_STOP_LOSS_PERCENT,
             auto_sell_on_graduation: true,
-            enable_post_graduation_entry: true,
+            enable_post_graduation_entry: false, // OFF by default for observation mode
             post_graduation_entry_sol: DEFAULT_POST_GRAD_ENTRY_SOL,
             post_graduation_take_profit: DEFAULT_POST_GRAD_TAKE_PROFIT,
             post_graduation_stop_loss: DEFAULT_POST_GRAD_STOP_LOSS,
@@ -104,7 +101,6 @@ pub struct SniperStats {
 
 pub struct GraduationSniper {
     positions: Arc<RwLock<HashMap<String, SnipePosition>>>,
-    graduation_tracker: Arc<GraduationTracker>,
     curve_builder: Arc<CurveTransactionBuilder>,
     jito_client: Arc<JitoClient>,
     on_chain_fetcher: Arc<OnChainFetcher>,
@@ -125,7 +121,6 @@ pub struct GraduationSniper {
 
 impl GraduationSniper {
     pub fn new(
-        graduation_tracker: Arc<GraduationTracker>,
         curve_builder: Arc<CurveTransactionBuilder>,
         jito_client: Arc<JitoClient>,
         on_chain_fetcher: Arc<OnChainFetcher>,
@@ -134,7 +129,6 @@ impl GraduationSniper {
     ) -> Self {
         Self {
             positions: Arc::new(RwLock::new(HashMap::new())),
-            graduation_tracker,
             curve_builder,
             jito_client,
             on_chain_fetcher,
@@ -248,53 +242,6 @@ impl GraduationSniper {
             current.post_graduation_take_profit,
             current.post_graduation_stop_loss
         );
-    }
-
-    fn create_graduation_signal(
-        mint: &str,
-        symbol: &str,
-        progress: f64,
-        progress_velocity: f64,
-        strategy_id: Uuid,
-    ) -> Signal {
-        // Higher progress = higher confidence but lower profit potential
-        let confidence = if progress >= 98.0 {
-            0.95
-        } else if progress >= 95.0 {
-            0.85
-        } else if progress >= 90.0 {
-            0.75
-        } else {
-            0.60  // Lower confidence for earlier entries
-        };
-
-        // FIXED profit estimation: Account for realistic post-graduation dynamics
-        // Post-graduation typically sees 5-15% pump then dump
-        // Entry at 95%+ progress with positive velocity has best odds
-        let estimated_profit_bps = if progress >= 95.0 && progress_velocity > 0.5 {
-            600  // 6% realistic profit for late entry with momentum
-        } else if progress >= 90.0 && progress_velocity > 0.0 {
-            400  // 4% for medium entry with some momentum
-        } else {
-            200  // 2% conservative estimate
-        };
-
-        Signal::new(
-            SignalType::CurveGraduation,
-            Uuid::new_v4(),
-            VenueType::BondingCurve,
-            if progress >= 98.0 { Significance::Critical } else { Significance::High },
-        )
-        .with_token(mint.to_string())
-        .with_profit(estimated_profit_bps, confidence)
-        .with_metadata(serde_json::json!({
-            "symbol": symbol,
-            "progress": progress,
-            "progress_velocity": progress_velocity,
-            "strategy_id": strategy_id.to_string(),
-            "signal_source": "graduation_sniper",
-            "entry_type": "pre_graduation",
-        }))
     }
 
     pub async fn add_position(
@@ -413,74 +360,6 @@ impl GraduationSniper {
                 tokio::select! {
                     Ok(event) = event_rx.recv() => {
                         match event.event_type.as_str() {
-                            "arb.curve.graduation_imminent" => {
-                                if let Some(ref engine) = strategy_engine {
-                                    let mint = event.payload.get("mint").and_then(|v| v.as_str()).unwrap_or("");
-                                    let symbol = event.payload.get("symbol").and_then(|v| v.as_str()).unwrap_or("???");
-                                    let progress = event.payload.get("progress").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                                    let velocity = event.payload.get("progress_velocity").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                                    let strategy_id = event.payload.get("strategy_id")
-                                        .and_then(|v| v.as_str())
-                                        .and_then(|s| Uuid::parse_str(s).ok())
-                                        .unwrap_or(Uuid::nil());
-
-                                    if !mint.is_empty() {
-                                        // MOMENTUM ENTRY FILTER: Skip if velocity is negative/flat
-                                        if velocity < MIN_ENTRY_VELOCITY {
-                                            tracing::info!(
-                                                "⏭️ Skipping {} ({:.1}%) - velocity {:.2}%/min below threshold {:.1}%/min",
-                                                symbol, progress, velocity, MIN_ENTRY_VELOCITY
-                                            );
-                                            continue;
-                                        }
-
-                                        let has_position = {
-                                            let positions = positions.read().await;
-                                            positions.contains_key(mint)
-                                        };
-
-                                        if !has_position {
-                                            tracing::info!(
-                                                "🎯 Graduation imminent for {} ({:.1}%, velocity={:.2}%/min) - creating signal",
-                                                symbol, progress, velocity
-                                            );
-
-                                            let signal = Self::create_graduation_signal(
-                                                mint,
-                                                symbol,
-                                                progress,
-                                                velocity,
-                                                strategy_id,
-                                            );
-
-                                            if let Some(result) = engine.match_signal(&signal).await {
-                                                if result.approved {
-                                                    tracing::info!(
-                                                        "✅ Signal matched strategy {} - edge created for autonomous execution",
-                                                        result.strategy_id
-                                                    );
-                                                } else {
-                                                    tracing::debug!(
-                                                        "Signal rejected by strategy {}: {:?}",
-                                                        result.strategy_id,
-                                                        result.reason
-                                                    );
-                                                }
-                                            } else {
-                                                tracing::debug!(
-                                                    "No strategy matched graduation signal for {}",
-                                                    symbol
-                                                );
-                                            }
-                                        } else {
-                                            tracing::debug!(
-                                                "Already have position for {} - skipping signal",
-                                                symbol
-                                            );
-                                        }
-                                    }
-                                }
-                            }
                             "arb.curve.graduated" => {
                                 if let Some(mint) = event.payload.get("mint").and_then(|v| v.as_str()) {
                                     let symbol = event.payload.get("symbol")

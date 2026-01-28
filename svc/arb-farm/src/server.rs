@@ -5,7 +5,7 @@ use tokio::sync::{broadcast, RwLock};
 
 use crate::agents::{
     AutonomousExecutor, CurveMetricsCollector, CurveOpportunityScorer, EngramHarvester,
-    GraduationSniper, GraduationTracker, KolDiscoveryAgent, OverseerConfig, ResilienceOverseer,
+    GraduationSniper, KolDiscoveryAgent, OverseerConfig, ResilienceOverseer,
     ScannerAgent, StrategyEngine, spawn_autonomous_executor, start_autonomous_executor,
     spawn_hecate_notifier,
 };
@@ -87,7 +87,6 @@ pub struct AppState {
     pub curve_scorer: Arc<CurveOpportunityScorer>,
     pub autonomous_executor: Arc<AutonomousExecutor>,
     pub realtime_monitor: Arc<RealtimePositionMonitor>,
-    pub graduation_tracker: Arc<GraduationTracker>,
     pub graduation_sniper: Arc<GraduationSniper>,
     pub wallet_max_position_sol: Arc<RwLock<f64>>,
 }
@@ -1041,26 +1040,21 @@ impl AppState {
         // Register behavioral strategies with the scanner for the Strategy Factory pattern
         // These strategies generate signals independently and share capital equally
         // Note: Strategies are registered but execution requires enabling via UI or env vars
-        use crate::agents::strategies::{KolCopyStrategy, VolumeHunterStrategy, GraduationSniperStrategy};
+        use crate::agents::strategies::{VolumeHunterStrategy, GraduationSniperStrategy};
         use crate::execution::CopyTradeExecutor;
 
-        let kol_copy_strategy = Arc::new(KolCopyStrategy::new(kol_repo.clone()));
         let graduation_sniper_strategy = Arc::new(GraduationSniperStrategy::new());
-
-        scanner.register_behavioral_strategy(kol_copy_strategy.clone()).await;
         scanner.register_behavioral_strategy(graduation_sniper_strategy).await;
 
-        // Volume Hunter is always registered but starts INACTIVE by default
-        // Users can enable it via the UI behavioral strategies panel
         let volume_hunter_strategy = Arc::new(VolumeHunterStrategy::new());
         scanner.register_behavioral_strategy(volume_hunter_strategy).await;
-        tracing::info!("✅ Behavioral strategies registered (KOL Copy, Graduation Sniper, Volume Hunter [inactive])");
+        tracing::info!("✅ Behavioral strategies registered (Graduation Sniper, Volume Hunter [inactive])");
 
         // Rebalance capital manager to give all strategies equal allocation
         capital_manager.rebalance_equal().await;
         tracing::info!("✅ Capital allocation rebalanced: all strategies have equal share");
 
-        // Create CopyTradeExecutor for KOL copy trading
+        // Create CopyTradeExecutor for KOL copy trading (OFF by default for observation mode)
         let copy_executor = Arc::new(CopyTradeExecutor::new(
             kol_repo.clone(),
             curve_builder.clone(),
@@ -1071,7 +1065,20 @@ impl AppState {
             event_tx.clone(),
             default_wallet.clone(),
         ));
-        tracing::info!("✅ Copy Trade Executor initialized");
+
+        // Enable copy trading via env var: ARBFARM_COPY_TRADING=1
+        let copy_trading_enabled = std::env::var("ARBFARM_COPY_TRADING")
+            .map(|v| v == "1" || v.to_lowercase() == "true")
+            .unwrap_or(false);
+
+        if copy_trading_enabled {
+            let mut copy_config = copy_executor.get_config().await;
+            copy_config.enabled = true;
+            copy_executor.update_config(copy_config).await;
+            tracing::info!("✅ Copy Trade Executor initialized (ENABLED via ARBFARM_COPY_TRADING=1)");
+        } else {
+            tracing::info!("✅ Copy Trade Executor initialized (DISABLED - observation mode)");
+        }
 
         // Create Autonomous Executor (does NOT auto-start - respects user preference)
         let default_wallet_for_executor = config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
@@ -1119,63 +1126,9 @@ impl AppState {
         ));
         tracing::info!("✅ Real-time Position Monitor initialized (websocket price updates)");
 
-        // Initialize Graduation Tracker with engrams persistence and config from env
-        let tracker_config = {
-            use crate::agents::graduation_tracker::TrackerConfig;
-            let mut tc = TrackerConfig::default();
-            if let Some(threshold) = config.graduation_threshold {
-                tc.graduation_threshold = threshold;
-            }
-            if let Some(fast_poll) = config.tracker_fast_poll_ms {
-                tc.fast_poll_interval_ms = fast_poll;
-            }
-            if let Some(normal_poll) = config.tracker_normal_poll_ms {
-                tc.normal_poll_interval_ms = normal_poll;
-            }
-            if let Some(timeout) = config.tracker_rpc_timeout_secs {
-                tc.rpc_timeout_secs = timeout;
-            }
-            if let Some(eviction) = config.tracker_eviction_hours {
-                tc.eviction_hours = eviction;
-            }
-            tc
-        };
-
-        let graduation_tracker = Arc::new(
-            GraduationTracker::new(
-                event_tx.clone(),
-                on_chain_fetcher.clone(),
-                curve_builder.clone(),
-            )
-            .with_config(tracker_config.clone())
-            .with_engrams(engrams_client.clone(), default_wallet.clone())
-        );
-
-        tracing::info!(
-            "✅ Graduation Tracker config: threshold={:.1}%, fast={}ms, normal={}ms, rpc_timeout={}s, eviction={}h",
-            tracker_config.graduation_threshold,
-            tracker_config.fast_poll_interval_ms,
-            tracker_config.normal_poll_interval_ms,
-            tracker_config.rpc_timeout_secs,
-            tracker_config.eviction_hours
-        );
-
-        // Restore tracked tokens from engrams on startup
-        let restored_count = graduation_tracker.restore_from_engrams().await;
-        if restored_count > 0 {
-            tracing::info!("✅ Graduation Tracker initialized with {} restored tokens from engrams", restored_count);
-        } else {
-            tracing::info!("✅ Graduation Tracker initialized (no prior tracked tokens to restore)");
-        }
-
-        // Connect scanner to graduation tracker for automatic token tracking from CurveGraduation signals
-        scanner.set_graduation_tracker(graduation_tracker.clone()).await;
-        tracing::info!("✅ Scanner connected to graduation tracker (auto-tracking enabled)");
-
-        // Initialize Graduation Sniper for automated buy on graduation_imminent and sell on graduation
+        // Initialize Graduation Sniper for automated sell on graduation (execution-only)
         let graduation_sniper = Arc::new(
             GraduationSniper::new(
-                graduation_tracker.clone(),
                 curve_builder.clone(),
                 jito_client.clone(),
                 on_chain_fetcher.clone(),
@@ -1235,7 +1188,6 @@ impl AppState {
             curve_scorer,
             autonomous_executor,
             realtime_monitor,
-            graduation_tracker,
             graduation_sniper,
             wallet_max_position_sol: Arc::new(RwLock::new(10.0)),
         })

@@ -30,7 +30,7 @@ mod webhooks;
 
 use axum::Json;
 use crate::config::Config;
-use crate::handlers::{approvals as approval_handlers, autonomous as autonomous_handlers, config_handlers, consensus as consensus_handlers, curves, edges, engram as engram_handlers, graduation as graduation_handlers, health, helius as helius_handlers, kol, positions as position_handlers, research as research_handlers, scanner, settings, sniper as sniper_handlers, sse, strategies, swarm, threat as threat_handlers, trades, wallet as wallet_handlers, webhooks as webhook_handlers};
+use crate::handlers::{approvals as approval_handlers, autonomous as autonomous_handlers, config_handlers, consensus as consensus_handlers, curves, edges, engram as engram_handlers, health, helius as helius_handlers, kol, positions as position_handlers, research as research_handlers, scanner, settings, sniper as sniper_handlers, sse, strategies, swarm, threat as threat_handlers, trades, wallet as wallet_handlers, webhooks as webhook_handlers};
 use crate::mcp::{get_manifest, get_all_tools, handlers as mcp_handlers};
 
 async fn print_startup_summary(state: &server::AppState) {
@@ -290,7 +290,6 @@ async fn main() -> anyhow::Result<()> {
     let metrics_collector_for_autostart = state.metrics_collector.clone();
     let jupiter_venue_for_autostart = state.jupiter_venue.clone();
     let risk_config_for_autostart = state.risk_config.clone();
-    let graduation_tracker_for_autostart = state.graduation_tracker.clone();
     let graduation_sniper_for_autostart = state.graduation_sniper.clone();
     let consensus_engine_for_analysis = state.consensus_engine.clone();
     let engrams_client_for_analysis = state.engrams_client.clone();
@@ -411,17 +410,30 @@ async fn main() -> anyhow::Result<()> {
             }
         });
 
-        // Start graduation tracker and sniper
-        graduation_tracker_for_autostart.start().await;
-        info!("✅ Graduation tracker started (monitoring tracked tokens)");
-
         // Sniper is ON by default (for observation) - disable with ARBFARM_ENABLE_SNIPER=0
         let sniper_disabled_env = std::env::var("ARBFARM_ENABLE_SNIPER")
             .map(|v| v == "0" || v.to_lowercase() == "false")
             .unwrap_or(false);
+
+        // Sniper ENTRY (buying) is OFF by default - enable with ARBFARM_SNIPER_ENTRY=1
+        let sniper_entry_enabled = std::env::var("ARBFARM_SNIPER_ENTRY")
+            .map(|v| v == "1" || v.to_lowercase() == "true")
+            .unwrap_or(false);
+
+        if sniper_entry_enabled {
+            let mut sniper_config = graduation_sniper_for_autostart.get_config().await;
+            sniper_config.enable_post_graduation_entry = true;
+            graduation_sniper_for_autostart.update_config(sniper_config).await;
+            info!("⚡ Sniper ENTRY enabled (ARBFARM_SNIPER_ENTRY=1) - will execute buys");
+        }
+
         if !sniper_disabled_env {
             graduation_sniper_for_autostart.start().await;
-            info!("✅ Graduation sniper started (observation mode - execution OFF)");
+            if sniper_entry_enabled {
+                info!("✅ Graduation sniper started (EXECUTION mode - will buy/sell)");
+            } else {
+                info!("✅ Graduation sniper started (OBSERVATION mode - sells only, no new buys)");
+            }
         } else {
             info!("ℹ️ Graduation sniper disabled (ARBFARM_ENABLE_SNIPER=0)");
         }
@@ -1283,16 +1295,6 @@ fn create_router(state: server::AppState) -> Router {
         .route("/curves/top-opportunities", get(curves::get_top_opportunities))
         .route("/curves/scoring-config", get(curves::get_scoring_config))
         // Graduation Tracker (Token Watchlist with Engram Persistence)
-        .route("/graduation/track", post(graduation_handlers::track_token))
-        .route("/graduation/untrack/:mint", post(graduation_handlers::untrack_token))
-        .route("/graduation/clear", post(graduation_handlers::clear_all_tracked))
-        .route("/graduation/tracked", get(graduation_handlers::list_tracked))
-        .route("/graduation/tracked/:mint", get(graduation_handlers::is_tracked))
-        .route("/graduation/stats", get(graduation_handlers::get_tracker_stats))
-        .route("/graduation/start", post(graduation_handlers::start_tracker))
-        .route("/graduation/stop", post(graduation_handlers::stop_tracker))
-        .route("/graduation/config", get(graduation_handlers::get_tracker_config))
-        .route("/graduation/config", axum::routing::put(graduation_handlers::update_tracker_config))
         // Graduation Sniper (Auto-sell positions on graduation)
         .route("/sniper/stats", get(sniper_handlers::get_sniper_stats))
         .route("/sniper/positions", get(sniper_handlers::list_snipe_positions))

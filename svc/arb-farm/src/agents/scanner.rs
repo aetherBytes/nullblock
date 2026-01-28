@@ -9,7 +9,7 @@ use crate::error::AppResult;
 use crate::events::{ArbEvent, AgentType, EventSource, scanner as scanner_topics, swarm as swarm_topics};
 use crate::models::{Signal, SignalType, VenueType};
 use crate::venues::MevVenue;
-use super::{GraduationTracker, StrategyEngine};
+use super::StrategyEngine;
 use super::strategies::{BehavioralStrategy, StrategyRegistry, VenueSnapshot, TokenData};
 
 pub struct VenueRateLimiter {
@@ -45,6 +45,9 @@ impl VenueRateLimiter {
     }
 }
 
+const MAX_CACHED_SIGNALS: usize = 100;
+const SIGNAL_CACHE_TTL_SECS: i64 = 600; // 10 minutes
+
 pub struct ScannerAgent {
     id: Uuid,
     venues: Arc<RwLock<HashMap<Uuid, Box<dyn MevVenue>>>>,
@@ -53,9 +56,9 @@ pub struct ScannerAgent {
     is_running: Arc<RwLock<bool>>,
     stats: Arc<RwLock<ScannerStats>>,
     strategy_engine: Arc<RwLock<Option<Arc<StrategyEngine>>>>,
-    graduation_tracker: Arc<RwLock<Option<Arc<GraduationTracker>>>>,
     behavioral_strategies: Arc<StrategyRegistry>,
     rate_limiter: Arc<VenueRateLimiter>,
+    recent_signals: Arc<RwLock<Vec<Signal>>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -98,9 +101,9 @@ impl ScannerAgent {
             is_running: Arc::new(RwLock::new(false)),
             stats: Arc::new(RwLock::new(ScannerStats::default())),
             strategy_engine: Arc::new(RwLock::new(None)),
-            graduation_tracker: Arc::new(RwLock::new(None)),
             behavioral_strategies: Arc::new(StrategyRegistry::new()),
             rate_limiter: Arc::new(VenueRateLimiter::new(DEFAULT_RATE_LIMIT_INTERVAL_MS)),
+            recent_signals: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -129,12 +132,6 @@ impl ScannerAgent {
         let mut se = self.strategy_engine.write().await;
         *se = Some(engine);
         tracing::info!("📡 Scanner: Strategy engine connected (auto-processing enabled)");
-    }
-
-    pub async fn set_graduation_tracker(&self, tracker: Arc<GraduationTracker>) {
-        let mut gt = self.graduation_tracker.write().await;
-        *gt = Some(tracker);
-        tracing::info!("📡 Scanner: Graduation tracker connected (auto-tracking enabled for CurveGraduation signals)");
     }
 
     pub async fn add_venue(&self, venue: Box<dyn MevVenue>) {
@@ -208,9 +205,9 @@ impl ScannerAgent {
         let is_running = Arc::clone(&self.is_running);
         let scan_interval = self.scan_interval_ms;
         let strategy_engine = Arc::clone(&self.strategy_engine);
-        let graduation_tracker = Arc::clone(&self.graduation_tracker);
         let behavioral_strategies = Arc::clone(&self.behavioral_strategies);
         let rate_limiter = Arc::clone(&self.rate_limiter);
+        let recent_signals = Arc::clone(&self.recent_signals);
 
         if let Err(e) = event_tx.send(ArbEvent::new(
             "scanner_started",
@@ -236,38 +233,31 @@ impl ScannerAgent {
 
                 let venues_guard = venues.read().await;
                 let mut all_signals: Vec<Signal> = Vec::new();
+                let mut all_token_data: Vec<TokenData> = Vec::new();
                 let mut healthy_count = 0u32;
 
                 for venue in venues_guard.values() {
                     if venue.is_healthy().await {
                         healthy_count += 1;
 
-                        // Rate limit API calls to avoid hitting venue rate limits
                         rate_limiter.wait_for_venue(venue.venue_id()).await;
 
-                        match venue.scan_for_signals().await {
-                            Ok(signals) => {
-                                for signal in signals {
-                                    if let Err(e) = event_tx.send(ArbEvent::new(
-                                        "signal_detected",
-                                        EventSource::Agent(AgentType::Scanner),
-                                        scanner_topics::SIGNAL_DETECTED,
-                                        serde_json::json!({
-                                            "signal_id": signal.id,
-                                            "signal_type": format!("{:?}", signal.signal_type),
-                                            "venue_id": signal.venue_id,
-                                            "venue_type": format!("{:?}", signal.venue_type),
-                                            "estimated_profit_bps": signal.estimated_profit_bps,
-                                            "confidence": signal.confidence,
-                                            "significance": format!("{:?}", signal.significance),
-                                            "token_mint": signal.token_mint,
-                                            "pool_address": signal.pool_address,
-                                            "metadata": signal.metadata,
-                                        }),
-                                    )) {
-                                        tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
-                                    }
-                                    all_signals.push(signal);
+                        match venue.scan_for_token_data().await {
+                            Ok(token_data) => {
+                                for td in token_data {
+                                    all_token_data.push(TokenData {
+                                        mint: td.mint,
+                                        name: td.name,
+                                        symbol: td.symbol,
+                                        graduation_progress: td.graduation_progress,
+                                        bonding_curve_address: td.bonding_curve_address,
+                                        market_cap_sol: td.market_cap_usd,
+                                        volume_24h_sol: td.volume_24h_usd,
+                                        holder_count: td.holder_count,
+                                        created_at: chrono::Utc::now(),
+                                        last_trade_at: None,
+                                        metadata: td.metadata,
+                                    });
                                 }
                             }
                             Err(e) => {
@@ -296,57 +286,30 @@ impl ScannerAgent {
 
                 drop(venues_guard);
 
-                // Run behavioral strategies to generate additional signals
                 let active_strategies = behavioral_strategies.get_active().await;
                 if !active_strategies.is_empty() {
-                    // Build venue snapshot from collected signals
                     let snapshot = VenueSnapshot {
                         venue_id: Uuid::nil(),
-                        venue_type: VenueType::BondingCurve, // Primary venue type
+                        venue_type: VenueType::BondingCurve,
                         venue_name: "pump_fun".to_string(),
-                        tokens: all_signals.iter().filter_map(|s| {
-                            s.token_mint.as_ref().map(|mint| {
-                                TokenData {
-                                    mint: mint.clone(),
-                                    symbol: s.metadata.get("token_symbol")
-                                        .and_then(|v| v.as_str())
-                                        .unwrap_or("???")
-                                        .to_string(),
-                                    name: s.metadata.get("token_name")
-                                        .and_then(|v| v.as_str())
-                                        .unwrap_or("Unknown")
-                                        .to_string(),
-                                    graduation_progress: s.metadata.get("progress_percent")
-                                        .and_then(|v| v.as_f64())
-                                        .unwrap_or(0.0),
-                                    bonding_curve_address: s.metadata.get("bonding_curve")
-                                        .and_then(|v| v.as_str())
-                                        .map(|s| s.to_string()),
-                                    market_cap_sol: s.metadata.get("market_cap_sol")
-                                        .and_then(|v| v.as_f64())
-                                        .unwrap_or(0.0),
-                                    volume_24h_sol: s.metadata.get("volume_24h_sol")
-                                        .and_then(|v| v.as_f64())
-                                        .unwrap_or(0.0),
-                                    holder_count: s.metadata.get("holder_count")
-                                        .and_then(|v| v.as_u64())
-                                        .map(|v| v as u32)
-                                        .unwrap_or(0),
-                                    created_at: chrono::Utc::now(),
-                                    last_trade_at: None,
-                                    metadata: s.metadata.clone(),
-                                }
-                            })
-                        }).collect(),
-                        raw_signals: all_signals.clone(),
+                        tokens: all_token_data.clone(),
+                        raw_signals: Vec::new(),
                         timestamp: chrono::Utc::now(),
                         is_healthy: true,
                     };
 
                     for strategy in active_strategies {
                         match strategy.scan(&snapshot).await {
-                            Ok(strategy_signals) => {
+                            Ok(mut strategy_signals) => {
                                 if !strategy_signals.is_empty() {
+                                    for signal in &mut strategy_signals {
+                                        if let Some(obj) = signal.metadata.as_object_mut() {
+                                            obj.entry("signal_source").or_insert(
+                                                serde_json::Value::String(strategy.strategy_type().to_string())
+                                            );
+                                        }
+                                    }
+
                                     tracing::info!(
                                         "📊 {} generated {} signals",
                                         strategy.name(),
@@ -403,51 +366,33 @@ impl ScannerAgent {
                 }
                 drop(stats_guard);
 
-                // Auto-track CurveGraduation signals in graduation tracker
-                let gt_guard = graduation_tracker.read().await;
-                if let Some(tracker) = gt_guard.as_ref() {
-                    for signal in all_signals.iter().filter(|s| s.signal_type == SignalType::CurveGraduation) {
-                        if let Some(ref mint) = signal.token_mint {
-                            // Skip if already tracking
-                            if tracker.is_token_tracked(mint).await {
-                                continue;
-                            }
+                if !all_signals.is_empty() {
+                    let mut cache = recent_signals.write().await;
+                    let now = chrono::Utc::now();
+                    let cutoff = now - chrono::Duration::seconds(SIGNAL_CACHE_TTL_SECS);
 
-                            let name = signal.metadata.get("token_name")
+                    cache.retain(|s| s.detected_at > cutoff);
+
+                    for signal in all_signals.iter() {
+                        let signal_source = signal.metadata.get("signal_source")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+                        let already_cached = cache.iter().any(|s| {
+                            s.token_mint == signal.token_mint &&
+                            s.signal_type == signal.signal_type &&
+                            s.metadata.get("signal_source")
                                 .and_then(|v| v.as_str())
-                                .unwrap_or("Unknown")
-                                .to_string();
-                            let symbol = signal.metadata.get("token_symbol")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("???")
-                                .to_string();
-                            let progress = signal.metadata.get("progress_percent")
-                                .and_then(|v| v.as_f64())
-                                .unwrap_or(0.0);
-                            let venue = format!("{:?}", signal.venue_type).to_lowercase();
-
-                            // Auto-track with persistence
-                            tracker.track_with_persistence(
-                                mint,
-                                &name,
-                                &symbol,
-                                &venue,
-                                Uuid::nil(), // Strategy ID assigned later when edge is created
-                                progress,
-                            ).await;
-
-                            tracing::info!(
-                                "🎯 Auto-tracked {} ({}) from scanner - progress: {:.1}%",
-                                symbol,
-                                mint,
-                                progress
-                            );
+                                .unwrap_or("") == signal_source
+                        });
+                        if !already_cached {
+                            cache.push(signal.clone());
                         }
                     }
-                }
-                drop(gt_guard);
 
-                // Auto-process signals through strategy engine if configured
+                    cache.sort_by(|a, b| b.detected_at.cmp(&a.detected_at));
+                    cache.truncate(MAX_CACHED_SIGNALS);
+                }
+
                 if !all_signals.is_empty() {
                     let se_guard = strategy_engine.read().await;
                     if let Some(engine) = se_guard.as_ref() {
@@ -511,6 +456,54 @@ impl ScannerAgent {
         stats.total_signals_detected += all_signals.len() as u64;
 
         Ok(all_signals)
+    }
+
+    pub async fn get_recent_signals(&self, limit: Option<usize>) -> Vec<Signal> {
+        let cache = self.recent_signals.read().await;
+        let now = chrono::Utc::now();
+        let cutoff = now - chrono::Duration::seconds(SIGNAL_CACHE_TTL_SECS);
+
+        let mut signals: Vec<Signal> = cache
+            .iter()
+            .filter(|s| s.detected_at > cutoff && s.expires_at > now)
+            .cloned()
+            .collect();
+
+        signals.sort_by(|a, b| b.detected_at.cmp(&a.detected_at));
+
+        if let Some(limit) = limit {
+            signals.truncate(limit);
+        }
+
+        signals
+    }
+
+    pub async fn get_cached_signals_by_venue(&self, venue_type: VenueType, limit: Option<usize>) -> Vec<Signal> {
+        let signals = self.get_recent_signals(None).await;
+        let mut filtered: Vec<Signal> = signals
+            .into_iter()
+            .filter(|s| s.venue_type == venue_type)
+            .collect();
+
+        if let Some(limit) = limit {
+            filtered.truncate(limit);
+        }
+
+        filtered
+    }
+
+    pub async fn get_cached_high_confidence(&self, min_confidence: f64, limit: Option<usize>) -> Vec<Signal> {
+        let signals = self.get_recent_signals(None).await;
+        let mut filtered: Vec<Signal> = signals
+            .into_iter()
+            .filter(|s| s.confidence >= min_confidence)
+            .collect();
+
+        if let Some(limit) = limit {
+            filtered.truncate(limit);
+        }
+
+        filtered
     }
 
     pub async fn get_signals_by_type(&self, signal_type: &str) -> AppResult<Vec<Signal>> {

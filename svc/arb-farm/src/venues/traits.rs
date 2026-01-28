@@ -18,6 +18,23 @@ pub trait MevVenue: Send + Sync {
     async fn get_quote(&self, params: &QuoteParams) -> AppResult<Quote>;
 
     async fn is_healthy(&self) -> bool;
+
+    async fn scan_for_token_data(&self) -> AppResult<Vec<VenueTokenData>> {
+        Ok(Vec::new())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VenueTokenData {
+    pub mint: String,
+    pub name: String,
+    pub symbol: String,
+    pub graduation_progress: f64,
+    pub bonding_curve_address: Option<String>,
+    pub market_cap_usd: f64,
+    pub volume_24h_usd: f64,
+    pub holder_count: u32,
+    pub metadata: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

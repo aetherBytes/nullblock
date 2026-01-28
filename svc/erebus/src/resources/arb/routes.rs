@@ -170,6 +170,41 @@ pub async fn scanner_stop() -> Result<ResponseJson<Value>, (StatusCode, Response
     proxy_request("POST", "scanner/stop", None).await
 }
 
+#[derive(Debug, Deserialize)]
+pub struct SignalQuery {
+    pub limit: Option<i64>,
+    pub venue_type: Option<String>,
+    pub min_profit_bps: Option<i32>,
+    pub min_confidence: Option<f64>,
+}
+
+pub async fn scanner_signals(
+    Query(query): Query<SignalQuery>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📡 Scanner signals requested");
+    let mut endpoint = "scanner/signals".to_string();
+    let mut params = Vec::new();
+
+    if let Some(limit) = query.limit {
+        params.push(format!("limit={}", limit));
+    }
+    if let Some(venue_type) = &query.venue_type {
+        params.push(format!("venue_type={}", venue_type));
+    }
+    if let Some(min_profit_bps) = query.min_profit_bps {
+        params.push(format!("min_profit_bps={}", min_profit_bps));
+    }
+    if let Some(min_confidence) = query.min_confidence {
+        params.push(format!("min_confidence={}", min_confidence));
+    }
+
+    if !params.is_empty() {
+        endpoint = format!("{}?{}", endpoint, params.join("&"));
+    }
+
+    proxy_request("GET", &endpoint, None).await
+}
+
 // Venues
 pub async fn list_venues(
     Query(query): Query<ListQuery>,
@@ -941,65 +976,6 @@ pub async fn sniper_config_update(
     proxy_request("PUT", "sniper/config", Some(body)).await
 }
 
-// Graduation Tracker
-pub async fn tracker_stats() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
-    info!("📊 Tracker stats requested");
-    proxy_request("GET", "graduation/stats", None).await
-}
-
-pub async fn tracker_tokens() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
-    info!("📋 Tracker tokens requested");
-    proxy_request("GET", "graduation/tracked", None).await
-}
-
-pub async fn tracker_is_tracked(
-    Path(mint): Path<String>,
-) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
-    info!("❓ Tracker is tracked requested: {}", mint);
-    proxy_request("GET", &format!("graduation/tracked/{}", mint), None).await
-}
-
-pub async fn tracker_untrack(
-    Path(mint): Path<String>,
-) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
-    info!("➖ Tracker untrack requested: {}", mint);
-    proxy_request("POST", &format!("graduation/untrack/{}", mint), None).await
-}
-
-pub async fn tracker_track(
-    Json(body): Json<Value>,
-) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
-    info!("➕ Tracker track requested");
-    proxy_request("POST", "graduation/track", Some(body)).await
-}
-
-pub async fn tracker_start() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
-    info!("▶️ Tracker start requested");
-    proxy_request("POST", "graduation/start", None).await
-}
-
-pub async fn tracker_stop() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
-    info!("⏹️ Tracker stop requested");
-    proxy_request("POST", "graduation/stop", None).await
-}
-
-pub async fn tracker_clear() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
-    info!("🗑️ Tracker clear requested");
-    proxy_request("POST", "graduation/clear", None).await
-}
-
-pub async fn tracker_config_get() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
-    info!("⚙️ Tracker config get requested");
-    proxy_request("GET", "graduation/config", None).await
-}
-
-pub async fn tracker_config_update(
-    Json(body): Json<Value>,
-) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
-    info!("⚙️ Tracker config update requested");
-    proxy_request("PUT", "graduation/config", Some(body)).await
-}
-
 // Helius
 pub async fn helius_status() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
     info!("📊 Helius status requested");
@@ -1086,6 +1062,7 @@ where
 
         // Scanner
         .route("/api/arb/scanner/status", get(scanner_status))
+        .route("/api/arb/scanner/signals", get(scanner_signals))
         .route("/api/arb/scanner/stream", get(scanner_stream))
         .route("/api/arb/scanner/start", post(scanner_start))
         .route("/api/arb/scanner/stop", post(scanner_stop))
@@ -1247,13 +1224,4 @@ where
         .route("/api/arb/sniper/config", get(sniper_config_get).put(sniper_config_update))
 
         // Graduation Tracker
-        .route("/api/arb/graduation/stats", get(tracker_stats))
-        .route("/api/arb/graduation/tracked", get(tracker_tokens))
-        .route("/api/arb/graduation/tracked/:mint", get(tracker_is_tracked))
-        .route("/api/arb/graduation/untrack/:mint", post(tracker_untrack))
-        .route("/api/arb/graduation/track", post(tracker_track))
-        .route("/api/arb/graduation/start", post(tracker_start))
-        .route("/api/arb/graduation/stop", post(tracker_stop))
-        .route("/api/arb/graduation/clear", post(tracker_clear))
-        .route("/api/arb/graduation/config", get(tracker_config_get).put(tracker_config_update))
 }

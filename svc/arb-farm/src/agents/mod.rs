@@ -3,7 +3,6 @@ pub mod curve_metrics;
 pub mod curve_scorer;
 pub mod engram_harvester;
 pub mod graduation_sniper;
-pub mod graduation_tracker;
 pub mod hecate_notifier;
 pub mod kol_discovery;
 pub mod metrics_aggregator;
@@ -22,7 +21,6 @@ pub use curve_scorer::{
 };
 pub use engram_harvester::{EngramHarvester, HarvesterStats};
 pub use graduation_sniper::{GraduationSniper, SnipePosition, SnipeStatus, SniperConfig, SniperStats};
-pub use graduation_tracker::{GraduationTracker, GraduationTrackerStats, TrackedState, TrackedToken, TrackerConfig};
 pub use hecate_notifier::{HecateNotifier, spawn_hecate_notifier};
 pub use kol_discovery::{DiscoveredKol, KolDiscoveryAgent, KolDiscoveryStats};
 pub use overseer::{
@@ -30,7 +28,7 @@ pub use overseer::{
 };
 pub use scanner::{ScannerAgent, ScannerStats, ScannerStatus, VenueStatus};
 pub use strategies::{
-    BehavioralStrategy, GraduationSniperStrategy, KolCopyStrategy, StrategyRegistry,
+    BehavioralStrategy, GraduationSniperStrategy, StrategyRegistry,
     TokenData, VenueSnapshot, VolumeHunterStrategy,
 };
 pub use strategy_engine::{MatchResult, StrategyEngine};

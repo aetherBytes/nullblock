@@ -5,7 +5,6 @@ pub mod consensus;
 pub mod curves;
 pub mod edges;
 pub mod engram;
-pub mod graduation;
 pub mod health;
 pub mod helius;
 pub mod kol;
