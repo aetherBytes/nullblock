@@ -1,0 +1,2 @@
+ALTER TABLE arb_positions ADD COLUMN IF NOT EXISTS signal_source VARCHAR(64);
+ALTER TABLE arb_positions ADD COLUMN IF NOT EXISTS venue VARCHAR(64);

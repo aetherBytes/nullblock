@@ -80,10 +80,8 @@ pub async fn all_events_stream(
     let event_stream = stream.filter_map(|result| {
         match result {
             Ok(event) => {
-                let event_type = event.topic.clone();
                 let data = serde_json::to_string(&event).unwrap_or_default();
                 Some(Ok(Event::default()
-                    .event(event_type)
                     .data(data)))
             }
             Err(_) => None,

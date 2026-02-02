@@ -18,14 +18,17 @@ pub struct ListTradesQuery {
 #[derive(Debug, Serialize)]
 pub struct TradeResponse {
     pub id: Uuid,
-    pub edge_id: Uuid,
-    pub strategy_id: Uuid,
+    pub edge_id: Option<Uuid>,
+    pub strategy_id: Option<Uuid>,
     pub tx_signature: Option<String>,
     pub bundle_id: Option<String>,
     pub profit_lamports: Option<i64>,
     pub gas_cost_lamports: Option<i64>,
     pub slippage_bps: Option<i32>,
     pub executed_at: String,
+    pub strategy_type: Option<String>,
+    pub token_mint: Option<String>,
+    pub token_symbol: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -50,9 +53,20 @@ pub async fn list_trades(
         state.trade_repo.list(limit, offset).await?
     };
 
-    let trades: Vec<TradeResponse> = records
-        .iter()
-        .map(|r| TradeResponse {
+    let strategy_map = state.strategy_repo.get_strategy_type_map().await.unwrap_or_default();
+
+    let mut trades: Vec<TradeResponse> = Vec::with_capacity(records.len());
+    for r in &records {
+        let strategy_type = r.strategy_id.and_then(|sid| strategy_map.get(&sid).cloned());
+        let (token_mint, token_symbol) = if let Some(eid) = r.edge_id {
+            match state.position_repo.get_by_edge_id(eid).await {
+                Ok(Some(pos)) => (Some(pos.token_mint), pos.token_symbol),
+                _ => (None, None),
+            }
+        } else {
+            (None, None)
+        };
+        trades.push(TradeResponse {
             id: r.id,
             edge_id: r.edge_id,
             strategy_id: r.strategy_id,
@@ -62,8 +76,11 @@ pub async fn list_trades(
             gas_cost_lamports: r.gas_cost_lamports,
             slippage_bps: r.slippage_bps,
             executed_at: r.executed_at.to_rfc3339(),
-        })
-        .collect();
+            strategy_type,
+            token_mint,
+            token_symbol,
+        });
+    }
 
     let total = trades.len();
 
@@ -80,6 +97,22 @@ pub async fn get_trade(
         .await?
         .ok_or_else(|| crate::error::AppError::NotFound(format!("Trade {} not found", trade_id)))?;
 
+    let strategy_type = if let Some(sid) = record.strategy_id {
+        state.strategy_repo.get_strategy_type_map().await
+            .ok()
+            .and_then(|m| m.get(&sid).cloned())
+    } else {
+        None
+    };
+    let (token_mint, token_symbol) = if let Some(eid) = record.edge_id {
+        match state.position_repo.get_by_edge_id(eid).await {
+            Ok(Some(pos)) => (Some(pos.token_mint), pos.token_symbol),
+            _ => (None, None),
+        }
+    } else {
+        (None, None)
+    };
+
     Ok(Json(TradeResponse {
         id: record.id,
         edge_id: record.edge_id,
@@ -90,6 +123,9 @@ pub async fn get_trade(
         gas_cost_lamports: record.gas_cost_lamports,
         slippage_bps: record.slippage_bps,
         executed_at: record.executed_at.to_rfc3339(),
+        strategy_type,
+        token_mint,
+        token_symbol,
     }))
 }
 
@@ -113,6 +149,8 @@ pub struct TradeStatsResponse {
     pub largest_loss_sol: f64,
 }
 
+// Execution-level trade stats (from arb_trades table). For position-based P&L aggregation,
+// use /positions/pnl-summary which derives from arb_positions with realized_pnl.
 pub async fn get_trade_stats(
     State(state): State<AppState>,
     Query(query): Query<TradeStatsQuery>,

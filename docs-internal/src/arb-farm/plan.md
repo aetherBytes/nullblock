@@ -2375,9 +2375,9 @@ curl http://localhost:9007/swarm/circuit-breakers
 
 #### Critical Fixes Implemented
 1. **Exit Transactions Saved to Engrams** ✅
-   - Added `save_exit_to_engrams()` in `position_monitor.rs`
+   - Added `save_exit_to_engrams()` in `position_executor.rs` (moved from position_monitor.rs)
    - Both buy AND sell transactions now tracked with PnL
-   - Files: `position_monitor.rs`, `server.rs`
+   - Files: `position_executor.rs`, `server.rs`
 
 2. **MCP Tool Annotations** ✅
    - All 97 tools annotated with `readOnlyHint`, `destructiveHint`, `idempotentHint`

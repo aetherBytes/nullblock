@@ -94,24 +94,13 @@ pub async fn close_position(
 
     match state
         .position_monitor
-        .trigger_manual_exit(position_id, exit_percent, &state.dev_signer)
+        .trigger_manual_exit(position_id, exit_percent)
         .await
     {
         Ok(_) => {
-            // Release capital if this was a full exit
-            if exit_percent >= 100.0 {
-                if let Some(released) = state.capital_manager.release_capital(position_id).await {
-                    info!(
-                        "💸 Released {} SOL capital for closed position {}",
-                        released as f64 / 1_000_000_000.0,
-                        position_id
-                    );
-                }
-            }
-
             Ok(Json(ExitResponse {
                 success: true,
-                message: format!("Exit triggered for {}% of position", exit_percent),
+                message: format!("Exit queued for {}% of position", exit_percent),
                 position_id,
             }))
         }
@@ -387,18 +376,11 @@ pub async fn emergency_close_all(
 
         match state
             .position_monitor
-            .trigger_manual_exit(position.id, 100.0, &state.dev_signer)
+            .trigger_manual_exit(position.id, 100.0)
             .await
         {
             Ok(_) => {
                 exited += 1;
-                if let Some(released) = state.capital_manager.release_capital(position.id).await {
-                    info!(
-                        "💸 Released {} SOL for {}",
-                        released as f64 / 1_000_000_000.0,
-                        position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8])
-                    );
-                }
                 results.push(EmergencyExitResult {
                     position_id: position.id,
                     token_mint: position.token_mint.clone(),
@@ -496,7 +478,7 @@ pub async fn force_clear_all_positions(
                     "realized_pnl_sol": 0.0,
                 }),
             );
-            let _ = state.event_tx.send(event);
+            crate::events::broadcast_event(&state.event_tx, event);
         }
     }
 
@@ -511,7 +493,7 @@ pub async fn force_clear_all_positions(
             "total_count": total,
         }),
     );
-    let _ = state.event_tx.send(event);
+    crate::events::broadcast_event(&state.event_tx, event);
 
     let message = format!("🧹 Cleared {}/{} positions from tracking", cleared, total);
     info!("{}", message);
@@ -682,7 +664,13 @@ pub async fn sell_all_wallet_tokens(
         let sem = semaphore.clone();
 
         async move {
-            let _permit = sem.acquire().await.unwrap();
+            let _permit = match sem.acquire().await {
+                Ok(permit) => permit,
+                Err(e) => {
+                    tracing::error!("Semaphore acquire failed for {}: {}", &token.mint[..12], e);
+                    return (token, Err(crate::error::AppError::Internal(format!("Semaphore closed: {}", e))));
+                }
+            };
             info!("💰 Selling {} ({:.2} tokens)", &token.mint[..12], token.ui_amount);
             let result = sell_token_to_sol(&state, &token.mint, token.ui_amount, token.decimals, &wallet).await;
             (token, result)
@@ -761,7 +749,7 @@ pub async fn sell_all_wallet_tokens(
                                 "tx_signature": signature,
                             }),
                         );
-                        let _ = state.event_tx.send(event);
+                        crate::events::broadcast_event(&state.event_tx, event);
                     }
                 }
 
@@ -1298,6 +1286,7 @@ pub struct PnLSummary {
     pub today_sol: f64,
     pub week_sol: f64,
     pub total_sol: f64,
+    pub total_gas_sol: f64,
     pub wins: u32,
     pub losses: u32,
     pub win_rate: f64,
@@ -1316,6 +1305,8 @@ pub struct PnLSummary {
     pub worst_trade: Option<BestWorstTrade>,
     pub recent_trades: Vec<RecentTradeInfo>,
     pub active_strategies: Vec<ActiveStrategy>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pnl_reset_at: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1338,6 +1329,11 @@ pub struct RecentTradeInfo {
     pub exit_price: Option<f64>,
     pub entry_amount_sol: f64,
     pub momentum_at_exit: Option<f64>,
+    pub hold_duration_mins: Option<i64>,
+    pub entry_time: Option<String>,
+    pub exit_time: Option<String>,
+    pub entry_tx_signature: Option<String>,
+    pub exit_tx_signature: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1359,14 +1355,21 @@ pub async fn get_pnl_summary(
     use crate::database::PositionRepository;
 
     let repo = PositionRepository::new(state.db_pool.clone());
-    let db_stats = match repo.get_pnl_stats().await {
+
+    let reset_at = state.settings_repo.get("pnl_reset_at").await
+        .ok()
+        .flatten()
+        .and_then(|r| chrono::DateTime::parse_from_rfc3339(&r.value).ok())
+        .map(|dt| dt.with_timezone(&Utc));
+
+    let db_stats = match repo.get_pnl_stats_since(reset_at).await {
         Ok(stats) => stats,
         Err(e) => {
             tracing::warn!("Failed to get PnL stats from DB: {}", e);
             Default::default()
         }
     };
-    let recent = repo.get_recent_trades(5).await.unwrap_or_default();
+    let recent = repo.get_recent_trades(20).await.unwrap_or_default();
 
     let manager_stats = state.position_manager.get_stats().await;
 
@@ -1407,6 +1410,11 @@ pub async fn get_pnl_summary(
             exit_price: t.exit_price,
             entry_amount_sol: t.entry_sol,
             momentum_at_exit: t.momentum_at_exit,
+            hold_duration_mins: t.hold_duration_mins,
+            entry_time: t.entry_time.map(|dt| dt.to_rfc3339()),
+            exit_time: t.time.map(|dt| dt.to_rfc3339()),
+            entry_tx_signature: t.entry_tx_signature,
+            exit_tx_signature: t.exit_tx_signature,
         }
     }).collect();
 
@@ -1436,6 +1444,7 @@ pub async fn get_pnl_summary(
         today_sol: db_stats.today_pnl,
         week_sol: db_stats.week_pnl,
         total_sol: db_stats.total_pnl,
+        total_gas_sol: db_stats.total_gas_sol,
         wins,
         losses,
         win_rate,
@@ -1460,7 +1469,35 @@ pub async fn get_pnl_summary(
         }),
         recent_trades,
         active_strategies,
+        pnl_reset_at: reset_at.map(|dt| dt.to_rfc3339()),
     }))
+}
+
+pub async fn reset_pnl(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let now = Utc::now().to_rfc3339();
+    state.settings_repo.set("pnl_reset_at", &now).await?;
+
+    info!("🔄 PnL odometer reset at {}", now);
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "pnl_reset_at": now,
+    })))
+}
+
+pub async fn get_pnl_reset(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let reset_at = state.settings_repo.get("pnl_reset_at").await
+        .ok()
+        .flatten()
+        .map(|r| r.value);
+
+    Ok(Json(serde_json::json!({
+        "pnl_reset_at": reset_at,
+    })))
 }
 
 #[derive(Debug, Serialize)]

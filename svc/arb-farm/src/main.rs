@@ -196,17 +196,34 @@ async fn main() -> anyhow::Result<()> {
                                 sol_balance, MIN_BALANCE_SOL, GAS_RESERVE_SOL);
                         }
 
-                        const MAX_POSITION_CAP_SOL: f64 = 10.0;
-                        let (divisor, tier_name) = if available_for_trading < 1.0 {
-                            (10.0, "micro (<1 SOL)")
-                        } else if available_for_trading < 10.0 {
-                            (15.0, "small (1-10 SOL)")
-                        } else if available_for_trading < 50.0 {
-                            (20.0, "medium (10-50 SOL)")
+                        let explicit_max = std::env::var("DEFAULT_MAX_POSITION_SOL")
+                            .ok()
+                            .and_then(|v| v.parse::<f64>().ok());
+
+                        let dynamic_max_position = if let Some(explicit) = explicit_max {
+                            info!(
+                                "💰 Using explicit DEFAULT_MAX_POSITION_SOL={:.2} SOL (available: {:.2} SOL)",
+                                explicit, available_for_trading
+                            );
+                            explicit.min(available_for_trading)
                         } else {
-                            (25.0, "large (50+ SOL)")
+                            const MAX_POSITION_CAP_SOL: f64 = 10.0;
+                            let (divisor, tier_name) = if available_for_trading < 1.0 {
+                                (10.0, "micro (<1 SOL)")
+                            } else if available_for_trading < 10.0 {
+                                (15.0, "small (1-10 SOL)")
+                            } else if available_for_trading < 50.0 {
+                                (20.0, "medium (10-50 SOL)")
+                            } else {
+                                (25.0, "large (50+ SOL)")
+                            };
+                            let computed = (available_for_trading / divisor).min(MAX_POSITION_CAP_SOL);
+                            info!(
+                                "💰 Dynamic max position: {:.2} SOL (1/{} of {:.2} SOL, tier: {}, cap: {} SOL)",
+                                computed, divisor as u32, available_for_trading, tier_name, MAX_POSITION_CAP_SOL
+                            );
+                            computed
                         };
-                        let dynamic_max_position = (available_for_trading / divisor).min(MAX_POSITION_CAP_SOL);
                         let dynamic_max_position = (dynamic_max_position * 100.0).round() / 100.0;
 
                         {
@@ -218,20 +235,17 @@ async fn main() -> anyhow::Result<()> {
                             let mut wallet_max = state.wallet_max_position_sol.write().await;
                             *wallet_max = dynamic_max_position;
                         }
-                        info!(
-                            "💰 Global dynamic max position: {:.2} SOL (1/{} of {:.2} SOL, tier: {}, cap: {} SOL)",
-                            dynamic_max_position, divisor as u32, available_for_trading, tier_name, MAX_POSITION_CAP_SOL
-                        );
 
-                        // Per-strategy budget allocation
-                        // Divide wallet balance between active strategies so they can operate independently
                         use crate::database::repositories::strategies::UpdateStrategyRecord;
                         let strategies = state.strategy_engine.list_strategies().await;
                         let active_strategies: Vec<_> = strategies.iter().filter(|s| s.is_active).collect();
                         let strategy_count = active_strategies.len().max(1);
-                        let per_strategy_budget = available_for_trading / strategy_count as f64;
-                        let per_strategy_max = (per_strategy_budget / divisor).min(MAX_POSITION_CAP_SOL);
-                        let per_strategy_max = (per_strategy_max * 100.0).round() / 100.0;
+                        let per_strategy_max = dynamic_max_position;
+
+                        info!(
+                            "💰 Per-strategy max: {:.2} SOL ({} active strategies)",
+                            per_strategy_max, strategy_count
+                        );
 
                         info!(
                             "💰 Per-strategy budget allocation: {:.2} SOL per strategy ({} active strategies)",
@@ -282,6 +296,7 @@ async fn main() -> anyhow::Result<()> {
     let scanner_for_autostart = state.scanner.clone();
     let executor_for_autostart = state.autonomous_executor.clone();
     let position_monitor_for_autostart = state.position_monitor.clone();
+    let position_executor_for_autostart = state.position_executor.clone();
     let realtime_monitor_for_autostart = state.realtime_monitor.clone();
     let dev_signer_for_autostart = state.dev_signer.clone();
     let helius_das_for_autostart = state.helius_das.clone();
@@ -296,6 +311,23 @@ async fn main() -> anyhow::Result<()> {
     let db_pool_for_analysis = state.db_pool.clone();
     let event_tx_for_analysis = state.event_tx.clone();
     let dev_signer_for_analysis = state.dev_signer.clone();
+    let consensus_scheduler_paused = state.consensus_scheduler_paused.clone();
+    let consensus_last_queried = state.consensus_last_queried.clone();
+
+    // Load persisted toggle states from DB (before spawning workers)
+    let persisted_scanner = state.settings_repo.get_bool("scanner_running").await.unwrap_or(None);
+    let persisted_consensus = state.settings_repo.get_bool("consensus_scheduler_enabled").await.unwrap_or(None);
+
+    // Apply persisted consensus state to the AtomicBool immediately
+    if let Some(enabled) = persisted_consensus {
+        let env_override_consensus = false; // no env var for consensus scheduler
+        if !env_override_consensus {
+            consensus_scheduler_paused.store(!enabled, std::sync::atomic::Ordering::Relaxed);
+            if !enabled {
+                info!("[Consensus] ⏸️ Scheduler paused (restored from saved state)");
+            }
+        }
+    }
 
     let position_repo_for_metrics = state.position_repo.clone();
     let engrams_client_for_metrics = state.engrams_client.clone();
@@ -352,16 +384,27 @@ async fn main() -> anyhow::Result<()> {
 
         info!("🚀 Auto-starting workers...");
 
-        // Start scanner (unless ARB_SCANNER_AUTO_START=false)
-        let scanner_auto_start = env::var("ARB_SCANNER_AUTO_START")
-            .map(|v| v.to_lowercase() != "false" && v != "0")
-            .unwrap_or(true);
+        // Scanner state: env var override > DB saved state > default (ON)
+        let scanner_env_override = env::var("ARB_SCANNER_AUTO_START")
+            .ok()
+            .map(|v| v.to_lowercase() != "false" && v != "0");
+        let scanner_auto_start = scanner_env_override.or(persisted_scanner).unwrap_or(true);
 
         if scanner_auto_start {
             scanner_for_autostart.start().await;
-            info!("✅ Scanner started");
+            if scanner_env_override.is_some() {
+                info!("✅ Scanner started (env var)");
+            } else if persisted_scanner.is_some() {
+                info!("✅ Scanner started (restored from saved state)");
+            } else {
+                info!("✅ Scanner started (default)");
+            }
         } else {
-            info!("ℹ️ Scanner NOT auto-started (ARB_SCANNER_AUTO_START=false)");
+            if scanner_env_override.is_some() {
+                info!("ℹ️ Scanner NOT auto-started (ARB_SCANNER_AUTO_START=false)");
+            } else {
+                info!("ℹ️ Scanner NOT auto-started (restored from saved state)");
+            }
             info!("   Start manually: curl -X POST localhost:9007/scanner/start");
         }
 
@@ -394,11 +437,17 @@ async fn main() -> anyhow::Result<()> {
 
         // Start position monitor
         let monitor = position_monitor_for_autostart.clone();
-        let signer = dev_signer_for_autostart.clone();
         tokio::spawn(async move {
-            monitor.start_monitoring(signer).await;
+            monitor.start_monitoring().await;
         });
         info!("✅ Position monitor started");
+
+        // Start position executor (receives commands from monitor)
+        let executor = position_executor_for_autostart.clone();
+        tokio::spawn(async move {
+            executor.run().await;
+        });
+        info!("⚡ Position executor started");
 
         // Start real-time position monitor (websocket price updates)
         let realtime = realtime_monitor_for_autostart.clone();
@@ -788,6 +837,12 @@ async fn main() -> anyhow::Result<()> {
                 tokio::time::sleep(initial_delay).await;
 
                 loop {
+                    if consensus_scheduler_paused.load(std::sync::atomic::Ordering::Relaxed) {
+                        info!("[Consensus] ⏸️ Scheduler paused, skipping analysis cycle");
+                        tokio::time::sleep(analysis_interval).await;
+                        continue;
+                    }
+
                     info!("🧠 [Consensus] Starting periodic consensus analysis...");
 
                     // Gather trading metrics from database
@@ -900,6 +955,10 @@ async fn main() -> anyhow::Result<()> {
                     // Request consensus analysis
                     match analysis_consensus.request_analysis(context).await {
                         Ok(result) => {
+                            {
+                                let mut last_q = consensus_last_queried.write().await;
+                                *last_q = Some(chrono::Utc::now());
+                            }
                             info!(
                                 "[Consensus] ✅ Analysis complete: {} recommendations, {} risk alerts, confidence: {:.1}%",
                                 result.recommendations.len(),
@@ -1102,7 +1161,7 @@ async fn main() -> anyhow::Result<()> {
                                     "timestamp": chrono::Utc::now(),
                                 }),
                             );
-                            let _ = analysis_event_tx.send(event);
+                            crate::events::broadcast_event(&analysis_event_tx, event);
                         }
                         Err(e) => {
                             warn!("[Consensus] ❌ Analysis failed: {}", e);
@@ -1240,6 +1299,7 @@ fn create_router(state: server::AppState) -> Router {
         .route("/scanner/start", post(scanner::start_scanner))
         .route("/scanner/stop", post(scanner::stop_scanner))
         .route("/scanner/signals", get(scanner::get_signals))
+        .route("/scanner/contenders", get(scanner::get_contenders))
         .route("/scanner/process", post(scanner::process_signals))
         // Behavioral Strategies (scanner-driven)
         .route("/scanner/strategies", get(scanner::list_behavioral_strategies))
@@ -1343,6 +1403,8 @@ fn create_router(state: server::AppState) -> Router {
         .route("/consensus/trade-analyses", get(consensus_handlers::list_trade_analyses))
         .route("/consensus/patterns", get(consensus_handlers::get_pattern_summary))
         .route("/consensus/analysis-summary", get(consensus_handlers::get_analysis_summary))
+        .route("/consensus/scheduler", get(consensus_handlers::get_consensus_scheduler_status))
+        .route("/consensus/scheduler", post(consensus_handlers::toggle_consensus_scheduler))
         .route("/consensus/:id", get(consensus_handlers::get_consensus_detail))
         // KOL Tracking + Copy Trading
         .route("/kol", get(kol::list_kols))
@@ -1451,6 +1513,8 @@ fn create_router(state: server::AppState) -> Router {
         .route("/positions/history", get(position_handlers::get_position_history))
         .route("/positions/exposure", get(position_handlers::get_exposure))
         .route("/positions/pnl-summary", get(position_handlers::get_pnl_summary))
+        .route("/positions/pnl-reset", post(position_handlers::reset_pnl))
+        .route("/positions/pnl-reset", get(position_handlers::get_pnl_reset))
         .route("/positions/reconcile", post(position_handlers::reconcile_wallet))
         .route("/positions/monitor/status", get(position_handlers::get_monitor_status))
         .route("/positions/monitor/start", post(position_handlers::start_monitor))

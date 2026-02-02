@@ -241,7 +241,7 @@ pub async fn request_consensus(
     };
 
     let event = state.consensus_engine.create_consensus_event(edge_id, &result);
-    let _ = state.event_tx.send(event);
+    crate::events::broadcast_event(&state.event_tx, event);
 
     // Persist consensus decision to database
     let create_record = CreateConsensusRecord {
@@ -790,6 +790,52 @@ pub fn save_conversation_to_memory(conversation: crate::engrams::ConversationLog
             history.remove(0);
         }
     });
+}
+
+#[derive(Debug, Serialize)]
+pub struct ConsensusSchedulerStatusResponse {
+    pub scheduler_enabled: bool,
+    pub last_queried: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+pub async fn get_consensus_scheduler_status(State(state): State<AppState>) -> impl IntoResponse {
+    let paused = state.consensus_scheduler_paused.load(std::sync::atomic::Ordering::Relaxed);
+    let last_queried = state.consensus_last_queried.read().await.clone();
+
+    (
+        StatusCode::OK,
+        Json(ConsensusSchedulerStatusResponse {
+            scheduler_enabled: !paused,
+            last_queried,
+        }),
+    )
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ToggleConsensusSchedulerRequest {
+    pub enabled: bool,
+}
+
+pub async fn toggle_consensus_scheduler(
+    State(state): State<AppState>,
+    Json(request): Json<ToggleConsensusSchedulerRequest>,
+) -> impl IntoResponse {
+    state.consensus_scheduler_paused.store(!request.enabled, std::sync::atomic::Ordering::Relaxed);
+    let last_queried = state.consensus_last_queried.read().await.clone();
+
+    if let Err(e) = state.settings_repo.set_bool("consensus_scheduler_enabled", request.enabled).await {
+        tracing::warn!("Failed to persist consensus scheduler toggle to DB: {}", e);
+    }
+
+    tracing::info!("[Consensus] Scheduler {}", if request.enabled { "resumed" } else { "paused" });
+
+    (
+        StatusCode::OK,
+        Json(ConsensusSchedulerStatusResponse {
+            scheduler_enabled: request.enabled,
+            last_queried,
+        }),
+    )
 }
 
 pub async fn get_model_discovery_status(State(_state): State<AppState>) -> impl IntoResponse {

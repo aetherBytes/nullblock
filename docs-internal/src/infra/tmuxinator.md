@@ -24,8 +24,10 @@ tmux attach -t nullblock-dev
 | `Ctrl+B, 2` | Agents | Port 9003 |
 | `Ctrl+B, 3` | Protocols | Port 8001 |
 | `Ctrl+B, 4` | Engrams | Port 9004 |
-| `Ctrl+B, 5` | Tasks | Task management |
-| `Ctrl+B, 6` | Frontend | Hecate (port 5173) |
+| `Ctrl+B, 5` | ArbFarm | Port 9007 (scanner, contenders, events, positions) |
+| `Ctrl+B, 6` | Tasks | Task management |
+| `Ctrl+B, 7` | Frontend | Hecate (port 5173) |
+| `Ctrl+B, 8` | Docs | mdBook (port 3001) |
 
 ## Configuration File
 

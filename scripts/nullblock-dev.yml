@@ -624,12 +624,12 @@ windows:
       panes:
         - |
           echo "⚡ Starting ArbFarm Service (Solana MEV)..."
-          echo "Solana MEV Agent Swarm for arbitrage opportunities"
+          echo "Observation mode: scanner ON, execution OFF by default"
           echo ""
           cd svc/arb-farm
           mkdir -p logs
           export ARB_FARM_PORT=9007
-          export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus"
+          export DATABASE_URL="postgresql://postgres:REDACTED_DB_PASS@localhost:5441/agents"
           echo "🚀 Starting ArbFarm service on port 9007..."
           echo "📝 Logs will be written to logs/arb-farm.log"
           echo ""
@@ -641,19 +641,60 @@ windows:
           echo "✅ Database connection ready"
           echo ""
           echo "🚀 Starting ArbFarm service..."
-          cargo run 2>&1 | tee logs/arb-farm.log
+          cargo run --release 2>&1 | tee logs/arb-farm.log
         - |
-          echo "📊 ArbFarm Health Monitoring"
-          echo "Monitoring ArbFarm service health and scanner status..."
+          echo "📊 ArbFarm Health & Contenders"
+          echo "Waiting for ArbFarm service..."
           echo ""
+          while ! curl -s --max-time 3 "http://localhost:9007/health" > /dev/null 2>&1; do
+            sleep 3
+          done
+          echo "✅ ArbFarm is up (observation mode)"
+          sleep 2
           while true; do
-            if curl -s --max-time 3 "http://localhost:9007/health" > /dev/null 2>&1; then
-              echo "$(date '+%H:%M:%S') ✅ ArbFarm healthy"
-              curl -s "http://localhost:9007/health" | jq . 2>/dev/null
-            else
-              echo "$(date '+%H:%M:%S') ❌ ArbFarm not responding"
+            clear
+            RISK_LEVEL=$(curl -s http://localhost:9007/config/risk 2>/dev/null | jq -r '.level // "unknown"' | tr '[:lower:]' '[:upper:]')
+            echo "⚡ ArbFarm - $(date '+%H:%M:%S') [RISK: $RISK_LEVEL]"
+            echo "================================"
+            curl -s http://localhost:9007/scanner/status 2>/dev/null | jq -r '"Scanner: Running=\(.is_running) | Scans=\(.stats.total_scans) | Signals=\(.stats.total_signals)"' || true
+            EXEC_RUNNING=$(curl -s http://localhost:9007/executor/stats 2>/dev/null | jq -r '.is_running // false')
+            curl -s http://localhost:9007/executor/stats 2>/dev/null | jq -r '"Executor: Running=\(.is_running) | Executed=\(.executions_succeeded)"' || true
+            curl -s http://localhost:9007/positions/monitor/status 2>/dev/null | jq -r '"Monitor: Positions=\(.active_positions)"' || true
+            if [ "$EXEC_RUNNING" != "true" ]; then
+              echo ""
+              echo "⚠️  OBSERVATION MODE - signals are buy candidates (execution off)"
             fi
-            sleep 30
+            echo ""
+            curl -s http://localhost:9007/wallet/balance 2>/dev/null | jq -r '"💰 Balance: \(.balance_sol) SOL"' || true
+            echo ""
+            echo "🎓 Top Contenders (approaching graduation)"
+            curl -s 'http://localhost:9007/scanner/contenders?limit=5' 2>/dev/null | jq -r '
+              if .count == 0 then "  No contenders yet (waiting for scan data)"
+              else .contenders[]? | "  \(.symbol) \(.graduation_progress | . * 10 | floor / 10)% | \(.market_cap_sol | . * 100 | floor / 100) SOL"
+              end
+            ' || echo "  Failed to get contenders"
+            sleep 5
+          done
+        - |
+          echo "📡 ArbFarm Event Stream"
+          echo "Waiting for ArbFarm..."
+          while ! curl -s --max-time 3 "http://localhost:9007/health" > /dev/null 2>&1; do
+            sleep 3
+          done
+          echo "✅ Connecting to event stream..."
+          while true; do
+            curl -sN http://localhost:9007/events/stream 2>/dev/null | while read line; do
+              if [[ "$line" == data:* ]]; then
+                json="${line#data: }"
+                ts=$(echo "$json" | jq -r '.timestamp[11:19]' 2>/dev/null)
+                evt=$(echo "$json" | jq -r '.event_type' 2>/dev/null)
+                if [ -n "$ts" ] && [ "$ts" != "null" ]; then
+                  echo "$ts | $evt"
+                fi
+              fi
+            done
+            echo "$(date '+%H:%M:%S') | Connection lost, retrying..."
+            sleep 5
           done
         - |
           echo "📈 ArbFarm Logs"

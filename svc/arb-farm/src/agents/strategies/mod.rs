@@ -1,10 +1,21 @@
 pub mod venue_snapshot;
-pub mod volume_hunter;
 pub mod graduation_sniper_strategy;
+pub mod raydium_snipe_strategy;
+// TODO: WIP - uncomment when KOL copy trading strategy is ready
+// pub mod kol_copy_strategy;
 
 pub use venue_snapshot::{TokenData, VenueSnapshot};
-pub use volume_hunter::VolumeHunterStrategy;
 pub use graduation_sniper_strategy::GraduationSniperStrategy;
+pub use raydium_snipe_strategy::RaydiumSnipeStrategy;
+
+#[derive(Debug, Clone)]
+pub struct GraduationEvent {
+    pub mint: String,
+    pub symbol: String,
+    pub name: String,
+    pub raydium_pool: Option<String>,
+    pub last_progress: f64,
+}
 
 use async_trait::async_trait;
 use std::sync::Arc;

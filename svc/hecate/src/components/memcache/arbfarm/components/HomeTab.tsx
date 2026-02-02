@@ -2,11 +2,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import styles from '../arbfarm.module.scss';
 import { arbFarmService } from '../../../../common/services/arbfarm-service';
 import DashboardPositionCard from './DashboardPositionCard';
-import TradeActivityCard from './TradeActivityCard';
+import ScannerHUD from './ScannerHUD';
 import TokenDetailModal from './TokenDetailModal';
 import CurveMetricsPanel from './CurveMetricsPanel';
-import BehavioralStrategiesPanel from './behavioral-strategies-panel';
-import ScannerSignalsPanel from './ScannerSignalsPanel';
 import type {
   PnLSummary,
   OpenPosition,
@@ -16,8 +14,6 @@ import type {
   RecentTradeInfo,
   ScannerStatus,
   SniperStats,
-  TopOpportunity,
-  CurveToken,
 } from '../../../../types/arbfarm';
 
 interface LiveTrade {
@@ -33,6 +29,7 @@ interface LiveTrade {
 
 interface HomeTabProps {
   liveTrades?: LiveTrade[];
+  lastSseEvent?: { topic: string; payload: unknown } | null;
 }
 
 interface SelectedToken {
@@ -47,10 +44,16 @@ interface SelectedToken {
     entry_amount_sol?: number;
     exit_type?: string;
     time_ago?: string;
+    hold_duration_mins?: number;
+    entry_time?: string;
+    exit_time?: string;
+    entry_tx_signature?: string;
+    exit_tx_signature?: string;
+    momentum_at_exit?: number;
   };
 }
 
-const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
+const HomeTab: React.FC<HomeTabProps> = ({ liveTrades, lastSseEvent }) => {
   const [pnlSummary, setPnlSummary] = useState<PnLSummary | null>(null);
   const [realPositions, setRealPositions] = useState<OpenPosition[]>([]);
   const [walletBalance, setWalletBalance] = useState<WalletBalanceResponse | null>(null);
@@ -67,21 +70,17 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
     symbol: string;
   } | null>(null);
 
-  // Automation state
   const [scannerStatus, setScannerStatus] = useState<ScannerStatus | null>(null);
   const [sniperStats, setSniperStats] = useState<SniperStats | null>(null);
   const [executionEnabled, setExecutionEnabled] = useState<boolean | null>(null);
-  const [autoExitStats, setAutoExitStats] = useState<{ total_positions: number; auto_exit_enabled: number; manual_mode: number } | null>(null);
-
-  // Command bar state
-  const [topOpportunities, setTopOpportunities] = useState<TopOpportunity[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<CurveToken[]>([]);
-  const [searchFocused, setSearchFocused] = useState(false);
+  const [togglingMonitor, setTogglingMonitor] = useState(false);
+  const [togglingScanner, setTogglingScanner] = useState(false);
+  const [togglingSniper, setTogglingSniper] = useState(false);
+  const [togglingExecution, setTogglingExecution] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const [pnlRes, positionsRes, balanceRes, exposureRes, monitorRes, scannerRes, sniperRes, execRes, autoExitRes, opportunitiesRes] = await Promise.all([
+      const [pnlRes, positionsRes, balanceRes, exposureRes, monitorRes, scannerRes, sniperRes, execRes] = await Promise.all([
         arbFarmService.getPnLSummary(),
         arbFarmService.getPositions(),
         arbFarmService.getWalletBalance(),
@@ -90,8 +89,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
         arbFarmService.getScannerStatus(),
         arbFarmService.getSniperStats(),
         arbFarmService.getExecutionConfig(),
-        arbFarmService.getAutoExitStats(),
-        arbFarmService.getTopOpportunities(5),
       ]);
 
       if (pnlRes.success && pnlRes.data) {
@@ -118,12 +115,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
       if (execRes.success && execRes.data) {
         setExecutionEnabled(execRes.data.auto_execution_enabled);
       }
-      if (autoExitRes.success && autoExitRes.data) {
-        setAutoExitStats(autoExitRes.data);
-      }
-      if (opportunitiesRes.success && opportunitiesRes.data) {
-        setTopOpportunities(opportunitiesRes.data.opportunities || []);
-      }
     } catch (error) {
       console.error('Failed to fetch home tab data:', error);
     } finally {
@@ -134,28 +125,16 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
   useEffect(() => {
     setLoading(true);
     fetchData();
-    const interval = setInterval(fetchData, 15000);
-    return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Search handler with debounce
   useEffect(() => {
-    if (searchQuery.length < 2) {
-      setSearchResults([]);
-      return;
+    if (!lastSseEvent) return;
+    if (closingPosition || sellingAll || reconciling) return;
+    const { topic } = lastSseEvent;
+    if (topic?.startsWith('arb.position.') || topic?.startsWith('arb.trade')) {
+      fetchData();
     }
-    const timer = setTimeout(async () => {
-      const res = await arbFarmService.listCurveTokens(undefined, 50);
-      if (res.success && res.data) {
-        const filtered = res.data.filter((t: CurveToken) =>
-          t.symbol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          t.mint.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        setSearchResults(filtered.slice(0, 5));
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [lastSseEvent, fetchData, closingPosition, sellingAll, reconciling]);
 
 
   const handleClosePosition = async (positionId: string, exitPercent: number = 100): Promise<boolean> => {
@@ -205,6 +184,8 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
   };
 
   const handleToggleMonitor = async () => {
+    if (togglingMonitor) return;
+    setTogglingMonitor(true);
     try {
       if (monitorStatus?.monitoring_active) {
         await arbFarmService.stopPositionMonitor();
@@ -217,10 +198,14 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
       }
     } catch (error) {
       console.error('Failed to toggle monitor:', error);
+    } finally {
+      setTogglingMonitor(false);
     }
   };
 
   const handleToggleScanner = async () => {
+    if (togglingScanner) return;
+    setTogglingScanner(true);
     try {
       if (scannerStatus?.is_running) {
         await arbFarmService.stopScanner();
@@ -233,10 +218,14 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
       }
     } catch (error) {
       console.error('Failed to toggle scanner:', error);
+    } finally {
+      setTogglingScanner(false);
     }
   };
 
   const handleToggleSniper = async () => {
+    if (togglingSniper) return;
+    setTogglingSniper(true);
     try {
       if (sniperStats?.is_running) {
         await arbFarmService.stopSniper();
@@ -249,10 +238,14 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
       }
     } catch (error) {
       console.error('Failed to toggle sniper:', error);
+    } finally {
+      setTogglingSniper(false);
     }
   };
 
   const handleToggleExecution = async () => {
+    if (togglingExecution) return;
+    setTogglingExecution(true);
     try {
       const newEnabled = !executionEnabled;
       const res = await arbFarmService.toggleExecution(newEnabled);
@@ -261,6 +254,8 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
       }
     } catch (error) {
       console.error('Failed to toggle execution:', error);
+    } finally {
+      setTogglingExecution(false);
     }
   };
 
@@ -293,122 +288,51 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
     );
   }
 
+
+  const totalSniped = sniperStats
+    ? sniperStats.positions_sold + sniperStats.positions_waiting + sniperStats.positions_failed
+    : 0;
+  const sniperWinRate = sniperStats
+    ? sniperStats.positions_sold > 0
+      ? ((sniperStats.positions_sold / (totalSniped || 1)) * 100)
+      : 0
+    : 0;
+
   return (
     <div className={styles.hudDashboard}>
-      {/* Command Bar */}
-      <div className={styles.hudCommandBar}>
-        {/* Next Picks - Top 3 opportunities */}
-        <div className={styles.nextPicksWidget}>
-          <span className={styles.widgetLabel}>NEXT PICKS</span>
-          <div className={styles.picksList}>
-            {topOpportunities.slice(0, 3).map((opp, i) => (
-              <div
-                key={opp.mint}
-                className={styles.pickItem}
-                onClick={() => setSelectedToken({ mint: opp.mint, symbol: opp.symbol, venue: opp.venue })}
-              >
-                <span className={styles.pickRank}>#{i + 1}</span>
-                <span className={styles.pickSymbol}>{opp.symbol}</span>
-                <span className={styles.pickScore}>{opp.score.overall_score.toFixed(0)}</span>
-                <div className={styles.pickMomentum} style={{ width: `${opp.metrics.graduation_progress}%` }} />
-              </div>
-            ))}
-            {topOpportunities.length === 0 && (
-              <span className={styles.emptyPicks}>No picks available</span>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Search */}
-        <div className={styles.searchWidget}>
-          <input
-            type="text"
-            placeholder="Search token or mint..."
-            className={styles.searchInput}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-          />
-          {searchFocused && searchResults.length > 0 && (
-            <div className={styles.searchResults}>
-              {searchResults.map((token) => (
-                <div
-                  key={token.mint}
-                  className={styles.searchResultItem}
-                  onClick={() => {
-                    setSelectedToken({ mint: token.mint, symbol: token.symbol, venue: token.venue });
-                    setSearchQuery('');
-                  }}
-                >
-                  <span className={styles.resultSymbol}>{token.symbol}</span>
-                  <span className={styles.resultMint}>{token.mint.slice(0, 8)}...</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Signal Counter */}
-        <div className={styles.signalWidget}>
-          <span className={styles.widgetLabel}>SIGNALS</span>
-          <span className={styles.signalCount}>{scannerStatus?.stats?.total_signals ?? 0}</span>
-          <span className={styles.signalSub}>detected</span>
-        </div>
-
-        {/* Best Trade Badge */}
-        <div className={styles.bestTradeWidget}>
-          <span className={styles.widgetLabel}>BEST TRADE</span>
-          <span className={styles.bestSymbol}>{pnlSummary?.best_trade?.symbol || '-'}</span>
-          <span className={`${styles.bestPnl} ${(pnlSummary?.best_trade?.pnl ?? 0) >= 0 ? styles.profit : ''}`}>
-            {pnlSummary?.best_trade?.pnl ? `+${pnlSummary.best_trade.pnl.toFixed(3)} SOL` : '-'}
-          </span>
-        </div>
-
-        {/* Quick Actions */}
-        <div className={styles.quickActions}>
-          <button onClick={handleToggleScanner} className={styles.quickBtn}>
-            {scannerStatus?.is_running ? '\u23F8' : '\u25B6'} Scanner
-          </button>
-          <button onClick={handleToggleSniper} className={styles.quickBtn}>
-            {sniperStats?.is_running ? '\u23F8' : '\u25B6'} Sniper
-          </button>
-        </div>
-      </div>
-
-      {/* Main Area: Positions + Activity */}
       <div className={styles.hudMainArea}>
-        {/* Positions Panel */}
         <div className={styles.hudPanel}>
           <div className={styles.hudPanelHeader}>
-            <h3 className={styles.hudPanelTitle}>Open Positions ({realPositions.length})</h3>
+            <h3 className={styles.hudPanelTitle}>Activity Monitor</h3>
           </div>
-          <div className={styles.hudAutomationRow}>
-            <div className={styles.hudToggle} onClick={handleToggleExecution}>
-              <span className={styles.hudToggleLabel}>Execution</span>
-              <span className={`${styles.hudToggleSwitch} ${executionEnabled ? styles.on : styles.off}`}>
-                {executionEnabled ? 'ON' : 'OFF'}
-              </span>
+
+          {sniperStats && (totalSniped > 0 || sniperStats.positions_waiting > 0) && (
+            <div className={styles.sniperSummary}>
+              <div className={styles.sniperStat}>
+                <span className={styles.sniperStatLabel}>Watching</span>
+                <span className={styles.sniperStatValue}>{sniperStats.positions_waiting}</span>
+              </div>
+              <div className={styles.sniperStat}>
+                <span className={styles.sniperStatLabel}>Sniped</span>
+                <span className={styles.sniperStatValue}>{totalSniped}</span>
+              </div>
+              <div className={styles.sniperStat}>
+                <span className={styles.sniperStatLabel}>Sold</span>
+                <span className={styles.sniperStatValue}>{sniperStats.positions_sold}</span>
+              </div>
+              <div className={styles.sniperStat}>
+                <span className={styles.sniperStatLabel}>Win Rate</span>
+                <span className={styles.sniperStatValue}>{sniperWinRate.toFixed(0)}%</span>
+              </div>
+              <div className={styles.sniperStat}>
+                <span className={styles.sniperStatLabel}>PnL</span>
+                <span className={`${styles.sniperStatValue} ${(sniperStats.total_pnl_sol ?? 0) >= 0 ? styles.profit : styles.loss}`}>
+                  {(sniperStats.total_pnl_sol ?? 0) >= 0 ? '+' : ''}{(sniperStats.total_pnl_sol ?? 0).toFixed(3)}
+                </span>
+              </div>
             </div>
-            <div className={styles.hudToggle} onClick={handleToggleScanner}>
-              <span className={styles.hudToggleLabel}>Scanner</span>
-              <span className={`${styles.hudToggleSwitch} ${scannerStatus?.is_running ? styles.on : styles.off}`}>
-                {scannerStatus?.is_running ? 'ON' : 'OFF'}
-              </span>
-            </div>
-            <div className={styles.hudToggle} onClick={handleToggleSniper}>
-              <span className={styles.hudToggleLabel}>Sniper</span>
-              <span className={`${styles.hudToggleSwitch} ${sniperStats?.is_running ? styles.on : styles.off}`}>
-                {sniperStats?.is_running ? 'ON' : 'OFF'}
-              </span>
-            </div>
-            <div className={styles.hudToggle}>
-              <span className={styles.hudToggleLabel}>Auto-Exits</span>
-              <span className={styles.hudToggleSwitch}>
-                {autoExitStats ? `${autoExitStats.auto_exit_enabled}/${autoExitStats.total_positions}` : '-'}
-              </span>
-            </div>
-          </div>
+          )}
+
           <div className={styles.hudPanelContent}>
             {realPositions.length === 0 ? (
               <div className={styles.emptyState}>No open positions</div>
@@ -429,33 +353,9 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
               </div>
             )}
           </div>
-          <div className={styles.hudControlsRow}>
-            <button
-              className={`${styles.hudControlBtn} ${styles.primary}`}
-              onClick={handleToggleMonitor}
-            >
-              {monitorStatus?.monitoring_active ? 'Pause Monitor' : 'Start Monitor'}
-            </button>
-            <button
-              className={styles.hudControlBtn}
-              onClick={handleReconcile}
-              disabled={reconciling}
-            >
-              {reconciling ? 'Syncing...' : 'Sync Wallet'}
-            </button>
-            <button
-              className={`${styles.hudControlBtn} ${styles.danger}`}
-              onClick={handleSellAll}
-              disabled={sellingAll || realPositions.length === 0}
-              title="Dumps all tokens to SOL (USDC excluded)"
-            >
-              {sellingAll ? 'Selling...' : 'Sell All'}
-            </button>
-          </div>
         </div>
 
-        {/* Trade Activity Panel */}
-        <TradeActivityCard
+        <ScannerHUD
           liveTrades={liveTrades}
           recentTrades={pnlSummary?.recent_trades}
           onSignalClick={(signal) => {
@@ -490,28 +390,35 @@ const HomeTab: React.FC<HomeTabProps> = ({ liveTrades }) => {
                     entry_amount_sol: closedTrade.entry_amount_sol,
                     exit_type: closedTrade.exit_type,
                     time_ago: closedTrade.time_ago,
+                    hold_duration_mins: closedTrade.hold_duration_mins,
+                    entry_time: closedTrade.entry_time,
+                    exit_time: closedTrade.exit_time,
+                    entry_tx_signature: closedTrade.entry_tx_signature,
+                    exit_tx_signature: closedTrade.exit_tx_signature,
+                    momentum_at_exit: closedTrade.momentum_at_exit,
                   },
                 });
               }
             }
           }}
+          onContenderClick={(mint, symbol) => {
+            setSelectedToken({ mint, venue: 'pump_fun', symbol });
+          }}
           onViewPosition={(tokenMint) => {
             setSelectedToken({ mint: tokenMint, venue: 'pump_fun', symbol: tokenMint.slice(0, 6) });
           }}
+          onToggleMonitor={handleToggleMonitor}
+          onSellAll={handleSellAll}
+          onToggleExecution={handleToggleExecution}
+          onReconcile={handleReconcile}
+          monitorActive={monitorStatus?.monitoring_active ?? false}
+          executionEnabled={executionEnabled ?? false}
+          sellingAll={sellingAll}
+          reconciling={reconciling}
+          positionCount={realPositions.length}
+          togglingMonitor={togglingMonitor}
+          togglingExecution={togglingExecution}
         />
-
-        {/* Scanner & Strategies Column */}
-        <div className={styles.hudScannerColumn}>
-          <ScannerSignalsPanel
-            onSignalClick={(signal) => {
-              if (signal.token_mint) {
-                setSelectedToken({ mint: signal.token_mint, venue: 'pump_fun', symbol: signal.token_mint.slice(0, 6) });
-              }
-            }}
-            maxSignals={10}
-          />
-          <BehavioralStrategiesPanel compact={true} />
-        </div>
       </div>
 
       {/* Metrics Panel Overlay */}

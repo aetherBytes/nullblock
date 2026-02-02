@@ -72,7 +72,7 @@ impl ApprovalManager {
 
         config.updated_at = Utc::now();
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             "execution_config_updated",
             EventSource::Agent(AgentType::ApprovalManager),
             approval_topics::CONFIG_UPDATED,
@@ -99,7 +99,7 @@ impl ApprovalManager {
             approval_topics::EXECUTION_DISABLED
         };
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             if enabled { "execution_enabled" } else { "execution_disabled" },
             EventSource::Agent(AgentType::ApprovalManager),
             topic,
@@ -159,7 +159,7 @@ impl ApprovalManager {
             approval_topics::CREATED
         };
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             if should_auto_approve { "approval_auto_approved" } else { "approval_created" },
             EventSource::Agent(AgentType::ApprovalManager),
             topic,
@@ -172,7 +172,7 @@ impl ApprovalManager {
         ));
 
         if config.notify_hecate_on_pending && !should_auto_approve {
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "approval_pending_hecate_notification",
                 EventSource::Agent(AgentType::ApprovalManager),
                 approval_topics::HECATE_NOTIFIED,
@@ -254,7 +254,7 @@ impl ApprovalManager {
             }
         }
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             "approval_approved",
             EventSource::Agent(AgentType::ApprovalManager),
             approval_topics::APPROVED,
@@ -289,7 +289,7 @@ impl ApprovalManager {
             obj.insert("rejection_reason".to_string(), serde_json::json!(reason.clone()));
         }
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             "approval_rejected",
             EventSource::Agent(AgentType::ApprovalManager),
             approval_topics::REJECTED,
@@ -314,7 +314,7 @@ impl ApprovalManager {
         approval.hecate_reasoning = Some(recommendation.reasoning.clone());
         approval.hecate_confidence = Some(recommendation.confidence);
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             "hecate_recommendation_received",
             EventSource::Agent(AgentType::ApprovalManager),
             approval_topics::HECATE_RECOMMENDED,
@@ -359,7 +359,7 @@ impl ApprovalManager {
         }
 
         for id in &expired_ids {
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "approval_expired",
                 EventSource::Agent(AgentType::ApprovalManager),
                 approval_topics::EXPIRED,
@@ -401,7 +401,7 @@ impl ApprovalManager {
 
                 cancelled_ids.push(*id);
 
-                let _ = self.event_tx.send(ArbEvent::new(
+                crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                     "approval_cancelled_by_kill",
                     EventSource::Agent(AgentType::ApprovalManager),
                     approval_topics::REJECTED,

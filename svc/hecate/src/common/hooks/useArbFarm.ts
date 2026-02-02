@@ -261,6 +261,7 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
     null,
   );
   const eventSourceRef = useRef<EventSource | null>(null);
+  const sseReconnectAttemptRef = useRef(0);
 
   const fetchDashboard = useCallback(async () => {
     setDashboardLoading(true);
@@ -1078,6 +1079,7 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
 
       eventSource.onopen = () => {
         setSseConnected(true);
+        sseReconnectAttemptRef.current = 0;
       };
 
       eventSource.onmessage = (event) => {
@@ -1105,6 +1107,8 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
                 slippage_bps: 0,
                 executed_at: new Date().toISOString(),
               };
+              // Synthetic trade is added optimistically; fetchTrades() (triggered by arb.trade.* event below)
+              // does a full setTrades() replacement from DB, which automatically purges synthetics.
               setTrades((prev) => [newTrade, ...prev.filter(t => t.edge_id !== payload.edge_id)].slice(0, 100));
               fetchTradeStats();
             }
@@ -1136,11 +1140,14 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
 
       eventSource.onerror = () => {
         setSseConnected(false);
+        const attempt = sseReconnectAttemptRef.current;
+        const delay = Math.min(2000 * Math.pow(2, attempt), 30000);
+        sseReconnectAttemptRef.current = attempt + 1;
         setTimeout(() => {
           if (eventSourceRef.current === eventSource) {
             connectSSE(topics);
           }
-        }, 5000);
+        }, delay);
       };
 
       eventSourceRef.current = eventSource;
@@ -1181,6 +1188,7 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
     if (!opts.pollInterval) {return;}
 
     const interval = setInterval(() => {
+      if (opts.autoFetchDashboard) {fetchDashboard();}
       if (opts.autoFetchScanner) {fetchScannerStatus();}
       if (opts.autoFetchSwarm) {fetchSwarmStatus();}
     }, opts.pollInterval);
@@ -1188,8 +1196,10 @@ export const useArbFarm = (options: UseArbFarmOptions = {}): UseArbFarmResult =>
     return () => clearInterval(interval);
   }, [
     opts.pollInterval,
+    opts.autoFetchDashboard,
     opts.autoFetchScanner,
     opts.autoFetchSwarm,
+    fetchDashboard,
     fetchScannerStatus,
     fetchSwarmStatus,
   ]);

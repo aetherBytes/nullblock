@@ -106,21 +106,14 @@ export const useLogs = (options: UseLogsOptions = {}) => {
       }
     };
 
-    eventSource.onerror = (err) => {
-      console.error('❌ Log stream error:', err);
+    eventSource.onerror = () => {
       setIsConnected(false);
 
       if (eventSource.readyState === EventSource.CLOSED) {
-        console.log('📡 Log stream closed, attempting to reconnect...');
-
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
 
           reconnectAttemptsRef.current += 1;
-
-          console.log(
-            `🔄 Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})...`,
-          );
 
           reconnectTimeoutRef.current = setTimeout(() => {
             if (eventSourceRef.current) {
@@ -131,8 +124,9 @@ export const useLogs = (options: UseLogsOptions = {}) => {
             connectToStream();
           }, delay);
         } else {
-          setError('Max reconnection attempts reached');
-          console.error('❌ Max reconnection attempts reached');
+          setError('Log stream unavailable');
+          eventSource.close();
+          eventSourceRef.current = null;
         }
       }
     };

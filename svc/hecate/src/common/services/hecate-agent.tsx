@@ -57,7 +57,7 @@ class HecateAgentService {
 
       return this.isConnected;
     } catch (error) {
-      console.error('Failed to connect to Hecate agent via Erebus:', error);
+      console.debug('Hecate agent unavailable (Erebus not running)');
       this.isConnected = false;
 
       return false;

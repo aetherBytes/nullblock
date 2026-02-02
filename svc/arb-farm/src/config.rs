@@ -17,6 +17,7 @@ pub struct Config {
     pub jupiter_api_url: String,
     pub raydium_api_url: String,
     pub pump_fun_api_url: String,
+    pub dexscreener_api_url: String,
     pub moonshot_api_url: String,
     pub helius_api_url: String,
     pub helius_api_key: Option<String>,
@@ -97,6 +98,8 @@ impl Config {
             raydium_api_url: env::var("RAYDIUM_API_URL")
                 .unwrap_or_else(|_| "https://api.raydium.io/v2".to_string()),
             pump_fun_api_url: env::var("PUMP_FUN_API_URL")
+                .unwrap_or_else(|_| "https://frontend-api-v3.pump.fun".to_string()),
+            dexscreener_api_url: env::var("DEXSCREENER_API_URL")
                 .unwrap_or_else(|_| "https://api.dexscreener.com/latest/dex".to_string()),
             moonshot_api_url: env::var("MOONSHOT_API_URL")
                 .unwrap_or_else(|_| "https://api.dexscreener.com/latest/dex".to_string()),
@@ -149,7 +152,7 @@ impl Config {
             default_max_position_sol: env::var("DEFAULT_MAX_POSITION_SOL")
                 .ok()
                 .and_then(|v| v.parse().ok())
-                .unwrap_or(0.01),
+                .unwrap_or(2.0),
             default_daily_loss_limit_sol: env::var("DEFAULT_DAILY_LOSS_LIMIT_SOL")
                 .ok()
                 .and_then(|v| v.parse().ok())

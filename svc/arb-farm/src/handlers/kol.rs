@@ -168,7 +168,7 @@ pub async fn add_kol(
                 ).await;
             }
 
-            let _ = state.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&state.event_tx, ArbEvent::new(
                 "kol_added",
                 crate::events::EventSource::Agent(crate::events::AgentType::CopyTrade),
                 kol_topics::ADDED,
@@ -361,7 +361,7 @@ pub async fn delete_kol(
                 state.kol_tracker.remove_kol(&wallet).await;
             }
 
-            let _ = state.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&state.event_tx, ArbEvent::new(
                 "kol_removed",
                 crate::events::EventSource::Agent(crate::events::AgentType::CopyTrade),
                 kol_topics::REMOVED,
@@ -1008,7 +1008,7 @@ pub async fn promote_discovered_kol(
                         discovered_kol.trust_score,
                     ).await;
 
-                    let _ = state.event_tx.send(ArbEvent::new(
+                    crate::events::broadcast_event(&state.event_tx, ArbEvent::new(
                         "kol_promoted",
                         crate::events::EventSource::Agent(crate::events::AgentType::CopyTrade),
                         kol_topics::PROMOTED,

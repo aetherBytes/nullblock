@@ -486,6 +486,11 @@ migrate:
     @./scripts/run-agents-migrations.sh
     @echo "✅ Agents migrations completed"
     @echo ""
+    @echo "📋 Step 3: Running ArbFarm database migrations..."
+    @echo "Applying ArbFarm schema updates..."
+    @./scripts/migrate-arbfarm.sh
+    @echo "✅ ArbFarm migrations completed"
+    @echo ""
     @echo "📊 Final status check..."
     @echo "Erebus tables:"
     @docker exec nullblock-postgres-erebus psql -U postgres -d erebus -c "\dt" 2>/dev/null || echo "❌ Erebus database not accessible"

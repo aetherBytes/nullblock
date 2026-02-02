@@ -5,6 +5,35 @@ windows:
   - main:
       layout: main-horizontal
       panes:
-        - echo "Starting ArbFarm..." && export $(cat .env.dev | xargs 2>/dev/null) && RUST_LOG=info,arb_farm=debug cargo run
-        - sleep 8 && curl -sX POST http://localhost:9007/scanner/start && curl -sX POST http://localhost:9007/executor/start && echo "Scanner & Executor started" && bash
+        - echo "Starting ArbFarm..." && export $(cat ../../.env.dev | xargs 2>/dev/null) && RUST_LOG=info,arb_farm=debug cargo run --release 2>&1 | tee logs/arb-farm.log
+        - |
+          echo "⏳ Waiting for ArbFarm to start..."
+          while ! curl -s http://localhost:9007/health > /dev/null 2>&1; do
+            sleep 3
+          done
+          echo "✅ ArbFarm is up (observation mode - execution disabled by default)"
+          echo ""
+          echo "Enable execution:"
+          echo "  curl -sX POST http://localhost:9007/executor/start"
+          echo "  curl -sX POST http://localhost:9007/config/sniper-entry -d '{\"enabled\":true}'"
+          echo ""
+          while true; do
+            clear
+            echo "⚡ ArbFarm - $(date '+%H:%M:%S')"
+            echo "================================"
+            curl -s http://localhost:9007/scanner/status 2>/dev/null | jq -r '"Scanner: Running=\(.is_running) | Scans=\(.stats.total_scans) | Signals=\(.stats.total_signals)"' || true
+            EXEC_RUNNING=$(curl -s http://localhost:9007/executor/stats 2>/dev/null | jq -r '.is_running // false')
+            curl -s http://localhost:9007/executor/stats 2>/dev/null | jq -r '"Executor: Running=\(.is_running) | Executed=\(.executions_succeeded)"' || true
+            if [ "$EXEC_RUNNING" != "true" ]; then
+              echo "⚠️  OBSERVATION MODE - signals are buy candidates (execution off)"
+            fi
+            echo ""
+            echo "🎓 Top Contenders"
+            curl -s 'http://localhost:9007/scanner/contenders?limit=5' 2>/dev/null | jq -r '
+              if .count == 0 then "  Waiting for scan data..."
+              else .contenders[]? | "  \(.symbol) \(.graduation_progress | . * 10 | floor / 10)% | \(.market_cap_sol | . * 100 | floor / 100) SOL"
+              end
+            ' || echo "  Failed"
+            sleep 5
+          done
         - sleep 10 && curl -sN http://localhost:9007/events/stream

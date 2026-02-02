@@ -80,7 +80,7 @@ impl EngramHarvester {
             .or_insert(0) += 1;
         stats.last_harvest_at = Some(chrono::Utc::now());
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             "engram_created",
             EventSource::Agent(AgentType::EngramHarvester),
             engram_topics::CREATED,
@@ -234,7 +234,7 @@ impl EngramHarvester {
             let mut stats = self.stats.write().await;
             stats.patterns_matched += 1;
 
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "pattern_matched",
                 EventSource::Agent(AgentType::EngramHarvester),
                 engram_topics::PATTERN_MATCHED,
@@ -302,7 +302,7 @@ impl EngramHarvester {
         let mut stats = self.stats.write().await;
         stats.avoidances_created += 1;
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             "avoidance_created",
             EventSource::Agent(AgentType::EngramHarvester),
             engram_topics::AVOIDANCE_CREATED,
@@ -435,7 +435,7 @@ impl EngramHarvester {
             count += 1;
         }
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             "strategies_saved_to_engrams",
             EventSource::Agent(AgentType::EngramHarvester),
             engram_topics::CREATED,
@@ -540,7 +540,7 @@ impl EngramHarvester {
                 "Restored engrams from remote service"
             );
 
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "engrams_restored",
                 EventSource::Agent(AgentType::EngramHarvester),
                 engram_topics::CREATED,

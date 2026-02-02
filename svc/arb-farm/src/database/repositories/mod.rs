@@ -2,6 +2,7 @@ pub mod consensus;
 pub mod edges;
 pub mod kol;
 pub mod positions;
+pub mod settings;
 pub mod strategies;
 pub mod trades;
 
@@ -13,5 +14,6 @@ pub use kol::{
     UpdateCopyTradeRecord, KolEntityStats, CopyStats,
 };
 pub use positions::{PositionRepository, PositionRow, PnLStats, RecentTrade, PendingExitSignalRow};
+pub use settings::SettingsRepository;
 pub use strategies::{StrategyRepository, StrategyRecord, CreateStrategyRecord, UpdateStrategyRecord, StrategyStats};
 pub use trades::{TradeRepository, TradeRecord, CreateTradeRecord, TradeStats, DailyStats};

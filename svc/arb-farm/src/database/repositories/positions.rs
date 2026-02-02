@@ -36,6 +36,8 @@ pub struct PositionRow {
     pub remaining_token_amount: Option<Decimal>,
     pub is_inferred_exit: bool,
     pub auto_exit_enabled: bool,
+    pub signal_source: Option<String>,
+    pub venue: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -90,8 +92,8 @@ impl From<PositionRow> for OpenPosition {
             momentum: MomentumData::default(),
             remaining_amount_base,
             remaining_token_amount,
-            venue: None,
-            signal_source: None,
+            venue: row.venue,
+            signal_source: row.signal_source,
             auto_exit_enabled: row.auto_exit_enabled,
         }
     }
@@ -159,8 +161,9 @@ impl PositionRepository {
                 id, edge_id, strategy_id, token_mint, token_symbol,
                 entry_amount_base, entry_token_amount, entry_price, entry_time, entry_tx_signature,
                 current_price, current_value_base, unrealized_pnl, unrealized_pnl_percent, high_water_mark,
-                exit_config, partial_exits, status, remaining_amount_base, remaining_token_amount, auto_exit_enabled
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+                exit_config, partial_exits, status, remaining_amount_base, remaining_token_amount, auto_exit_enabled,
+                signal_source, venue
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
             ON CONFLICT (id) DO UPDATE SET
                 current_price = EXCLUDED.current_price,
                 current_value_base = EXCLUDED.current_value_base,
@@ -195,6 +198,8 @@ impl PositionRepository {
             .bind(f64_to_decimal(position.remaining_amount_base))
             .bind(f64_to_decimal(position.remaining_token_amount))
             .bind(position.auto_exit_enabled)
+            .bind(&position.signal_source)
+            .bind(&position.venue)
             .execute(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
@@ -295,6 +300,18 @@ impl PositionRepository {
         Ok(rows)
     }
 
+    pub async fn get_by_edge_id(&self, edge_id: Uuid) -> AppResult<Option<PositionRow>> {
+        let row: Option<PositionRow> = sqlx::query_as(
+            "SELECT * FROM arb_positions WHERE edge_id = $1 ORDER BY created_at DESC LIMIT 1"
+        )
+            .bind(edge_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(row)
+    }
+
     pub async fn get_position(&self, position_id: Uuid) -> AppResult<Option<OpenPosition>> {
         let row: Option<PositionRow> = sqlx::query_as(
             "SELECT * FROM arb_positions WHERE id = $1"
@@ -387,6 +404,10 @@ impl PositionRepository {
     }
 
     pub async fn get_pnl_stats(&self) -> AppResult<PnLStats> {
+        self.get_pnl_stats_since(None).await
+    }
+
+    pub async fn get_pnl_stats_since(&self, since: Option<DateTime<Utc>>) -> AppResult<PnLStats> {
         #[derive(sqlx::FromRow)]
         struct StatsRow {
             exit_reason: Option<String>,
@@ -397,9 +418,10 @@ impl PositionRepository {
         let rows: Vec<StatsRow> = sqlx::query_as(
             r#"SELECT exit_reason, COUNT(*) as cnt, SUM(realized_pnl) as total_pnl
                FROM arb_positions
-               WHERE status = 'closed'
+               WHERE status = 'closed' AND ($1::timestamptz IS NULL OR exit_time >= $1)
                GROUP BY exit_reason"#
         )
+            .bind(since)
             .fetch_all(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
@@ -408,38 +430,35 @@ impl PositionRepository {
         for row in rows {
             let pnl = decimal_to_f64(row.total_pnl.unwrap_or(Decimal::ZERO));
             let cnt = row.cnt as u32;
-            match row.exit_reason.as_deref() {
-                Some("TakeProfit") => {
-                    stats.take_profits = cnt;
-                    stats.take_profit_pnl = pnl;
-                }
-                Some("StopLoss") => {
-                    stats.stop_losses = cnt;
-                    stats.stop_loss_pnl = pnl;
-                }
-                Some("Manual") => {
-                    stats.manual_exits = cnt;
-                    stats.manual_pnl = pnl;
-                }
-                Some("TimeLimit") => {
-                    stats.time_exits = cnt;
-                    stats.time_exit_pnl = pnl;
-                }
-                Some("TrailingStop") => {
-                    stats.trailing_stops = cnt;
-                    stats.trailing_stop_pnl = pnl;
-                }
-                _ => {}
+            stats.total_pnl += pnl;
+            stats.total_trades += cnt;
+            let reason = row.exit_reason.as_deref().unwrap_or("");
+            if reason.starts_with("TakeProfit") {
+                stats.take_profits += cnt;
+                stats.take_profit_pnl += pnl;
+            } else if reason.starts_with("StopLoss") {
+                stats.stop_losses += cnt;
+                stats.stop_loss_pnl += pnl;
+            } else if reason.starts_with("Manual") {
+                stats.manual_exits += cnt;
+                stats.manual_pnl += pnl;
+            } else if reason.starts_with("TimeLimit") {
+                stats.time_exits += cnt;
+                stats.time_exit_pnl += pnl;
+            } else if reason.starts_with("TrailingStop") {
+                stats.trailing_stops += cnt;
+                stats.trailing_stop_pnl += pnl;
+            } else if reason.starts_with("MomentumDecay") || reason.starts_with("MomentumAdaptive") || reason.starts_with("Emergency") || reason.starts_with("AlreadySold") || reason.starts_with("Salvage") || reason.starts_with("DustBalance") {
+                stats.stop_losses += cnt;
+                stats.stop_loss_pnl += pnl;
             }
         }
-        stats.total_pnl = stats.take_profit_pnl + stats.stop_loss_pnl + stats.manual_pnl + stats.time_exit_pnl + stats.trailing_stop_pnl;
-        stats.total_trades = stats.take_profits + stats.stop_losses + stats.manual_exits + stats.time_exits + stats.trailing_stops;
 
-        // Get today's and this week's PnL
         let today_row: Option<(Option<Decimal>,)> = sqlx::query_as(
             r#"SELECT SUM(realized_pnl) FROM arb_positions
-               WHERE status = 'closed' AND exit_time >= CURRENT_DATE"#
+               WHERE status = 'closed' AND exit_time >= CURRENT_DATE AND ($1::timestamptz IS NULL OR exit_time >= $1)"#
         )
+            .bind(since)
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
@@ -447,19 +466,20 @@ impl PositionRepository {
 
         let week_row: Option<(Option<Decimal>,)> = sqlx::query_as(
             r#"SELECT SUM(realized_pnl) FROM arb_positions
-               WHERE status = 'closed' AND exit_time >= CURRENT_DATE - INTERVAL '7 days'"#
+               WHERE status = 'closed' AND exit_time >= CURRENT_DATE - INTERVAL '7 days' AND ($1::timestamptz IS NULL OR exit_time >= $1)"#
         )
+            .bind(since)
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
         stats.week_pnl = week_row.and_then(|r| r.0).map(decimal_to_f64).unwrap_or(0.0);
 
-        // Get best and worst trades
         let best_row: Option<(Option<Decimal>, Option<String>)> = sqlx::query_as(
             r#"SELECT realized_pnl, token_symbol FROM arb_positions
-               WHERE status = 'closed' AND realized_pnl IS NOT NULL
+               WHERE status = 'closed' AND realized_pnl IS NOT NULL AND ($1::timestamptz IS NULL OR exit_time >= $1)
                ORDER BY realized_pnl DESC LIMIT 1"#
         )
+            .bind(since)
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
@@ -470,9 +490,10 @@ impl PositionRepository {
 
         let worst_row: Option<(Option<Decimal>, Option<String>)> = sqlx::query_as(
             r#"SELECT realized_pnl, token_symbol FROM arb_positions
-               WHERE status = 'closed' AND realized_pnl IS NOT NULL
+               WHERE status = 'closed' AND realized_pnl IS NOT NULL AND ($1::timestamptz IS NULL OR exit_time >= $1)
                ORDER BY realized_pnl ASC LIMIT 1"#
         )
+            .bind(since)
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
@@ -481,15 +502,25 @@ impl PositionRepository {
             stats.worst_trade_symbol = symbol;
         }
 
-        // Get avg hold time (cast to DOUBLE PRECISION to match f64)
         let avg_hold: Option<(Option<f64>,)> = sqlx::query_as(
             r#"SELECT AVG(EXTRACT(EPOCH FROM (exit_time - entry_time)) / 60.0)::DOUBLE PRECISION
-               FROM arb_positions WHERE status = 'closed' AND exit_time IS NOT NULL"#
+               FROM arb_positions WHERE status = 'closed' AND exit_time IS NOT NULL AND ($1::timestamptz IS NULL OR exit_time >= $1)"#
         )
+            .bind(since)
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
         stats.avg_hold_minutes = avg_hold.and_then(|r| r.0).unwrap_or(0.0);
+
+        let gas_row: Option<(Option<i64>,)> = sqlx::query_as(
+            r#"SELECT (COALESCE(SUM(entry_gas_lamports), 0) + COALESCE(SUM(exit_gas_lamports), 0))::BIGINT
+               FROM arb_positions WHERE status = 'closed' AND ($1::timestamptz IS NULL OR exit_time >= $1)"#
+        )
+            .bind(since)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+        stats.total_gas_sol = gas_row.and_then(|r| r.0).unwrap_or(0) as f64 / 1_000_000_000.0;
 
         Ok(stats)
     }
@@ -500,19 +531,22 @@ impl PositionRepository {
             id: Uuid,
             token_symbol: Option<String>,
             token_mint: String,
-            venue: Option<String>,
             realized_pnl: Option<Decimal>,
             exit_reason: Option<String>,
+            entry_time: DateTime<Utc>,
             exit_time: Option<DateTime<Utc>>,
             entry_amount_base: Decimal,
             entry_price: Option<Decimal>,
             exit_price: Option<Decimal>,
             momentum_at_exit: Option<Decimal>,
+            entry_tx_signature: Option<String>,
+            exit_tx_signature: Option<String>,
         }
 
         let rows: Vec<TradeRow> = sqlx::query_as(
-            r#"SELECT id, token_symbol, token_mint, venue, realized_pnl, exit_reason, exit_time,
-                      entry_amount_base, entry_price, exit_price, momentum_at_exit
+            r#"SELECT id, token_symbol, token_mint, realized_pnl, exit_reason,
+                      entry_time, exit_time, entry_amount_base, entry_price, exit_price,
+                      momentum_at_exit, entry_tx_signature, exit_tx_signature
                FROM arb_positions
                WHERE status = 'closed' AND exit_time IS NOT NULL
                ORDER BY exit_time DESC
@@ -523,18 +557,25 @@ impl PositionRepository {
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
 
-        Ok(rows.into_iter().map(|r| RecentTrade {
-            id: r.id.to_string(),
-            symbol: r.token_symbol.unwrap_or_else(|| r.token_mint[..8].to_string()),
-            mint: r.token_mint.clone(),
-            venue: r.venue.unwrap_or_else(|| "pump_fun".to_string()),
-            pnl: decimal_to_f64(r.realized_pnl.unwrap_or(Decimal::ZERO)),
-            reason: r.exit_reason.unwrap_or_else(|| "Unknown".to_string()),
-            time: r.exit_time,
-            entry_sol: decimal_to_f64(r.entry_amount_base),
-            entry_price: r.entry_price.map(decimal_to_f64),
-            exit_price: r.exit_price.map(decimal_to_f64),
-            momentum_at_exit: r.momentum_at_exit.map(decimal_to_f64),
+        Ok(rows.into_iter().map(|r| {
+            let hold_mins = r.exit_time.map(|et| (et - r.entry_time).num_minutes());
+            RecentTrade {
+                id: r.id.to_string(),
+                symbol: r.token_symbol.unwrap_or_else(|| r.token_mint[..8].to_string()),
+                mint: r.token_mint.clone(),
+                venue: "pump_fun".to_string(),
+                pnl: decimal_to_f64(r.realized_pnl.unwrap_or(Decimal::ZERO)),
+                reason: r.exit_reason.unwrap_or_else(|| "Unknown".to_string()),
+                time: r.exit_time,
+                entry_sol: decimal_to_f64(r.entry_amount_base),
+                entry_price: r.entry_price.map(decimal_to_f64),
+                exit_price: r.exit_price.map(decimal_to_f64),
+                momentum_at_exit: r.momentum_at_exit.map(decimal_to_f64),
+                hold_duration_mins: hold_mins,
+                entry_time: Some(r.entry_time),
+                entry_tx_signature: r.entry_tx_signature,
+                exit_tx_signature: r.exit_tx_signature,
+            }
         }).collect())
     }
 
@@ -827,6 +868,7 @@ pub struct PnLStats {
     pub worst_trade_pnl: f64,
     pub worst_trade_symbol: Option<String>,
     pub avg_hold_minutes: f64,
+    pub total_gas_sol: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -842,4 +884,8 @@ pub struct RecentTrade {
     pub entry_price: Option<f64>,
     pub exit_price: Option<f64>,
     pub momentum_at_exit: Option<f64>,
+    pub hold_duration_mins: Option<i64>,
+    pub entry_time: Option<DateTime<Utc>>,
+    pub entry_tx_signature: Option<String>,
+    pub exit_tx_signature: Option<String>,
 }

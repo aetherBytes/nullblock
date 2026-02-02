@@ -221,6 +221,22 @@ impl StrategyRepository {
         Ok(record)
     }
 
+    pub async fn get_strategy_type_map(&self) -> AppResult<std::collections::HashMap<Uuid, String>> {
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            id: Uuid,
+            strategy_type: String,
+        }
+        let rows: Vec<Row> = sqlx::query_as(
+            "SELECT id, strategy_type FROM arb_strategies"
+        )
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
+
+        Ok(rows.into_iter().map(|r| (r.id, r.strategy_type)).collect())
+    }
+
     pub async fn get_stats(&self, id: Uuid) -> AppResult<StrategyStats> {
         let stats = sqlx::query_as::<_, StrategyStats>(
             r#"
@@ -230,7 +246,7 @@ impl StrategyRepository {
                 COUNT(t.id) as total_trades,
                 COUNT(t.id) FILTER (WHERE t.profit_lamports > 0) as winning_trades,
                 COUNT(t.id) FILTER (WHERE t.profit_lamports < 0) as losing_trades,
-                COALESCE(SUM(t.profit_lamports), 0) as total_pnl_lamports,
+                COALESCE(SUM(t.profit_lamports), 0)::BIGINT as total_pnl_lamports,
                 COALESCE(AVG(t.profit_lamports), 0) as avg_profit_lamports
             FROM arb_strategies s
             LEFT JOIN arb_trades t ON s.id = t.strategy_id

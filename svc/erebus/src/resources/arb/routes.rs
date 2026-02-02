@@ -2,13 +2,17 @@ use axum::{
     body::Body,
     extract::{Path, Query, Json},
     http::StatusCode,
-    response::{Json as ResponseJson, IntoResponse, Response},
+    response::{Json as ResponseJson, IntoResponse, Response, Sse},
     routing::{get, post, put, delete},
     Router,
 };
+use axum::response::sse::Event as SseEvent;
+use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tracing::{info, error};
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::net::TcpStream;
+use tracing::{info, warn, error};
 
 fn get_arb_service_url() -> String {
     std::env::var("ARB_FARM_SERVICE_URL")
@@ -115,31 +119,146 @@ async fn proxy_request(
     }
 }
 
-async fn proxy_sse(endpoint: &str) -> Result<Response, StatusCode> {
-    let base_url = get_arb_service_url();
-    let url = format!("{}/{}", base_url, endpoint);
+fn parse_arb_host_port() -> (String, u16) {
+    let url = get_arb_service_url();
+    let stripped = url
+        .strip_prefix("http://")
+        .or_else(|| url.strip_prefix("https://"))
+        .unwrap_or(&url);
+    match stripped.rsplit_once(':') {
+        Some((host, port_str)) => {
+            let port = port_str.parse::<u16>().unwrap_or(9007);
+            (host.to_string(), port)
+        }
+        None => (stripped.to_string(), 9007),
+    }
+}
 
-    info!("🔌 Proxying SSE request to ArbFarm: {}", url);
+fn sse_stream_from_tcp(
+    reader: BufReader<tokio::io::ReadHalf<TcpStream>>,
+    chunked: bool,
+) -> impl Stream<Item = Result<SseEvent, std::convert::Infallible>> {
+    async_stream::stream! {
+        let mut lines = reader.lines();
+        let mut event_type: Option<String> = None;
+        let mut data_buf = String::new();
 
-    let client = reqwest::Client::new();
-    match client.get(&url).send().await {
-        Ok(response) => {
-            if response.status().is_success() {
-                let stream = response.bytes_stream();
-                Ok((
-                    [(axum::http::header::CONTENT_TYPE, "text/event-stream")],
-                    Body::from_stream(stream)
-                ).into_response())
-            } else {
-                error!("❌ SSE proxy failed: {}", response.status());
-                Err(StatusCode::BAD_GATEWAY)
+        loop {
+            match lines.next_line().await {
+                Ok(Some(line)) => {
+                    if chunked {
+                        let trimmed = line.trim();
+                        if !trimmed.is_empty() && trimmed.chars().all(|c| c.is_ascii_hexdigit()) {
+                            continue;
+                        }
+                    }
+
+                    if line.is_empty() {
+                        if !data_buf.is_empty() {
+                            let mut ev = SseEvent::default().data(data_buf.clone());
+                            if let Some(ref et) = event_type {
+                                ev = ev.event(et.clone());
+                            }
+                            yield Ok(ev);
+                            data_buf.clear();
+                            event_type = None;
+                        }
+                        continue;
+                    }
+
+                    if let Some(comment) = line.strip_prefix(':') {
+                        let text = comment.trim();
+                        if !text.is_empty() {
+                            yield Ok(SseEvent::default().comment(text));
+                        }
+                        continue;
+                    }
+
+                    if let Some(val) = line.strip_prefix("data:") {
+                        let val = val.strip_prefix(' ').unwrap_or(val);
+                        if !data_buf.is_empty() {
+                            data_buf.push('\n');
+                        }
+                        data_buf.push_str(val);
+                    } else if let Some(val) = line.strip_prefix("event:") {
+                        event_type = Some(val.strip_prefix(' ').unwrap_or(val).to_string());
+                    } else if let Some(val) = line.strip_prefix("id:") {
+                        let _ = val;
+                    } else if let Some(val) = line.strip_prefix("retry:") {
+                        let _ = val;
+                    }
+                }
+                Ok(None) => {
+                    break;
+                }
+                Err(e) => {
+                    warn!("SSE proxy read error: {}", e);
+                    break;
+                }
             }
         }
-        Err(e) => {
-            error!("❌ SSE proxy connection failed: {}", e);
-            Err(StatusCode::SERVICE_UNAVAILABLE)
+    }
+}
+
+async fn proxy_sse(endpoint: &str) -> Result<Response, StatusCode> {
+    let (host, port) = parse_arb_host_port();
+    let addr = format!("{}:{}", host, port);
+
+    info!("SSE proxy connecting to ArbFarm: {} /{}", addr, endpoint);
+
+    let tcp = TcpStream::connect(&addr).await.map_err(|e| {
+        error!("SSE proxy TCP connect failed to {}: {}", addr, e);
+        StatusCode::SERVICE_UNAVAILABLE
+    })?;
+
+    let (read_half, mut write_half) = tokio::io::split(tcp);
+
+    let request = format!(
+        "GET /{} HTTP/1.1\r\nHost: {}:{}\r\nAccept: text/event-stream\r\nConnection: keep-alive\r\n\r\n",
+        endpoint, host, port
+    );
+
+    tokio::io::AsyncWriteExt::write_all(&mut write_half, request.as_bytes())
+        .await
+        .map_err(|e| {
+            error!("SSE proxy write failed: {}", e);
+            StatusCode::SERVICE_UNAVAILABLE
+        })?;
+
+    let mut reader = BufReader::new(read_half);
+    let mut status_line = String::new();
+    reader.read_line(&mut status_line).await.map_err(|e| {
+        error!("SSE proxy failed to read status line: {}", e);
+        StatusCode::BAD_GATEWAY
+    })?;
+
+    if !status_line.contains("200") {
+        error!("SSE proxy upstream returned: {}", status_line.trim());
+        return Err(StatusCode::BAD_GATEWAY);
+    }
+
+    let mut chunked = false;
+    loop {
+        let mut header_line = String::new();
+        reader.read_line(&mut header_line).await.map_err(|e| {
+            error!("SSE proxy failed reading headers: {}", e);
+            StatusCode::BAD_GATEWAY
+        })?;
+        if header_line.trim().is_empty() {
+            break;
+        }
+        if header_line.to_lowercase().contains("transfer-encoding: chunked") {
+            chunked = true;
         }
     }
+
+    let stream = sse_stream_from_tcp(reader, chunked);
+
+    Ok(Sse::new(stream).keep_alive(
+        axum::response::sse::KeepAlive::new()
+            .interval(std::time::Duration::from_secs(15))
+            .text("keep-alive"),
+    ).into_response())
 }
 
 // Health
@@ -158,16 +277,37 @@ pub async fn scanner_stream() -> Result<Response, StatusCode> {
     proxy_sse("scanner/stream").await
 }
 
-pub async fn scanner_start(
-    Json(request): Json<Value>,
-) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+pub async fn scanner_start() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
     info!("▶️ Start scanner requested");
-    proxy_request("POST", "scanner/start", Some(request)).await
+    proxy_request("POST", "scanner/start", None).await
 }
 
 pub async fn scanner_stop() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
     info!("⏹️ Stop scanner requested");
     proxy_request("POST", "scanner/stop", None).await
+}
+
+pub async fn list_behavioral_strategies() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    proxy_request("GET", "scanner/strategies", None).await
+}
+
+pub async fn get_behavioral_strategy(
+    Path(name): Path<String>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    proxy_request("GET", &format!("scanner/strategies/{}", name), None).await
+}
+
+pub async fn toggle_behavioral_strategy(
+    Path(name): Path<String>,
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    proxy_request("POST", &format!("scanner/strategies/{}/toggle", name), Some(request)).await
+}
+
+pub async fn toggle_all_behavioral_strategies(
+    Json(request): Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    proxy_request("POST", "scanner/strategies/toggle-all", Some(request)).await
 }
 
 #[derive(Debug, Deserialize)]
@@ -176,6 +316,21 @@ pub struct SignalQuery {
     pub venue_type: Option<String>,
     pub min_profit_bps: Option<i32>,
     pub min_confidence: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ContenderQuery {
+    pub limit: Option<i64>,
+}
+
+pub async fn scanner_contenders(
+    Query(query): Query<ContenderQuery>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    let mut endpoint = "scanner/contenders".to_string();
+    if let Some(limit) = query.limit {
+        endpoint = format!("{}?limit={}", endpoint, limit);
+    }
+    proxy_request("GET", &endpoint, None).await
 }
 
 pub async fn scanner_signals(
@@ -599,6 +754,10 @@ pub async fn swarm_status() -> Result<ResponseJson<Value>, (StatusCode, Response
     proxy_request("GET", "swarm/status", None).await
 }
 
+pub async fn swarm_health() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    proxy_request("GET", "swarm/health", None).await
+}
+
 pub async fn swarm_pause() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
     info!("⏸️ Pause swarm requested");
     proxy_request("POST", "swarm/pause", None).await
@@ -661,6 +820,18 @@ pub async fn consensus_stats() -> Result<ResponseJson<Value>, (StatusCode, Respo
 pub async fn consensus_models() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
     info!("🤖 Consensus models requested");
     proxy_request("GET", "consensus/models", None).await
+}
+
+pub async fn consensus_scheduler_status() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("📊 Consensus scheduler status requested");
+    proxy_request("GET", "consensus/scheduler", None).await
+}
+
+pub async fn toggle_consensus_scheduler(
+    request: axum::extract::Json<Value>,
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🔄 Toggle consensus scheduler");
+    proxy_request("POST", "consensus/scheduler", Some(request.0)).await
 }
 
 // Wallet Management
@@ -762,6 +933,15 @@ pub async fn positions_exposure() -> Result<ResponseJson<Value>, (StatusCode, Re
 pub async fn positions_pnl_summary() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
     info!("📊 Positions PnL summary requested");
     proxy_request("GET", "positions/pnl-summary", None).await
+}
+
+pub async fn positions_pnl_reset() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    info!("🔄 PnL reset requested");
+    proxy_request("POST", "positions/pnl-reset", None).await
+}
+
+pub async fn positions_pnl_reset_get() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
+    proxy_request("GET", "positions/pnl-reset", None).await
 }
 
 pub async fn positions_reconcile() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<ArbErrorResponse>)> {
@@ -1063,9 +1243,14 @@ where
         // Scanner
         .route("/api/arb/scanner/status", get(scanner_status))
         .route("/api/arb/scanner/signals", get(scanner_signals))
+        .route("/api/arb/scanner/contenders", get(scanner_contenders))
         .route("/api/arb/scanner/stream", get(scanner_stream))
         .route("/api/arb/scanner/start", post(scanner_start))
         .route("/api/arb/scanner/stop", post(scanner_stop))
+        .route("/api/arb/scanner/strategies", get(list_behavioral_strategies))
+        .route("/api/arb/scanner/strategies/toggle-all", post(toggle_all_behavioral_strategies))
+        .route("/api/arb/scanner/strategies/:name", get(get_behavioral_strategy))
+        .route("/api/arb/scanner/strategies/:name/toggle", post(toggle_behavioral_strategy))
 
         // Venues
         .route("/api/arb/venues", get(list_venues))
@@ -1095,6 +1280,8 @@ where
         .route("/api/arb/consensus/history", get(consensus_history))
         .route("/api/arb/consensus/stats", get(consensus_stats))
         .route("/api/arb/consensus/models", get(consensus_models))
+        .route("/api/arb/consensus/scheduler", get(consensus_scheduler_status))
+        .route("/api/arb/consensus/scheduler", post(toggle_consensus_scheduler))
         .route("/api/arb/consensus/:id", get(get_consensus))
 
         // Research/DD
@@ -1128,6 +1315,7 @@ where
         .route("/api/arb/threat/whitelist", post(threat_whitelist))
 
         // Swarm Management
+        .route("/api/arb/swarm/health", get(swarm_health))
         .route("/api/arb/swarm/status", get(swarm_status))
         .route("/api/arb/swarm/pause", post(swarm_pause))
         .route("/api/arb/swarm/resume", post(swarm_resume))
@@ -1164,6 +1352,7 @@ where
         .route("/api/arb/positions/history", get(positions_history))
         .route("/api/arb/positions/exposure", get(positions_exposure))
         .route("/api/arb/positions/pnl-summary", get(positions_pnl_summary))
+        .route("/api/arb/positions/pnl-reset", get(positions_pnl_reset_get).post(positions_pnl_reset))
         .route("/api/arb/positions/reconcile", post(positions_reconcile))
         .route("/api/arb/positions/monitor/status", get(positions_monitor_status))
         .route("/api/arb/positions/monitor/start", post(positions_monitor_start))

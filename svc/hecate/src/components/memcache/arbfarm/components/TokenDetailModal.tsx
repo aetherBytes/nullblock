@@ -13,6 +13,12 @@ interface ClosedTradeData {
   entry_amount_sol?: number;
   exit_type?: string;
   time_ago?: string;
+  hold_duration_mins?: number;
+  entry_time?: string;
+  exit_time?: string;
+  entry_tx_signature?: string;
+  exit_tx_signature?: string;
+  momentum_at_exit?: number;
 }
 
 interface TokenDetailModalProps {
@@ -418,11 +424,62 @@ const TokenDetailModal: React.FC<TokenDetailModalProps> = ({
               <span className={styles.metricLabel}>Exit Type</span>
               <span className={styles.metricValue}>{closedTrade.exit_type || 'Manual'}</span>
             </div>
+            {closedTrade.hold_duration_mins != null && (
+              <div className={styles.metricRow}>
+                <span className={styles.metricLabel}>Hold Time</span>
+                <span className={styles.metricValue}>
+                  {closedTrade.hold_duration_mins < 60
+                    ? `${closedTrade.hold_duration_mins}m`
+                    : `${Math.floor(closedTrade.hold_duration_mins / 60)}h ${closedTrade.hold_duration_mins % 60}m`}
+                </span>
+              </div>
+            )}
+            {closedTrade.momentum_at_exit != null && (
+              <div className={styles.metricRow}>
+                <span className={styles.metricLabel}>Momentum at Exit</span>
+                <span className={`${styles.metricValue} ${(closedTrade.momentum_at_exit ?? 0) >= 0 ? styles.positive : styles.negative}`}>
+                  {(closedTrade.momentum_at_exit ?? 0).toFixed(1)}
+                </span>
+              </div>
+            )}
             <div className={styles.metricRow}>
               <span className={styles.metricLabel}>Closed</span>
               <span className={styles.metricValue}>{closedTrade.time_ago || '—'}</span>
             </div>
+            {closedTrade.entry_time && (
+              <div className={styles.metricRow}>
+                <span className={styles.metricLabel}>Entry Time</span>
+                <span className={styles.metricValue}>{new Date(closedTrade.entry_time).toLocaleString()}</span>
+              </div>
+            )}
+            {closedTrade.exit_time && (
+              <div className={styles.metricRow}>
+                <span className={styles.metricLabel}>Exit Time</span>
+                <span className={styles.metricValue}>{new Date(closedTrade.exit_time).toLocaleString()}</span>
+              </div>
+            )}
           </div>
+
+          {(closedTrade.entry_tx_signature || closedTrade.exit_tx_signature) && (
+            <div className={styles.assetTransactions}>
+              {closedTrade.entry_tx_signature && (
+                <div className={styles.txRow}>
+                  <span className={styles.txLabel}>Entry TX</span>
+                  <a href={`https://solscan.io/tx/${closedTrade.entry_tx_signature}`} target="_blank" rel="noopener noreferrer" className={styles.txLink}>
+                    {closedTrade.entry_tx_signature.slice(0, 10)}...
+                  </a>
+                </div>
+              )}
+              {closedTrade.exit_tx_signature && !closedTrade.exit_tx_signature.startsWith('INFERRED') && (
+                <div className={styles.txRow}>
+                  <span className={styles.txLabel}>Exit TX</span>
+                  <a href={`https://solscan.io/tx/${closedTrade.exit_tx_signature}`} target="_blank" rel="noopener noreferrer" className={styles.txLink}>
+                    {closedTrade.exit_tx_signature.slice(0, 10)}...
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
         </>
       ) : (
         <div className={styles.assetMetrics}>
@@ -694,18 +751,26 @@ const TokenDetailModal: React.FC<TokenDetailModalProps> = ({
         {/* Buy Section - always shown */}
         <div className={styles.buySection}>
           <h4>Buy {walletBalance > 0 && <span className={styles.balanceHint}>({walletBalance.toFixed(3)} SOL)</span>}</h4>
-          <div className={styles.buyInputRow}>
-            <input
-              type="number"
-              value={buyAmount}
-              onChange={(e) => setBuyAmount(e.target.value)}
-              placeholder="0.05"
-              step="0.01"
-              min="0.001"
-              className={styles.buyInput}
-            />
-            <span className={styles.buyInputLabel}>SOL</span>
+
+          <div className={styles.swapBox}>
+            <div className={styles.swapFieldLabel}>You Pay</div>
+            <div className={styles.swapFieldRow}>
+              <input
+                type="number"
+                value={buyAmount}
+                onChange={(e) => setBuyAmount(e.target.value)}
+                placeholder="0.05"
+                step="0.01"
+                min="0.001"
+                className={styles.buyInput}
+              />
+              <span className={styles.swapFieldToken}>SOL</span>
+            </div>
+            {solPriceUsd > 0 && buyAmountNum > 0 && (
+              <div className={styles.swapFieldUsd}>${buyValueUsd.toFixed(2)}</div>
+            )}
           </div>
+
           <div className={styles.buyPresets}>
             {['0.01', '0.05', '0.1', '0.25'].map((amt) => (
               <button key={amt} className={styles.buyPresetBtn} onClick={() => setBuyAmount(amt)}>
@@ -728,22 +793,28 @@ const TokenDetailModal: React.FC<TokenDetailModalProps> = ({
             </button>
           </div>
 
-          {/* Buy Preview */}
+          <div className={styles.swapArrow}>↓</div>
+
+          <div className={styles.swapBox}>
+            <div className={styles.swapFieldLabel}>You Receive (est.)</div>
+            <div className={styles.swapFieldRow}>
+              <span className={styles.swapFieldAmount}>
+                {estimatedTokens > 0 ? formatNumber(estimatedTokens) : '—'}
+              </span>
+              <span className={styles.swapFieldToken}>{symbol}</span>
+            </div>
+            {solPriceUsd > 0 && buyAmountNum > 0 && priceImpact > 0 ? (
+              <div className={styles.swapFieldUsd}>
+                ~${(buyValueUsd * (1 - priceImpact / 100)).toFixed(2)} after impact
+              </div>
+            ) : solPriceUsd > 0 && buyAmountNum > 0 ? (
+              <div className={styles.swapFieldUsd}>~${buyValueUsd.toFixed(2)}</div>
+            ) : null}
+          </div>
+
+          {/* Trade Details */}
           {buyAmountNum > 0 && (
             <div className={styles.buyPreview}>
-              <div className={styles.previewRow}>
-                <span className={styles.previewLabel}>You Pay</span>
-                <span className={styles.previewValue}>
-                  {buyAmountNum.toFixed(4)} SOL
-                  {solPriceUsd > 0 && <span className={styles.previewUsd}>(${buyValueUsd.toFixed(2)})</span>}
-                </span>
-              </div>
-              {estimatedTokens > 0 && (
-                <div className={styles.previewRow}>
-                  <span className={styles.previewLabel}>You Get (est.)</span>
-                  <span className={styles.previewValue}>{formatNumber(estimatedTokens)} {symbol}</span>
-                </div>
-              )}
               {currentPriceNative > 0 && (
                 <div className={styles.previewRow}>
                   <span className={styles.previewLabel}>Price</span>
@@ -778,19 +849,27 @@ const TokenDetailModal: React.FC<TokenDetailModalProps> = ({
         {hasPosition && position && (
           <div className={styles.sellSection}>
             <h4>Sell</h4>
-            <div className={styles.sellInputRow}>
-              <input
-                type="number"
-                value={sellPercent}
-                onChange={(e) => setSellPercent(e.target.value)}
-                placeholder="100"
-                step="1"
-                min="1"
-                max="100"
-                className={styles.sellInput}
-              />
-              <span className={styles.sellInputLabel}>%</span>
+
+            <div className={styles.swapBox}>
+              <div className={styles.swapFieldLabel}>You Sell</div>
+              <div className={styles.swapFieldRow}>
+                <input
+                  type="number"
+                  value={sellPercent}
+                  onChange={(e) => setSellPercent(e.target.value)}
+                  placeholder="100"
+                  step="1"
+                  min="1"
+                  max="100"
+                  className={styles.sellInput}
+                />
+                <span className={styles.swapFieldToken}>%</span>
+              </div>
+              <div className={styles.swapFieldUsd}>
+                {formatNumber((position.remaining_token_amount ?? position.entry_token_amount ?? 0) * (parseFloat(sellPercent) / 100))} {symbol}
+              </div>
             </div>
+
             <div className={styles.sellPresets}>
               <button className={styles.sellPresetBtn} onClick={() => setSellPercent('25')}>25%</button>
               <button className={styles.sellPresetBtn} onClick={() => setSellPercent('50')}>Half</button>
@@ -798,30 +877,35 @@ const TokenDetailModal: React.FC<TokenDetailModalProps> = ({
               <button className={styles.sellPresetBtn} onClick={() => setSellPercent('100')}>Max</button>
             </div>
 
-            {/* Sell Preview */}
+            <div className={styles.swapArrow}>↓</div>
+
+            <div className={styles.swapBox}>
+              <div className={styles.swapFieldLabel}>You Receive (est.)</div>
+              <div className={styles.swapFieldRow}>
+                <span className={styles.swapFieldAmount}>
+                  {formatSol((position.current_value_base ?? 0) * (parseFloat(sellPercent) / 100))}
+                </span>
+                <span className={styles.swapFieldToken}>SOL</span>
+              </div>
+              {solPriceUsd > 0 && (
+                <div className={styles.swapFieldUsd}>
+                  ~${((position.current_value_base ?? 0) * (parseFloat(sellPercent) / 100) * solPriceUsd).toFixed(2)}
+                </div>
+              )}
+            </div>
+
+            {/* Sell Details */}
             {parseFloat(sellPercent) > 0 && (
               <div className={styles.sellPreview}>
-                <div className={styles.previewRow}>
-                  <span className={styles.previewLabel}>You Sell</span>
-                  <span className={styles.previewValue}>
-                    {formatNumber((position.remaining_token_amount ?? position.entry_token_amount ?? 0) * (parseFloat(sellPercent) / 100))} {symbol}
-                  </span>
-                </div>
-                <div className={styles.previewRow}>
-                  <span className={styles.previewLabel}>You Receive (est.)</span>
-                  <span className={styles.previewValue}>
-                    {formatSol((position.current_value_base ?? 0) * (parseFloat(sellPercent) / 100))} SOL
-                    {solPriceUsd > 0 && (
-                      <span className={styles.previewUsd}>
-                        (${((position.current_value_base ?? 0) * (parseFloat(sellPercent) / 100) * solPriceUsd).toFixed(2)})
-                      </span>
-                    )}
-                  </span>
-                </div>
                 <div className={styles.previewRow}>
                   <span className={styles.previewLabel}>Current PnL</span>
                   <span className={`${styles.previewValue} ${(position.unrealized_pnl ?? 0) >= 0 ? styles.impactLow : styles.impactHigh}`}>
                     {(position.unrealized_pnl ?? 0) >= 0 ? '+' : ''}{formatSol(position.unrealized_pnl)} SOL ({formatPercent(position.unrealized_pnl_percent)})
+                    {solPriceUsd > 0 && (
+                      <span className={styles.previewUsd}>
+                        ${((position.unrealized_pnl ?? 0) * solPriceUsd).toFixed(2)}
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>

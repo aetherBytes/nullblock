@@ -25,12 +25,24 @@ while true; do
   echo "================================"
   curl -s http://localhost:9007/health 2>/dev/null | jq -r '"Service: \(.status)"' || echo "❌ Not responding"
   echo ""
-  curl -s http://localhost:9007/scanner/status 2>/dev/null | jq -r '"Scanner: Running=\(.is_running) | Signals=\(.stats.total_signals)"' || true
+  curl -s http://localhost:9007/scanner/status 2>/dev/null | jq -r '"Scanner: Running=\(.is_running) | Scans=\(.stats.total_scans) | Signals=\(.stats.total_signals)"' || true
+  EXEC_RUNNING=$(curl -s http://localhost:9007/executor/stats 2>/dev/null | jq -r '.is_running // false')
   curl -s http://localhost:9007/executor/stats 2>/dev/null | jq -r '"Executor: Running=\(.is_running) | Executed=\(.executions_succeeded)"' || true
   curl -s http://localhost:9007/positions/monitor/status 2>/dev/null | jq -r '"Monitor: Positions=\(.active_positions)"' || true
+  if [ "$EXEC_RUNNING" != "true" ]; then
+    echo ""
+    echo "⚠️  OBSERVATION MODE - signals are buy candidates (execution off)"
+  fi
   echo ""
   echo "💰 Wallet"
   curl -s http://localhost:9007/wallet/balance 2>/dev/null | jq -r '"Balance: \(.balance_sol) SOL"' || echo "Unknown"
+  echo ""
+  echo "🎓 Top Contenders (approaching graduation)"
+  curl -s 'http://localhost:9007/scanner/contenders?limit=5' 2>/dev/null | jq -r '
+    if .count == 0 then "  No contenders yet (waiting for scan data)"
+    else .contenders[]? | "  \(.symbol) \(.graduation_progress | . * 10 | floor / 10)% | \(.market_cap_sol | . * 100 | floor / 100) SOL"
+    end
+  ' || echo "  Failed to get contenders"
   echo ""
   echo "🔒 Strategy Configs"
   curl -s http://localhost:9007/strategies 2>/dev/null | jq -r '

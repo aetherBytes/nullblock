@@ -15,9 +15,16 @@ cd ~/nullblock/svc/arb-farm
 mkdir -p logs
 
 if [ -f ../../.env.dev ]; then
-  echo "🔐 Loading environment variables from .env.dev..."
+  echo "🔐 Loading environment variables from root .env.dev..."
   set -a
   source ../../.env.dev
+  set +a
+fi
+
+if [ -f .env.dev ]; then
+  echo "🔐 Loading environment variables from arb-farm .env.dev..."
+  set -a
+  source .env.dev
   set +a
 fi
 
