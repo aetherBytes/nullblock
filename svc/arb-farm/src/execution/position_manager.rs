@@ -406,12 +406,12 @@ impl ExitConfig {
     /// - Take profits at 15% (covers fees + profit)
     /// - If momentum is Strong: let it run until decay
     /// - Exit ASAP on any momentum slowdown
-    /// - Tight 10% stop loss to protect capital
+    /// - 13% stop loss to protect capital (widened from 10% per LLM consensus)
     pub fn for_defensive() -> Self {
         Self {
             base_currency: BaseCurrency::Sol,
             exit_mode: ExitMode::Default,
-            stop_loss_percent: Some(10.0),      // -10% tight stop loss
+            stop_loss_percent: Some(13.0),      // -13% stop loss (widened from 10% per LLM consensus)
             take_profit_percent: Some(15.0),    // +15% base TP (after fees = ~11% profit)
             trailing_stop_percent: Some(8.0),   // 8% trailing stop (tight protection)
             time_limit_minutes: Some(5),        // 5 min max hold

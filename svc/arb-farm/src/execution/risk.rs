@@ -79,7 +79,7 @@ impl RiskConfig {
         Self {
             max_position_sol: 5.0,
             daily_loss_limit_sol: 2.0,
-            max_drawdown_percent: 10.0,         // DEFENSIVE: 10% stop loss
+            max_drawdown_percent: 13.0,         // DEFENSIVE: 13% stop loss (widened from 10% per LLM consensus)
             max_concurrent_positions: 10,
             max_position_per_token_sol: 2.0,
             cooldown_after_loss_ms: 2000,

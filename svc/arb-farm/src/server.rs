@@ -353,7 +353,7 @@ impl AppState {
             "autonomous",  // Autonomous execution for speed
             RiskParams {
                 // Synced with global config
-                max_position_sol: 0.3,                  // Matches global default
+                max_position_sol: 0.08,                 // Reduced from 0.3 per LLM consensus
                 daily_loss_limit_sol: 1.0,              // Matches global default
                 min_profit_bps: 25,                     // Lower profit threshold (0.25%)
                 max_slippage_bps: 300,                  // Higher slippage tolerance for speed
@@ -364,7 +364,7 @@ impl AppState {
                 require_consensus: false,               // No consensus for time-sensitive snipes
                 require_confirmation: false,            // No confirmation needed
                 staleness_threshold_hours: 1,          // Short staleness window
-                stop_loss_percent: Some(10.0),          // DEFENSIVE: 10% tight stop
+                stop_loss_percent: Some(13.0),          // DEFENSIVE: 13% stop (widened from 10%)
                 take_profit_percent: Some(15.0),        // DEFENSIVE: 15% TP (strong momentum extends)
                 trailing_stop_percent: Some(8.0),       // DEFENSIVE: 8% trailing stop
                 time_limit_minutes: Some(5),            // DEFENSIVE: 5 min
@@ -386,7 +386,7 @@ impl AppState {
             vec!["dexamm".to_string(), "DexAmm".to_string()],
             "autonomous",
             RiskParams {
-                max_position_sol: 0.3,
+                max_position_sol: 0.08,
                 daily_loss_limit_sol: 1.0,
                 min_profit_bps: 25,
                 max_slippage_bps: 500,

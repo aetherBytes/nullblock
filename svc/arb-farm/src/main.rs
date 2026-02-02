@@ -207,7 +207,7 @@ async fn main() -> anyhow::Result<()> {
                             );
                             explicit.min(available_for_trading)
                         } else {
-                            const MAX_POSITION_CAP_SOL: f64 = 10.0;
+                            const MAX_POSITION_CAP_SOL: f64 = 0.08;
                             let (divisor, tier_name) = if available_for_trading < 1.0 {
                                 (10.0, "micro (<1 SOL)")
                             } else if available_for_trading < 10.0 {
