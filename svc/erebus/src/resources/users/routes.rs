@@ -1,30 +1,30 @@
 use axum::{
-    extract::{Path, Json},
-    response::Json as ResponseJson,
+    extract::{Json, Path},
     http::StatusCode,
+    response::Json as ResponseJson,
 };
 use serde::{Deserialize, Serialize};
-use tracing::{info, error};
+use tracing::{error, info};
 use uuid::Uuid;
 
 use crate::database::Database;
-use crate::user_references::{UserReferenceService, UserReference, SourceType};
+use crate::user_references::{SourceType, UserReference, UserReferenceService};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateUserRequest {
     pub source_identifier: String,
-    pub network: String,                        // Renamed from 'chain' for source agnostic terminology
-    pub source_type: SourceType,                // Use proper SourceType enum instead of raw JSON
-    pub user_type: Option<String>,              // Optional user type (defaults to "external")
-    pub email: Option<String>,                  // Email address if available
-    pub metadata: Option<serde_json::Value>,    // General user metadata
+    pub network: String, // Renamed from 'chain' for source agnostic terminology
+    pub source_type: SourceType, // Use proper SourceType enum instead of raw JSON
+    pub user_type: Option<String>, // Optional user type (defaults to "external")
+    pub email: Option<String>, // Email address if available
+    pub metadata: Option<serde_json::Value>, // General user metadata
     pub preferences: Option<serde_json::Value>, // User preferences
 
     // Legacy fields for backward compatibility (will be removed in future version)
     #[serde(default)]
-    pub chain: Option<String>,                  // Legacy field name - maps to network
+    pub chain: Option<String>, // Legacy field name - maps to network
     #[serde(default)]
-    pub wallet_type: Option<String>,            // Legacy wallet type - handled by source_type conversion
+    pub wallet_type: Option<String>, // Legacy wallet type - handled by source_type conversion
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,11 +38,11 @@ pub struct CreateUserResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LookupUserRequest {
     pub source_identifier: String,
-    pub network: String,                        // Renamed from 'chain' for source agnostic terminology
+    pub network: String, // Renamed from 'chain' for source agnostic terminology
 
     // Legacy field for backward compatibility
     #[serde(default)]
-    pub chain: Option<String>,                  // Legacy field name - maps to network
+    pub chain: Option<String>, // Legacy field name - maps to network
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -59,13 +59,17 @@ pub struct ErrorResponse {
 }
 
 pub async fn create_user_endpoint(
-    Json(request): Json<CreateUserRequest>
+    Json(request): Json<CreateUserRequest>,
 ) -> Result<ResponseJson<CreateUserResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     info!("🏗️ User creation request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://postgres:postgres_secure_pass@localhost:5440/erebus".to_string());
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgresql://postgres:postgres_secure_pass@localhost:5440/erebus".to_string()
+    });
 
     let database = match Database::new(&database_url).await {
         Ok(db) => db,
@@ -103,7 +107,10 @@ pub async fn create_user_endpoint(
 
     // Handle legacy wallet_type conversion to proper SourceType if needed
     let source_type = if let Some(wallet_type) = request.wallet_type.as_ref() {
-        info!("🔄 Converting legacy wallet_type '{}' to SourceType::Web3Wallet", wallet_type);
+        info!(
+            "🔄 Converting legacy wallet_type '{}' to SourceType::Web3Wallet",
+            wallet_type
+        );
         SourceType::Web3Wallet {
             provider: wallet_type.clone(),
             network: network.clone(),
@@ -146,13 +153,17 @@ pub async fn create_user_endpoint(
 }
 
 pub async fn lookup_user_endpoint(
-    Json(request): Json<LookupUserRequest>
+    Json(request): Json<LookupUserRequest>,
 ) -> Result<ResponseJson<LookupUserResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     info!("🔍 User lookup request received");
-    info!("📝 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📝 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
 
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://postgres:postgres_secure_pass@localhost:5440/erebus".to_string());
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgresql://postgres:postgres_secure_pass@localhost:5440/erebus".to_string()
+    });
 
     let database = match Database::new(&database_url).await {
         Ok(db) => db,
@@ -214,12 +225,13 @@ pub async fn lookup_user_endpoint(
 }
 
 pub async fn get_user_endpoint(
-    Path(user_id): Path<Uuid>
+    Path(user_id): Path<Uuid>,
 ) -> Result<ResponseJson<LookupUserResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     info!("👤 Get user by ID request received: {}", user_id);
 
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://postgres:postgres_secure_pass@localhost:5440/erebus".to_string());
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgresql://postgres:postgres_secure_pass@localhost:5440/erebus".to_string()
+    });
 
     let database = match Database::new(&database_url).await {
         Ok(db) => db,

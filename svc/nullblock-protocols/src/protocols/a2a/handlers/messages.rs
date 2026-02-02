@@ -1,10 +1,7 @@
 use axum::Json;
 
 use crate::errors::ProtocolError;
-use crate::protocols::a2a::types::{
-    MessageSendRequest, MessageSendResponse,
-    MessageStreamRequest
-};
+use crate::protocols::a2a::types::{MessageSendRequest, MessageSendResponse, MessageStreamRequest};
 
 pub async fn send_message(
     Json(_request): Json<MessageSendRequest>,
@@ -16,7 +13,7 @@ pub async fn send_message(
     // 3. Return task_id and response from agent processing
 
     Err(ProtocolError::InternalError(
-        "Message processing not yet implemented - requires Agents database integration".to_string()
+        "Message processing not yet implemented - requires Agents database integration".to_string(),
     ))
 }
 
@@ -30,6 +27,7 @@ pub async fn send_streaming_message(
     // 3. Stream agent processing results back to client
 
     Err(ProtocolError::InternalError(
-        "Streaming message processing not yet implemented - requires Agents database integration".to_string()
+        "Streaming message processing not yet implemented - requires Agents database integration"
+            .to_string(),
     ))
 }

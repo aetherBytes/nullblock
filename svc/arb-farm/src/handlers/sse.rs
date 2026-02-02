@@ -23,9 +23,7 @@ pub async fn scanner_stream(
                 // Filter for scanner-related events
                 if event.topic.starts_with("arb.scanner.") {
                     let data = serde_json::to_string(&event).unwrap_or_default();
-                    Some(Ok(Event::default()
-                        .event("signal")
-                        .data(data)))
+                    Some(Ok(Event::default().event("signal").data(data)))
                 } else {
                     None
                 }
@@ -53,9 +51,7 @@ pub async fn edges_stream(
                 // Filter for edge-related events
                 if event.topic.starts_with("arb.edge.") {
                     let data = serde_json::to_string(&event).unwrap_or_default();
-                    Some(Ok(Event::default()
-                        .event("edge")
-                        .data(data)))
+                    Some(Ok(Event::default().event("edge").data(data)))
                 } else {
                     None
                 }
@@ -77,15 +73,12 @@ pub async fn all_events_stream(
     let rx = state.subscribe_events();
     let stream = BroadcastStream::new(rx);
 
-    let event_stream = stream.filter_map(|result| {
-        match result {
-            Ok(event) => {
-                let data = serde_json::to_string(&event).unwrap_or_default();
-                Some(Ok(Event::default()
-                    .data(data)))
-            }
-            Err(_) => None,
+    let event_stream = stream.filter_map(|result| match result {
+        Ok(event) => {
+            let data = serde_json::to_string(&event).unwrap_or_default();
+            Some(Ok(Event::default().data(data)))
         }
+        Err(_) => None,
     });
 
     Sse::new(event_stream).keep_alive(
@@ -101,20 +94,16 @@ pub async fn threat_stream(
     let rx = state.subscribe_events();
     let stream = BroadcastStream::new(rx);
 
-    let event_stream = stream.filter_map(|result| {
-        match result {
-            Ok(event) => {
-                if event.topic.starts_with("arb.threat.") {
-                    let data = serde_json::to_string(&event).unwrap_or_default();
-                    Some(Ok(Event::default()
-                        .event("threat")
-                        .data(data)))
-                } else {
-                    None
-                }
+    let event_stream = stream.filter_map(|result| match result {
+        Ok(event) => {
+            if event.topic.starts_with("arb.threat.") {
+                let data = serde_json::to_string(&event).unwrap_or_default();
+                Some(Ok(Event::default().event("threat").data(data)))
+            } else {
+                None
             }
-            Err(_) => None,
         }
+        Err(_) => None,
     });
 
     Sse::new(event_stream).keep_alive(
@@ -130,21 +119,17 @@ pub async fn helius_stream(
     let rx = state.subscribe_events();
     let stream = BroadcastStream::new(rx);
 
-    let event_stream = stream.filter_map(|result| {
-        match result {
-            Ok(event) => {
-                if event.topic.starts_with("arb.helius.") {
-                    let event_name = event.topic.split('.').last().unwrap_or("helius");
-                    let data = serde_json::to_string(&event).unwrap_or_default();
-                    Some(Ok(Event::default()
-                        .event(event_name)
-                        .data(data)))
-                } else {
-                    None
-                }
+    let event_stream = stream.filter_map(|result| match result {
+        Ok(event) => {
+            if event.topic.starts_with("arb.helius.") {
+                let event_name = event.topic.split('.').last().unwrap_or("helius");
+                let data = serde_json::to_string(&event).unwrap_or_default();
+                Some(Ok(Event::default().event(event_name).data(data)))
+            } else {
+                None
             }
-            Err(_) => None,
         }
+        Err(_) => None,
     });
 
     Sse::new(event_stream).keep_alive(
@@ -160,21 +145,17 @@ pub async fn positions_stream(
     let rx = state.subscribe_events();
     let stream = BroadcastStream::new(rx);
 
-    let event_stream = stream.filter_map(|result| {
-        match result {
-            Ok(event) => {
-                if event.topic.starts_with("arb.position.") {
-                    let event_name = event.topic.split('.').last().unwrap_or("position");
-                    let data = serde_json::to_string(&event).unwrap_or_default();
-                    Some(Ok(Event::default()
-                        .event(event_name)
-                        .data(data)))
-                } else {
-                    None
-                }
+    let event_stream = stream.filter_map(|result| match result {
+        Ok(event) => {
+            if event.topic.starts_with("arb.position.") {
+                let event_name = event.topic.split('.').last().unwrap_or("position");
+                let data = serde_json::to_string(&event).unwrap_or_default();
+                Some(Ok(Event::default().event(event_name).data(data)))
+            } else {
+                None
             }
-            Err(_) => None,
         }
+        Err(_) => None,
     });
 
     Sse::new(event_stream).keep_alive(

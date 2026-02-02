@@ -1,16 +1,16 @@
 use serde::{Deserialize, Serialize};
 
 pub const ALLOWED_PROGRAMS: &[&str] = &[
-    "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",  // Jupiter v6 Aggregator
-    "JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB",  // Jupiter v4
+    "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", // Jupiter v6 Aggregator
+    "JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB", // Jupiter v4
     "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8", // Raydium AMM v4
     "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK", // Raydium CPMM
-    "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",  // pump.fun
-    "MoonCVVNZFSYkqNXP6bxHLPL6QQJiMagDL3qcqUQTrG",  // moonshot
-    "11111111111111111111111111111111",              // System Program
-    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",  // Token Program
+    "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P", // pump.fun
+    "MoonCVVNZFSYkqNXP6bxHLPL6QQJiMagDL3qcqUQTrG", // moonshot
+    "11111111111111111111111111111111",            // System Program
+    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", // Token Program
     "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", // Associated Token Program
-    "ComputeBudget111111111111111111111111111111",   // Compute Budget
+    "ComputeBudget111111111111111111111111111111", // Compute Budget
 ];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

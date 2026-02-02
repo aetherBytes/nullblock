@@ -870,3 +870,39 @@ arb-monitor-stop:
 arb-exit-config preset="curve":
     @echo "📝 Setting exit config to: {{preset}}"
     @curl -s -X PUT http://localhost:9007/positions/exit-config -H "Content-Type: application/json" -d '{"preset":"{{preset}}"}' | jq '.'
+
+hooks:
+    git config core.hooksPath .githooks
+    @echo "Git hooks configured to use .githooks/"
+
+check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for svc in svc/erebus svc/arb-farm svc/nullblock-agents svc/nullblock-engrams svc/nullblock-protocols lib/nullblock-mcp-client; do
+        if [ -f "$svc/Cargo.toml" ]; then
+            echo "Checking $svc..."
+            cargo fmt --manifest-path "$svc/Cargo.toml" --check
+            cargo clippy --manifest-path "$svc/Cargo.toml" -- -D clippy::correctness -D clippy::suspicious
+        fi
+    done
+    echo "All checks passed"
+
+fmt:
+    #!/usr/bin/env bash
+    for svc in svc/erebus svc/arb-farm svc/nullblock-agents svc/nullblock-engrams svc/nullblock-protocols lib/nullblock-mcp-client; do
+        if [ -f "$svc/Cargo.toml" ]; then
+            cargo fmt --manifest-path "$svc/Cargo.toml"
+        fi
+    done
+    echo "All services formatted"
+
+test-rust:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for svc in svc/erebus svc/arb-farm svc/nullblock-agents svc/nullblock-engrams svc/nullblock-protocols lib/nullblock-mcp-client; do
+        if [ -f "$svc/Cargo.toml" ]; then
+            echo "Testing $svc..."
+            cargo test --manifest-path "$svc/Cargo.toml"
+        fi
+    done
+    echo "All tests passed"

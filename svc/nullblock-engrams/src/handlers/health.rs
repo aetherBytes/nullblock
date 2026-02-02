@@ -5,10 +5,7 @@ use crate::server::AppState;
 
 pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
     // Test database connection
-    let db_status = match sqlx::query("SELECT 1")
-        .fetch_one(&state.db_pool)
-        .await
-    {
+    let db_status = match sqlx::query("SELECT 1").fetch_one(&state.db_pool).await {
         Ok(_) => "healthy",
         Err(_) => "unhealthy",
     };

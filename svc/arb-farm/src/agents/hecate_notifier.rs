@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use reqwest::Client;
+use std::sync::Arc;
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
-use crate::events::{ArbEvent, approval as approval_topics};
+use crate::events::{approval as approval_topics, ArbEvent};
 use crate::models::HecateRecommendation;
 
 pub struct HecateNotifier {
@@ -41,17 +41,26 @@ impl HecateNotifier {
         tracing::info!("HecateNotifier stopped");
     }
 
-    async fn handle_approval_notification(&self, event: &ArbEvent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let approval_id = event.payload.get("approval_id")
+    async fn handle_approval_notification(
+        &self,
+        event: &ArbEvent,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let approval_id = event
+            .payload
+            .get("approval_id")
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or("Missing approval_id in event")?;
 
-        let approval_type = event.payload.get("approval_type")
+        let approval_type = event
+            .payload
+            .get("approval_type")
             .and_then(|v| v.as_str())
             .unwrap_or("unknown");
 
-        let context = event.payload.get("context")
+        let context = event
+            .payload
+            .get("context")
             .cloned()
             .unwrap_or(serde_json::json!({}));
 
@@ -61,7 +70,9 @@ impl HecateNotifier {
             "Requesting Hecate recommendation"
         );
 
-        let recommendation = self.request_hecate_recommendation(approval_id, approval_type, &context).await?;
+        let recommendation = self
+            .request_hecate_recommendation(approval_id, approval_type, &context)
+            .await?;
 
         self.submit_recommendation(recommendation).await?;
 
@@ -88,7 +99,8 @@ impl HecateNotifier {
             }
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(format!("{}/api/agents/analyze", self.agents_service_url))
             .json(&request_body)
             .send()
@@ -108,18 +120,21 @@ impl HecateNotifier {
 
         let response_json: serde_json::Value = response.json().await?;
 
-        let decision = response_json.get("recommendation")
+        let decision = response_json
+            .get("recommendation")
             .and_then(|r| r.get("approve"))
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        let reasoning = response_json.get("recommendation")
+        let reasoning = response_json
+            .get("recommendation")
             .and_then(|r| r.get("reasoning"))
             .and_then(|v| v.as_str())
             .unwrap_or("No reasoning provided")
             .to_string();
 
-        let confidence = response_json.get("recommendation")
+        let confidence = response_json
+            .get("recommendation")
             .and_then(|r| r.get("confidence"))
             .and_then(|v| v.as_f64())
             .unwrap_or(0.5);
@@ -132,7 +147,11 @@ impl HecateNotifier {
         })
     }
 
-    fn build_recommendation_prompt(&self, approval_type: &str, context: &serde_json::Value) -> String {
+    fn build_recommendation_prompt(
+        &self,
+        approval_type: &str,
+        context: &serde_json::Value,
+    ) -> String {
         let context_str = serde_json::to_string_pretty(context).unwrap_or_default();
 
         format!(
@@ -158,16 +177,19 @@ Consider:
 5. Any red flags in the context
 
 Be conservative - when in doubt, recommend rejection."#,
-            approval_type,
-            context_str,
+            approval_type, context_str,
         )
     }
 
-    async fn submit_recommendation(&self, recommendation: HecateRecommendation) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn submit_recommendation(
+        &self,
+        recommendation: HecateRecommendation,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let arbfarm_url = std::env::var("ARB_FARM_SERVICE_URL")
             .unwrap_or_else(|_| "http://localhost:9007".to_string());
 
-        let response = self.client
+        let response = self
+            .client
             .post(format!("{}/approvals/hecate-recommendation", arbfarm_url))
             .json(&recommendation)
             .send()

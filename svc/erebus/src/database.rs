@@ -1,4 +1,4 @@
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::time::Duration;
 use tracing::info;
 
@@ -28,9 +28,7 @@ impl Database {
     }
 
     pub async fn health_check(&self) -> Result<(), sqlx::Error> {
-        sqlx::query("SELECT 1")
-            .fetch_one(&self.pool)
-            .await?;
+        sqlx::query("SELECT 1").fetch_one(&self.pool).await?;
         Ok(())
     }
 }
@@ -42,5 +40,3 @@ impl Clone for Database {
         }
     }
 }
-
-

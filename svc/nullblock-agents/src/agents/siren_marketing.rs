@@ -15,7 +15,7 @@ use chrono::Utc;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 pub struct MarketingAgent {
@@ -49,9 +49,9 @@ pub struct ContentTheme {
 impl MarketingAgent {
     pub fn new(personality: Option<String>) -> Self {
         let personality = personality.unwrap_or_else(|| "cyberpunk_marketer".to_string());
-        
+
         let mut content_themes = HashMap::new();
-        
+
         // Define content themes for different types of marketing content
         content_themes.insert("product_announcement".to_string(), ContentTheme {
             name: "Product Announcement".to_string(),
@@ -66,57 +66,89 @@ impl MarketingAgent {
             ],
         });
 
-        content_themes.insert("technical_insight".to_string(), ContentTheme {
-            name: "Technical Insight".to_string(),
-            description: "Sharing technical knowledge and insights".to_string(),
-            hashtags: vec!["#Rust".to_string(), "#AI".to_string(), "#Blockchain".to_string(), "#Tech".to_string()],
-            tone: "educational_authoritative".to_string(),
-            target_audience: "technical_community".to_string(),
-            content_templates: vec![
-                "🧠 Deep dive: {topic} in {context}. {insight} {hashtags}".to_string(),
-                "⚙️ Technical insight: {topic} {explanation} {hashtags}".to_string(),
-                "🔬 Exploring {topic}: {insight} {hashtags}".to_string(),
-            ],
-        });
+        content_themes.insert(
+            "technical_insight".to_string(),
+            ContentTheme {
+                name: "Technical Insight".to_string(),
+                description: "Sharing technical knowledge and insights".to_string(),
+                hashtags: vec![
+                    "#Rust".to_string(),
+                    "#AI".to_string(),
+                    "#Blockchain".to_string(),
+                    "#Tech".to_string(),
+                ],
+                tone: "educational_authoritative".to_string(),
+                target_audience: "technical_community".to_string(),
+                content_templates: vec![
+                    "🧠 Deep dive: {topic} in {context}. {insight} {hashtags}".to_string(),
+                    "⚙️ Technical insight: {topic} {explanation} {hashtags}".to_string(),
+                    "🔬 Exploring {topic}: {insight} {hashtags}".to_string(),
+                ],
+            },
+        );
 
-        content_themes.insert("community_engagement".to_string(), ContentTheme {
-            name: "Community Engagement".to_string(),
-            description: "Engaging with the community and ecosystem".to_string(),
-            hashtags: vec!["#Community".to_string(), "#Builders".to_string(), "#OpenSource".to_string(), "#Web3".to_string()],
-            tone: "friendly_engaging".to_string(),
-            target_audience: "community_members".to_string(),
-            content_templates: vec![
-                "💬 {question} What's your take on {topic}? {hashtags}".to_string(),
-                "🤝 Shoutout to {community} for {reason}! {hashtags}".to_string(),
-                "🎯 Building together: {message} {hashtags}".to_string(),
-            ],
-        });
+        content_themes.insert(
+            "community_engagement".to_string(),
+            ContentTheme {
+                name: "Community Engagement".to_string(),
+                description: "Engaging with the community and ecosystem".to_string(),
+                hashtags: vec![
+                    "#Community".to_string(),
+                    "#Builders".to_string(),
+                    "#OpenSource".to_string(),
+                    "#Web3".to_string(),
+                ],
+                tone: "friendly_engaging".to_string(),
+                target_audience: "community_members".to_string(),
+                content_templates: vec![
+                    "💬 {question} What's your take on {topic}? {hashtags}".to_string(),
+                    "🤝 Shoutout to {community} for {reason}! {hashtags}".to_string(),
+                    "🎯 Building together: {message} {hashtags}".to_string(),
+                ],
+            },
+        );
 
-        content_themes.insert("milestone_celebration".to_string(), ContentTheme {
-            name: "Milestone Celebration".to_string(),
-            description: "Celebrating achievements and milestones".to_string(),
-            hashtags: vec!["#Milestone".to_string(), "#Achievement".to_string(), "#Progress".to_string(), "#NullBlock".to_string()],
-            tone: "celebratory_proud".to_string(),
-            target_audience: "general_audience".to_string(),
-            content_templates: vec![
-                "🎉 {milestone} achieved! {description} {hashtags}".to_string(),
-                "🏆 {achievement}! {description} {hashtags}".to_string(),
-                "✨ {milestone} milestone reached! {description} {hashtags}".to_string(),
-            ],
-        });
+        content_themes.insert(
+            "milestone_celebration".to_string(),
+            ContentTheme {
+                name: "Milestone Celebration".to_string(),
+                description: "Celebrating achievements and milestones".to_string(),
+                hashtags: vec![
+                    "#Milestone".to_string(),
+                    "#Achievement".to_string(),
+                    "#Progress".to_string(),
+                    "#NullBlock".to_string(),
+                ],
+                tone: "celebratory_proud".to_string(),
+                target_audience: "general_audience".to_string(),
+                content_templates: vec![
+                    "🎉 {milestone} achieved! {description} {hashtags}".to_string(),
+                    "🏆 {achievement}! {description} {hashtags}".to_string(),
+                    "✨ {milestone} milestone reached! {description} {hashtags}".to_string(),
+                ],
+            },
+        );
 
-        content_themes.insert("thought_leadership".to_string(), ContentTheme {
-            name: "Thought Leadership".to_string(),
-            description: "Sharing insights on industry trends and future vision".to_string(),
-            hashtags: vec!["#FutureOfAI".to_string(), "#Web3".to_string(), "#Innovation".to_string(), "#ThoughtLeadership".to_string()],
-            tone: "visionary_insightful".to_string(),
-            target_audience: "industry_leaders".to_string(),
-            content_templates: vec![
-                "🔮 The future of {domain}: {insight} {hashtags}".to_string(),
-                "💡 {perspective} on {topic}: {insight} {hashtags}".to_string(),
-                "🚀 {vision} for {domain}: {insight} {hashtags}".to_string(),
-            ],
-        });
+        content_themes.insert(
+            "thought_leadership".to_string(),
+            ContentTheme {
+                name: "Thought Leadership".to_string(),
+                description: "Sharing insights on industry trends and future vision".to_string(),
+                hashtags: vec![
+                    "#FutureOfAI".to_string(),
+                    "#Web3".to_string(),
+                    "#Innovation".to_string(),
+                    "#ThoughtLeadership".to_string(),
+                ],
+                tone: "visionary_insightful".to_string(),
+                target_audience: "industry_leaders".to_string(),
+                content_templates: vec![
+                    "🔮 The future of {domain}: {insight} {hashtags}".to_string(),
+                    "💡 {perspective} on {topic}: {insight} {hashtags}".to_string(),
+                    "🚀 {vision} for {domain}: {insight} {hashtags}".to_string(),
+                ],
+            },
+        );
 
         // Initialize posting schedule
         let mut posting_schedule = HashMap::new();
@@ -159,11 +191,17 @@ impl MarketingAgent {
         info!("✅ LLM Service Factory ready");
 
         // Set current model to preferred model if available
-        if self.is_model_available(&self.preferred_model, api_keys).await {
+        if self
+            .is_model_available(&self.preferred_model, api_keys)
+            .await
+        {
             self.current_model = Some(self.preferred_model.clone());
             info!("✅ Default model loaded: {}", self.preferred_model);
         } else {
-            warn!("⚠️ Could not load default model {}, will use routing", self.preferred_model);
+            warn!(
+                "⚠️ Could not load default model {}, will use routing",
+                self.preferred_model
+            );
         }
 
         // Start new chat session
@@ -201,7 +239,9 @@ impl MarketingAgent {
             return Err(AppError::AgentNotRunning);
         }
 
-        let llm_factory = self.llm_factory.as_ref()
+        let llm_factory = self
+            .llm_factory
+            .as_ref()
             .ok_or(AppError::AgentNotInitialized)?;
 
         let start_time = std::time::Instant::now();
@@ -231,17 +271,19 @@ RESPONSE FORMAT: Always start your responses by clearly identifying yourself as 
 Always provide engaging, hype-fueled marketing advice with cyberpunk flair. Keep responses charismatic and community-focused.";
 
         let full_prompt = if let Some(context) = &user_context {
-            format!("{}\n\nUser Context: {}\n\nUser: {}",
+            format!(
+                "{}\n\nUser Context: {}\n\nUser: {}",
                 system_prompt,
                 serde_json::to_string_pretty(context).unwrap_or_default(),
-                message)
+                message
+            )
         } else {
             format!("{}\n\nUser: {}", system_prompt, message)
         };
 
         // For image generation, use higher max_tokens to allow for base64 image data
         let max_tokens = if is_image_request {
-            Some(16384)  // Increased for full base64 image responses (50-200KB+)
+            Some(16384) // Increased for full base64 image responses (50-200KB+)
         } else {
             Some(1000)
         };
@@ -278,14 +320,20 @@ Always provide engaging, hype-fueled marketing advice with cyberpunk flair. Keep
             metadata: {
                 let mut meta = std::collections::HashMap::new();
                 meta.insert("agent_type".to_string(), serde_json::json!("siren"));
-                meta.insert("specialization".to_string(), serde_json::json!("marketing_community_orchestrator"));
-                meta.insert("capabilities".to_string(), serde_json::json!([
-                    "campaign_design",
-                    "tokenomics_narrative",
-                    "sentiment_analysis",
-                    "partnership_brokering",
-                    "viral_outreach"
-                ]));
+                meta.insert(
+                    "specialization".to_string(),
+                    serde_json::json!("marketing_community_orchestrator"),
+                );
+                meta.insert(
+                    "capabilities".to_string(),
+                    serde_json::json!([
+                        "campaign_design",
+                        "tokenomics_narrative",
+                        "sentiment_analysis",
+                        "partnership_brokering",
+                        "viral_outreach"
+                    ]),
+                );
                 meta.insert("latency_ms".to_string(), serde_json::json!(latency));
                 meta.insert("confidence_score".to_string(), serde_json::json!(0.85));
                 if let Some(ctx) = user_context {
@@ -305,16 +353,18 @@ Always provide engaging, hype-fueled marketing advice with cyberpunk flair. Keep
             return Err(AppError::AgentNotRunning);
         }
 
-        let llm_factory = self.llm_factory.as_ref()
+        let llm_factory = self
+            .llm_factory
+            .as_ref()
             .ok_or(AppError::AgentNotInitialized)?;
 
         let start_time = std::time::Instant::now();
-        
+
         log_request_start!("content_generation", &content_type);
 
         // Build content generation prompt based on type and context
         let prompt = self.build_content_prompt(&content_type, &context).await;
-        
+
         let request = LLMRequest {
             prompt,
             system_prompt: Some(self.build_system_prompt()),
@@ -331,10 +381,7 @@ Always provide engaging, hype-fueled marketing advice with cyberpunk flair. Keep
         };
 
         let requirements = TaskRequirements {
-            required_capabilities: vec![
-                ModelCapability::Creative,
-                ModelCapability::Conversation,
-            ],
+            required_capabilities: vec![ModelCapability::Creative, ModelCapability::Conversation],
             optimization_goal: OptimizationGoal::Quality,
             priority: Priority::High,
             task_type: "content_generation".to_string(),
@@ -353,7 +400,9 @@ Always provide engaging, hype-fueled marketing advice with cyberpunk flair. Keep
         };
 
         let latency_ms = start_time.elapsed().as_millis() as f64;
-        let content = self.parse_generated_content(&llm_response.content, &content_type).await;
+        let content = self
+            .parse_generated_content(&llm_response.content, &content_type)
+            .await;
 
         log_request_complete!("content_generation", latency_ms, true);
         info!("✅ Content generated successfully");
@@ -373,14 +422,17 @@ Always provide engaging, hype-fueled marketing advice with cyberpunk flair. Keep
         // For now, simulate Twitter posting
         // In a real implementation, this would use the Twitter API
         info!("📱 Creating Twitter post: {}", content);
-        
+
         // Simulate API call delay
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
         Ok(TwitterPostResult {
             success: true,
             post_id: Some(format!("post_{}", Uuid::new_v4())),
-            url: Some(format!("https://twitter.com/nullblock_io/status/{}", Uuid::new_v4())),
+            url: Some(format!(
+                "https://twitter.com/nullblock_io/status/{}",
+                Uuid::new_v4()
+            )),
             error: None,
         })
     }
@@ -440,7 +492,9 @@ Always provide engaging, hype-fueled marketing advice with cyberpunk flair. Keep
             reasoning: None,
         };
 
-        let llm_factory = self.llm_factory.as_ref()
+        let llm_factory = self
+            .llm_factory
+            .as_ref()
             .ok_or(AppError::AgentNotInitialized)?;
 
         let llm_response = {
@@ -512,7 +566,11 @@ KEY MESSAGING:
 I create content that educates, engages, and excites our community about the future of agentic automation."#.to_string()
     }
 
-    async fn build_content_prompt(&self, content_type: &str, context: &Option<HashMap<String, serde_json::Value>>) -> String {
+    async fn build_content_prompt(
+        &self,
+        content_type: &str,
+        context: &Option<HashMap<String, serde_json::Value>>,
+    ) -> String {
         let base_prompt = match content_type {
             "product_announcement" => "Create a Twitter post announcing a new NullBlock feature or capability. Focus on the technical benefits and user impact.",
             "technical_insight" => "Create a Twitter post sharing technical insights about NullBlock's architecture or AI/blockchain technology.",
@@ -523,7 +581,7 @@ I create content that educates, engages, and excites our community about the fut
         };
 
         let mut prompt = base_prompt.to_string();
-        
+
         if let Some(ctx) = context {
             if let Some(specific_topic) = ctx.get("topic").and_then(|v| v.as_str()) {
                 prompt.push_str(&format!(" Focus on: {}", specific_topic));
@@ -545,7 +603,7 @@ I create content that educates, engages, and excites our community about the fut
 
     async fn build_messages_history(&self) -> Vec<HashMap<String, String>> {
         let mut messages = Vec::new();
-        
+
         // Add system message first
         let mut system_msg = HashMap::new();
         system_msg.insert("role".to_string(), "system".to_string());
@@ -627,24 +685,45 @@ I create content that educates, engages, and excites our community about the fut
         // Simple extraction - in a real implementation, this would be more sophisticated
         content
             .lines()
-            .filter(|line| line.contains("content") || line.contains("post") || line.contains("tweet"))
+            .filter(|line| {
+                line.contains("content") || line.contains("post") || line.contains("tweet")
+            })
             .map(|line| line.trim().to_string())
             .collect()
     }
 
     fn start_new_chat_session(&mut self) {
         self.current_session_id = Some(format!("session_{}", Utc::now().format("%Y%m%d_%H%M%S")));
-        info!("💬 Started new Siren session: {:?}", self.current_session_id);
+        info!(
+            "💬 Started new Siren session: {:?}",
+            self.current_session_id
+        );
     }
 
     fn is_image_generation_request(&self, message: &str) -> bool {
         let image_keywords = [
-            "logo", "image", "picture", "photo", "draw", "create", "generate", "design",
-            "visual", "graphic", "illustration", "artwork", "sketch", "render", "icon", "banner"
+            "logo",
+            "image",
+            "picture",
+            "photo",
+            "draw",
+            "create",
+            "generate",
+            "design",
+            "visual",
+            "graphic",
+            "illustration",
+            "artwork",
+            "sketch",
+            "render",
+            "icon",
+            "banner",
         ];
 
         let lower_message = message.to_lowercase();
-        image_keywords.iter().any(|&keyword| lower_message.contains(keyword))
+        image_keywords
+            .iter()
+            .any(|&keyword| lower_message.contains(keyword))
     }
 
     async fn is_model_available(&self, model_name: &str, _api_keys: &ApiKeys) -> bool {
@@ -653,7 +732,8 @@ I create content that educates, engages, and excites our community about the fut
             match llm_factory.fetch_available_models().await {
                 Ok(models) => {
                     let model_exists = models.iter().any(|model| {
-                        model.get("id")
+                        model
+                            .get("id")
                             .and_then(|id| id.as_str())
                             .map(|id| id == model_name)
                             .unwrap_or(false)
@@ -685,7 +765,10 @@ I create content that educates, engages, and excites our community about the fut
             info!("🎯 Siren preferred model set to: {}", model_name);
 
             if previous_model != model_name {
-                info!("📤 Siren switched from {} to {}", previous_model, model_name);
+                info!(
+                    "📤 Siren switched from {} to {}",
+                    previous_model, model_name
+                );
             }
 
             true
@@ -705,37 +788,55 @@ I create content that educates, engages, and excites our community about the fut
             "brand_management".to_string(),
         ];
 
-        match agent_repo.get_by_name_and_type("siren", "specialized").await {
+        match agent_repo
+            .get_by_name_and_type("siren", "specialized")
+            .await
+        {
             Ok(Some(existing_agent)) => {
-                info!("✅ Siren agent already registered with ID: {}", existing_agent.id);
+                info!(
+                    "✅ Siren agent already registered with ID: {}",
+                    existing_agent.id
+                );
                 self.agent_id = Some(existing_agent.id);
 
                 // Update health status
-                if let Err(e) = agent_repo.update_health_status(&existing_agent.id, "healthy").await {
+                if let Err(e) = agent_repo
+                    .update_health_status(&existing_agent.id, "healthy")
+                    .await
+                {
                     warn!("⚠️ Failed to update Siren health status: {}", e);
                 }
             }
             Ok(None) => {
                 info!("📝 Registering Siren agent in database...");
-                match agent_repo.create(
-                    "siren",
-                    "specialized",
-                    Some("Siren - Marketing and Community Orchestrator for NullBlock platform"),
-                    &capabilities,
-                ).await {
+                match agent_repo
+                    .create(
+                        "siren",
+                        "specialized",
+                        Some("Siren - Marketing and Community Orchestrator for NullBlock platform"),
+                        &capabilities,
+                    )
+                    .await
+                {
                     Ok(agent_entity) => {
                         info!("✅ Siren agent registered with ID: {}", agent_entity.id);
                         self.agent_id = Some(agent_entity.id);
                     }
                     Err(e) => {
                         error!("❌ Failed to register Siren agent: {}", e);
-                        return Err(AppError::DatabaseError(format!("Agent registration failed: {}", e)));
+                        return Err(AppError::DatabaseError(format!(
+                            "Agent registration failed: {}",
+                            e
+                        )));
                     }
                 }
             }
             Err(e) => {
                 error!("❌ Failed to check existing Siren agent: {}", e);
-                return Err(AppError::DatabaseError(format!("Agent lookup failed: {}", e)));
+                return Err(AppError::DatabaseError(format!(
+                    "Agent lookup failed: {}",
+                    e
+                )));
             }
         }
 
@@ -774,7 +875,3 @@ pub struct ProjectAnalysis {
     pub technical_highlights: Vec<String>,
     pub target_audiences: Vec<String>,
 }
-
-
-
-

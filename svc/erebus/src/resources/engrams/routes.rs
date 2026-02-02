@@ -1,17 +1,16 @@
 use axum::{
-    extract::{Path, Query, Json},
-    response::Json as ResponseJson,
+    extract::{Json, Path, Query},
     http::StatusCode,
-    routing::{get, post, put, delete},
+    response::Json as ResponseJson,
+    routing::{delete, get, post, put},
     Router,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tracing::{info, error};
+use tracing::{error, info};
 
 fn get_engrams_service_url() -> String {
-    std::env::var("ENGRAMS_SERVICE_URL")
-        .unwrap_or_else(|_| "http://localhost:9004".to_string())
+    std::env::var("ENGRAMS_SERVICE_URL").unwrap_or_else(|_| "http://localhost:9004".to_string())
 }
 
 #[derive(Debug, Serialize)]
@@ -76,7 +75,8 @@ async fn proxy_request(
                     } else {
                         error!("❌ Engram service returned error status: {}", status);
                         Err((
-                            StatusCode::from_u16(status.as_u16()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+                            StatusCode::from_u16(status.as_u16())
+                                .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
                             ResponseJson(EngramErrorResponse {
                                 error: "engram_service_error".to_string(),
                                 code: "ENGRAM_SERVICE_ERROR".to_string(),
@@ -112,7 +112,8 @@ async fn proxy_request(
     }
 }
 
-pub async fn engram_health() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<EngramErrorResponse>)> {
+pub async fn engram_health(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<EngramErrorResponse>)> {
     info!("🏥 Engram service health check requested");
     proxy_request("GET", "health", None).await
 }
@@ -121,7 +122,10 @@ pub async fn create_engram(
     Json(request): Json<Value>,
 ) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<EngramErrorResponse>)> {
     info!("📝 Create engram request received");
-    info!("📋 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📋 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
     proxy_request("POST", "engrams", Some(request)).await
 }
 
@@ -149,7 +153,10 @@ pub async fn update_engram(
     Json(request): Json<Value>,
 ) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<EngramErrorResponse>)> {
     info!("✏️ Update engram request received for ID: {}", id);
-    info!("📋 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📋 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
     proxy_request("PUT", &format!("engrams/{}", id), Some(request)).await
 }
 
@@ -170,7 +177,10 @@ pub async fn get_engrams_by_wallet(
 pub async fn get_engram_by_wallet_key(
     Path((wallet, key)): Path<(String, String)>,
 ) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<EngramErrorResponse>)> {
-    info!("🔑 Get engram by wallet+key request received for: {}/{}", wallet, key);
+    info!(
+        "🔑 Get engram by wallet+key request received for: {}/{}",
+        wallet, key
+    );
     proxy_request("GET", &format!("engrams/wallet/{}/{}", wallet, key), None).await
 }
 
@@ -178,7 +188,10 @@ pub async fn search_engrams(
     Json(request): Json<Value>,
 ) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<EngramErrorResponse>)> {
     info!("🔍 Search engrams request received");
-    info!("📋 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📋 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
     proxy_request("POST", "engrams/search", Some(request)).await
 }
 
@@ -187,7 +200,10 @@ pub async fn fork_engram(
     Json(request): Json<Value>,
 ) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<EngramErrorResponse>)> {
     info!("🔀 Fork engram request received for ID: {}", id);
-    info!("📋 Request payload: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+    info!(
+        "📋 Request payload: {}",
+        serde_json::to_string_pretty(&request).unwrap_or_default()
+    );
     proxy_request("POST", &format!("engrams/{}/fork", id), Some(request)).await
 }
 
@@ -211,7 +227,10 @@ where
         .route("/api/engrams/:id", put(update_engram))
         .route("/api/engrams/:id", delete(delete_engram))
         .route("/api/engrams/wallet/:wallet", get(get_engrams_by_wallet))
-        .route("/api/engrams/wallet/:wallet/:key", get(get_engram_by_wallet_key))
+        .route(
+            "/api/engrams/wallet/:wallet/:key",
+            get(get_engram_by_wallet_key),
+        )
         .route("/api/engrams/:id/fork", post(fork_engram))
         .route("/api/engrams/:id/publish", post(publish_engram))
 }

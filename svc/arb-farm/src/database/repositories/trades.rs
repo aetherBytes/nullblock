@@ -97,25 +97,22 @@ impl TradeRepository {
     }
 
     pub async fn get_by_id(&self, id: Uuid) -> AppResult<Option<TradeRecord>> {
-        let record = sqlx::query_as::<_, TradeRecord>(
-            r#"SELECT * FROM arb_trades WHERE id = $1"#,
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+        let record = sqlx::query_as::<_, TradeRecord>(r#"SELECT * FROM arb_trades WHERE id = $1"#)
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(record)
     }
 
     pub async fn get_by_edge_id(&self, edge_id: Uuid) -> AppResult<Option<TradeRecord>> {
-        let record = sqlx::query_as::<_, TradeRecord>(
-            r#"SELECT * FROM arb_trades WHERE edge_id = $1"#,
-        )
-        .bind(edge_id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+        let record =
+            sqlx::query_as::<_, TradeRecord>(r#"SELECT * FROM arb_trades WHERE edge_id = $1"#)
+                .bind(edge_id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(record)
     }

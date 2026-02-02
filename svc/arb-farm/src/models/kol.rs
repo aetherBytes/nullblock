@@ -30,7 +30,11 @@ pub struct KolEntity {
 }
 
 impl KolEntity {
-    pub fn new(entity_type: KolEntityType, identifier: String, display_name: Option<String>) -> Self {
+    pub fn new(
+        entity_type: KolEntityType,
+        identifier: String,
+        display_name: Option<String>,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
             entity_type,
@@ -61,22 +65,25 @@ impl KolEntity {
         let base_score = 50.0;
         let win_rate_factor = self.win_rate() * 30.0;
         let trade_count_factor = (self.total_trades_tracked.min(100) as f64 / 100.0) * 10.0;
-        let avg_profit_factor = self.avg_profit_percent
+        let avg_profit_factor = self
+            .avg_profit_percent
             .map(|p| {
                 let p_f64: f64 = p.try_into().unwrap_or(0.0);
                 (p_f64.min(50.0) / 50.0) * 10.0
             })
             .unwrap_or(0.0);
-        let drawdown_penalty = self.max_drawdown
+        let drawdown_penalty = self
+            .max_drawdown
             .map(|d| {
                 let d_f64: f64 = d.try_into().unwrap_or(0.0);
                 (d_f64 / 100.0) * 20.0
             })
             .unwrap_or(0.0);
 
-        let score = base_score + win_rate_factor + trade_count_factor + avg_profit_factor - drawdown_penalty;
-        self.trust_score = Decimal::from_f64_retain(score.max(0.0).min(100.0))
-            .unwrap_or(Decimal::new(500, 1));
+        let score = base_score + win_rate_factor + trade_count_factor + avg_profit_factor
+            - drawdown_penalty;
+        self.trust_score =
+            Decimal::from_f64_retain(score.max(0.0).min(100.0)).unwrap_or(Decimal::new(500, 1));
         self.updated_at = Utc::now();
     }
 }
@@ -94,10 +101,10 @@ pub struct CopyTradeConfig {
 impl Default for CopyTradeConfig {
     fn default() -> Self {
         Self {
-            max_position_sol: Decimal::new(5, 1),      // 0.5 SOL
+            max_position_sol: Decimal::new(5, 1), // 0.5 SOL
             delay_ms: 500,
-            min_trust_score: Decimal::new(600, 1),    // 60.0
-            copy_percentage: Decimal::new(5, 1),       // 0.5 = 50% (matches CopyExecutorConfig)
+            min_trust_score: Decimal::new(600, 1), // 60.0
+            copy_percentage: Decimal::new(5, 1),   // 0.5 = 50% (matches CopyExecutorConfig)
             token_whitelist: None,
             token_blacklist: None,
         }
@@ -174,7 +181,12 @@ pub struct CopyTrade {
 }
 
 impl CopyTrade {
-    pub fn new(entity_id: Uuid, kol_trade_id: Uuid, copy_amount_sol: Decimal, delay_ms: u64) -> Self {
+    pub fn new(
+        entity_id: Uuid,
+        kol_trade_id: Uuid,
+        copy_amount_sol: Decimal,
+        delay_ms: u64,
+    ) -> Self {
         Self {
             id: Uuid::new_v4(),
             entity_id,
@@ -240,13 +252,15 @@ impl KolEntity {
         let base_score = 50.0;
         let win_rate_factor = self.win_rate() * 30.0;
         let trade_count_factor = (self.total_trades_tracked.min(100) as f64 / 100.0) * 10.0;
-        let avg_profit_factor = self.avg_profit_percent
+        let avg_profit_factor = self
+            .avg_profit_percent
             .map(|p| {
                 let p_f64: f64 = p.try_into().unwrap_or(0.0);
                 (p_f64.min(50.0) / 50.0) * 10.0
             })
             .unwrap_or(0.0);
-        let drawdown_penalty = self.max_drawdown
+        let drawdown_penalty = self
+            .max_drawdown
             .map(|d| {
                 let d_f64: f64 = d.try_into().unwrap_or(0.0);
                 (d_f64 / 100.0) * 20.0
@@ -259,7 +273,8 @@ impl KolEntity {
             trade_count_factor,
             avg_profit_factor,
             drawdown_penalty,
-            final_score: (base_score + win_rate_factor + trade_count_factor + avg_profit_factor - drawdown_penalty)
+            final_score: (base_score + win_rate_factor + trade_count_factor + avg_profit_factor
+                - drawdown_penalty)
                 .max(0.0)
                 .min(100.0),
         }

@@ -95,9 +95,15 @@ impl LLMServiceFactory {
                     Arc::new(OpenRouterProvider::new(api_key.clone())),
                 );
                 available_providers.push("openrouter");
-                info!("✅ OpenRouter is configured as the cloud model aggregator (key: {}...{})",
+                info!(
+                    "✅ OpenRouter is configured as the cloud model aggregator (key: {}...{})",
                     &api_key[..15.min(api_key.len())],
-                    if api_key.len() > 15 { &api_key[api_key.len()-4..] } else { "" });
+                    if api_key.len() > 15 {
+                        &api_key[api_key.len() - 4..]
+                    } else {
+                        ""
+                    }
+                );
             }
         } else {
             error!("🔑 CRITICAL: OpenRouter API key is missing!");
@@ -113,7 +119,10 @@ impl LLMServiceFactory {
 
         // Log provider status
         if !available_providers.is_empty() {
-            info!("Available LLM providers: {}", available_providers.join(", "));
+            info!(
+                "Available LLM providers: {}",
+                available_providers.join(", ")
+            );
         }
         if !missing_providers.is_empty() {
             warn!(
@@ -147,23 +156,35 @@ impl LLMServiceFactory {
             let config = self.create_model_config_for_override(override_model);
             (override_model.clone(), config)
         } else {
-            (routing_decision.selected_model, routing_decision.model_config)
+            (
+                routing_decision.selected_model,
+                routing_decision.model_config,
+            )
         };
 
-        info!("🧠 Using model: {} (confidence: {:.2})", selected_model, routing_decision.confidence);
+        info!(
+            "🧠 Using model: {} (confidence: {:.2})",
+            selected_model, routing_decision.confidence
+        );
 
         // Try to generate response with the selected model, with fallback on 404
         let mut response_result = self.generate_with_model(request, &model_config).await;
 
         if let Err(AppError::ModelNotAvailable(ref msg)) = response_result {
             if msg.contains("no longer available") {
-                warn!("⚠️ Model {} not available, fetching live free models for fallback", selected_model);
+                warn!(
+                    "⚠️ Model {} not available, fetching live free models for fallback",
+                    selected_model
+                );
 
                 let mut fallback_models = routing_decision.fallback_models.clone();
 
                 let live_fallbacks = self.get_free_model_fallbacks().await;
                 if !live_fallbacks.is_empty() {
-                    info!("📡 Using {} live free models as fallbacks", live_fallbacks.len());
+                    info!(
+                        "📡 Using {} live free models as fallbacks",
+                        live_fallbacks.len()
+                    );
                     fallback_models = live_fallbacks;
                 }
 
@@ -216,10 +237,12 @@ impl LLMServiceFactory {
         request: &LLMRequest,
         config: &ModelConfig,
     ) -> AppResult<LLMResponse> {
-        let provider = self
-            .providers
-            .get(&config.provider)
-            .ok_or_else(|| AppError::ModelNotAvailable(format!("Provider {} not available", config.provider.as_str())))?;
+        let provider = self.providers.get(&config.provider).ok_or_else(|| {
+            AppError::ModelNotAvailable(format!(
+                "Provider {} not available",
+                config.provider.as_str()
+            ))
+        })?;
 
         provider.generate(request, config).await
     }
@@ -263,13 +286,17 @@ impl LLMServiceFactory {
 
             match provider_type {
                 ModelProvider::Ollama => {
-                    local_providers.insert("ollama".to_string(), serde_json::Value::Bool(is_healthy));
+                    local_providers
+                        .insert("ollama".to_string(), serde_json::Value::Bool(is_healthy));
                     if is_healthy {
                         available_models += 1;
                     }
                 }
                 _ => {
-                    api_providers.insert(provider_type.as_str().to_string(), serde_json::Value::Bool(is_healthy));
+                    api_providers.insert(
+                        provider_type.as_str().to_string(),
+                        serde_json::Value::Bool(is_healthy),
+                    );
                     if is_healthy {
                         available_models += 1;
                     }
@@ -287,7 +314,9 @@ impl LLMServiceFactory {
             status["issues"]
                 .as_array_mut()
                 .unwrap()
-                .push(serde_json::Value::String("No working models available".to_string()));
+                .push(serde_json::Value::String(
+                    "No working models available".to_string(),
+                ));
         }
 
         Ok(status)
@@ -317,7 +346,11 @@ impl LLMServiceFactory {
         // Create a basic model config for override models (primarily for OpenRouter dynamic models)
         ModelConfig {
             name: model_name.to_string(),
-            display_name: model_name.split('/').last().unwrap_or(model_name).to_string(),
+            display_name: model_name
+                .split('/')
+                .last()
+                .unwrap_or(model_name)
+                .to_string(),
             icon: "🤖".to_string(),
             provider: ModelProvider::OpenRouter, // Assume OpenRouter for dynamic models
             tier: crate::models::ModelTier::Standard,
@@ -338,7 +371,8 @@ impl LLMServiceFactory {
             api_key_env: Some("OPENROUTER_API_KEY".to_string()),
             description: format!("Dynamic model: {}", model_name),
             enabled: true,
-            supports_reasoning: model_name.contains("deepseek-r1") || model_name.contains("reasoning"),
+            supports_reasoning: model_name.contains("deepseek-r1")
+                || model_name.contains("reasoning"),
             is_popular: false,
             created: None,
         }
@@ -361,7 +395,11 @@ impl LLMServiceFactory {
         };
 
         let requirements = TaskRequirements {
-            optimization_goal: if concise { OptimizationGoal::Speed } else { OptimizationGoal::Balanced },
+            optimization_goal: if concise {
+                OptimizationGoal::Speed
+            } else {
+                OptimizationGoal::Balanced
+            },
             ..TaskRequirements::default()
         };
 
@@ -387,7 +425,10 @@ impl LLMServiceFactory {
         if !self.is_model_available(model_name, api_keys) {
             if model_name.contains("/") || model_name.contains(":") {
                 if api_keys.openrouter.is_none() {
-                    format!("Model '{}' requires OPENROUTER_API_KEY to be set.", model_name)
+                    format!(
+                        "Model '{}' requires OPENROUTER_API_KEY to be set.",
+                        model_name
+                    )
                 } else {
                     format!("Model '{}' is temporarily unavailable.", model_name)
                 }
@@ -457,8 +498,14 @@ impl LLMServiceFactory {
             .into_iter()
             .filter(|model| {
                 if let Some(pricing) = model.get("pricing") {
-                    let prompt_price = pricing.get("prompt").and_then(|p| p.as_str()).unwrap_or("1");
-                    let completion_price = pricing.get("completion").and_then(|p| p.as_str()).unwrap_or("1");
+                    let prompt_price = pricing
+                        .get("prompt")
+                        .and_then(|p| p.as_str())
+                        .unwrap_or("1");
+                    let completion_price = pricing
+                        .get("completion")
+                        .and_then(|p| p.as_str())
+                        .unwrap_or("1");
                     prompt_price == "0" && completion_price == "0"
                 } else {
                     false
@@ -484,11 +531,8 @@ impl LLMServiceFactory {
 
                 model_names.sort_by(|a, b| b.1.cmp(&a.1));
 
-                let fallbacks: Vec<String> = model_names
-                    .into_iter()
-                    .take(5)
-                    .map(|(id, _)| id)
-                    .collect();
+                let fallbacks: Vec<String> =
+                    model_names.into_iter().take(5).map(|(id, _)| id).collect();
 
                 if !fallbacks.is_empty() {
                     info!("🔄 Top 5 free model fallbacks: {:?}", fallbacks);
@@ -522,9 +566,9 @@ impl LLMServiceFactory {
         // For models without :free suffix, check via API
         match self.get_free_models().await {
             Ok(free_models) => {
-                let is_free = free_models.iter().any(|model| {
-                    model.get("id").and_then(|id| id.as_str()) == Some(model_name)
-                });
+                let is_free = free_models
+                    .iter()
+                    .any(|model| model.get("id").and_then(|id| id.as_str()) == Some(model_name));
 
                 if is_free {
                     Ok(())

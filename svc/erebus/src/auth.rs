@@ -63,14 +63,13 @@ pub fn extract_session_token(headers: &HeaderMap) -> Option<String> {
 pub fn validate_service_token(token: &str) -> bool {
     let expected_token = std::env::var("SERVICE_SECRET")
         .unwrap_or_else(|_| "nullblock-service-secret-dev".to_string());
-    
+
     token == expected_token
 }
 
 pub fn validate_api_key(api_key: &str) -> bool {
-    let api_keys_str = std::env::var("API_KEYS")
-        .unwrap_or_else(|_| String::new());
-    
+    let api_keys_str = std::env::var("API_KEYS").unwrap_or_else(|_| String::new());
+
     if api_keys_str.is_empty() {
         return true;
     }
@@ -92,7 +91,10 @@ pub async fn service_auth_middleware(
         .unwrap_or(false);
 
     if !require_service_auth {
-        tracing::debug!("Service auth not required, allowing request: {}", request.uri());
+        tracing::debug!(
+            "Service auth not required, allowing request: {}",
+            request.uri()
+        );
         return Ok(next.run(request).await);
     }
 
@@ -128,15 +130,19 @@ pub async fn optional_auth_middleware(
             warn!("⚠️ Invalid API key, continuing without auth");
         }
     } else if let Some(bearer_token) = extract_bearer_token(&headers) {
-        info!("✅ Bearer token detected: {}...", &bearer_token[..8.min(bearer_token.len())]);
+        info!(
+            "✅ Bearer token detected: {}...",
+            &bearer_token[..8.min(bearer_token.len())]
+        );
     } else if let Some(wallet) = extract_wallet_address(&headers) {
         let chain = extract_wallet_chain(&headers).unwrap_or_else(|| "unknown".to_string());
         info!("✅ Wallet detected: {} on {}", wallet, chain);
     } else if let Some(session) = extract_session_token(&headers) {
-        info!("✅ Session token detected: {}...", &session[..8.min(session.len())]);
+        info!(
+            "✅ Session token detected: {}...",
+            &session[..8.min(session.len())]
+        );
     }
 
     Ok(next.run(request).await)
 }
-
-

@@ -8,25 +8,31 @@ use uuid::Uuid;
 
 use crate::agents::start_autonomous_executor;
 use crate::models::{
-    ApproveRequest, ExecutionToggleRequest, HecateRecommendation,
-    RejectRequest, UpdateExecutionConfigRequest,
+    ApproveRequest, ExecutionToggleRequest, HecateRecommendation, RejectRequest,
+    UpdateExecutionConfigRequest,
 };
 use crate::server::AppState;
 
 pub async fn list_approvals(State(state): State<AppState>) -> impl IntoResponse {
     let approvals = state.approval_manager.list_all().await;
-    (StatusCode::OK, Json(serde_json::json!({
-        "approvals": approvals,
-        "total": approvals.len()
-    })))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "approvals": approvals,
+            "total": approvals.len()
+        })),
+    )
 }
 
 pub async fn list_pending_approvals(State(state): State<AppState>) -> impl IntoResponse {
     let approvals = state.approval_manager.list_pending().await;
-    (StatusCode::OK, Json(serde_json::json!({
-        "approvals": approvals,
-        "total": approvals.len()
-    })))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "approvals": approvals,
+            "total": approvals.len()
+        })),
+    )
 }
 
 pub async fn get_approval(
@@ -86,10 +92,15 @@ pub async fn get_execution_config(State(state): State<AppState>) -> impl IntoRes
 
     // Check for state mismatch between executor and strategy execution_mode
     let strategies = state.strategy_engine.list_strategies().await;
-    let autonomous_strategies: Vec<_> = strategies.iter()
-        .filter(|s| (s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe") && s.is_active)
+    let autonomous_strategies: Vec<_> = strategies
+        .iter()
+        .filter(|s| {
+            (s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe") && s.is_active
+        })
         .collect();
-    let any_autonomous = autonomous_strategies.iter().any(|s| s.execution_mode == "autonomous");
+    let any_autonomous = autonomous_strategies
+        .iter()
+        .any(|s| s.execution_mode == "autonomous");
 
     if executor_stats.is_running && !any_autonomous && !autonomous_strategies.is_empty() {
         tracing::warn!(
@@ -113,7 +124,11 @@ pub async fn get_execution_config(State(state): State<AppState>) -> impl IntoRes
         // Auto-fix: update strategies to autonomous mode
         for strategy in autonomous_strategies {
             // Update execution_mode
-            if let Err(e) = state.strategy_engine.set_execution_mode(strategy.id, "autonomous".to_string()).await {
+            if let Err(e) = state
+                .strategy_engine
+                .set_execution_mode(strategy.id, "autonomous".to_string())
+                .await
+            {
                 tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to auto-fix execution_mode");
                 continue;
             }
@@ -121,19 +136,29 @@ pub async fn get_execution_config(State(state): State<AppState>) -> impl IntoRes
             // Also update risk_params.auto_execute_enabled
             let mut updated_params = strategy.risk_params.clone();
             updated_params.auto_execute_enabled = true;
-            if let Err(e) = state.strategy_engine.set_risk_params(strategy.id, updated_params.clone()).await {
+            if let Err(e) = state
+                .strategy_engine
+                .set_risk_params(strategy.id, updated_params.clone())
+                .await
+            {
                 tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to auto-fix auto_execute_enabled");
             }
 
             // Persist to database
             use crate::database::repositories::strategies::UpdateStrategyRecord;
-            let _ = state.strategy_repo.update(strategy.id, UpdateStrategyRecord {
-                name: None,
-                venue_types: None,
-                execution_mode: Some("autonomous".to_string()),
-                risk_params: Some(updated_params),
-                is_active: None,
-            }).await;
+            let _ = state
+                .strategy_repo
+                .update(
+                    strategy.id,
+                    UpdateStrategyRecord {
+                        name: None,
+                        venue_types: None,
+                        execution_mode: Some("autonomous".to_string()),
+                        risk_params: Some(updated_params),
+                        is_active: None,
+                    },
+                )
+                .await;
             tracing::info!(strategy_id = %strategy.id, strategy_name = %strategy.name, "✅ Auto-fixed to autonomous mode");
         }
     }
@@ -172,21 +197,27 @@ pub async fn update_execution_config(
             let capped = v.min(wallet_max);
             if capped < v {
                 tracing::warn!(
-                    requested = v, capped = capped, wallet_max = wallet_max,
+                    requested = v,
+                    capped = capped,
+                    wallet_max = wallet_max,
                     "max_position_sol capped at wallet-based limit"
                 );
             }
             risk_config.max_position_sol = capped;
             risk_config.max_position_per_token_sol = capped;
-            tracing::info!(max_position_sol = capped, "Updated global RiskConfig max_position_sol");
+            tracing::info!(
+                max_position_sol = capped,
+                "Updated global RiskConfig max_position_sol"
+            );
         }
     }
 
     // Update all autonomous-capable strategies (curve_arb AND graduation_snipe)
     let strategies = state.strategy_engine.list_strategies().await;
-    for strategy in strategies.iter().filter(|s|
-        s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe"
-    ) {
+    for strategy in strategies
+        .iter()
+        .filter(|s| s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe")
+    {
         let mut updated_params = strategy.risk_params.clone();
 
         if let Some(enabled) = request.auto_execution_enabled {
@@ -216,38 +247,61 @@ pub async fn update_execution_config(
             "agent_directed"
         };
 
-        if let Err(e) = state.strategy_engine.set_risk_params(strategy.id, updated_params.clone()).await {
+        if let Err(e) = state
+            .strategy_engine
+            .set_risk_params(strategy.id, updated_params.clone())
+            .await
+        {
             tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to update strategy risk params");
         }
 
         // Update execution_mode in memory
-        if let Err(e) = state.strategy_engine.set_execution_mode(strategy.id, new_execution_mode.to_string()).await {
+        if let Err(e) = state
+            .strategy_engine
+            .set_execution_mode(strategy.id, new_execution_mode.to_string())
+            .await
+        {
             tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to update strategy execution_mode");
         }
 
         use crate::database::repositories::strategies::UpdateStrategyRecord;
-        if let Err(e) = state.strategy_repo.update(strategy.id, UpdateStrategyRecord {
-            name: None,
-            venue_types: None,
-            execution_mode: Some(new_execution_mode.to_string()),
-            risk_params: Some(updated_params.clone()),
-            is_active: None,
-        }).await {
+        if let Err(e) = state
+            .strategy_repo
+            .update(
+                strategy.id,
+                UpdateStrategyRecord {
+                    name: None,
+                    venue_types: None,
+                    execution_mode: Some(new_execution_mode.to_string()),
+                    risk_params: Some(updated_params.clone()),
+                    is_active: None,
+                },
+            )
+            .await
+        {
             tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to persist execution config to database");
         }
 
-        let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+        let wallet = state
+            .config
+            .wallet_address
+            .clone()
+            .unwrap_or_else(|| "default".to_string());
         let risk_params_json = serde_json::to_value(&updated_params).unwrap_or_default();
-        if let Err(e) = state.engrams_client.save_strategy_full(
-            &wallet,
-            &strategy.id.to_string(),
-            &strategy.name,
-            &strategy.strategy_type,
-            &strategy.venue_types,
-            new_execution_mode,
-            &risk_params_json,
-            strategy.is_active,
-        ).await {
+        if let Err(e) = state
+            .engrams_client
+            .save_strategy_full(
+                &wallet,
+                &strategy.id.to_string(),
+                &strategy.name,
+                &strategy.strategy_type,
+                &strategy.venue_types,
+                new_execution_mode,
+                &risk_params_json,
+                strategy.is_active,
+            )
+            .await
+        {
             tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to persist execution config to engrams");
         }
 
@@ -261,9 +315,10 @@ pub async fn update_execution_config(
 
     // Post-update verification logging
     let updated_strategies = state.strategy_engine.list_strategies().await;
-    for strategy in updated_strategies.iter().filter(|s|
-        s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe"
-    ) {
+    for strategy in updated_strategies
+        .iter()
+        .filter(|s| s.strategy_type == "curve_arb" || s.strategy_type == "graduation_snipe")
+    {
         tracing::info!(
             strategy_id = %strategy.id,
             strategy_name = %strategy.name,
@@ -285,9 +340,16 @@ pub async fn toggle_execution(
         "🔄 toggle_execution called - updating all autonomous-capable strategies"
     );
 
-    let config = state.approval_manager.toggle_execution(request.enabled).await;
+    let config = state
+        .approval_manager
+        .toggle_execution(request.enabled)
+        .await;
 
-    if let Err(e) = state.settings_repo.set_bool("execution_enabled", request.enabled).await {
+    if let Err(e) = state
+        .settings_repo
+        .set_bool("execution_enabled", request.enabled)
+        .await
+    {
         tracing::warn!("Failed to persist execution toggle to DB: {}", e);
     }
 
@@ -310,43 +372,70 @@ pub async fn toggle_execution(
         updated_params.auto_execute_enabled = request.enabled;
 
         // Set execution_mode based on toggle state
-        let new_execution_mode = if request.enabled { "autonomous" } else { "agent_directed" };
+        let new_execution_mode = if request.enabled {
+            "autonomous"
+        } else {
+            "agent_directed"
+        };
 
         // Update in-memory engine (risk params)
-        if let Err(e) = state.strategy_engine.set_risk_params(strategy.id, updated_params.clone()).await {
+        if let Err(e) = state
+            .strategy_engine
+            .set_risk_params(strategy.id, updated_params.clone())
+            .await
+        {
             tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to update strategy auto_execute_enabled");
         }
 
         // Update in-memory engine (execution mode)
-        if let Err(e) = state.strategy_engine.set_execution_mode(strategy.id, new_execution_mode.to_string()).await {
+        if let Err(e) = state
+            .strategy_engine
+            .set_execution_mode(strategy.id, new_execution_mode.to_string())
+            .await
+        {
             tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to update strategy execution_mode");
         }
 
         // Persist to database
         use crate::database::repositories::strategies::UpdateStrategyRecord;
-        if let Err(e) = state.strategy_repo.update(strategy.id, UpdateStrategyRecord {
-            name: None,
-            venue_types: None,
-            execution_mode: Some(new_execution_mode.to_string()),
-            risk_params: Some(updated_params.clone()),
-            is_active: None,
-        }).await {
+        if let Err(e) = state
+            .strategy_repo
+            .update(
+                strategy.id,
+                UpdateStrategyRecord {
+                    name: None,
+                    venue_types: None,
+                    execution_mode: Some(new_execution_mode.to_string()),
+                    risk_params: Some(updated_params.clone()),
+                    is_active: None,
+                },
+            )
+            .await
+        {
             tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to persist auto_execute toggle to database");
         }
 
         // Persist to engrams
-        let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+        let wallet = state
+            .config
+            .wallet_address
+            .clone()
+            .unwrap_or_else(|| "default".to_string());
         let risk_params_json = serde_json::to_value(&updated_params).unwrap_or_default();
-        if let Err(e) = state.engrams_client.save_strategy_full(
-            &wallet,
-            &strategy.id.to_string(),
-            &strategy.name,
-            &strategy.strategy_type,
-            &strategy.venue_types,
-            new_execution_mode,
-            &risk_params_json,
-            strategy.is_active,
-        ).await {
+        if let Err(e) = state
+            .engrams_client
+            .save_strategy_full(
+                &wallet,
+                &strategy.id.to_string(),
+                &strategy.name,
+                &strategy.strategy_type,
+                &strategy.venue_types,
+                new_execution_mode,
+                &risk_params_json,
+                strategy.is_active,
+            )
+            .await
+        {
             tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to persist auto_execute toggle to engrams");
         }
 
@@ -371,21 +460,28 @@ pub async fn toggle_execution(
         );
     }
 
-    (StatusCode::OK, Json(serde_json::json!({
-        "enabled": config.auto_execution_enabled,
-        "message": if config.auto_execution_enabled {
-            "Auto-execution enabled"
-        } else {
-            "Auto-execution disabled"
-        }
-    })))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "enabled": config.auto_execution_enabled,
+            "message": if config.auto_execution_enabled {
+                "Auto-execution enabled"
+            } else {
+                "Auto-execution disabled"
+            }
+        })),
+    )
 }
 
 pub async fn add_hecate_recommendation(
     State(state): State<AppState>,
     Json(recommendation): Json<HecateRecommendation>,
 ) -> impl IntoResponse {
-    match state.approval_manager.add_hecate_recommendation(recommendation).await {
+    match state
+        .approval_manager
+        .add_hecate_recommendation(recommendation)
+        .await
+    {
         Ok(approval) => (StatusCode::OK, Json(approval)).into_response(),
         Err(e) => (
             StatusCode::BAD_REQUEST,
@@ -397,8 +493,11 @@ pub async fn add_hecate_recommendation(
 
 pub async fn cleanup_expired(State(state): State<AppState>) -> impl IntoResponse {
     let expired = state.approval_manager.cleanup_expired().await;
-    (StatusCode::OK, Json(serde_json::json!({
-        "expired_count": expired.len(),
-        "expired_ids": expired
-    })))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "expired_count": expired.len(),
+            "expired_ids": expired
+        })),
+    )
 }

@@ -51,7 +51,10 @@ impl WebContentType {
             WebContentType::Documentation
         } else if url_lower.contains("reddit.com") || url_lower.contains("discord.com") {
             WebContentType::Forum
-        } else if url_lower.contains("news") || url_lower.contains("coindesk") || url_lower.contains("cointelegraph") {
+        } else if url_lower.contains("news")
+            || url_lower.contains("coindesk")
+            || url_lower.contains("cointelegraph")
+        {
             WebContentType::News
         } else if url_lower.contains("blog") {
             WebContentType::Blog
@@ -105,7 +108,10 @@ impl WebClient {
             .client
             .get(url)
             .header("User-Agent", &self.user_agent)
-            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            .header(
+                "Accept",
+                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            )
             .send()
             .await
             .map_err(|e| format!("Failed to fetch URL: {}", e))?;
@@ -143,10 +149,7 @@ impl WebClient {
         let extracted_addresses = self.extract_solana_addresses(&content);
 
         let elapsed = start.elapsed().as_millis();
-        info!(
-            "Fetched {} ({} words) in {}ms",
-            url, word_count, elapsed
-        );
+        info!("Fetched {} ({} words) in {}ms", url, word_count, elapsed);
 
         Ok(WebFetchResult {
             id: Uuid::new_v4(),
@@ -192,10 +195,9 @@ impl WebClient {
 
     fn extract_author(&self, document: &Html, content_type: &WebContentType) -> Option<String> {
         let selectors = match content_type {
-            WebContentType::Tweet | WebContentType::Thread => vec![
-                "meta[property='og:title']",
-                "[data-testid='User-Name']",
-            ],
+            WebContentType::Tweet | WebContentType::Thread => {
+                vec!["meta[property='og:title']", "[data-testid='User-Name']"]
+            }
             WebContentType::Article | WebContentType::Blog => vec![
                 "meta[name='author']",
                 "meta[property='article:author']",
@@ -314,19 +316,13 @@ impl WebClient {
             cleaned = cleaned.replace(pattern, "");
         }
 
-        cleaned
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ")
+        cleaned.split_whitespace().collect::<Vec<_>>().join(" ")
     }
 
     fn extract_article_content(&self, raw: &str, max_length: usize) -> String {
         let cleaned = self.clean_content(raw);
 
-        let paragraphs: Vec<&str> = cleaned
-            .split("\n\n")
-            .filter(|p| p.len() > 50)
-            .collect();
+        let paragraphs: Vec<&str> = cleaned.split("\n\n").filter(|p| p.len() > 50).collect();
 
         let mut result = String::new();
         for para in paragraphs {
@@ -378,7 +374,9 @@ impl WebClient {
             }
         }
 
-        let common_tokens = ["SOL", "USDC", "USDT", "ETH", "BTC", "BONK", "JUP", "RAY", "WIF", "PEPE"];
+        let common_tokens = [
+            "SOL", "USDC", "USDT", "ETH", "BTC", "BONK", "JUP", "RAY", "WIF", "PEPE",
+        ];
         for token in common_tokens {
             if content.to_uppercase().contains(token) && !tokens.contains(&token.to_string()) {
                 tokens.push(token.to_string());

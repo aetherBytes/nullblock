@@ -2,7 +2,7 @@ use std::env;
 use std::net::SocketAddr;
 
 use axum::{
-    routing::{get, post, put, delete},
+    routing::{delete, get, post, put},
     Router,
 };
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -58,8 +58,8 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or(9001);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    let agents_base_url = env::var("AGENTS_SERVICE_URL")
-        .unwrap_or_else(|_| format!("http://localhost:{}", port));
+    let agents_base_url =
+        env::var("AGENTS_SERVICE_URL").unwrap_or_else(|_| format!("http://localhost:{}", port));
 
     info!("🚀 NullBlock Agents Rust Service starting...");
     info!("📡 Server will bind to: {}", addr);
@@ -109,18 +109,39 @@ fn create_router(state: server::AppState) -> Router {
         .route("/tasks/:task_id/process", post(tasks::process_task))
         // Siren Marketing agent endpoints
         .route("/siren/chat", post(siren_marketing::chat))
-        .route("/siren/generate-content", post(siren_marketing::generate_content))
-        .route("/siren/create-post", post(siren_marketing::create_twitter_post))
-        .route("/siren/analyze-project", get(siren_marketing::analyze_project_progress))
+        .route(
+            "/siren/generate-content",
+            post(siren_marketing::generate_content),
+        )
+        .route(
+            "/siren/create-post",
+            post(siren_marketing::create_twitter_post),
+        )
+        .route(
+            "/siren/analyze-project",
+            get(siren_marketing::analyze_project_progress),
+        )
         .route("/siren/health", get(siren_marketing::get_siren_health))
         .route("/siren/model-status", get(siren_marketing::model_status))
         .route("/siren/themes", get(siren_marketing::get_content_themes))
         .route("/siren/set-model", post(siren_marketing::set_model))
         // User reference endpoints
-        .route("/user-references", post(user_references::create_user_reference))
-        .route("/user-references", get(user_references::list_user_references))
-        .route("/user-references/:wallet_address/:chain", get(user_references::get_user_reference))
-        .route("/user-references/sync", post(user_references::sync_user_reference))
+        .route(
+            "/user-references",
+            post(user_references::create_user_reference),
+        )
+        .route(
+            "/user-references",
+            get(user_references::list_user_references),
+        )
+        .route(
+            "/user-references/:wallet_address/:chain",
+            get(user_references::get_user_reference),
+        )
+        .route(
+            "/user-references/sync",
+            post(user_references::sync_user_reference),
+        )
         // Add state
         .with_state(state)
         // Add middleware

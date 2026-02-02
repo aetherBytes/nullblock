@@ -130,7 +130,10 @@ impl BondingCurveMath for PumpFunCurve {
         let new_virtual_sol = self.params.virtual_sol_reserves + sol_after_fee;
         let new_virtual_token = (k / new_virtual_sol as u128) as u64;
 
-        let tokens_out = self.params.virtual_token_reserves.saturating_sub(new_virtual_token);
+        let tokens_out = self
+            .params
+            .virtual_token_reserves
+            .saturating_sub(new_virtual_token);
         let tokens_out = tokens_out.min(self.params.real_token_reserves);
 
         let price_before = self.get_current_price();
@@ -155,7 +158,10 @@ impl BondingCurveMath for PumpFunCurve {
         let new_virtual_token = self.params.virtual_token_reserves + tokens_to_sell;
         let new_virtual_sol = (k / new_virtual_token as u128) as u64;
 
-        let sol_out_before_fee = self.params.virtual_sol_reserves.saturating_sub(new_virtual_sol);
+        let sol_out_before_fee = self
+            .params
+            .virtual_sol_reserves
+            .saturating_sub(new_virtual_sol);
         let fee = self.calculate_fee(sol_out_before_fee);
         let sol_out = sol_out_before_fee - fee;
 

@@ -2,21 +2,18 @@
 
 use axum::{
     extract::{Path, Query, State},
-    http::{StatusCode, HeaderMap},
+    http::{HeaderMap, StatusCode},
     response::Json,
 };
 use chrono::Utc;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use crate::{
-    database::repositories::{TaskRepository, AgentRepository},
     database::repositories::user_references::UserReferenceRepository,
+    database::repositories::{AgentRepository, TaskRepository},
     kafka::TaskLifecycleEvent,
-    models::{
-        TaskState,
-        CreateTaskRequest, UpdateTaskRequest, TaskResponse, TaskListResponse
-    },
+    models::{CreateTaskRequest, TaskListResponse, TaskResponse, TaskState, UpdateTaskRequest},
     server::AppState,
 };
 
@@ -40,12 +37,18 @@ async fn get_user_id_from_wallet(
         match user_repo.get_by_source(wallet, network).await {
             Ok(Some(user)) => {
                 // User exists, return their UUID
-                info!("✅ Found existing user for wallet: {} -> {}", wallet, user.id);
+                info!(
+                    "✅ Found existing user for wallet: {} -> {}",
+                    wallet, user.id
+                );
                 Some(user.id)
             }
             Ok(None) => {
                 // User doesn't exist - this shouldn't happen if Erebus registration worked
-                warn!("⚠️ No user found for wallet: {} on network: {}", wallet, network);
+                warn!(
+                    "⚠️ No user found for wallet: {} on network: {}",
+                    wallet, network
+                );
                 warn!("⚠️ User should be registered via Erebus /api/users/register before creating tasks");
                 None
             }
@@ -58,7 +61,6 @@ async fn get_user_id_from_wallet(
         None
     }
 }
-
 
 // Wrapper function for create_task that extracts headers
 pub async fn create_task_handler(
@@ -95,9 +97,11 @@ pub async fn create_task(
     let agent_repo = AgentRepository::new(database.pool().clone());
 
     // Extract wallet address and chain from headers
-    let wallet_address = headers.get("x-wallet-address")
+    let wallet_address = headers
+        .get("x-wallet-address")
         .and_then(|h| h.to_str().ok());
-    let chain = headers.get("x-wallet-chain")
+    let chain = headers
+        .get("x-wallet-chain")
         .and_then(|h| h.to_str().ok())
         .unwrap_or("solana"); // Default to Solana chain
 
@@ -105,9 +109,15 @@ pub async fn create_task(
     let user_id = get_user_id_from_wallet(database, wallet_address, Some(chain)).await;
 
     if let Some(wallet) = wallet_address {
-        info!("🔍 Creating task for wallet: {} on chain: {}", wallet, chain);
+        info!(
+            "🔍 Creating task for wallet: {} on chain: {}",
+            wallet, chain
+        );
         if user_id.is_none() {
-            warn!("⚠️ No user found for wallet: {}, creating task without user association", wallet);
+            warn!(
+                "⚠️ No user found for wallet: {}, creating task without user association",
+                wallet
+            );
         }
     } else {
         info!("📋 No wallet address provided, creating task without user association");
@@ -122,19 +132,25 @@ pub async fn create_task(
                 Some(agent.id)
             }
             Ok(None) => {
-                warn!("⚠️ Requested agent '{}' not found, defaulting to Hecate", agent_id_str);
+                warn!(
+                    "⚠️ Requested agent '{}' not found, defaulting to Hecate",
+                    agent_id_str
+                );
                 // Fall back to Hecate
                 match agent_repo.get_by_name_and_type("hecate", "hive_mind").await {
                     Ok(Some(agent)) => Some(agent.id),
-                    _ => None
+                    _ => None,
                 }
             }
             Err(e) => {
-                warn!("⚠️ Failed to lookup agent '{}': {}, defaulting to Hecate", agent_id_str, e);
+                warn!(
+                    "⚠️ Failed to lookup agent '{}': {}, defaulting to Hecate",
+                    agent_id_str, e
+                );
                 // Fall back to Hecate
                 match agent_repo.get_by_name_and_type("hecate", "hive_mind").await {
                     Ok(Some(agent)) => Some(agent.id),
-                    _ => None
+                    _ => None,
                 }
             }
         }
@@ -150,14 +166,25 @@ pub async fn create_task(
                 None
             }
             Err(e) => {
-                warn!("⚠️ Failed to lookup Hecate agent: {}, creating task without assignment", e);
+                warn!(
+                    "⚠️ Failed to lookup Hecate agent: {}, creating task without assignment",
+                    e
+                );
                 None
             }
         }
     };
 
     // Create task in database
-    match task_repo.create(&request, user_id, assigned_agent_id, wallet_address.map(|s| s.to_string())).await {
+    match task_repo
+        .create(
+            &request,
+            user_id,
+            assigned_agent_id,
+            wallet_address.map(|s| s.to_string()),
+        )
+        .await
+    {
         Ok(task_entity) => {
             // Add initial message to history with task description
             let initial_message = serde_json::json!({
@@ -173,7 +200,10 @@ pub async fn create_task(
                 "kind": "message"
             });
 
-            if let Err(e) = task_repo.add_message_to_history(&task_entity.id.to_string(), initial_message).await {
+            if let Err(e) = task_repo
+                .add_message_to_history(&task_entity.id.to_string(), initial_message)
+                .await
+            {
                 warn!("⚠️ Failed to add initial message to task history: {}", e);
             }
 
@@ -188,8 +218,14 @@ pub async fn create_task(
                             task.id.clone(),
                             user_id,
                             task.name.clone(),
-                            serde_json::to_string(&task.status).unwrap().trim_matches('"').to_string(),
-                            serde_json::to_string(&task.priority).unwrap().trim_matches('"').to_string(),
+                            serde_json::to_string(&task.status)
+                                .unwrap()
+                                .trim_matches('"')
+                                .to_string(),
+                            serde_json::to_string(&task.priority)
+                                .unwrap()
+                                .trim_matches('"')
+                                .to_string(),
                         );
 
                         if let Err(e) = kafka_producer.publish_task_event(event).await {
@@ -280,31 +316,42 @@ pub async fn get_tasks(
     let task_repo = TaskRepository::new(database.pool().clone());
 
     // Extract wallet address and chain from headers
-    let wallet_address = headers.get("x-wallet-address")
+    let wallet_address = headers
+        .get("x-wallet-address")
         .and_then(|h| h.to_str().ok());
-    let chain = headers.get("x-wallet-chain")
+    let chain = headers
+        .get("x-wallet-chain")
         .and_then(|h| h.to_str().ok())
         .unwrap_or("solana"); // Default to Solana chain
 
     // Get user_id from wallet address
     let user_id = get_user_id_from_wallet(database, wallet_address, Some(chain)).await;
-    
+
     if let Some(wallet) = wallet_address {
-        info!("🔍 Looking up tasks for wallet: {} on chain: {}", wallet, chain);
+        info!(
+            "🔍 Looking up tasks for wallet: {} on chain: {}",
+            wallet, chain
+        );
         if user_id.is_none() {
-            warn!("⚠️ No user found for wallet: {}, returning empty task list", wallet);
+            warn!(
+                "⚠️ No user found for wallet: {}, returning empty task list",
+                wallet
+            );
         }
     } else {
         info!("📋 No wallet address provided, returning all tasks (admin mode)");
     }
 
     // Fetch tasks from database
-    match task_repo.list(
-        user_id,
-        query.status.as_deref(),
-        query.task_type.as_deref(),
-        query.limit.map(|l| l as i64),
-    ).await {
+    match task_repo
+        .list(
+            user_id,
+            query.status.as_deref(),
+            query.task_type.as_deref(),
+            query.limit.map(|l| l as i64),
+        )
+        .await
+    {
         Ok(task_entities) => {
             // Convert to domain models
             let mut tasks = Vec::new();
@@ -366,28 +413,26 @@ pub async fn get_task(
 
     // Fetch task from database
     match task_repo.get_by_id(&task_id).await {
-        Ok(Some(task_entity)) => {
-            match task_entity.to_domain_model() {
-                Ok(task) => {
-                    info!("✅ Found task: {}", task.name);
-                    Ok(Json(TaskResponse {
-                        success: true,
-                        data: Some(task),
-                        error: None,
-                        timestamp: Utc::now(),
-                    }))
-                }
-                Err(e) => {
-                    error!("❌ Failed to convert task entity to domain model: {}", e);
-                    Ok(Json(TaskResponse {
-                        success: false,
-                        data: None,
-                        error: Some("Failed to fetch task".to_string()),
-                        timestamp: Utc::now(),
-                    }))
-                }
+        Ok(Some(task_entity)) => match task_entity.to_domain_model() {
+            Ok(task) => {
+                info!("✅ Found task: {}", task.name);
+                Ok(Json(TaskResponse {
+                    success: true,
+                    data: Some(task),
+                    error: None,
+                    timestamp: Utc::now(),
+                }))
             }
-        }
+            Err(e) => {
+                error!("❌ Failed to convert task entity to domain model: {}", e);
+                Ok(Json(TaskResponse {
+                    success: false,
+                    data: None,
+                    error: Some("Failed to fetch task".to_string()),
+                    timestamp: Utc::now(),
+                }))
+            }
+        },
         Ok(None) => {
             warn!("⚠️ Task not found: {}", task_id);
             Ok(Json(TaskResponse {
@@ -584,7 +629,10 @@ pub async fn start_task(
                             task.name.clone(),
                             "submitted".to_string(), // previous A2A state
                             "working".to_string(),   // new A2A state
-                            serde_json::to_string(&task.priority).unwrap().trim_matches('"').to_string(),
+                            serde_json::to_string(&task.priority)
+                                .unwrap()
+                                .trim_matches('"')
+                                .to_string(),
                             task.progress,
                         );
 
@@ -654,30 +702,31 @@ pub async fn pause_task(
 
     let task_repo = TaskRepository::new(database.pool().clone());
 
-    match task_repo.update_status(&task_id, TaskState::InputRequired).await {
-        Ok(Some(task_entity)) => {
-            match task_entity.to_domain_model() {
-                Ok(task) => {
-                    info!("✅ Task paused successfully: {}", task.name);
+    match task_repo
+        .update_status(&task_id, TaskState::InputRequired)
+        .await
+    {
+        Ok(Some(task_entity)) => match task_entity.to_domain_model() {
+            Ok(task) => {
+                info!("✅ Task paused successfully: {}", task.name);
 
-                    Ok(Json(TaskResponse {
-                        success: true,
-                        data: Some(task),
-                        error: None,
-                        timestamp: Utc::now(),
-                    }))
-                }
-                Err(e) => {
-                    error!("❌ Failed to convert task entity: {}", e);
-                    Ok(Json(TaskResponse {
-                        success: false,
-                        data: None,
-                        error: Some("Failed to convert task data".to_string()),
-                        timestamp: Utc::now(),
-                    }))
-                }
+                Ok(Json(TaskResponse {
+                    success: true,
+                    data: Some(task),
+                    error: None,
+                    timestamp: Utc::now(),
+                }))
             }
-        }
+            Err(e) => {
+                error!("❌ Failed to convert task entity: {}", e);
+                Ok(Json(TaskResponse {
+                    success: false,
+                    data: None,
+                    error: Some("Failed to convert task data".to_string()),
+                    timestamp: Utc::now(),
+                }))
+            }
+        },
         Ok(None) => {
             warn!("⚠️ Task not found for pause: {}", task_id);
             Ok(Json(TaskResponse {
@@ -722,29 +771,27 @@ pub async fn resume_task(
     let task_repo = TaskRepository::new(database.pool().clone());
 
     match task_repo.update_status(&task_id, TaskState::Working).await {
-        Ok(Some(task_entity)) => {
-            match task_entity.to_domain_model() {
-                Ok(task) => {
-                    info!("✅ Task resumed successfully: {}", task.name);
+        Ok(Some(task_entity)) => match task_entity.to_domain_model() {
+            Ok(task) => {
+                info!("✅ Task resumed successfully: {}", task.name);
 
-                    Ok(Json(TaskResponse {
-                        success: true,
-                        data: Some(task),
-                        error: None,
-                        timestamp: Utc::now(),
-                    }))
-                }
-                Err(e) => {
-                    error!("❌ Failed to convert task entity: {}", e);
-                    Ok(Json(TaskResponse {
-                        success: false,
-                        data: None,
-                        error: Some("Failed to convert task data".to_string()),
-                        timestamp: Utc::now(),
-                    }))
-                }
+                Ok(Json(TaskResponse {
+                    success: true,
+                    data: Some(task),
+                    error: None,
+                    timestamp: Utc::now(),
+                }))
             }
-        }
+            Err(e) => {
+                error!("❌ Failed to convert task entity: {}", e);
+                Ok(Json(TaskResponse {
+                    success: false,
+                    data: None,
+                    error: Some("Failed to convert task data".to_string()),
+                    timestamp: Utc::now(),
+                }))
+            }
+        },
         Ok(None) => {
             warn!("⚠️ Task not found for resume: {}", task_id);
             Ok(Json(TaskResponse {
@@ -788,28 +835,26 @@ pub async fn cancel_task(
     let task_repo = TaskRepository::new(database.pool().clone());
 
     match task_repo.update_status(&task_id, TaskState::Canceled).await {
-        Ok(Some(task_entity)) => {
-            match task_entity.to_domain_model() {
-                Ok(task) => {
-                    info!("✅ Task cancelled successfully: {}", task.name);
-                    Ok(Json(TaskResponse {
-                        success: true,
-                        data: Some(task),
-                        error: None,
-                        timestamp: Utc::now(),
-                    }))
-                }
-                Err(e) => {
-                    error!("❌ Failed to convert task entity: {}", e);
-                    Ok(Json(TaskResponse {
-                        success: false,
-                        data: None,
-                        error: Some("Failed to convert task data".to_string()),
-                        timestamp: Utc::now(),
-                    }))
-                }
+        Ok(Some(task_entity)) => match task_entity.to_domain_model() {
+            Ok(task) => {
+                info!("✅ Task cancelled successfully: {}", task.name);
+                Ok(Json(TaskResponse {
+                    success: true,
+                    data: Some(task),
+                    error: None,
+                    timestamp: Utc::now(),
+                }))
             }
-        }
+            Err(e) => {
+                error!("❌ Failed to convert task entity: {}", e);
+                Ok(Json(TaskResponse {
+                    success: false,
+                    data: None,
+                    error: Some("Failed to convert task data".to_string()),
+                    timestamp: Utc::now(),
+                }))
+            }
+        },
         Ok(None) => {
             warn!("⚠️ Task not found for cancellation: {}", task_id);
             Ok(Json(TaskResponse {
@@ -853,28 +898,26 @@ pub async fn retry_task(
     let task_repo = TaskRepository::new(database.pool().clone());
 
     match task_repo.update_status(&task_id, TaskState::Working).await {
-        Ok(Some(task_entity)) => {
-            match task_entity.to_domain_model() {
-                Ok(task) => {
-                    info!("✅ Task retried successfully: {}", task.name);
-                    Ok(Json(TaskResponse {
-                        success: true,
-                        data: Some(task),
-                        error: None,
-                        timestamp: Utc::now(),
-                    }))
-                }
-                Err(e) => {
-                    error!("❌ Failed to convert task entity: {}", e);
-                    Ok(Json(TaskResponse {
-                        success: false,
-                        data: None,
-                        error: Some("Failed to convert task data".to_string()),
-                        timestamp: Utc::now(),
-                    }))
-                }
+        Ok(Some(task_entity)) => match task_entity.to_domain_model() {
+            Ok(task) => {
+                info!("✅ Task retried successfully: {}", task.name);
+                Ok(Json(TaskResponse {
+                    success: true,
+                    data: Some(task),
+                    error: None,
+                    timestamp: Utc::now(),
+                }))
             }
-        }
+            Err(e) => {
+                error!("❌ Failed to convert task entity: {}", e);
+                Ok(Json(TaskResponse {
+                    success: false,
+                    data: None,
+                    error: Some("Failed to convert task data".to_string()),
+                    timestamp: Utc::now(),
+                }))
+            }
+        },
         Ok(None) => {
             warn!("⚠️ Task not found for retry: {}", task_id);
             Ok(Json(TaskResponse {
@@ -897,10 +940,7 @@ pub async fn retry_task(
 }
 
 // Internal function for processing tasks (used by both public endpoint and auto-start)
-async fn process_task_internal(
-    state: AppState,
-    task_id: String,
-) -> Result<TaskResponse, String> {
+async fn process_task_internal(state: AppState, task_id: String) -> Result<TaskResponse, String> {
     info!("🎯 Processing task internally: {}", task_id);
 
     // Check if we have database connection
@@ -931,8 +971,14 @@ async fn process_task_internal(
     // Check if task is in a processable state - if it's submitted, start it automatically
     // Valid A2A states: submitted, working, input-required, completed, canceled, failed, rejected, auth-required, unknown
     if task_entity.status == "submitted" {
-        info!("🚀 Auto-starting task {} before processing (status: submitted → working)", task_id);
-        match task_repo.update_status(&task_id, crate::models::TaskState::Working).await {
+        info!(
+            "🚀 Auto-starting task {} before processing (status: submitted → working)",
+            task_id
+        );
+        match task_repo
+            .update_status(&task_id, crate::models::TaskState::Working)
+            .await
+        {
             Ok(Some(updated_task)) => {
                 info!("✅ Task {} automatically started", task_id);
 
@@ -947,7 +993,7 @@ async fn process_task_internal(
                             "submitted".to_string(), // previous A2A state
                             "working".to_string(),   // new A2A state
                             format!("{:?}", task_model.priority), // Use Debug format
-                            0, // progress: u8 (0% when starting)
+                            0,                       // progress: u8 (0% when starting)
                         );
                         let _ = kafka_producer.publish_task_event(event).await;
                     }
@@ -964,15 +1010,27 @@ async fn process_task_internal(
         }
     } else if task_entity.status != "working" {
         // Task must be in 'submitted' (to auto-start) or 'working' (already started) to process
-        warn!("⚠️ Task {} is not in a processable state: {}", task_id, task_entity.status);
-        return Err(format!("Task must be in 'submitted' or 'working' state to process. Current state: {}", task_entity.status));
+        warn!(
+            "⚠️ Task {} is not in a processable state: {}",
+            task_id, task_entity.status
+        );
+        return Err(format!(
+            "Task must be in 'submitted' or 'working' state to process. Current state: {}",
+            task_entity.status
+        ));
     }
 
     // Execute the task using Hecate
     let mut hecate_agent = state.hecate_agent.write().await;
-    let task_description = task_entity.description.as_deref().unwrap_or(&task_entity.name);
+    let task_description = task_entity
+        .description
+        .as_deref()
+        .unwrap_or(&task_entity.name);
 
-    match hecate_agent.execute_task(&task_id, task_description, &task_repo, &agent_repo).await {
+    match hecate_agent
+        .execute_task(&task_id, task_description, &task_repo, &agent_repo)
+        .await
+    {
         Ok(_result) => {
             info!("✅ Task {} processed successfully", task_id);
 
@@ -988,9 +1046,12 @@ async fn process_task_internal(
                                     None, // user_id
                                     hecate_agent.get_agent_id(),
                                     task_model.name.clone(),
-                                    "working".to_string(),   // previous A2A state
+                                    "working".to_string(), // previous A2A state
                                     "completed".to_string(), // final A2A state
-                                    serde_json::to_string(&task_model.priority).unwrap().trim_matches('"').to_string(),
+                                    serde_json::to_string(&task_model.priority)
+                                        .unwrap()
+                                        .trim_matches('"')
+                                        .to_string(),
                                     task_model.progress,
                                 );
 
@@ -1040,13 +1101,13 @@ pub async fn process_task(
             data: None,
             error: Some(error),
             timestamp: Utc::now(),
-        }))
+        })),
     }
 }
 
 // Utility function to convert wallet address to deterministic UUID
 fn wallet_to_uuid(wallet_address: &str, chain: &str) -> Uuid {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
 
     // Create input string combining wallet and chain for uniqueness
     let input = format!("{}:{}", wallet_address.to_lowercase(), chain.to_lowercase());
@@ -1083,7 +1144,9 @@ async fn migrate_existing_users_to_wallet_uuids(
             let mut failed_count = 0;
 
             for user_entity in existing_users {
-                if let (Some(source_identifier), Some(network)) = (&user_entity.source_identifier, &user_entity.network) {
+                if let (Some(source_identifier), Some(network)) =
+                    (&user_entity.source_identifier, &user_entity.network)
+                {
                     // Calculate what the UUID should be
                     let correct_uuid = wallet_to_uuid(source_identifier, network);
 
@@ -1127,7 +1190,10 @@ async fn migrate_existing_users_to_wallet_uuids(
                 }
             }
 
-            info!("🎉 Migration completed: {} migrated, {} failed", migrated_count, failed_count);
+            info!(
+                "🎉 Migration completed: {} migrated, {} failed",
+                migrated_count, failed_count
+            );
             Ok(())
         }
         Err(e) => {

@@ -1,8 +1,8 @@
+use futures_util::{SinkExt, StreamExt};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Instant;
-use futures_util::{SinkExt, StreamExt};
-use serde::{Deserialize, Serialize};
 use tokio::sync::{broadcast, mpsc, RwLock};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use tracing::{debug, error, info, warn};
@@ -157,9 +157,14 @@ impl LaserStreamClient {
         let ws_url = format!(
             "{}/?api-key={}",
             self.endpoint.trim_end_matches('/'),
-            self.api_key.as_ref().expect("is_configured() verified api_key.is_some()")
+            self.api_key
+                .as_ref()
+                .expect("is_configured() verified api_key.is_some()")
         );
-        info!("🔌 Connecting to Helius WebSocket: {}...", &ws_url[..ws_url.len().min(50)]);
+        info!(
+            "🔌 Connecting to Helius WebSocket: {}...",
+            &ws_url[..ws_url.len().min(50)]
+        );
 
         let (ws_stream, _) = connect_async(&ws_url)
             .await
@@ -377,9 +382,13 @@ impl LaserStreamClient {
             info!("🔌 WebSocket disconnected");
 
             // Auto-reconnect after delay
-            let accounts_to_resubscribe: Vec<String> = subscribed_accounts.read().await.iter().cloned().collect();
+            let accounts_to_resubscribe: Vec<String> =
+                subscribed_accounts.read().await.iter().cloned().collect();
             if !accounts_to_resubscribe.is_empty() {
-                warn!("🔄 Will attempt to reconnect in 5 seconds (had {} subscriptions)", accounts_to_resubscribe.len());
+                warn!(
+                    "🔄 Will attempt to reconnect in 5 seconds (had {} subscriptions)",
+                    accounts_to_resubscribe.len()
+                );
                 tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
                 // Signal that we need reconnection - the main loop should handle this
@@ -406,7 +415,8 @@ impl LaserStreamClient {
         let client = Arc::clone(self);
         tokio::spawn(async move {
             loop {
-                tokio::time::sleep(tokio::time::Duration::from_secs(HEALTH_CHECK_INTERVAL_SECS)).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(HEALTH_CHECK_INTERVAL_SECS))
+                    .await;
 
                 let status = client.get_status().await;
 
@@ -445,7 +455,13 @@ impl LaserStreamClient {
                     info!("🔄 Attempting WebSocket reconnection...");
 
                     // Get accounts to resubscribe
-                    let accounts: Vec<String> = client.subscribed_accounts.read().await.iter().cloned().collect();
+                    let accounts: Vec<String> = client
+                        .subscribed_accounts
+                        .read()
+                        .await
+                        .iter()
+                        .cloned()
+                        .collect();
 
                     // Clear old subscription IDs
                     {
@@ -489,7 +505,10 @@ impl LaserStreamClient {
             return Err("WebSocket not connected".to_string());
         }
 
-        info!("📡 Subscribing to {} accounts via WebSocket", addresses.len());
+        info!(
+            "📡 Subscribing to {} accounts via WebSocket",
+            addresses.len()
+        );
 
         if let Some(tx) = self.command_tx.read().await.as_ref() {
             tx.send(WebSocketCommand::Subscribe(addresses))
@@ -515,7 +534,12 @@ impl LaserStreamClient {
     }
 
     pub async fn get_subscribed_accounts(&self) -> Vec<String> {
-        self.subscribed_accounts.read().await.iter().cloned().collect()
+        self.subscribed_accounts
+            .read()
+            .await
+            .iter()
+            .cloned()
+            .collect()
     }
 }
 

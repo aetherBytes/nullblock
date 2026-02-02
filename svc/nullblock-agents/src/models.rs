@@ -139,7 +139,7 @@ impl ModelProvider {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::OpenAI => "openai",
-            Self::Anthropic => "anthropic", 
+            Self::Anthropic => "anthropic",
             Self::Groq => "groq",
             Self::Ollama => "ollama",
             Self::HuggingFace => "huggingface",

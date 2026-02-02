@@ -35,7 +35,9 @@ impl ArbFarmProvider {
         ToolCategory::from_tool_name(name)
     }
 
-    async fn discover_tools_impl(&self) -> Result<Vec<DiscoveredTool>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn discover_tools_impl(
+        &self,
+    ) -> Result<Vec<DiscoveredTool>, Box<dyn std::error::Error + Send + Sync>> {
         let url = format!("{}/mcp/jsonrpc", self.base_url);
 
         info!("🔧 Discovering ArbFarm MCP tools from {}", url);
@@ -117,7 +119,9 @@ impl ArbFarmProvider {
         Ok(discovered_tools)
     }
 
-    async fn discover_agents_impl(&self) -> Result<Vec<DiscoveredAgent>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn discover_agents_impl(
+        &self,
+    ) -> Result<Vec<DiscoveredAgent>, Box<dyn std::error::Error + Send + Sync>> {
         let url = format!("{}/api/swarm/status", self.base_url);
 
         info!("🤖 Discovering ArbFarm swarm agents from {}", url);
@@ -182,7 +186,9 @@ impl ArbFarmProvider {
         }
     }
 
-    async fn discover_protocols_impl(&self) -> Result<Vec<DiscoveredProtocol>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn discover_protocols_impl(
+        &self,
+    ) -> Result<Vec<DiscoveredProtocol>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(vec![DiscoveredProtocol {
             name: "ArbFarm MCP".to_string(),
             protocol_type: "mcp".to_string(),
@@ -228,19 +234,51 @@ impl DiscoveryProvider for ArbFarmProvider {
         "arbfarm"
     }
 
-    fn discover_tools(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<DiscoveredTool>, Box<dyn std::error::Error + Send + Sync>>> + Send + '_>> {
+    fn discover_tools(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<Vec<DiscoveredTool>, Box<dyn std::error::Error + Send + Sync>>,
+                > + Send
+                + '_,
+        >,
+    > {
         Box::pin(self.discover_tools_impl())
     }
 
-    fn discover_agents(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<DiscoveredAgent>, Box<dyn std::error::Error + Send + Sync>>> + Send + '_>> {
+    fn discover_agents(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<Vec<DiscoveredAgent>, Box<dyn std::error::Error + Send + Sync>>,
+                > + Send
+                + '_,
+        >,
+    > {
         Box::pin(self.discover_agents_impl())
     }
 
-    fn discover_protocols(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<DiscoveredProtocol>, Box<dyn std::error::Error + Send + Sync>>> + Send + '_>> {
+    fn discover_protocols(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<
+                        Vec<DiscoveredProtocol>,
+                        Box<dyn std::error::Error + Send + Sync>,
+                    >,
+                > + Send
+                + '_,
+        >,
+    > {
         Box::pin(self.discover_protocols_impl())
     }
 
-    fn health(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ProviderHealth> + Send + '_>> {
+    fn health(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ProviderHealth> + Send + '_>> {
         Box::pin(self.health_impl())
     }
 }

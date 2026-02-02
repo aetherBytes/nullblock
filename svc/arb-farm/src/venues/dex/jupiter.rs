@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
-use crate::models::{Signal, SignalType, VenueType};
 use crate::events::Significance;
+use crate::models::{Signal, SignalType, VenueType};
 use crate::venues::{MevVenue, ProfitEstimate, Quote, QuoteParams};
 
 pub struct JupiterVenue {

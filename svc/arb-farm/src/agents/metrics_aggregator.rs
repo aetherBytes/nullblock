@@ -1,12 +1,9 @@
-use chrono::{DateTime, Duration, Utc, Datelike};
+use chrono::{DateTime, Datelike, Duration, Utc};
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::database::PositionRepository;
-use crate::engrams::{
-    EngramsClient,
-    DailyMetrics, TradeHighlight, VenueMetrics, StrategyMetrics,
-};
+use crate::engrams::{DailyMetrics, EngramsClient, StrategyMetrics, TradeHighlight, VenueMetrics};
 
 pub struct MetricsAggregator {
     position_repo: Arc<PositionRepository>,
@@ -27,7 +24,10 @@ impl MetricsAggregator {
         }
     }
 
-    pub async fn aggregate_daily_metrics(&self, date: DateTime<Utc>) -> Result<DailyMetrics, String> {
+    pub async fn aggregate_daily_metrics(
+        &self,
+        date: DateTime<Utc>,
+    ) -> Result<DailyMetrics, String> {
         let start_of_day = date
             .date_naive()
             .and_hms_opt(0, 0, 0)
@@ -35,7 +35,8 @@ impl MetricsAggregator {
         let start = DateTime::<Utc>::from_naive_utc_and_offset(start_of_day, Utc);
         let end = start + Duration::days(1);
 
-        let positions = self.position_repo
+        let positions = self
+            .position_repo
             .get_closed_positions_for_period(start, end)
             .await
             .map_err(|e| format!("Failed to fetch positions: {}", e))?;
@@ -88,7 +89,9 @@ impl MetricsAggregator {
                 max_drawdown = drawdown;
             }
 
-            let token_display = pos.token_symbol.clone()
+            let token_display = pos
+                .token_symbol
+                .clone()
                 .unwrap_or_else(|| pos.token_mint[..8.min(pos.token_mint.len())].to_string());
 
             match &best_trade {
@@ -148,16 +151,15 @@ impl MetricsAggregator {
 
         for (_, metrics) in by_venue.iter_mut() {
             if metrics.trades > 0 {
-                let winning_count = positions.iter()
-                    .filter(|p| p.unrealized_pnl > 0.0)
-                    .count();
+                let winning_count = positions.iter().filter(|p| p.unrealized_pnl > 0.0).count();
                 metrics.win_rate = winning_count as f64 / metrics.trades as f64 * 100.0;
             }
         }
 
         for (strategy_id, metrics) in by_strategy.iter_mut() {
             if metrics.trades > 0 {
-                let winning_count = positions.iter()
+                let winning_count = positions
+                    .iter()
                     .filter(|p| p.strategy_id.to_string() == *strategy_id && p.unrealized_pnl > 0.0)
                     .count();
                 metrics.win_rate = winning_count as f64 / metrics.trades as f64 * 100.0;

@@ -1,9 +1,9 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 use crate::error::AppResult;
 
@@ -189,7 +189,9 @@ impl SocialMonitor {
     }
 
     pub async fn list_sources_by_type(&self, source_type: SourceType) -> Vec<MonitoredSource> {
-        self.sources.read().await
+        self.sources
+            .read()
+            .await
             .values()
             .filter(|s| s.source_type == source_type)
             .cloned()
@@ -316,16 +318,17 @@ impl SocialMonitor {
 
     pub async fn get_recent_alerts(&self, limit: usize) -> Vec<SocialAlert> {
         let alerts = self.alerts.read().await;
-        alerts.iter()
-            .rev()
-            .take(limit)
-            .cloned()
-            .collect()
+        alerts.iter().rev().take(limit).cloned().collect()
     }
 
-    pub async fn get_alerts_by_type(&self, alert_type: &AlertType, limit: usize) -> Vec<SocialAlert> {
+    pub async fn get_alerts_by_type(
+        &self,
+        alert_type: &AlertType,
+        limit: usize,
+    ) -> Vec<SocialAlert> {
         let alerts = self.alerts.read().await;
-        alerts.iter()
+        alerts
+            .iter()
             .filter(|a| std::mem::discriminant(&a.alert_type) == std::mem::discriminant(alert_type))
             .rev()
             .take(limit)
@@ -335,7 +338,8 @@ impl SocialMonitor {
 
     pub async fn get_alerts_for_source(&self, source_id: Uuid, limit: usize) -> Vec<SocialAlert> {
         let alerts = self.alerts.read().await;
-        alerts.iter()
+        alerts
+            .iter()
             .filter(|a| a.source_id == source_id)
             .rev()
             .take(limit)
@@ -377,7 +381,8 @@ impl SocialMonitor {
                 SourceType::Twitter,
                 handle.trim_start_matches('@').to_string(),
                 TrackType::Alpha,
-            ).with_display_name(name.to_string());
+            )
+            .with_display_name(name.to_string());
             self.add_source(source).await;
         }
 
@@ -386,7 +391,8 @@ impl SocialMonitor {
                 SourceType::Twitter,
                 handle.trim_start_matches('@').to_string(),
                 TrackType::Threat,
-            ).with_display_name(name.to_string());
+            )
+            .with_display_name(name.to_string());
             self.add_source(source).await;
         }
     }
@@ -404,7 +410,8 @@ impl SocialMonitor {
             acc
         });
 
-        let alerts_last_24h = alerts.iter()
+        let alerts_last_24h = alerts
+            .iter()
             .filter(|a| a.created_at > Utc::now() - chrono::Duration::hours(24))
             .count() as u64;
 
@@ -440,7 +447,9 @@ mod tests {
     #[tokio::test]
     async fn test_add_twitter_account() {
         let monitor = SocialMonitor::new();
-        let id = monitor.add_twitter_account("@testuser", TrackType::Alpha).await;
+        let id = monitor
+            .add_twitter_account("@testuser", TrackType::Alpha)
+            .await;
 
         let source = monitor.get_source(id).await.unwrap();
         assert_eq!(source.handle, "testuser");
@@ -450,11 +459,8 @@ mod tests {
     #[test]
     fn test_analyze_alpha_content() {
         let monitor = SocialMonitor::new();
-        let source = MonitoredSource::new(
-            SourceType::Twitter,
-            "trader".to_string(),
-            TrackType::Alpha,
-        );
+        let source =
+            MonitoredSource::new(SourceType::Twitter, "trader".to_string(), TrackType::Alpha);
 
         let content = "Bullish on $SOL, this is alpha! Entry now.";
         let alert = monitor.analyze_content(content, &source);

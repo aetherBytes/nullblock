@@ -48,20 +48,25 @@ pub async fn create_strategy(
     use crate::database::repositories::strategies::CreateStrategyRecord;
 
     // Create in database first for persistence
-    let db_record = match state.strategy_repo.create(CreateStrategyRecord {
-        wallet_address: request.wallet_address.clone(),
-        name: request.name.clone(),
-        strategy_type: request.strategy_type.clone(),
-        venue_types: request.venue_types.clone(),
-        execution_mode: request.execution_mode.clone(),
-        risk_params: request.risk_params.clone(),
-    }).await {
+    let db_record = match state
+        .strategy_repo
+        .create(CreateStrategyRecord {
+            wallet_address: request.wallet_address.clone(),
+            name: request.name.clone(),
+            strategy_type: request.strategy_type.clone(),
+            venue_types: request.venue_types.clone(),
+            execution_mode: request.execution_mode.clone(),
+            risk_params: request.risk_params.clone(),
+        })
+        .await
+    {
         Ok(record) => record,
         Err(e) => {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({"error": format!("Failed to persist strategy: {}", e)})),
-            ).into_response();
+            )
+                .into_response();
         }
     };
 
@@ -86,18 +91,26 @@ pub async fn create_strategy(
     state.strategy_engine.add_strategy(strategy.clone()).await;
 
     // Persist to engrams for cross-session persistence
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
     let risk_params_json = serde_json::to_value(&strategy.risk_params).unwrap_or_default();
-    if let Err(e) = state.engrams_client.save_strategy_full(
-        &wallet,
-        &strategy.id.to_string(),
-        &strategy.name,
-        &strategy.strategy_type,
-        &strategy.venue_types,
-        &strategy.execution_mode,
-        &risk_params_json,
-        strategy.is_active,
-    ).await {
+    if let Err(e) = state
+        .engrams_client
+        .save_strategy_full(
+            &wallet,
+            &strategy.id.to_string(),
+            &strategy.name,
+            &strategy.strategy_type,
+            &strategy.venue_types,
+            &strategy.execution_mode,
+            &risk_params_json,
+            strategy.is_active,
+        )
+        .await
+    {
         tracing::warn!(strategy_id = %strategy.id, error = %e, "Failed to persist strategy to engrams");
     }
 
@@ -145,7 +158,11 @@ pub async fn toggle_strategy(
     }
 
     // Update in-memory engine
-    match state.strategy_engine.toggle_strategy(id, request.enabled).await {
+    match state
+        .strategy_engine
+        .toggle_strategy(id, request.enabled)
+        .await
+    {
         Ok(_) => {
             // Persist toggle state to engrams
             if let Some(strategy) = state.strategy_engine.get_strategy(id).await {
@@ -155,18 +172,27 @@ pub async fn toggle_strategy(
                     tracing::info!(strategy_id = %id, "Strategy enabled with auto-execution - starting executor");
                 }
 
-                let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
-                let risk_params_json = serde_json::to_value(&strategy.risk_params).unwrap_or_default();
-                if let Err(e) = state.engrams_client.save_strategy_full(
-                    &wallet,
-                    &strategy.id.to_string(),
-                    &strategy.name,
-                    &strategy.strategy_type,
-                    &strategy.venue_types,
-                    &strategy.execution_mode,
-                    &risk_params_json,
-                    request.enabled,
-                ).await {
+                let wallet = state
+                    .config
+                    .wallet_address
+                    .clone()
+                    .unwrap_or_else(|| "default".to_string());
+                let risk_params_json =
+                    serde_json::to_value(&strategy.risk_params).unwrap_or_default();
+                if let Err(e) = state
+                    .engrams_client
+                    .save_strategy_full(
+                        &wallet,
+                        &strategy.id.to_string(),
+                        &strategy.name,
+                        &strategy.strategy_type,
+                        &strategy.venue_types,
+                        &strategy.execution_mode,
+                        &risk_params_json,
+                        request.enabled,
+                    )
+                    .await
+                {
                     tracing::warn!(strategy_id = %id, error = %e, "Failed to persist toggle to engrams");
                 }
             }
@@ -179,7 +205,7 @@ pub async fn toggle_strategy(
                 })),
             )
                 .into_response()
-        },
+        }
         Err(e) => (
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({"error": e.to_string()})),
@@ -196,13 +222,20 @@ pub async fn update_strategy(
     use crate::database::repositories::strategies::UpdateStrategyRecord;
 
     // Persist update to database first
-    if let Err(e) = state.strategy_repo.update(id, UpdateStrategyRecord {
-        name: request.name.clone(),
-        venue_types: request.venue_types.clone(),
-        execution_mode: request.execution_mode.clone(),
-        risk_params: request.risk_params.clone(),
-        is_active: request.is_active,
-    }).await {
+    if let Err(e) = state
+        .strategy_repo
+        .update(
+            id,
+            UpdateStrategyRecord {
+                name: request.name.clone(),
+                venue_types: request.venue_types.clone(),
+                execution_mode: request.execution_mode.clone(),
+                risk_params: request.risk_params.clone(),
+                is_active: request.is_active,
+            },
+        )
+        .await
+    {
         tracing::warn!(strategy_id = %id, error = %e, "Failed to persist update to database");
     }
 
@@ -216,23 +249,31 @@ pub async fn update_strategy(
             }
 
             // Persist updated strategy to engrams
-            let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+            let wallet = state
+                .config
+                .wallet_address
+                .clone()
+                .unwrap_or_else(|| "default".to_string());
             let risk_params_json = serde_json::to_value(&strategy.risk_params).unwrap_or_default();
-            if let Err(e) = state.engrams_client.save_strategy_full(
-                &wallet,
-                &strategy.id.to_string(),
-                &strategy.name,
-                &strategy.strategy_type,
-                &strategy.venue_types,
-                &strategy.execution_mode,
-                &risk_params_json,
-                strategy.is_active,
-            ).await {
+            if let Err(e) = state
+                .engrams_client
+                .save_strategy_full(
+                    &wallet,
+                    &strategy.id.to_string(),
+                    &strategy.name,
+                    &strategy.strategy_type,
+                    &strategy.venue_types,
+                    &strategy.execution_mode,
+                    &risk_params_json,
+                    strategy.is_active,
+                )
+                .await
+            {
                 tracing::warn!(strategy_id = %id, error = %e, "Failed to persist update to engrams");
             }
 
             (StatusCode::OK, Json(strategy)).into_response()
-        },
+        }
         Err(e) => (
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({"error": e.to_string()})),
@@ -258,18 +299,29 @@ pub async fn set_risk_profile(
     let risk_params_json = serde_json::to_value(&risk_params).ok();
 
     // Persist to database first
-    if let Err(e) = state.strategy_repo.update(id, UpdateStrategyRecord {
-        name: None,
-        venue_types: None,
-        execution_mode: None,
-        risk_params: Some(risk_params.clone()),
-        is_active: None,
-    }).await {
+    if let Err(e) = state
+        .strategy_repo
+        .update(
+            id,
+            UpdateStrategyRecord {
+                name: None,
+                venue_types: None,
+                execution_mode: None,
+                risk_params: Some(risk_params.clone()),
+                is_active: None,
+            },
+        )
+        .await
+    {
         tracing::warn!(strategy_id = %id, error = %e, "Failed to persist risk profile to database");
     }
 
     // Update in-memory engine
-    match state.strategy_engine.set_risk_params(id, risk_params.clone()).await {
+    match state
+        .strategy_engine
+        .set_risk_params(id, risk_params.clone())
+        .await
+    {
         Ok(strategy) => {
             // If auto_execute_enabled is now true, start the executor
             if strategy.risk_params.auto_execute_enabled && strategy.is_active {
@@ -278,30 +330,43 @@ pub async fn set_risk_profile(
             }
 
             // Persist to engrams
-            let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
-            if let Err(e) = state.engrams_client.save_strategy_full(
-                &wallet,
-                &strategy.id.to_string(),
-                &strategy.name,
-                &strategy.strategy_type,
-                &strategy.venue_types,
-                &strategy.execution_mode,
-                &risk_params_json.unwrap_or_default(),
-                strategy.is_active,
-            ).await {
+            let wallet = state
+                .config
+                .wallet_address
+                .clone()
+                .unwrap_or_else(|| "default".to_string());
+            if let Err(e) = state
+                .engrams_client
+                .save_strategy_full(
+                    &wallet,
+                    &strategy.id.to_string(),
+                    &strategy.name,
+                    &strategy.strategy_type,
+                    &strategy.venue_types,
+                    &strategy.execution_mode,
+                    &risk_params_json.unwrap_or_default(),
+                    strategy.is_active,
+                )
+                .await
+            {
                 tracing::warn!(strategy_id = %id, error = %e, "Failed to persist risk profile to engrams");
             }
 
-            (StatusCode::OK, Json(serde_json::json!({
-                "success": true,
-                "profile": request.profile,
-                "strategy": strategy
-            }))).into_response()
-        },
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "profile": request.profile,
+                    "strategy": strategy
+                })),
+            )
+                .into_response()
+        }
         Err(e) => (
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({"error": e.to_string()})),
-        ).into_response(),
+        )
+            .into_response(),
     }
 }
 
@@ -323,37 +388,51 @@ pub async fn batch_toggle_strategies(
         }
 
         // Update in-memory engine
-        match state.strategy_engine.toggle_strategy(*id, request.enabled).await {
+        match state
+            .strategy_engine
+            .toggle_strategy(*id, request.enabled)
+            .await
+        {
             Ok(_) => results.push(serde_json::json!({"id": id, "success": true})),
-            Err(e) => results.push(serde_json::json!({"id": id, "success": false, "error": e.to_string()})),
+            Err(e) => results
+                .push(serde_json::json!({"id": id, "success": false, "error": e.to_string()})),
         }
     }
-    (StatusCode::OK, Json(serde_json::json!({
-        "results": results,
-        "enabled": request.enabled
-    })))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "results": results,
+            "enabled": request.enabled
+        })),
+    )
 }
 
-pub async fn save_strategies_to_engrams(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn save_strategies_to_engrams(State(state): State<AppState>) -> impl IntoResponse {
     let strategies = state.strategy_engine.list_strategies().await;
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
 
     // Save strategies via the engrams client with full state including is_active
     let mut saved = 0;
     for strategy in &strategies {
         let risk_params_json = serde_json::to_value(&strategy.risk_params).unwrap_or_default();
-        match state.engrams_client.save_strategy_full(
-            &wallet,
-            &strategy.id.to_string(),
-            &strategy.name,
-            &strategy.strategy_type,
-            &strategy.venue_types,
-            &strategy.execution_mode,
-            &risk_params_json,
-            strategy.is_active,
-        ).await {
+        match state
+            .engrams_client
+            .save_strategy_full(
+                &wallet,
+                &strategy.id.to_string(),
+                &strategy.name,
+                &strategy.strategy_type,
+                &strategy.venue_types,
+                &strategy.execution_mode,
+                &risk_params_json,
+                strategy.is_active,
+            )
+            .await
+        {
             Ok(_) => saved += 1,
             Err(e) => {
                 tracing::warn!("Failed to save strategy {}: {}", strategy.id, e);
@@ -361,11 +440,15 @@ pub async fn save_strategies_to_engrams(
         }
     }
 
-    (StatusCode::OK, Json(serde_json::json!({
-        "success": true,
-        "message": format!("Saved {} strategies to engrams", saved),
-        "count": saved
-    }))).into_response()
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "message": format!("Saved {} strategies to engrams", saved),
+            "count": saved
+        })),
+    )
+        .into_response()
 }
 
 pub async fn reset_strategy_stats(
@@ -373,15 +456,23 @@ pub async fn reset_strategy_stats(
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
     match state.strategy_engine.reset_stats(id).await {
-        Ok(_) => (StatusCode::OK, Json(serde_json::json!({
-            "success": true,
-            "id": id,
-            "message": "Strategy stats reset"
-        }))).into_response(),
-        Err(e) => (StatusCode::NOT_FOUND, Json(serde_json::json!({
-            "success": false,
-            "error": e.to_string()
-        }))).into_response(),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "id": id,
+                "message": "Strategy stats reset"
+            })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        )
+            .into_response(),
     }
 }
 
@@ -403,34 +494,51 @@ pub async fn kill_strategy(
 
             // Persist killed state to engrams (is_active = false)
             if let Some(strategy) = state.strategy_engine.get_strategy(id).await {
-                let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
-                let risk_params_json = serde_json::to_value(&strategy.risk_params).unwrap_or_default();
-                if let Err(e) = state.engrams_client.save_strategy_full(
-                    &wallet,
-                    &strategy.id.to_string(),
-                    &strategy.name,
-                    &strategy.strategy_type,
-                    &strategy.venue_types,
-                    &strategy.execution_mode,
-                    &risk_params_json,
-                    false, // Killed = inactive
-                ).await {
+                let wallet = state
+                    .config
+                    .wallet_address
+                    .clone()
+                    .unwrap_or_else(|| "default".to_string());
+                let risk_params_json =
+                    serde_json::to_value(&strategy.risk_params).unwrap_or_default();
+                if let Err(e) = state
+                    .engrams_client
+                    .save_strategy_full(
+                        &wallet,
+                        &strategy.id.to_string(),
+                        &strategy.name,
+                        &strategy.strategy_type,
+                        &strategy.venue_types,
+                        &strategy.execution_mode,
+                        &risk_params_json,
+                        false, // Killed = inactive
+                    )
+                    .await
+                {
                     tracing::warn!(strategy_id = %id, error = %e, "Failed to persist kill to engrams");
                 }
             }
 
-            (StatusCode::OK, Json(serde_json::json!({
-                "success": true,
-                "id": id,
-                "strategy_name": strategy_name,
-                "message": "Strategy killed - all operations halted",
-                "action": "emergency_stop"
-            }))).into_response()
-        },
-        Err(e) => (StatusCode::NOT_FOUND, Json(serde_json::json!({
-            "success": false,
-            "error": e.to_string()
-        }))).into_response(),
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "id": id,
+                    "strategy_name": strategy_name,
+                    "message": "Strategy killed - all operations halted",
+                    "action": "emergency_stop"
+                })),
+            )
+                .into_response()
+        }
+        Err(e) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        )
+            .into_response(),
     }
 }
 
@@ -452,37 +560,60 @@ pub async fn toggle_strategy_momentum(
             updated_params.momentum_adaptive_exits = request.enabled;
 
             // Update in-memory
-            if let Err(e) = state.strategy_engine.set_risk_params(id, updated_params.clone()).await {
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                    "success": false,
-                    "error": format!("Failed to update strategy: {}", e)
-                }))).into_response();
+            if let Err(e) = state
+                .strategy_engine
+                .set_risk_params(id, updated_params.clone())
+                .await
+            {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({
+                        "success": false,
+                        "error": format!("Failed to update strategy: {}", e)
+                    })),
+                )
+                    .into_response();
             }
 
             // Persist to database
-            if let Err(e) = state.strategy_repo.update(id, UpdateStrategyRecord {
-                name: None,
-                venue_types: None,
-                execution_mode: None,
-                risk_params: Some(updated_params.clone()),
-                is_active: None,
-            }).await {
+            if let Err(e) = state
+                .strategy_repo
+                .update(
+                    id,
+                    UpdateStrategyRecord {
+                        name: None,
+                        venue_types: None,
+                        execution_mode: None,
+                        risk_params: Some(updated_params.clone()),
+                        is_active: None,
+                    },
+                )
+                .await
+            {
                 tracing::warn!(strategy_id = %id, error = %e, "Failed to persist momentum toggle to database");
             }
 
             // Persist to engrams
-            let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+            let wallet = state
+                .config
+                .wallet_address
+                .clone()
+                .unwrap_or_else(|| "default".to_string());
             let risk_params_json = serde_json::to_value(&updated_params).unwrap_or_default();
-            if let Err(e) = state.engrams_client.save_strategy_full(
-                &wallet,
-                &strategy.id.to_string(),
-                &strategy.name,
-                &strategy.strategy_type,
-                &strategy.venue_types,
-                &strategy.execution_mode,
-                &risk_params_json,
-                strategy.is_active,
-            ).await {
+            if let Err(e) = state
+                .engrams_client
+                .save_strategy_full(
+                    &wallet,
+                    &strategy.id.to_string(),
+                    &strategy.name,
+                    &strategy.strategy_type,
+                    &strategy.venue_types,
+                    &strategy.execution_mode,
+                    &risk_params_json,
+                    strategy.is_active,
+                )
+                .await
+            {
                 tracing::warn!(strategy_id = %id, error = %e, "Failed to persist momentum toggle to engrams");
             }
 
@@ -494,16 +625,24 @@ pub async fn toggle_strategy_momentum(
                 if request.enabled { "enabled" } else { "disabled" }
             );
 
-            (StatusCode::OK, Json(serde_json::json!({
-                "success": true,
-                "id": id,
-                "strategy_name": strategy.name,
-                "momentum_enabled": request.enabled
-            }))).into_response()
-        },
-        None => (StatusCode::NOT_FOUND, Json(serde_json::json!({
-            "success": false,
-            "error": "Strategy not found"
-        }))).into_response(),
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "id": id,
+                    "strategy_name": strategy.name,
+                    "momentum_enabled": request.enabled
+                })),
+            )
+                .into_response()
+        }
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "success": false,
+                "error": "Strategy not found"
+            })),
+        )
+            .into_response(),
     }
 }

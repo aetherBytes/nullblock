@@ -7,8 +7,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::models::{
-    AlertSeverity, BlockedEntity, ThreatAlert, ThreatCategory, ThreatEntityType,
-    ThreatScore, ThreatStats, WalletAnalysis, WatchedWallet, WhitelistedEntity,
+    AlertSeverity, BlockedEntity, ThreatAlert, ThreatCategory, ThreatEntityType, ThreatScore,
+    ThreatStats, WalletAnalysis, WatchedWallet, WhitelistedEntity,
 };
 use crate::server::AppState;
 use crate::threat::ThreatDetector;
@@ -183,14 +183,17 @@ pub async fn add_watch(
 ) -> Json<WatchResponse> {
     let mut watched = WatchedWallet::new(
         request.wallet_address,
-        request.watch_reason.unwrap_or_else(|| "User requested watch".to_string()),
+        request
+            .watch_reason
+            .unwrap_or_else(|| "User requested watch".to_string()),
     );
 
     watched.related_token_mint = request.related_token_mint;
     watched.alert_on_sell = request.alert_on_sell.unwrap_or(true);
     watched.alert_on_transfer = request.alert_on_transfer.unwrap_or(true);
     if let Some(threshold) = request.alert_threshold_sol {
-        watched.alert_threshold_sol = Some(rust_decimal::Decimal::from_f64_retain(threshold).unwrap_or_default());
+        watched.alert_threshold_sol =
+            Some(rust_decimal::Decimal::from_f64_retain(threshold).unwrap_or_default());
     }
 
     let watched = THREAT_DETECTOR.add_watched_wallet(watched);
@@ -253,9 +256,7 @@ pub async fn get_score_history(
     Json(score)
 }
 
-pub async fn get_stats(
-    State(_config): State<AppState>,
-) -> Json<ThreatStats> {
+pub async fn get_stats(State(_config): State<AppState>) -> Json<ThreatStats> {
     let stats = THREAT_DETECTOR.get_stats();
     Json(stats)
 }

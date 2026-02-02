@@ -1,0 +1,13 @@
+**/target/
+**/node_modules/
+**/.git/
+docs-internal/
+branding/
+archive/
+**/*.log
+.github/
+.githooks/
+infra/
+*.md
+.env*
+tmuxinator*.yml

@@ -3,20 +3,25 @@ use serde_json::json;
 use std::collections::HashMap;
 use tracing::{info, warn};
 
-use crate::server::AppState;
 use super::types::*;
+use crate::server::AppState;
 
 pub async fn initialize(
     State(_state): State<AppState>,
     request: InitializeRequest,
 ) -> Result<Json<InitializeResult>, StatusCode> {
     info!("🔌 MCP Initialize request received");
-    info!("  Client: {} v{}", request.client_info.name, request.client_info.version);
+    info!(
+        "  Client: {} v{}",
+        request.client_info.name, request.client_info.version
+    );
     info!("  Protocol Version: {}", request.protocol_version);
 
     if request.protocol_version != PROTOCOL_VERSION {
-        warn!("⚠️ Protocol version mismatch: client={}, server={}", 
-              request.protocol_version, PROTOCOL_VERSION);
+        warn!(
+            "⚠️ Protocol version mismatch: client={}, server={}",
+            request.protocol_version, PROTOCOL_VERSION
+        );
     }
 
     let server_capabilities = ServerCapabilities {
@@ -56,28 +61,34 @@ pub async fn list_resources(
     info!("📋 MCP List Resources request");
 
     let agents_url = format!("{}/agents", state.agents_service_url);
-    
+
     let resources = match state.http_client.get(&agents_url).send().await {
         Ok(response) => {
             if response.status().is_success() {
                 match response.json::<serde_json::Value>().await {
                     Ok(json) => {
                         if let Some(agents) = json.get("data").and_then(|d| d.as_array()) {
-                            agents.iter().filter_map(|agent| {
-                                let name = agent.get("name")?.as_str()?;
-                                let status = agent.get("status")?.as_str()?;
-                                
-                                Some(Resource {
-                                    uri: format!("agent://{}", name),
-                                    name: name.to_string(),
-                                    title: Some(format!("{} Agent", name)),
-                                    description: Some(format!("NullBlock Agent: {} ({})", name, status)),
-                                    mime_type: Some("application/json".to_string()),
-                                    annotations: None,
-                                    size: None,
-                                    meta: None,
+                            agents
+                                .iter()
+                                .filter_map(|agent| {
+                                    let name = agent.get("name")?.as_str()?;
+                                    let status = agent.get("status")?.as_str()?;
+
+                                    Some(Resource {
+                                        uri: format!("agent://{}", name),
+                                        name: name.to_string(),
+                                        title: Some(format!("{} Agent", name)),
+                                        description: Some(format!(
+                                            "NullBlock Agent: {} ({})",
+                                            name, status
+                                        )),
+                                        mime_type: Some("application/json".to_string()),
+                                        annotations: None,
+                                        size: None,
+                                        meta: None,
+                                    })
                                 })
-                            }).collect()
+                                .collect()
                         } else {
                             vec![]
                         }
@@ -414,7 +425,9 @@ pub async fn list_tools(
                             ) {
                                 let prefixed_name = format!("arb_{}", name);
                                 let mut props = HashMap::new();
-                                if let Some(schema_props) = input_schema.get("properties").and_then(|p| p.as_object()) {
+                                if let Some(schema_props) =
+                                    input_schema.get("properties").and_then(|p| p.as_object())
+                                {
                                     for (key, val) in schema_props {
                                         props.insert(key.clone(), val.clone());
                                     }
@@ -422,7 +435,11 @@ pub async fn list_tools(
                                 let required: Vec<String> = input_schema
                                     .get("required")
                                     .and_then(|r| r.as_array())
-                                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                                    .map(|arr| {
+                                        arr.iter()
+                                            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                            .collect()
+                                    })
                                     .unwrap_or_default();
 
                                 tools.push(Tool {
@@ -431,8 +448,16 @@ pub async fn list_tools(
                                     description: Some(format!("[ArbFarm] {}", description)),
                                     input_schema: InputSchema {
                                         schema_type: "object".to_string(),
-                                        properties: if props.is_empty() { None } else { Some(props) },
-                                        required: if required.is_empty() { None } else { Some(required) },
+                                        properties: if props.is_empty() {
+                                            None
+                                        } else {
+                                            Some(props)
+                                        },
+                                        required: if required.is_empty() {
+                                            None
+                                        } else {
+                                            Some(required)
+                                        },
                                     },
                                     output_schema: None,
                                     annotations: None,
@@ -448,7 +473,10 @@ pub async fn list_tools(
             }
         }
         Err(e) => {
-            warn!("⚠️ Failed to fetch ArbFarm tools: {}. ArbFarm tools will not be available.", e);
+            warn!(
+                "⚠️ Failed to fetch ArbFarm tools: {}. ArbFarm tools will not be available.",
+                e
+            );
         }
     }
 
@@ -473,31 +501,45 @@ pub async fn call_tool(
             "arguments": request.arguments.clone().unwrap_or_default()
         });
 
-        info!("🔀 Routing tool '{}' to ArbFarm as '{}'", request.name, original_name);
+        info!(
+            "🔀 Routing tool '{}' to ArbFarm as '{}'",
+            request.name, original_name
+        );
 
-        match state.http_client.post(&arbfarm_call_url).json(&body).send().await {
+        match state
+            .http_client
+            .post(&arbfarm_call_url)
+            .json(&body)
+            .send()
+            .await
+        {
             Ok(response) => {
                 if response.status().is_success() {
                     match response.json::<serde_json::Value>().await {
                         Ok(result) => {
                             // Parse ArbFarm response format
-                            let content = result.get("content")
+                            let content = result
+                                .get("content")
                                 .and_then(|c| c.as_array())
                                 .map(|arr| {
-                                    arr.iter().filter_map(|item| {
-                                        let text = item.get("text").and_then(|t| t.as_str())?;
-                                        Some(ContentBlock::Text {
-                                            text: text.to_string(),
-                                            annotations: None,
-                                            meta: None,
+                                    arr.iter()
+                                        .filter_map(|item| {
+                                            let text = item.get("text").and_then(|t| t.as_str())?;
+                                            Some(ContentBlock::Text {
+                                                text: text.to_string(),
+                                                annotations: None,
+                                                meta: None,
+                                            })
                                         })
-                                    }).collect::<Vec<_>>()
+                                        .collect::<Vec<_>>()
                                 })
-                                .unwrap_or_else(|| vec![ContentBlock::Text {
-                                    text: result.to_string(),
-                                    annotations: None,
-                                    meta: None,
-                                }]);
+                                .unwrap_or_else(|| {
+                                    vec![ContentBlock::Text {
+                                        text: result.to_string(),
+                                        annotations: None,
+                                        meta: None,
+                                    }]
+                                });
 
                             let is_error = result.get("isError").and_then(|e| e.as_bool());
 
@@ -548,14 +590,19 @@ pub async fn call_tool(
     match request.name.as_str() {
         "send_agent_message" => {
             let args = request.arguments.unwrap_or_default();
-            let agent_name = args.get("agent_name")
+            let agent_name = args
+                .get("agent_name")
                 .and_then(|v| v.as_str())
                 .ok_or(StatusCode::BAD_REQUEST)?;
-            let message = args.get("message")
+            let message = args
+                .get("message")
                 .and_then(|v| v.as_str())
                 .ok_or(StatusCode::BAD_REQUEST)?;
 
-            let url = format!("{}/api/agents/{}/chat", state.agents_service_url, agent_name);
+            let url = format!(
+                "{}/api/agents/{}/chat",
+                state.agents_service_url, agent_name
+            );
             let body = json!({
                 "message": message
             });
@@ -564,59 +611,62 @@ pub async fn call_tool(
                 Ok(response) => {
                     if response.status().is_success() {
                         match response.text().await {
-                            Ok(text) => {
-                                Ok(Json(CallToolResult {
-                                    content: vec![ContentBlock::Text { 
-                                        text, 
-                                        annotations: None, 
-                                        meta: None 
-                                    }],
-                                    structured_content: None,
-                                    is_error: Some(false),
-                                }))
-                            }
-                            Err(e) => {
-                                Ok(Json(CallToolResult {
-                                    content: vec![ContentBlock::Text { 
-                                        text: format!("Failed to read response: {}", e),
-                                        annotations: None, 
-                                        meta: None 
-                                    }],
-                                    structured_content: None,
-                                    is_error: Some(true),
-                                }))
-                            }
+                            Ok(text) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text {
+                                    text,
+                                    annotations: None,
+                                    meta: None,
+                                }],
+                                structured_content: None,
+                                is_error: Some(false),
+                            })),
+                            Err(e) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text {
+                                    text: format!("Failed to read response: {}", e),
+                                    annotations: None,
+                                    meta: None,
+                                }],
+                                structured_content: None,
+                                is_error: Some(true),
+                            })),
                         }
                     } else {
                         Ok(Json(CallToolResult {
-                            content: vec![ContentBlock::Text { 
+                            content: vec![ContentBlock::Text {
                                 text: format!("Agent returned status: {}", response.status()),
-                                annotations: None, 
-                                meta: None 
+                                annotations: None,
+                                meta: None,
                             }],
                             structured_content: None,
                             is_error: Some(true),
                         }))
                     }
                 }
-                Err(e) => {
-                    Ok(Json(CallToolResult {
-                        content: vec![ContentBlock::Text { 
-                            text: format!("Failed to send message: {}", e),
-                            annotations: None, 
-                            meta: None 
-                        }],
-                        structured_content: None,
-                        is_error: Some(true),
-                    }))
-                }
+                Err(e) => Ok(Json(CallToolResult {
+                    content: vec![ContentBlock::Text {
+                        text: format!("Failed to send message: {}", e),
+                        annotations: None,
+                        meta: None,
+                    }],
+                    structured_content: None,
+                    is_error: Some(true),
+                })),
             }
         }
         "create_task" => {
             let args = request.arguments.unwrap_or_default();
-            let name = args.get("name").and_then(|v| v.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
-            let description = args.get("description").and_then(|v| v.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
-            let priority = args.get("priority").and_then(|v| v.as_str()).unwrap_or("medium");
+            let name = args
+                .get("name")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+            let description = args
+                .get("description")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
+            let priority = args
+                .get("priority")
+                .and_then(|v| v.as_str())
+                .unwrap_or("medium");
 
             let url = format!("{}/tasks", state.agents_service_url);
             let body = json!({
@@ -631,57 +681,57 @@ pub async fn call_tool(
                 Ok(response) => {
                     if response.status().is_success() {
                         match response.text().await {
-                            Ok(text) => {
-                                Ok(Json(CallToolResult {
-                                    content: vec![ContentBlock::Text { 
-                                        text, 
-                                        annotations: None, 
-                                        meta: None 
-                                    }],
-                                    structured_content: None,
-                                    is_error: Some(false),
-                                }))
-                            }
-                            Err(e) => {
-                                Ok(Json(CallToolResult {
-                                    content: vec![ContentBlock::Text { 
-                                        text: format!("Failed to read response: {}", e),
-                                        annotations: None, 
-                                        meta: None 
-                                    }],
-                                    structured_content: None,
-                                    is_error: Some(true),
-                                }))
-                            }
+                            Ok(text) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text {
+                                    text,
+                                    annotations: None,
+                                    meta: None,
+                                }],
+                                structured_content: None,
+                                is_error: Some(false),
+                            })),
+                            Err(e) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text {
+                                    text: format!("Failed to read response: {}", e),
+                                    annotations: None,
+                                    meta: None,
+                                }],
+                                structured_content: None,
+                                is_error: Some(true),
+                            })),
                         }
                     } else {
                         Ok(Json(CallToolResult {
-                            content: vec![ContentBlock::Text { 
-                                text: format!("Task service returned status: {}", response.status()),
-                                annotations: None, 
-                                meta: None 
+                            content: vec![ContentBlock::Text {
+                                text: format!(
+                                    "Task service returned status: {}",
+                                    response.status()
+                                ),
+                                annotations: None,
+                                meta: None,
                             }],
                             structured_content: None,
                             is_error: Some(true),
                         }))
                     }
                 }
-                Err(e) => {
-                    Ok(Json(CallToolResult {
-                        content: vec![ContentBlock::Text { 
-                            text: format!("Failed to create task: {}", e),
-                            annotations: None, 
-                            meta: None 
-                        }],
-                        structured_content: None,
-                        is_error: Some(true),
-                    }))
-                }
+                Err(e) => Ok(Json(CallToolResult {
+                    content: vec![ContentBlock::Text {
+                        text: format!("Failed to create task: {}", e),
+                        annotations: None,
+                        meta: None,
+                    }],
+                    structured_content: None,
+                    is_error: Some(true),
+                })),
             }
         }
         "get_task_status" => {
             let args = request.arguments.unwrap_or_default();
-            let task_id = args.get("task_id").and_then(|v| v.as_str()).ok_or(StatusCode::BAD_REQUEST)?;
+            let task_id = args
+                .get("task_id")
+                .and_then(|v| v.as_str())
+                .ok_or(StatusCode::BAD_REQUEST)?;
 
             let url = format!("{}/tasks/{}", state.agents_service_url, task_id);
 
@@ -689,64 +739,65 @@ pub async fn call_tool(
                 Ok(response) => {
                     if response.status().is_success() {
                         match response.text().await {
-                            Ok(text) => {
-                                Ok(Json(CallToolResult {
-                                    content: vec![ContentBlock::Text {
-                                        text,
-                                        annotations: None,
-                                        meta: None
-                                    }],
-                                    structured_content: None,
-                                    is_error: Some(false),
-                                }))
-                            }
-                            Err(e) => {
-                                Ok(Json(CallToolResult {
-                                    content: vec![ContentBlock::Text {
-                                        text: format!("Failed to read response: {}", e),
-                                        annotations: None,
-                                        meta: None
-                                    }],
-                                    structured_content: None,
-                                    is_error: Some(true),
-                                }))
-                            }
+                            Ok(text) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text {
+                                    text,
+                                    annotations: None,
+                                    meta: None,
+                                }],
+                                structured_content: None,
+                                is_error: Some(false),
+                            })),
+                            Err(e) => Ok(Json(CallToolResult {
+                                content: vec![ContentBlock::Text {
+                                    text: format!("Failed to read response: {}", e),
+                                    annotations: None,
+                                    meta: None,
+                                }],
+                                structured_content: None,
+                                is_error: Some(true),
+                            })),
                         }
                     } else {
                         Ok(Json(CallToolResult {
                             content: vec![ContentBlock::Text {
-                                text: format!("Task not found or service error: {}", response.status()),
+                                text: format!(
+                                    "Task not found or service error: {}",
+                                    response.status()
+                                ),
                                 annotations: None,
-                                meta: None
+                                meta: None,
                             }],
                             structured_content: None,
                             is_error: Some(true),
                         }))
                     }
                 }
-                Err(e) => {
-                    Ok(Json(CallToolResult {
-                        content: vec![ContentBlock::Text {
-                            text: format!("Failed to fetch task: {}", e),
-                            annotations: None,
-                            meta: None
-                        }],
-                        structured_content: None,
-                        is_error: Some(true),
-                    }))
-                }
+                Err(e) => Ok(Json(CallToolResult {
+                    content: vec![ContentBlock::Text {
+                        text: format!("Failed to fetch task: {}", e),
+                        annotations: None,
+                        meta: None,
+                    }],
+                    structured_content: None,
+                    is_error: Some(true),
+                })),
             }
         }
         // Engrams Tools - All calls go through Erebus (dogfooding)
         "list_engrams" => {
             let args = request.arguments.unwrap_or_default();
-            let wallet_address = args.get("wallet_address")
+            let wallet_address = args
+                .get("wallet_address")
                 .and_then(|v| v.as_str())
                 .ok_or(StatusCode::BAD_REQUEST)?;
             let engram_type = args.get("engram_type").and_then(|v| v.as_str());
             let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(50);
 
-            let mut url = format!("{}/api/engrams/wallet/{}", state.erebus_base_url, wallet_address);
+            let mut url = format!(
+                "{}/api/engrams/wallet/{}",
+                state.erebus_base_url, wallet_address
+            );
             if let Some(etype) = engram_type {
                 url = format!("{}?type={}&limit={}", url, etype, limit);
             } else {
@@ -760,24 +811,30 @@ pub async fn call_tool(
                     if response.status().is_success() {
                         match response.text().await {
                             Ok(text) => Ok(Json(CallToolResult {
-                                content: vec![ContentBlock::Text { text, annotations: None, meta: None }],
+                                content: vec![ContentBlock::Text {
+                                    text,
+                                    annotations: None,
+                                    meta: None,
+                                }],
                                 structured_content: None,
                                 is_error: Some(false),
                             })),
                             Err(e) => Ok(Json(CallToolResult {
                                 content: vec![ContentBlock::Text {
                                     text: format!("Failed to read response: {}", e),
-                                    annotations: None, meta: None
+                                    annotations: None,
+                                    meta: None,
                                 }],
                                 structured_content: None,
                                 is_error: Some(true),
-                            }))
+                            })),
                         }
                     } else {
                         Ok(Json(CallToolResult {
                             content: vec![ContentBlock::Text {
                                 text: format!("Engrams service error: {}", response.status()),
-                                annotations: None, meta: None
+                                annotations: None,
+                                meta: None,
                             }],
                             structured_content: None,
                             is_error: Some(true),
@@ -787,16 +844,18 @@ pub async fn call_tool(
                 Err(e) => Ok(Json(CallToolResult {
                     content: vec![ContentBlock::Text {
                         text: format!("Failed to connect to Erebus: {}", e),
-                        annotations: None, meta: None
+                        annotations: None,
+                        meta: None,
                     }],
                     structured_content: None,
                     is_error: Some(true),
-                }))
+                })),
             }
         }
         "get_engram" => {
             let args = request.arguments.unwrap_or_default();
-            let engram_id = args.get("engram_id")
+            let engram_id = args
+                .get("engram_id")
                 .and_then(|v| v.as_str())
                 .ok_or(StatusCode::BAD_REQUEST)?;
 
@@ -808,24 +867,33 @@ pub async fn call_tool(
                     if response.status().is_success() {
                         match response.text().await {
                             Ok(text) => Ok(Json(CallToolResult {
-                                content: vec![ContentBlock::Text { text, annotations: None, meta: None }],
+                                content: vec![ContentBlock::Text {
+                                    text,
+                                    annotations: None,
+                                    meta: None,
+                                }],
                                 structured_content: None,
                                 is_error: Some(false),
                             })),
                             Err(e) => Ok(Json(CallToolResult {
                                 content: vec![ContentBlock::Text {
                                     text: format!("Failed to read response: {}", e),
-                                    annotations: None, meta: None
+                                    annotations: None,
+                                    meta: None,
                                 }],
                                 structured_content: None,
                                 is_error: Some(true),
-                            }))
+                            })),
                         }
                     } else {
                         Ok(Json(CallToolResult {
                             content: vec![ContentBlock::Text {
-                                text: format!("Engram not found or service error: {}", response.status()),
-                                annotations: None, meta: None
+                                text: format!(
+                                    "Engram not found or service error: {}",
+                                    response.status()
+                                ),
+                                annotations: None,
+                                meta: None,
                             }],
                             structured_content: None,
                             is_error: Some(true),
@@ -835,25 +903,30 @@ pub async fn call_tool(
                 Err(e) => Ok(Json(CallToolResult {
                     content: vec![ContentBlock::Text {
                         text: format!("Failed to connect to Erebus: {}", e),
-                        annotations: None, meta: None
+                        annotations: None,
+                        meta: None,
                     }],
                     structured_content: None,
                     is_error: Some(true),
-                }))
+                })),
             }
         }
         "create_engram" => {
             let args = request.arguments.unwrap_or_default();
-            let wallet_address = args.get("wallet_address")
+            let wallet_address = args
+                .get("wallet_address")
                 .and_then(|v| v.as_str())
                 .ok_or(StatusCode::BAD_REQUEST)?;
-            let engram_type = args.get("engram_type")
+            let engram_type = args
+                .get("engram_type")
                 .and_then(|v| v.as_str())
                 .ok_or(StatusCode::BAD_REQUEST)?;
-            let key = args.get("key")
+            let key = args
+                .get("key")
                 .and_then(|v| v.as_str())
                 .ok_or(StatusCode::BAD_REQUEST)?;
-            let content = args.get("content")
+            let content = args
+                .get("content")
                 .and_then(|v| v.as_str())
                 .ok_or(StatusCode::BAD_REQUEST)?;
             let metadata = args.get("metadata").cloned();
@@ -866,7 +939,9 @@ pub async fn call_tool(
                 "content": content
             });
             if let Some(meta) = metadata {
-                body.as_object_mut().unwrap().insert("metadata".to_string(), meta);
+                body.as_object_mut()
+                    .unwrap()
+                    .insert("metadata".to_string(), meta);
             }
 
             info!("🧠 Creating engram via Erebus: {}", url);
@@ -876,24 +951,30 @@ pub async fn call_tool(
                     if response.status().is_success() {
                         match response.text().await {
                             Ok(text) => Ok(Json(CallToolResult {
-                                content: vec![ContentBlock::Text { text, annotations: None, meta: None }],
+                                content: vec![ContentBlock::Text {
+                                    text,
+                                    annotations: None,
+                                    meta: None,
+                                }],
                                 structured_content: None,
                                 is_error: Some(false),
                             })),
                             Err(e) => Ok(Json(CallToolResult {
                                 content: vec![ContentBlock::Text {
                                     text: format!("Failed to read response: {}", e),
-                                    annotations: None, meta: None
+                                    annotations: None,
+                                    meta: None,
                                 }],
                                 structured_content: None,
                                 is_error: Some(true),
-                            }))
+                            })),
                         }
                     } else {
                         Ok(Json(CallToolResult {
                             content: vec![ContentBlock::Text {
                                 text: format!("Failed to create engram: {}", response.status()),
-                                annotations: None, meta: None
+                                annotations: None,
+                                meta: None,
                             }],
                             structured_content: None,
                             is_error: Some(true),
@@ -903,16 +984,18 @@ pub async fn call_tool(
                 Err(e) => Ok(Json(CallToolResult {
                     content: vec![ContentBlock::Text {
                         text: format!("Failed to connect to Erebus: {}", e),
-                        annotations: None, meta: None
+                        annotations: None,
+                        meta: None,
                     }],
                     structured_content: None,
                     is_error: Some(true),
-                }))
+                })),
             }
         }
         "update_engram" => {
             let args = request.arguments.unwrap_or_default();
-            let engram_id = args.get("engram_id")
+            let engram_id = args
+                .get("engram_id")
                 .and_then(|v| v.as_str())
                 .ok_or(StatusCode::BAD_REQUEST)?;
             let content = args.get("content").and_then(|v| v.as_str());
@@ -921,10 +1004,14 @@ pub async fn call_tool(
             let url = format!("{}/api/engrams/{}", state.erebus_base_url, engram_id);
             let mut body = json!({});
             if let Some(c) = content {
-                body.as_object_mut().unwrap().insert("content".to_string(), json!(c));
+                body.as_object_mut()
+                    .unwrap()
+                    .insert("content".to_string(), json!(c));
             }
             if let Some(meta) = metadata {
-                body.as_object_mut().unwrap().insert("metadata".to_string(), meta);
+                body.as_object_mut()
+                    .unwrap()
+                    .insert("metadata".to_string(), meta);
             }
 
             info!("🧠 Updating engram via Erebus: {}", url);
@@ -934,24 +1021,30 @@ pub async fn call_tool(
                     if response.status().is_success() {
                         match response.text().await {
                             Ok(text) => Ok(Json(CallToolResult {
-                                content: vec![ContentBlock::Text { text, annotations: None, meta: None }],
+                                content: vec![ContentBlock::Text {
+                                    text,
+                                    annotations: None,
+                                    meta: None,
+                                }],
                                 structured_content: None,
                                 is_error: Some(false),
                             })),
                             Err(e) => Ok(Json(CallToolResult {
                                 content: vec![ContentBlock::Text {
                                     text: format!("Failed to read response: {}", e),
-                                    annotations: None, meta: None
+                                    annotations: None,
+                                    meta: None,
                                 }],
                                 structured_content: None,
                                 is_error: Some(true),
-                            }))
+                            })),
                         }
                     } else {
                         Ok(Json(CallToolResult {
                             content: vec![ContentBlock::Text {
                                 text: format!("Failed to update engram: {}", response.status()),
-                                annotations: None, meta: None
+                                annotations: None,
+                                meta: None,
                             }],
                             structured_content: None,
                             is_error: Some(true),
@@ -961,16 +1054,18 @@ pub async fn call_tool(
                 Err(e) => Ok(Json(CallToolResult {
                     content: vec![ContentBlock::Text {
                         text: format!("Failed to connect to Erebus: {}", e),
-                        annotations: None, meta: None
+                        annotations: None,
+                        meta: None,
                     }],
                     structured_content: None,
                     is_error: Some(true),
-                }))
+                })),
             }
         }
         "delete_engram" => {
             let args = request.arguments.unwrap_or_default();
-            let engram_id = args.get("engram_id")
+            let engram_id = args
+                .get("engram_id")
                 .and_then(|v| v.as_str())
                 .ok_or(StatusCode::BAD_REQUEST)?;
 
@@ -983,7 +1078,8 @@ pub async fn call_tool(
                         Ok(Json(CallToolResult {
                             content: vec![ContentBlock::Text {
                                 text: format!("Engram {} deleted successfully", engram_id),
-                                annotations: None, meta: None
+                                annotations: None,
+                                meta: None,
                             }],
                             structured_content: None,
                             is_error: Some(false),
@@ -992,7 +1088,8 @@ pub async fn call_tool(
                         Ok(Json(CallToolResult {
                             content: vec![ContentBlock::Text {
                                 text: format!("Failed to delete engram: {}", response.status()),
-                                annotations: None, meta: None
+                                annotations: None,
+                                meta: None,
                             }],
                             structured_content: None,
                             is_error: Some(true),
@@ -1002,19 +1099,22 @@ pub async fn call_tool(
                 Err(e) => Ok(Json(CallToolResult {
                     content: vec![ContentBlock::Text {
                         text: format!("Failed to connect to Erebus: {}", e),
-                        annotations: None, meta: None
+                        annotations: None,
+                        meta: None,
                     }],
                     structured_content: None,
                     is_error: Some(true),
-                }))
+                })),
             }
         }
         "search_engrams" => {
             let args = request.arguments.unwrap_or_default();
-            let wallet_address = args.get("wallet_address")
+            let wallet_address = args
+                .get("wallet_address")
                 .and_then(|v| v.as_str())
                 .ok_or(StatusCode::BAD_REQUEST)?;
-            let query = args.get("query")
+            let query = args
+                .get("query")
                 .and_then(|v| v.as_str())
                 .ok_or(StatusCode::BAD_REQUEST)?;
             let engram_type = args.get("engram_type").and_then(|v| v.as_str());
@@ -1025,7 +1125,9 @@ pub async fn call_tool(
                 "query": query
             });
             if let Some(etype) = engram_type {
-                body.as_object_mut().unwrap().insert("engram_type".to_string(), json!(etype));
+                body.as_object_mut()
+                    .unwrap()
+                    .insert("engram_type".to_string(), json!(etype));
             }
 
             info!("🧠 Searching engrams via Erebus: {}", url);
@@ -1035,24 +1137,30 @@ pub async fn call_tool(
                     if response.status().is_success() {
                         match response.text().await {
                             Ok(text) => Ok(Json(CallToolResult {
-                                content: vec![ContentBlock::Text { text, annotations: None, meta: None }],
+                                content: vec![ContentBlock::Text {
+                                    text,
+                                    annotations: None,
+                                    meta: None,
+                                }],
                                 structured_content: None,
                                 is_error: Some(false),
                             })),
                             Err(e) => Ok(Json(CallToolResult {
                                 content: vec![ContentBlock::Text {
                                     text: format!("Failed to read response: {}", e),
-                                    annotations: None, meta: None
+                                    annotations: None,
+                                    meta: None,
                                 }],
                                 structured_content: None,
                                 is_error: Some(true),
-                            }))
+                            })),
                         }
                     } else {
                         Ok(Json(CallToolResult {
                             content: vec![ContentBlock::Text {
                                 text: format!("Search failed: {}", response.status()),
-                                annotations: None, meta: None
+                                annotations: None,
+                                meta: None,
                             }],
                             structured_content: None,
                             is_error: Some(true),
@@ -1062,20 +1170,21 @@ pub async fn call_tool(
                 Err(e) => Ok(Json(CallToolResult {
                     content: vec![ContentBlock::Text {
                         text: format!("Failed to connect to Erebus: {}", e),
-                        annotations: None, meta: None
+                        annotations: None,
+                        meta: None,
                     }],
                     structured_content: None,
                     is_error: Some(true),
-                }))
+                })),
             }
         }
         _ => {
             warn!("⚠️ Unknown tool: {}", request.name);
             Ok(Json(CallToolResult {
-                content: vec![ContentBlock::Text { 
+                content: vec![ContentBlock::Text {
                     text: format!("Unknown tool: {}", request.name),
-                    annotations: None, 
-                    meta: None 
+                    annotations: None,
+                    meta: None,
                 }],
                 structured_content: None,
                 is_error: Some(true),
@@ -1114,14 +1223,14 @@ pub async fn list_prompts(
             name: "task_template".to_string(),
             title: Some("Task Template".to_string()),
             description: Some("Create a task from a template".to_string()),
-            arguments: Some(vec![
-                PromptArgument {
-                    name: "type".to_string(),
-                    title: Some("Task Type".to_string()),
-                    description: Some("Task type (e.g., 'analysis', 'research', 'development')".to_string()),
-                    required: Some(true),
-                },
-            ]),
+            arguments: Some(vec![PromptArgument {
+                name: "type".to_string(),
+                title: Some("Task Type".to_string()),
+                description: Some(
+                    "Task type (e.g., 'analysis', 'research', 'development')".to_string(),
+                ),
+                required: Some(true),
+            }]),
             meta: None,
         },
     ];
@@ -1144,16 +1253,14 @@ pub async fn get_prompt(
             let agent = args.get("agent").ok_or(StatusCode::BAD_REQUEST)?;
             let context = args.get("context").map(|s| s.as_str()).unwrap_or("");
 
-            let mut messages = vec![
-                PromptMessage {
-                    role: "system".to_string(),
-                    content: ContentBlock::Text {
-                        text: format!("You are chatting with the NullBlock {} agent.", agent),
-                        annotations: None,
-                        meta: None,
-                    },
+            let mut messages = vec![PromptMessage {
+                role: "system".to_string(),
+                content: ContentBlock::Text {
+                    text: format!("You are chatting with the NullBlock {} agent.", agent),
+                    annotations: None,
+                    meta: None,
                 },
-            ];
+            }];
 
             if !context.is_empty() {
                 messages.push(PromptMessage {
@@ -1213,4 +1320,3 @@ pub async fn get_prompt(
         }
     }
 }
-

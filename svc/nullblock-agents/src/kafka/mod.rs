@@ -3,11 +3,11 @@
 
 #![allow(dead_code)]
 
-use rdkafka::config::ClientConfig;
-use rdkafka::producer::{FutureProducer, FutureRecord};
-use rdkafka::consumer::{StreamConsumer, Consumer};
-use rdkafka::Message;
 use anyhow::Result;
+use rdkafka::config::ClientConfig;
+use rdkafka::consumer::{Consumer, StreamConsumer};
+use rdkafka::producer::{FutureProducer, FutureRecord};
+use rdkafka::Message;
 use serde::Serialize;
 use std::time::Duration;
 
@@ -48,12 +48,15 @@ impl KafkaProducer {
         Ok(Self { producer })
     }
 
-    pub async fn publish_event<T: Serialize>(&self, topic: &str, key: &str, event: &T) -> Result<()> {
+    pub async fn publish_event<T: Serialize>(
+        &self,
+        topic: &str,
+        key: &str,
+        event: &T,
+    ) -> Result<()> {
         let payload = serde_json::to_string(event)?;
 
-        let record = FutureRecord::to(topic)
-            .key(key)
-            .payload(&payload);
+        let record = FutureRecord::to(topic).key(key).payload(&payload);
 
         self.producer
             .send(record, Duration::from_secs(5))
@@ -65,11 +68,13 @@ impl KafkaProducer {
     }
 
     pub async fn publish_task_event(&self, event: TaskLifecycleEvent) -> Result<()> {
-        self.publish_event("task.lifecycle", &event.task_id, &event).await
+        self.publish_event("task.lifecycle", &event.task_id, &event)
+            .await
     }
 
     pub async fn publish_agent_event(&self, event: AgentStatusEvent) -> Result<()> {
-        self.publish_event("agent.status", &event.agent_id.to_string(), &event).await
+        self.publish_event("agent.status", &event.agent_id.to_string(), &event)
+            .await
     }
 }
 
@@ -92,7 +97,8 @@ impl KafkaConsumer {
     }
 
     pub async fn subscribe_to_user_events(&self) -> Result<()> {
-        self.consumer.subscribe(&["user.created", "user.updated", "user.deleted"])?;
+        self.consumer
+            .subscribe(&["user.created", "user.updated", "user.deleted"])?;
         tracing::info!("📥 Subscribed to user events from Erebus");
         Ok(())
     }

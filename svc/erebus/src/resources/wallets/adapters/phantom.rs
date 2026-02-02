@@ -1,6 +1,6 @@
 use crate::resources::wallets::chains::{ChainSignatureVerifier, SolanaSignatureVerifier};
 use crate::resources::wallets::traits::{
-    ChallengeContext, ChainType, WalletAdapter, WalletError, WalletInfo,
+    ChainType, ChallengeContext, WalletAdapter, WalletError, WalletInfo,
 };
 
 #[derive(Debug)]
@@ -70,9 +70,10 @@ impl WalletAdapter for PhantomAdapter {
         chain: &ChainType,
     ) -> Result<bool, WalletError> {
         match chain {
-            ChainType::Solana => self
-                .solana_verifier
-                .verify_signature(message, signature, wallet_address),
+            ChainType::Solana => {
+                self.solana_verifier
+                    .verify_signature(message, signature, wallet_address)
+            }
             _ => Err(WalletError::UnsupportedChain(chain.clone())),
         }
     }

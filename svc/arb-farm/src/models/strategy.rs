@@ -96,13 +96,25 @@ pub struct RiskParams {
     pub let_winners_run: bool,
 }
 
-fn default_base_currency() -> String { "sol".to_string() }
-fn default_capital_allocation_percent() -> f64 { 25.0 }
+fn default_base_currency() -> String {
+    "sol".to_string()
+}
+fn default_capital_allocation_percent() -> f64 {
+    25.0
+}
 
-fn default_auto_execute() -> bool { false }
-fn default_require_consensus() -> bool { false }
-fn default_require_confirmation() -> bool { true }
-fn default_staleness_hours() -> u32 { 24 }
+fn default_auto_execute() -> bool {
+    false
+}
+fn default_require_consensus() -> bool {
+    false
+}
+fn default_require_confirmation() -> bool {
+    true
+}
+fn default_staleness_hours() -> u32 {
+    24
+}
 
 impl Default for RiskParams {
     fn default() -> Self {
@@ -118,22 +130,24 @@ impl Default for RiskParams {
             require_consensus: false,
             require_confirmation: true,
             staleness_threshold_hours: 24,
-            stop_loss_percent: Some(10.0),     // DEFENSIVE: 10% tight stop
-            take_profit_percent: Some(15.0),   // DEFENSIVE: 15% TP (strong momentum extends)
-            trailing_stop_percent: Some(8.0),  // DEFENSIVE: 8% trailing stop
-            time_limit_minutes: Some(5),       // DEFENSIVE: 5 min
+            stop_loss_percent: Some(10.0), // DEFENSIVE: 10% tight stop
+            take_profit_percent: Some(15.0), // DEFENSIVE: 15% TP (strong momentum extends)
+            trailing_stop_percent: Some(8.0), // DEFENSIVE: 8% trailing stop
+            time_limit_minutes: Some(5),   // DEFENSIVE: 5 min
             base_currency: "sol".to_string(),
             max_capital_allocation_percent: 25.0,
             concurrent_positions: Some(1),
-            momentum_adaptive_exits: true,     // Enable momentum tracking by default
-            let_winners_run: true,             // Let profitable positions run
+            momentum_adaptive_exits: true, // Enable momentum tracking by default
+            let_winners_run: true,         // Let profitable positions run
         }
     }
 }
 
 impl RiskParams {
     pub fn to_exit_config(&self) -> crate::execution::ExitConfig {
-        use crate::execution::{BaseCurrency, ExitMode, MomentumAdaptiveConfig, AdaptivePartialTakeProfit};
+        use crate::execution::{
+            AdaptivePartialTakeProfit, BaseCurrency, ExitMode, MomentumAdaptiveConfig,
+        };
 
         let base = match self.base_currency.to_lowercase().as_str() {
             "usdc" => BaseCurrency::Usdc,
@@ -286,14 +300,14 @@ impl RiskParams {
             require_consensus: false,
             require_confirmation: true,
             staleness_threshold_hours: 48,
-            stop_loss_percent: Some(10.0),     // DEFENSIVE
-            take_profit_percent: Some(15.0),   // DEFENSIVE
-            trailing_stop_percent: Some(8.0),  // DEFENSIVE
-            time_limit_minutes: Some(5),       // DEFENSIVE
+            stop_loss_percent: Some(10.0),    // DEFENSIVE
+            take_profit_percent: Some(15.0),  // DEFENSIVE
+            trailing_stop_percent: Some(8.0), // DEFENSIVE
+            time_limit_minutes: Some(5),      // DEFENSIVE
             base_currency: "sol".to_string(),
             max_capital_allocation_percent: 40.0,
             concurrent_positions: Some(5),
-            momentum_adaptive_exits: true,  // Enable for aggressive strategy
+            momentum_adaptive_exits: true, // Enable for aggressive strategy
             let_winners_run: true,
         }
     }
@@ -327,7 +341,9 @@ impl Strategy {
     }
 
     pub fn can_auto_execute(&self) -> bool {
-        self.risk_params.auto_execute_enabled && !self.is_stale() && !self.risk_params.require_confirmation
+        self.risk_params.auto_execute_enabled
+            && !self.is_stale()
+            && !self.risk_params.require_confirmation
     }
 }
 
@@ -427,30 +443,52 @@ pub struct CurveStrategyParams {
     pub max_recent_pump_percent: f64,
 }
 
-fn default_min_graduation_progress() -> f64 { 85.0 }  // Narrowed entry window (was 70%)
-fn default_max_graduation_progress() -> f64 { 98.0 }
-fn default_max_holder_concentration() -> f64 { 30.0 } // Tighter to reduce dumps (was 50%)
-fn default_min_holder_count() -> u32 { 100 }           // More distributed (was 50)
-fn default_entry_sol_amount() -> f64 { 0.1 }
-fn default_exit_on_graduation() -> bool { true }
-fn default_graduation_sell_delay_ms() -> u64 { 50 }    // Faster exit (was 500ms)
-fn default_post_graduation_momentum_delay_ms() -> u64 { 250 } // Faster (was 1000ms)
-fn default_min_progress_velocity() -> f64 { 0.5 }      // % per minute acceleration required
-fn default_min_price_velocity() -> f64 { 1.0 }         // % per minute price increase required
-fn default_max_recent_pump_percent() -> f64 { 15.0 }   // Skip if pumped >15% in last 2 min
+fn default_min_graduation_progress() -> f64 {
+    85.0
+} // Narrowed entry window (was 70%)
+fn default_max_graduation_progress() -> f64 {
+    98.0
+}
+fn default_max_holder_concentration() -> f64 {
+    30.0
+} // Tighter to reduce dumps (was 50%)
+fn default_min_holder_count() -> u32 {
+    100
+} // More distributed (was 50)
+fn default_entry_sol_amount() -> f64 {
+    0.1
+}
+fn default_exit_on_graduation() -> bool {
+    true
+}
+fn default_graduation_sell_delay_ms() -> u64 {
+    50
+} // Faster exit (was 500ms)
+fn default_post_graduation_momentum_delay_ms() -> u64 {
+    250
+} // Faster (was 1000ms)
+fn default_min_progress_velocity() -> f64 {
+    0.5
+} // % per minute acceleration required
+fn default_min_price_velocity() -> f64 {
+    1.0
+} // % per minute price increase required
+fn default_max_recent_pump_percent() -> f64 {
+    15.0
+} // Skip if pumped >15% in last 2 min
 
 impl Default for CurveStrategyParams {
     fn default() -> Self {
         Self {
             mode: CurveStrategyMode::GraduationArbitrage,
-            min_graduation_progress: 85.0,   // Narrowed entry window (was 70%)
+            min_graduation_progress: 85.0, // Narrowed entry window (was 70%)
             max_graduation_progress: 98.0,
             min_volume_24h_sol: 10.0,
-            max_holder_concentration: 30.0,  // Tighter to reduce dumps (was 50%)
-            min_holder_count: 100,           // More distributed (was 50)
+            max_holder_concentration: 30.0, // Tighter to reduce dumps (was 50%)
+            min_holder_count: 100,          // More distributed (was 50)
             entry_sol_amount: 0.1,
             exit_on_graduation: true,
-            graduation_sell_delay_ms: 50,    // Faster exit (was 500ms)
+            graduation_sell_delay_ms: 50, // Faster exit (was 500ms)
             venue_filter: None,
             min_score: None,
             post_graduation_momentum_sell: false,
@@ -469,18 +507,18 @@ impl CurveStrategyParams {
             min_graduation_progress: 95.0,
             max_graduation_progress: 99.5,
             min_volume_24h_sol: 50.0,
-            max_holder_concentration: 25.0,  // Tighter for fast snipes (was 40%)
+            max_holder_concentration: 25.0, // Tighter for fast snipes (was 40%)
             min_holder_count: 100,
             entry_sol_amount: 0.5,
             exit_on_graduation: true,
-            graduation_sell_delay_ms: 50,    // Faster (was 100ms)
+            graduation_sell_delay_ms: 50, // Faster (was 100ms)
             venue_filter: None,
             min_score: Some(70),
             post_graduation_momentum_sell: true,
-            post_graduation_momentum_delay_ms: 250,  // Faster (was 500ms)
-            min_progress_velocity: 1.0,      // Higher velocity required for snipes
-            min_price_velocity: 2.0,         // Strong upward momentum
-            max_recent_pump_percent: 10.0,   // Stricter FOMO filter
+            post_graduation_momentum_delay_ms: 250, // Faster (was 500ms)
+            min_progress_velocity: 1.0,             // Higher velocity required for snipes
+            min_price_velocity: 2.0,                // Strong upward momentum
+            max_recent_pump_percent: 10.0,          // Stricter FOMO filter
         }
     }
 
@@ -490,8 +528,8 @@ impl CurveStrategyParams {
             min_graduation_progress: 50.0,
             max_graduation_progress: 85.0,
             min_volume_24h_sol: 20.0,
-            max_holder_concentration: 40.0,  // Tighter (was 60%)
-            min_holder_count: 50,            // More distributed (was 30)
+            max_holder_concentration: 40.0, // Tighter (was 60%)
+            min_holder_count: 50,           // More distributed (was 30)
             entry_sol_amount: 0.2,
             exit_on_graduation: false,
             graduation_sell_delay_ms: 0,
@@ -499,13 +537,19 @@ impl CurveStrategyParams {
             min_score: None,
             post_graduation_momentum_sell: false,
             post_graduation_momentum_delay_ms: 0,
-            min_progress_velocity: 0.0,      // No velocity requirement for scalping
-            min_price_velocity: 0.0,         // No velocity requirement
-            max_recent_pump_percent: 20.0,   // More permissive for scalps
+            min_progress_velocity: 0.0, // No velocity requirement for scalping
+            min_price_velocity: 0.0,    // No velocity requirement
+            max_recent_pump_percent: 20.0, // More permissive for scalps
         }
     }
 
-    pub fn matches_candidate(&self, progress: f64, volume_sol: f64, holder_concentration: f64, holder_count: u32) -> bool {
+    pub fn matches_candidate(
+        &self,
+        progress: f64,
+        volume_sol: f64,
+        holder_concentration: f64,
+        holder_count: u32,
+    ) -> bool {
         progress >= self.min_graduation_progress
             && progress <= self.max_graduation_progress
             && volume_sol >= self.min_volume_24h_sol

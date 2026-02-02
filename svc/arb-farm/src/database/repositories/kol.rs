@@ -208,13 +208,12 @@ impl KolRepository {
     }
 
     pub async fn get_entity(&self, id: Uuid) -> AppResult<Option<KolEntityRecord>> {
-        let record = sqlx::query_as::<_, KolEntityRecord>(
-            r#"SELECT * FROM arb_kol_entities WHERE id = $1"#,
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+        let record =
+            sqlx::query_as::<_, KolEntityRecord>(r#"SELECT * FROM arb_kol_entities WHERE id = $1"#)
+                .bind(id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(record)
     }
@@ -231,7 +230,11 @@ impl KolRepository {
         Ok(record)
     }
 
-    pub async fn update_entity(&self, id: Uuid, update: UpdateKolEntityRecord) -> AppResult<KolEntityRecord> {
+    pub async fn update_entity(
+        &self,
+        id: Uuid,
+        update: UpdateKolEntityRecord,
+    ) -> AppResult<KolEntityRecord> {
         let current = self
             .get_entity(id)
             .await?
@@ -361,7 +364,10 @@ impl KolRepository {
         Ok(count.0)
     }
 
-    pub async fn get_entities_for_copy(&self, min_trust_score: f64) -> AppResult<Vec<KolEntityRecord>> {
+    pub async fn get_entities_for_copy(
+        &self,
+        min_trust_score: f64,
+    ) -> AppResult<Vec<KolEntityRecord>> {
         let records = sqlx::query_as::<_, KolEntityRecord>(
             r#"
             SELECT * FROM arb_kol_entities
@@ -476,7 +482,10 @@ impl KolRepository {
         Ok(records)
     }
 
-    pub async fn record_copy_trade(&self, copy: CreateCopyTradeRecord) -> AppResult<CopyTradeRecord> {
+    pub async fn record_copy_trade(
+        &self,
+        copy: CreateCopyTradeRecord,
+    ) -> AppResult<CopyTradeRecord> {
         let record = sqlx::query_as::<_, CopyTradeRecord>(
             r#"
             INSERT INTO arb_copy_trades (
@@ -498,7 +507,11 @@ impl KolRepository {
         Ok(record)
     }
 
-    pub async fn update_copy_trade(&self, id: Uuid, update: UpdateCopyTradeRecord) -> AppResult<CopyTradeRecord> {
+    pub async fn update_copy_trade(
+        &self,
+        id: Uuid,
+        update: UpdateCopyTradeRecord,
+    ) -> AppResult<CopyTradeRecord> {
         let status_str = update.status.map(|s| match s {
             CopyTradeStatus::Pending => "pending",
             CopyTradeStatus::Executing => "executing",

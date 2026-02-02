@@ -1,17 +1,16 @@
 use axum::{
     extract::Json,
-    response::Json as ResponseJson,
     http::StatusCode,
+    response::Json as ResponseJson,
     routing::{get, post},
     Router,
 };
 use serde::Serialize;
 use serde_json::{json, Value};
-use tracing::{info, error};
+use tracing::{error, info};
 
 fn get_protocols_service_url() -> String {
-    std::env::var("PROTOCOLS_SERVICE_URL")
-        .unwrap_or_else(|_| "http://localhost:8001".to_string())
+    std::env::var("PROTOCOLS_SERVICE_URL").unwrap_or_else(|_| "http://localhost:8001".to_string())
 }
 
 #[derive(Debug, Serialize)]
@@ -34,7 +33,10 @@ async fn mcp_proxy_request(
     let request_builder = client.post(&url);
 
     let request_builder = if let Some(body) = body {
-        info!("📤 MCP request body: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+        info!(
+            "📤 MCP request body: {}",
+            serde_json::to_string_pretty(&body).unwrap_or_default()
+        );
         request_builder.json(&body)
     } else {
         request_builder
@@ -56,7 +58,8 @@ async fn mcp_proxy_request(
                     } else {
                         error!("❌ Protocols service returned error status: {}", status);
                         Err((
-                            StatusCode::from_u16(status.as_u16()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+                            StatusCode::from_u16(status.as_u16())
+                                .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
                             ResponseJson(McpErrorResponse {
                                 error: "protocols_service_error".to_string(),
                                 code: "MCP_SERVICE_ERROR".to_string(),
@@ -99,7 +102,8 @@ pub async fn mcp_jsonrpc(
     mcp_proxy_request("mcp/jsonrpc", Some(request)).await
 }
 
-pub async fn mcp_tools() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<McpErrorResponse>)> {
+pub async fn mcp_tools() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<McpErrorResponse>)>
+{
     info!("🛠️ MCP tools list requested");
     let request = json!({
         "jsonrpc": "2.0",
@@ -109,7 +113,8 @@ pub async fn mcp_tools() -> Result<ResponseJson<Value>, (StatusCode, ResponseJso
     mcp_proxy_request("mcp/jsonrpc", Some(request)).await
 }
 
-pub async fn mcp_resources() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<McpErrorResponse>)> {
+pub async fn mcp_resources(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<McpErrorResponse>)> {
     info!("📚 MCP resources list requested");
     let request = json!({
         "jsonrpc": "2.0",
@@ -119,7 +124,8 @@ pub async fn mcp_resources() -> Result<ResponseJson<Value>, (StatusCode, Respons
     mcp_proxy_request("mcp/jsonrpc", Some(request)).await
 }
 
-pub async fn mcp_prompts() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<McpErrorResponse>)> {
+pub async fn mcp_prompts(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<McpErrorResponse>)> {
     info!("💬 MCP prompts list requested");
     let request = json!({
         "jsonrpc": "2.0",
@@ -129,7 +135,8 @@ pub async fn mcp_prompts() -> Result<ResponseJson<Value>, (StatusCode, ResponseJ
     mcp_proxy_request("mcp/jsonrpc", Some(request)).await
 }
 
-pub async fn mcp_health() -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<McpErrorResponse>)> {
+pub async fn mcp_health(
+) -> Result<ResponseJson<Value>, (StatusCode, ResponseJson<McpErrorResponse>)> {
     info!("🏥 MCP health check requested");
     let protocols_url = get_protocols_service_url();
     let client = reqwest::Client::new();
@@ -140,34 +147,28 @@ pub async fn mcp_health() -> Result<ResponseJson<Value>, (StatusCode, ResponseJs
         .send()
         .await
     {
-        Ok(response) if response.status().is_success() => {
-            Ok(ResponseJson(json!({
-                "status": "healthy",
-                "service": "mcp-proxy",
-                "protocols_service": protocols_url,
-                "message": "MCP proxy connected to Protocols service"
-            })))
-        }
-        Ok(response) => {
-            Err((
-                StatusCode::BAD_GATEWAY,
-                ResponseJson(McpErrorResponse {
-                    error: "protocols_unhealthy".to_string(),
-                    code: "MCP_PROTOCOLS_UNHEALTHY".to_string(),
-                    message: format!("Protocols service returned status: {}", response.status()),
-                }),
-            ))
-        }
-        Err(e) => {
-            Err((
-                StatusCode::SERVICE_UNAVAILABLE,
-                ResponseJson(McpErrorResponse {
-                    error: "protocols_unavailable".to_string(),
-                    code: "MCP_PROTOCOLS_UNAVAILABLE".to_string(),
-                    message: format!("Cannot reach Protocols service: {}", e),
-                }),
-            ))
-        }
+        Ok(response) if response.status().is_success() => Ok(ResponseJson(json!({
+            "status": "healthy",
+            "service": "mcp-proxy",
+            "protocols_service": protocols_url,
+            "message": "MCP proxy connected to Protocols service"
+        }))),
+        Ok(response) => Err((
+            StatusCode::BAD_GATEWAY,
+            ResponseJson(McpErrorResponse {
+                error: "protocols_unhealthy".to_string(),
+                code: "MCP_PROTOCOLS_UNHEALTHY".to_string(),
+                message: format!("Protocols service returned status: {}", response.status()),
+            }),
+        )),
+        Err(e) => Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            ResponseJson(McpErrorResponse {
+                error: "protocols_unavailable".to_string(),
+                code: "MCP_PROTOCOLS_UNAVAILABLE".to_string(),
+                message: format!("Cannot reach Protocols service: {}", e),
+            }),
+        )),
     }
 }
 

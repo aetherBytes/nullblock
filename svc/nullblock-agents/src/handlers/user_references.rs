@@ -4,12 +4,12 @@ use axum::{
     response::Json,
 };
 use chrono::Utc;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use crate::{
     database::repositories::user_references::UserReferenceRepository,
-    models::{UserReference, UserReferenceResponse, UserReferenceListResponse},
+    models::{UserReference, UserReferenceListResponse, UserReferenceResponse},
     server::AppState,
 };
 
@@ -21,8 +21,8 @@ async fn call_erebus_user_api(
     wallet_type: Option<&str>,
 ) -> Result<UserReference, String> {
     let client = reqwest::Client::new();
-    let erebus_url = std::env::var("EREBUS_BASE_URL")
-        .unwrap_or_else(|_| "http://localhost:3000".to_string());
+    let erebus_url =
+        std::env::var("EREBUS_BASE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
 
     let request_body = serde_json::json!({
         "source_identifier": source_identifier,
@@ -31,7 +31,10 @@ async fn call_erebus_user_api(
         "wallet_type": wallet_type.unwrap_or("unknown")
     });
 
-    info!("🌐 Calling Erebus user API to enforce GOLDEN RULE: {}/api/users/register", erebus_url);
+    info!(
+        "🌐 Calling Erebus user API to enforce GOLDEN RULE: {}/api/users/register",
+        erebus_url
+    );
 
     match client
         .post(&format!("{}/api/users/register", erebus_url))
@@ -45,42 +48,46 @@ async fn call_erebus_user_api(
                     Ok(json_response) => {
                         if let (Some(user_id_str), Some(user_data)) = (
                             json_response["user_id"].as_str(),
-                            json_response["user"].as_object()
+                            json_response["user"].as_object(),
                         ) {
                             match Uuid::parse_str(user_id_str) {
                                 Ok(user_id) => Ok(UserReference {
                                     id: user_id,
-                                    source_identifier: user_data.get("source_identifier")
+                                    source_identifier: user_data
+                                        .get("source_identifier")
                                         .and_then(|v| v.as_str())
                                         .unwrap_or(source_identifier)
                                         .to_string(),
-                                    network: user_data.get("network")
+                                    network: user_data
+                                        .get("network")
                                         .and_then(|v| v.as_str())
                                         .unwrap_or(network)
                                         .to_string(),
-                                    source_type: user_data.get("source_type")
+                                    source_type: user_data
+                                        .get("source_type")
                                         .cloned()
                                         .unwrap_or_else(|| source_type.clone()),
-                                    wallet_type: user_data.get("wallet_type")
+                                    wallet_type: user_data
+                                        .get("wallet_type")
                                         .and_then(|v| v.as_str())
                                         .map(|s| s.to_string()),
                                     created_at: chrono::Utc::now(),
                                     updated_at: chrono::Utc::now(),
                                 }),
-                                Err(e) => Err(format!("Invalid UUID in Erebus response: {}", e))
+                                Err(e) => Err(format!("Invalid UUID in Erebus response: {}", e)),
                             }
                         } else {
                             Err("Invalid response format from Erebus API".to_string())
                         }
                     }
-                    Err(e) => Err(format!("Failed to parse Erebus API response: {}", e))
+                    Err(e) => Err(format!("Failed to parse Erebus API response: {}", e)),
                 }
             } else {
                 let error_text = response.text().await.unwrap_or_default();
                 Err(format!("Erebus API error: {}", error_text))
             }
         }
-        Err(e) => Err(format!("Failed to call Erebus API: {}", e))
+        Err(e) => Err(format!("Failed to call Erebus API: {}", e)),
     }
 }
 
@@ -90,15 +97,18 @@ async fn call_erebus_user_lookup_api(
     network: &str,
 ) -> Result<Option<UserReference>, String> {
     let client = reqwest::Client::new();
-    let erebus_url = std::env::var("EREBUS_BASE_URL")
-        .unwrap_or_else(|_| "http://localhost:3000".to_string());
+    let erebus_url =
+        std::env::var("EREBUS_BASE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
 
     let request_body = serde_json::json!({
         "source_identifier": source_identifier,
         "network": network
     });
 
-    info!("🔍 Calling Erebus user lookup API to enforce GOLDEN RULE: {}/api/users/lookup", erebus_url);
+    info!(
+        "🔍 Calling Erebus user lookup API to enforce GOLDEN RULE: {}/api/users/lookup",
+        erebus_url
+    );
 
     match client
         .post(&format!("{}/api/users/lookup", erebus_url))
@@ -112,28 +122,36 @@ async fn call_erebus_user_lookup_api(
                     Ok(json_response) => {
                         if json_response["found"].as_bool() == Some(true) {
                             if let Some(user_data) = json_response["user"].as_object() {
-                                if let Some(user_id_str) = user_data.get("id").and_then(|v| v.as_str()) {
+                                if let Some(user_id_str) =
+                                    user_data.get("id").and_then(|v| v.as_str())
+                                {
                                     match Uuid::parse_str(user_id_str) {
                                         Ok(user_id) => Ok(Some(UserReference {
                                             id: user_id,
-                                            source_identifier: user_data.get("source_identifier")
+                                            source_identifier: user_data
+                                                .get("source_identifier")
                                                 .and_then(|v| v.as_str())
                                                 .unwrap_or(source_identifier)
                                                 .to_string(),
-                                            network: user_data.get("network")
+                                            network: user_data
+                                                .get("network")
                                                 .and_then(|v| v.as_str())
                                                 .unwrap_or(network)
                                                 .to_string(),
-                                            source_type: user_data.get("source_type")
+                                            source_type: user_data
+                                                .get("source_type")
                                                 .cloned()
                                                 .unwrap_or_else(|| serde_json::json!({})),
-                                            wallet_type: user_data.get("wallet_type")
+                                            wallet_type: user_data
+                                                .get("wallet_type")
                                                 .and_then(|v| v.as_str())
                                                 .map(|s| s.to_string()),
                                             created_at: chrono::Utc::now(),
                                             updated_at: chrono::Utc::now(),
                                         })),
-                                        Err(e) => Err(format!("Invalid UUID in Erebus response: {}", e))
+                                        Err(e) => {
+                                            Err(format!("Invalid UUID in Erebus response: {}", e))
+                                        }
                                     }
                                 } else {
                                     Err("No user ID in Erebus response".to_string())
@@ -145,14 +163,14 @@ async fn call_erebus_user_lookup_api(
                             Ok(None) // User not found
                         }
                     }
-                    Err(e) => Err(format!("Failed to parse Erebus API response: {}", e))
+                    Err(e) => Err(format!("Failed to parse Erebus API response: {}", e)),
                 }
             } else {
                 let error_text = response.text().await.unwrap_or_default();
                 Err(format!("Erebus API error: {}", error_text))
             }
         }
-        Err(e) => Err(format!("Failed to call Erebus API: {}", e))
+        Err(e) => Err(format!("Failed to call Erebus API: {}", e)),
     }
 }
 
@@ -194,7 +212,14 @@ pub async fn create_user_reference(
     warn!("⚠️ Use Erebus /api/users/register endpoint instead - enforcing GOLDEN RULE");
 
     // Forward to Erebus user registration API
-    match call_erebus_user_api(&request.source_identifier, &request.network, &request.source_type, request.wallet_type.as_deref()).await {
+    match call_erebus_user_api(
+        &request.source_identifier,
+        &request.network,
+        &request.source_type,
+        request.wallet_type.as_deref(),
+    )
+    .await
+    {
         Ok(user_ref) => {
             info!("✅ User created via Erebus API forwarding: {}", user_ref.id);
             Ok(Json(UserReferenceResponse {
@@ -284,17 +309,27 @@ pub async fn list_user_references(
     // Create user reference repository
     let user_repo = UserReferenceRepository::new(database.pool().clone());
 
-    match user_repo.list(query.source_identifier.as_deref(), query.network.as_deref(), query.limit).await {
+    match user_repo
+        .list(
+            query.source_identifier.as_deref(),
+            query.network.as_deref(),
+            query.limit,
+        )
+        .await
+    {
         Ok(users) => {
-            let user_refs: Vec<UserReference> = users.into_iter().map(|user| UserReference {
-                id: user.id,
-                source_identifier: user.source_identifier.unwrap_or_default(),
-                network: user.network.unwrap_or_default(),
-                source_type: user.source_type,
-                wallet_type: None,
-                created_at: user.created_at,
-                updated_at: user.updated_at,
-            }).collect();
+            let user_refs: Vec<UserReference> = users
+                .into_iter()
+                .map(|user| UserReference {
+                    id: user.id,
+                    source_identifier: user.source_identifier.unwrap_or_default(),
+                    network: user.network.unwrap_or_default(),
+                    source_type: user.source_type,
+                    wallet_type: None,
+                    created_at: user.created_at,
+                    updated_at: user.updated_at,
+                })
+                .collect();
             info!("✅ Found {} user references", user_refs.len());
             Ok(Json(UserReferenceListResponse {
                 success: true,
@@ -322,7 +357,10 @@ pub async fn sync_user_reference(
     State(state): State<AppState>,
     Json(request): Json<SyncUserReferenceRequest>,
 ) -> Result<Json<UserReferenceResponse>, StatusCode> {
-    info!("🔄 Syncing user reference from Erebus: {} on network: {}", request.source_identifier, request.network);
+    info!(
+        "🔄 Syncing user reference from Erebus: {} on network: {}",
+        request.source_identifier, request.network
+    );
 
     // Check if we have database connection
     let database = match &state.database {
@@ -373,17 +411,20 @@ pub async fn sync_user_reference(
     let user_repo = UserReferenceRepository::new(database.pool().clone());
 
     // Sync user from Erebus
-    match user_repo.upsert_from_kafka_event(
-        user_id,
-        Some(&request.source_identifier),
-        Some(&request.network),
-        &request.source_type,
-        request.wallet_type.as_deref(),
-        None, // email
-        &serde_json::json!({}), // metadata
-        erebus_created_at,
-        erebus_updated_at,
-    ).await {
+    match user_repo
+        .upsert_from_kafka_event(
+            user_id,
+            Some(&request.source_identifier),
+            Some(&request.network),
+            &request.source_type,
+            request.wallet_type.as_deref(),
+            None,                   // email
+            &serde_json::json!({}), // metadata
+            erebus_created_at,
+            erebus_updated_at,
+        )
+        .await
+    {
         Ok(user_ref) => {
             info!("✅ User reference synced successfully: {}", user_ref.id);
             let user = UserReference {

@@ -53,23 +53,36 @@ impl ErebusClient {
         }
     }
 
-    pub async fn get_agent_api_key(&self, agent_name: &str, provider: &str) -> AppResult<Option<String>> {
+    pub async fn get_agent_api_key(
+        &self,
+        agent_name: &str,
+        provider: &str,
+    ) -> AppResult<Option<String>> {
         let url = format!(
             "{}/internal/agents/{}/api-keys/{}/decrypted",
             self.base_url, agent_name, provider
         );
 
-        info!("🔑 Fetching API key for agent '{}' provider '{}' from Erebus", agent_name, provider);
+        info!(
+            "🔑 Fetching API key for agent '{}' provider '{}' from Erebus",
+            agent_name, provider
+        );
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .timeout(std::time::Duration::from_secs(10))
             .send()
             .await
-            .map_err(|e| AppError::ApiKeyResolutionFailed(format!("Failed to connect to Erebus: {}", e)))?;
+            .map_err(|e| {
+                AppError::ApiKeyResolutionFailed(format!("Failed to connect to Erebus: {}", e))
+            })?;
 
         if response.status() == reqwest::StatusCode::NOT_FOUND {
-            warn!("⚠️ No API key found for agent '{}' provider '{}'", agent_name, provider);
+            warn!(
+                "⚠️ No API key found for agent '{}' provider '{}'",
+                agent_name, provider
+            );
             return Ok(None);
         }
 
@@ -82,17 +95,21 @@ impl ErebusClient {
             )));
         }
 
-        let data: DecryptedAgentApiKeyResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ApiKeyResolutionFailed(format!("Failed to parse response: {}", e)))?;
+        let data: DecryptedAgentApiKeyResponse = response.json().await.map_err(|e| {
+            AppError::ApiKeyResolutionFailed(format!("Failed to parse response: {}", e))
+        })?;
 
         if data.success {
             if let Some(api_key) = data.api_key {
-                info!("✅ Retrieved API key for agent '{}' ({}...{})",
+                info!(
+                    "✅ Retrieved API key for agent '{}' ({}...{})",
                     agent_name,
                     &api_key[..10.min(api_key.len())],
-                    if api_key.len() > 10 { &api_key[api_key.len()-4..] } else { "" }
+                    if api_key.len() > 10 {
+                        &api_key[api_key.len() - 4..]
+                    } else {
+                        ""
+                    }
                 );
                 return Ok(Some(api_key));
             }
@@ -105,18 +122,25 @@ impl ErebusClient {
         Ok(None)
     }
 
-    pub async fn check_rate_limit(&self, user_id: &str, agent_name: &str) -> AppResult<RateLimitStatus> {
+    pub async fn check_rate_limit(
+        &self,
+        user_id: &str,
+        agent_name: &str,
+    ) -> AppResult<RateLimitStatus> {
         let url = format!(
             "{}/internal/users/{}/rate-limit/{}",
             self.base_url, user_id, agent_name
         );
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .timeout(std::time::Duration::from_secs(5))
             .send()
             .await
-            .map_err(|e| AppError::RateLimitCheckFailed(format!("Failed to connect to Erebus: {}", e)))?;
+            .map_err(|e| {
+                AppError::RateLimitCheckFailed(format!("Failed to connect to Erebus: {}", e))
+            })?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -127,10 +151,9 @@ impl ErebusClient {
             )));
         }
 
-        let data: RateLimitResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::RateLimitCheckFailed(format!("Failed to parse response: {}", e)))?;
+        let data: RateLimitResponse = response.json().await.map_err(|e| {
+            AppError::RateLimitCheckFailed(format!("Failed to parse response: {}", e))
+        })?;
 
         if data.success {
             if let Some(status) = data.data {
@@ -139,22 +162,29 @@ impl ErebusClient {
         }
 
         Err(AppError::RateLimitCheckFailed(
-            data.error.unwrap_or_else(|| "Unknown error".to_string())
+            data.error.unwrap_or_else(|| "Unknown error".to_string()),
         ))
     }
 
-    pub async fn increment_rate_limit(&self, user_id: &str, agent_name: &str) -> AppResult<RateLimitStatus> {
+    pub async fn increment_rate_limit(
+        &self,
+        user_id: &str,
+        agent_name: &str,
+    ) -> AppResult<RateLimitStatus> {
         let url = format!(
             "{}/internal/users/{}/rate-limit/{}/increment",
             self.base_url, user_id, agent_name
         );
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .timeout(std::time::Duration::from_secs(5))
             .send()
             .await
-            .map_err(|e| AppError::RateLimitCheckFailed(format!("Failed to connect to Erebus: {}", e)))?;
+            .map_err(|e| {
+                AppError::RateLimitCheckFailed(format!("Failed to connect to Erebus: {}", e))
+            })?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -165,10 +195,9 @@ impl ErebusClient {
             )));
         }
 
-        let data: RateLimitResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::RateLimitCheckFailed(format!("Failed to parse response: {}", e)))?;
+        let data: RateLimitResponse = response.json().await.map_err(|e| {
+            AppError::RateLimitCheckFailed(format!("Failed to parse response: {}", e))
+        })?;
 
         if data.success {
             if let Some(status) = data.data {
@@ -177,7 +206,7 @@ impl ErebusClient {
         }
 
         Err(AppError::RateLimitCheckFailed(
-            data.error.unwrap_or_else(|| "Unknown error".to_string())
+            data.error.unwrap_or_else(|| "Unknown error".to_string()),
         ))
     }
 
@@ -187,21 +216,23 @@ impl ErebusClient {
             self.base_url, user_id, provider
         );
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .timeout(std::time::Duration::from_secs(5))
             .send()
             .await
-            .map_err(|e| AppError::ApiKeyResolutionFailed(format!("Failed to connect to Erebus: {}", e)))?;
+            .map_err(|e| {
+                AppError::ApiKeyResolutionFailed(format!("Failed to connect to Erebus: {}", e))
+            })?;
 
         if !response.status().is_success() {
             return Ok(false);
         }
 
-        let data: HasApiKeyResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ApiKeyResolutionFailed(format!("Failed to parse response: {}", e)))?;
+        let data: HasApiKeyResponse = response.json().await.map_err(|e| {
+            AppError::ApiKeyResolutionFailed(format!("Failed to parse response: {}", e))
+        })?;
 
         Ok(data.success && data.has_key)
     }
@@ -212,21 +243,23 @@ impl ErebusClient {
             self.base_url, user_id
         );
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .timeout(std::time::Duration::from_secs(5))
             .send()
             .await
-            .map_err(|e| AppError::ApiKeyResolutionFailed(format!("Failed to connect to Erebus: {}", e)))?;
+            .map_err(|e| {
+                AppError::ApiKeyResolutionFailed(format!("Failed to connect to Erebus: {}", e))
+            })?;
 
         if !response.status().is_success() {
             return Ok(vec![]);
         }
 
-        let data: DecryptedUserApiKeysResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ApiKeyResolutionFailed(format!("Failed to parse response: {}", e)))?;
+        let data: DecryptedUserApiKeysResponse = response.json().await.map_err(|e| {
+            AppError::ApiKeyResolutionFailed(format!("Failed to parse response: {}", e))
+        })?;
 
         if data.success {
             return Ok(data.data.unwrap_or_default());

@@ -1,0 +1,23 @@
+name: CI - Engrams
+
+on:
+  pull_request:
+    paths:
+      - 'svc/nullblock-engrams/**'
+      - 'lib/**'
+  push:
+    branches: [main]
+    paths:
+      - 'svc/nullblock-engrams/**'
+      - 'lib/**'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/rust-service.yml
+    with:
+      service-name: nullblock-engrams
+      service-path: svc/nullblock-engrams
+      service-port: 9004
+      ecs-service: nullblock-engrams
+      run-deploy: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    secrets: inherit

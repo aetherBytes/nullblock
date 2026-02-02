@@ -3,9 +3,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-use crate::error::AppResult;
-use crate::models::{Signal, SignalType, SignalSignificance, VenueType};
 use super::{BehavioralStrategy, GraduationEvent, VenueSnapshot};
+use crate::error::AppResult;
+use crate::models::{Signal, SignalSignificance, SignalType, VenueType};
 
 pub struct RaydiumSnipeStrategy {
     name: String,

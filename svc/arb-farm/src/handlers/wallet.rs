@@ -1,24 +1,17 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 
 use crate::error::AppResult;
 use crate::server::AppState;
-use crate::wallet::{ArbFarmPolicy, WalletStatus, SignRequest, SignResult};
 use crate::wallet::turnkey::WalletSetupRequest;
+use crate::wallet::{ArbFarmPolicy, SignRequest, SignResult, WalletStatus};
 
 #[derive(Debug, Serialize)]
 pub struct WalletStatusResponse {
     pub status: WalletStatus,
 }
 
-pub async fn get_wallet_status(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_wallet_status(State(state): State<AppState>) -> impl IntoResponse {
     let status = state.turnkey_signer.get_status().await;
     (StatusCode::OK, Json(WalletStatusResponse { status }))
 }
@@ -114,15 +107,21 @@ pub async fn update_policy(
     match state.turnkey_signer.update_policy(policy).await {
         Ok(_) => {
             let status = state.turnkey_signer.get_status().await;
-            (StatusCode::OK, Json(serde_json::json!({
-                "success": true,
-                "policy": status.policy,
-            })))
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "policy": status.policy,
+                })),
+            )
         }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "success": false,
-            "error": e.to_string(),
-        }))),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string(),
+            })),
+        ),
     }
 }
 
@@ -132,9 +131,7 @@ pub struct BalanceResponse {
     pub balance_sol: f64,
 }
 
-pub async fn get_balance(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_balance(State(state): State<AppState>) -> impl IntoResponse {
     let status = state.turnkey_signer.get_status().await;
 
     match status.wallet_address {
@@ -145,31 +142,43 @@ pub async fn get_balance(
                     // Update cached balance
                     let _ = state.turnkey_signer.update_balance(balance).await;
 
-                    (StatusCode::OK, Json(BalanceResponse {
-                        balance_lamports: balance,
-                        balance_sol: balance as f64 / 1_000_000_000.0,
-                    }))
+                    (
+                        StatusCode::OK,
+                        Json(BalanceResponse {
+                            balance_lamports: balance,
+                            balance_sol: balance as f64 / 1_000_000_000.0,
+                        }),
+                    )
                 }
                 Err(e) => {
                     // Return cached balance if RPC fails
                     if let Some(cached) = status.balance_lamports {
-                        (StatusCode::OK, Json(BalanceResponse {
-                            balance_lamports: cached,
-                            balance_sol: cached as f64 / 1_000_000_000.0,
-                        }))
+                        (
+                            StatusCode::OK,
+                            Json(BalanceResponse {
+                                balance_lamports: cached,
+                                balance_sol: cached as f64 / 1_000_000_000.0,
+                            }),
+                        )
                     } else {
-                        (StatusCode::SERVICE_UNAVAILABLE, Json(BalanceResponse {
-                            balance_lamports: 0,
-                            balance_sol: 0.0,
-                        }))
+                        (
+                            StatusCode::SERVICE_UNAVAILABLE,
+                            Json(BalanceResponse {
+                                balance_lamports: 0,
+                                balance_sol: 0.0,
+                            }),
+                        )
                     }
                 }
             }
         }
-        None => (StatusCode::BAD_REQUEST, Json(BalanceResponse {
-            balance_lamports: 0,
-            balance_sol: 0.0,
-        })),
+        None => (
+            StatusCode::BAD_REQUEST,
+            Json(BalanceResponse {
+                balance_lamports: 0,
+                balance_sol: 0.0,
+            }),
+        ),
     }
 }
 
@@ -190,28 +199,32 @@ async fn fetch_balance(rpc_url: &str, address: &str) -> AppResult<u64> {
         .await
         .map_err(|e| crate::error::AppError::ExternalApi(format!("RPC error: {}", e)))?;
 
-    let result: serde_json::Value = response.json().await
+    let result: serde_json::Value = response
+        .json()
+        .await
         .map_err(|e| crate::error::AppError::ExternalApi(format!("Parse error: {}", e)))?;
 
-    let balance = result["result"]["value"]
-        .as_u64()
-        .unwrap_or(0);
+    let balance = result["result"]["value"].as_u64().unwrap_or(0);
 
     Ok(balance)
 }
 
-pub async fn disconnect_wallet(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn disconnect_wallet(State(state): State<AppState>) -> impl IntoResponse {
     match state.turnkey_signer.disconnect().await {
-        Ok(_) => (StatusCode::OK, Json(serde_json::json!({
-            "success": true,
-            "message": "Wallet disconnected",
-        }))),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "success": false,
-            "error": e.to_string(),
-        }))),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "message": "Wallet disconnected",
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string(),
+            })),
+        ),
     }
 }
 
@@ -222,57 +235,74 @@ pub struct DevModeResponse {
     pub has_private_key: bool,
 }
 
-pub async fn get_dev_mode(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_dev_mode(State(state): State<AppState>) -> impl IntoResponse {
     let has_address = state.config.wallet_address.is_some();
     let has_key = state.config.wallet_private_key.is_some();
 
-    (StatusCode::OK, Json(DevModeResponse {
-        dev_mode_available: has_address && has_key,
-        wallet_address: state.config.wallet_address.clone(),
-        has_private_key: has_key,
-    }))
+    (
+        StatusCode::OK,
+        Json(DevModeResponse {
+            dev_mode_available: has_address && has_key,
+            wallet_address: state.config.wallet_address.clone(),
+            has_private_key: has_key,
+        }),
+    )
 }
 
-pub async fn connect_dev_wallet(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn connect_dev_wallet(State(state): State<AppState>) -> impl IntoResponse {
     if !state.dev_signer.is_configured() {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "success": false,
-            "error": "Dev wallet not configured - ARB_FARM_WALLET_PRIVATE_KEY missing",
-        })));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "success": false,
+                "error": "Dev wallet not configured - ARB_FARM_WALLET_PRIVATE_KEY missing",
+            })),
+        );
     }
 
     let wallet_address = match state.dev_signer.get_address() {
         Some(addr) => addr.to_string(),
         None => {
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "success": false,
-                "error": "Dev signer has no wallet address",
-            })));
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "success": false,
+                    "error": "Dev signer has no wallet address",
+                })),
+            );
         }
     };
 
     match state.dev_signer.connect().await {
         Ok(_) => {
-            let dev_wallet_id = format!("dev_wallet_{}", wallet_address.chars().take(8).collect::<String>());
-            let _ = state.turnkey_signer.set_wallet(wallet_address.clone(), dev_wallet_id).await;
+            let dev_wallet_id = format!(
+                "dev_wallet_{}",
+                wallet_address.chars().take(8).collect::<String>()
+            );
+            let _ = state
+                .turnkey_signer
+                .set_wallet(wallet_address.clone(), dev_wallet_id)
+                .await;
 
             let status = state.dev_signer.get_status().await;
-            (StatusCode::OK, Json(serde_json::json!({
-                "success": true,
-                "message": "Dev wallet connected with real signing enabled",
-                "wallet_address": wallet_address,
-                "signing_mode": "dev_private_key",
-                "status": status,
-            })))
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "message": "Dev wallet connected with real signing enabled",
+                    "wallet_address": wallet_address,
+                    "signing_mode": "dev_private_key",
+                    "status": status,
+                })),
+            )
         }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "success": false,
-            "error": e.to_string(),
-        }))),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string(),
+            })),
+        ),
     }
 }
 
@@ -298,29 +328,45 @@ pub async fn test_sign(
 
     if dev_connected {
         match state.dev_signer.validate_transaction(&sign_request).await {
-            Ok(_) => (StatusCode::OK, Json(serde_json::json!({
-                "success": true,
-                "message": "Transaction would pass policy checks",
-                "signing_mode": "dev_private_key",
-                "amount_sol": request.amount_sol,
-            }))),
-            Err(violation) => (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "success": false,
-                "violation": violation,
-            }))),
+            Ok(_) => (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "message": "Transaction would pass policy checks",
+                    "signing_mode": "dev_private_key",
+                    "amount_sol": request.amount_sol,
+                })),
+            ),
+            Err(violation) => (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "success": false,
+                    "violation": violation,
+                })),
+            ),
         }
     } else {
-        match state.turnkey_signer.validate_transaction(&sign_request).await {
-            Ok(_) => (StatusCode::OK, Json(serde_json::json!({
-                "success": true,
-                "message": "Transaction would pass policy checks",
-                "signing_mode": "turnkey",
-                "amount_sol": request.amount_sol,
-            }))),
-            Err(violation) => (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "success": false,
-                "violation": violation,
-            }))),
+        match state
+            .turnkey_signer
+            .validate_transaction(&sign_request)
+            .await
+        {
+            Ok(_) => (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "success": true,
+                    "message": "Transaction would pass policy checks",
+                    "signing_mode": "turnkey",
+                    "amount_sol": request.amount_sol,
+                })),
+            ),
+            Err(violation) => (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "success": false,
+                    "violation": violation,
+                })),
+            ),
         }
     }
 }
@@ -352,47 +398,65 @@ pub async fn sign_transaction(
         match state.dev_signer.sign_transaction(sign_request).await {
             Ok(result) => {
                 if result.success {
-                    (StatusCode::OK, Json(serde_json::json!({
-                        "success": true,
-                        "signing_mode": "dev_private_key",
-                        "signed_transaction_base64": result.signed_transaction_base64,
-                        "signature": result.signature,
-                    })))
+                    (
+                        StatusCode::OK,
+                        Json(serde_json::json!({
+                            "success": true,
+                            "signing_mode": "dev_private_key",
+                            "signed_transaction_base64": result.signed_transaction_base64,
+                            "signature": result.signature,
+                        })),
+                    )
                 } else {
-                    (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                        "success": false,
-                        "error": result.error,
-                        "policy_violation": result.policy_violation,
-                    })))
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(serde_json::json!({
+                            "success": false,
+                            "error": result.error,
+                            "policy_violation": result.policy_violation,
+                        })),
+                    )
                 }
             }
-            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "success": false,
-                "error": e.to_string(),
-            }))),
+            Err(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "success": false,
+                    "error": e.to_string(),
+                })),
+            ),
         }
     } else {
         match state.turnkey_signer.sign_transaction(sign_request).await {
             Ok(result) => {
                 if result.success {
-                    (StatusCode::OK, Json(serde_json::json!({
-                        "success": true,
-                        "signing_mode": "turnkey",
-                        "signed_transaction_base64": result.signed_transaction_base64,
-                        "signature": result.signature,
-                    })))
+                    (
+                        StatusCode::OK,
+                        Json(serde_json::json!({
+                            "success": true,
+                            "signing_mode": "turnkey",
+                            "signed_transaction_base64": result.signed_transaction_base64,
+                            "signature": result.signature,
+                        })),
+                    )
                 } else {
-                    (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                        "success": false,
-                        "error": result.error,
-                        "policy_violation": result.policy_violation,
-                    })))
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(serde_json::json!({
+                            "success": false,
+                            "error": result.error,
+                            "policy_violation": result.policy_violation,
+                        })),
+                    )
                 }
             }
-            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "success": false,
-                "error": e.to_string(),
-            }))),
+            Err(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "success": false,
+                    "error": e.to_string(),
+                })),
+            ),
         }
     }
 }
@@ -407,9 +471,7 @@ pub struct DailyUsageResponse {
     pub remaining_transactions: u32,
 }
 
-pub async fn get_daily_usage(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_daily_usage(State(state): State<AppState>) -> impl IntoResponse {
     let status = state.turnkey_signer.get_status().await;
     let usage = &status.daily_usage;
     let policy = &status.policy;
@@ -426,14 +488,17 @@ pub async fn get_daily_usage(
         0
     };
 
-    (StatusCode::OK, Json(DailyUsageResponse {
-        date: usage.date.to_string(),
-        volume_lamports: usage.total_volume_lamports,
-        volume_sol: usage.total_volume_lamports as f64 / 1_000_000_000.0,
-        transaction_count: usage.transaction_count,
-        remaining_volume_sol: remaining_volume as f64 / 1_000_000_000.0,
-        remaining_transactions: remaining_txs,
-    }))
+    (
+        StatusCode::OK,
+        Json(DailyUsageResponse {
+            date: usage.date.to_string(),
+            volume_lamports: usage.total_volume_lamports,
+            volume_sol: usage.total_volume_lamports as f64 / 1_000_000_000.0,
+            transaction_count: usage.transaction_count,
+            remaining_volume_sol: remaining_volume as f64 / 1_000_000_000.0,
+            remaining_transactions: remaining_txs,
+        }),
+    )
 }
 
 #[derive(Debug, Serialize)]
@@ -464,9 +529,7 @@ pub struct ReservationInfo {
     pub created_at: String,
 }
 
-pub async fn get_capital_usage(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_capital_usage(State(state): State<AppState>) -> impl IntoResponse {
     let global_usage = state.capital_manager.get_global_usage().await;
     let strategy_usages = state.capital_manager.get_all_strategy_usage().await;
 
@@ -494,44 +557,52 @@ pub async fn get_capital_usage(
         })
         .collect();
 
-    (StatusCode::OK, Json(CapitalUsageResponse {
-        total_balance_sol: global_usage.total_balance_lamports as f64 / 1_000_000_000.0,
-        global_reserved_sol: global_usage.global_reserved_lamports as f64 / 1_000_000_000.0,
-        available_sol: global_usage.available_lamports as f64 / 1_000_000_000.0,
-        strategy_allocations,
-        active_reservations,
-    }))
+    (
+        StatusCode::OK,
+        Json(CapitalUsageResponse {
+            total_balance_sol: global_usage.total_balance_lamports as f64 / 1_000_000_000.0,
+            global_reserved_sol: global_usage.global_reserved_lamports as f64 / 1_000_000_000.0,
+            available_sol: global_usage.available_lamports as f64 / 1_000_000_000.0,
+            strategy_allocations,
+            active_reservations,
+        }),
+    )
 }
 
-pub async fn sync_capital_balance(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn sync_capital_balance(State(state): State<AppState>) -> impl IntoResponse {
     let wallet_status = state.turnkey_signer.get_status().await;
 
     match wallet_status.wallet_address {
-        Some(address) => {
-            match fetch_balance(&state.config.rpc_url, &address).await {
-                Ok(balance) => {
-                    let _ = state.turnkey_signer.update_balance(balance).await;
-                    state.capital_manager.update_total_balance(balance).await;
+        Some(address) => match fetch_balance(&state.config.rpc_url, &address).await {
+            Ok(balance) => {
+                let _ = state.turnkey_signer.update_balance(balance).await;
+                state.capital_manager.update_total_balance(balance).await;
 
-                    let global_usage = state.capital_manager.get_global_usage().await;
-                    (StatusCode::OK, Json(serde_json::json!({
+                let global_usage = state.capital_manager.get_global_usage().await;
+                (
+                    StatusCode::OK,
+                    Json(serde_json::json!({
                         "success": true,
                         "balance_sol": balance as f64 / 1_000_000_000.0,
                         "available_sol": global_usage.available_lamports as f64 / 1_000_000_000.0,
                         "reserved_sol": global_usage.global_reserved_lamports as f64 / 1_000_000_000.0,
-                    })))
-                }
-                Err(e) => (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({
+                    })),
+                )
+            }
+            Err(e) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({
                     "success": false,
                     "error": format!("Failed to fetch balance: {}", e),
-                }))),
-            }
-        }
-        None => (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-            "success": false,
-            "error": "No wallet connected",
-        }))),
+                })),
+            ),
+        },
+        None => (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "success": false,
+                "error": "No wallet connected",
+            })),
+        ),
     }
 }

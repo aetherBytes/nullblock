@@ -4,46 +4,46 @@
 #![allow(dead_code)]
 
 use crate::database::Database;
-use serde::{Deserialize, Serialize};
-use serde_json::{Value as JsonValue, Map as JsonMap};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use tracing::{info, error};
+use serde::{Deserialize, Serialize};
+use serde_json::{Map as JsonMap, Value as JsonValue};
+use tracing::{error, info};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum SourceType {
     Web3Wallet {
-        provider: String,      // metamask, phantom, coinbase, etc.
-        network: String,       // ethereum, solana, etc.
+        provider: String, // metamask, phantom, coinbase, etc.
+        network: String,  // ethereum, solana, etc.
         #[serde(default)]
-        metadata: JsonValue,   // Additional wallet-specific data
+        metadata: JsonValue, // Additional wallet-specific data
     },
     ApiKey {
-        name: String,          // API service name or identifier
+        name: String, // API service name or identifier
         #[serde(default)]
-        scope: Vec<String>,    // API permissions/scopes
+        scope: Vec<String>, // API permissions/scopes
         #[serde(default)]
-        metadata: JsonValue,   // Additional API-specific data
+        metadata: JsonValue, // Additional API-specific data
     },
     EmailAuth {
-        verified: bool,        // Email verification status
-        provider: String,      // email service provider (gmail, outlook, etc.)
+        verified: bool,   // Email verification status
+        provider: String, // email service provider (gmail, outlook, etc.)
         #[serde(default)]
-        metadata: JsonValue,   // Additional email-specific data
+        metadata: JsonValue, // Additional email-specific data
     },
     SystemAgent {
-        agent_type: String,    // Type of system agent (task_runner, monitor, etc.)
+        agent_type: String, // Type of system agent (task_runner, monitor, etc.)
         #[serde(default)]
         capabilities: Vec<String>, // Agent capabilities
         #[serde(default)]
-        metadata: JsonValue,   // Additional agent-specific data
+        metadata: JsonValue, // Additional agent-specific data
     },
     OAuth {
-        provider: String,      // OAuth provider (google, github, discord, etc.)
-        user_id: String,       // User ID from OAuth provider
+        provider: String, // OAuth provider (google, github, discord, etc.)
+        user_id: String,  // User ID from OAuth provider
         #[serde(default)]
-        metadata: JsonValue,   // Additional OAuth-specific data
+        metadata: JsonValue, // Additional OAuth-specific data
     },
 }
 
@@ -97,13 +97,13 @@ impl Default for SourceType {
 pub struct UserReference {
     pub id: Uuid,
     pub source_identifier: String,
-    pub network: String,                    // Renamed from 'chain' to be more generic
-    pub user_type: String,                  // external, system, agent, api
-    pub source_type: SourceType,            // Strongly typed instead of raw JSONB
-    pub email: Option<String>,              // Email address if available
-    pub metadata: JsonValue,                // General user metadata
-    pub preferences: JsonValue,             // User preferences
-    pub is_active: bool,                    // Soft delete flag
+    pub network: String,         // Renamed from 'chain' to be more generic
+    pub user_type: String,       // external, system, agent, api
+    pub source_type: SourceType, // Strongly typed instead of raw JSONB
+    pub email: Option<String>,   // Email address if available
+    pub metadata: JsonValue,     // General user metadata
+    pub preferences: JsonValue,  // User preferences
+    pub is_active: bool,         // Soft delete flag
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -113,7 +113,7 @@ pub struct CreateUserReferenceRequest {
     pub source_identifier: String,
     pub network: String,
     pub source_type: SourceType,
-    pub user_type: Option<String>,              // defaults to "external"
+    pub user_type: Option<String>, // defaults to "external"
     pub email: Option<String>,
     pub metadata: Option<JsonValue>,
     pub preferences: Option<JsonValue>,
@@ -129,8 +129,17 @@ impl UserReferenceService {
     }
 
     /// Create or get user reference by source identifier
-    pub async fn create_or_get_user(&self, source_identifier: &str, network: &str, source_type: SourceType, user_type: Option<&str>) -> Result<UserReference, String> {
-        info!("👤 Creating or getting user reference for source: {} on network: {}", source_identifier, network);
+    pub async fn create_or_get_user(
+        &self,
+        source_identifier: &str,
+        network: &str,
+        source_type: SourceType,
+        user_type: Option<&str>,
+    ) -> Result<UserReference, String> {
+        info!(
+            "👤 Creating or getting user reference for source: {} on network: {}",
+            source_identifier, network
+        );
 
         // First, try to get existing user
         match self.get_user_by_source(source_identifier, network).await {
@@ -140,7 +149,10 @@ impl UserReferenceService {
             }
             Ok(None) => {
                 // User doesn't exist, create new one
-                info!("📝 Creating new user reference for source: {}", source_identifier);
+                info!(
+                    "📝 Creating new user reference for source: {}",
+                    source_identifier
+                );
             }
             Err(e) => {
                 error!("❌ Failed to check existing user: {}", e);
@@ -184,7 +196,19 @@ impl UserReferenceService {
         .await;
 
         match result {
-            Ok((id, source_identifier, network, user_type, source_type_json, email, metadata, preferences, is_active, created_at, updated_at)) => {
+            Ok((
+                id,
+                source_identifier,
+                network,
+                user_type,
+                source_type_json,
+                email,
+                metadata,
+                preferences,
+                is_active,
+                created_at,
+                updated_at,
+            )) => {
                 let source_type = SourceType::from_json(source_type_json)
                     .unwrap_or_else(|_| SourceType::default());
 
@@ -212,7 +236,11 @@ impl UserReferenceService {
     }
 
     /// Get user reference by source identifier and network
-    pub async fn get_user_by_source(&self, source_identifier: &str, network: &str) -> Result<Option<UserReference>, String> {
+    pub async fn get_user_by_source(
+        &self,
+        source_identifier: &str,
+        network: &str,
+    ) -> Result<Option<UserReference>, String> {
         let result = sqlx::query_as::<_, (uuid::Uuid, String, String, String, serde_json::Value, Option<String>, serde_json::Value, serde_json::Value, bool, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)>(
             "SELECT id, source_identifier, network, user_type, source_type, email, metadata, preferences, is_active, created_at, updated_at FROM user_references WHERE source_identifier = $1 AND network = $2 AND is_active = true"
         )
@@ -222,7 +250,19 @@ impl UserReferenceService {
         .await;
 
         match result {
-            Ok(Some((id, source_identifier, network, user_type, source_type_json, email, metadata, preferences, is_active, created_at, updated_at))) => {
+            Ok(Some((
+                id,
+                source_identifier,
+                network,
+                user_type,
+                source_type_json,
+                email,
+                metadata,
+                preferences,
+                is_active,
+                created_at,
+                updated_at,
+            ))) => {
                 let source_type = SourceType::from_json(source_type_json)
                     .unwrap_or_else(|_| SourceType::default());
 
@@ -259,7 +299,19 @@ impl UserReferenceService {
         .await;
 
         match result {
-            Ok(Some((id, source_identifier, network, user_type, source_type_json, email, metadata, preferences, is_active, created_at, updated_at))) => {
+            Ok(Some((
+                id,
+                source_identifier,
+                network,
+                user_type,
+                source_type_json,
+                email,
+                metadata,
+                preferences,
+                is_active,
+                created_at,
+                updated_at,
+            ))) => {
                 let source_type = SourceType::from_json(source_type_json)
                     .unwrap_or_else(|_| SourceType::default());
 
@@ -287,62 +339,95 @@ impl UserReferenceService {
     }
 
     /// Create a web3 wallet user (backward compatibility helper)
-    pub async fn create_web3_user(&self, source_identifier: &str, network: &str, provider: &str) -> Result<UserReference, String> {
+    pub async fn create_web3_user(
+        &self,
+        source_identifier: &str,
+        network: &str,
+        provider: &str,
+    ) -> Result<UserReference, String> {
         let source_type = SourceType::Web3Wallet {
             provider: provider.to_string(),
             network: network.to_string(),
             metadata: JsonValue::Object(JsonMap::new()),
         };
 
-        self.create_or_get_user(source_identifier, network, source_type, None).await
+        self.create_or_get_user(source_identifier, network, source_type, None)
+            .await
     }
 
     /// Create an API key user
-    pub async fn create_api_user(&self, source_identifier: &str, api_name: &str, scope: Vec<String>) -> Result<UserReference, String> {
+    pub async fn create_api_user(
+        &self,
+        source_identifier: &str,
+        api_name: &str,
+        scope: Vec<String>,
+    ) -> Result<UserReference, String> {
         let source_type = SourceType::ApiKey {
             name: api_name.to_string(),
             scope,
             metadata: JsonValue::Object(JsonMap::new()),
         };
 
-        self.create_or_get_user(source_identifier, "api", source_type, Some("external")).await
+        self.create_or_get_user(source_identifier, "api", source_type, Some("external"))
+            .await
     }
 
     /// Create an email authenticated user
-    pub async fn create_email_user(&self, email: &str, provider: &str, verified: bool) -> Result<UserReference, String> {
+    pub async fn create_email_user(
+        &self,
+        email: &str,
+        provider: &str,
+        verified: bool,
+    ) -> Result<UserReference, String> {
         let source_type = SourceType::EmailAuth {
             verified,
             provider: provider.to_string(),
             metadata: JsonValue::Object(JsonMap::new()),
         };
 
-        self.create_or_get_user(email, "email", source_type, Some("external")).await
+        self.create_or_get_user(email, "email", source_type, Some("external"))
+            .await
     }
 
     /// Create a system agent user
-    pub async fn create_system_agent(&self, agent_id: &str, agent_type: &str, capabilities: Vec<String>) -> Result<UserReference, String> {
+    pub async fn create_system_agent(
+        &self,
+        agent_id: &str,
+        agent_type: &str,
+        capabilities: Vec<String>,
+    ) -> Result<UserReference, String> {
         let source_type = SourceType::SystemAgent {
             agent_type: agent_type.to_string(),
             capabilities,
             metadata: JsonValue::Object(JsonMap::new()),
         };
 
-        self.create_or_get_user(agent_id, "system", source_type, Some("system")).await
+        self.create_or_get_user(agent_id, "system", source_type, Some("system"))
+            .await
     }
 
     /// Create an OAuth user
-    pub async fn create_oauth_user(&self, oauth_user_id: &str, provider: &str, metadata: JsonValue) -> Result<UserReference, String> {
+    pub async fn create_oauth_user(
+        &self,
+        oauth_user_id: &str,
+        provider: &str,
+        metadata: JsonValue,
+    ) -> Result<UserReference, String> {
         let source_type = SourceType::OAuth {
             provider: provider.to_string(),
             user_id: oauth_user_id.to_string(),
             metadata,
         };
 
-        self.create_or_get_user(oauth_user_id, "oauth", source_type, Some("external")).await
+        self.create_or_get_user(oauth_user_id, "oauth", source_type, Some("external"))
+            .await
     }
 
     /// Get users by source type
-    pub async fn get_users_by_source_type(&self, source_type: &str) -> Result<Vec<UserReference>, String> {
+    pub async fn get_users_by_source_type(
+        &self,
+        source_type: &str,
+    ) -> Result<Vec<UserReference>, String> {
         let result = sqlx::query_as::<_, (uuid::Uuid, String, String, String, serde_json::Value, Option<String>, serde_json::Value, serde_json::Value, bool, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)>(
             "SELECT id, source_identifier, network, user_type, source_type, email, metadata, preferences, is_active, created_at, updated_at FROM user_references WHERE source_type->>'type' = $1 AND is_active = true ORDER BY created_at DESC"
         )
@@ -352,24 +437,41 @@ impl UserReferenceService {
 
         match result {
             Ok(rows) => {
-                let users = rows.into_iter().map(|(id, source_identifier, network, user_type, source_type_json, email, metadata, preferences, is_active, created_at, updated_at)| {
-                    let source_type = SourceType::from_json(source_type_json)
-                        .unwrap_or_else(|_| SourceType::default());
+                let users = rows
+                    .into_iter()
+                    .map(
+                        |(
+                            id,
+                            source_identifier,
+                            network,
+                            user_type,
+                            source_type_json,
+                            email,
+                            metadata,
+                            preferences,
+                            is_active,
+                            created_at,
+                            updated_at,
+                        )| {
+                            let source_type = SourceType::from_json(source_type_json)
+                                .unwrap_or_else(|_| SourceType::default());
 
-                    UserReference {
-                        id,
-                        source_identifier,
-                        network,
-                        user_type,
-                        source_type,
-                        email,
-                        metadata,
-                        preferences,
-                        is_active,
-                        created_at,
-                        updated_at,
-                    }
-                }).collect();
+                            UserReference {
+                                id,
+                                source_identifier,
+                                network,
+                                user_type,
+                                source_type,
+                                email,
+                                metadata,
+                                preferences,
+                                is_active,
+                                created_at,
+                                updated_at,
+                            }
+                        },
+                    )
+                    .collect();
                 Ok(users)
             }
             Err(e) => {
@@ -380,7 +482,12 @@ impl UserReferenceService {
     }
 
     /// Update user metadata
-    pub async fn update_user_metadata(&self, user_id: &Uuid, metadata: JsonValue, preferences: Option<JsonValue>) -> Result<UserReference, String> {
+    pub async fn update_user_metadata(
+        &self,
+        user_id: &Uuid,
+        metadata: JsonValue,
+        preferences: Option<JsonValue>,
+    ) -> Result<UserReference, String> {
         let update_query = if let Some(_prefs) = &preferences {
             "UPDATE user_references SET metadata = $2, preferences = $3, updated_at = NOW() WHERE id = $1 AND is_active = true RETURNING id, source_identifier, network, user_type, source_type, email, metadata, preferences, is_active, created_at, updated_at"
         } else {
@@ -388,22 +495,64 @@ impl UserReferenceService {
         };
 
         let result = if let Some(prefs) = &preferences {
-            sqlx::query_as::<_, (uuid::Uuid, String, String, String, serde_json::Value, Option<String>, serde_json::Value, serde_json::Value, bool, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)>(update_query)
-                .bind(user_id)
-                .bind(&metadata)
-                .bind(&prefs)
-                .fetch_one(self.database.pool())
-                .await
+            sqlx::query_as::<
+                _,
+                (
+                    uuid::Uuid,
+                    String,
+                    String,
+                    String,
+                    serde_json::Value,
+                    Option<String>,
+                    serde_json::Value,
+                    serde_json::Value,
+                    bool,
+                    chrono::DateTime<chrono::Utc>,
+                    chrono::DateTime<chrono::Utc>,
+                ),
+            >(update_query)
+            .bind(user_id)
+            .bind(&metadata)
+            .bind(&prefs)
+            .fetch_one(self.database.pool())
+            .await
         } else {
-            sqlx::query_as::<_, (uuid::Uuid, String, String, String, serde_json::Value, Option<String>, serde_json::Value, serde_json::Value, bool, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)>(update_query)
-                .bind(user_id)
-                .bind(&metadata)
-                .fetch_one(self.database.pool())
-                .await
+            sqlx::query_as::<
+                _,
+                (
+                    uuid::Uuid,
+                    String,
+                    String,
+                    String,
+                    serde_json::Value,
+                    Option<String>,
+                    serde_json::Value,
+                    serde_json::Value,
+                    bool,
+                    chrono::DateTime<chrono::Utc>,
+                    chrono::DateTime<chrono::Utc>,
+                ),
+            >(update_query)
+            .bind(user_id)
+            .bind(&metadata)
+            .fetch_one(self.database.pool())
+            .await
         };
 
         match result {
-            Ok((id, source_identifier, network, user_type, source_type_json, email, metadata, preferences, is_active, created_at, updated_at)) => {
+            Ok((
+                id,
+                source_identifier,
+                network,
+                user_type,
+                source_type_json,
+                email,
+                metadata,
+                preferences,
+                is_active,
+                created_at,
+                updated_at,
+            )) => {
                 let source_type = SourceType::from_json(source_type_json)
                     .unwrap_or_else(|_| SourceType::default());
 

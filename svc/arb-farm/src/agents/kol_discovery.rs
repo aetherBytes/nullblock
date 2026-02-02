@@ -42,9 +42,10 @@ impl DiscoveredKol {
         let profit_factor = (self.avg_profit_pct.min(50.0) / 50.0) * 10.0;
         let consecutive_bonus = (self.consecutive_wins.min(10) as f64 / 10.0) * 5.0;
 
-        self.trust_score = (base + win_rate_factor + trade_count_factor + profit_factor + consecutive_bonus)
-            .max(0.0)
-            .min(100.0);
+        self.trust_score =
+            (base + win_rate_factor + trade_count_factor + profit_factor + consecutive_bonus)
+                .max(0.0)
+                .min(100.0);
     }
 }
 
@@ -131,7 +132,10 @@ impl KolDiscoveryAgent {
             stats.is_running = true;
         }
 
-        info!("🔍 KOL Discovery Agent started (interval: {}ms)", DISCOVERY_INTERVAL_MS);
+        info!(
+            "🔍 KOL Discovery Agent started (interval: {}ms)",
+            DISCOVERY_INTERVAL_MS
+        );
 
         let discovered = self.discovered.clone();
         let wallet_cache = self.wallet_cache.clone();
@@ -185,16 +189,19 @@ impl KolDiscoveryAgent {
 
                                     if let Some(ref engrams) = engrams_client {
                                         if engrams.is_configured() {
-                                            let wallet = owner_wallet.as_deref().unwrap_or("default");
-                                            let _ = engrams.save_kol_discovery(
-                                                wallet,
-                                                &candidate.wallet_address,
-                                                candidate.display_name.as_deref(),
-                                                candidate.trust_score,
-                                                candidate.win_rate,
-                                                candidate.total_trades as i32,
-                                                &candidate.source,
-                                            ).await;
+                                            let wallet =
+                                                owner_wallet.as_deref().unwrap_or("default");
+                                            let _ = engrams
+                                                .save_kol_discovery(
+                                                    wallet,
+                                                    &candidate.wallet_address,
+                                                    candidate.display_name.as_deref(),
+                                                    candidate.trust_score,
+                                                    candidate.win_rate,
+                                                    candidate.total_trades as i32,
+                                                    &candidate.source,
+                                                )
+                                                .await;
                                         }
                                     }
 
@@ -232,7 +239,11 @@ impl KolDiscoveryAgent {
         let discovered = self.discovered.read().await;
         let mut kols: Vec<_> = discovered.clone();
 
-        kols.sort_by(|a, b| b.trust_score.partial_cmp(&a.trust_score).unwrap_or(std::cmp::Ordering::Equal));
+        kols.sort_by(|a, b| {
+            b.trust_score
+                .partial_cmp(&a.trust_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         if let Some(limit) = limit {
             kols.truncate(limit);
@@ -267,15 +278,17 @@ impl KolDiscoveryAgent {
                     if let Some(ref engrams) = self.engrams_client {
                         if engrams.is_configured() {
                             let wallet = self.owner_wallet.as_deref().unwrap_or("default");
-                            let _ = engrams.save_kol_discovery(
-                                wallet,
-                                &candidate.wallet_address,
-                                candidate.display_name.as_deref(),
-                                candidate.trust_score,
-                                candidate.win_rate,
-                                candidate.total_trades as i32,
-                                &candidate.source,
-                            ).await;
+                            let _ = engrams
+                                .save_kol_discovery(
+                                    wallet,
+                                    &candidate.wallet_address,
+                                    candidate.display_name.as_deref(),
+                                    candidate.trust_score,
+                                    candidate.win_rate,
+                                    candidate.total_trades as i32,
+                                    &candidate.source,
+                                )
+                                .await;
                         }
                     }
 
@@ -309,7 +322,8 @@ impl KolDiscoveryAgent {
         match Self::fetch_dexscreener_top_traders(http_client).await {
             Ok(traders) => {
                 for trader in traders {
-                    let already_exists = discovered.iter()
+                    let already_exists = discovered
+                        .iter()
                         .any(|d| d.wallet_address == trader.wallet_address);
                     if !already_exists {
                         discovered.push(trader);
@@ -360,7 +374,8 @@ impl KolDiscoveryAgent {
                         .into_iter()
                         .filter_map(|t| {
                             let wallet_address = t.wallet.or(t.address)?;
-                            let total_trades = t.total_trades
+                            let total_trades = t
+                                .total_trades
                                 .or(t.total_buys.map(|b| b + t.total_sells.unwrap_or(0)))
                                 .unwrap_or(0);
 
@@ -368,7 +383,8 @@ impl KolDiscoveryAgent {
                                 wallet_address,
                                 display_name: None,
                                 total_trades,
-                                winning_trades: (total_trades as f64 * t.win_rate.unwrap_or(0.5)) as u32,
+                                winning_trades: (total_trades as f64 * t.win_rate.unwrap_or(0.5))
+                                    as u32,
                                 win_rate: t.win_rate.unwrap_or(0.5),
                                 avg_profit_pct: t.avg_profit.unwrap_or(0.0),
                                 total_volume_usd: t.total_volume.unwrap_or(0.0),
@@ -494,8 +510,11 @@ impl KolDiscoveryAgent {
             }
         }
 
-        info!("📥 Restored {} KOLs from engrams (total: {})",
-            stats.total_kols_discovered, discovered.len());
+        info!(
+            "📥 Restored {} KOLs from engrams (total: {})",
+            stats.total_kols_discovered,
+            discovered.len()
+        );
     }
 
     pub async fn analyze_wallet(&self, address: &str) -> AppResult<Option<DiscoveredKol>> {
@@ -504,13 +523,22 @@ impl KolDiscoveryAgent {
         if let Some(analysis) = wallet_cache.get(address) {
             if (Utc::now() - analysis.last_analyzed).num_minutes() < 5 {
                 let total_trades = analysis.trades.len() as u32;
-                let winning = analysis.trades.iter()
+                let winning = analysis
+                    .trades
+                    .iter()
                     .filter(|t| t.profit_pct.map(|p| p > 0.0).unwrap_or(false))
                     .count() as u32;
-                let win_rate = if total_trades > 0 { winning as f64 / total_trades as f64 } else { 0.0 };
-                let avg_profit = analysis.trades.iter()
+                let win_rate = if total_trades > 0 {
+                    winning as f64 / total_trades as f64
+                } else {
+                    0.0
+                };
+                let avg_profit = analysis
+                    .trades
+                    .iter()
                     .filter_map(|t| t.profit_pct)
-                    .sum::<f64>() / analysis.trades.len().max(1) as f64;
+                    .sum::<f64>()
+                    / analysis.trades.len().max(1) as f64;
 
                 let mut kol = DiscoveredKol {
                     wallet_address: address.to_string(),

@@ -163,7 +163,10 @@ impl ServiceRegistry {
         );
 
         let endpoint = ServiceEndpoint::from_server_config(&config);
-        let client = Arc::new(McpClient::from_server_config(&config, self.client_info.clone()));
+        let client = Arc::new(McpClient::from_server_config(
+            &config,
+            self.client_info.clone(),
+        ));
 
         {
             let mut services = self.services.write().await;
@@ -434,7 +437,11 @@ impl ServiceRegistry {
 
     pub async fn list_local_services(&self) -> Vec<ServiceEndpoint> {
         let services = self.services.read().await;
-        services.values().filter(|s| !s.is_remote).cloned().collect()
+        services
+            .values()
+            .filter(|s| !s.is_remote)
+            .cloned()
+            .collect()
     }
 
     pub async fn get_tools_by_service(&self) -> HashMap<String, Vec<McpTool>> {

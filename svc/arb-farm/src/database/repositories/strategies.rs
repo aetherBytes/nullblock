@@ -76,18 +76,21 @@ impl StrategyRepository {
     }
 
     pub async fn get_by_id(&self, id: Uuid) -> AppResult<Option<StrategyRecord>> {
-        let record = sqlx::query_as::<_, StrategyRecord>(
-            r#"SELECT * FROM arb_strategies WHERE id = $1"#,
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+        let record =
+            sqlx::query_as::<_, StrategyRecord>(r#"SELECT * FROM arb_strategies WHERE id = $1"#)
+                .bind(id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(record)
     }
 
-    pub async fn update(&self, id: Uuid, update: UpdateStrategyRecord) -> AppResult<StrategyRecord> {
+    pub async fn update(
+        &self,
+        id: Uuid,
+        update: UpdateStrategyRecord,
+    ) -> AppResult<StrategyRecord> {
         let current = self
             .get_by_id(id)
             .await?
@@ -135,7 +138,12 @@ impl StrategyRepository {
         Ok(())
     }
 
-    pub async fn list(&self, wallet_address: Option<&str>, limit: i64, offset: i64) -> AppResult<Vec<StrategyRecord>> {
+    pub async fn list(
+        &self,
+        wallet_address: Option<&str>,
+        limit: i64,
+        offset: i64,
+    ) -> AppResult<Vec<StrategyRecord>> {
         let query = if wallet_address.is_some() {
             r#"
             SELECT * FROM arb_strategies
@@ -221,15 +229,15 @@ impl StrategyRepository {
         Ok(record)
     }
 
-    pub async fn get_strategy_type_map(&self) -> AppResult<std::collections::HashMap<Uuid, String>> {
+    pub async fn get_strategy_type_map(
+        &self,
+    ) -> AppResult<std::collections::HashMap<Uuid, String>> {
         #[derive(sqlx::FromRow)]
         struct Row {
             id: Uuid,
             strategy_type: String,
         }
-        let rows: Vec<Row> = sqlx::query_as(
-            "SELECT id, strategy_type FROM arb_strategies"
-        )
+        let rows: Vec<Row> = sqlx::query_as("SELECT id, strategy_type FROM arb_strategies")
             .fetch_all(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;

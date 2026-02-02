@@ -63,7 +63,8 @@ pub struct FeatureConfig {
 impl Config {
     pub fn from_env() -> Result<Self, ConfigError> {
         Ok(Self {
-            service_name: env::var("SERVICE_NAME").unwrap_or_else(|_| "nullblock-agents".to_string()),
+            service_name: env::var("SERVICE_NAME")
+                .unwrap_or_else(|_| "nullblock-agents".to_string()),
             version: env::var("SERVICE_VERSION").unwrap_or_else(|_| "0.1.0".to_string()),
 
             server: ServerConfig {
@@ -74,8 +75,10 @@ impl Config {
                     .map_err(|e| ConfigError::Parse(format!("AGENTS_PORT: {}", e)))?,
                 cors_origins: env::var("CORS_ORIGINS")
                     .unwrap_or_else(|_| {
-                        let frontend_url = env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
-                        let erebus_url = env::var("EREBUS_BASE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+                        let frontend_url = env::var("FRONTEND_URL")
+                            .unwrap_or_else(|_| "http://localhost:5173".to_string());
+                        let erebus_url = env::var("EREBUS_BASE_URL")
+                            .unwrap_or_else(|_| "http://localhost:3000".to_string());
                         format!("{},{}", frontend_url, erebus_url)
                     })
                     .split(',')
@@ -92,8 +95,9 @@ impl Config {
             },
 
             llm: LLMConfig {
-                default_model: env::var("DEFAULT_LLM_MODEL")
-                    .unwrap_or_else(|_| "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string()),
+                default_model: env::var("DEFAULT_LLM_MODEL").unwrap_or_else(|_| {
+                    "cognitivecomputations/dolphin3.0-mistral-24b:free".to_string()
+                }),
                 request_timeout_ms: env::var("LLM_REQUEST_TIMEOUT_MS")
                     .unwrap_or_else(|_| "300000".to_string()) // 5 minutes for thinking models
                     .parse()
@@ -135,7 +139,9 @@ impl Config {
                 information_gathering_enabled: env::var("FEATURE_INFORMATION_GATHERING")
                     .unwrap_or_else(|_| "true".to_string())
                     .parse()
-                    .map_err(|e| ConfigError::Parse(format!("FEATURE_INFORMATION_GATHERING: {}", e)))?,
+                    .map_err(|e| {
+                        ConfigError::Parse(format!("FEATURE_INFORMATION_GATHERING: {}", e))
+                    })?,
                 metrics_enabled: env::var("FEATURE_METRICS")
                     .unwrap_or_else(|_| "true".to_string())
                     .parse()
@@ -180,7 +186,10 @@ impl Config {
             let key_lower = key.to_lowercase();
 
             // Check if key is obviously a placeholder
-            if placeholder_patterns.iter().any(|pattern| key_lower.contains(pattern)) {
+            if placeholder_patterns
+                .iter()
+                .any(|pattern| key_lower.contains(pattern))
+            {
                 None
             } else if key.len() < 10 {
                 // API keys are typically longer than 10 characters

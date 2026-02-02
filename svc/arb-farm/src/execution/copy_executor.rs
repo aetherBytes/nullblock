@@ -6,18 +6,18 @@ use tokio::sync::{broadcast, RwLock};
 use tokio::time::Instant;
 use uuid::Uuid;
 
-use crate::database::repositories::{KolRepository, CreateCopyTradeRecord, UpdateCopyTradeRecord};
-use crate::models::CopyTradeStatus;
+use crate::database::repositories::{CreateCopyTradeRecord, KolRepository, UpdateCopyTradeRecord};
 use crate::engrams::client::EngramsClient;
 use crate::error::{AppError, AppResult};
-use crate::events::{ArbEvent, AgentType, EventSource};
-use crate::execution::{CurveBuyParams, CurveSellParams, CurveTransactionBuilder, PositionManager};
+use crate::events::{AgentType, ArbEvent, EventSource};
 use crate::execution::position_command::{CommandSource, ExitCommand, PositionCommand};
 use crate::execution::position_manager::{ExitReason, ExitSignal, ExitUrgency};
+use crate::execution::{CurveBuyParams, CurveSellParams, CurveTransactionBuilder, PositionManager};
 use crate::helius::HeliusSender;
+use crate::models::CopyTradeStatus;
 use crate::models::Signal;
-use crate::wallet::DevWalletSigner;
 use crate::wallet::turnkey::SignRequest;
+use crate::wallet::DevWalletSigner;
 
 const MIN_COPY_INTERVAL_MS: u64 = 1000;
 const MAX_COPIES_PER_MINUTE: u32 = 10;
@@ -162,7 +162,8 @@ impl CopyTradeExecutor {
 
     pub async fn calculate_profit_for_closed_position(&self, position_id: Uuid, pnl_lamports: i64) {
         let map = self.copy_to_position.read().await;
-        let copy_trade_id = map.iter()
+        let copy_trade_id = map
+            .iter()
             .find(|(_, &pid)| pid == position_id)
             .map(|(&cid, _)| cid);
 
@@ -221,7 +222,9 @@ impl CopyTradeExecutor {
 
         let kol_id = self.extract_kol_id(signal)?;
         let kol_trade_id = self.extract_kol_trade_id(signal)?;
-        let token_mint = signal.token_mint.clone()
+        let token_mint = signal
+            .token_mint
+            .clone()
             .ok_or_else(|| AppError::Validation("Signal missing token_mint".into()))?;
         let trade_type = self.extract_trade_type(signal)?;
         let kol_trust_score = self.extract_trust_score(signal)?;
@@ -235,7 +238,9 @@ impl CopyTradeExecutor {
 
         let kol_amount_sol = self.extract_kol_amount(signal)?;
 
-        let copy_percentage = signal.metadata.get("copy_percentage")
+        let copy_percentage = signal
+            .metadata
+            .get("copy_percentage")
             .and_then(|v| v.as_f64())
             .unwrap_or(config.default_copy_percentage);
 
@@ -268,25 +273,44 @@ impl CopyTradeExecutor {
         }
 
         let result = match trade_type.as_str() {
-            "buy" => self.execute_buy(&token_mint, our_amount_sol, &kol_id, &kol_trade_id, copy_trade_id).await,
+            "buy" => {
+                self.execute_buy(
+                    &token_mint,
+                    our_amount_sol,
+                    &kol_id,
+                    &kol_trade_id,
+                    copy_trade_id,
+                )
+                .await
+            }
             "sell" => self.execute_sell(&token_mint, &kol_id, &kol_trade_id).await,
-            _ => Err(AppError::Validation(format!("Unknown trade type: {}", trade_type))),
+            _ => Err(AppError::Validation(format!(
+                "Unknown trade type: {}",
+                trade_type
+            ))),
         };
 
         let latency_ms = start.elapsed().as_millis() as u64;
 
         match result {
             Ok((tx_signature, success)) => {
-                let _ = self.kol_repo.update_copy_trade(
-                    copy_trade_id,
-                    UpdateCopyTradeRecord {
-                        our_tx_signature: tx_signature.clone(),
-                        status: Some(if success { CopyTradeStatus::Executed } else { CopyTradeStatus::Failed }),
-                        is_copied: Some(success),
-                        executed_at: Some(Utc::now()),
-                        ..Default::default()
-                    },
-                ).await;
+                let _ = self
+                    .kol_repo
+                    .update_copy_trade(
+                        copy_trade_id,
+                        UpdateCopyTradeRecord {
+                            our_tx_signature: tx_signature.clone(),
+                            status: Some(if success {
+                                CopyTradeStatus::Executed
+                            } else {
+                                CopyTradeStatus::Failed
+                            }),
+                            is_copied: Some(success),
+                            executed_at: Some(Utc::now()),
+                            ..Default::default()
+                        },
+                    )
+                    .await;
 
                 let copy_result = CopyTradeResult {
                     copy_trade_id,
@@ -317,15 +341,18 @@ impl CopyTradeExecutor {
                 Ok(copy_result)
             }
             Err(e) => {
-                let _ = self.kol_repo.update_copy_trade(
-                    copy_trade_id,
-                    UpdateCopyTradeRecord {
-                        status: Some(CopyTradeStatus::Failed),
-                        is_copied: Some(false),
-                        executed_at: Some(Utc::now()),
-                        ..Default::default()
-                    },
-                ).await;
+                let _ = self
+                    .kol_repo
+                    .update_copy_trade(
+                        copy_trade_id,
+                        UpdateCopyTradeRecord {
+                            status: Some(CopyTradeStatus::Failed),
+                            is_copied: Some(false),
+                            executed_at: Some(Utc::now()),
+                            ..Default::default()
+                        },
+                    )
+                    .await;
 
                 let copy_result = CopyTradeResult {
                     copy_trade_id,
@@ -377,14 +404,15 @@ impl CopyTradeExecutor {
         let sol_lamports = (sol_amount * 1_000_000_000.0) as u64;
         let slippage_bps = 500;
 
-        let build_result = self.curve_builder.build_pump_fun_buy(
-            &CurveBuyParams {
+        let build_result = self
+            .curve_builder
+            .build_pump_fun_buy(&CurveBuyParams {
                 mint: token_mint.to_string(),
                 sol_amount_lamports: sol_lamports,
                 slippage_bps,
                 user_wallet: self.default_wallet.clone(),
-            },
-        ).await?;
+            })
+            .await?;
 
         let sign_request = SignRequest {
             transaction_base64: build_result.transaction_base64.clone(),
@@ -398,14 +426,20 @@ impl CopyTradeExecutor {
 
         if !sign_result.success {
             return Err(AppError::Execution(
-                sign_result.error.unwrap_or_else(|| "Signing failed".to_string())
+                sign_result
+                    .error
+                    .unwrap_or_else(|| "Signing failed".to_string()),
             ));
         }
 
-        let signed_tx = sign_result.signed_transaction_base64
+        let signed_tx = sign_result
+            .signed_transaction_base64
             .ok_or_else(|| AppError::Execution("No signed transaction returned".into()))?;
 
-        let signature = self.helius_sender.send_and_confirm(&signed_tx, std::time::Duration::from_secs(30)).await
+        let signature = self
+            .helius_sender
+            .send_and_confirm(&signed_tx, std::time::Duration::from_secs(30))
+            .await
             .map_err(|e| AppError::Execution(format!("Send failed: {}", e)))?;
 
         tracing::info!(
@@ -427,19 +461,23 @@ impl CopyTradeExecutor {
 
         let exit_config = crate::execution::ExitConfig::default();
 
-        if let Ok(position) = self.position_manager.open_position(
-            Uuid::nil(),
-            Uuid::nil(),
-            token_mint.to_string(),
-            None,
-            sol_amount,
-            expected_tokens,
-            entry_price,
-            exit_config,
-            Some(signature.clone()),
-            Some("kol_copy".to_string()),
-            Some(format!("kol:{}", kol_id)),
-        ).await {
+        if let Ok(position) = self
+            .position_manager
+            .open_position(
+                Uuid::nil(),
+                Uuid::nil(),
+                token_mint.to_string(),
+                None,
+                sol_amount,
+                expected_tokens,
+                entry_price,
+                exit_config,
+                Some(signature.clone()),
+                Some("kol_copy".to_string()),
+                Some(format!("kol:{}", kol_id)),
+            )
+            .await
+        {
             self.link_copy_to_position(copy_trade_id, position.id).await;
             tracing::info!(
                 copy_trade_id = %copy_trade_id,
@@ -458,7 +496,11 @@ impl CopyTradeExecutor {
         kol_id: &Uuid,
         kol_trade_id: &Uuid,
     ) -> AppResult<(Option<String>, bool)> {
-        let position = match self.position_manager.get_open_position_for_mint(token_mint).await {
+        let position = match self
+            .position_manager
+            .get_open_position_for_mint(token_mint)
+            .await
+        {
             Some(pos) => pos,
             None => {
                 tracing::warn!(
@@ -492,7 +534,12 @@ impl CopyTradeExecutor {
             tokio::time::sleep(tokio::time::Duration::from_millis(CHECK_INTERVAL_MS)).await;
 
             // Check if position was closed by position monitor
-            if self.position_manager.get_position(position_id).await.is_none() {
+            if self
+                .position_manager
+                .get_position(position_id)
+                .await
+                .is_none()
+            {
                 tracing::info!(
                     kol_id = %kol_id,
                     position_id = %position_id,
@@ -534,7 +581,8 @@ impl CopyTradeExecutor {
             urgency: ExitUrgency::Critical,
         };
 
-        let cmd = PositionCommand::Exit(ExitCommand::new(signal, CommandSource::CopyTradeEmergency));
+        let cmd =
+            PositionCommand::Exit(ExitCommand::new(signal, CommandSource::CopyTradeEmergency));
         if let Err(e) = self.command_tx.send(cmd).await {
             tracing::error!(
                 kol_id = %kol_id,
@@ -542,7 +590,10 @@ impl CopyTradeExecutor {
                 "Failed to queue emergency exit command: {}",
                 e
             );
-            return Err(AppError::Internal(format!("Failed to queue emergency exit: {}", e)));
+            return Err(AppError::Internal(format!(
+                "Failed to queue emergency exit: {}",
+                e
+            )));
         }
 
         Ok((None, true))
@@ -550,9 +601,17 @@ impl CopyTradeExecutor {
 
     async fn emit_copy_event(&self, result: &CopyTradeResult, success: bool) {
         let event = ArbEvent::new(
-            if success { "copy_trade.executed" } else { "copy_trade.failed" },
+            if success {
+                "copy_trade.executed"
+            } else {
+                "copy_trade.failed"
+            },
             EventSource::Agent(AgentType::Executor),
-            if success { "arb.kol.trade.copied" } else { "arb.kol.trade.copy_failed" },
+            if success {
+                "arb.kol.trade.copied"
+            } else {
+                "arb.kol.trade.copy_failed"
+            },
             serde_json::json!({
                 "copy_trade_id": result.copy_trade_id,
                 "kol_id": result.kol_id,
@@ -571,34 +630,44 @@ impl CopyTradeExecutor {
     }
 
     fn extract_kol_id(&self, signal: &Signal) -> AppResult<Uuid> {
-        signal.metadata.get("kol_id")
+        signal
+            .metadata
+            .get("kol_id")
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or_else(|| AppError::Validation("Signal missing kol_id".into()))
     }
 
     fn extract_kol_trade_id(&self, signal: &Signal) -> AppResult<Uuid> {
-        signal.metadata.get("kol_trade_id")
+        signal
+            .metadata
+            .get("kol_trade_id")
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok())
             .ok_or_else(|| AppError::Validation("Signal missing kol_trade_id".into()))
     }
 
     fn extract_trade_type(&self, signal: &Signal) -> AppResult<String> {
-        signal.metadata.get("trade_type")
+        signal
+            .metadata
+            .get("trade_type")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .ok_or_else(|| AppError::Validation("Signal missing trade_type".into()))
     }
 
     fn extract_trust_score(&self, signal: &Signal) -> AppResult<f64> {
-        signal.metadata.get("kol_trust_score")
+        signal
+            .metadata
+            .get("kol_trust_score")
             .and_then(|v| v.as_f64())
             .ok_or_else(|| AppError::Validation("Signal missing kol_trust_score".into()))
     }
 
     fn extract_kol_amount(&self, signal: &Signal) -> AppResult<f64> {
-        signal.metadata.get("amount_sol")
+        signal
+            .metadata
+            .get("amount_sol")
             .and_then(|v| v.as_f64())
             .ok_or_else(|| AppError::Validation("Signal missing amount_sol".into()))
     }

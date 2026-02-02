@@ -4,11 +4,14 @@
 #![allow(dead_code)]
 
 use crate::{
-    config::ApiKeys,
     config::dev_wallet::get_dev_preferred_model,
+    config::ApiKeys,
     database::repositories::AgentRepository,
     error::{AppError, AppResult},
-    llm::{LLMServiceFactory, OptimizationGoal, Priority, TaskRequirements, validator::{ModelValidator, sort_models_by_context_length}},
+    llm::{
+        validator::{sort_models_by_context_length, ModelValidator},
+        LLMServiceFactory, OptimizationGoal, Priority, TaskRequirements,
+    },
     log_agent_shutdown, log_agent_startup, log_request_complete, log_request_start,
     mcp::McpClient,
     models::{ChatResponse, ConversationMessage, LLMRequest, ModelCapability},
@@ -19,7 +22,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 // Compiled regex for stripping base64 image data (used to reduce token usage)
@@ -32,7 +35,6 @@ fn get_image_data_regex() -> &'static Regex {
         Regex::new(r"data:image/[^;]+;base64,[A-Za-z0-9+/=\s]+").unwrap()
     })
 }
-
 
 pub struct HecateAgent {
     pub personality: String,
@@ -110,11 +112,14 @@ When asked about capabilities, features, tools, or what you can do:
 "The crossroads await, visitor. Shall we explore?""#.to_string();
 
         let mut personalities = HashMap::new();
-        personalities.insert("unified".to_string(), PersonalityConfig {
-            system_prompt,
-            style: "vessel_companion".to_string(),
-            optimization_goal: OptimizationGoal::Balanced,
-        });
+        personalities.insert(
+            "unified".to_string(),
+            PersonalityConfig {
+                system_prompt,
+                style: "vessel_companion".to_string(),
+                optimization_goal: OptimizationGoal::Balanced,
+            },
+        );
 
         log_agent_startup!("hecate", "2.0.0");
         info!("🚀 HECATE MK1 Vessel AI Online");
@@ -154,7 +159,10 @@ When asked about capabilities, features, tools, or what you can do:
         info!("🔍 Validating default model: {}", self.preferred_model);
         let validator = ModelValidator::new(llm_factory_arc.clone());
 
-        match validator.validate_model(&self.preferred_model, api_keys).await {
+        match validator
+            .validate_model(&self.preferred_model, api_keys)
+            .await
+        {
             Ok(true) => {
                 self.current_model = Some(self.preferred_model.clone());
                 info!("✅ Default model validated: {}", self.preferred_model);
@@ -177,7 +185,12 @@ When asked about capabilities, features, tools, or what you can do:
 
                             let mut validated = false;
                             for (idx, candidate) in sorted_models.iter().take(10).enumerate() {
-                                info!("🧪 Testing candidate {}/{}: {}", idx + 1, sorted_models.len().min(10), candidate);
+                                info!(
+                                    "🧪 Testing candidate {}/{}: {}",
+                                    idx + 1,
+                                    sorted_models.len().min(10),
+                                    candidate
+                                );
 
                                 match validator.validate_model(candidate, api_keys).await {
                                     Ok(true) => {
@@ -187,10 +200,16 @@ When asked about capabilities, features, tools, or what you can do:
                                         break;
                                     }
                                     Ok(false) => {
-                                        warn!("⚠️ Candidate {} failed validation, trying next...", candidate);
+                                        warn!(
+                                            "⚠️ Candidate {} failed validation, trying next...",
+                                            candidate
+                                        );
                                     }
                                     Err(e) => {
-                                        warn!("⚠️ Candidate {} error: {}, trying next...", candidate, e);
+                                        warn!(
+                                            "⚠️ Candidate {} error: {}, trying next...",
+                                            candidate, e
+                                        );
                                     }
                                 }
                             }
@@ -214,9 +233,11 @@ When asked about capabilities, features, tools, or what you can do:
         self.start_new_chat_session();
 
         // Add system message to conversation
-        let personality_config = self.personalities.get(&self.personality)
+        let personality_config = self
+            .personalities
+            .get(&self.personality)
             .unwrap_or(&self.personalities["unified"]);
-        
+
         let system_message = ConversationMessage::new(
             personality_config.system_prompt.clone(),
             "system".to_string(),
@@ -227,7 +248,10 @@ When asked about capabilities, features, tools, or what you can do:
             history.push(system_message);
         }
 
-        info!("💬 Conversation context initialized with {} personality", self.personality);
+        info!(
+            "💬 Conversation context initialized with {} personality",
+            self.personality
+        );
 
         // Initialize MCP client connection
         info!("🔌 Connecting to MCP server...");
@@ -240,7 +264,10 @@ When asked about capabilities, features, tools, or what you can do:
                 }
             }
             Err(e) => {
-                warn!("⚠️ Failed to connect to MCP server: {} (will retry on first tool request)", e);
+                warn!(
+                    "⚠️ Failed to connect to MCP server: {} (will retry on first tool request)",
+                    e
+                );
             }
         }
 
@@ -277,7 +304,11 @@ When asked about capabilities, features, tools, or what you can do:
         self.mcp_client.get_tools_for_prompt_async().await
     }
 
-    pub async fn call_mcp_tool(&self, name: &str, arguments: std::collections::HashMap<String, serde_json::Value>) -> AppResult<crate::mcp::CallToolResult> {
+    pub async fn call_mcp_tool(
+        &self,
+        name: &str,
+        arguments: std::collections::HashMap<String, serde_json::Value>,
+    ) -> AppResult<crate::mcp::CallToolResult> {
         self.mcp_client.call_tool(name, arguments).await
     }
 
@@ -302,12 +333,19 @@ When asked about capabilities, features, tools, or what you can do:
             "/capabilities",
         ];
 
-        if capability_phrases.iter().any(|phrase| lower.contains(phrase)) {
+        if capability_phrases
+            .iter()
+            .any(|phrase| lower.contains(phrase))
+        {
             return true;
         }
 
         // MCP-specific questions (any mention of "mcp" with tool context)
-        if lower.contains("mcp") && (lower.contains("tool") || lower.contains("capability") || lower.contains("function")) {
+        if lower.contains("mcp")
+            && (lower.contains("tool")
+                || lower.contains("capability")
+                || lower.contains("function"))
+        {
             return true;
         }
 
@@ -323,7 +361,20 @@ When asked about capabilities, features, tools, or what you can do:
             "is there a",
         ];
 
-        let tool_context_words = ["tool", "tools", "scanner", "curve", "consensus", "engram", "strategy", "execution", "swarm", "kol", "threat", "research"];
+        let tool_context_words = [
+            "tool",
+            "tools",
+            "scanner",
+            "curve",
+            "consensus",
+            "engram",
+            "strategy",
+            "execution",
+            "swarm",
+            "kol",
+            "threat",
+            "research",
+        ];
 
         // Check if message has both a question pattern AND a tool context word
         let has_question_pattern = tool_question_patterns.iter().any(|p| lower.contains(p));
@@ -345,24 +396,34 @@ When asked about capabilities, features, tools, or what you can do:
             return Err(AppError::AgentNotRunning);
         }
 
-        let llm_factory = self.llm_factory.clone()
+        let llm_factory = self
+            .llm_factory
+            .clone()
             .ok_or(AppError::AgentNotInitialized)?;
 
         let start_time = std::time::Instant::now();
-        
+
         let user_id = user_context
             .as_ref()
             .and_then(|ctx| ctx.get("wallet_address"))
             .and_then(|addr| addr.as_str())
             .unwrap_or("anonymous");
 
-        log_request_start!("chat", &format!("from {}", &user_id[..8.min(user_id.len())]));
+        log_request_start!(
+            "chat",
+            &format!("from {}", &user_id[..8.min(user_id.len())])
+        );
 
         // Check if message contains base64 image data and strip it before storing in history
         let message_for_history = if message.contains("data:image") {
-            let stripped = get_image_data_regex().replace_all(&message, "[Image provided]").to_string();
+            let stripped = get_image_data_regex()
+                .replace_all(&message, "[Image provided]")
+                .to_string();
             let saved_tokens = message.len().saturating_sub(stripped.len());
-            info!("🖼️ Stripped base64 image data from user message (saved ~{} tokens)", saved_tokens / 4);
+            info!(
+                "🖼️ Stripped base64 image data from user message (saved ~{} tokens)",
+                saved_tokens / 4
+            );
             stripped
         } else {
             message.clone()
@@ -378,21 +439,25 @@ When asked about capabilities, features, tools, or what you can do:
         }
 
         // Try orchestration workflow for complex requests
-        if let Some(orchestrated_response) = self.orchestrate_workflow(&message, &user_context).await {
+        if let Some(orchestrated_response) =
+            self.orchestrate_workflow(&message, &user_context).await
+        {
             let latency_ms = start_time.elapsed().as_millis() as f64;
             info!("🎯 Orchestrated response generated");
             log_request_complete!("chat", latency_ms, true);
 
-            let assistant_message = ConversationMessage::new(
-                orchestrated_response.clone(),
-                "assistant".to_string(),
-            ).with_model(format!("{} (orchestrated)", self.current_model.as_deref().unwrap_or("unknown")))
-            .with_metadata({
-                let mut meta = HashMap::new();
-                meta.insert("response_type".to_string(), json!("orchestrated"));
-                meta.insert("latency_ms".to_string(), json!(latency_ms));
-                meta
-            });
+            let assistant_message =
+                ConversationMessage::new(orchestrated_response.clone(), "assistant".to_string())
+                    .with_model(format!(
+                        "{} (orchestrated)",
+                        self.current_model.as_deref().unwrap_or("unknown")
+                    ))
+                    .with_metadata({
+                        let mut meta = HashMap::new();
+                        meta.insert("response_type".to_string(), json!("orchestrated"));
+                        meta.insert("latency_ms".to_string(), json!(latency_ms));
+                        meta
+                    });
 
             {
                 let mut history = self.conversation_history.write().await;
@@ -401,7 +466,10 @@ When asked about capabilities, features, tools, or what you can do:
 
             return Ok(ChatResponse {
                 content: orchestrated_response,
-                model_used: format!("{} (orchestrated)", self.current_model.as_deref().unwrap_or("unknown")),
+                model_used: format!(
+                    "{} (orchestrated)",
+                    self.current_model.as_deref().unwrap_or("unknown")
+                ),
                 latency_ms,
                 confidence_score: 0.9,
                 metadata: {
@@ -416,7 +484,9 @@ When asked about capabilities, features, tools, or what you can do:
         }
 
         // Fall back to direct LLM interaction
-        let personality_config = self.personalities.get(&self.personality)
+        let personality_config = self
+            .personalities
+            .get(&self.personality)
             .unwrap_or(&self.personalities["unified"]);
 
         // Check if user is asking about capabilities - inject tool list if so
@@ -427,7 +497,9 @@ When asked about capabilities, features, tools, or what you can do:
             None
         };
 
-        let context = self.build_conversation_context(&user_context, inject_tools.as_deref()).await;
+        let context = self
+            .build_conversation_context(&user_context, inject_tools.as_deref())
+            .await;
 
         // Check if this is an image generation request (before moving message)
         let is_image_request = self.is_image_generation_request(&message);
@@ -451,12 +523,18 @@ When asked about capabilities, features, tools, or what you can do:
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        info!("🔍 Chat request - is_dev_wallet: {}, current_model: {:?}", is_dev, self.current_model);
+        info!(
+            "🔍 Chat request - is_dev_wallet: {}, current_model: {:?}",
+            is_dev, self.current_model
+        );
 
         // Override model for dev wallets - ALWAYS use premium model for dev wallets
         let model_override = if is_dev {
             let premium_model = get_dev_preferred_model();
-            info!("🔥 DEV WALLET BOOST - forcing premium model: {}", premium_model);
+            info!(
+                "🔥 DEV WALLET BOOST - forcing premium model: {}",
+                premium_model
+            );
             Some(premium_model.to_string())
         } else {
             self.current_model.clone()
@@ -464,7 +542,7 @@ When asked about capabilities, features, tools, or what you can do:
 
         // Determine max_tokens based on request type and user tier
         let max_tokens = if is_image_request {
-            Some(16384)  // Increased for full base64 image responses (50-200KB+)
+            Some(16384) // Increased for full base64 image responses (50-200KB+)
         } else if is_dev {
             // Dev wallets get higher token limits
             Some(4096)
@@ -480,7 +558,7 @@ When asked about capabilities, features, tools, or what you can do:
                 info!("🆓 Applying free tier output limit: {} tokens", limit);
                 Some(limit)
             } else {
-                Some(600)  // Concise responses by default
+                Some(600) // Concise responses by default
             }
         };
 
@@ -520,7 +598,10 @@ When asked about capabilities, features, tools, or what you can do:
             }
         };
 
-        info!("🧠 Generating response with {:?} optimization...", requirements.optimization_goal);
+        info!(
+            "🧠 Generating response with {:?} optimization...",
+            requirements.optimization_goal
+        );
 
         let llm_response = {
             let factory = llm_factory.read().await;
@@ -533,22 +614,25 @@ When asked about capabilities, features, tools, or what you can do:
                     let error_msg = e.to_string().to_lowercase();
 
                     // Check if this is a context limit error
-                    if error_msg.contains("maximum context length") ||
-                       error_msg.contains("context length") ||
-                       error_msg.contains("too many tokens") ||
-                       error_msg.contains("reduce the length") ||
-                       error_msg.contains("middle-out") {
-
+                    if error_msg.contains("maximum context length")
+                        || error_msg.contains("context length")
+                        || error_msg.contains("too many tokens")
+                        || error_msg.contains("reduce the length")
+                        || error_msg.contains("middle-out")
+                    {
                         warn!("⚠️ Context limit exceeded, auto-compacting conversation and retrying...");
 
                         // Force trim conversation history
                         self.trim_conversation_history().await;
 
                         // Rebuild context with trimmed history
-                        let context = self.build_conversation_context(&user_context, inject_tools.as_deref()).await;
+                        let context = self
+                            .build_conversation_context(&user_context, inject_tools.as_deref())
+                            .await;
 
                         let (system_prompt, messages) = if is_image_request {
-                            let (prompt, msgs) = self.build_image_generation_context(&user_context).await;
+                            let (prompt, msgs) =
+                                self.build_image_generation_context(&user_context).await;
                             (Some(prompt), msgs)
                         } else {
                             (Some(context.system_prompt), Some(context.messages))
@@ -589,7 +673,9 @@ When asked about capabilities, features, tools, or what you can do:
 
         // For image generation responses, strip out base64 image data from history to save tokens
         let content_for_history = if is_image_request && cleaned_content.contains("data:image") {
-            let stripped = get_image_data_regex().replace_all(&cleaned_content, "[Image generated]").to_string();
+            let stripped = get_image_data_regex()
+                .replace_all(&cleaned_content, "[Image generated]")
+                .to_string();
             let saved_tokens = cleaned_content.len().saturating_sub(stripped.len());
             info!("🖼️ Stripped base64 image from assistant response (saved ~{} tokens for future requests)", saved_tokens / 4);
             stripped
@@ -598,20 +684,25 @@ When asked about capabilities, features, tools, or what you can do:
         };
 
         // Add assistant response to history
-        let assistant_message = ConversationMessage::new(
-            content_for_history,
-            "assistant".to_string(),
-        ).with_model(llm_response.model_used.clone())
-        .with_metadata({
-            let mut meta = HashMap::new();
-            meta.insert("latency_ms".to_string(), json!(latency_ms));
-            meta.insert("cost_estimate".to_string(), json!(llm_response.cost_estimate));
-            meta.insert("finish_reason".to_string(), json!(llm_response.finish_reason));
-            if is_image_request {
-                meta.insert("image_generation".to_string(), json!(true));
-            }
-            meta
-        });
+        let assistant_message =
+            ConversationMessage::new(content_for_history, "assistant".to_string())
+                .with_model(llm_response.model_used.clone())
+                .with_metadata({
+                    let mut meta = HashMap::new();
+                    meta.insert("latency_ms".to_string(), json!(latency_ms));
+                    meta.insert(
+                        "cost_estimate".to_string(),
+                        json!(llm_response.cost_estimate),
+                    );
+                    meta.insert(
+                        "finish_reason".to_string(),
+                        json!(llm_response.finish_reason),
+                    );
+                    if is_image_request {
+                        meta.insert("image_generation".to_string(), json!(true));
+                    }
+                    meta
+                });
 
         {
             let mut history = self.conversation_history.write().await;
@@ -625,8 +716,9 @@ When asked about capabilities, features, tools, or what you can do:
         let confidence_score = self.calculate_confidence(&llm_response);
 
         log_request_complete!("chat", latency_ms, true);
-        info!("💯 Confidence: {:.2} | Tokens: {}", 
-            confidence_score, 
+        info!(
+            "💯 Confidence: {:.2} | Tokens: {}",
+            confidence_score,
             llm_response.usage.get("total_tokens").unwrap_or(&0)
         );
 
@@ -638,9 +730,15 @@ When asked about capabilities, features, tools, or what you can do:
             metadata: {
                 let mut meta = HashMap::new();
                 meta.insert("personality".to_string(), json!(self.personality));
-                meta.insert("cost_estimate".to_string(), json!(llm_response.cost_estimate));
+                meta.insert(
+                    "cost_estimate".to_string(),
+                    json!(llm_response.cost_estimate),
+                );
                 meta.insert("token_usage".to_string(), json!(llm_response.usage));
-                meta.insert("finish_reason".to_string(), json!(llm_response.finish_reason));
+                meta.insert(
+                    "finish_reason".to_string(),
+                    json!(llm_response.finish_reason),
+                );
                 let history_len = self.conversation_history.read().await.len();
                 meta.insert("conversation_length".to_string(), json!(history_len));
                 meta
@@ -650,13 +748,32 @@ When asked about capabilities, features, tools, or what you can do:
 
     fn is_image_generation_request(&self, message: &str) -> bool {
         let image_keywords = [
-            "logo", "image", "picture", "photo", "draw", "create", "generate", "design",
-            "visual", "graphic", "illustration", "artwork", "sketch", "render",
-            "show me", "make me", "give me", "create a", "design a", "draw a"
+            "logo",
+            "image",
+            "picture",
+            "photo",
+            "draw",
+            "create",
+            "generate",
+            "design",
+            "visual",
+            "graphic",
+            "illustration",
+            "artwork",
+            "sketch",
+            "render",
+            "show me",
+            "make me",
+            "give me",
+            "create a",
+            "design a",
+            "draw a",
         ];
-        
+
         let lower_message = message.to_lowercase();
-        image_keywords.iter().any(|keyword| lower_message.contains(keyword))
+        image_keywords
+            .iter()
+            .any(|keyword| lower_message.contains(keyword))
     }
 
     pub async fn get_model_status(&self) -> AppResult<serde_json::Value> {
@@ -722,7 +839,8 @@ When asked about capabilities, features, tools, or what you can do:
             match llm_factory.fetch_available_models().await {
                 Ok(models) => {
                     let model_exists = models.iter().any(|model| {
-                        model.get("id")
+                        model
+                            .get("id")
                             .and_then(|id| id.as_str())
                             .map(|id| id == model_name)
                             .unwrap_or(false)
@@ -746,19 +864,31 @@ When asked about capabilities, features, tools, or what you can do:
         }
     }
 
-    pub async fn get_model_availability_reason(&self, model_name: &str, api_keys: &ApiKeys) -> String {
+    pub async fn get_model_availability_reason(
+        &self,
+        model_name: &str,
+        api_keys: &ApiKeys,
+    ) -> String {
         if let Some(llm_factory_arc) = &self.llm_factory {
             if !self.is_model_available(model_name, api_keys).await {
                 let llm_factory = llm_factory_arc.read().await;
                 let fallbacks = llm_factory.get_free_model_fallbacks().await;
                 if !fallbacks.is_empty() {
-                    let suggestions = fallbacks.iter().take(3).map(|s| s.as_str()).collect::<Vec<_>>().join(", ");
+                    let suggestions = fallbacks
+                        .iter()
+                        .take(3)
+                        .map(|s| s.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ");
                     format!(
                         "Model '{}' is not available. Try one of these free alternatives: {}",
                         model_name, suggestions
                     )
                 } else {
-                    format!("Model '{}' is not available. Check API keys and model name.", model_name)
+                    format!(
+                        "Model '{}' is not available. Check API keys and model name.",
+                        model_name
+                    )
                 }
             } else {
                 format!("Model '{}' is available.", model_name)
@@ -777,14 +907,16 @@ When asked about capabilities, features, tools, or what you can do:
             let mut history = self.conversation_history.write().await;
             history.clear();
         }
-        
+
         info!("💬 Conversation history cleared");
 
         // Re-add system message if running
         if self.running {
-            let personality_config = self.personalities.get(&self.personality)
+            let personality_config = self
+                .personalities
+                .get(&self.personality)
                 .unwrap_or(&self.personalities["unified"]);
-            
+
             let system_message = ConversationMessage::new(
                 personality_config.system_prompt.clone(),
                 "system".to_string(),
@@ -816,8 +948,14 @@ When asked about capabilities, features, tools, or what you can do:
         None
     }
 
-    async fn build_conversation_context(&self, user_context: &Option<HashMap<String, serde_json::Value>>, inject_tools: Option<&str>) -> ConversationContext {
-        let personality_config = self.personalities.get(&self.personality)
+    async fn build_conversation_context(
+        &self,
+        user_context: &Option<HashMap<String, serde_json::Value>>,
+        inject_tools: Option<&str>,
+    ) -> ConversationContext {
+        let personality_config = self
+            .personalities
+            .get(&self.personality)
             .unwrap_or(&self.personalities["unified"]);
 
         let mut base_system_prompt = personality_config.system_prompt.clone();
@@ -832,7 +970,11 @@ When asked about capabilities, features, tools, or what you can do:
             let mut context_additions = Vec::new();
 
             if let Some(wallet_address) = context.get("wallet_address").and_then(|v| v.as_str()) {
-                let shortened = format!("{}...{}", &wallet_address[..8], &wallet_address[wallet_address.len()-4..]);
+                let shortened = format!(
+                    "{}...{}",
+                    &wallet_address[..8],
+                    &wallet_address[wallet_address.len() - 4..]
+                );
                 context_additions.push(format!("User wallet: {}", shortened));
             }
 
@@ -845,7 +987,10 @@ When asked about capabilities, features, tools, or what you can do:
             }
 
             if !context_additions.is_empty() {
-                base_system_prompt.push_str(&format!("\n\nUser Context: {}", context_additions.join("; ")));
+                base_system_prompt.push_str(&format!(
+                    "\n\nUser Context: {}",
+                    context_additions.join("; ")
+                ));
             }
         }
 
@@ -859,14 +1004,19 @@ When asked about capabilities, features, tools, or what you can do:
 
     async fn build_messages_history(&self) -> Vec<HashMap<String, String>> {
         let mut messages = Vec::new();
-        
+
         // Add system message first
-        let personality_config = self.personalities.get(&self.personality)
+        let personality_config = self
+            .personalities
+            .get(&self.personality)
             .unwrap_or(&self.personalities["unified"]);
-        
+
         let mut system_msg = HashMap::new();
         system_msg.insert("role".to_string(), "system".to_string());
-        system_msg.insert("content".to_string(), personality_config.system_prompt.clone());
+        system_msg.insert(
+            "content".to_string(),
+            personality_config.system_prompt.clone(),
+        );
         messages.push(system_msg);
 
         // Add conversation history (excluding system messages since we added our own)
@@ -883,28 +1033,40 @@ When asked about capabilities, features, tools, or what you can do:
         messages
     }
 
-    async fn build_image_generation_context(&self, user_context: &Option<HashMap<String, serde_json::Value>>) -> (String, Option<Vec<HashMap<String, String>>>) {
+    async fn build_image_generation_context(
+        &self,
+        user_context: &Option<HashMap<String, serde_json::Value>>,
+    ) -> (String, Option<Vec<HashMap<String, String>>>) {
         // For image generation, use full personality but strip images from history
-        let personality_config = self.personalities.get(&self.personality)
+        let personality_config = self
+            .personalities
+            .get(&self.personality)
             .unwrap_or(&self.personalities["unified"]);
-        
+
         let mut base_system_prompt = personality_config.system_prompt.clone();
 
         // Add user context if available
         if let Some(context) = user_context {
             let mut context_additions = Vec::new();
-            
+
             if let Some(wallet_address) = context.get("wallet_address").and_then(|v| v.as_str()) {
-                let shortened = format!("{}...{}", &wallet_address[..8], &wallet_address[wallet_address.len()-4..]);
+                let shortened = format!(
+                    "{}...{}",
+                    &wallet_address[..8],
+                    &wallet_address[wallet_address.len() - 4..]
+                );
                 context_additions.push(format!("User wallet: {}", shortened));
             }
-            
+
             if let Some(wallet_type) = context.get("wallet_type").and_then(|v| v.as_str()) {
                 context_additions.push(format!("Wallet type: {}", wallet_type));
             }
 
             if !context_additions.is_empty() {
-                base_system_prompt.push_str(&format!("\n\nUser Context: {}", context_additions.join("; ")));
+                base_system_prompt.push_str(&format!(
+                    "\n\nUser Context: {}",
+                    context_additions.join("; ")
+                ));
             }
         }
 
@@ -913,7 +1075,7 @@ When asked about capabilities, features, tools, or what you can do:
 
         // Build messages with images stripped
         let mut messages = Vec::new();
-        
+
         // Add system message
         let mut system_msg = HashMap::new();
         system_msg.insert("role".to_string(), "system".to_string());
@@ -934,7 +1096,10 @@ When asked about capabilities, features, tools, or what you can do:
                     let alt_regex = regex::Regex::new(r"!\[([^\]]*)\]\(data:image").unwrap();
                     let descriptions: Vec<String> = alt_regex
                         .captures_iter(&msg.content)
-                        .map(|cap| cap.get(1).map_or("image".to_string(), |m| m.as_str().to_string()))
+                        .map(|cap| {
+                            cap.get(1)
+                                .map_or("image".to_string(), |m| m.as_str().to_string())
+                        })
                         .collect();
 
                     // Replace each image with a lightweight reference including description
@@ -947,7 +1112,8 @@ When asked about capabilities, features, tools, or what you can do:
                         };
                         // Only replace the first occurrence each time to preserve order
                         if let Some(pos) = result.find("data:image") {
-                            let end_pos = result[pos..].find(')').unwrap_or(result.len() - pos) + pos;
+                            let end_pos =
+                                result[pos..].find(')').unwrap_or(result.len() - pos) + pos;
                             let markdown_start = result[..pos].rfind("![").unwrap_or(pos);
                             result.replace_range(markdown_start..end_pos + 1, &replacement);
                         }
@@ -956,7 +1122,10 @@ When asked about capabilities, features, tools, or what you can do:
                     // Handle any remaining base64 images without markdown
                     result = regex.replace_all(&result, "[Image]").to_string();
 
-                    info!("🖼️ Replaced {} image(s) with lightweight references in history", image_count);
+                    info!(
+                        "🖼️ Replaced {} image(s) with lightweight references in history",
+                        image_count
+                    );
                     result
                 } else {
                     msg.content.clone()
@@ -969,7 +1138,10 @@ When asked about capabilities, features, tools, or what you can do:
             }
         }
 
-        info!("🎨 Image generation: Full personality with {} messages (images replaced with refs)", messages.len());
+        info!(
+            "🎨 Image generation: Full personality with {} messages (images replaced with refs)",
+            messages.len()
+        );
 
         (base_system_prompt, Some(messages))
     }
@@ -978,7 +1150,8 @@ When asked about capabilities, features, tools, or what you can do:
         let mut history = self.conversation_history.write().await;
 
         // Estimate token count (rough approximation)
-        let total_tokens: usize = history.iter()
+        let total_tokens: usize = history
+            .iter()
             .map(|msg| (msg.content.len() / 4) + 10) // Rough token estimation
             .sum();
 
@@ -1004,18 +1177,18 @@ When asked about capabilities, features, tools, or what you can do:
                 .rev()
                 .collect();
 
-            let latest_system: Vec<ConversationMessage> = system_messages
-                .into_iter()
-                .rev()
-                .take(1)
-                .collect();
+            let latest_system: Vec<ConversationMessage> =
+                system_messages.into_iter().rev().take(1).collect();
 
             let mut new_history = latest_system;
             new_history.extend(recent_conversation);
 
             *history = new_history;
 
-            info!("✂️ Trimmed conversation history to {} messages", history.len());
+            info!(
+                "✂️ Trimmed conversation history to {} messages",
+                history.len()
+            );
         }
     }
 
@@ -1023,11 +1196,11 @@ When asked about capabilities, features, tools, or what you can do:
         // Remove <think>...</think> blocks
         let re = regex::Regex::new(r"(?s)<think>.*?</think>").unwrap();
         let mut cleaned = re.replace_all(content, "").to_string();
-        
+
         // Clean up extra whitespace
         let whitespace_re = regex::Regex::new(r"\n\s*\n\s*\n").unwrap();
         cleaned = whitespace_re.replace_all(&cleaned, "\n\n").to_string();
-        
+
         cleaned.trim().to_string()
     }
 
@@ -1062,37 +1235,58 @@ When asked about capabilities, features, tools, or what you can do:
             "creative".to_string(),
         ];
 
-        match agent_repo.get_by_name_and_type("hecate", "conversational").await {
+        match agent_repo
+            .get_by_name_and_type("hecate", "conversational")
+            .await
+        {
             Ok(Some(existing_agent)) => {
-                info!("✅ HECATE vessel AI registered with ID: {}", existing_agent.id);
+                info!(
+                    "✅ HECATE vessel AI registered with ID: {}",
+                    existing_agent.id
+                );
                 self.agent_id = Some(existing_agent.id);
 
                 // Update health status
-                if let Err(e) = agent_repo.update_health_status(&existing_agent.id, "healthy").await {
+                if let Err(e) = agent_repo
+                    .update_health_status(&existing_agent.id, "healthy")
+                    .await
+                {
                     warn!("⚠️ Failed to update HECATE health status: {}", e);
                 }
             }
             Ok(None) => {
                 info!("📝 Registering HECATE vessel AI in database...");
-                match agent_repo.create(
-                    "hecate",
-                    "conversational",
-                    Some("HECATE - Von Neumann-class vessel AI companion for void exploration"),
-                    &capabilities,
-                ).await {
+                match agent_repo
+                    .create(
+                        "hecate",
+                        "conversational",
+                        Some("HECATE - Von Neumann-class vessel AI companion for void exploration"),
+                        &capabilities,
+                    )
+                    .await
+                {
                     Ok(agent_entity) => {
-                        info!("✅ HECATE vessel AI registered with ID: {}", agent_entity.id);
+                        info!(
+                            "✅ HECATE vessel AI registered with ID: {}",
+                            agent_entity.id
+                        );
                         self.agent_id = Some(agent_entity.id);
                     }
                     Err(e) => {
                         error!("❌ Failed to register HECATE vessel AI: {}", e);
-                        return Err(AppError::DatabaseError(format!("Agent registration failed: {}", e)));
+                        return Err(AppError::DatabaseError(format!(
+                            "Agent registration failed: {}",
+                            e
+                        )));
                     }
                 }
             }
             Err(e) => {
                 error!("❌ Failed to check existing HECATE registration: {}", e);
-                return Err(AppError::DatabaseError(format!("Agent lookup failed: {}", e)));
+                return Err(AppError::DatabaseError(format!(
+                    "Agent lookup failed: {}",
+                    e
+                )));
             }
         }
 
@@ -1104,7 +1298,13 @@ When asked about capabilities, features, tools, or what you can do:
     }
 
     // Task execution handler
-    pub async fn execute_task(&mut self, task_id: &str, task_description: &str, task_repo: &crate::database::repositories::TaskRepository, agent_repo: &AgentRepository) -> AppResult<String> {
+    pub async fn execute_task(
+        &mut self,
+        task_id: &str,
+        task_description: &str,
+        task_repo: &crate::database::repositories::TaskRepository,
+        agent_repo: &AgentRepository,
+    ) -> AppResult<String> {
         let start_time = std::time::Instant::now();
 
         // Mark task as actioned to prevent duplicate processing
@@ -1115,7 +1315,10 @@ When asked about capabilities, features, tools, or what you can do:
         });
 
         // Mark task as being processed
-        match task_repo.mark_task_actioned(task_id, Some(action_metadata)).await {
+        match task_repo
+            .mark_task_actioned(task_id, Some(action_metadata))
+            .await
+        {
             Ok(Some(_)) => {
                 info!("🎯 Task {} marked as actioned by Hecate", task_id);
             }
@@ -1125,7 +1328,10 @@ When asked about capabilities, features, tools, or what you can do:
             }
             Err(e) => {
                 error!("❌ Failed to mark task as actioned: {}", e);
-                return Err(AppError::DatabaseError(format!("Task action marking failed: {}", e)));
+                return Err(AppError::DatabaseError(format!(
+                    "Task action marking failed: {}",
+                    e
+                )));
             }
         }
 
@@ -1141,7 +1347,10 @@ When asked about capabilities, features, tools, or what you can do:
         let task_context = Some(std::collections::HashMap::from([
             ("task_id".to_string(), serde_json::json!(task_id)),
             ("task_mode".to_string(), serde_json::json!(true)),
-            ("execution_type".to_string(), serde_json::json!("task_processing"))
+            (
+                "execution_type".to_string(),
+                serde_json::json!("task_processing"),
+            ),
         ]));
 
         let chat_response = match self.chat(task_prompt, task_context).await {
@@ -1151,7 +1360,9 @@ When asked about capabilities, features, tools, or what you can do:
 
                 // Update task with error result
                 let error_result = format!("Task processing failed: {}", e);
-                let _ = task_repo.update_action_result(task_id, &error_result, None).await;
+                let _ = task_repo
+                    .update_action_result(task_id, &error_result, None)
+                    .await;
 
                 return Err(e);
             }
@@ -1160,7 +1371,10 @@ When asked about capabilities, features, tools, or what you can do:
         let processing_duration = start_time.elapsed().as_millis() as u64;
 
         // Store the result in the database
-        match task_repo.update_action_result(task_id, &chat_response.content, Some(processing_duration)).await {
+        match task_repo
+            .update_action_result(task_id, &chat_response.content, Some(processing_duration))
+            .await
+        {
             Ok(Some(_)) => {
                 info!("✅ Task {} result stored successfully", task_id);
             }
@@ -1169,7 +1383,10 @@ When asked about capabilities, features, tools, or what you can do:
             }
             Err(e) => {
                 error!("❌ Failed to store task result: {}", e);
-                return Err(AppError::DatabaseError(format!("Task result storage failed: {}", e)));
+                return Err(AppError::DatabaseError(format!(
+                    "Task result storage failed: {}",
+                    e
+                )));
             }
         }
 
@@ -1192,7 +1409,10 @@ When asked about capabilities, features, tools, or what you can do:
             }
         });
 
-        if let Err(e) = task_repo.add_message_to_history(task_id, agent_message).await {
+        if let Err(e) = task_repo
+            .add_message_to_history(task_id, agent_message)
+            .await
+        {
             warn!("⚠️ Failed to add agent message to task history: {}", e);
         }
 
@@ -1218,19 +1438,33 @@ When asked about capabilities, features, tools, or what you can do:
         // Update agent statistics
         if let Some(agent_id) = self.agent_id {
             let task_uuid = Uuid::parse_str(task_id).unwrap_or_else(|_| Uuid::new_v4());
-            if let Err(e) = agent_repo.update_task_processing_stats(&agent_id, &task_uuid, processing_duration).await {
+            if let Err(e) = agent_repo
+                .update_task_processing_stats(&agent_id, &task_uuid, processing_duration)
+                .await
+            {
                 warn!("⚠️ Failed to update agent processing stats: {}", e);
             }
         }
 
         // Update task status to completed with success message
-        let completion_message = format!("Task completed successfully in {}ms", processing_duration);
-        match task_repo.update_status_with_message(task_id, crate::models::TaskState::Completed, Some(completion_message)).await {
+        let completion_message =
+            format!("Task completed successfully in {}ms", processing_duration);
+        match task_repo
+            .update_status_with_message(
+                task_id,
+                crate::models::TaskState::Completed,
+                Some(completion_message),
+            )
+            .await
+        {
             Ok(Some(_)) => {
                 info!("✅ Task {} status updated to completed", task_id);
             }
             Ok(None) => {
-                warn!("⚠️ Task {} not found when updating status to completed", task_id);
+                warn!(
+                    "⚠️ Task {} not found when updating status to completed",
+                    task_id
+                );
             }
             Err(e) => {
                 error!("❌ Failed to update task status to completed: {}", e);

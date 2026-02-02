@@ -1,6 +1,6 @@
-pub mod tasks;
 pub mod agents;
+pub mod tasks;
 pub mod user_references;
 
-pub use tasks::TaskRepository;
 pub use agents::AgentRepository;
+pub use tasks::TaskRepository;

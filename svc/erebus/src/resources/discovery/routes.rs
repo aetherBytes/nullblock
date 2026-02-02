@@ -32,8 +32,14 @@ pub fn create_discovery_routes() -> Router<crate::AppState> {
         .route("/api/discovery/health", get(discovery_health))
         .route("/api/discovery/external", get(list_external_services))
         .route("/api/discovery/external", post(register_external_service))
-        .route("/api/discovery/external/:name", delete(unregister_external_service))
-        .route("/api/discovery/external/refresh", post(refresh_external_tools))
+        .route(
+            "/api/discovery/external/:name",
+            delete(unregister_external_service),
+        )
+        .route(
+            "/api/discovery/external/refresh",
+            post(refresh_external_tools),
+        )
 }
 
 async fn get_or_init_external_provider() -> Arc<ExternalMcpProvider> {
@@ -87,7 +93,10 @@ async fn discover_tools(State(_app_state): State<crate::AppState>) -> Json<Value
     let categories = DiscoveryAggregator::get_category_summary(&tools);
 
     let hot_count = tools.iter().filter(|t| t.is_hot).count();
-    let external_count = tools.iter().filter(|t| t.provider.starts_with("external/")).count();
+    let external_count = tools
+        .iter()
+        .filter(|t| t.provider.starts_with("external/"))
+        .count();
 
     let response = ToolsResponse {
         total_count: tools.len(),

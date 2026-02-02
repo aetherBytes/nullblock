@@ -46,9 +46,10 @@ impl EncryptionService {
             .map_err(|e| EncryptionError::InvalidMasterKey(format!("Invalid hex: {}", e)))?;
 
         if key_bytes.len() != 32 {
-            return Err(EncryptionError::InvalidMasterKey(
-                format!("Expected 32 bytes (256 bits), got {} bytes", key_bytes.len())
-            ));
+            return Err(EncryptionError::InvalidMasterKey(format!(
+                "Expected 32 bytes (256 bits), got {} bytes",
+                key_bytes.len()
+            )));
         }
 
         let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
@@ -63,7 +64,8 @@ impl EncryptionService {
 
         let nonce = Nonce::from_slice(&iv);
 
-        let ciphertext = self.cipher
+        let ciphertext = self
+            .cipher
             .encrypt(nonce, plaintext.as_bytes())
             .map_err(|e| EncryptionError::EncryptionFailed(e.to_string()))?;
 
@@ -91,7 +93,8 @@ impl EncryptionService {
         let mut ciphertext_with_tag = encrypted.ciphertext.clone();
         ciphertext_with_tag.extend_from_slice(&encrypted.tag);
 
-        let plaintext_bytes = self.cipher
+        let plaintext_bytes = self
+            .cipher
             .decrypt(nonce, ciphertext_with_tag.as_slice())
             .map_err(|e| EncryptionError::DecryptionFailed(e.to_string()))?;
 
@@ -184,8 +187,9 @@ mod tests {
     fn test_decrypt_with_wrong_key_fails() {
         let service1 = get_test_service();
         let service2 = EncryptionService::new(
-            "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
-        ).unwrap();
+            "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+        )
+        .unwrap();
 
         let plaintext = "test-key";
         let encrypted = service1.encrypt(plaintext).unwrap();

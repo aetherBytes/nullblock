@@ -67,7 +67,8 @@ pub struct TaskEntity {
 
 impl TaskEntity {
     pub fn to_domain_model(self) -> Result<crate::models::Task, serde_json::Error> {
-        let task_state: crate::models::TaskState = serde_json::from_str(&format!("\"{}\"", self.status))?;
+        let task_state: crate::models::TaskState =
+            serde_json::from_str(&format!("\"{}\"", self.status))?;
 
         Ok(crate::models::Task {
             id: self.id.to_string(),
@@ -132,24 +133,56 @@ impl TaskEntity {
         })
     }
 
-    pub fn from_domain_model(task: &crate::models::Task, user_id: Option<Uuid>, assigned_agent_id: Option<Uuid>) -> Result<TaskEntity, serde_json::Error> {
+    pub fn from_domain_model(
+        task: &crate::models::Task,
+        user_id: Option<Uuid>,
+        assigned_agent_id: Option<Uuid>,
+    ) -> Result<TaskEntity, serde_json::Error> {
         Ok(TaskEntity {
             id: Uuid::parse_str(&task.id).unwrap_or_else(|_| Uuid::new_v4()),
             name: task.name.clone(),
-            description: if task.description.is_empty() { None } else { Some(task.description.clone()) },
-            task_type: serde_json::to_string(&task.task_type).unwrap().trim_matches('"').to_string(),
-            category: serde_json::to_string(&task.category).unwrap().trim_matches('"').to_string(),
+            description: if task.description.is_empty() {
+                None
+            } else {
+                Some(task.description.clone())
+            },
+            task_type: serde_json::to_string(&task.task_type)
+                .unwrap()
+                .trim_matches('"')
+                .to_string(),
+            category: serde_json::to_string(&task.category)
+                .unwrap()
+                .trim_matches('"')
+                .to_string(),
 
             context_id: Uuid::parse_str(&task.context_id).unwrap_or_else(|_| Uuid::new_v4()),
             kind: task.kind.clone(),
-            status: serde_json::to_string(&task.status.state).unwrap().trim_matches('"').to_string(),
+            status: serde_json::to_string(&task.status.state)
+                .unwrap()
+                .trim_matches('"')
+                .to_string(),
             status_message: task.status.message.clone(),
-            status_timestamp: task.status.timestamp.as_ref().and_then(|ts| chrono::DateTime::parse_from_rfc3339(ts).ok().map(|dt| dt.with_timezone(&chrono::Utc))),
+            status_timestamp: task.status.timestamp.as_ref().and_then(|ts| {
+                chrono::DateTime::parse_from_rfc3339(ts)
+                    .ok()
+                    .map(|dt| dt.with_timezone(&chrono::Utc))
+            }),
 
-            history: task.history.as_ref().map(|h| serde_json::to_value(h).unwrap()).unwrap_or_else(|| serde_json::json!([])),
-            artifacts: task.artifacts.as_ref().map(|a| serde_json::to_value(a).unwrap()).unwrap_or_else(|| serde_json::json!([])),
+            history: task
+                .history
+                .as_ref()
+                .map(|h| serde_json::to_value(h).unwrap())
+                .unwrap_or_else(|| serde_json::json!([])),
+            artifacts: task
+                .artifacts
+                .as_ref()
+                .map(|a| serde_json::to_value(a).unwrap())
+                .unwrap_or_else(|| serde_json::json!([])),
 
-            priority: serde_json::to_string(&task.priority).unwrap().trim_matches('"').to_string(),
+            priority: serde_json::to_string(&task.priority)
+                .unwrap()
+                .trim_matches('"')
+                .to_string(),
             user_id,
             assigned_agent_id,
             created_at: task.created_at,

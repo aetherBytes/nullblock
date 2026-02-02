@@ -62,7 +62,9 @@ pub struct NamePrefixFilter {
 
 impl NamePrefixFilter {
     pub fn new(prefix: impl Into<String>) -> Self {
-        Self { prefix: prefix.into() }
+        Self {
+            prefix: prefix.into(),
+        }
     }
 }
 

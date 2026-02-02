@@ -6,29 +6,32 @@ use tokio::sync::{broadcast, RwLock, Semaphore};
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
-use crate::events::{ArbEvent, AgentType, EventSource, Significance};
-use crate::execution::{CurveTransactionBuilder, CurveSellParams, ExitConfig, JitoClient, MomentumAdaptiveConfig, MomentumData, MomentumStrength, PositionManager};
+use crate::events::{AgentType, ArbEvent, EventSource, Significance};
 use crate::execution::risk::RiskConfig;
+use crate::execution::{
+    CurveSellParams, CurveTransactionBuilder, ExitConfig, JitoClient, MomentumAdaptiveConfig,
+    MomentumData, MomentumStrength, PositionManager,
+};
 use crate::helius::HeliusSender;
 use crate::venues::curves::OnChainFetcher;
-use crate::wallet::DevWalletSigner;
 use crate::wallet::turnkey::SignRequest;
+use crate::wallet::DevWalletSigner;
 
 use super::strategy_engine::StrategyEngine;
 
 const DEFAULT_JUPITER_API_URL: &str = "https://lite-api.jup.ag/swap/v1";
 const MAX_CONCURRENT_SELLS: usize = 5;
 
-const DEFAULT_SELL_DELAY_MS: u64 = 50;  // Reduced from 500ms to beat front-runners
+const DEFAULT_SELL_DELAY_MS: u64 = 50; // Reduced from 500ms to beat front-runners
 const MAX_SELL_RETRIES: u32 = 3;
 const DEFAULT_SLIPPAGE_BPS: u32 = 300;
 const DEFAULT_MAX_CONCURRENT_POSITIONS: u32 = 2;
-const DEFAULT_TAKE_PROFIT_PERCENT: f64 = 12.0;  // Achievable target (was 30%)
-const DEFAULT_STOP_LOSS_PERCENT: f64 = 20.0;   // Matches volatility (was 15%)
+const DEFAULT_TAKE_PROFIT_PERCENT: f64 = 12.0; // Achievable target (was 30%)
+const DEFAULT_STOP_LOSS_PERCENT: f64 = 20.0; // Matches volatility (was 15%)
 
-const DEFAULT_POST_GRAD_ENTRY_SOL: f64 = 0.15;  // Conservative entry for post-grad quick flip
+const DEFAULT_POST_GRAD_ENTRY_SOL: f64 = 0.15; // Conservative entry for post-grad quick flip
 const DEFAULT_POST_GRAD_TAKE_PROFIT: f64 = 8.0; // 8% quick flip target
-const DEFAULT_POST_GRAD_STOP_LOSS: f64 = 5.0;   // 5% tight stop loss
+const DEFAULT_POST_GRAD_STOP_LOSS: f64 = 5.0; // 5% tight stop loss
 const DEFAULT_POST_GRAD_MAX_DELAY_MS: u64 = 200; // Max 200ms after graduation to enter
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -187,12 +190,15 @@ impl GraduationSniper {
     }
 
     fn calculate_adaptive_slippage(position: &SnipePosition, is_post_graduation: bool) -> u32 {
-        const MIN_SLIPPAGE_BPS: u32 = 500;  // 5% floor - post-grad markets can be volatile
+        const MIN_SLIPPAGE_BPS: u32 = 500; // 5% floor - post-grad markets can be volatile
         const MAX_SLIPPAGE_BPS: u32 = 2000; // 20% cap - prioritize execution
         const POST_GRAD_SLIPPAGE_BPS: u32 = 1500; // 15% for post-graduation sells (thin liquidity)
 
         if is_post_graduation {
-            tracing::info!("🎓 Post-graduation sell: using base slippage {}bps (15%)", POST_GRAD_SLIPPAGE_BPS);
+            tracing::info!(
+                "🎓 Post-graduation sell: using base slippage {}bps (15%)",
+                POST_GRAD_SLIPPAGE_BPS
+            );
             return POST_GRAD_SLIPPAGE_BPS;
         }
 
@@ -215,7 +221,10 @@ impl GraduationSniper {
 
         tracing::info!(
             "📊 Sniper slippage: entry={:.6} SOL | realized_pnl={:?} | base={}bps | final={}bps",
-            position.entry_price_sol, position.pnl_sol, calculated_slippage, calculated_slippage.min(MAX_SLIPPAGE_BPS)
+            position.entry_price_sol,
+            position.pnl_sol,
+            calculated_slippage,
+            calculated_slippage.min(MAX_SLIPPAGE_BPS)
         );
 
         calculated_slippage.min(MAX_SLIPPAGE_BPS)
@@ -297,13 +306,19 @@ impl GraduationSniper {
         let positions = self.positions.read().await;
         let is_running = *self.is_running.read().await;
 
-        let waiting = positions.values().filter(|p| p.status == SnipeStatus::Waiting).count();
-        let sold = positions.values().filter(|p| p.status == SnipeStatus::Sold).count();
-        let failed = positions.values().filter(|p| p.status == SnipeStatus::Failed).count();
-        let total_pnl: f64 = positions
+        let waiting = positions
             .values()
-            .filter_map(|p| p.pnl_sol)
-            .sum();
+            .filter(|p| p.status == SnipeStatus::Waiting)
+            .count();
+        let sold = positions
+            .values()
+            .filter(|p| p.status == SnipeStatus::Sold)
+            .count();
+        let failed = positions
+            .values()
+            .filter(|p| p.status == SnipeStatus::Failed)
+            .count();
+        let total_pnl: f64 = positions.values().filter_map(|p| p.pnl_sol).sum();
 
         SniperStats {
             positions_waiting: waiting,
@@ -783,9 +798,10 @@ impl GraduationSniper {
             max_sell_retries,
             jupiter_api_url,
             raydium_pool,
-            None,  // No momentum data
-            None,  // No momentum config
-        ).await
+            None, // No momentum data
+            None, // No momentum config
+        )
+        .await
     }
 
     async fn execute_graduation_sell_with_momentum(
@@ -806,7 +822,11 @@ impl GraduationSniper {
             let mut pos = positions.write().await;
             if let Some(p) = pos.get_mut(mint) {
                 if p.status != SnipeStatus::Selling {
-                    tracing::debug!("Position {} in unexpected state {:?}, expected Selling", mint, p.status);
+                    tracing::debug!(
+                        "Position {} in unexpected state {:?}, expected Selling",
+                        mint,
+                        p.status
+                    );
                 }
                 p.sell_attempts += 1;
                 p.last_sell_attempt = Some(Utc::now());
@@ -821,7 +841,9 @@ impl GraduationSniper {
         let exit_percent = Self::calculate_momentum_exit_percent(momentum_data, momentum_config);
         let token_amount_to_sell = if exit_percent < 100.0 {
             // Round to nearest token, capped at actual balance
-            ((position.entry_tokens as f64) * (exit_percent / 100.0)).round().min(position.entry_tokens as f64) as u64
+            ((position.entry_tokens as f64) * (exit_percent / 100.0))
+                .round()
+                .min(position.entry_tokens as f64) as u64
         } else {
             position.entry_tokens
         };
@@ -841,107 +863,127 @@ impl GraduationSniper {
             user_wallet: wallet.to_string(),
         };
 
-        let (tx_base64, expected_sol_out, price_impact, route_label) =
-            match curve_builder.build_pump_fun_sell(&sell_params).await {
-                Ok(build_result) => {
+        let (tx_base64, expected_sol_out, price_impact, route_label) = match curve_builder
+            .build_pump_fun_sell(&sell_params)
+            .await
+        {
+            Ok(build_result) => {
+                tracing::info!(
+                    "📤 Built pump.fun sell tx for {}: expected {} SOL, impact {:.2}%",
+                    position.symbol,
+                    build_result.expected_sol_out.unwrap_or(0) as f64 / 1e9,
+                    build_result.price_impact_percent
+                );
+                (
+                    build_result.transaction_base64,
+                    build_result.expected_sol_out.unwrap_or(0),
+                    build_result.price_impact_percent,
+                    "pump.fun".to_string(),
+                )
+            }
+            Err(e) => {
+                let err_str = e.to_string();
+                if err_str.contains("graduated") || err_str.contains("is_complete") {
                     tracing::info!(
-                        "📤 Built pump.fun sell tx for {}: expected {} SOL, impact {:.2}%",
+                        "🎓 Token {} has graduated, attempting Raydium direct sell (pool={:?})",
                         position.symbol,
-                        build_result.expected_sol_out.unwrap_or(0) as f64 / 1e9,
-                        build_result.price_impact_percent
+                        raydium_pool
                     );
-                    (
-                        build_result.transaction_base64,
-                        build_result.expected_sol_out.unwrap_or(0),
-                        build_result.price_impact_percent,
-                        "pump.fun".to_string(),
-                    )
-                }
-                Err(e) => {
-                    let err_str = e.to_string();
-                    if err_str.contains("graduated") || err_str.contains("is_complete") {
-                        tracing::info!(
-                            "🎓 Token {} has graduated, attempting Raydium direct sell (pool={:?})",
-                            position.symbol,
-                            raydium_pool
-                        );
 
-                        match curve_builder.build_raydium_sell(&sell_params).await {
-                            Ok(raydium_result) => {
-                                tracing::info!(
-                                    "📤 Built Raydium sell tx for {}: expected {} SOL, impact {:.2}%",
-                                    position.symbol,
-                                    raydium_result.expected_sol_out as f64 / 1e9,
-                                    raydium_result.price_impact_percent
-                                );
-                                (
-                                    raydium_result.transaction_base64,
-                                    raydium_result.expected_sol_out,
-                                    raydium_result.price_impact_percent,
-                                    raydium_result.route_label,
-                                )
-                            }
-                            Err(raydium_err) => {
-                                tracing::warn!(
-                                    "⚠️ Raydium sell failed for {}: {}, falling back to Jupiter",
-                                    position.symbol, raydium_err
-                                );
-                                match curve_builder.build_post_graduation_sell(&sell_params, jupiter_api_url).await {
-                                    Ok(jupiter_result) => {
-                                        tracing::info!(
+                    match curve_builder.build_raydium_sell(&sell_params).await {
+                        Ok(raydium_result) => {
+                            tracing::info!(
+                                "📤 Built Raydium sell tx for {}: expected {} SOL, impact {:.2}%",
+                                position.symbol,
+                                raydium_result.expected_sol_out as f64 / 1e9,
+                                raydium_result.price_impact_percent
+                            );
+                            (
+                                raydium_result.transaction_base64,
+                                raydium_result.expected_sol_out,
+                                raydium_result.price_impact_percent,
+                                raydium_result.route_label,
+                            )
+                        }
+                        Err(raydium_err) => {
+                            tracing::warn!(
+                                "⚠️ Raydium sell failed for {}: {}, falling back to Jupiter",
+                                position.symbol,
+                                raydium_err
+                            );
+                            match curve_builder
+                                .build_post_graduation_sell(&sell_params, jupiter_api_url)
+                                .await
+                            {
+                                Ok(jupiter_result) => {
+                                    tracing::info!(
                                             "📤 Built Jupiter sell tx for {}: expected {} SOL, impact {:.2}%, route: {}",
                                             position.symbol,
                                             jupiter_result.expected_sol_out as f64 / 1e9,
                                             jupiter_result.price_impact_percent,
                                             jupiter_result.route_label
                                         );
-                                        (
-                                            jupiter_result.transaction_base64,
-                                            jupiter_result.expected_sol_out,
-                                            jupiter_result.price_impact_percent,
-                                            jupiter_result.route_label,
-                                        )
-                                    }
-                                    Err(jupiter_err) => {
-                                        tracing::error!(
-                                            "Failed to build Jupiter sell for {}: {}",
-                                            position.symbol, jupiter_err
-                                        );
-                                        Self::handle_sell_failure(
-                                            positions, mint, &position, event_tx,
-                                            max_sell_retries, jupiter_api_url,
-                                            &format!("Raydium: {} | Jupiter: {}", raydium_err, jupiter_err),
-                                        ).await;
-                                        return;
-                                    }
+                                    (
+                                        jupiter_result.transaction_base64,
+                                        jupiter_result.expected_sol_out,
+                                        jupiter_result.price_impact_percent,
+                                        jupiter_result.route_label,
+                                    )
+                                }
+                                Err(jupiter_err) => {
+                                    tracing::error!(
+                                        "Failed to build Jupiter sell for {}: {}",
+                                        position.symbol,
+                                        jupiter_err
+                                    );
+                                    Self::handle_sell_failure(
+                                        positions,
+                                        mint,
+                                        &position,
+                                        event_tx,
+                                        max_sell_retries,
+                                        jupiter_api_url,
+                                        &format!(
+                                            "Raydium: {} | Jupiter: {}",
+                                            raydium_err, jupiter_err
+                                        ),
+                                    )
+                                    .await;
+                                    return;
                                 }
                             }
                         }
-                    } else {
-                        tracing::error!(
-                            "Failed to build pump.fun sell for {}: {}",
-                            position.symbol, e
-                        );
-                        Self::handle_sell_failure(
-                            positions, mint, &position, event_tx,
-                            max_sell_retries, jupiter_api_url,
-                            &format!("Build error: {}", e),
-                        ).await;
-                        return;
                     }
+                } else {
+                    tracing::error!(
+                        "Failed to build pump.fun sell for {}: {}",
+                        position.symbol,
+                        e
+                    );
+                    Self::handle_sell_failure(
+                        positions,
+                        mint,
+                        &position,
+                        event_tx,
+                        max_sell_retries,
+                        jupiter_api_url,
+                        &format!("Build error: {}", e),
+                    )
+                    .await;
+                    return;
                 }
-            };
-
-        let tx_bytes = match base64::Engine::decode(
-            &base64::engine::general_purpose::STANDARD,
-            &tx_base64,
-        ) {
-            Ok(bytes) => bytes,
-            Err(e) => {
-                Self::mark_position_failed(positions, mint, &format!("Decode error: {}", e)).await;
-                return;
             }
         };
+
+        let tx_bytes =
+            match base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &tx_base64) {
+                Ok(bytes) => bytes,
+                Err(e) => {
+                    Self::mark_position_failed(positions, mint, &format!("Decode error: {}", e))
+                        .await;
+                    return;
+                }
+            };
 
         match jito_client.send_bundle_fast(&[tx_bytes]).await {
             Ok(bundle_id) => {
@@ -974,22 +1016,20 @@ impl GraduationSniper {
                     price_impact
                 );
 
-                Self::emit_sell_event(
-                    event_tx,
-                    &position,
-                    expected_sol,
-                    pnl,
-                    &bundle_id,
-                    true,
-                );
+                Self::emit_sell_event(event_tx, &position, expected_sol, pnl, &bundle_id, true);
             }
             Err(e) => {
                 tracing::error!("Failed to send bundle for {}: {}", mint, e);
                 Self::handle_sell_failure(
-                    positions, mint, &position, event_tx,
-                    max_sell_retries, jupiter_api_url,
+                    positions,
+                    mint,
+                    &position,
+                    event_tx,
+                    max_sell_retries,
+                    jupiter_api_url,
                     &format!("Jito error: {}", e),
-                ).await;
+                )
+                .await;
             }
         }
     }
@@ -1047,7 +1087,8 @@ impl GraduationSniper {
                 positions,
                 mint,
                 &format!("Failed after {} retries: {}", max_sell_retries, error_msg),
-            ).await;
+            )
+            .await;
         }
     }
 
@@ -1068,10 +1109,10 @@ impl GraduationSniper {
         config: Option<&MomentumAdaptiveConfig>,
     ) -> f64 {
         let Some(momentum) = momentum_data else {
-            return 100.0;  // Full exit if no momentum data
+            return 100.0; // Full exit if no momentum data
         };
         let Some(cfg) = config else {
-            return 100.0;  // Full exit if no config
+            return 100.0; // Full exit if no config
         };
 
         let strength = momentum.classify_strength(cfg);
@@ -1192,7 +1233,8 @@ impl GraduationSniper {
                 config.max_sell_retries,
                 &self.jupiter_api_url,
                 None,
-            ).await;
+            )
+            .await;
         }
 
         Ok(())
@@ -1224,7 +1266,10 @@ impl GraduationSniper {
                 let delay_secs = INITIAL_DELAY_SECS * (attempt as u64 + 1);
                 tracing::info!(
                     "🔄 Retry {}/{} for post-grad buy {} - waiting {}s for Jupiter indexing...",
-                    attempt + 1, MAX_RETRIES, symbol, delay_secs
+                    attempt + 1,
+                    MAX_RETRIES,
+                    symbol,
+                    delay_secs
                 );
                 tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs)).await;
             }
@@ -1243,7 +1288,8 @@ impl GraduationSniper {
                 slippage_bps,
                 strategy_id,
                 position_manager,
-            ).await;
+            )
+            .await;
 
             match result {
                 Ok(()) => {
@@ -1267,7 +1313,9 @@ impl GraduationSniper {
                     } else {
                         tracing::error!(
                             "❌ Post-grad buy for {} failed permanently after {} attempts: {}",
-                            symbol, attempt + 1, err_str
+                            symbol,
+                            attempt + 1,
+                            err_str
                         );
 
                         let fail_event = ArbEvent::new(
@@ -1323,13 +1371,15 @@ impl GraduationSniper {
         let sol_amount_lamports = (entry_sol * 1_000_000_000.0) as u64;
 
         // Build the Jupiter swap transaction (SOL -> Token)
-        let buy_result = curve_builder.build_post_graduation_buy(
-            mint,
-            sol_amount_lamports,
-            slippage_bps,
-            wallet,
-            jupiter_api_url,
-        ).await?;
+        let buy_result = curve_builder
+            .build_post_graduation_buy(
+                mint,
+                sol_amount_lamports,
+                slippage_bps,
+                wallet,
+                jupiter_api_url,
+            )
+            .await?;
 
         tracing::info!(
             "📦 Built Jupiter buy tx for {}: expected {} tokens, impact {:.2}%, route: {}",
@@ -1345,19 +1395,23 @@ impl GraduationSniper {
             estimated_amount_lamports: sol_amount_lamports,
             estimated_profit_lamports: None,
             edge_id: None,
-            description: format!(
-                "Post-grad buy: {} for {} SOL",
-                symbol,
-                entry_sol
-            ),
+            description: format!("Post-grad buy: {} for {} SOL", symbol, entry_sol),
         };
 
-        let sign_result = dev_signer.sign_transaction(sign_request).await
+        let sign_result = dev_signer
+            .sign_transaction(sign_request)
+            .await
             .map_err(|e| AppError::Internal(format!("Signing error: {}", e)))?;
 
         if !sign_result.success {
-            let error = sign_result.error.unwrap_or_else(|| "Unknown signing error".to_string());
-            tracing::error!("❌ Signing rejected for post-graduation buy {}: {}", symbol, error);
+            let error = sign_result
+                .error
+                .unwrap_or_else(|| "Unknown signing error".to_string());
+            tracing::error!(
+                "❌ Signing rejected for post-graduation buy {}: {}",
+                symbol,
+                error
+            );
 
             let fail_event = ArbEvent::new(
                 "arb.curve.post_grad_buy_failed",
@@ -1375,11 +1429,14 @@ impl GraduationSniper {
             return Err(AppError::Internal(format!("Signing rejected: {}", error)));
         }
 
-        let signed_tx = sign_result.signed_transaction_base64
+        let signed_tx = sign_result
+            .signed_transaction_base64
             .ok_or_else(|| AppError::Internal("No signed transaction returned".to_string()))?;
 
         // Send the transaction
-        let signature = helius_sender.send_transaction(&signed_tx, true).await
+        let signature = helius_sender
+            .send_transaction(&signed_tx, true)
+            .await
             .map_err(|e| AppError::Internal(format!("Send error: {}", e)))?;
 
         let tokens_received = buy_result.expected_tokens_out;
@@ -1435,19 +1492,22 @@ impl GraduationSniper {
                 exit_config.time_limit_minutes
             );
 
-            match pm.open_position(
-                edge_id,
-                strategy_id,
-                mint.to_string(),
-                Some(symbol.to_string()),
-                entry_sol,
-                actual_tokens,
-                entry_price,
-                exit_config,
-                Some(signature.clone()),
-                Some("jupiter".to_string()),
-                Some("graduation_sniper".to_string()),
-            ).await {
+            match pm
+                .open_position(
+                    edge_id,
+                    strategy_id,
+                    mint.to_string(),
+                    Some(symbol.to_string()),
+                    entry_sol,
+                    actual_tokens,
+                    entry_price,
+                    exit_config,
+                    Some(signature.clone()),
+                    Some("jupiter".to_string()),
+                    Some("graduation_sniper".to_string()),
+                )
+                .await
+            {
                 Ok(pos) => {
                     tracing::info!(
                         "🎯 Post-grad position registered with PositionManager: {} (pos_id={}, strategy_id={})",

@@ -62,13 +62,19 @@ pub async fn list_edges(
     let edges: Vec<EdgeResponse> = records
         .iter()
         .map(|r| {
-            let token_mint = r.route_data.get("token_mint")
+            let token_mint = r
+                .route_data
+                .get("token_mint")
                 .and_then(|v| v.as_str())
                 .map(String::from);
-            let token_symbol = r.route_data.get("token_symbol")
+            let token_symbol = r
+                .route_data
+                .get("token_symbol")
                 .and_then(|v| v.as_str())
                 .map(String::from);
-            let opportunity_score = r.route_data.get("opportunity_score")
+            let opportunity_score = r
+                .route_data
+                .get("opportunity_score")
                 .and_then(|v| v.as_f64());
 
             EdgeResponse {
@@ -107,13 +113,19 @@ pub async fn get_edge(
 
     let trade = state.trade_repo.get_by_edge_id(edge_id).await?;
 
-    let token_mint = record.route_data.get("token_mint")
+    let token_mint = record
+        .route_data
+        .get("token_mint")
         .and_then(|v| v.as_str())
         .map(String::from);
-    let token_symbol = record.route_data.get("token_symbol")
+    let token_symbol = record
+        .route_data
+        .get("token_symbol")
         .and_then(|v| v.as_str())
         .map(String::from);
-    let opportunity_score = record.route_data.get("opportunity_score")
+    let opportunity_score = record
+        .route_data
+        .get("opportunity_score")
         .and_then(|v| v.as_f64());
 
     Ok(Json(EdgeDetailResponse {
@@ -468,13 +480,19 @@ pub async fn list_atomic_edges(
     let edges: Vec<EdgeResponse> = records
         .iter()
         .map(|r| {
-            let token_mint = r.route_data.get("token_mint")
+            let token_mint = r
+                .route_data
+                .get("token_mint")
                 .and_then(|v| v.as_str())
                 .map(String::from);
-            let token_symbol = r.route_data.get("token_symbol")
+            let token_symbol = r
+                .route_data
+                .get("token_symbol")
                 .and_then(|v| v.as_str())
                 .map(String::from);
-            let opportunity_score = r.route_data.get("opportunity_score")
+            let opportunity_score = r
+                .route_data
+                .get("opportunity_score")
                 .and_then(|v| v.as_f64());
 
             EdgeResponse {
@@ -561,13 +579,18 @@ pub async fn execute_edge_auto(
         0 // Atomic trades don't lock capital
     } else {
         // Use the estimated profit as a proxy for position size, or use max_position_sol
-        let max_position_lamports = (strategy.risk_params.max_position_sol * 1_000_000_000.0) as u64;
+        let max_position_lamports =
+            (strategy.risk_params.max_position_sol * 1_000_000_000.0) as u64;
         max_position_lamports
     };
 
     // Check capital allocation for non-atomic trades
     if !is_atomic && required_capital_lamports > 0 {
-        if let Err(e) = state.capital_manager.can_allocate(strategy_id, required_capital_lamports).await {
+        if let Err(e) = state
+            .capital_manager
+            .can_allocate(strategy_id, required_capital_lamports)
+            .await
+        {
             warn!(
                 "Capital allocation check failed for strategy {}: {}",
                 strategy_id, e
@@ -589,7 +612,11 @@ pub async fn execute_edge_auto(
     // Reserve capital before execution (for non-atomic trades)
     let position_id = Uuid::new_v4();
     if !is_atomic && required_capital_lamports > 0 {
-        if let Err(e) = state.capital_manager.reserve_capital(strategy_id, position_id, required_capital_lamports).await {
+        if let Err(e) = state
+            .capital_manager
+            .reserve_capital(strategy_id, position_id, required_capital_lamports)
+            .await
+        {
             warn!(
                 "Failed to reserve capital for strategy {}: {}",
                 strategy_id, e
@@ -666,7 +693,10 @@ pub async fn execute_edge_auto(
         // For atomic trades, capital is already released (never locked)
         // For non-atomic trades that succeed immediately (instant profit), release capital
         if is_atomic {
-            info!("⚡ Atomic trade {} completed - no capital was locked", edge_id);
+            info!(
+                "⚡ Atomic trade {} completed - no capital was locked",
+                edge_id
+            );
         } else {
             // Keep capital reserved until position is closed
             // Capital will be released when position exits (SL/TP/manual close)
@@ -737,7 +767,9 @@ fn record_to_edge(
         _ => crate::models::EdgeStatus::Detected,
     };
 
-    let token_mint = record.route_data.get("token_mint")
+    let token_mint = record
+        .route_data
+        .get("token_mint")
         .and_then(|v| v.as_str())
         .map(String::from);
 
@@ -762,9 +794,8 @@ fn record_to_edge(
 fn record_to_strategy(
     record: &crate::database::repositories::strategies::StrategyRecord,
 ) -> AppResult<crate::models::Strategy> {
-    let risk_params: crate::models::RiskParams =
-        serde_json::from_value(record.risk_params.clone())
-            .map_err(|e| AppError::Serialization(e.to_string()))?;
+    let risk_params: crate::models::RiskParams = serde_json::from_value(record.risk_params.clone())
+        .map_err(|e| AppError::Serialization(e.to_string()))?;
 
     Ok(crate::models::Strategy {
         id: record.id,

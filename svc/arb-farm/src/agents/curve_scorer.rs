@@ -3,7 +3,9 @@ use std::sync::Arc;
 
 use crate::agents::curve_metrics::{CurveMetricsCollector, DetailedCurveMetrics};
 use crate::error::AppResult;
-use crate::venues::curves::{HolderAnalyzer, HolderDistribution, OnChainCurveState, OnChainFetcher};
+use crate::venues::curves::{
+    HolderAnalyzer, HolderDistribution, OnChainCurveState, OnChainFetcher,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -56,10 +58,11 @@ impl OpportunityScore {
     pub fn is_actionable(&self) -> bool {
         // Only trigger trades for confident buy signals (>= 70.0)
         // Marginal buys (60-69) should not auto-execute
-        self.overall >= 70.0 && matches!(
-            self.recommendation,
-            Recommendation::StrongBuy | Recommendation::Buy
-        )
+        self.overall >= 70.0
+            && matches!(
+                self.recommendation,
+                Recommendation::StrongBuy | Recommendation::Buy
+            )
     }
 }
 
@@ -171,20 +174,13 @@ impl CurveOpportunityScorer {
         self
     }
 
-    pub async fn score_opportunity(
-        &self,
-        mint: &str,
-        venue: &str,
-    ) -> AppResult<OpportunityScore> {
+    pub async fn score_opportunity(&self, mint: &str, venue: &str) -> AppResult<OpportunityScore> {
         let metrics = self
             .metrics_collector
             .get_or_calculate_metrics(mint, venue, 300)
             .await?;
 
-        let holders = self
-            .holder_analyzer
-            .get_or_analyze(mint, None, 600)
-            .await?;
+        let holders = self.holder_analyzer.get_or_analyze(mint, None, 600).await?;
 
         let on_chain = self.on_chain_fetcher.get_bonding_curve_state(mint).await?;
 
@@ -204,8 +200,12 @@ impl CurveOpportunityScorer {
 
         let graduation_factor = self.calculate_graduation_factor(on_chain, &mut positive_signals);
         let volume_factor = self.calculate_volume_factor(metrics, &mut positive_signals);
-        let holder_factor =
-            self.calculate_holder_factor(metrics, holders, &mut positive_signals, &mut risk_warnings);
+        let holder_factor = self.calculate_holder_factor(
+            metrics,
+            holders,
+            &mut positive_signals,
+            &mut risk_warnings,
+        );
         let momentum_factor = self.calculate_momentum_factor(metrics, &mut positive_signals);
         let risk_penalty =
             self.calculate_risk_penalty(metrics, holders, on_chain, &mut risk_warnings);
@@ -499,7 +499,9 @@ impl CurveOpportunityScorer {
         }
 
         scores.sort_by(|a, b| {
-            b.overall.partial_cmp(&a.overall).unwrap_or(std::cmp::Ordering::Equal)
+            b.overall
+                .partial_cmp(&a.overall)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
         scores.truncate(limit);
 
@@ -630,9 +632,17 @@ mod tests {
         );
         // is_actionable() requires >= 70.0, so check both cases
         if score.overall >= 70.0 {
-            assert!(score.is_actionable(), "Score {} should be actionable", score.overall);
+            assert!(
+                score.is_actionable(),
+                "Score {} should be actionable",
+                score.overall
+            );
         } else {
-            assert!(!score.is_actionable(), "Score {} (60-69) should not auto-execute", score.overall);
+            assert!(
+                !score.is_actionable(),
+                "Score {} (60-69) should not auto-execute",
+                score.overall
+            );
         }
         assert!(!score.positive_signals.is_empty());
     }

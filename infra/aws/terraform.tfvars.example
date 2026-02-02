@@ -1,0 +1,4 @@
+aws_region  = "us-east-1"
+domain_name = "nullblock.io"
+admin_cidr  = "YOUR_IP/32"
+db_password = "CHANGE_ME_IN_PRODUCTION"

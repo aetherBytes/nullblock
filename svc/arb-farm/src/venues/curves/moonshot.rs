@@ -33,7 +33,9 @@ impl MoonshotVenue {
             .timeout(std::time::Duration::from_secs(10))
             .send()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("DexScreener token request failed: {}", e)))?;
+            .map_err(|e| {
+                AppError::ExternalApi(format!("DexScreener token request failed: {}", e))
+            })?;
 
         if !response.status().is_success() {
             return Err(AppError::ExternalApi(format!(
@@ -42,13 +44,13 @@ impl MoonshotVenue {
             )));
         }
 
-        let dex_response: DexScreenerTokenResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e)))?;
+        let dex_response: DexScreenerTokenResponse = response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e))
+        })?;
 
         // Find a moonshot pair
-        let pair = dex_response.pairs
+        let pair = dex_response
+            .pairs
             .into_iter()
             .find(|p| p.dex_id == "moonshot")
             .ok_or_else(|| AppError::NotFound(format!("No moonshot pair found for {}", mint)))?;
@@ -75,12 +77,12 @@ impl MoonshotVenue {
             )));
         }
 
-        let dex_response: DexScreenerSearchResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e)))?;
+        let dex_response: DexScreenerSearchResponse = response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e))
+        })?;
 
-        let tokens: Vec<MoonshotToken> = dex_response.pairs
+        let tokens: Vec<MoonshotToken> = dex_response
+            .pairs
             .into_iter()
             .filter(|p| p.dex_id == "moonshot")
             .take(limit as usize)
@@ -90,7 +92,10 @@ impl MoonshotVenue {
         Ok(tokens)
     }
 
-    pub async fn get_graduation_progress(&self, mint: &str) -> AppResult<MoonshotGraduationProgress> {
+    pub async fn get_graduation_progress(
+        &self,
+        mint: &str,
+    ) -> AppResult<MoonshotGraduationProgress> {
         let token = self.get_token_info(mint).await?;
 
         let progress_percent = if token.is_graduated {
@@ -227,8 +232,8 @@ impl MoonshotVenue {
             "linear" => base_impact,
             "exponential" => base_impact * 1.5,
             "sigmoid" => {
-                let progress = token.market_cap_usd
-                    / token.graduation_market_cap.unwrap_or(500_000.0);
+                let progress =
+                    token.market_cap_usd / token.graduation_market_cap.unwrap_or(500_000.0);
                 if progress > 0.8 {
                     base_impact * 2.0
                 } else {
@@ -300,8 +305,7 @@ impl MoonshotVenue {
             graduation_market_cap: token.graduation_market_cap.unwrap_or(500_000.0),
             total_supply: token.total_supply,
             circulating_supply: token.circulating_supply,
-            curve_progress: token.market_cap_usd
-                / token.graduation_market_cap.unwrap_or(500_000.0),
+            curve_progress: token.market_cap_usd / token.graduation_market_cap.unwrap_or(500_000.0),
         })
     }
 }
@@ -517,10 +521,14 @@ impl MoonshotToken {
         let market_cap = pair.market_cap.or(pair.fdv).unwrap_or(0.0);
         let volume_24h = pair.volume.as_ref().and_then(|v| v.h24).unwrap_or(0.0);
         let price_change_24h = pair.price_change.as_ref().and_then(|p| p.h24);
-        let price_usd = pair.price_usd.as_ref()
+        let price_usd = pair
+            .price_usd
+            .as_ref()
             .and_then(|p| p.parse::<f64>().ok())
             .unwrap_or(0.0);
-        let price_native = pair.price_native.as_ref()
+        let price_native = pair
+            .price_native
+            .as_ref()
             .and_then(|p| p.parse::<f64>().ok())
             .unwrap_or(0.0);
 
@@ -553,7 +561,11 @@ impl MoonshotToken {
             volume_24h_usd: volume_24h,
             price_change_24h,
             is_graduated,
-            dex_pool_address: if is_graduated { Some(pair.pair_address) } else { None },
+            dex_pool_address: if is_graduated {
+                Some(pair.pair_address)
+            } else {
+                None
+            },
             graduation_market_cap: Some(500_000.0), // Typical moonshot threshold
             curve_type,
             initial_price_sol: None,

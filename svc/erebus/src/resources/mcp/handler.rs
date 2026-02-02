@@ -1,4 +1,4 @@
-use super::types::{McpRequest, McpResponse, McpServerInfo, McpCapabilities};
+use super::types::{McpCapabilities, McpRequest, McpResponse, McpServerInfo};
 use super::worker::McpWorkerFactory;
 
 #[derive(Clone)]
@@ -35,7 +35,10 @@ impl McpHandler {
 
     fn handle_ping(&self, params: &Option<serde_json::Value>) -> McpResponse {
         let empty_json = serde_json::json!({});
-        let ping_data = params.as_ref().and_then(|p| p.get("data")).unwrap_or(&empty_json);
+        let ping_data = params
+            .as_ref()
+            .and_then(|p| p.get("data"))
+            .unwrap_or(&empty_json);
         println!("🏓 MCP ping received with data: {}", ping_data);
         McpResponse::success(serde_json::json!({
             "message": "pong",
@@ -46,11 +49,15 @@ impl McpHandler {
 
     fn handle_initialize(&self, params: &Option<serde_json::Value>) -> McpResponse {
         let default_client = serde_json::json!({"name": "unknown", "version": "unknown"});
-        let client_info = params.as_ref()
+        let client_info = params
+            .as_ref()
             .and_then(|p| p.get("clientInfo"))
             .unwrap_or(&default_client);
-        
-        println!("🚀 MCP initialization requested from client: {}", client_info);
+
+        println!(
+            "🚀 MCP initialization requested from client: {}",
+            client_info
+        );
         let server_info = McpServerInfo {
             name: "erebus".to_string(),
             version: "0.1.0".to_string(),
@@ -79,9 +86,12 @@ impl McpHandler {
     }
 
     fn handle_list_resources(&self, params: &Option<serde_json::Value>) -> McpResponse {
-        let filter = params.as_ref().and_then(|p| p.get("filter")).and_then(|f| f.as_str());
+        let filter = params
+            .as_ref()
+            .and_then(|p| p.get("filter"))
+            .and_then(|f| f.as_str());
         println!("📋 MCP resources list requested with filter: {:?}", filter);
-        
+
         let mut resources = vec![
             serde_json::json!({
                 "uri": "erebus://wallets",
@@ -91,7 +101,7 @@ impl McpHandler {
                 "category": "authentication"
             }),
             serde_json::json!({
-                "uri": "erebus://sessions", 
+                "uri": "erebus://sessions",
                 "name": "Session Management",
                 "description": "Active wallet session validation and cleanup",
                 "mimeType": "application/json",
@@ -115,9 +125,12 @@ impl McpHandler {
     }
 
     fn handle_list_tools(&self, params: &Option<serde_json::Value>) -> McpResponse {
-        let category = params.as_ref().and_then(|p| p.get("category")).and_then(|c| c.as_str());
+        let category = params
+            .as_ref()
+            .and_then(|p| p.get("category"))
+            .and_then(|c| c.as_str());
         println!("🔧 MCP tools list requested for category: {:?}", category);
-        
+
         let mut tools = vec![
             serde_json::json!({
                 "name": "wallet_challenge",
@@ -145,7 +158,7 @@ impl McpHandler {
                     },
                     "required": ["token"]
                 }
-            })
+            }),
         ];
 
         // Apply category filter if provided
@@ -157,9 +170,12 @@ impl McpHandler {
     }
 
     fn handle_list_prompts(&self, params: &Option<serde_json::Value>) -> McpResponse {
-        let context = params.as_ref().and_then(|p| p.get("context")).and_then(|c| c.as_str());
+        let context = params
+            .as_ref()
+            .and_then(|p| p.get("context"))
+            .and_then(|c| c.as_str());
         println!("💬 MCP prompts list requested for context: {:?}", context);
-        
+
         let prompts = serde_json::json!([
             {
                 "name": "wallet_connection_flow",
@@ -200,13 +216,15 @@ impl McpHandler {
     }
 
     fn handle_tool_call(&self, params: &Option<serde_json::Value>) -> McpResponse {
-        let tool_name = params.as_ref()
+        let tool_name = params
+            .as_ref()
             .and_then(|p| p.get("name"))
             .and_then(|n| n.as_str())
             .unwrap_or("unknown");
-        
+
         let empty_args = serde_json::json!({});
-        let arguments = params.as_ref()
+        let arguments = params
+            .as_ref()
             .and_then(|p| p.get("arguments"))
             .unwrap_or(&empty_args);
 
@@ -214,32 +232,43 @@ impl McpHandler {
 
         match tool_name {
             "social_trading_analyze" => self.delegate_to_nullblock_mcp("social_trading", arguments),
-            _ => McpResponse::error(format!("Tool '{}' requires delegation to nullblock.mcp", tool_name))
+            _ => McpResponse::error(format!(
+                "Tool '{}' requires delegation to nullblock.mcp",
+                tool_name
+            )),
         }
     }
 
     fn handle_get_prompt(&self, params: &Option<serde_json::Value>) -> McpResponse {
-        let prompt_name = params.as_ref()
+        let prompt_name = params
+            .as_ref()
             .and_then(|p| p.get("name"))
             .and_then(|n| n.as_str())
             .unwrap_or("unknown");
-        
+
         let empty_args = serde_json::json!({});
-        let arguments = params.as_ref()
+        let arguments = params
+            .as_ref()
             .and_then(|p| p.get("arguments"))
             .unwrap_or(&empty_args);
 
-        println!("💬 MCP prompt requested: {} with args: {}", prompt_name, arguments);
+        println!(
+            "💬 MCP prompt requested: {} with args: {}",
+            prompt_name, arguments
+        );
 
         match prompt_name {
             "wallet_connection_flow" => self.generate_wallet_flow_prompt(arguments),
-            "trading_strategy" => self.delegate_to_nullblock_mcp("prompt_trading_strategy", arguments),
-            _ => McpResponse::error(format!("Unknown prompt: {}", prompt_name))
+            "trading_strategy" => {
+                self.delegate_to_nullblock_mcp("prompt_trading_strategy", arguments)
+            }
+            _ => McpResponse::error(format!("Unknown prompt: {}", prompt_name)),
         }
     }
 
     fn handle_read_resource(&self, params: &Option<serde_json::Value>) -> McpResponse {
-        let uri = params.as_ref()
+        let uri = params
+            .as_ref()
             .and_then(|p| p.get("uri"))
             .and_then(|u| u.as_str())
             .unwrap_or("unknown");
@@ -249,14 +278,22 @@ impl McpHandler {
         match uri {
             "erebus://wallets" => self.get_wallet_resource_data(),
             "erebus://sessions" => self.get_session_resource_data(),
-            "erebus://trading_agents" => self.delegate_to_nullblock_mcp("resource_trading_agents", &serde_json::json!({})),
-            _ => McpResponse::error(format!("Unknown resource URI: {}", uri))
+            "erebus://trading_agents" => {
+                self.delegate_to_nullblock_mcp("resource_trading_agents", &serde_json::json!({}))
+            }
+            _ => McpResponse::error(format!("Unknown resource URI: {}", uri)),
         }
     }
 
     fn handle_social_trading(&self, params: &Option<serde_json::Value>) -> McpResponse {
-        println!("📱 Social trading analysis requested: {}", params.as_ref().unwrap_or(&serde_json::json!({})));
-        self.delegate_to_nullblock_mcp("social_trading", params.as_ref().unwrap_or(&serde_json::json!({})))
+        println!(
+            "📱 Social trading analysis requested: {}",
+            params.as_ref().unwrap_or(&serde_json::json!({}))
+        );
+        self.delegate_to_nullblock_mcp(
+            "social_trading",
+            params.as_ref().unwrap_or(&serde_json::json!({})),
+        )
     }
 
     fn handle_wallet_integration(&self, _params: &Option<serde_json::Value>) -> McpResponse {
@@ -265,7 +302,7 @@ impl McpHandler {
             "supported_wallets": [
                 {
                     "id": "phantom",
-                    "name": "Phantom", 
+                    "name": "Phantom",
                     "description": "Solana Wallet",
                     "icon": "👻",
                     "networks": ["solana-mainnet", "solana-devnet", "solana-testnet"]
@@ -273,7 +310,7 @@ impl McpHandler {
                 {
                     "id": "metamask",
                     "name": "MetaMask",
-                    "description": "Ethereum Wallet", 
+                    "description": "Ethereum Wallet",
                     "icon": "🦊",
                     "networks": ["ethereum", "polygon", "optimism"]
                 }
@@ -288,12 +325,19 @@ impl McpHandler {
     }
 
     /// Delegate complex MCP operations to nullblock.mcp service
-    fn delegate_to_nullblock_mcp(&self, operation: &str, params: &serde_json::Value) -> McpResponse {
-        println!("🔄 Delegating '{}' to nullblock.mcp service with params: {}", operation, params);
-        
+    fn delegate_to_nullblock_mcp(
+        &self,
+        operation: &str,
+        params: &serde_json::Value,
+    ) -> McpResponse {
+        println!(
+            "🔄 Delegating '{}' to nullblock.mcp service with params: {}",
+            operation, params
+        );
+
         // Create worker for the operation
         let worker = self.worker_factory.create_worker(operation, params.clone());
-        
+
         // For now, return worker information - in production this would be async
         // and we'd use tokio::spawn to handle the nullblock.mcp communication
         McpResponse::success(serde_json::json!({
@@ -310,8 +354,14 @@ impl McpHandler {
     }
 
     fn generate_wallet_flow_prompt(&self, arguments: &serde_json::Value) -> McpResponse {
-        let wallet_type = arguments.get("wallet_type").and_then(|w| w.as_str()).unwrap_or("any");
-        let experience = arguments.get("user_experience_level").and_then(|e| e.as_str()).unwrap_or("intermediate");
+        let wallet_type = arguments
+            .get("wallet_type")
+            .and_then(|w| w.as_str())
+            .unwrap_or("any");
+        let experience = arguments
+            .get("user_experience_level")
+            .and_then(|e| e.as_str())
+            .unwrap_or("intermediate");
 
         let prompt = match (wallet_type, experience) {
             ("phantom", "beginner") => "I'll guide you through connecting your Phantom wallet step-by-step. First, make sure you have the Phantom browser extension installed...",
@@ -353,7 +403,8 @@ impl McpHandler {
     }
 
     fn handle_worker_status(&self, params: &Option<serde_json::Value>) -> McpResponse {
-        let worker_id = params.as_ref()
+        let worker_id = params
+            .as_ref()
             .and_then(|p| p.get("worker_id"))
             .and_then(|w| w.as_str())
             .unwrap_or("unknown");
@@ -371,21 +422,26 @@ impl McpHandler {
                 "result": worker.result,
                 "error": worker.error
             })),
-            None => McpResponse::error(format!("Worker '{}' not found", worker_id))
+            None => McpResponse::error(format!("Worker '{}' not found", worker_id)),
         }
     }
 
     fn handle_worker_list(&self, _params: &Option<serde_json::Value>) -> McpResponse {
         println!("📋 MCP worker list requested");
         let workers = self.worker_factory.get_all_workers();
-        
-        let worker_summaries: Vec<_> = workers.into_iter().map(|w| serde_json::json!({
-            "worker_id": w.worker_id,
-            "operation": w.operation,
-            "status": format!("{:?}", w.status),
-            "created_at": w.created_at,
-            "updated_at": w.updated_at
-        })).collect();
+
+        let worker_summaries: Vec<_> = workers
+            .into_iter()
+            .map(|w| {
+                serde_json::json!({
+                    "worker_id": w.worker_id,
+                    "operation": w.operation,
+                    "status": format!("{:?}", w.status),
+                    "created_at": w.created_at,
+                    "updated_at": w.updated_at
+                })
+            })
+            .collect();
 
         McpResponse::success(serde_json::json!({
             "total_workers": worker_summaries.len(),

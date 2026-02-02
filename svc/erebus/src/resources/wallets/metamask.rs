@@ -22,14 +22,18 @@ impl WalletProvider for MetaMaskWallet {
         )
     }
 
-    fn verify_signature(message: &str, signature: &str, wallet_address: &str) -> Result<bool, String> {
+    fn verify_signature(
+        message: &str,
+        signature: &str,
+        wallet_address: &str,
+    ) -> Result<bool, String> {
         // TODO: Implement proper Ethereum signature verification
         // This would involve:
         // 1. Hash the message with Ethereum's message prefix
         // 2. Recover the public key from signature
         // 3. Derive address from public key
         // 4. Compare with expected address
-        
+
         println!("MetaMask signature verification:");
         println!("  Message: {}", message);
         println!("  Signature: {}", signature);
@@ -56,11 +60,11 @@ pub struct MetaMaskTransaction {
 }
 
 impl MetaMaskWallet {
-
-
     pub fn validate_ethereum_address(address: &str) -> bool {
         // Basic Ethereum address validation
-        address.starts_with("0x") && address.len() == 42 && address[2..].chars().all(|c| c.is_ascii_hexdigit())
+        address.starts_with("0x")
+            && address.len() == 42
+            && address[2..].chars().all(|c| c.is_ascii_hexdigit())
     }
 
     pub fn get_network_info() -> Vec<NetworkInfo> {

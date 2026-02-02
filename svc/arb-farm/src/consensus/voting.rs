@@ -33,8 +33,8 @@ impl Default for VotingEngine {
         Self {
             min_agreement: 0.5,
             min_weighted_confidence: 0.6,
-            min_quorum: 1,       // Minimum 1 model for any consensus (graceful degradation)
-            expected_models: 3,  // Expect 3 models for full confidence
+            min_quorum: 1, // Minimum 1 model for any consensus (graceful degradation)
+            expected_models: 3, // Expect 3 models for full confidence
         }
     }
 }
@@ -329,17 +329,23 @@ pub struct ParsedRecommendation {
 }
 
 pub fn generate_analysis_prompt(context: &AnalysisContext) -> String {
-    let best_trade_str = context.best_trade.as_ref()
+    let best_trade_str = context
+        .best_trade
+        .as_ref()
         .map(|t| format!("{} (+{:.4} SOL)", t.symbol, t.pnl_sol))
         .unwrap_or_else(|| "None".to_string());
-    let worst_trade_str = context.worst_trade.as_ref()
+    let worst_trade_str = context
+        .worst_trade
+        .as_ref()
         .map(|t| format!("{} ({:.4} SOL)", t.symbol, t.pnl_sol))
         .unwrap_or_else(|| "None".to_string());
 
     let errors_summary = if context.recent_errors.is_empty() {
         "No recent errors".to_string()
     } else {
-        context.recent_errors.iter()
+        context
+            .recent_errors
+            .iter()
             .map(|e| format!("  - {} (x{}): {}", e.error_type, e.count, e.last_message))
             .collect::<Vec<_>>()
             .join("\n")
@@ -348,11 +354,21 @@ pub fn generate_analysis_prompt(context: &AnalysisContext) -> String {
     let trades_table = if context.recent_trades.is_empty() {
         "No recent trades to analyze.".to_string()
     } else {
-        let mut table = String::from("| # | Token | Venue | Entry | Exit | PnL | Hold | Exit Reason | SL% | TP% |\n");
-        table.push_str("|---|-------|-------|-------|------|-----|------|-------------|-----|-----|\n");
+        let mut table = String::from(
+            "| # | Token | Venue | Entry | Exit | PnL | Hold | Exit Reason | SL% | TP% |\n",
+        );
+        table.push_str(
+            "|---|-------|-------|-------|------|-----|------|-------------|-----|-----|\n",
+        );
         for (i, trade) in context.recent_trades.iter().enumerate() {
-            let sl_str = trade.stop_loss_pct.map(|v| format!("{:.1}", v)).unwrap_or_else(|| "-".to_string());
-            let tp_str = trade.take_profit_pct.map(|v| format!("{:.1}", v)).unwrap_or_else(|| "-".to_string());
+            let sl_str = trade
+                .stop_loss_pct
+                .map(|v| format!("{:.1}", v))
+                .unwrap_or_else(|| "-".to_string());
+            let tp_str = trade
+                .take_profit_pct
+                .map(|v| format!("{:.1}", v))
+                .unwrap_or_else(|| "-".to_string());
             let pnl_sign = if trade.pnl_sol >= 0.0 { "+" } else { "" };
             table.push_str(&format!(
                 "| {} | {} | {} | {:.4} | {:.4} | {}{:.4} ({:.1}%) | {:.1}m | {} | {} | {} |\n",
@@ -374,7 +390,11 @@ pub fn generate_analysis_prompt(context: &AnalysisContext) -> String {
     };
 
     let losing_trades_note = if !context.recent_trades.is_empty() {
-        let losing_count = context.recent_trades.iter().filter(|t| t.pnl_sol < 0.0).count();
+        let losing_count = context
+            .recent_trades
+            .iter()
+            .filter(|t| t.pnl_sol < 0.0)
+            .count();
         format!("\n**Losing Trades to Analyze: {}**", losing_count)
     } else {
         String::new()

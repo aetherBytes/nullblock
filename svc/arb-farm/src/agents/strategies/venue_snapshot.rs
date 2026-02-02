@@ -47,13 +47,15 @@ impl VenueSnapshot {
     }
 
     pub fn filter_tokens_by_progress(&self, min: f64, max: f64) -> Vec<&TokenData> {
-        self.tokens.iter()
+        self.tokens
+            .iter()
             .filter(|t| t.graduation_progress >= min && t.graduation_progress <= max)
             .collect()
     }
 
     pub fn filter_tokens_by_volume(&self, min_volume_sol: f64) -> Vec<&TokenData> {
-        self.tokens.iter()
+        self.tokens
+            .iter()
             .filter(|t| t.volume_24h_sol >= min_volume_sol)
             .collect()
     }

@@ -34,7 +34,9 @@ impl MarginfiVenue {
             .timeout(std::time::Duration::from_secs(15))
             .send()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("Marginfi accounts request failed: {}", e)))?;
+            .map_err(|e| {
+                AppError::ExternalApi(format!("Marginfi accounts request failed: {}", e))
+            })?;
 
         if !response.status().is_success() {
             return Err(AppError::ExternalApi(format!(
@@ -43,10 +45,9 @@ impl MarginfiVenue {
             )));
         }
 
-        let accounts: MarginfiAccountsResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Marginfi response: {}", e)))?;
+        let accounts: MarginfiAccountsResponse = response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse Marginfi response: {}", e))
+        })?;
 
         Ok(accounts.accounts)
     }
@@ -75,13 +76,17 @@ impl MarginfiVenue {
             .map_err(|e| AppError::ExternalApi(format!("Failed to parse health response: {}", e)))
     }
 
-    pub async fn get_liquidatable_accounts(&self, min_shortfall: f64) -> AppResult<Vec<LiquidatableAccount>> {
+    pub async fn get_liquidatable_accounts(
+        &self,
+        min_shortfall: f64,
+    ) -> AppResult<Vec<LiquidatableAccount>> {
         let accounts = self.get_accounts_at_risk().await?;
         let mut liquidatable = Vec::new();
 
         for account in accounts {
             if account.health_factor < 1.0 {
-                let shortfall = account.total_borrowed_usd - (account.total_collateral_usd * account.liquidation_threshold);
+                let shortfall = account.total_borrowed_usd
+                    - (account.total_collateral_usd * account.liquidation_threshold);
 
                 if shortfall >= min_shortfall {
                     let liquidation_bonus = account.total_collateral_usd * 0.05;
@@ -103,7 +108,8 @@ impl MarginfiVenue {
         }
 
         liquidatable.sort_by(|a, b| {
-            b.estimated_profit_lamports.cmp(&a.estimated_profit_lamports)
+            b.estimated_profit_lamports
+                .cmp(&a.estimated_profit_lamports)
         });
 
         Ok(liquidatable)

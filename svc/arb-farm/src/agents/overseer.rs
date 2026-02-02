@@ -131,30 +131,36 @@ impl ResilienceOverseer {
         let status = AgentStatus::new(agent_type.clone(), agent_id);
         self.agents.write().await.insert(agent_id, status);
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            "agent_started",
-            EventSource::Agent(AgentType::Overseer),
-            swarm_topics::AGENT_STARTED,
-            serde_json::json!({
-                "agent_type": format!("{:?}", agent_type),
-                "agent_id": agent_id.to_string(),
-            }),
-        ));
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                "agent_started",
+                EventSource::Agent(AgentType::Overseer),
+                swarm_topics::AGENT_STARTED,
+                serde_json::json!({
+                    "agent_type": format!("{:?}", agent_type),
+                    "agent_id": agent_id.to_string(),
+                }),
+            ),
+        );
 
         tracing::info!("Registered agent {:?} with id {}", agent_type, agent_id);
     }
 
     pub async fn unregister_agent(&self, agent_id: Uuid) {
         if let Some(status) = self.agents.write().await.remove(&agent_id) {
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "agent_stopped",
-                EventSource::Agent(AgentType::Overseer),
-                swarm_topics::AGENT_STOPPED,
-                serde_json::json!({
-                    "agent_type": format!("{:?}", status.agent_type),
-                    "agent_id": agent_id.to_string(),
-                }),
-            ));
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "agent_stopped",
+                    EventSource::Agent(AgentType::Overseer),
+                    swarm_topics::AGENT_STOPPED,
+                    serde_json::json!({
+                        "agent_type": format!("{:?}", status.agent_type),
+                        "agent_id": agent_id.to_string(),
+                    }),
+                ),
+            );
 
             tracing::info!(
                 "Unregistered agent {:?} with id {}",
@@ -185,18 +191,21 @@ impl ResilienceOverseer {
         if should_emit_event {
             let agents = self.agents.read().await;
             if let Some(status) = agents.get(&agent_id) {
-                crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                    "agent_failed",
-                    EventSource::Agent(AgentType::Overseer),
-                    swarm_topics::AGENT_FAILED,
-                    serde_json::json!({
-                        "agent_type": format!("{:?}", status.agent_type),
-                        "agent_id": agent_id.to_string(),
-                        "health": format!("{:?}", status.health),
-                        "error": error,
-                        "consecutive_failures": status.consecutive_failures,
-                    }),
-                ));
+                crate::events::broadcast_event(
+                    &self.event_tx,
+                    ArbEvent::new(
+                        "agent_failed",
+                        EventSource::Agent(AgentType::Overseer),
+                        swarm_topics::AGENT_FAILED,
+                        serde_json::json!({
+                            "agent_type": format!("{:?}", status.agent_type),
+                            "agent_id": agent_id.to_string(),
+                            "health": format!("{:?}", status.health),
+                            "error": error,
+                            "consecutive_failures": status.consecutive_failures,
+                        }),
+                    ),
+                );
             }
         }
     }
@@ -215,16 +224,19 @@ impl ResilienceOverseer {
         if should_emit_event {
             let agents = self.agents.read().await;
             if let Some(status) = agents.get(&agent_id) {
-                crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                    "agent_recovered",
-                    EventSource::Agent(AgentType::Overseer),
-                    swarm_topics::AGENT_RECOVERED,
-                    serde_json::json!({
-                        "agent_type": format!("{:?}", status.agent_type),
-                        "agent_id": agent_id.to_string(),
-                        "restart_count": status.restart_count,
-                    }),
-                ));
+                crate::events::broadcast_event(
+                    &self.event_tx,
+                    ArbEvent::new(
+                        "agent_recovered",
+                        EventSource::Agent(AgentType::Overseer),
+                        swarm_topics::AGENT_RECOVERED,
+                        serde_json::json!({
+                            "agent_type": format!("{:?}", status.agent_type),
+                            "agent_id": agent_id.to_string(),
+                            "restart_count": status.restart_count,
+                        }),
+                    ),
+                );
             }
         }
     }
@@ -280,14 +292,17 @@ impl ResilienceOverseer {
     pub async fn pause_swarm(&self) {
         *self.is_paused.write().await = true;
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            "swarm_paused",
-            EventSource::Agent(AgentType::Overseer),
-            swarm_topics::PAUSED,
-            serde_json::json!({
-                "timestamp": chrono::Utc::now().to_rfc3339(),
-            }),
-        ));
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                "swarm_paused",
+                EventSource::Agent(AgentType::Overseer),
+                swarm_topics::PAUSED,
+                serde_json::json!({
+                    "timestamp": chrono::Utc::now().to_rfc3339(),
+                }),
+            ),
+        );
 
         tracing::warn!("Swarm paused by overseer");
     }
@@ -295,14 +310,17 @@ impl ResilienceOverseer {
     pub async fn resume_swarm(&self) {
         *self.is_paused.write().await = false;
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            "swarm_resumed",
-            EventSource::Agent(AgentType::Overseer),
-            swarm_topics::RESUMED,
-            serde_json::json!({
-                "timestamp": chrono::Utc::now().to_rfc3339(),
-            }),
-        ));
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                "swarm_resumed",
+                EventSource::Agent(AgentType::Overseer),
+                swarm_topics::RESUMED,
+                serde_json::json!({
+                    "timestamp": chrono::Utc::now().to_rfc3339(),
+                }),
+            ),
+        );
 
         tracing::info!("Swarm resumed by overseer");
     }

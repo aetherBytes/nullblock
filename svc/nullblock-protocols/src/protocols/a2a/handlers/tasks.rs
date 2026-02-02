@@ -1,16 +1,18 @@
-use axum::{extract::{Path, State}, Json};
-use tracing::{info, error};
+use axum::{
+    extract::{Path, State},
+    Json,
+};
+use tracing::{error, info};
 
 use crate::errors::ProtocolError;
 use crate::protocols::a2a::types::{
-    Task, TaskCancelRequest, TaskCancelResponse, TaskListRequest,
-    TaskListResponse
+    Task, TaskCancelRequest, TaskCancelResponse, TaskListRequest, TaskListResponse,
 };
 use crate::server::AppState;
 
 pub async fn get_task(
     State(state): State<AppState>,
-    Path(task_id): Path<String>
+    Path(task_id): Path<String>,
 ) -> Result<Json<Task>, ProtocolError> {
     info!("📋 A2A: Fetching task {}", task_id);
 
@@ -29,36 +31,57 @@ pub async fn get_task(
                                 }
                                 Err(e) => {
                                     error!("❌ A2A: Failed to parse task response: {}", e);
-                                    Err(ProtocolError::InternalError(format!("Failed to parse task: {}", e)))
+                                    Err(ProtocolError::InternalError(format!(
+                                        "Failed to parse task: {}",
+                                        e
+                                    )))
                                 }
                             }
                         } else {
                             error!("❌ A2A: No data field in response");
-                            Err(ProtocolError::TaskNotFound(format!("Task {} not found", task_id)))
+                            Err(ProtocolError::TaskNotFound(format!(
+                                "Task {} not found",
+                                task_id
+                            )))
                         }
                     }
                     Err(e) => {
                         error!("❌ A2A: Failed to parse JSON response: {}", e);
-                        Err(ProtocolError::InternalError(format!("Invalid response format: {}", e)))
+                        Err(ProtocolError::InternalError(format!(
+                            "Invalid response format: {}",
+                            e
+                        )))
                     }
                 }
             } else if response.status() == 404 {
-                Err(ProtocolError::TaskNotFound(format!("Task {} not found", task_id)))
+                Err(ProtocolError::TaskNotFound(format!(
+                    "Task {} not found",
+                    task_id
+                )))
             } else {
-                error!("❌ A2A: Task fetch failed with status {}", response.status());
-                Err(ProtocolError::InternalError(format!("Failed to fetch task: {}", response.status())))
+                error!(
+                    "❌ A2A: Task fetch failed with status {}",
+                    response.status()
+                );
+                Err(ProtocolError::InternalError(format!(
+                    "Failed to fetch task: {}",
+                    response.status()
+                )))
             }
         }
         Err(e) => {
             error!("❌ A2A: HTTP request failed: {}", e);
-            Err(ProtocolError::InternalError(format!("Request failed: {}", e)))
+            Err(ProtocolError::InternalError(format!(
+                "Request failed: {}",
+                e
+            )))
         }
     }
 }
 
 pub async fn list_tasks(
     State(state): State<AppState>,
-    Json(request): Json<TaskListRequest>
+    Json(request): Json<TaskListRequest>,
 ) -> Result<Json<TaskListResponse>, ProtocolError> {
     info!("📋 A2A: Listing tasks with filters");
 
@@ -87,9 +110,8 @@ pub async fn list_tasks(
                                 Ok(tasks) => {
                                     info!("✅ A2A: Listed {} tasks", tasks.len());
                                     let total = tasks.len() as u32;
-                                    let next_offset = request.offset.and_then(|o| {
-                                        request.limit.map(|l| o + l)
-                                    });
+                                    let next_offset =
+                                        request.offset.and_then(|o| request.limit.map(|l| o + l));
                                     Ok(Json(TaskListResponse {
                                         tasks,
                                         total,
@@ -98,7 +120,10 @@ pub async fn list_tasks(
                                 }
                                 Err(e) => {
                                     error!("❌ A2A: Failed to parse tasks response: {}", e);
-                                    Err(ProtocolError::InternalError(format!("Failed to parse tasks: {}", e)))
+                                    Err(ProtocolError::InternalError(format!(
+                                        "Failed to parse tasks: {}",
+                                        e
+                                    )))
                                 }
                             }
                         } else {
@@ -111,17 +136,26 @@ pub async fn list_tasks(
                     }
                     Err(e) => {
                         error!("❌ A2A: Failed to parse JSON response: {}", e);
-                        Err(ProtocolError::InternalError(format!("Invalid response format: {}", e)))
+                        Err(ProtocolError::InternalError(format!(
+                            "Invalid response format: {}",
+                            e
+                        )))
                     }
                 }
             } else {
                 error!("❌ A2A: Task list failed with status {}", response.status());
-                Err(ProtocolError::InternalError(format!("Failed to list tasks: {}", response.status())))
+                Err(ProtocolError::InternalError(format!(
+                    "Failed to list tasks: {}",
+                    response.status()
+                )))
             }
         }
         Err(e) => {
             error!("❌ A2A: HTTP request failed: {}", e);
-            Err(ProtocolError::InternalError(format!("Request failed: {}", e)))
+            Err(ProtocolError::InternalError(format!(
+                "Request failed: {}",
+                e
+            )))
         }
     }
 }
@@ -133,7 +167,10 @@ pub async fn cancel_task(
 ) -> Result<Json<TaskCancelResponse>, ProtocolError> {
     info!("🚫 A2A: Cancelling task {}", task_id);
 
-    let url = format!("{}/api/agents/tasks/{}/cancel", state.agents_service_url, task_id);
+    let url = format!(
+        "{}/api/agents/tasks/{}/cancel",
+        state.agents_service_url, task_id
+    );
 
     match state.http_client.post(&url).send().await {
         Ok(response) => {
@@ -149,24 +186,42 @@ pub async fn cancel_task(
                             }))
                         } else {
                             error!("❌ A2A: No data field in response");
-                            Err(ProtocolError::TaskNotFound(format!("Task {} not found", task_id)))
+                            Err(ProtocolError::TaskNotFound(format!(
+                                "Task {} not found",
+                                task_id
+                            )))
                         }
                     }
                     Err(e) => {
                         error!("❌ A2A: Failed to parse JSON response: {}", e);
-                        Err(ProtocolError::InternalError(format!("Invalid response format: {}", e)))
+                        Err(ProtocolError::InternalError(format!(
+                            "Invalid response format: {}",
+                            e
+                        )))
                     }
                 }
             } else if response.status() == 404 {
-                Err(ProtocolError::TaskNotFound(format!("Task {} not found", task_id)))
+                Err(ProtocolError::TaskNotFound(format!(
+                    "Task {} not found",
+                    task_id
+                )))
             } else {
-                error!("❌ A2A: Task cancel failed with status {}", response.status());
-                Err(ProtocolError::InternalError(format!("Failed to cancel task: {}", response.status())))
+                error!(
+                    "❌ A2A: Task cancel failed with status {}",
+                    response.status()
+                );
+                Err(ProtocolError::InternalError(format!(
+                    "Failed to cancel task: {}",
+                    response.status()
+                )))
             }
         }
         Err(e) => {
             error!("❌ A2A: HTTP request failed: {}", e);
-            Err(ProtocolError::InternalError(format!("Request failed: {}", e)))
+            Err(ProtocolError::InternalError(format!(
+                "Request failed: {}",
+                e
+            )))
         }
     }
 }
@@ -192,29 +247,50 @@ pub async fn resubscribe_task(
                                 }
                                 Err(e) => {
                                     error!("❌ A2A: Failed to parse task response: {}", e);
-                                    Err(ProtocolError::InternalError(format!("Failed to parse task: {}", e)))
+                                    Err(ProtocolError::InternalError(format!(
+                                        "Failed to parse task: {}",
+                                        e
+                                    )))
                                 }
                             }
                         } else {
                             error!("❌ A2A: No data field in response");
-                            Err(ProtocolError::TaskNotFound(format!("Task {} not found", task_id)))
+                            Err(ProtocolError::TaskNotFound(format!(
+                                "Task {} not found",
+                                task_id
+                            )))
                         }
                     }
                     Err(e) => {
                         error!("❌ A2A: Failed to parse JSON response: {}", e);
-                        Err(ProtocolError::InternalError(format!("Invalid response format: {}", e)))
+                        Err(ProtocolError::InternalError(format!(
+                            "Invalid response format: {}",
+                            e
+                        )))
                     }
                 }
             } else if response.status() == 404 {
-                Err(ProtocolError::TaskNotFound(format!("Task {} not found", task_id)))
+                Err(ProtocolError::TaskNotFound(format!(
+                    "Task {} not found",
+                    task_id
+                )))
             } else {
-                error!("❌ A2A: Task resubscribe failed with status {}", response.status());
-                Err(ProtocolError::InternalError(format!("Failed to resubscribe to task: {}", response.status())))
+                error!(
+                    "❌ A2A: Task resubscribe failed with status {}",
+                    response.status()
+                );
+                Err(ProtocolError::InternalError(format!(
+                    "Failed to resubscribe to task: {}",
+                    response.status()
+                )))
             }
         }
         Err(e) => {
             error!("❌ A2A: HTTP request failed: {}", e);
-            Err(ProtocolError::InternalError(format!("Request failed: {}", e)))
+            Err(ProtocolError::InternalError(format!(
+                "Request failed: {}",
+                e
+            )))
         }
     }
 }

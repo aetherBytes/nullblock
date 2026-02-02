@@ -5,9 +5,9 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::error::AppResult;
-use crate::helius::types::{HeliusConfig, HeliusStatus, SenderStats, TokenMetadata};
 use crate::helius::laserstream::LaserStreamStatus;
 use crate::helius::priority_fee::PriorityFeeResponse;
+use crate::helius::types::{HeliusConfig, HeliusStatus, SenderStats, TokenMetadata};
 use crate::server::AppState;
 
 #[derive(Debug, Serialize)]
@@ -97,9 +97,9 @@ pub async fn get_priority_fees(
     State(state): State<AppState>,
     Query(query): Query<PriorityFeeQuery>,
 ) -> AppResult<Json<PriorityFeeApiResponse>> {
-    let account_keys: Option<Vec<String>> = query.account_keys.map(|s| {
-        s.split(',').map(|k| k.trim().to_string()).collect()
-    });
+    let account_keys: Option<Vec<String>> = query
+        .account_keys
+        .map(|s| s.split(',').map(|k| k.trim().to_string()).collect());
 
     let fees = state
         .priority_fee_monitor
@@ -161,12 +161,12 @@ pub struct PingResponse {
     pub latency_ms: u64,
 }
 
-pub async fn ping_sender(
-    State(state): State<AppState>,
-) -> AppResult<Json<PingResponse>> {
+pub async fn ping_sender(State(state): State<AppState>) -> AppResult<Json<PingResponse>> {
     let latency = state.helius_sender.ping().await?;
 
-    Ok(Json(PingResponse { latency_ms: latency }))
+    Ok(Json(PingResponse {
+        latency_ms: latency,
+    }))
 }
 
 #[derive(Debug, Deserialize)]
@@ -212,9 +212,7 @@ pub async fn das_assets_by_owner(
     Ok(Json(DasAssetsResponse { assets, total }))
 }
 
-pub async fn get_helius_config(
-    State(state): State<AppState>,
-) -> AppResult<Json<HeliusConfig>> {
+pub async fn get_helius_config(State(state): State<AppState>) -> AppResult<Json<HeliusConfig>> {
     let config = state.helius_rpc_client.get_config().await;
     Ok(Json(config))
 }
@@ -265,23 +263,20 @@ pub async fn send_transaction(
     State(state): State<AppState>,
     Json(request): Json<SendTransactionRequest>,
 ) -> AppResult<Json<SendTransactionResponse>> {
-    match state.helius_sender.send_transaction(
-        &request.signed_transaction_base64,
-        request.skip_preflight,
-    ).await {
-        Ok(signature) => {
-            Ok(Json(SendTransactionResponse {
-                success: true,
-                signature: Some(signature),
-                error: None,
-            }))
-        }
-        Err(e) => {
-            Ok(Json(SendTransactionResponse {
-                success: false,
-                signature: None,
-                error: Some(e.to_string()),
-            }))
-        }
+    match state
+        .helius_sender
+        .send_transaction(&request.signed_transaction_base64, request.skip_preflight)
+        .await
+    {
+        Ok(signature) => Ok(Json(SendTransactionResponse {
+            success: true,
+            signature: Some(signature),
+            error: None,
+        })),
+        Err(e) => Ok(Json(SendTransactionResponse {
+            success: false,
+            signature: None,
+            error: Some(e.to_string()),
+        })),
     }
 }

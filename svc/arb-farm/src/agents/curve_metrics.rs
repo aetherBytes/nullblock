@@ -5,9 +5,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::error::AppResult;
-use crate::venues::curves::OnChainFetcher;
-use crate::venues::curves::pump_fun::{PumpFunToken, HolderStats as PumpFunHolderStats};
 use crate::venues::curves::moonshot::MoonshotToken;
+use crate::venues::curves::pump_fun::{HolderStats as PumpFunHolderStats, PumpFunToken};
+use crate::venues::curves::OnChainFetcher;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetailedCurveMetrics {
@@ -256,7 +256,11 @@ impl CurveMetricsCollector {
         }
     }
 
-    pub async fn calculate_metrics(&self, mint: &str, venue: &str) -> AppResult<DetailedCurveMetrics> {
+    pub async fn calculate_metrics(
+        &self,
+        mint: &str,
+        venue: &str,
+    ) -> AppResult<DetailedCurveMetrics> {
         let samples = self.samples.read().await;
         let token_samples = samples.get(mint);
 
@@ -282,11 +286,13 @@ impl CurveMetricsCollector {
                 let one_hour_ago = now - Duration::hours(1);
                 let twenty_four_hours_ago = now - Duration::hours(24);
 
-                let samples_1h: Vec<_> = samples.iter()
+                let samples_1h: Vec<_> = samples
+                    .iter()
                     .filter(|s| s.timestamp >= one_hour_ago)
                     .collect();
 
-                let samples_24h: Vec<_> = samples.iter()
+                let samples_24h: Vec<_> = samples
+                    .iter()
                     .filter(|s| s.timestamp >= twenty_four_hours_ago)
                     .collect();
 
@@ -297,7 +303,8 @@ impl CurveMetricsCollector {
                     let first = samples_1h.first().unwrap();
                     let last = samples_1h.last().unwrap();
                     if first.price_sol > 0.0 {
-                        metrics.price_momentum_1h = ((last.price_sol - first.price_sol) / first.price_sol) * 100.0;
+                        metrics.price_momentum_1h =
+                            ((last.price_sol - first.price_sol) / first.price_sol) * 100.0;
                     }
 
                     let first_holders = samples_1h.first().map(|s| s.holder_count).unwrap_or(0);
@@ -312,7 +319,8 @@ impl CurveMetricsCollector {
                     let first = samples_24h.first().unwrap();
                     let last = samples_24h.last().unwrap();
                     if first.price_sol > 0.0 {
-                        metrics.price_momentum_24h = ((last.price_sol - first.price_sol) / first.price_sol) * 100.0;
+                        metrics.price_momentum_24h =
+                            ((last.price_sol - first.price_sol) / first.price_sol) * 100.0;
                     }
 
                     let first_holders = samples_24h.first().map(|s| s.holder_count).unwrap_or(0);
@@ -320,7 +328,8 @@ impl CurveMetricsCollector {
                     metrics.holder_growth_24h = last_holders as i32 - first_holders as i32;
 
                     if metrics.trade_count_24h > 0 {
-                        metrics.avg_trade_size_sol = metrics.volume_24h / metrics.trade_count_24h as f64;
+                        metrics.avg_trade_size_sol =
+                            metrics.volume_24h / metrics.trade_count_24h as f64;
                     }
                 }
 
@@ -331,7 +340,8 @@ impl CurveMetricsCollector {
                 if samples_1h.len() >= 2 {
                     let first_vol = samples_1h.first().unwrap().volume_sol;
                     let last_vol = samples_1h.last().unwrap().volume_sol;
-                    let time_diff = (samples_1h.last().unwrap().timestamp - samples_1h.first().unwrap().timestamp)
+                    let time_diff = (samples_1h.last().unwrap().timestamp
+                        - samples_1h.first().unwrap().timestamp)
                         .num_minutes()
                         .max(1) as f64;
                     metrics.volume_velocity = (last_vol - first_vol) / time_diff * 60.0;
@@ -354,7 +364,12 @@ impl CurveMetricsCollector {
         cache.get(mint).cloned()
     }
 
-    pub async fn get_or_calculate_metrics(&self, mint: &str, venue: &str, max_age_seconds: i64) -> AppResult<DetailedCurveMetrics> {
+    pub async fn get_or_calculate_metrics(
+        &self,
+        mint: &str,
+        venue: &str,
+        max_age_seconds: i64,
+    ) -> AppResult<DetailedCurveMetrics> {
         if let Some(cached) = self.get_cached_metrics(mint).await {
             if !cached.is_stale(max_age_seconds) {
                 return Ok(cached);
@@ -382,12 +397,19 @@ impl CurveMetricsCollector {
         };
 
         let top_20_concentration = if holder_stats.top_holders.len() >= 20 {
-            holder_stats.top_holders.iter().take(20).map(|h| h.percentage).sum()
+            holder_stats
+                .top_holders
+                .iter()
+                .take(20)
+                .map(|h| h.percentage)
+                .sum()
         } else {
             holder_stats.top_10_concentration * 1.3
         };
 
-        let creator_holdings = holder_stats.top_holders.first()
+        let creator_holdings = holder_stats
+            .top_holders
+            .first()
             .map(|h| h.percentage)
             .unwrap_or(0.0);
 
@@ -531,10 +553,16 @@ mod tests {
         metrics.volume_1h = 20.0;
 
         let accel = metrics.volume_acceleration();
-        assert!(accel > 0.5, "Expected positive acceleration when hourly > daily avg");
+        assert!(
+            accel > 0.5,
+            "Expected positive acceleration when hourly > daily avg"
+        );
 
         metrics.volume_1h = 5.0;
         let accel = metrics.volume_acceleration();
-        assert!(accel < 0.0, "Expected negative acceleration when hourly < daily avg");
+        assert!(
+            accel < 0.0,
+            "Expected negative acceleration when hourly < daily avg"
+        );
     }
 }

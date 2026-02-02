@@ -10,7 +10,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-use crate::database::repositories::kol::{CreateKolTradeRecord};
+use crate::database::repositories::kol::CreateKolTradeRecord;
 use crate::error::{AppError, AppResult};
 use crate::events::{kol as kol_topics, ArbEvent};
 use crate::models::KolTradeType;
@@ -68,9 +68,9 @@ pub async fn register_webhook(
         }));
     }
 
-    let webhook_url = request.webhook_url.unwrap_or_else(|| {
-        format!("{}/api/arb/webhooks/helius", state.config.erebus_url)
-    });
+    let webhook_url = request
+        .webhook_url
+        .unwrap_or_else(|| format!("{}/api/arb/webhooks/helius", state.config.erebus_url));
 
     let config = WebhookConfig {
         webhook_url,
@@ -109,9 +109,7 @@ pub struct WebhookSummary {
     pub created_at: String,
 }
 
-pub async fn list_webhooks(
-    State(state): State<AppState>,
-) -> AppResult<Json<ListWebhooksResponse>> {
+pub async fn list_webhooks(State(state): State<AppState>) -> AppResult<Json<ListWebhooksResponse>> {
     if state.config.helius_api_key.is_none() {
         return Ok(Json(ListWebhooksResponse { webhooks: vec![] }));
     }
@@ -152,7 +150,11 @@ pub async fn delete_webhook(
     State(state): State<AppState>,
     Json(request): Json<DeleteWebhookRequest>,
 ) -> AppResult<Json<DeleteWebhookResponse>> {
-    match state.helius_webhook_client.delete_webhook(&request.webhook_id).await {
+    match state
+        .helius_webhook_client
+        .delete_webhook(&request.webhook_id)
+        .await
+    {
         Ok(()) => Ok(Json(DeleteWebhookResponse {
             success: true,
             error: None,
@@ -208,7 +210,8 @@ pub async fn receive_helius_webhook(
                 );
 
                 // Look up the KOL entity from DB by wallet address
-                let kol_entity = match state.kol_repo.get_by_identifier(&swap.wallet_address).await {
+                let kol_entity = match state.kol_repo.get_by_identifier(&swap.wallet_address).await
+                {
                     Ok(Some(entity)) => entity,
                     Ok(None) => {
                         tracing::debug!(
@@ -243,20 +246,24 @@ pub async fn receive_helius_webhook(
                 let value_sol = TransactionParser::calculate_swap_value_sol(&swap);
 
                 // Record the KOL trade in DB to get kol_trade_id
-                let kol_trade = match state.kol_repo.record_trade(CreateKolTradeRecord {
-                    entity_id: kol_entity.id,
-                    tx_signature: swap.signature.clone(),
-                    trade_type: trade_type.clone(),
-                    token_mint: token_mint.clone(),
-                    token_symbol: None,
-                    amount_sol: Decimal::from_f64_retain(value_sol).unwrap_or_default(),
-                    token_amount: if trade_type == KolTradeType::Buy {
-                        Some(Decimal::from(swap.output_amount))
-                    } else {
-                        Some(Decimal::from(swap.input_amount))
-                    },
-                    price_at_trade: None,
-                }).await {
+                let kol_trade = match state
+                    .kol_repo
+                    .record_trade(CreateKolTradeRecord {
+                        entity_id: kol_entity.id,
+                        tx_signature: swap.signature.clone(),
+                        trade_type: trade_type.clone(),
+                        token_mint: token_mint.clone(),
+                        token_symbol: None,
+                        amount_sol: Decimal::from_f64_retain(value_sol).unwrap_or_default(),
+                        token_amount: if trade_type == KolTradeType::Buy {
+                            Some(Decimal::from(swap.output_amount))
+                        } else {
+                            Some(Decimal::from(swap.input_amount))
+                        },
+                        price_at_trade: None,
+                    })
+                    .await
+                {
                     Ok(trade) => trade,
                     Err(e) => {
                         tracing::error!("Failed to record KOL trade in DB: {}", e);

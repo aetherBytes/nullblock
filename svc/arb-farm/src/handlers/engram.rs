@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::agents::EngramHarvester;
 use crate::models::{
-    ArbEngram, AvoidanceSeverity, CreateEngramRequest, EngramQuery,
-    EngramType, PatternMatch, PatternMatchRequest,
+    ArbEngram, AvoidanceSeverity, CreateEngramRequest, EngramQuery, EngramType, PatternMatch,
+    PatternMatchRequest,
 };
 use crate::server::AppState;
 
@@ -141,7 +141,10 @@ pub async fn create_engram(
             engram: Some(engram),
             message: None,
         })),
-        Err(e) => Err(json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string())),
+        Err(e) => Err(json_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &e.to_string(),
+        )),
     }
 }
 
@@ -157,7 +160,10 @@ pub async fn get_engram(
             engram: Some(engram),
             message: None,
         })),
-        None => Err(json_error(StatusCode::NOT_FOUND, &format!("Engram not found: {}", key))),
+        None => Err(json_error(
+            StatusCode::NOT_FOUND,
+            &format!("Engram not found: {}", key),
+        )),
     }
 }
 
@@ -262,7 +268,10 @@ pub async fn create_avoidance(
                 message: Some(format!("Created avoidance engram: {}", id)),
             }))
         }
-        Err(e) => Err(json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string())),
+        Err(e) => Err(json_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &e.to_string(),
+        )),
     }
 }
 
@@ -288,7 +297,10 @@ pub async fn create_pattern(
             engram: None,
             message: Some(format!("Created pattern engram: {}", id)),
         })),
-        Err(e) => Err(json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string())),
+        Err(e) => Err(json_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &e.to_string(),
+        )),
     }
 }
 
@@ -304,7 +316,10 @@ pub async fn delete_engram(
             "message": format!("Deleted engram: {}", key)
         })))
     } else {
-        Err(json_error(StatusCode::NOT_FOUND, &format!("Engram not found: {}", key)))
+        Err(json_error(
+            StatusCode::NOT_FOUND,
+            &format!("Engram not found: {}", key),
+        ))
     }
 }
 
@@ -401,7 +416,10 @@ pub async fn get_learning_insights(
 
         if win_rate > 0.6 {
             insights.push(LearningInsight {
-                text: format!("Current strategy achieving {:.0}% win rate", win_rate * 100.0),
+                text: format!(
+                    "Current strategy achieving {:.0}% win rate",
+                    win_rate * 100.0
+                ),
                 confidence: 0.85,
                 source: "position_analysis".to_string(),
                 insight_type: "performance".to_string(),
@@ -410,7 +428,8 @@ pub async fn get_learning_insights(
 
         if position_stats.stop_losses_triggered > position_stats.take_profits_triggered {
             insights.push(LearningInsight {
-                text: "Consider tightening entry criteria - stop losses exceeding take profits".to_string(),
+                text: "Consider tightening entry criteria - stop losses exceeding take profits"
+                    .to_string(),
                 confidence: 0.75,
                 source: "position_analysis".to_string(),
                 insight_type: "recommendation".to_string(),

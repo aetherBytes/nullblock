@@ -352,7 +352,9 @@ pub fn get_threat_tools() -> Vec<McpTool> {
     vec![
         McpTool {
             name: "threat_check_token".to_string(),
-            description: "Run full threat analysis on a token using RugCheck, GoPlus, and Birdeye APIs".to_string(),
+            description:
+                "Run full threat analysis on a token using RugCheck, GoPlus, and Birdeye APIs"
+                    .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -642,7 +644,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
     vec![
         McpTool {
             name: "curve_buy_token".to_string(),
-            description: "Get a quote for buying tokens on a bonding curve (pump.fun or moonshot)".to_string(),
+            description: "Get a quote for buying tokens on a bonding curve (pump.fun or moonshot)"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -668,7 +671,9 @@ pub fn get_curve_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "curve_sell_token".to_string(),
-            description: "Get a quote for selling tokens on a bonding curve (before or after graduation)".to_string(),
+            description:
+                "Get a quote for selling tokens on a bonding curve (before or after graduation)"
+                    .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -694,7 +699,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "curve_check_progress".to_string(),
-            description: "Check graduation progress percentage for a bonding curve token".to_string(),
+            description: "Check graduation progress percentage for a bonding curve token"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -716,7 +722,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "curve_get_holder_stats".to_string(),
-            description: "Get holder statistics including top holders and concentration".to_string(),
+            description: "Get holder statistics including top holders and concentration"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -738,7 +745,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "curve_graduation_eta".to_string(),
-            description: "Get estimated time/blocks until graduation based on current volume".to_string(),
+            description: "Get estimated time/blocks until graduation based on current volume"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -760,7 +768,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "curve_list_tokens".to_string(),
-            description: "List recent bonding curve tokens with progress and volume info".to_string(),
+            description: "List recent bonding curve tokens with progress and volume info"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -783,7 +792,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "curve_graduation_candidates".to_string(),
-            description: "List tokens approaching graduation (configurable progress range)".to_string(),
+            description: "List tokens approaching graduation (configurable progress range)"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -815,7 +825,9 @@ pub fn get_curve_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "curve_cross_venue_arb".to_string(),
-            description: "Detect cross-venue arbitrage opportunities between bonding curves and DEXes".to_string(),
+            description:
+                "Detect cross-venue arbitrage opportunities between bonding curves and DEXes"
+                    .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -837,7 +849,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "curve_get_parameters".to_string(),
-            description: "Get bonding curve parameters (curve type, initial/current price, etc.)".to_string(),
+            description: "Get bonding curve parameters (curve type, initial/current price, etc.)"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -853,7 +866,8 @@ pub fn get_curve_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "curve_venues_health".to_string(),
-            description: "Check health status of bonding curve venues (pump.fun, moonshot)".to_string(),
+            description: "Check health status of bonding curve venues (pump.fun, moonshot)"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {},
@@ -869,7 +883,9 @@ pub fn get_research_tools() -> Vec<McpTool> {
     vec![
         McpTool {
             name: "research_ingest_url".to_string(),
-            description: "Ingest and analyze a URL for trading strategies (tweets, articles, threads)".to_string(),
+            description:
+                "Ingest and analyze a URL for trading strategies (tweets, articles, threads)"
+                    .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -894,7 +910,8 @@ pub fn get_research_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "research_monitor_account".to_string(),
-            description: "Add X/Twitter account to monitoring list for alpha or threat intel".to_string(),
+            description: "Add X/Twitter account to monitoring list for alpha or threat intel"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -1013,7 +1030,8 @@ pub fn get_research_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "research_list_sources".to_string(),
-            description: "List monitored social media sources (Twitter, Telegram, etc.)".to_string(),
+            description: "List monitored social media sources (Twitter, Telegram, etc.)"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -1081,7 +1099,8 @@ pub fn get_kol_tools() -> Vec<McpTool> {
     vec![
         McpTool {
             name: "kol_add".to_string(),
-            description: "Add a new KOL wallet or social handle to track (persisted to PostgreSQL)".to_string(),
+            description: "Add a new KOL wallet or social handle to track (persisted to PostgreSQL)"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -1492,7 +1511,8 @@ pub fn get_engram_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "engram_check_avoidance".to_string(),
-            description: "Check if an entity should be avoided based on stored avoidance engrams".to_string(),
+            description: "Check if an entity should be avoided based on stored avoidance engrams"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -2160,7 +2180,8 @@ pub fn get_approval_tools() -> Vec<McpTool> {
         },
         McpTool {
             name: "execution_config_get".to_string(),
-            description: "Get current execution configuration including auto-execution settings".to_string(),
+            description: "Get current execution configuration including auto-execution settings"
+                .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {},
@@ -2368,7 +2389,8 @@ pub fn get_manifest() -> McpToolManifest {
     McpToolManifest {
         name: "arb-farm".to_string(),
         version: "0.1.0".to_string(),
-        description: "ArbFarm MEV Agent Swarm - Solana arbitrage and MEV opportunity detection".to_string(),
+        description: "ArbFarm MEV Agent Swarm - Solana arbitrage and MEV opportunity detection"
+            .to_string(),
         tools: get_all_tools(),
     }
 }

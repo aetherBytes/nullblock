@@ -3,29 +3,35 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::Json,
-    Router,
     routing::{get, post},
+    Router,
 };
 
-
-use crate::resources::{
-    WalletManager, WalletChallengeRequest, WalletChallengeResponse,
-    WalletVerifyRequest, WalletVerifyResponse, WalletListResponse,
-};
-use crate::resources::types::{
-    WalletDetectionRequest, WalletDetectionResponse, WalletConnectionRequest,
-    WalletConnectionResponse, WalletStatusResponse
-};
-use crate::user_references::{UserReferenceService, SourceType};
 use super::wallet_service::WalletService;
-use super::{PhantomWallet, MetaMaskWallet};
+use super::{MetaMaskWallet, PhantomWallet};
+use crate::resources::types::{
+    WalletConnectionRequest, WalletConnectionResponse, WalletDetectionRequest,
+    WalletDetectionResponse, WalletStatusResponse,
+};
+use crate::resources::{
+    WalletChallengeRequest, WalletChallengeResponse, WalletListResponse, WalletManager,
+    WalletVerifyRequest, WalletVerifyResponse,
+};
+use crate::user_references::{SourceType, UserReferenceService};
 use uuid::Uuid;
 
 /// Register user directly in Erebus database after successful wallet verification
-async fn register_user_in_database(wallet_address: &str, chain: &str, database: &std::sync::Arc<crate::database::Database>) -> Result<Uuid, String> {
-    use tracing::{info, error};
+async fn register_user_in_database(
+    wallet_address: &str,
+    chain: &str,
+    database: &std::sync::Arc<crate::database::Database>,
+) -> Result<Uuid, String> {
+    use tracing::{error, info};
 
-    info!("🗄️ Starting user registration for wallet: {} on chain: {}", wallet_address, chain);
+    info!(
+        "🗄️ Starting user registration for wallet: {} on chain: {}",
+        wallet_address, chain
+    );
 
     let user_service = UserReferenceService::new((**database).clone());
 
@@ -46,9 +52,15 @@ async fn register_user_in_database(wallet_address: &str, chain: &str, database: 
     };
 
     info!("📝 Creating SourceType: {:?}", source_type);
-    info!("🗄️ Calling create_or_get_user with identifier: {}, network: {}", wallet_address, chain);
+    info!(
+        "🗄️ Calling create_or_get_user with identifier: {}, network: {}",
+        wallet_address, chain
+    );
 
-    match user_service.create_or_get_user(wallet_address, chain, source_type, None).await {
+    match user_service
+        .create_or_get_user(wallet_address, chain, source_type, None)
+        .await
+    {
         Ok(user_ref) => {
             info!("✅ User registered successfully in Erebus database");
             info!("   User ID: {}", user_ref.id);
@@ -76,7 +88,10 @@ pub fn create_wallet_routes() -> Router<crate::AppState> {
         .route("/api/wallets/status", get(get_wallet_status))
         .route("/api/wallets/challenge", post(create_wallet_challenge))
         .route("/api/wallets/verify", post(verify_wallet_signature))
-        .route("/api/wallets/{wallet_type}/networks", get(get_wallet_networks))
+        .route(
+            "/api/wallets/{wallet_type}/networks",
+            get(get_wallet_networks),
+        )
         .route("/api/wallets/sessions/validate", post(validate_session))
 }
 
@@ -89,7 +104,10 @@ async fn get_supported_wallets() -> Json<WalletListResponse> {
 async fn detect_wallets(
     Json(request): Json<WalletDetectionRequest>,
 ) -> Json<WalletDetectionResponse> {
-    println!("🔍 Wallet detection requested: {:?}", request.available_wallets);
+    println!(
+        "🔍 Wallet detection requested: {:?}",
+        request.available_wallets
+    );
     let response = WalletService::detect_wallets(request.available_wallets);
     Json(response)
 }
@@ -98,15 +116,16 @@ async fn detect_wallets(
 async fn initiate_wallet_connection(
     Json(request): Json<WalletConnectionRequest>,
 ) -> Json<WalletConnectionResponse> {
-    println!("🔗 Wallet connection initiated for {}: {}", request.wallet_type, request.wallet_address);
+    println!(
+        "🔗 Wallet connection initiated for {}: {}",
+        request.wallet_type, request.wallet_address
+    );
     let response = WalletService::initiate_connection(request);
     Json(response)
 }
 
 /// Get wallet status endpoint
-async fn get_wallet_status(
-    State(app_state): State<crate::AppState>,
-) -> Json<WalletStatusResponse> {
+async fn get_wallet_status(State(app_state): State<crate::AppState>) -> Json<WalletStatusResponse> {
     // In a real implementation, you'd get the session token from headers or cookies
     // For now, we'll return a disconnected status
     let response = WalletService::get_wallet_status(None, &app_state.wallet_manager);
@@ -132,16 +151,22 @@ async fn verify_wallet_signature(
     State(app_state): State<crate::AppState>,
     Json(request): Json<WalletVerifyRequest>,
 ) -> Json<WalletVerifyResponse> {
-    use tracing::{info, warn, error};
+    use tracing::{error, info, warn};
 
     let wallet_address = request.wallet_address.clone();
-    info!("🔐 Verifying wallet signature for address: {}", wallet_address);
+    info!(
+        "🔐 Verifying wallet signature for address: {}",
+        wallet_address
+    );
 
     let mut verification_response = app_state.wallet_manager.verify_wallet_signature(request);
 
     // If verification successful, register user via Erebus database
     if verification_response.success {
-        info!("✅ Wallet signature verification successful for: {}", wallet_address);
+        info!(
+            "✅ Wallet signature verification successful for: {}",
+            wallet_address
+        );
         info!("🎯 Proceeding with user registration in Erebus database");
 
         // Determine chain based on wallet type
@@ -175,15 +200,20 @@ async fn verify_wallet_signature(
             }
         }
     } else {
-        warn!("❌ Wallet signature verification failed for: {}", wallet_address);
+        warn!(
+            "❌ Wallet signature verification failed for: {}",
+            wallet_address
+        );
         verification_response.user_id = None;
         verification_response.registration_error = None;
     }
 
-    info!("📤 Returning verification response: success={}, user_id={:?}, registration_error={:?}",
-          verification_response.success,
-          verification_response.user_id,
-          verification_response.registration_error);
+    info!(
+        "📤 Returning verification response: success={}, user_id={:?}, registration_error={:?}",
+        verification_response.success,
+        verification_response.user_id,
+        verification_response.registration_error
+    );
 
     Json(verification_response)
 }
