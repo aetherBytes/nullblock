@@ -240,7 +240,17 @@ async fn logging_middleware(request: Request, next: Next) -> Result<axum::respon
           request_id, method, uri, status, duration.as_millis());
     info!("📋 [{}] Response headers: {:#?}", request_id, response_headers);
     
-    // Extract and log response body for non-streaming responses
+    let is_streaming = response_headers
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .map(|ct| ct.contains("text/event-stream"))
+        .unwrap_or(false);
+
+    if is_streaming {
+        info!("✅ [{}] STREAMING RESPONSE (SSE) - passing through", request_id);
+        return Ok(response);
+    }
+
     let (parts, body) = response.into_parts();
     let response_body = match axum::body::to_bytes(body, usize::MAX).await {
         Ok(bytes) => {
@@ -251,9 +261,7 @@ async fn logging_middleware(request: Request, next: Next) -> Result<axum::respon
                 } else {
                     match serde_json::from_slice::<serde_json::Value>(&bytes) {
                         Ok(mut json) => {
-                            // Sanitize sensitive fields in response
                             if let Some(obj) = json.as_object_mut() {
-                                // Sanitize decrypted API keys in response data
                                 if let Some(data) = obj.get_mut("data") {
                                     if let Some(arr) = data.as_array_mut() {
                                         for item in arr.iter_mut() {
@@ -296,8 +304,7 @@ async fn logging_middleware(request: Request, next: Next) -> Result<axum::respon
             axum::body::Bytes::new()
         }
     };
-    
-    // Log completion
+
     if status.is_success() {
         info!("✅ [{}] REQUEST COMPLETED SUCCESSFULLY", request_id);
     } else if status.is_client_error() {
@@ -305,10 +312,9 @@ async fn logging_middleware(request: Request, next: Next) -> Result<axum::respon
     } else if status.is_server_error() {
         error!("💥 [{}] SERVER ERROR: {}", request_id, status);
     }
-    
-    // Rebuild response
+
     let response = axum::response::Response::from_parts(parts, axum::body::Body::from(response_body));
-    
+
     Ok(response)
 }
 

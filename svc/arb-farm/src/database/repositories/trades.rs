@@ -9,8 +9,8 @@ use crate::error::{AppError, AppResult};
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct TradeRecord {
     pub id: Uuid,
-    pub edge_id: Uuid,
-    pub strategy_id: Uuid,
+    pub edge_id: Option<Uuid>,
+    pub strategy_id: Option<Uuid>,
     pub tx_signature: Option<String>,
     pub bundle_id: Option<String>,
     pub entry_price: Option<Decimal>,
@@ -19,12 +19,15 @@ pub struct TradeRecord {
     pub gas_cost_lamports: Option<i64>,
     pub slippage_bps: Option<i32>,
     pub executed_at: DateTime<Utc>,
+    pub entry_gas_lamports: Option<i64>,
+    pub exit_gas_lamports: Option<i64>,
+    pub pnl_source: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateTradeRecord {
-    pub edge_id: Uuid,
-    pub strategy_id: Uuid,
+    pub edge_id: Option<Uuid>,
+    pub strategy_id: Option<Uuid>,
     pub tx_signature: Option<String>,
     pub bundle_id: Option<String>,
     pub entry_price: Option<Decimal>,
@@ -32,6 +35,9 @@ pub struct CreateTradeRecord {
     pub profit_lamports: Option<i64>,
     pub gas_cost_lamports: Option<i64>,
     pub slippage_bps: Option<i32>,
+    pub entry_gas_lamports: Option<i64>,
+    pub exit_gas_lamports: Option<i64>,
+    pub pnl_source: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,9 +70,10 @@ impl TradeRepository {
             INSERT INTO arb_trades (
                 edge_id, strategy_id, tx_signature, bundle_id,
                 entry_price, exit_price, profit_lamports,
-                gas_cost_lamports, slippage_bps, executed_at
+                gas_cost_lamports, slippage_bps, executed_at,
+                entry_gas_lamports, exit_gas_lamports, pnl_source
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), $10, $11, $12)
             RETURNING *
             "#,
         )
@@ -79,6 +86,9 @@ impl TradeRepository {
         .bind(trade.profit_lamports)
         .bind(trade.gas_cost_lamports)
         .bind(trade.slippage_bps)
+        .bind(trade.entry_gas_lamports)
+        .bind(trade.exit_gas_lamports)
+        .bind(&trade.pnl_source)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| AppError::Database(e.to_string()))?;
@@ -225,8 +235,8 @@ impl TradeRepository {
                 COUNT(*) as trade_count,
                 COUNT(*) FILTER (WHERE profit_lamports > 0) as wins,
                 COUNT(*) FILTER (WHERE profit_lamports < 0) as losses,
-                COALESCE(SUM(profit_lamports), 0) as net_pnl_lamports,
-                COALESCE(SUM(gas_cost_lamports), 0) as gas_cost_lamports
+                COALESCE(SUM(profit_lamports), 0)::BIGINT as net_pnl_lamports,
+                COALESCE(SUM(gas_cost_lamports), 0)::BIGINT as gas_cost_lamports
             FROM arb_trades
             WHERE executed_at > NOW() - INTERVAL '1 day' * $1
             GROUP BY DATE(executed_at)

@@ -31,6 +31,11 @@ import type {
   WhitelistedEntity,
   WatchedEntity,
   ThreatStats,
+  WalletBalanceResponse,
+  PositionExposure,
+  MonitorStatus,
+  ScannerStatus,
+  SniperStats,
 } from '../../../types/arbfarm';
 import {
   PRIORITY_LEVEL_LABELS,
@@ -81,6 +86,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
   });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [resettingPnl, setResettingPnl] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [opportunitiesFilter, setOpportunitiesFilter] = useState<string>('all');
   const [threatTokenInput, setThreatTokenInput] = useState('');
@@ -252,8 +258,14 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     return localStorage.getItem('arbfarm_hide_autoexec_warning') === 'true';
   });
 
+  const [walletBalance, setWalletBalance] = useState<WalletBalanceResponse | null>(null);
+  const [statusExposure, setStatusExposure] = useState<PositionExposure | null>(null);
+  const [statusMonitor, setStatusMonitor] = useState<MonitorStatus | null>(null);
+  const [statusScanner, setStatusScanner] = useState<ScannerStatus | null>(null);
+  const [statusSniper, setStatusSniper] = useState<SniperStats | null>(null);
+
   useEffect(() => {
-    sse.connect(['arb.edge.*', 'arb.trade.*', 'arb.threat.*', 'arb.swarm.*', 'arb.helius.*', 'arb.approval.*']);
+    sse.connect(['arb.edge.*', 'arb.trade.*', 'arb.threat.*', 'arb.swarm.*', 'arb.helius.*', 'arb.approval.*', 'arb.position.*']);
 
     return () => sse.disconnect();
   }, []);
@@ -266,6 +278,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     threats.refresh();
     fetchPendingApprovals();
     fetchExecutionConfig();
+    fetchStatusBarData();
   }, []);
 
   useEffect(() => {
@@ -292,6 +305,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
         swarm.refresh(),
         strategies.refresh(),
         threats.refresh(),
+        fetchStatusBarData(),
       ]);
       setLastRefresh(new Date());
     } catch (err) {
@@ -402,6 +416,25 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
       }
     } catch (err) {
       console.error('Failed to fetch execution config:', err);
+    }
+  };
+
+  const fetchStatusBarData = async () => {
+    try {
+      const [balanceRes, exposureRes, monitorRes, scannerRes, sniperRes] = await Promise.all([
+        arbFarmService.getWalletBalance(),
+        arbFarmService.getPositionExposure(),
+        arbFarmService.getMonitorStatus(),
+        arbFarmService.getScannerStatus(),
+        arbFarmService.getSniperStats(),
+      ]);
+      if (balanceRes.success && balanceRes.data) setWalletBalance(balanceRes.data);
+      if (exposureRes.success && exposureRes.data) setStatusExposure(exposureRes.data);
+      if (monitorRes.success && monitorRes.data) setStatusMonitor(monitorRes.data);
+      if (scannerRes.success && scannerRes.data) setStatusScanner(scannerRes.data);
+      if (sniperRes.success && sniperRes.data?.stats) setStatusSniper(sniperRes.data.stats);
+    } catch (err) {
+      console.error('Failed to fetch status bar data:', err);
     }
   };
 
@@ -1297,7 +1330,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
           />
           <MetricCard
             label="Win Rate"
-            value={`${((summary?.win_rate || 0) * 100).toFixed(1)}%`}
+            value={`${(summary?.win_rate || 0).toFixed(1)}%`}
             subValue={
               trades.stats
                 ? `${trades.stats.successful_trades}/${trades.stats.total_trades} trades`
@@ -5083,11 +5116,27 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
     </nav>
   );
 
+  const handleResetPnl = async () => {
+    if (resettingPnl) return;
+    if (!window.confirm('Reset PnL odometer? Stats will count from now.')) return;
+    setResettingPnl(true);
+    try {
+      await arbFarmService.resetPnL();
+      handleRefreshAll();
+    } finally {
+      setResettingPnl(false);
+    }
+  };
+
   const renderStatusBar = () => {
     const pnl = dashboard.summary?.total_profit_sol ?? 0;
     const winRate = dashboard.summary?.win_rate ?? 0;
     const isLive = executionConfig?.auto_execution_enabled;
     const activeEdges = dashboard.summary?.active_opportunities ?? 0;
+    const resetAt = dashboard.summary?.pnl_reset_at;
+    const resetLabel = resetAt
+      ? `Since ${new Date(resetAt).toLocaleDateString()} ${new Date(resetAt).toLocaleTimeString()}`
+      : 'Lifetime';
 
     return (
       <header className={styles.hudStatusBar}>
@@ -5114,6 +5163,34 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
             <span className={styles.hudMetricLabel}>Active</span>
             <span className={styles.hudMetricValue}>{activeEdges}</span>
           </div>
+          <div className={styles.hudMetric}>
+            <span className={styles.hudMetricLabel}>Wallet</span>
+            <span className={styles.hudMetricValue}>
+              {walletBalance?.balance_sol != null ? `${walletBalance.balance_sol.toFixed(2)}` : '--'}
+            </span>
+          </div>
+          <div className={styles.hudMetric}>
+            <span className={styles.hudMetricLabel}>Exposure</span>
+            <span className={styles.hudMetricValue}>
+              {statusExposure?.total_exposure_sol != null ? `${statusExposure.total_exposure_sol.toFixed(2)}` : '--'}
+            </span>
+          </div>
+          <div className={styles.statusPillGroup}>
+            <span className={`${styles.statusMiniDot} ${statusScanner?.is_running ? styles.statusDotOn : ''}`} title="Scanner" />
+            <span className={`${styles.statusMiniDot} ${statusSniper?.is_running ? styles.statusDotOn : ''}`} title="Sniper" />
+            <span className={`${styles.statusMiniDot} ${statusMonitor?.monitoring_active ? styles.statusDotOn : ''}`} title="Monitor" />
+          </div>
+          <div className={styles.hudMetric}>
+            <button
+              className={styles.hudOdometerBtn}
+              onClick={handleResetPnl}
+              disabled={resettingPnl}
+              title={`${resetLabel} — Click to reset`}
+            >
+              <span className={styles.hudMetricLabel}>{resetLabel}</span>
+              <span className={styles.hudOdometerReset}>&#x21BA;</span>
+            </button>
+          </div>
         </div>
         <div className={styles.hudStatusRight}>
           <button
@@ -5135,6 +5212,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
         return (
           <HomeTab
             liveTrades={trades.data?.slice(0, 10)}
+            lastSseEvent={sse.lastEvent}
           />
         );
       case 'signals':
@@ -5170,6 +5248,7 @@ const ArbFarmDashboard: React.FC<ArbFarmDashboardProps> = ({ activeView, onViewC
         return (
           <HomeTab
             liveTrades={trades.data?.slice(0, 10)}
+            lastSseEvent={sse.lastEvent}
           />
         );
     }

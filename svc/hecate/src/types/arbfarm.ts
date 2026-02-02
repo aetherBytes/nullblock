@@ -134,6 +134,7 @@ export interface Trade {
   token_mint?: string;
   token_symbol?: string;
   venue?: string;
+  strategy_type?: string;
 }
 
 export interface TradeStats {
@@ -208,11 +209,25 @@ export interface Signal {
 // Behavioral Strategy Types (Scanner-driven strategies)
 // ============================================================================
 
+export interface Contender {
+  mint: string;
+  name: string;
+  symbol: string;
+  graduation_progress: number;
+  market_cap_sol: number;
+  volume_24h_sol: number;
+  volume_1h_sol?: number;
+  holder_count: number;
+  velocity: number;
+  metadata: Record<string, unknown>;
+}
+
 export interface BehavioralStrategy {
   name: string;
   strategy_type: string;
   is_active: boolean;
   supported_venues: string[];
+  status_detail?: string;
 }
 
 export interface BehavioralStrategiesResponse {
@@ -639,7 +654,9 @@ export interface SniperStats {
   positions_waiting: number;
   positions_sold: number;
   positions_failed: number;
+  positions_sniped?: number;
   total_pnl_sol: number;
+  total_pnl?: number;
   is_running: boolean;
 }
 
@@ -802,6 +819,9 @@ export interface DashboardSummary {
 
   // Alerts
   recent_alerts: ThreatAlert[];
+
+  // PnL odometer reset
+  pnl_reset_at?: string;
 }
 
 // ============================================================================
@@ -1664,6 +1684,8 @@ export interface RecentTradeInfo {
   exit_time?: string;
   entry_tx?: string;
   exit_tx?: string;
+  entry_tx_signature?: string;
+  exit_tx_signature?: string;
   momentum_at_exit?: number;
   hold_duration_mins?: number;
 }
@@ -1698,10 +1720,12 @@ export interface PnLSummary {
   trailing_stop_pnl: number;
   manual_exits: number;
   manual_pnl: number;
+  total_gas_sol: number;
   best_trade?: BestWorstTrade;
   worst_trade?: BestWorstTrade;
   recent_trades: RecentTradeInfo[];
   active_strategies: ActiveStrategy[];
+  pnl_reset_at?: string;
 }
 
 export interface ExitConfig {

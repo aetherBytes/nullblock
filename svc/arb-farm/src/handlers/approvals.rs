@@ -287,6 +287,10 @@ pub async fn toggle_execution(
 
     let config = state.approval_manager.toggle_execution(request.enabled).await;
 
+    if let Err(e) = state.settings_repo.set_bool("execution_enabled", request.enabled).await {
+        tracing::warn!("Failed to persist execution toggle to DB: {}", e);
+    }
+
     // Also control the autonomous executor
     if request.enabled {
         start_autonomous_executor(state.autonomous_executor.clone());

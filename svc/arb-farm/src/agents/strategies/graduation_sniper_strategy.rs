@@ -58,14 +58,15 @@ impl BehavioralStrategy for GraduationSniperStrategy {
         let mut signals = Vec::new();
 
         for token in &snapshot.tokens {
-            if token.graduation_progress >= self.min_progress {
+            if token.graduation_progress >= self.min_progress && token.graduation_progress <= 100.0 {
                 let velocity = if token.market_cap_sol > 0.0 {
                     token.volume_24h_sol / token.market_cap_sol
                 } else {
                     0.0
                 };
 
-                if velocity >= self.min_velocity_threshold || token.graduation_progress >= 95.0 {
+                let volume_available = token.volume_24h_sol > 0.0;
+                if !volume_available || velocity >= self.min_velocity_threshold || token.graduation_progress >= 95.0 {
                     let confidence = calculate_snipe_confidence(
                         token.graduation_progress,
                         velocity,
@@ -132,9 +133,13 @@ impl BehavioralStrategy for GraduationSniperStrategy {
 fn calculate_snipe_confidence(progress: f64, velocity: f64, holders: u32) -> f64 {
     let progress_factor = ((progress - 85.0) / 15.0).min(1.0).max(0.0);
     let velocity_factor = (velocity * 5.0).min(1.0);
-    let holder_factor = (holders as f64 / 50.0).min(1.0);
 
-    (progress_factor * 0.6 + velocity_factor * 0.25 + holder_factor * 0.15).min(1.0)
+    if holders == 0 {
+        (progress_factor * 0.75 + velocity_factor * 0.25).min(1.0)
+    } else {
+        let holder_factor = (holders as f64 / 50.0).min(1.0);
+        (progress_factor * 0.6 + velocity_factor * 0.25 + holder_factor * 0.15).min(1.0)
+    }
 }
 
 fn estimate_snipe_profit_bps(progress: f64) -> i32 {

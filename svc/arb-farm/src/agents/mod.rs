@@ -28,8 +28,8 @@ pub use overseer::{
 };
 pub use scanner::{ScannerAgent, ScannerStats, ScannerStatus, VenueStatus};
 pub use strategies::{
-    BehavioralStrategy, GraduationSniperStrategy, StrategyRegistry,
-    TokenData, VenueSnapshot, VolumeHunterStrategy,
+    BehavioralStrategy, GraduationEvent, GraduationSniperStrategy, RaydiumSnipeStrategy,
+    StrategyRegistry, TokenData, VenueSnapshot,
 };
 pub use strategy_engine::{MatchResult, StrategyEngine};
 pub use metrics_aggregator::{MetricsAggregator, start_daily_metrics_scheduler};

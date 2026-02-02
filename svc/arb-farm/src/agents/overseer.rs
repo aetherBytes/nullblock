@@ -131,7 +131,7 @@ impl ResilienceOverseer {
         let status = AgentStatus::new(agent_type.clone(), agent_id);
         self.agents.write().await.insert(agent_id, status);
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             "agent_started",
             EventSource::Agent(AgentType::Overseer),
             swarm_topics::AGENT_STARTED,
@@ -146,7 +146,7 @@ impl ResilienceOverseer {
 
     pub async fn unregister_agent(&self, agent_id: Uuid) {
         if let Some(status) = self.agents.write().await.remove(&agent_id) {
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "agent_stopped",
                 EventSource::Agent(AgentType::Overseer),
                 swarm_topics::AGENT_STOPPED,
@@ -185,7 +185,7 @@ impl ResilienceOverseer {
         if should_emit_event {
             let agents = self.agents.read().await;
             if let Some(status) = agents.get(&agent_id) {
-                let _ = self.event_tx.send(ArbEvent::new(
+                crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                     "agent_failed",
                     EventSource::Agent(AgentType::Overseer),
                     swarm_topics::AGENT_FAILED,
@@ -215,7 +215,7 @@ impl ResilienceOverseer {
         if should_emit_event {
             let agents = self.agents.read().await;
             if let Some(status) = agents.get(&agent_id) {
-                let _ = self.event_tx.send(ArbEvent::new(
+                crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                     "agent_recovered",
                     EventSource::Agent(AgentType::Overseer),
                     swarm_topics::AGENT_RECOVERED,
@@ -280,7 +280,7 @@ impl ResilienceOverseer {
     pub async fn pause_swarm(&self) {
         *self.is_paused.write().await = true;
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             "swarm_paused",
             EventSource::Agent(AgentType::Overseer),
             swarm_topics::PAUSED,
@@ -295,7 +295,7 @@ impl ResilienceOverseer {
     pub async fn resume_swarm(&self) {
         *self.is_paused.write().await = false;
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             "swarm_resumed",
             EventSource::Agent(AgentType::Overseer),
             swarm_topics::RESUMED,

@@ -32,7 +32,9 @@ pub struct VenueTokenData {
     pub graduation_progress: f64,
     pub bonding_curve_address: Option<String>,
     pub market_cap_usd: f64,
+    pub market_cap_sol: Option<f64>,
     pub volume_24h_usd: f64,
+    pub volume_1h_usd: f64,
     pub holder_count: u32,
     pub metadata: serde_json::Value,
 }

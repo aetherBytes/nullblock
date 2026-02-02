@@ -10,8 +10,11 @@ pub mod priority_queue;
 pub mod blockhash;
 pub mod transaction_builder;
 pub mod position_manager;
+pub mod position_command;
+pub mod position_executor;
 pub mod position_monitor;
 pub mod realtime_monitor;
+pub mod tx_settlement;
 
 pub use approval_manager::ApprovalManager;
 pub use capital_manager::{CapitalManager, CapitalError, CapitalReservation, StrategyAllocation, StrategyUsage, GlobalCapitalUsage};
@@ -30,5 +33,8 @@ pub use position_manager::{
     WalletTokenHolding, ReconciliationResult,
     MomentumStrength, MomentumAdaptiveConfig, AdaptivePartialTakeProfit, MomentumData,
 };
+pub use position_command::{PositionCommand, ExitCommand, CommandSource};
+pub use position_executor::{PositionExecutor, ExecutorConfig};
 pub use position_monitor::{PositionMonitor, MonitorConfig};
 pub use realtime_monitor::RealtimePositionMonitor;
+pub use tx_settlement::{TxSettlement, resolve_settlement};

@@ -22,7 +22,7 @@ const MAX_CONCURRENT_SELLS: usize = 5;
 const DEFAULT_SELL_DELAY_MS: u64 = 50;  // Reduced from 500ms to beat front-runners
 const MAX_SELL_RETRIES: u32 = 3;
 const DEFAULT_SLIPPAGE_BPS: u32 = 300;
-const DEFAULT_MAX_CONCURRENT_POSITIONS: u32 = 5;
+const DEFAULT_MAX_CONCURRENT_POSITIONS: u32 = 2;
 const DEFAULT_TAKE_PROFIT_PERCENT: f64 = 12.0;  // Achievable target (was 30%)
 const DEFAULT_STOP_LOSS_PERCENT: f64 = 20.0;   // Matches volatility (was 15%)
 
@@ -1282,7 +1282,7 @@ impl GraduationSniper {
                                 "attempts": attempt + 1,
                             }),
                         );
-                        let _ = event_tx.send(fail_event);
+                        crate::events::broadcast_event(&event_tx, fail_event);
 
                         // Clear in-flight and return
                         in_flight_buys.write().await.remove(mint);
@@ -1371,7 +1371,7 @@ impl GraduationSniper {
                     "entry_sol": entry_sol,
                 }),
             );
-            let _ = event_tx.send(fail_event);
+            crate::events::broadcast_event(&event_tx, fail_event);
             return Err(AppError::Internal(format!("Signing rejected: {}", error)));
         }
 

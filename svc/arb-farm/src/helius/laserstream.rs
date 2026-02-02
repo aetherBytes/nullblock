@@ -252,7 +252,9 @@ impl LaserStreamClient {
                                                     );
 
                                                     // Broadcast to subscribers
-                                                    let _ = account_update_tx.send(update.clone());
+                                                    if let Err(e) = account_update_tx.send(update.clone()) {
+                                                        tracing::debug!("Account update broadcast dropped (no receivers): {}", e);
+                                                    }
 
                                                     // Also emit to event bus
                                                     let event_data = serde_json::to_value(&update).unwrap_or_default();
@@ -262,7 +264,9 @@ impl LaserStreamClient {
                                                         "arb.helius.account.update",
                                                         event_data,
                                                     );
-                                                    let _ = event_bus.publish(event).await;
+                                                    if let Err(e) = event_bus.publish(event).await {
+                                                        tracing::warn!("Failed to publish account update event: {}", e);
+                                                    }
                                                 }
                                             }
                                         }
@@ -337,7 +341,9 @@ impl LaserStreamClient {
                                         });
 
                                         if let Ok(msg) = serde_json::to_string(&request) {
-                                            let _ = write.send(Message::Text(msg)).await;
+                                            if let Err(e) = write.send(Message::Text(msg)).await {
+                                                tracing::warn!("Failed to send unsubscribe message: {}", e);
+                                            }
                                         }
                                         request_id += 1;
                                     }
@@ -353,7 +359,9 @@ impl LaserStreamClient {
                             }
                             WebSocketCommand::Disconnect => {
                                 info!("🔌 Disconnecting WebSocket...");
-                                let _ = write.close().await;
+                                if let Err(e) = write.close().await {
+                                    tracing::debug!("WebSocket close error (may already be closed): {}", e);
+                                }
                                 break;
                             }
                         }
@@ -387,7 +395,9 @@ impl LaserStreamClient {
 
     pub async fn disconnect(&self) {
         if let Some(tx) = self.command_tx.read().await.as_ref() {
-            let _ = tx.send(WebSocketCommand::Disconnect).await;
+            if let Err(e) = tx.send(WebSocketCommand::Disconnect).await {
+                tracing::debug!("Disconnect command send failed (receiver dropped): {}", e);
+            }
         }
     }
 

@@ -102,6 +102,9 @@ pub async fn start_scanner(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     state.scanner.start().await;
+    if let Err(e) = state.settings_repo.set_bool("scanner_running", true).await {
+        tracing::warn!("Failed to persist scanner start to DB: {}", e);
+    }
     (StatusCode::OK, Json(serde_json::json!({
         "status": "started",
         "message": "Scanner started successfully"
@@ -112,6 +115,9 @@ pub async fn stop_scanner(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     state.scanner.stop().await;
+    if let Err(e) = state.settings_repo.set_bool("scanner_running", false).await {
+        tracing::warn!("Failed to persist scanner stop to DB: {}", e);
+    }
     (StatusCode::OK, Json(serde_json::json!({
         "status": "stopped",
         "message": "Scanner stopped successfully"
@@ -122,7 +128,9 @@ pub async fn get_signals(
     State(state): State<AppState>,
     Query(query): Query<SignalQuery>,
 ) -> impl IntoResponse {
-    let signals_result = if let Some(venue_type_str) = &query.venue_type {
+    let limit = query.limit.unwrap_or(100);
+
+    let mut signals = if let Some(venue_type_str) = &query.venue_type {
         let venue_type = match venue_type_str.to_lowercase().as_str() {
             "dex" | "dex_amm" => VenueType::DexAmm,
             "curve" | "bonding_curve" => VenueType::BondingCurve,
@@ -132,51 +140,40 @@ pub async fn get_signals(
                 "error": format!("Unknown venue type: {}", venue_type_str)
             }))).into_response(),
         };
-        state.scanner.get_signals_by_venue(venue_type).await
+        state.scanner.get_cached_signals_by_venue(venue_type, Some(limit)).await
     } else if let Some(min_confidence) = query.min_confidence {
-        state.scanner.get_high_confidence_signals(min_confidence).await
+        state.scanner.get_cached_high_confidence(min_confidence, Some(limit)).await
     } else {
-        state.scanner.scan_once().await
+        state.scanner.get_recent_signals(Some(limit)).await
     };
 
-    match signals_result {
-        Ok(mut signals) => {
-            // Filter by min profit if specified
-            if let Some(min_profit) = query.min_profit_bps {
-                signals.retain(|s| s.estimated_profit_bps >= min_profit);
-            }
-
-            // Apply limit
-            let limit = query.limit.unwrap_or(100);
-            signals.truncate(limit);
-
-            let responses: Vec<SignalResponse> = signals
-                .into_iter()
-                .map(|s| SignalResponse {
-                    id: s.id.to_string(),
-                    signal_type: format!("{:?}", s.signal_type),
-                    venue_id: s.venue_id.to_string(),
-                    venue_type: format!("{:?}", s.venue_type),
-                    token_mint: s.token_mint,
-                    pool_address: s.pool_address,
-                    estimated_profit_bps: s.estimated_profit_bps,
-                    confidence: s.confidence,
-                    significance: format!("{:?}", s.significance),
-                    metadata: s.metadata,
-                    detected_at: s.detected_at.to_rfc3339(),
-                    expires_at: s.expires_at.to_rfc3339(),
-                })
-                .collect();
-
-            Json(serde_json::json!({
-                "signals": responses,
-                "count": responses.len()
-            })).into_response()
-        }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": e.to_string()
-        }))).into_response(),
+    // Filter by min profit if specified
+    if let Some(min_profit) = query.min_profit_bps {
+        signals.retain(|s| s.estimated_profit_bps >= min_profit);
     }
+
+    let responses: Vec<SignalResponse> = signals
+        .into_iter()
+        .map(|s| SignalResponse {
+            id: s.id.to_string(),
+            signal_type: format!("{:?}", s.signal_type),
+            venue_id: s.venue_id.to_string(),
+            venue_type: format!("{:?}", s.venue_type),
+            token_mint: s.token_mint,
+            pool_address: s.pool_address,
+            estimated_profit_bps: s.estimated_profit_bps,
+            confidence: s.confidence,
+            significance: format!("{:?}", s.significance),
+            metadata: s.metadata,
+            detected_at: s.detected_at.to_rfc3339(),
+            expires_at: s.expires_at.to_rfc3339(),
+        })
+        .collect();
+
+    Json(serde_json::json!({
+        "signals": responses,
+        "count": responses.len()
+    })).into_response()
 }
 
 #[derive(Debug, Serialize)]
@@ -279,6 +276,66 @@ pub async fn process_signals(
 }
 
 // ============================================================================
+// Contenders (tokens approaching graduation)
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct ContenderResponse {
+    pub mint: String,
+    pub name: String,
+    pub symbol: String,
+    pub graduation_progress: f64,
+    pub market_cap_sol: f64,
+    pub volume_24h_sol: f64,
+    pub volume_1h_sol: f64,
+    pub holder_count: u32,
+    pub velocity: f64,
+    pub metadata: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ContenderQuery {
+    pub limit: Option<usize>,
+}
+
+pub async fn get_contenders(
+    State(state): State<AppState>,
+    Query(query): Query<ContenderQuery>,
+) -> impl IntoResponse {
+    let limit = query.limit.unwrap_or(10).min(50);
+    let contenders = state.scanner.get_contenders(limit).await;
+
+    let responses: Vec<ContenderResponse> = contenders
+        .into_iter()
+        .map(|t| {
+            let velocity = if t.market_cap_sol > 0.01 {
+                t.volume_24h_sol / t.market_cap_sol
+            } else {
+                0.0
+            };
+            ContenderResponse {
+                mint: t.mint,
+                name: t.name,
+                symbol: t.symbol,
+                graduation_progress: t.graduation_progress,
+                market_cap_sol: t.market_cap_sol,
+                volume_24h_sol: t.volume_24h_sol,
+                volume_1h_sol: t.volume_1h_sol,
+                holder_count: t.holder_count,
+                velocity,
+                metadata: t.metadata,
+            }
+        })
+        .collect();
+
+    let count = responses.len();
+    Json(serde_json::json!({
+        "contenders": responses,
+        "count": count
+    }))
+}
+
+// ============================================================================
 // Behavioral Strategies
 // ============================================================================
 
@@ -288,6 +345,7 @@ pub struct BehavioralStrategyResponse {
     pub strategy_type: String,
     pub is_active: bool,
     pub supported_venues: Vec<String>,
+    pub status_detail: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -304,13 +362,29 @@ pub async fn list_behavioral_strategies(
     let strategies = registry.list().await;
     let active_count = registry.active_count().await;
 
+    let webhook_token_set = std::env::var("HELIUS_WEBHOOK_AUTH_TOKEN").is_ok();
+
     let strategy_list: Vec<BehavioralStrategyResponse> = strategies
         .iter()
-        .map(|s| BehavioralStrategyResponse {
-            name: s.name().to_string(),
-            strategy_type: s.strategy_type().to_string(),
-            is_active: s.is_active(),
-            supported_venues: s.supported_venues().iter().map(|v| format!("{:?}", v)).collect(),
+        .map(|s| {
+            let status_detail = match s.strategy_type() {
+                "raydium_snipe" => Some("Standby — awaiting Helius webhooks (requires public URL)".to_string()),
+                "copy_trade" => {
+                    if webhook_token_set {
+                        Some("Webhook connected".to_string())
+                    } else {
+                        Some("Standby — webhook not configured".to_string())
+                    }
+                }
+                _ => None,
+            };
+            BehavioralStrategyResponse {
+                name: s.name().to_string(),
+                strategy_type: s.strategy_type().to_string(),
+                is_active: s.is_active(),
+                supported_venues: s.supported_venues().iter().map(|v| format!("{:?}", v)).collect(),
+                status_detail,
+            }
         })
         .collect();
 

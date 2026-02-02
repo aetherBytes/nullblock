@@ -30,7 +30,7 @@ class TaskService {
 
       return this.isConnected;
     } catch (error) {
-      console.error('Failed to connect to Erebus:', error);
+      console.debug('Task service unavailable (Erebus not running)');
       this.isConnected = false;
 
       return false;

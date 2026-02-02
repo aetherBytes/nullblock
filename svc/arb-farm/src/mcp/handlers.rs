@@ -1876,7 +1876,7 @@ async fn consensus_request_mcp(state: &AppState, args: Value) -> McpToolResult {
     match state.consensus_engine.request_consensus(edge_id, &edge_context, models).await {
         Ok(result) => {
             let event = state.consensus_engine.create_consensus_event(edge_id, &result);
-            let _ = state.event_tx.send(event);
+            crate::events::broadcast_event(&state.event_tx, event);
 
             let response = serde_json::json!({
                 "edge_id": edge_id.to_string(),

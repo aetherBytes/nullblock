@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{broadcast, RwLock, Mutex};
@@ -7,10 +7,10 @@ use uuid::Uuid;
 
 use crate::error::AppResult;
 use crate::events::{ArbEvent, AgentType, EventSource, scanner as scanner_topics, swarm as swarm_topics};
-use crate::models::{Signal, SignalType, VenueType};
+use crate::models::{Signal, VenueType};
 use crate::venues::MevVenue;
 use super::StrategyEngine;
-use super::strategies::{BehavioralStrategy, StrategyRegistry, VenueSnapshot, TokenData};
+use super::strategies::{BehavioralStrategy, GraduationEvent, RaydiumSnipeStrategy, StrategyRegistry, VenueSnapshot, TokenData};
 
 pub struct VenueRateLimiter {
     last_request: Mutex<HashMap<Uuid, Instant>>,
@@ -48,6 +48,8 @@ impl VenueRateLimiter {
 const MAX_CACHED_SIGNALS: usize = 100;
 const SIGNAL_CACHE_TTL_SECS: i64 = 600; // 10 minutes
 
+const GRADUATED_MINTS_TTL_SECS: i64 = 1800; // 30 minutes
+
 pub struct ScannerAgent {
     id: Uuid,
     venues: Arc<RwLock<HashMap<Uuid, Box<dyn MevVenue>>>>,
@@ -59,6 +61,10 @@ pub struct ScannerAgent {
     behavioral_strategies: Arc<StrategyRegistry>,
     rate_limiter: Arc<VenueRateLimiter>,
     recent_signals: Arc<RwLock<Vec<Signal>>>,
+    recent_token_data: Arc<RwLock<Vec<TokenData>>>,
+    graduated_mints: Arc<RwLock<HashMap<String, chrono::DateTime<chrono::Utc>>>>,
+    raydium_snipe_strategy: Arc<RwLock<Option<Arc<RaydiumSnipeStrategy>>>>,
+    pump_fun_venue: Arc<RwLock<Option<Arc<crate::venues::curves::pump_fun::PumpFunVenue>>>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -104,6 +110,10 @@ impl ScannerAgent {
             behavioral_strategies: Arc::new(StrategyRegistry::new()),
             rate_limiter: Arc::new(VenueRateLimiter::new(DEFAULT_RATE_LIMIT_INTERVAL_MS)),
             recent_signals: Arc::new(RwLock::new(Vec::new())),
+            recent_token_data: Arc::new(RwLock::new(Vec::new())),
+            graduated_mints: Arc::new(RwLock::new(HashMap::new())),
+            raydium_snipe_strategy: Arc::new(RwLock::new(None)),
+            pump_fun_venue: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -126,6 +136,16 @@ impl ScannerAgent {
 
     pub fn id(&self) -> Uuid {
         self.id
+    }
+
+    pub async fn set_raydium_snipe_strategy(&self, strategy: Arc<RaydiumSnipeStrategy>) {
+        let mut s = self.raydium_snipe_strategy.write().await;
+        *s = Some(strategy);
+    }
+
+    pub async fn set_pump_fun_venue(&self, venue: Arc<crate::venues::curves::pump_fun::PumpFunVenue>) {
+        let mut v = self.pump_fun_venue.write().await;
+        *v = Some(venue);
     }
 
     pub async fn set_strategy_engine(&self, engine: Arc<StrategyEngine>) {
@@ -208,6 +228,10 @@ impl ScannerAgent {
         let behavioral_strategies = Arc::clone(&self.behavioral_strategies);
         let rate_limiter = Arc::clone(&self.rate_limiter);
         let recent_signals = Arc::clone(&self.recent_signals);
+        let recent_token_data = Arc::clone(&self.recent_token_data);
+        let graduated_mints = Arc::clone(&self.graduated_mints);
+        let raydium_snipe_strategy = Arc::clone(&self.raydium_snipe_strategy);
+        let pump_fun_venue = Arc::clone(&self.pump_fun_venue);
 
         if let Err(e) = event_tx.send(ArbEvent::new(
             "scanner_started",
@@ -251,8 +275,9 @@ impl ScannerAgent {
                                         symbol: td.symbol,
                                         graduation_progress: td.graduation_progress,
                                         bonding_curve_address: td.bonding_curve_address,
-                                        market_cap_sol: td.market_cap_usd,
-                                        volume_24h_sol: td.volume_24h_usd,
+                                        market_cap_sol: td.market_cap_sol.unwrap_or(td.market_cap_usd),
+                                        volume_24h_sol: td.volume_24h_usd / 200.0,
+                                        volume_1h_sol: td.volume_1h_usd / 200.0,
                                         holder_count: td.holder_count,
                                         created_at: chrono::Utc::now(),
                                         last_trade_at: None,
@@ -285,6 +310,79 @@ impl ScannerAgent {
                 }
 
                 drop(venues_guard);
+
+                let contender_mints: HashSet<String>;
+                {
+                    let mut contenders: Vec<TokenData> = all_token_data
+                        .iter()
+                        .filter(|t| t.graduation_progress <= 100.0)
+                        .cloned()
+                        .collect();
+                    contenders.sort_by(|a, b| b.graduation_progress.partial_cmp(&a.graduation_progress).unwrap_or(std::cmp::Ordering::Equal));
+                    contenders.truncate(50);
+                    contender_mints = contenders.iter().map(|t| t.mint.clone()).collect();
+                    let mut cache = recent_token_data.write().await;
+                    *cache = contenders;
+                }
+
+                {
+                    let now = chrono::Utc::now();
+                    let mut grad_cache = graduated_mints.write().await;
+                    grad_cache.retain(|_, ts| (now - *ts).num_seconds() < GRADUATED_MINTS_TTL_SECS);
+                }
+
+                if let Some(pfv) = pump_fun_venue.read().await.as_ref() {
+                    match pfv.get_recently_graduated(20).await {
+                        Ok(graduated_tokens) => {
+                            let snipe_strategy = raydium_snipe_strategy.read().await;
+                            for token in graduated_tokens {
+                                if token.raydium_pool.is_none() {
+                                    continue;
+                                }
+
+                                let mut grad_cache = graduated_mints.write().await;
+                                if grad_cache.contains_key(&token.mint) {
+                                    continue;
+                                }
+
+                                let was_contender = contender_mints.contains(&token.mint)
+                                    || all_token_data.iter().any(|t| t.mint == token.mint);
+
+                                if !was_contender {
+                                    continue;
+                                }
+
+                                let last_progress = all_token_data.iter()
+                                    .find(|t| t.mint == token.mint)
+                                    .map(|t| t.graduation_progress)
+                                    .unwrap_or(100.0);
+
+                                grad_cache.insert(token.mint.clone(), chrono::Utc::now());
+
+                                tracing::info!(
+                                    mint = %token.mint,
+                                    symbol = %token.symbol,
+                                    pool = ?token.raydium_pool,
+                                    "🎓 Graduation detected: {} migrated to Raydium",
+                                    token.symbol
+                                );
+
+                                if let Some(strategy) = snipe_strategy.as_ref() {
+                                    strategy.push_graduation(GraduationEvent {
+                                        mint: token.mint.clone(),
+                                        symbol: token.symbol.clone(),
+                                        name: token.name.clone(),
+                                        raydium_pool: token.raydium_pool.clone(),
+                                        last_progress,
+                                    }).await;
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::debug!("Failed to fetch graduated tokens: {}", e);
+                        }
+                    }
+                }
 
                 let active_strategies = behavioral_strategies.get_active().await;
                 if !active_strategies.is_empty() {
@@ -369,9 +467,8 @@ impl ScannerAgent {
                 if !all_signals.is_empty() {
                     let mut cache = recent_signals.write().await;
                     let now = chrono::Utc::now();
-                    let cutoff = now - chrono::Duration::seconds(SIGNAL_CACHE_TTL_SECS);
 
-                    cache.retain(|s| s.detected_at > cutoff);
+                    cache.retain(|s| s.expires_at > now);
 
                     for signal in all_signals.iter() {
                         let signal_source = signal.metadata.get("signal_source")
@@ -512,6 +609,11 @@ impl ScannerAgent {
             .into_iter()
             .filter(|s| format!("{:?}", s.signal_type).to_lowercase().contains(&signal_type.to_lowercase()))
             .collect())
+    }
+
+    pub async fn get_contenders(&self, limit: usize) -> Vec<TokenData> {
+        let cache = self.recent_token_data.read().await;
+        cache.iter().take(limit).cloned().collect()
     }
 
     pub async fn get_signals_by_venue(&self, venue_type: VenueType) -> AppResult<Vec<Signal>> {

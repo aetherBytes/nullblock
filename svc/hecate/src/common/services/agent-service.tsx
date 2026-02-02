@@ -17,7 +17,7 @@ class AgentService {
 
       return this.isConnected;
     } catch (error) {
-      console.error('Failed to connect to Erebus:', error);
+      console.debug('Agent service unavailable (Erebus not running)');
       this.isConnected = false;
 
       return false;

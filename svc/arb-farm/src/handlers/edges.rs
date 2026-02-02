@@ -323,8 +323,8 @@ pub async fn execute_edge(
         state
             .trade_repo
             .create(crate::database::repositories::trades::CreateTradeRecord {
-                edge_id,
-                strategy_id,
+                edge_id: Some(edge_id),
+                strategy_id: Some(strategy_id),
                 tx_signature: result.tx_signature.clone(),
                 bundle_id: result.bundle_id.clone(),
                 entry_price: None,
@@ -332,6 +332,9 @@ pub async fn execute_edge(
                 profit_lamports: result.profit_lamports,
                 gas_cost_lamports: result.gas_cost_lamports.map(|g| g as i64),
                 slippage_bps: request.max_slippage_bps,
+                entry_gas_lamports: None,
+                exit_gas_lamports: None,
+                pnl_source: None,
             })
             .await?;
 
@@ -628,8 +631,8 @@ pub async fn execute_edge_auto(
         state
             .trade_repo
             .create(crate::database::repositories::trades::CreateTradeRecord {
-                edge_id,
-                strategy_id,
+                edge_id: Some(edge_id),
+                strategy_id: Some(strategy_id),
                 tx_signature: result.tx_signature.clone(),
                 bundle_id: result.bundle_id.clone(),
                 entry_price: None,
@@ -637,6 +640,9 @@ pub async fn execute_edge_auto(
                 profit_lamports: result.profit_lamports,
                 gas_cost_lamports: result.gas_cost_lamports.map(|g| g as i64),
                 slippage_bps: Some(slippage_bps as i32),
+                entry_gas_lamports: None,
+                exit_gas_lamports: None,
+                pnl_source: None,
             })
             .await?;
 

@@ -220,6 +220,43 @@ impl HeliusClient {
             .await?;
         Ok(response)
     }
+
+    pub async fn get_signatures_for_address(
+        &self,
+        address: &str,
+        limit: u8,
+    ) -> AppResult<Vec<SignatureInfo>> {
+        let result: Vec<SignatureInfo> = self
+            .rpc_call(
+                "getSignaturesForAddress",
+                json!([
+                    address,
+                    {
+                        "limit": limit,
+                        "commitment": "confirmed"
+                    }
+                ]),
+            )
+            .await?;
+        Ok(result)
+    }
+
+    pub async fn get_transaction(&self, signature: &str) -> AppResult<Option<TransactionResponse>> {
+        let result: Option<TransactionResponse> = self
+            .rpc_call(
+                "getTransaction",
+                json!([
+                    signature,
+                    {
+                        "encoding": "json",
+                        "maxSupportedTransactionVersion": 0,
+                        "commitment": "confirmed"
+                    }
+                ]),
+            )
+            .await?;
+        Ok(result)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -242,6 +279,42 @@ pub struct TokenAccountBalance {
     pub ui_amount: Option<f64>,
     #[serde(rename = "uiAmountString")]
     pub ui_amount_string: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignatureInfo {
+    pub signature: String,
+    pub slot: u64,
+    #[serde(rename = "blockTime")]
+    pub block_time: Option<i64>,
+    pub err: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionMeta {
+    pub fee: u64,
+    #[serde(rename = "preBalances")]
+    pub pre_balances: Vec<u64>,
+    #[serde(rename = "postBalances")]
+    pub post_balances: Vec<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionMessage {
+    #[serde(rename = "accountKeys")]
+    pub account_keys: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionInner {
+    pub message: TransactionMessage,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionResponse {
+    pub meta: Option<TransactionMeta>,
+    pub transaction: Option<TransactionInner>,
+    pub slot: u64,
 }
 
 #[derive(Debug, Deserialize)]

@@ -21,6 +21,7 @@ import type {
   ScannerStatus,
   Signal,
   BehavioralStrategy,
+  Contender,
   BehavioralStrategiesResponse,
   SwarmStatus,
   SwarmHealth,
@@ -116,11 +117,13 @@ export interface ArbFarmServiceResponse<T = unknown> {
 
 class ArbFarmService {
   private baseUrl: string;
+  private sseBaseUrl: string;
   private isConnected: boolean = false;
   private walletAddress: string | null = null;
 
-  constructor(baseUrl: string = import.meta.env.VITE_ARBFARM_API_URL || 'http://localhost:3000/api/arb') {
+  constructor(baseUrl: string = import.meta.env.VITE_ARBFARM_API_URL || `${import.meta.env.VITE_EREBUS_API_URL || 'http://localhost:3000'}/api/arb`) {
     this.baseUrl = baseUrl;
+    this.sseBaseUrl = import.meta.env.VITE_ARBFARM_SSE_URL || 'http://localhost:9007';
   }
 
   setWalletContext(walletAddress: string | null) {
@@ -222,33 +225,30 @@ class ArbFarmService {
   async getDashboardSummary(): Promise<ArbFarmServiceResponse<DashboardSummary>> {
     try {
       const [statsRes, swarmRes, edgesRes, tradesRes, alertsRes, pnlRes] = await Promise.all([
-        this.getTradeStats(),
-        this.getSwarmHealth(),
-        this.listEdges({ status: ['detected', 'pending_approval'], limit: 5 }),
-        this.listTrades(5),
-        this.getThreatAlerts(5),
-        this.getPnLSummary(),
+        this.getTradeStats().catch(() => ({ success: false, data: undefined, timestamp: new Date() }) as ArbFarmServiceResponse<TradeStats>),
+        this.getSwarmHealth().catch(() => ({ success: false, data: undefined, timestamp: new Date() }) as ArbFarmServiceResponse<SwarmHealth>),
+        this.listEdges({ status: ['detected', 'pending_approval'], limit: 5 }).catch(() => ({ success: false, data: undefined, timestamp: new Date() }) as ArbFarmServiceResponse<Edge[]>),
+        this.listTrades(5).catch(() => ({ success: false, data: undefined, timestamp: new Date() }) as ArbFarmServiceResponse<Trade[]>),
+        this.getThreatAlerts(5).catch(() => ({ success: false, data: undefined, timestamp: new Date() }) as ArbFarmServiceResponse<ThreatAlert[]>),
+        this.getPnLSummary().catch(() => ({ success: false, data: undefined, timestamp: new Date() }) as ArbFarmServiceResponse<PnLSummary>),
       ]);
 
-      if (!statsRes.success || !swarmRes.success) {
-        throw new Error('Failed to fetch dashboard data');
-      }
-
-      const stats = statsRes.data!;
+      const stats = statsRes.data;
       const pnl = pnlRes.data;
       const summary: DashboardSummary = {
-        total_profit_sol: pnl?.total_sol ?? stats.net_profit_sol,
+        total_profit_sol: pnl?.total_sol ?? stats?.net_pnl_sol ?? 0,
         today_profit_sol: pnl?.today_sol ?? 0,
         week_profit_sol: pnl?.week_sol ?? 0,
-        win_rate: pnl?.win_rate ?? stats.win_rate,
-        active_opportunities: edgesRes.data?.filter((e) => e.status === 'detected').length || 0,
+        win_rate: pnl?.win_rate ?? stats?.win_rate ?? 0,
+        active_opportunities: pnl?.active_positions ?? (Array.isArray(edgesRes.data) ? edgesRes.data : edgesRes.data?.edges)?.filter((e: Edge) => e.status === 'detected')?.length ?? 0,
         pending_approvals:
-          edgesRes.data?.filter((e) => e.status === 'pending_approval').length || 0,
-        executed_today: pnl?.total_trades ?? stats.successful_trades,
+          (Array.isArray(edgesRes.data) ? edgesRes.data : edgesRes.data?.edges)?.filter((e: Edge) => e.status === 'pending_approval')?.length || 0,
+        executed_today: pnl?.total_trades ?? stats?.total_trades ?? 0,
         swarm_health: swarmRes.data!,
-        top_opportunities: edgesRes.data || [],
-        recent_trades: tradesRes.data || [],
-        recent_alerts: alertsRes.data || [],
+        top_opportunities: (Array.isArray(edgesRes.data) ? edgesRes.data : edgesRes.data?.edges) || [],
+        recent_trades: (Array.isArray(tradesRes.data) ? tradesRes.data : tradesRes.data?.trades) || [],
+        recent_alerts: (Array.isArray(alertsRes.data) ? alertsRes.data : alertsRes.data?.alerts) || [],
+        pnl_reset_at: pnl?.pnl_reset_at,
       };
 
       return {
@@ -453,8 +453,13 @@ class ArbFarmService {
     return this.makeRequest(`/scanner/signals${queryString ? '?' + queryString : ''}`);
   }
 
+  async getContenders(limit?: number): Promise<ArbFarmServiceResponse<{ contenders: Contender[]; count: number }>> {
+    const params = limit ? `?limit=${limit}` : '';
+    return this.makeRequest(`/scanner/contenders${params}`);
+  }
+
   subscribeToSignals(onSignal: (signal: Signal) => void): () => void {
-    const eventSource = new EventSource(`${this.baseUrl}/scanner/stream`);
+    const eventSource = new EventSource(`${this.sseBaseUrl}/scanner/stream`);
     eventSource.addEventListener('signal', (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -2017,23 +2022,23 @@ class ArbFarmService {
   // ============================================================================
 
   getScannerStreamUrl(): string {
-    return `${this.baseUrl}/scanner/stream`;
+    return `${this.sseBaseUrl}/scanner/stream`;
   }
 
   getEdgesStreamUrl(): string {
-    return `${this.baseUrl}/edges/stream`;
+    return `${this.sseBaseUrl}/edges/stream`;
   }
 
   getEventsStreamUrl(): string {
-    return `${this.baseUrl}/events/stream`;
+    return `${this.sseBaseUrl}/events/stream`;
   }
 
   getThreatStreamUrl(): string {
-    return `${this.baseUrl}/threat/stream`;
+    return `${this.sseBaseUrl}/threat/stream`;
   }
 
   getHeliusStreamUrl(): string {
-    return `${this.baseUrl}/helius/stream`;
+    return `${this.sseBaseUrl}/helius/stream`;
   }
 
   // ============================================================================
@@ -2303,6 +2308,12 @@ class ArbFarmService {
   async getPnLSummary(): Promise<ArbFarmServiceResponse<PnLSummary>> {
     return this.request<PnLSummary>('/positions/pnl-summary', {
       method: 'GET',
+    });
+  }
+
+  async resetPnL(): Promise<ArbFarmServiceResponse<{ success: boolean; pnl_reset_at: string }>> {
+    return this.request('/positions/pnl-reset', {
+      method: 'POST',
     });
   }
 
@@ -2778,6 +2789,19 @@ class ArbFarmService {
   async getAnalysisSummary(): Promise<ArbFarmServiceResponse<import('../../types/consensus').AnalysisSummaryResponse>> {
     return this.request<import('../../types/consensus').AnalysisSummaryResponse>('/consensus/analysis-summary', {
       method: 'GET',
+    });
+  }
+
+  async getConsensusSchedulerStatus(): Promise<ArbFarmServiceResponse<{ scheduler_enabled: boolean; last_queried: string | null }>> {
+    return this.request<{ scheduler_enabled: boolean; last_queried: string | null }>('/consensus/scheduler', {
+      method: 'GET',
+    });
+  }
+
+  async toggleConsensusScheduler(enabled: boolean): Promise<ArbFarmServiceResponse<{ scheduler_enabled: boolean; last_queried: string | null }>> {
+    return this.request<{ scheduler_enabled: boolean; last_queried: string | null }>('/consensus/scheduler', {
+      method: 'POST',
+      body: JSON.stringify({ enabled }),
     });
   }
 

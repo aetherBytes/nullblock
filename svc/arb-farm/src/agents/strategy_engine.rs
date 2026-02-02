@@ -44,7 +44,7 @@ impl StrategyEngine {
         let mut strategies = self.strategies.write().await;
         strategies.insert(strategy_id, strategy.clone());
 
-        let _ = self.event_tx.send(ArbEvent::new(
+        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
             "strategy_created",
             EventSource::Agent(AgentType::StrategyEngine),
             strategy_topics::CREATED,
@@ -59,7 +59,7 @@ impl StrategyEngine {
     pub async fn remove_strategy(&self, strategy_id: Uuid) -> bool {
         let mut strategies = self.strategies.write().await;
         if strategies.remove(&strategy_id).is_some() {
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "strategy_deleted",
                 EventSource::Agent(AgentType::StrategyEngine),
                 strategy_topics::DELETED,
@@ -78,7 +78,7 @@ impl StrategyEngine {
         if let Some(strategy) = strategies.get_mut(&strategy_id) {
             strategy.is_active = enabled;
             let topic = if enabled { strategy_topics::ENABLED } else { strategy_topics::DISABLED };
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 if enabled { "strategy_enabled" } else { "strategy_disabled" },
                 EventSource::Agent(AgentType::StrategyEngine),
                 topic,
@@ -98,7 +98,7 @@ impl StrategyEngine {
         if let Some(strategy) = strategies.get_mut(&strategy_id) {
             strategy.risk_params = risk_params;
             strategy.updated_at = chrono::Utc::now();
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "strategy_risk_updated",
                 EventSource::Agent(AgentType::StrategyEngine),
                 strategy_topics::UPDATED,
@@ -118,7 +118,7 @@ impl StrategyEngine {
         if let Some(strategy) = strategies.get_mut(&strategy_id) {
             strategy.execution_mode = execution_mode.clone();
             strategy.updated_at = chrono::Utc::now();
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "strategy_execution_mode_updated",
                 EventSource::Agent(AgentType::StrategyEngine),
                 strategy_topics::UPDATED,
@@ -168,7 +168,7 @@ impl StrategyEngine {
             }
             strategy.updated_at = chrono::Utc::now();
 
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "strategy_updated",
                 EventSource::Agent(AgentType::StrategyEngine),
                 strategy_topics::UPDATED,
@@ -187,7 +187,7 @@ impl StrategyEngine {
     pub async fn reset_stats(&self, strategy_id: Uuid) -> AppResult<()> {
         let strategies = self.strategies.read().await;
         if strategies.contains_key(&strategy_id) {
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "strategy_stats_reset",
                 EventSource::Agent(AgentType::StrategyEngine),
                 strategy_topics::UPDATED,
@@ -211,7 +211,7 @@ impl StrategyEngine {
             strategy.is_active = false;
 
             // Emit a kill event - this signals all components to stop any in-flight operations
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "strategy_killed",
                 EventSource::Agent(AgentType::StrategyEngine),
                 strategy_topics::DISABLED,
@@ -264,7 +264,7 @@ impl StrategyEngine {
 
             let edge = self.create_edge_from_signal(signal, strategy);
 
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "edge_detected",
                 EventSource::Agent(AgentType::StrategyEngine),
                 edge_topics::DETECTED,
@@ -313,15 +313,16 @@ impl StrategyEngine {
             .unwrap_or(0.0);
 
         match strategy.strategy_type.as_str() {
-            "curve_arb" => {
-                // Scanner: only match pre-graduation signals (< 85%)
-                progress < 85.0
-            },
             "graduation_snipe" => {
-                // Sniper: only match graduation-ready signals (>= 85%)
                 progress >= 85.0
             },
-            _ => true, // Other strategies match any progress
+            "raydium_snipe" => {
+                let source = signal.metadata.get("signal_source")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                source == "raydium_snipe"
+            },
+            _ => true,
         }
     }
 
@@ -464,10 +465,10 @@ impl StrategyEngine {
                 {
                     Ok(consensus_result) => {
                         let event = consensus_engine.create_consensus_event(edge.id, &consensus_result);
-                        let _ = self.event_tx.send(event);
+                        crate::events::broadcast_event(&self.event_tx, event);
 
                         if !consensus_result.approved {
-                            let _ = self.event_tx.send(ArbEvent::new(
+                            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                                 "edge_rejected_by_consensus",
                                 EventSource::Agent(AgentType::StrategyEngine),
                                 edge_topics::REJECTED,
@@ -509,7 +510,7 @@ impl StrategyEngine {
                 }
             }
 
-            let _ = self.event_tx.send(ArbEvent::new(
+            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
                 "edge_detected",
                 EventSource::Agent(AgentType::StrategyEngine),
                 edge_topics::DETECTED,

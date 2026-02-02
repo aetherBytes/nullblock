@@ -10,7 +10,6 @@ use crate::error::AppResult;
 use crate::events::{ArbEvent, edge as edge_topics};
 use crate::helius::laserstream::{AccountUpdate, LaserStreamClient, LaserStreamStatus};
 use crate::venues::curves::math::PUMP_FUN_PROGRAM_ID;
-use crate::wallet::DevWalletSigner;
 
 use super::position_manager::{OpenPosition, PositionManager};
 use super::position_monitor::PositionMonitor;
@@ -19,7 +18,6 @@ pub struct RealtimePositionMonitor {
     laserstream: Arc<LaserStreamClient>,
     position_manager: Arc<PositionManager>,
     position_monitor: Arc<PositionMonitor>,
-    dev_signer: Arc<DevWalletSigner>,
     event_tx: broadcast::Sender<ArbEvent>,
     subscribed_positions: Arc<RwLock<HashMap<String, PositionSubscription>>>,
 }
@@ -35,14 +33,12 @@ impl RealtimePositionMonitor {
         laserstream: Arc<LaserStreamClient>,
         position_manager: Arc<PositionManager>,
         position_monitor: Arc<PositionMonitor>,
-        dev_signer: Arc<DevWalletSigner>,
         event_tx: broadcast::Sender<ArbEvent>,
     ) -> Self {
         Self {
             laserstream,
             position_manager,
             position_monitor,
-            dev_signer,
             event_tx,
             subscribed_positions: Arc::new(RwLock::new(HashMap::new())),
         }
@@ -204,7 +200,6 @@ impl RealtimePositionMonitor {
         let subscribed_positions = self.subscribed_positions.clone();
         let position_manager = self.position_manager.clone();
         let position_monitor = self.position_monitor.clone();
-        let dev_signer = self.dev_signer.clone();
 
         tokio::spawn(async move {
             info!("🔭 Real-time price listener started - waiting for account updates");
@@ -242,10 +237,7 @@ impl RealtimePositionMonitor {
                                             signal.exit_percent
                                         );
                                         if let Err(e) = position_monitor
-                                            .trigger_exit_with_reason(
-                                                &signal,
-                                                &dev_signer,
-                                            )
+                                            .trigger_exit_with_reason(&signal)
                                             .await
                                         {
                                             error!(

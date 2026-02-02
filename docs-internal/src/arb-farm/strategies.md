@@ -1,21 +1,22 @@
 # ArbFarm Trading Strategies
 
-> Last Updated: 2026-01-25 (Added per-position auto_exit_enabled toggle for manual trading. DEFENSIVE MODE default: 15% TP for all strategies, strong momentum extends to 30%+. Quick exit on momentum decay.)
+> Last Updated: 2026-02-01 (Audit fixes: token age filter for stale tokens, webhook status indicators, strategy labels on trades/positions, SSE-driven dashboard, event broadcast logging.)
 
-This document describes how ArbFarm's trading strategies work - from token discovery through position management and exit execution.
+This document describes how ArbFarm's trading strategies work - from token discovery through position management and exit execution. It also covers the pluggable strategy architecture and how to register new strategies.
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Strategy 1: Bonding Curve Scanner](#strategy-1-bonding-curve-scanner)
-3. [Strategy 2: Graduation Sniper](#strategy-2-graduation-sniper)
-4. [Position Management](#position-management)
-5. [Exit Strategies](#exit-strategies)
-6. [Risk Management](#risk-management)
-7. [Wallet Reconciliation](#wallet-reconciliation)
-8. [Configuration Reference](#configuration-reference)
+2. [Strategy Architecture](#strategy-architecture)
+3. [Graduation Sniper](#graduation-sniper)
+4. [KOL Copy Trading (WIP)](#kol-copy-trading-wip)
+5. [Position Management](#position-management)
+6. [Exit Strategies](#exit-strategies)
+7. [Risk Management](#risk-management)
+8. [Wallet Reconciliation](#wallet-reconciliation)
+9. [Configuration Reference](#configuration-reference)
 
 ---
 
@@ -27,8 +28,12 @@ ArbFarm operates as an autonomous multi-agent system with the following componen
 ┌─────────────────────────────────────────────────────────────────┐
 │                         DISCOVERY LAYER                          │
 ├─────────────────────────────────────────────────────────────────┤
-│  Scanner Agent          Graduation Sniper        KOL Discovery  │
-│  (Curve monitoring)     (Graduation events)      (Copy trading) │
+│  Scanner Agent                                                  │
+│  (Polls venues, orchestrates strategies)                        │
+│    ├─ GraduationSniperStrategy (active)                         │
+│    │    (Filters 85%+ progress, generates signals)              │
+│    └─ KolCopyStrategy (WIP - event-buffered)                    │
+│         (Drains webhook buffer, generates KolTrade signals)     │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -37,22 +42,39 @@ ArbFarm operates as an autonomous multi-agent system with the following componen
 ├─────────────────────────────────────────────────────────────────┤
 │  Autonomous Executor    Position Manager        Capital Manager  │
 │  (Buy execution)        (Position tracking)     (SOL allocation) │
+│                                                                   │
+│  Position Executor                                                │
+│  (Centralized sell: builds/signs/submits exit TXs)               │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                         MONITORING LAYER                         │
 ├─────────────────────────────────────────────────────────────────┤
-│  Position Monitor       Graduation Tracker      Risk Monitor     │
-│  (Exit conditions)      (Progress watching)     (Daily limits)   │
+│  Position Monitor ──────► command channel ──► Position Executor  │
+│  (Exit detection only)    (mpsc)               (Sell execution)  │
+│  Copy Trade Executor ────►                                       │
+│  (Emergency sells)                                               │
+│  Manual API triggers ────►                                       │
+│                                                                   │
+│  Graduation Tracker      Risk Monitor                            │
+│  (Progress watching)     (Daily limits)                          │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**Active Strategies:**
+
+| Strategy | Type | Status |
+|----------|------|--------|
+| Graduation Sniper | `graduation_snipe` | Active |
+| Raydium Snipe | `raydium_snipe` | Standby (awaiting Helius webhooks — requires public URL) |
+| KOL Copy Trading | `copy_trade` | Standby (webhook not configured — requires `HELIUS_WEBHOOK_AUTH_TOKEN`) |
 
 ---
 
 ## Strategy Isolation
 
-Scanner and Sniper strategies operate **independently** - they can hold positions in the same token without blocking each other.
+Strategies operate **independently** - they can hold positions in the same token without blocking each other.
 
 ### Per-Strategy Budget Allocation
 
@@ -62,29 +84,13 @@ At startup, wallet balance is divided between active strategies:
 Available SOL ÷ Active Strategy Count = Per-Strategy Budget
 ```
 
-Example with 2 SOL available and 2 active strategies:
-- Scanner: 1.0 SOL max position
-- Sniper: 1.0 SOL max position
-
-### Independent Position Tracking
-
-Position checks are **per-strategy**, not global:
-
-| Scenario | Before | After |
-|----------|--------|-------|
-| Scanner buys at 40% | ✅ Works | ✅ Works |
-| Sniper buys at 85% (scanner has position) | ❌ Blocked | ✅ Works |
-| Same mint, different strategies | Blocked | Independent |
-
 ### Strategy-Specific Exit Configs
 
-**DEFENSIVE MODE (Default):** All strategies now use the defensive config for capital preservation.
+**DEFENSIVE MODE (Default):** All strategies use the defensive config for capital preservation.
 
 | Mode | Take Profit | Stop Loss | Trailing | Time Limit | Momentum Behavior |
 |------|-------------|-----------|----------|------------|-------------------|
 | **Defensive (DEFAULT)** | 15% | 10% | 8% | 5 min | Strong: extends to 30%+, Weak: exit at 7.5% |
-
-> **Note (2026-01-25):** Switched to defensive mode as default. 15% base TP covers fees (~4%) plus profit. If momentum is **Strong**, targets extend to 30%/50%+ and only partial exits. On any momentum decay (velocity slowing, negative readings), exit ASAP to protect gains. Stop loss tightened to 10% to protect capital.
 
 **Legacy Configs (Available via API):**
 
@@ -97,72 +103,525 @@ Position checks are **per-strategy**, not global:
 ### Momentum Toggle API
 
 ```bash
-# Enable momentum-adaptive exits for scanner
 curl -X POST localhost:9007/strategies/{id}/momentum \
   -H "Content-Type: application/json" \
   -d '{"enabled": true}'
-
-# Disable momentum for faster exits
-curl -X POST localhost:9007/strategies/{id}/momentum \
-  -H "Content-Type: application/json" \
-  -d '{"enabled": false}'
 ```
 
 ---
 
-## Strategy 1: Bonding Curve Scanner
+## Strategy Architecture
 
-**File:** `src/agents/scanner.rs`
+ArbFarm uses a **pluggable strategy factory pattern**. Strategies are split into two layers that work together:
+
+1. **Behavioral Strategies** — Rust structs implementing the `BehavioralStrategy` trait. These are registered with the Scanner and generate `Signal`s from venue data.
+2. **Database Strategies** — Persisted configuration records loaded into the `StrategyEngine`. These define risk parameters, execution mode, and venue filters. The engine matches incoming signals against these records to create `Edge`s for execution.
+
+Both layers must be wired for a strategy to function end-to-end.
+
+### Signal Flow (End-to-End)
+
+```
+Scanner polls venues (pump.fun API, RPC, DexScreener fallback)
+        │
+        ▼
+Creates VenueSnapshot { tokens: [...] }
+        │
+        ▼
+Calls BehavioralStrategy::scan(snapshot) for each active strategy
+        │
+        ├─→ GraduationSniperStrategy → Vec<Signal>
+        ├─→ [Future] NewStrategy     → Vec<Signal>
+        │
+        ▼
+Scanner emits "signal_detected" events
+        │
+        ▼
+StrategyEngine::process_signals(signals)
+        │
+        ├── Check signal expiry (drop if stale)
+        ├── Check dedup cache (drop if already processed)
+        ├── Match signal to DB strategies:
+        │     ├── Venue type match?
+        │     ├── Strategy-specific filter? (e.g., progress >= 85%)
+        │     └── Risk param validation? (profit > min_profit_bps?)
+        │
+        ▼
+Create Edge from matched Signal + Strategy
+        │
+        ▼
+AutonomousExecutor picks up Edge
+        │
+        ├── Capital allocation check
+        ├── Risk limit check
+        ├── Simulate transaction (if required)
+        ├── Determine execution mode (autonomous vs agent_directed)
+        │
+        ▼
+Execute: build TX → sign → submit via Jito → confirm
+        │
+        ▼
+PositionManager registers open position
+        │
+        ▼
+PositionMonitor detects exit conditions (every 2s)
+        │
+        ▼
+PositionCommand sent via mpsc channel
+        │
+        ▼
+PositionExecutor builds TX → signs → submits via Jito → confirms
+```
+
+### Key Abstractions
+
+#### BehavioralStrategy Trait
+
+**File:** `src/agents/strategies/mod.rs`
+
+```rust
+#[async_trait]
+pub trait BehavioralStrategy: Send + Sync {
+    fn strategy_type(&self) -> &str;
+    fn name(&self) -> &str;
+    fn supported_venues(&self) -> Vec<VenueType>;
+    async fn scan(&self, snapshot: &VenueSnapshot) -> AppResult<Vec<Signal>>;
+    fn create_edge(&self, _signal: &Signal, _risk: &RiskParams) -> Option<Edge> {
+        None
+    }
+    fn is_active(&self) -> bool;
+    async fn set_active(&self, active: bool);
+}
+```
+
+| Method | Purpose |
+|--------|---------|
+| `strategy_type()` | Returns the string key (e.g. `"graduation_snipe"`) — must match the DB strategy's `strategy_type` |
+| `name()` | Human-readable name for logs/UI |
+| `supported_venues()` | Which venue types this strategy can scan (e.g. `[VenueType::BondingCurve]`) |
+| `scan()` | Core logic: receives a `VenueSnapshot` of all tokens from a venue, returns `Vec<Signal>` of detected opportunities |
+| `is_active()` / `set_active()` | Toggle via `AtomicBool` — inactive strategies are skipped during scan cycles |
+
+#### StrategyRegistry
+
+Manages all registered behavioral strategies. The Scanner holds a reference to this.
+
+```rust
+pub struct StrategyRegistry {
+    strategies: Arc<RwLock<Vec<Arc<dyn BehavioralStrategy>>>>,
+}
+
+impl StrategyRegistry {
+    pub async fn register(&self, strategy: Arc<dyn BehavioralStrategy>);
+    pub async fn get_active(&self) -> Vec<Arc<dyn BehavioralStrategy>>;
+    pub async fn get_by_venue(&self, venue_type: VenueType) -> Vec<Arc<dyn BehavioralStrategy>>;
+    pub async fn toggle(&self, name: &str, active: bool) -> bool;
+}
+```
+
+#### Database Strategy Model
+
+**File:** `src/models/strategy.rs`
+
+```rust
+pub struct Strategy {
+    pub id: Uuid,
+    pub wallet_address: String,
+    pub name: String,              // "Graduation Snipe"
+    pub strategy_type: String,     // "graduation_snipe"
+    pub venue_types: Vec<String>,  // ["bondingcurve", "BondingCurve"]
+    pub execution_mode: String,    // "autonomous" or "agent_directed"
+    pub risk_params: RiskParams,
+    pub is_active: bool,
+}
+```
+
+The `StrategyEngine` holds a map of these DB strategies. When a signal comes in, the engine iterates through them looking for a match on venue type, strategy-specific filters, and risk params.
+
+#### StrategyEngine Signal Matching
+
+**File:** `src/agents/strategy_engine.rs`
+
+The engine's `signal_matches_strategy()` method controls which signals a DB strategy accepts:
+
+```rust
+fn signal_matches_strategy(&self, signal: &Signal, strategy: &Strategy) -> bool {
+    // 1. Venue type match
+    let venue_matches = strategy.venue_types.iter().any(|vt|
+        vt.to_lowercase() == signal_venue_str
+    );
+    if !venue_matches { return false; }
+
+    // 2. Strategy-specific filter
+    match strategy.strategy_type.as_str() {
+        "graduation_snipe" => {
+            let progress = signal.metadata.get("progress_percent")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            progress >= 85.0
+        },
+        _ => true,
+    }
+}
+```
+
+Add a new match arm here if your strategy needs to filter signals beyond venue type.
+
+#### Capital Manager
+
+**File:** `src/execution/capital_manager.rs`
+
+Each strategy gets an equal share of the wallet balance. The capital manager tracks per-strategy reservations and position counts.
+
+```
+Available SOL ÷ Active Strategy Count = Per-Strategy Budget
+```
+
+`rebalance_equal()` is called after behavioral strategies are registered to redistribute allocations.
+
+### How to Register a New Strategy
+
+Follow these steps to add a new strategy to the system. Use `GraduationSniperStrategy` as a reference implementation.
+
+#### Step 1: Create the strategy struct
+
+Create a new file `src/agents/strategies/my_strategy.rs`:
+
+```rust
+use async_trait::async_trait;
+use std::sync::atomic::{AtomicBool, Ordering};
+use crate::agents::strategies::{BehavioralStrategy, VenueSnapshot};
+use crate::error::AppResult;
+use crate::models::{Signal, SignalType, VenueType, Edge, RiskParams};
+
+pub struct MyStrategy {
+    name: String,
+    is_active: AtomicBool,
+}
+
+impl MyStrategy {
+    pub fn new() -> Self {
+        Self {
+            name: "My Strategy".to_string(),
+            is_active: AtomicBool::new(true),
+        }
+    }
+}
+
+#[async_trait]
+impl BehavioralStrategy for MyStrategy {
+    fn strategy_type(&self) -> &str { "my_strategy" }
+    fn name(&self) -> &str { &self.name }
+    fn supported_venues(&self) -> Vec<VenueType> {
+        vec![VenueType::BondingCurve]
+    }
+
+    async fn scan(&self, snapshot: &VenueSnapshot) -> AppResult<Vec<Signal>> {
+        let mut signals = Vec::new();
+
+        for token in &snapshot.tokens {
+            // Your detection logic here
+            // Filter tokens, calculate confidence, estimate profit
+
+            let signal = Signal {
+                id: uuid::Uuid::new_v4(),
+                signal_type: SignalType::CurveGraduation,
+                venue_id: snapshot.venue_id,
+                venue_type: snapshot.venue_type.clone(),
+                token_mint: Some(token.mint.clone()),
+                pool_address: token.bonding_curve_address.clone(),
+                estimated_profit_bps: 500,  // 5%
+                confidence: 0.7,
+                metadata: serde_json::json!({
+                    "signal_source": "my_strategy",
+                    "progress_percent": token.graduation_progress,
+                }),
+                detected_at: chrono::Utc::now(),
+                expires_at: chrono::Utc::now() + chrono::Duration::minutes(5),
+                ..Default::default()
+            };
+            signals.push(signal);
+        }
+
+        Ok(signals)
+    }
+
+    fn is_active(&self) -> bool {
+        self.is_active.load(Ordering::SeqCst)
+    }
+
+    async fn set_active(&self, active: bool) {
+        self.is_active.store(active, Ordering::SeqCst);
+    }
+}
+```
+
+#### Step 2: Export from `strategies/mod.rs`
+
+```rust
+pub mod my_strategy;
+pub use my_strategy::MyStrategy;
+```
+
+#### Step 3: Register the behavioral strategy with Scanner
+
+In `server.rs` (near the other behavioral strategy registrations):
+
+```rust
+use crate::agents::strategies::MyStrategy;
+
+let my_strategy = Arc::new(MyStrategy::new());
+scanner.register_behavioral_strategy(my_strategy).await;
+```
+
+#### Step 4: Create a DB strategy record
+
+In `server.rs` (near the other `get_or_create_strategy` calls):
+
+```rust
+if let Some(my_db_strategy) = get_or_create_strategy(
+    &strategy_repo,
+    "My Strategy",             // Display name
+    &default_wallet,
+    "my_strategy",             // Must match strategy_type() return value
+    vec!["bondingcurve".to_string(), "BondingCurve".to_string()],
+    "autonomous",              // "autonomous" or "agent_directed"
+    RiskParams {
+        max_position_sol: 0.15,
+        daily_loss_limit_sol: 1.0,
+        min_profit_bps: 50,
+        max_slippage_bps: 150,
+        auto_execute_enabled: true,
+        stop_loss_percent: Some(10.0),
+        take_profit_percent: Some(15.0),
+        trailing_stop_percent: Some(8.0),
+        time_limit_minutes: Some(5),
+        ..Default::default()
+    },
+).await {
+    strategy_engine.add_strategy(my_db_strategy).await;
+}
+```
+
+#### Step 5: Add signal matching (optional)
+
+If your strategy needs to filter signals beyond venue type matching, add a match arm in `strategy_engine.rs`:
+
+```rust
+fn signal_matches_strategy(&self, signal: &Signal, strategy: &Strategy) -> bool {
+    // ... venue match check ...
+
+    match strategy.strategy_type.as_str() {
+        "graduation_snipe" => { progress >= 85.0 },
+        "my_strategy" => {
+            // Custom filter logic
+            true
+        },
+        _ => true,
+    }
+}
+```
+
+If your strategy accepts all signals matching its venue types, no changes are needed — the `_ => true` fallback handles it.
+
+#### Note: Event-Driven Strategies (Buffer Pattern)
+
+Not all strategies read from `VenueSnapshot.tokens`. Some strategies receive data asynchronously via external events (webhooks, WebSocket feeds, etc.) instead of polling a venue. These strategies use an internal buffer:
+
+1. External source pushes events into the strategy via a method like `push_event()`
+2. The strategy stores events in an `Arc<RwLock<Vec<Event>>>` buffer
+3. When Scanner calls `scan()`, the strategy drains the buffer and converts events to `Signal`s
+4. The `VenueSnapshot` parameter is ignored — signals come from the buffer, not the snapshot
+
+This pattern keeps event-driven data sources in the same Scanner → StrategyEngine → Executor pipeline without requiring a new `VenueType`. See `KolCopyStrategy` (WIP) for a reference implementation of this pattern.
+
+#### Step 6: Verify
+
+1. `cargo check` — compiles clean
+2. Restart arb-farm
+3. `GET /scanner/strategies` — your strategy appears in the list
+4. `GET /strategies` — DB strategy record exists with correct risk params
+5. Watch logs for signals from your strategy being detected and matched
+
+### What the Scanner Does
+
+The Scanner (`src/agents/scanner.rs`) runs a polling loop on a configurable interval (2-6 seconds). Each cycle:
+
+1. Queries all registered venues (pump.fun API primary, DexScreener fallback) for token data
+2. Builds a `VenueSnapshot` containing all discovered tokens with metrics (progress, volume, holders, velocity)
+3. Calls `scan()` on each active behavioral strategy, passing the snapshot
+4. Collects returned signals and emits `signal_detected` events on the event bus
+5. Caches signals for API reads, deduplicating by token mint + signal type + source
+6. Passes signals to the `StrategyEngine` for matching against DB strategies
+
+The Scanner itself doesn't make trading decisions — it orchestrates the behavioral strategies and feeds their output into the matching pipeline. Rate limiting (150ms min between venue requests) prevents API abuse.
+
+**Signal Cache:** Signals are cached for API reads (`GET /scanner/signals`). Cache eviction uses `expires_at` (signal expiry) rather than detection time, so signals remain visible and re-insertable as long as they haven't expired. This prevents a blind window where expired signals block re-detection.
+
+### What the StrategyEngine Does
+
+The StrategyEngine (`src/agents/strategy_engine.rs`) is the bridge between signals and execution:
+
+1. Receives `Vec<Signal>` from the Scanner
+2. For each signal: checks expiry, checks dedup cache, attempts to match against all active DB strategies
+3. On match: creates an `Edge` (a validated trading opportunity with risk parameters attached)
+4. Emits `edge_detected` event
+5. The `AutonomousExecutor` listens for edges and handles execution based on the strategy's `execution_mode`
+
+### What the AutonomousExecutor Does
+
+The AutonomousExecutor (`src/agents/autonomous_executor.rs`) handles the buy side:
+
+1. Listens for `edge_detected` events
+2. Checks capital allocation via `CapitalManager`
+3. Validates against risk limits
+4. Builds the buy transaction (pump.fun for curves, Jupiter for DEX)
+5. Signs with the dev wallet, submits via Jito bundles
+6. On success: registers position with `PositionManager`
+
+For `autonomous` strategies, execution is immediate. For `agent_directed` strategies, the executor emits an approval request and waits for LLM consensus.
+
+---
+
+## Graduation Sniper
+
+**Files:**
+- `src/agents/graduation_sniper.rs` — Graduation event monitoring
+- `src/agents/strategies/graduation_sniper_strategy.rs` — Behavioral strategy (signal generation)
+
+The Graduation Sniper is the primary active strategy. It targets tokens approaching graduation (migration from pump.fun bonding curve to Raydium DEX).
 
 ### How It Works
 
-The Scanner Agent continuously monitors pump.fun bonding curves for entry opportunities.
-
-### Discovery Flow
+The `GraduationSniperStrategy` behavioral strategy scans venue snapshots for tokens with high graduation progress:
 
 ```
-1. Scan pump.fun for active curves (every 2-6 seconds)
-2. Filter by metrics:
-   - Progress: 70-95% toward graduation
-   - Volume: Recent buy activity
-   - Holders: Growing holder count
-   - Velocity: Positive progress momentum
-3. Generate CurveGraduation signal
-4. Pass to Strategy Engine for validation
-5. If approved → Autonomous Executor places buy
+VenueSnapshot arrives from Scanner
+  → Filter: token age <= 48h if progress >= 85% (stale token filter in pump_fun.rs)
+  → Filter: graduation_progress >= 85%
+  → Calculate velocity (volume / market_cap ratio)
+  → Filter: velocity >= 0.1 (or progress >= 95%)
+  → Calculate confidence score
+  → Emit Signal(CurveGraduation)
 ```
 
-### Buy Signal Criteria
+**Stale Token Filter:** Tokens older than 48 hours that are still at >=85% progress are skipped by the scanner. These are likely stuck tokens that will never graduate.
 
-| Metric | Threshold | Weight |
-|--------|-----------|--------|
-| Progress | 70-95% | Required |
-| Progress Velocity | > 0%/min | High |
-| Volume (24h) | > 5 SOL | Medium |
-| Holder Count | > 50 | Medium |
-| Curve Age | < 24h | Low |
+The `StrategyEngine` matches these signals to the `graduation_snipe` DB strategy (which only accepts signals with `progress_percent >= 85`), creates an Edge, and the AutonomousExecutor places the buy.
 
 ### Signal Confidence Scoring
 
+**File:** `src/agents/strategies/graduation_sniper_strategy.rs`
+
+Confidence is calculated from three weighted factors: graduation progress, price velocity, and holder count.
+
+**When holder count is known (> 0):**
+
+| Factor | Weight | Calculation |
+|--------|--------|-------------|
+| Progress | 60% | `((progress - 85) / 15).clamp(0, 1)` |
+| Velocity | 25% | `(velocity * 5).min(1)` |
+| Holders | 15% | `(holders / 50).min(1)` |
+
+**When holder count is unknown (== 0):**
+
+The 15% holder weight is redistributed to avoid penalizing tokens where bulk holder lookups aren't available:
+
+| Factor | Weight | Calculation |
+|--------|--------|-------------|
+| Progress | 75% | `((progress - 85) / 15).clamp(0, 1)` |
+| Velocity | 25% | `(velocity * 5).min(1)` |
+
+This prevents a systematic 15% confidence penalty on tokens scanned via the pump.fun bulk API (which doesn't return holder counts).
+
+### Phase 1: Pre-Graduation Entry
+
+**Trigger:** Token at 90%+ graduation progress
+
 ```
-98%+ progress + positive velocity → 0.95 confidence
-95%+ progress + positive velocity → 0.85 confidence
-90%+ progress + positive velocity → 0.75 confidence
-Below 90%                         → 0.60 confidence
+Scanner detects high-progress curve
+  → GraduationSniperStrategy generates signal
+  → StrategyEngine matches to graduation_snipe
+  → Autonomous Executor buys on bonding curve
+  → Position waits for graduation event
 ```
+
+**Exit on Graduation:**
+When the token graduates to Raydium:
+1. Receive `arb.curve.graduated` event
+2. Calculate adaptive slippage (15% base for post-grad liquidity)
+3. Execute sell via **Raydium Trade API** (direct, ~200ms latency)
+   - If Raydium fails → Fallback to Jupiter (~1000ms)
+4. Record P&L to engrams
+
+**Raydium vs Jupiter Performance:**
+| Metric | Raydium (Direct) | Jupiter (Aggregator) |
+|--------|------------------|---------------------|
+| Latency | ~200ms | ~1000ms |
+| Routing overhead | None (direct) | 50-200 bps |
+| Best for | Post-graduation (single pool) | Multi-hop routes |
+
+### Phase 2: Post-Graduation Quick-Flip (Raydium Snipe)
+
+See [Raydium Snipe](#raydium-snipe) strategy below for the post-graduation buy implementation.
+
+### Velocity Data
+
+The scanner now fetches per-token trade data from the pump.fun API for tokens at 70%+ graduation progress. This provides non-zero velocity values for the graduation sniper's momentum scoring.
+
+The per-token endpoint (`GET /coins/{mint}`) returns `volume_24h_usd` which is used to calculate velocity as `volume / market_cap`. Only high-progress tokens are queried to avoid rate limiting.
+
+### Adaptive Slippage (Graduation Sells)
+
+```rust
+const MIN_SLIPPAGE_BPS: u32 = 500;   // 5% floor
+const MAX_SLIPPAGE_BPS: u32 = 2000;  // 20% cap
+const POST_GRAD_BASE: u32 = 1500;    // 15% for thin liquidity
+const PROFIT_SACRIFICE: f64 = 0.25;  // 25% of profits
+
+// For profitable positions:
+slippage = max(profit_percent * 0.25 * 100, 500)
+slippage = min(slippage, 2000)
+```
+
+### Sniper Controls
+
+```bash
+just arb-sniper-start    # Start sniper
+just arb-sniper-stop     # Stop sniper
+just arb-sniper-status   # Check stats
+just dev-mac no-snipe    # Start without sniper
+```
+
+### Data Sources & Token Discovery
+
+**File:** `src/venues/curves/pump_fun.rs`
+
+Token discovery uses a two-URL architecture:
+
+| URL | Purpose | Default |
+|-----|---------|---------|
+| `pump_api_url` | Bulk scanning (`/coins/currently-live`) | `https://frontend-api-v3.pump.fun` |
+| `dexscreener_url` | Individual token info (`/tokens/{mint}`) | `https://api.dexscreener.com/latest/dex` |
+
+**Why pump.fun API for scanning:** DexScreener's `/search?q=pumpfun` returns ~30-50 curated/trending pairs. Tokens in the 85-99% graduation window ($58.6k-$69k market cap) almost never appeared. The pump.fun `/coins/currently-live` endpoint returns actively-trading tokens including those near graduation.
+
+**Fallback:** If the pump.fun API fails, scanning falls back to DexScreener search automatically.
+
+**USD vs SOL market cap:** The pump.fun API provides both `usd_market_cap` (USD) and `market_cap` (SOL). The scanner passes `market_cap_sol` through to strategies so velocity calculations use correct SOL-denominated values. When SOL data is unavailable (DexScreener fallback), USD values are used as before.
 
 ### Metrics Collection
 
 **Files:** `src/agents/curve_metrics.rs`, `src/handlers/curves.rs`
 
-The metrics collector populates detailed token metrics from venue APIs (DexScreener):
+The metrics collector populates detailed token metrics from venue APIs:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         DATA SOURCES                              │
 ├─────────────────────────────────────────────────────────────────┤
-│  DexScreener API        pump.fun API         On-Chain RPC       │
-│  (Volume, Price)        (Holder stats)       (Curve state)      │
+│  pump.fun API           DexScreener API      On-Chain RPC       │
+│  (Scanning, Holders)    (Token info)         (Curve state)      │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -180,11 +639,11 @@ The metrics collector populates detailed token metrics from venue APIs (DexScree
 |--------|--------|----------|
 | `volume_24h` | DexScreener | 0.0 |
 | `volume_1h` | Estimated (24h/24) | 0.0 |
-| `holder_count` | pump.fun API | Helius largest accounts count |
+| `holder_count` | pump.fun API (per-token) | Helius largest accounts count |
 | `top_10_concentration` | pump.fun API | Helius calculation |
 | `price_momentum_24h` | DexScreener | 0.0 |
 | `graduation_progress` | On-chain RPC | Estimated from market cap |
-| `market_cap_sol` | On-chain RPC | DexScreener estimate |
+| `market_cap_sol` | pump.fun API / On-chain RPC | DexScreener estimate (USD) |
 | `liquidity_depth_sol` | On-chain RPC | 0.0 |
 
 ### Opportunity Scoring
@@ -227,95 +686,69 @@ The scorer combines metrics into an actionable recommendation:
 
 ---
 
-## Strategy 2: Graduation Sniper
+## KOL Copy Trading (WIP)
 
-**File:** `src/agents/graduation_sniper.rs`
-
-The Graduation Sniper operates in two phases:
-
-### Phase 1: Pre-Graduation Entry
-
-**Trigger:** Token approaching graduation (90%+ progress)
-
-```
-Scanner detects high-progress curve
-  → GraduationTracker monitors progress
-  → At 95%+ with positive velocity
-  → Autonomous Executor buys on bonding curve
-  → Position waits for graduation event
-```
-
-**Exit on Graduation:**
-When the token graduates to Raydium:
-1. Receive `arb.curve.graduated` event
-2. Calculate adaptive slippage (15% base for post-grad liquidity)
-3. Execute sell via **Raydium Trade API** (direct, ~200ms latency)
-   - If Raydium fails → Fallback to Jupiter (~1000ms)
-4. Record P&L to engrams
-
-**Raydium vs Jupiter Performance:**
-| Metric | Raydium (Direct) | Jupiter (Aggregator) |
-|--------|------------------|---------------------|
-| Latency | ~200ms | ~1000ms |
-| Routing overhead | None (direct) | 50-200 bps |
-| Best for | Post-graduation (single pool) | Multi-hop routes |
-
-### Phase 2: Post-Graduation Quick-Flip
-
-**Trigger:** Graduation event for token we DON'T hold
-
-```
-Token graduates to Raydium
-  → No existing position?
-  → Execute quick-flip buy via Jupiter
-  → Apply tight exit strategy (8% TP, 5% SL)
-  → Monitor for fast exit
-```
-
-**Post-Graduation Entry Config:**
-
-| Parameter | Value | Rationale |
-|-----------|-------|-----------|
-| Entry Amount | `risk_config.max_position_sol` | Uses global risk config |
-| Take Profit | 8% | Quick scalp target |
-| Stop Loss | 5% | Tight risk control |
-| Time Limit | 5 minutes | Don't hold post-grad long |
-| Max Entry Delay | 200ms | Beat competition |
-
-### Adaptive Slippage (Graduation Sells)
-
-```rust
-const MIN_SLIPPAGE_BPS: u32 = 500;   // 5% floor
-const MAX_SLIPPAGE_BPS: u32 = 2000;  // 20% cap
-const POST_GRAD_BASE: u32 = 1500;    // 15% for thin liquidity
-const PROFIT_SACRIFICE: f64 = 0.25;  // 25% of profits
-
-// For profitable positions:
-slippage = max(profit_percent * 0.25 * 100, 500)
-slippage = min(slippage, 2000)
-```
-
-### Sniper Controls
-
-```bash
-just arb-sniper-start    # Start sniper
-just arb-sniper-stop     # Stop sniper
-just arb-sniper-status   # Check stats
-just dev-mac no-snipe    # Start without sniper
-```
-
----
-
-## Strategy 3: KOL Copy Trading
+> **Status:** Infrastructure fully wired with a bypass implementation. Strategy stub (`kol_copy_strategy.rs`) created for future unification into the standard pipeline. The current bypass works but doesn't flow through Scanner → StrategyEngine like other strategies.
 
 **Files:**
-- `src/agents/kol_discovery.rs` - KOL wallet discovery and trust scoring
-- `src/execution/copy_executor.rs` - Copy trade execution
-- `src/handlers/webhooks.rs` - Helius webhook handler for trade detection
+- `src/agents/kol_discovery.rs` — KOL wallet discovery and trust scoring
+- `src/execution/copy_executor.rs` — Copy trade execution
+- `src/handlers/webhooks.rs` — Helius webhook handler for trade detection
+- `src/agents/strategies/kol_copy_strategy.rs` — WIP strategy stub (not registered yet)
 
-> **⚠️ Requires Public URL:** KOL copy trading depends on Helius webhooks pushing wallet activity to ArbFarm. This only works when deployed with a publicly accessible URL (not localhost). See CLAUDE.md "AWS Deployment TODO" section for setup instructions.
+> **Requires Public URL:** KOL copy trading depends on Helius webhooks pushing wallet activity to ArbFarm. This only works when deployed with a publicly accessible URL (not localhost). See CLAUDE.md "AWS Deployment TODO" section for setup instructions.
 
-### Signal Flow
+### Intended Architecture
+
+KOL copy trading should eventually flow through the same pipeline as all other strategies:
+
+```
+Helius Webhook (swap detected)
+    │
+    ▼
+webhooks.rs: Look up KOL entity by wallet
+    │
+    ├── Not tracked → Skip
+    │
+    ▼
+Record KOL trade in DB (arb_kol_trades)
+    │
+    ▼
+KolCopyStrategy.push_trade(event)  ← buffer the event
+    │
+    ▼
+Scanner calls strategy.scan() on next polling cycle
+    │
+    ▼
+scan() drains buffer → Vec<Signal(KolTrade)>
+    │
+    ▼
+StrategyEngine.process_signals()
+    │
+    ├── Check signal expiry (30s TTL for KOL trades)
+    ├── Check dedup cache
+    ├── Match to "copy_trade" DB strategy
+    │     ├── Trust score >= min_trust_score?
+    │     └── Token whitelist/blacklist check?
+    │
+    ▼
+Create Edge → AutonomousExecutor.handle_edge_detected()
+    │
+    ▼
+Standard buy/sell execution via CopyTradeExecutor
+```
+
+**Why KOL data is NOT a new VenueType:** Venues are poll-based market data sources (pump.fun API, DexScreener, on-chain RPC). KOL trades are push-based wallet activity from Helius webhooks. Instead of adding a `VenueType::Kol`, the strategy uses an internal buffer pattern: webhooks push events in, and `scan()` drains them. This keeps the Scanner → StrategyEngine pipeline uniform.
+
+**What needs to change to wire this up:**
+1. `webhooks.rs` — Call `kol_copy_strategy.push_trade(event)` instead of (or in addition to) emitting `kol_topics::TRADE_DETECTED`
+2. `server.rs` — Register `KolCopyStrategy` with `StrategyRegistry` and create a `"copy_trade"` DB strategy record
+3. `strategy_engine.rs` — Add `"copy_trade"` match arm in `signal_matches_strategy()` for trust score filtering
+4. `autonomous_executor.rs` — Remove or gate the direct `handle_kol_trade()` bypass behind a feature flag
+
+### Current Bypass Implementation
+
+The current implementation bypasses the Scanner → StrategyEngine pipeline entirely:
 
 ```
 Helius Webhook (swap detected)
@@ -341,6 +774,8 @@ copy_executor.rs: execute_copy()
     │
     └── Sell → Queue priority exit via PositionManager
 ```
+
+This bypass works but means KOL trades don't benefit from signal deduplication, strategy-level risk params, or the StrategyEngine's matching/filtering pipeline.
 
 ### KOL Discovery
 
@@ -424,6 +859,77 @@ POST /api/arb/discovery/start
 
 ---
 
+## Raydium Snipe
+
+**Files:**
+- `src/agents/strategies/raydium_snipe_strategy.rs` — RaydiumSnipeStrategy (signal generation from push buffer)
+- `src/agents/scanner.rs` — Graduation detection (polls `complete=true`, compares to contender cache)
+
+The Raydium Snipe strategy detects when a token graduates from pump.fun's bonding curve to Raydium and immediately buys via Jupiter swap.
+
+### How It Works
+
+```
+Scanner polls pump.fun API for recently graduated tokens
+  → Compare against known contenders (tokens we were tracking)
+  → If token just graduated (complete=true, raydium_pool set)
+  → Push GraduationEvent into RaydiumSnipeStrategy buffer
+  → Strategy drains buffer on next scan() call
+  → Emit Signal(CurveGraduation, source=raydium_snipe)
+  → StrategyEngine matches to raydium_snipe DB strategy
+  → AutonomousExecutor routes to build_post_graduation_buy() (Jupiter swap)
+```
+
+### Graduation Detection
+
+The scanner maintains a `graduated_mints` cache (TTL: 30 minutes) to prevent duplicate signals. Each scan cycle:
+
+1. Fetch `GET /coins?complete=true&sort=last_trade_timestamp&order=DESC&limit=20`
+2. For each graduated token with a `raydium_pool`:
+   - Skip if already in `graduated_mints` cache
+   - Skip if token was never tracked as a contender
+   - Push `GraduationEvent` into the strategy's buffer
+   - Add to `graduated_mints` cache
+
+### Signal Properties
+
+| Property | Value | Rationale |
+|----------|-------|-----------|
+| Signal Type | `CurveGraduation` | Reuses existing variant |
+| Signal Source | `raydium_snipe` | Distinguishes from `graduation_sniper` |
+| Venue Type | `DexAmm` | Token is now on Raydium |
+| Confidence | 0.85 | High — graduation confirmed, pool confirmed |
+| Expiry | 60 seconds | Very time-sensitive |
+| Significance | Critical | Immediate action required |
+
+### Exit Config (`ExitConfig::for_raydium_snipe()`)
+
+Fast-flip exit strategy for post-graduation price discovery:
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| Stop Loss | 15% | Tight — cut losses fast if post-grad dump |
+| Take Profit | 30% | Capture initial DEX price discovery pump |
+| Trailing Stop | 10% | Lock in gains during pump |
+| Time Limit | 5 minutes | Quick flip, don't hold |
+| Partial TP #1 | 60% at 20% gain | Recover capital + profit early |
+| Partial TP #2 | 100% at 30% gain | Exit remaining position |
+| Momentum Adaptive | Disabled | Speed over optimization |
+
+### Execution Routing
+
+When `signal_source == "raydium_snipe"`:
+- Buy: `build_post_graduation_buy()` — Jupiter swap (SOL → Token)
+- Sell: `build_raydium_sell()` — Raydium Trade API (existing position exit logic)
+
+### Controls
+
+Raydium Snipe is always in observation mode unless execution is enabled:
+- Requires `ARBFARM_SNIPER_ENTRY=1` (shared with graduation sniper)
+- Signals are always generated and visible in `/scanner/signals`
+
+---
+
 ## Position Management
 
 **File:** `src/execution/position_manager.rs`
@@ -495,7 +1001,8 @@ struct OpenPosition {
 
 ## Exit Strategies
 
-**File:** `src/execution/position_monitor.rs`
+**Detection:** `src/execution/position_monitor.rs` (checks exit conditions, sends `PositionCommand` via mpsc channel)
+**Execution:** `src/execution/position_executor.rs` (receives commands, builds/signs/submits sell transactions)
 
 ### Exit Config: Defensive (DEFAULT)
 
@@ -547,15 +1054,15 @@ These configs are preserved and can be used via direct API calls:
 
 ### Exit Triggers
 
-The Position Monitor checks these conditions every 2 seconds:
+The Position Monitor checks these conditions every 2 seconds and sends matching signals as `PositionCommand::Exit` to the PositionExecutor via mpsc channel:
 
 ```rust
 enum ExitReason {
     Emergency,          // CIRCUIT BREAKER: -50% catastrophic loss protection
-    StopLoss,           // Price dropped below configured SL (40% for sniper, 20% for scanner)
+    StopLoss,           // Price dropped below configured SL
     TakeProfit,         // Hit take profit target
-    TrailingStop,       // Dropped 20% from peak
-    TimeLimit,          // Held > time limit (3 min scanner, 15 min sniper)
+    TrailingStop,       // Dropped from peak
+    TimeLimit,          // Held > time limit
     PartialTakeProfit,  // Tiered exit phase
     MomentumDecay,      // Velocity declining sustained
     MomentumReversal,   // Strong reversal detected
@@ -566,13 +1073,12 @@ enum ExitReason {
 
 ### Emergency Exit Circuit Breaker
 
-**Added 2026-01-25** - Prevents catastrophic losses from rug pulls and crashes.
+Prevents catastrophic losses from rug pulls and crashes.
 
 ```
 If unrealized_pnl_percent <= -50%:
   → IMMEDIATELY exit at Critical urgency
   → Bypasses all other exit logic
-  → Would have prevented -84% and -91% losses seen in trade history
 ```
 
 This circuit breaker triggers regardless of the configured stop loss, providing a hard floor to limit maximum single-position loss.
@@ -601,11 +1107,11 @@ struct MomentumData {
 
 **Momentum Slowing Exit:** Requires `decay_count >= 3` (or velocity stalled or 2+ consecutive negatives).
 
-**Peak Drop Protection:** If position is profitable and has dropped 6%+ from peak P&L, exit to protect gains. This is independent of trailing stop and triggers earlier to prevent giving back profits.
-
-*Note: Decay thresholds were increased ~30% on 2026-01-24 to reduce premature exits. Peak drop was increased from 3% to 6% to allow more volatility.*
+**Peak Drop Protection:** If position is profitable and has dropped 6%+ from peak P&L, exit to protect gains.
 
 ### Slippage Calculation
+
+**File:** `src/execution/position_executor.rs`
 
 ```rust
 fn calculate_profit_aware_slippage(position, signal) -> u16 {
@@ -635,7 +1141,17 @@ fn calculate_profit_aware_slippage(position, signal) -> u16 {
 
 ### Transaction Execution Path
 
+**File:** `src/execution/position_executor.rs`
+
+The PositionExecutor receives `PositionCommand` messages from multiple sources via mpsc channel, sorts by urgency (Critical first), deduplicates by position ID, then executes:
+
 ```
+Sources:
+  PositionMonitor ──────────┐
+  CopyTradeExecutor ────────┤  mpsc channel  ──► PositionExecutor
+  Manual API / RealtimeMonitor ──┘
+
+Execution:
 1. Build sell transaction:
    - Pre-graduation: pump.fun bonding curve
    - Post-graduation: Raydium (direct) → Jupiter (fallback)
@@ -643,15 +1159,15 @@ fn calculate_profit_aware_slippage(position, signal) -> u16 {
 3. Try Jito bundle (priority fee for speed)
 4. If Jito fails/times out → Helius fallback
 5. On timeout → Check wallet balance
-   - If tokens gone → Treat as success
+   - If tokens gone → Treat as success (inferred exit)
    - If tokens remain → Retry
-6. Update position status
+6. Update position status + release capital
 7. Record to engrams
 ```
 
 ### Jupiter Rate Limit Handling
 
-**Added 2026-01-25** - Automatic retry with exponential backoff for Jupiter API rate limits.
+Automatic retry with exponential backoff for Jupiter API rate limits.
 
 ```
 Jupiter quote/swap request
@@ -765,6 +1281,49 @@ final = min(adjusted, max_position_sol)
 
 ---
 
+## On-Chain PnL Settlement
+
+**Files:** `src/execution/tx_settlement.rs`, `src/helius/client.rs`
+
+After each confirmed buy or sell transaction, the system fetches actual on-chain data via Solana's `getTransaction` RPC (Helius) to compute exact PnL:
+
+```
+1. Transaction confirmed → get signature
+2. Call getTransaction (up to 3 retries, 2s delay between)
+3. Find wallet pubkey in transaction accountKeys
+4. Compute SOL delta = postBalances[wallet_idx] - preBalances[wallet_idx]
+5. Use SOL delta as realized PnL (includes all fees, slippage, priority fees)
+6. Record gas_lamports from transaction meta fee field
+```
+
+### Settlement Sources
+
+| Source | Meaning |
+|--------|---------|
+| `onchain` | Used actual `getTransaction` data — PnL is exact |
+| `estimated` | RPC failed or unavailable — PnL uses estimated price math |
+
+### Graceful Fallback
+
+If `getTransaction` fails after 3 retries (RPC down, transaction not indexed), the system falls back to the previous estimated PnL calculation (`effective_base * pnl_percent`). Trade records are never blocked on settlement resolution.
+
+### Gas Tracking
+
+Both buy and sell gas costs (transaction fees in lamports) are persisted:
+- `entry_gas_lamports` — gas paid on the buy transaction
+- `exit_gas_lamports` — gas paid on the sell transaction
+- `total_gas_sol` — aggregated in PnL summary for the UI
+
+### DB Columns (migration 015)
+
+```sql
+ALTER TABLE arb_trades ADD COLUMN entry_gas_lamports BIGINT;
+ALTER TABLE arb_trades ADD COLUMN exit_gas_lamports BIGINT;
+ALTER TABLE arb_trades ADD COLUMN pnl_source TEXT DEFAULT 'estimated';
+```
+
+---
+
 ## Wallet Reconciliation
 
 **File:** `src/execution/position_manager.rs`
@@ -845,6 +1404,12 @@ just dev-mac "no-scan no-snipe"  # Without both
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ARB_SCANNER_AUTO_START` | true | Auto-start scanner |
+| `ARBFARM_ENABLE_EXECUTOR` | 0 | Enable autonomous executor |
+| `ARBFARM_SNIPER_ENTRY` | 0 | Enable sniper buy entries |
+| `ARBFARM_COPY_TRADING` | 0 | Enable KOL copy trading |
+| `ARBFARM_DISABLE_SNIPER` | 0 | Disable sniper entirely |
+| `PUMP_FUN_API_URL` | `https://frontend-api-v3.pump.fun` | pump.fun API for bulk scanning |
+| `DEXSCREENER_API_URL` | `https://api.dexscreener.com/latest/dex` | DexScreener API for token info |
 | `/tmp/arb-no-scan` | - | Sentinel to disable scanner |
 | `/tmp/arb-no-snipe` | - | Sentinel to disable sniper |
 
@@ -854,18 +1419,21 @@ just dev-mac "no-scan no-snipe"  # Without both
 
 ### Fully Implemented
 
-- Bonding curve scanner
 - Graduation sniper (pre/post-grad)
+- Pluggable strategy factory (BehavioralStrategy trait + StrategyRegistry)
 - Raydium Trade API integration (post-graduation sells)
 - Position manager with P&L tracking
 - Position monitor with adaptive exits
 - Strategy isolation (per-strategy budgets + position tracking)
-- Strategy-specific exit configs (scanner vs sniper)
 - Tiered exit strategy
 - Momentum-based exits (with API toggle)
 - Risk management
 - Engrams integration
 - Dead token salvage
+
+### WIP
+
+- KOL Copy Trading (infrastructure wired, strategy registration disabled)
 
 ### Stubbed (Warnings Expected)
 

@@ -12,6 +12,8 @@ use crate::engrams::client::EngramsClient;
 use crate::error::{AppError, AppResult};
 use crate::events::{ArbEvent, AgentType, EventSource};
 use crate::execution::{CurveBuyParams, CurveSellParams, CurveTransactionBuilder, PositionManager};
+use crate::execution::position_command::{CommandSource, ExitCommand, PositionCommand};
+use crate::execution::position_manager::{ExitReason, ExitSignal, ExitUrgency};
 use crate::helius::HeliusSender;
 use crate::models::Signal;
 use crate::wallet::DevWalletSigner;
@@ -33,7 +35,7 @@ pub struct CopyExecutorConfig {
 impl Default for CopyExecutorConfig {
     fn default() -> Self {
         Self {
-            enabled: true,
+            enabled: false, // OFF by default for observation mode
             default_copy_percentage: 0.5,
             max_position_sol: 0.5,
             min_trust_score: 60.0,
@@ -82,6 +84,7 @@ pub struct CopyTradeExecutor {
     position_manager: Arc<PositionManager>,
     engrams_client: Arc<EngramsClient>,
     event_tx: broadcast::Sender<ArbEvent>,
+    command_tx: tokio::sync::mpsc::Sender<PositionCommand>,
     config: Arc<RwLock<CopyExecutorConfig>>,
     default_wallet: String,
     rate_limiter: Arc<RwLock<RateLimiter>>,
@@ -97,6 +100,7 @@ impl CopyTradeExecutor {
         position_manager: Arc<PositionManager>,
         engrams_client: Arc<EngramsClient>,
         event_tx: broadcast::Sender<ArbEvent>,
+        command_tx: tokio::sync::mpsc::Sender<PositionCommand>,
         default_wallet: String,
     ) -> Self {
         Self {
@@ -107,6 +111,7 @@ impl CopyTradeExecutor {
             position_manager,
             engrams_client,
             event_tx,
+            command_tx,
             config: Arc::new(RwLock::new(CopyExecutorConfig::default())),
             default_wallet,
             rate_limiter: Arc::new(RwLock::new(RateLimiter::default())),
@@ -511,139 +516,36 @@ impl CopyTradeExecutor {
             }
         }
 
-        // Position still not closed after timeout - force direct sell with emergency slippage
         tracing::warn!(
             kol_id = %kol_id,
             kol_trade_id = %kol_trade_id,
             token_mint = %token_mint,
             position_id = %position_id,
             timeout_secs = COPY_SELL_TIMEOUT_SECS,
-            "⚠️ Copy sell timeout - forcing direct market sell with emergency slippage"
+            "Copy sell timeout - queuing emergency exit command"
         );
 
-        // Force direct sell with maximum slippage tolerance
-        self.force_emergency_sell(token_mint, kol_id, position_id).await
-    }
-
-    async fn force_emergency_sell(
-        &self,
-        token_mint: &str,
-        kol_id: &Uuid,
-        position_id: Uuid,
-    ) -> AppResult<(Option<String>, bool)> {
-        const EMERGENCY_SLIPPAGE_BPS: u16 = 2500; // 25% - prioritize exit over profit
-
-        if !self.dev_signer.is_configured() {
-            return Err(AppError::Internal("Dev signer not configured for emergency sell".into()));
-        }
-
-        // Get actual token balance
-        let token_balance = self.curve_builder
-            .get_actual_token_balance(&self.default_wallet, token_mint)
-            .await
-            .unwrap_or(0);
-
-        if token_balance == 0 {
-            tracing::warn!(
-                kol_id = %kol_id,
-                token_mint = %token_mint,
-                "Emergency sell: no tokens to sell (may have been sold externally)"
-            );
-            // Mark position as closed since tokens are gone
-            let _ = self.position_manager.close_position(
-                position_id,
-                0.0,
-                0.0,
-                "CopySellForced-NoBalance",
-                None,
-                None, // No momentum data for forced close
-            ).await;
-            return Ok((None, true));
-        }
-
-        let sell_params = CurveSellParams {
-            mint: token_mint.to_string(),
-            token_amount: token_balance,
-            slippage_bps: EMERGENCY_SLIPPAGE_BPS,
-            user_wallet: self.default_wallet.clone(),
-        };
-
-        // Try curve sell first (pre-graduation), then DEX for graduated tokens
-        let build_result = match self.curve_builder.build_pump_fun_sell(&sell_params).await {
-            Ok(result) => result,
-            Err(curve_err) => {
-                // Token may have graduated - try Raydium
-                tracing::info!(
-                    kol_id = %kol_id,
-                    token_mint = %token_mint,
-                    "Curve sell failed ({}), trying Raydium...",
-                    curve_err
-                );
-                match self.curve_builder.build_raydium_sell(&sell_params).await {
-                    Ok(raydium_result) => {
-                        super::curve_builder::CurveBuildResult {
-                            transaction_base64: raydium_result.transaction_base64,
-                            expected_tokens_out: None,
-                            expected_sol_out: Some(raydium_result.expected_sol_out),
-                            min_tokens_out: None,
-                            min_sol_out: None,
-                            price_impact_percent: raydium_result.price_impact_percent,
-                            fee_lamports: 0,
-                            compute_units: 200_000,
-                            priority_fee_lamports: 0,
-                        }
-                    }
-                    Err(raydium_err) => {
-                        return Err(AppError::Execution(format!(
-                            "Emergency sell failed: curve={}, raydium={}",
-                            curve_err, raydium_err
-                        )));
-                    }
-                }
-            }
-        };
-
-        let sign_request = SignRequest {
-            transaction_base64: build_result.transaction_base64.clone(),
-            estimated_amount_lamports: build_result.expected_sol_out.unwrap_or(0) as u64,
-            estimated_profit_lamports: None,
-            edge_id: None,
-            description: format!("EMERGENCY copy sell {} for KOL {}", token_mint, kol_id),
-        };
-
-        let sign_result = self.dev_signer.sign_transaction(sign_request).await?;
-
-        if !sign_result.success {
-            return Err(AppError::Execution(
-                sign_result.error.unwrap_or_else(|| "Emergency signing failed".to_string())
-            ));
-        }
-
-        let signed_tx = sign_result.signed_transaction_base64
-            .ok_or_else(|| AppError::Execution("No signed transaction for emergency sell".into()))?;
-
-        let signature = self.helius_sender.send_and_confirm(&signed_tx, std::time::Duration::from_secs(60)).await
-            .map_err(|e| AppError::Execution(format!("Emergency send failed: {}", e)))?;
-
-        tracing::info!(
-            kol_id = %kol_id,
-            token_mint = %token_mint,
-            position_id = %position_id,
-            signature = %signature,
-            "🔥 Emergency copy sell executed"
-        );
-
-        // Close position in tracking
-        let _ = self.position_manager.close_position(
+        let signal = ExitSignal {
             position_id,
-            0.0, // Price not known precisely
-            0.0, // PnL calculated separately
-            "CopySellForced",
-            Some(signature.clone()),
-            None, // No momentum data for forced close
-        ).await;
+            reason: ExitReason::CopyTradeSell,
+            exit_percent: 100.0,
+            current_price: 0.0,
+            triggered_at: chrono::Utc::now(),
+            urgency: ExitUrgency::Critical,
+        };
 
-        Ok((Some(signature), true))
+        let cmd = PositionCommand::Exit(ExitCommand::new(signal, CommandSource::CopyTradeEmergency));
+        if let Err(e) = self.command_tx.send(cmd).await {
+            tracing::error!(
+                kol_id = %kol_id,
+                position_id = %position_id,
+                "Failed to queue emergency exit command: {}",
+                e
+            );
+            return Err(AppError::Internal(format!("Failed to queue emergency exit: {}", e)));
+        }
+
+        Ok((None, true))
     }
 
     async fn emit_copy_event(&self, result: &CopyTradeResult, success: bool) {
@@ -665,7 +567,7 @@ impl CopyTradeExecutor {
             }),
         );
 
-        let _ = self.event_tx.send(event);
+        crate::events::broadcast_event(&self.event_tx, event);
     }
 
     fn extract_kol_id(&self, signal: &Signal) -> AppResult<Uuid> {

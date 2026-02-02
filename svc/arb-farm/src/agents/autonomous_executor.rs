@@ -7,13 +7,14 @@ use uuid::Uuid;
 
 use crate::agents::StrategyEngine;
 use crate::consensus::{ConsensusConfig, ConsensusEngine, format_edge_context};
+use crate::database::TradeRepository;
 use crate::engrams::client::EngramsClient;
 use crate::engrams::schemas::{TransactionSummary, TransactionAction, TransactionMetadata, ExecutionError, ExecutionErrorType, ErrorContext};
 use crate::error::{AppError, AppResult};
-use crate::events::{edge as edge_topics, kol as kol_topics, ArbEvent, AgentType, EventSource};
+use crate::events::{edge as edge_topics, kol as kol_topics, topics::position as position_topics, ArbEvent, AgentType, EventSource};
 use crate::execution::{CurveBuyParams, CurveTransactionBuilder, ExitConfig, PositionManager, CopyTradeExecutor};
 use crate::execution::risk::RiskConfig;
-use crate::helius::HeliusSender;
+use crate::helius::{HeliusClient, HeliusSender};
 use crate::models::Signal;
 use crate::wallet::DevWalletSigner;
 use crate::wallet::turnkey::SignRequest;
@@ -116,6 +117,8 @@ pub struct AutonomousExecutor {
     recent_mints: Arc<RwLock<HashMap<String, DateTime<Utc>>>>,
     stats: Arc<RwLock<AutoExecutorStats>>,
     is_running: Arc<RwLock<bool>>,
+    trade_repo: Option<Arc<TradeRepository>>,
+    helius_client: Option<Arc<HeliusClient>>,
     default_wallet: String,
     default_slippage_bps: u16,
     copy_executor: Arc<RwLock<Option<Arc<CopyTradeExecutor>>>>,
@@ -156,6 +159,8 @@ impl AutonomousExecutor {
                 is_running: false,
             })),
             is_running: Arc::new(RwLock::new(false)),
+            trade_repo: None,
+            helius_client: None,
             default_wallet,
             default_slippage_bps: 500,
             copy_executor: Arc::new(RwLock::new(None)),
@@ -166,6 +171,14 @@ impl AutonomousExecutor {
         let mut ce = self.copy_executor.write().await;
         *ce = Some(executor);
         tracing::info!("🔗 Autonomous executor: Copy trade executor connected");
+    }
+
+    pub fn set_trade_repo(&mut self, repo: Arc<TradeRepository>) {
+        self.trade_repo = Some(repo);
+    }
+
+    pub fn set_helius_client(&mut self, client: Arc<HeliusClient>) {
+        self.helius_client = Some(client);
     }
 
     pub async fn start(&self) {
@@ -199,6 +212,8 @@ impl AutonomousExecutor {
         let recent_mints = self.recent_mints.clone();
         let stats = self.stats.clone();
         let is_running = self.is_running.clone();
+        let trade_repo = self.trade_repo.clone();
+        let helius_client = self.helius_client.clone();
         let default_wallet = self.default_wallet.clone();
         let default_slippage_bps = self.default_slippage_bps;
         let copy_executor = self.copy_executor.clone();
@@ -251,6 +266,8 @@ impl AutonomousExecutor {
                                         &executions,
                                         &recent_mints,
                                         &stats,
+                                        &trade_repo,
+                                        &helius_client,
                                         &default_wallet,
                                         default_slippage_bps,
                                     ).await {
@@ -324,6 +341,8 @@ impl AutonomousExecutor {
         executions: &Arc<RwLock<HashMap<Uuid, AutoExecutionRecord>>>,
         recent_mints: &Arc<RwLock<HashMap<String, DateTime<Utc>>>>,
         stats: &Arc<RwLock<AutoExecutorStats>>,
+        trade_repo: &Option<Arc<TradeRepository>>,
+        helius_client: &Option<Arc<HeliusClient>>,
         default_wallet: &str,
         default_slippage_bps: u16,
     ) -> AppResult<()> {
@@ -782,15 +801,32 @@ impl AutonomousExecutor {
             }),
         )).await;
 
-        let result = Self::execute_curve_buy(
-            &mint,
-            sol_amount_lamports,
-            default_slippage_bps,
-            default_wallet,
-            curve_builder,
-            dev_signer,
-            helius_sender,
-        ).await;
+        let is_raydium_snipe = route_data.get("signal_source")
+            .and_then(|v| v.as_str())
+            .map(|s| s == "raydium_snipe")
+            .unwrap_or(false);
+
+        let result = if is_raydium_snipe {
+            Self::execute_post_graduation_buy(
+                &mint,
+                sol_amount_lamports,
+                default_slippage_bps,
+                default_wallet,
+                curve_builder,
+                dev_signer,
+                helius_sender,
+            ).await
+        } else {
+            Self::execute_curve_buy(
+                &mint,
+                sol_amount_lamports,
+                default_slippage_bps,
+                default_wallet,
+                curve_builder,
+                dev_signer,
+                helius_sender,
+            ).await
+        };
 
         match result {
             Ok((signature, tokens_out)) => {
@@ -852,24 +888,33 @@ impl AutonomousExecutor {
                     let entry_price = sol_amount_lamports as f64 / tokens_received as f64;
                     // DEFENSIVE MODE (default): 15% TP, strong momentum can run
                     // All strategies now use defensive config for capital preservation
-                    let exit_config = ExitConfig::for_defensive();
+                    let exit_config = if is_raydium_snipe {
+                        ExitConfig::for_raydium_snipe()
+                    } else {
+                        ExitConfig::for_defensive()
+                    };
+                    let config_label = if is_raydium_snipe {
+                        "RAYDIUM SNIPE (15% SL, 30% TP, 5 min fast flip)"
+                    } else {
+                        "DEFENSIVE (15% TP, strong momentum extends)"
+                    };
                     tracing::info!(
                         edge_id = %edge_id,
                         strategy_type = %strategy.strategy_type,
-                        "🛡️ Using DEFENSIVE exit config (15% TP, strong momentum extends)"
+                        "🛡️ Using {} exit config", config_label
                     );
 
                     let venue = route_data.get("venue")
                         .and_then(|v| v.as_str())
                         .map(|s| s.to_string())
-                        .or_else(|| Some("pump_fun".to_string()));
+                        .or_else(|| if is_raydium_snipe { Some("raydium".to_string()) } else { Some("pump_fun".to_string()) });
                     let signal_src = if signal_source.is_empty() {
                         None
                     } else {
                         Some(signal_source.to_string())
                     };
-                    let is_snipe = signal_source == "graduation_sniper";
-                    let snipe_indicator = if is_snipe { "🔫 " } else { "" };
+                    let is_snipe = signal_source == "graduation_sniper" || signal_source == "raydium_snipe";
+                    let snipe_indicator = if signal_source == "raydium_snipe" { "🎓 " } else if is_snipe { "🔫 " } else { "" };
 
                     if let Err(e) = position_manager.open_position(
                         edge_id,
@@ -898,6 +943,21 @@ impl AutonomousExecutor {
                             is_snipe = is_snipe,
                             "{}📊 Position opened for tracking", snipe_indicator
                         );
+
+                        send_critical_event(&event_tx, ArbEvent::new(
+                            "position_opened",
+                            EventSource::Agent(AgentType::Executor),
+                            position_topics::OPENED,
+                            serde_json::json!({
+                                "edge_id": edge_id.to_string(),
+                                "mint": mint,
+                                "symbol": token_symbol,
+                                "sol_amount": sol_amount_lamports as f64 / 1e9,
+                                "entry_price": entry_price,
+                                "signal_source": signal_source,
+                                "strategy_type": strategy.strategy_type,
+                            }),
+                        )).await;
                     }
 
                     // Save buy transaction summary to engrams
@@ -928,6 +988,41 @@ impl AutonomousExecutor {
                         tracing::warn!("Failed to save buy transaction summary engram: {}", e);
                     } else {
                         tracing::debug!("📝 Saved buy transaction summary engram for {}", &signature[..12.min(signature.len())]);
+                    }
+
+                    let buy_settlement = if let Some(ref hc) = helius_client {
+                        let s = crate::execution::tx_settlement::resolve_settlement(hc, &signature, default_wallet).await;
+                        Some(s)
+                    } else {
+                        None
+                    };
+
+                    if let Some(repo) = trade_repo {
+                        let entry_price_decimal = rust_decimal::Decimal::try_from(entry_price).ok();
+                        let trade_record = crate::database::CreateTradeRecord {
+                            edge_id: Some(edge_id),
+                            strategy_id: Some(strategy_id),
+                            tx_signature: Some(signature.clone()),
+                            bundle_id: None,
+                            entry_price: entry_price_decimal,
+                            exit_price: None,
+                            profit_lamports: None,
+                            gas_cost_lamports: buy_settlement.as_ref().map(|s| s.gas_lamports as i64),
+                            slippage_bps: Some(default_slippage_bps as i32),
+                            entry_gas_lamports: buy_settlement.as_ref().map(|s| s.gas_lamports as i64),
+                            exit_gas_lamports: None,
+                            pnl_source: Some(buy_settlement.as_ref().map(|s| s.source.to_string()).unwrap_or_else(|| "estimated".to_string())),
+                        };
+                        if let Err(e) = repo.create(trade_record).await {
+                            tracing::warn!("Failed to save buy trade record to DB: {}", e);
+                        } else {
+                            tracing::debug!(
+                                "Saved buy trade record to arb_trades for edge {} (gas: {} lamports, source: {})",
+                                edge_id,
+                                buy_settlement.as_ref().map(|s| s.gas_lamports).unwrap_or(0),
+                                buy_settlement.as_ref().map(|s| s.source).unwrap_or("estimated"),
+                            );
+                        }
                     }
                 }
 
@@ -1067,6 +1162,67 @@ impl AutonomousExecutor {
         Ok((signature, build_result.expected_tokens_out))
     }
 
+    async fn execute_post_graduation_buy(
+        mint: &str,
+        sol_amount_lamports: u64,
+        slippage_bps: u16,
+        user_wallet: &str,
+        curve_builder: &Arc<CurveTransactionBuilder>,
+        dev_signer: &Arc<DevWalletSigner>,
+        helius_sender: &Arc<HeliusSender>,
+    ) -> AppResult<(String, Option<u64>)> {
+        tracing::info!(
+            mint = %mint,
+            sol = sol_amount_lamports as f64 / 1e9,
+            "🎓 Building post-graduation Jupiter buy"
+        );
+
+        let jupiter_api_url = std::env::var("JUPITER_API_URL")
+            .unwrap_or_else(|_| "https://lite-api.jup.ag/swap/v1".to_string());
+
+        let build_result = curve_builder.build_post_graduation_buy(
+            mint,
+            sol_amount_lamports,
+            slippage_bps,
+            user_wallet,
+            &jupiter_api_url,
+        ).await?;
+
+        tracing::debug!(
+            mint = %mint,
+            expected_tokens = build_result.expected_tokens_out,
+            price_impact = build_result.price_impact_percent,
+            route = %build_result.route_label,
+            "Post-graduation TX built, signing..."
+        );
+
+        let sign_request = SignRequest {
+            transaction_base64: build_result.transaction_base64.clone(),
+            estimated_amount_lamports: sol_amount_lamports,
+            estimated_profit_lamports: None,
+            edge_id: None,
+            description: format!("Post-graduation buy: {} for {} SOL (Jupiter)", mint, sol_amount_lamports as f64 / 1e9),
+        };
+
+        let sign_result = dev_signer.sign_transaction(sign_request).await?;
+
+        if !sign_result.success {
+            return Err(AppError::Internal(format!(
+                "Signing failed: {}",
+                sign_result.error.unwrap_or_else(|| "Unknown error".to_string())
+            )));
+        }
+
+        let signed_tx = sign_result.signed_transaction_base64
+            .ok_or_else(|| AppError::Internal("No signed transaction returned".into()))?;
+
+        tracing::debug!(mint = %mint, "Post-graduation TX signed, submitting...");
+
+        let signature = helius_sender.send_transaction(&signed_tx, true).await?;
+
+        Ok((signature, Some(build_result.expected_tokens_out)))
+    }
+
     async fn handle_kol_trade(
         event: &ArbEvent,
         copy_executor: &Arc<RwLock<Option<Arc<CopyTradeExecutor>>>>,
@@ -1193,8 +1349,10 @@ pub fn spawn_autonomous_executor(
     consensus_config: Arc<RwLock<ConsensusConfig>>,
     event_tx: broadcast::Sender<ArbEvent>,
     default_wallet: String,
+    trade_repo: Option<Arc<TradeRepository>>,
+    helius_client: Option<Arc<HeliusClient>>,
 ) -> Arc<AutonomousExecutor> {
-    Arc::new(AutonomousExecutor::new(
+    let mut executor = AutonomousExecutor::new(
         strategy_engine,
         curve_builder,
         dev_signer,
@@ -1206,7 +1364,14 @@ pub fn spawn_autonomous_executor(
         consensus_config,
         event_tx,
         default_wallet,
-    ))
+    );
+    if let Some(repo) = trade_repo {
+        executor.set_trade_repo(repo);
+    }
+    if let Some(client) = helius_client {
+        executor.set_helius_client(client);
+    }
+    Arc::new(executor)
 }
 
 pub fn start_autonomous_executor(executor: Arc<AutonomousExecutor>) {

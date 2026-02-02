@@ -41,19 +41,18 @@ fn default_time_limit() -> u32 { 5 }       // DEFENSIVE: 5 min
 
 impl Default for RiskConfig {
     fn default() -> Self {
-        // DEFENSIVE config - 15% TP, strong momentum can run
         Self {
-            max_position_sol: 0.08,             // 0.08 SOL per position
-            daily_loss_limit_sol: 1.0,          // 1 SOL daily loss limit
-            max_drawdown_percent: 10.0,         // DEFENSIVE: 10% tight stop loss
-            max_concurrent_positions: 10,       // 10 concurrent positions
-            max_position_per_token_sol: 0.08,   // Same as max_position
+            max_position_sol: 2.0,
+            daily_loss_limit_sol: 5.0,
+            max_drawdown_percent: 10.0,
+            max_concurrent_positions: 2,
+            max_position_per_token_sol: 2.0,
             cooldown_after_loss_ms: 5000,
             volatility_scaling_enabled: true,
             auto_pause_on_drawdown: true,
-            take_profit_percent: 15.0,          // DEFENSIVE: 15% TP (strong momentum extends)
-            trailing_stop_percent: 8.0,         // DEFENSIVE: 8% trailing stop
-            time_limit_minutes: 5,              // DEFENSIVE: 5 min
+            take_profit_percent: 15.0,
+            trailing_stop_percent: 8.0,
+            time_limit_minutes: 5,
         }
     }
 }

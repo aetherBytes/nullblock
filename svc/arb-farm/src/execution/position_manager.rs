@@ -273,54 +273,66 @@ impl ExitConfig {
         Self {
             base_currency: BaseCurrency::Sol,
             exit_mode: ExitMode::Default,
-            stop_loss_percent: Some(40.0),      // -40% stop loss (allow curve volatility)
-            take_profit_percent: Some(50.0),    // +50% base TP (conservative default)
-            trailing_stop_percent: Some(20.0),  // 20% trailing stop for moon bag
-            time_limit_minutes: Some(15),       // 15 min - let winners run
+            stop_loss_percent: Some(25.0),
+            take_profit_percent: Some(30.0),
+            trailing_stop_percent: Some(12.0),
+            time_limit_minutes: Some(10),
             partial_take_profit: Some(PartialTakeProfit {
-                first_target_percent: 50.0,     // 50% - sell 50% to recover capital faster
+                first_target_percent: 20.0,
                 first_exit_percent: 50.0,
-                second_target_percent: 100.0,   // 2x - sell 25% more if momentum holds
+                second_target_percent: 40.0,
                 second_exit_percent: 25.0,
             }),
             custom_exit_instructions: None,
             momentum_adaptive: Some(MomentumAdaptiveConfig::default()),
             adaptive_partial_tp: Some(AdaptivePartialTakeProfit {
-                first_target_percent: 50.0,     // 50% first target (conservative)
-                first_exit_percent: 50.0,       // Sell 50% to lock in gains
-                second_target_percent: 100.0,   // 2x second target (if momentum holds)
-                second_exit_percent: 25.0,      // Sell 25% more
-                third_target_percent: 150.0,    // Extended target for strong momentum
-                third_exit_percent: 100.0,      // Exit remaining on extended target
-                enable_extended_targets: true,  // Strong momentum can ride higher
+                first_target_percent: 20.0,
+                first_exit_percent: 50.0,
+                second_target_percent: 40.0,
+                second_exit_percent: 25.0,
+                third_target_percent: 80.0,
+                third_exit_percent: 100.0,
+                enable_extended_targets: true,
             }),
         }
     }
 
-    /// Exit config optimized for bonding curve (pump.fun/moonshot) trading
-    /// TIERED EXIT STRATEGY (2026 best practices):
-    /// - Phase 1: At 2x (100% gain) - sell 50% to recover initial capital
-    /// - Phase 2: At 150% (pre-migration) - sell 25% to lock in profits
-    /// - Phase 3: Trailing stop on remaining 25% "moon bag"
-    /// - Stop loss at 40% to handle curve volatility (increased from 30% per LLM consensus)
-    /// - Time limit extended to allow winners to run
-    /// - Momentum tracking enabled to adapt exits dynamically
+    pub fn for_raydium_snipe() -> Self {
+        Self {
+            base_currency: BaseCurrency::Sol,
+            exit_mode: ExitMode::Default,
+            stop_loss_percent: Some(15.0),
+            take_profit_percent: Some(30.0),
+            trailing_stop_percent: Some(10.0),
+            time_limit_minutes: Some(5),
+            partial_take_profit: Some(PartialTakeProfit {
+                first_target_percent: 20.0,
+                first_exit_percent: 60.0,
+                second_target_percent: 30.0,
+                second_exit_percent: 100.0,
+            }),
+            custom_exit_instructions: None,
+            momentum_adaptive: None,
+            adaptive_partial_tp: None,
+        }
+    }
+
     pub fn for_curve_bonding() -> Self {
         Self {
             base_currency: BaseCurrency::Sol,
             exit_mode: ExitMode::Default,
-            stop_loss_percent: Some(40.0),      // -40% stop loss (allow curve volatility, increased from 30%)
-            take_profit_percent: Some(100.0),   // +100% (2x) - first major TP target
-            trailing_stop_percent: Some(20.0),  // 20% trailing stop for moon bag
-            time_limit_minutes: Some(15),       // 15 min - extended to let winners run
+            stop_loss_percent: Some(25.0),
+            take_profit_percent: Some(50.0),
+            trailing_stop_percent: Some(12.0),
+            time_limit_minutes: Some(10),
             partial_take_profit: Some(PartialTakeProfit {
-                first_target_percent: 100.0,    // 2x - sell 50% to recover capital
+                first_target_percent: 25.0,
                 first_exit_percent: 50.0,
-                second_target_percent: 150.0,   // Pre-migration - sell 25%
+                second_target_percent: 50.0,
                 second_exit_percent: 25.0,
             }),
             custom_exit_instructions: None,
-            momentum_adaptive: Some(MomentumAdaptiveConfig::default()),  // Enable momentum tracking
+            momentum_adaptive: Some(MomentumAdaptiveConfig::default()),
             adaptive_partial_tp: Some(AdaptivePartialTakeProfit::default()),
         }
     }
@@ -885,12 +897,12 @@ pub struct AdaptivePartialTakeProfit {
 impl Default for AdaptivePartialTakeProfit {
     fn default() -> Self {
         Self {
-            first_target_percent: 100.0,  // 2x = recover initial capital
-            first_exit_percent: 50.0,     // Sell 50% to lock in breakeven
-            second_target_percent: 150.0, // Pre-migration level (near curve completion)
-            second_exit_percent: 25.0,    // Sell 25% more, keep 25% moon bag
-            third_target_percent: 300.0,  // Extended moon target (3x+)
-            third_exit_percent: 100.0,    // Exit remaining on extended target or trailing stop
+            first_target_percent: 25.0,
+            first_exit_percent: 50.0,
+            second_target_percent: 50.0,
+            second_exit_percent: 25.0,
+            third_target_percent: 100.0,
+            third_exit_percent: 100.0,
             enable_extended_targets: true,
         }
     }
@@ -1651,8 +1663,7 @@ impl PositionManager {
             }
         }
 
-        // Tighter exit thresholds when in significant profit - protect gains (only at 10%+ to avoid false exits)
-        if position.unrealized_pnl_percent > 10.0 {
+        if position.unrealized_pnl_percent > 8.0 {
             // Exit if velocity turns strongly negative while profitable (requires stronger reversal confirmation)
             // Require: velocity < -0.5 (actual decline), decay_count >= 3 (sustained), momentum_score < -10 (confirmed negative)
             if position.momentum.velocity < -0.5
@@ -1686,15 +1697,13 @@ impl PositionManager {
             };
             let pnl_drop_from_peak = peak_pnl_percent - position.unrealized_pnl_percent;
 
-            // Exit if dropped 6% from peak while still profitable (was 3%, allow more volatility)
-            // Only trigger if we're still above 4% profit (above break-even after costs)
-            if pnl_drop_from_peak > 6.0 && position.unrealized_pnl_percent > 4.0 {
+            if pnl_drop_from_peak > 5.0 && position.unrealized_pnl_percent > 3.0 {
                 tracing::info!(
                     position_id = %position_id,
                     current_pnl = position.unrealized_pnl_percent,
                     peak_pnl = peak_pnl_percent,
                     drop = pnl_drop_from_peak,
-                    "📉 Dropped 6%+ from peak profit - exiting to protect gains"
+                    "📉 Dropped 5%+ from peak profit - exiting to protect gains"
                 );
                 position.status = PositionStatus::PendingExit;
                 return Some(ExitSignal {
@@ -1708,16 +1717,13 @@ impl PositionManager {
             }
         }
 
-        // NEW: Exit if momentum is slowing AND we're profitable after fees
-        // This captures profits on positions where TP won't be reached but we're still in the green
-        // Fees: ~1% entry + ~1% exit + ~1-2% slippage = ~4% break-even
-        let profitable_after_fees = position.unrealized_pnl_percent > 5.0;
-        let momentum_slowing = position.momentum.velocity < 0.5  // Not strongly positive
-            && (position.momentum.momentum_decay_count >= 3     // Some decay observed (was 2, reduced sensitivity 30%)
-                || position.momentum.velocity.abs() < 0.3       // Velocity stalled
-                || position.momentum.consecutive_negative_readings >= 2); // Recent negatives
+        let profitable_after_fees = position.unrealized_pnl_percent > 4.0;
+        let momentum_slowing = position.momentum.velocity < 0.5
+            && (position.momentum.momentum_decay_count >= 3
+                || position.momentum.velocity.abs() < 0.3
+                || position.momentum.consecutive_negative_readings >= 2);
 
-        if profitable_after_fees && momentum_slowing && hold_time_mins >= 3 {
+        if profitable_after_fees && momentum_slowing && hold_time_mins >= 2 {
             tracing::info!(
                 position_id = %position_id,
                 pnl_pct = position.unrealized_pnl_percent,

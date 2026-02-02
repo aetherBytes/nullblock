@@ -139,16 +139,17 @@ Von Neumann-class vessel AI. Default model: `cognitivecomputations/dolphin3.0-mi
 | `/mcp/*` | MCP Protocol (2025-11-25) |
 | `/a2a/*` | A2A Protocol |
 
-## ArbFarm Production Status (Audit: 2026-01-25)
+## ArbFarm Development Status (Audit: 2026-02-01)
 
-**Overall**: 100% Production Ready (all blocking issues resolved)
+**Mode**: LOCAL DEVELOPMENT / PRE-PRODUCTION
+**Overall**: LOCAL DEV READY — all code compiles, all features functional, production deployment blocked on security hardening
 
-### Implemented (Live Trading Ready)
+### Implemented (Core Trading Logic)
 - ✅ Exit transactions saved to engrams (buy AND sell tracked)
 - ✅ MCP tool annotations (97 tools with readOnlyHint/destructiveHint/idempotentHint)
 - ✅ A2A tags exposed (`arbFarm.learning` on 6 learning tools)
 - ✅ Wallet funding validated at startup (blocks if < 0.05 SOL)
-- ✅ Position monitor auto-starts with curve support + engrams
+- ✅ Position monitor (detection) + position executor (sell execution) auto-start with curve support + engrams
 - ✅ Frontend service methods deduplicated
 - ✅ Momentum exits fully implemented (position_manager.rs:1403-1500)
 - ✅ Copy trading fully wired (webhooks.rs → kol_topics::TRADE_DETECTED → autonomous_executor)
@@ -170,17 +171,63 @@ Von Neumann-class vessel AI. Default model: `cognitivecomputations/dolphin3.0-mi
 - ✅ Confident-only recommendation threshold (>=70 score)
 - ✅ Consolidated DB pools (30 connections)
 - ✅ Inferred exit signatures flagged in DB (is_inferred_exit column)
+- ✅ Position.opened event emitted on buy success (SSE-visible)
+- ✅ Token age filter (stale tokens >48h at >=85% progress skipped in scanner)
+- ✅ SSE-driven dashboard refresh (HomeTab no longer polls, reacts to SSE events)
+- ✅ Strategy labels on trades and positions (strategy_type, signal_source, venue persisted)
+- ✅ Webhook status indicators on behavioral strategies (Standby/Connected badges)
+- ✅ signal_source and venue columns persisted to arb_positions (migration 016)
+- ✅ RwLock poison safety in threat module (all unwraps replaced with safe fallbacks)
+- ✅ Semaphore error handling in sell-all handler (no more panic on acquire failure)
+- ✅ DB health check at startup (SELECT 1 with retry before accepting traffic)
+- ✅ ALERTS_STORE capped at 10K entries with oldest-first eviction
+- ✅ Strategy update failures logged (no more silent config loss)
+- ✅ SSE reconnection backoff (exponential backoff prevents tight reconnect loops)
+- ✅ WebSocket broadcast failures logged in laserstream (all 5 silent `let _ =` replaced)
+- ✅ DB connection pool retry with exponential backoff (3 retries: 1s/2s/4s)
+- ✅ SSE refresh race guard (skips fetchData during user actions: sell, sell-all, reconcile)
+- ✅ Tmuxinator DATABASE_URL fixed (was pointing to Erebus DB, now points to Agents DB)
+- ✅ `just migrate` includes ArbFarm migrations (scripts/migrate-arbfarm.sh added as Step 3)
+
+### Known Issues — Fix Before Production Deployment
+
+These issues are acceptable for local development but MUST be resolved before deploying with real capital:
+
+| # | Issue | Severity | Why Deferred |
+|---|-------|----------|-------------|
+| P1 | API endpoints unauthenticated (wallet spoofing via x-wallet-address header) | CRITICAL | Local only — no external access |
+| P2 | CORS allows any origin (`tower_http::cors::Any`) | CRITICAL | Local only — restrict to prod domain on deploy |
+| P3 | Private keys / API keys in .env.dev (git-tracked) | CRITICAL | Dev keys only — rotate all keys before production, purge git history |
+| P4 | HTTP endpoints not rate limited | HIGH | Local only — add Tower rate limiting middleware on deploy |
+| P5 | No simulation before execute_edge_auto (buy without preflight) | HIGH | Add simulateTransaction call before real capital |
+| P6 | No capital re-verification at execution time (race between check and TX) | HIGH | Re-check balance/allocation at TX submission |
+| P7 | Emergency kill switch not prominent in UI | MEDIUM | Add top-level emergency stop button |
+| P8 | Migrations not fully idempotent (ALTER TABLE without guards) | MEDIUM | Wrap in IF EXISTS checks |
+| P9 | No auto migration runner at startup | MEDIUM | Add sqlx::migrate!() or document manual step |
+
+### Audit False Alarms (Verified OK)
+- Jito timeout — already has comprehensive Helius fallback (position_executor.rs:696-730)
+- Exit queue unbounded — actually uses bounded mpsc channel, not Vec (position_executor.rs:50-67)
+- Position persistence — correctly does DB-first, aborts on DB failure (position_manager.rs:1224-1236)
 
 ### Startup Safety Defaults (Automated Trading OFF)
-All automated trading is **disabled by default** on every restart. Enable via UI or env vars:
+All automated trading is **disabled by default** on every restart. The system starts in **OBSERVATION MODE**:
+- All scanners/strategies active (find and display opportunities)
+- All execution disabled (no buys, sells on existing positions only)
+
+Enable execution via UI or env vars:
 
 | Component | Default | Enable With |
 |-----------|---------|-------------|
 | Scanner | ON | Always runs (displays opportunities) |
 | Execution Engine | OFF | `ARBFARM_ENABLE_EXECUTOR=1` or UI toggle |
-| Graduation Sniper | OFF | `ARBFARM_ENABLE_SNIPER=1` or UI toggle |
-| Volume Hunter | OFF | `ARBFARM_ENABLE_VOLUME_HUNTER=1` |
-| Position Monitor | ON | Always runs (tracks existing positions) |
+| Graduation Sniper | ON (observe only) | `ARBFARM_SNIPER_ENTRY=1` to enable buys |
+| Copy Trading | OFF | `ARBFARM_COPY_TRADING=1` to enable KOL copy |
+| Volume Hunter | ON (observe only) | Execution via Execution Engine |
+| Position Monitor | ON | Always runs (detects exit conditions, queues sells) |
+| Position Executor | ON | Always runs (executes queued sell transactions) |
+
+To disable sniper entirely (stop observing): `ARBFARM_ENABLE_SNIPER=0`
 
 This prevents accidental automated trading after service restarts.
 
@@ -199,11 +246,19 @@ These features are scaffolded but not implemented. Warnings are expected:
 - ❌ Research/DD Agent (Phase 6)
 - ❌ Threat Detection (Phase 8)
 
-### AWS Deployment TODO (KOL Copy Trading)
+### AWS Deployment TODO (Security + KOL Copy Trading)
 
-**Status:** Pending - requires public URL for Helius webhooks
+**Status:** LOCAL DEV ONLY — resolve P1-P9 above before deploying with real capital
 
-KOL copy trading requires Helius webhooks to push wallet activity to ArbFarm. This only works with a publicly accessible URL (not localhost).
+**Security hardening required before production:**
+1. Add auth middleware or restrict API to localhost/VPN (P1)
+2. Restrict CORS to production domain (P2)
+3. Rotate ALL API keys, purge from git history with BFG/filter-branch (P3)
+4. Add Tower rate limiting middleware on sensitive endpoints (P4)
+5. Add simulateTransaction preflight on buys (P5)
+6. Re-verify capital at TX submission time (P6)
+
+**KOL Copy Trading** requires public URL for Helius webhooks:
 
 **Setup Steps (do this when deploying to AWS):**
 
