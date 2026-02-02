@@ -73,6 +73,77 @@ curl -s -X POST "http://localhost:9007/mcp/call" \
 
 # Get consensus learning summary
 curl -s "http://localhost:9007/consensus/learning"
+
+# Get consensus scheduler status (check if analysis is running)
+curl -s "http://localhost:9007/consensus/scheduler"
+
+# Get PnL summary from positions DB (authoritative trade stats)
+curl -s "http://localhost:9007/positions/pnl-summary"
+
+# Get current risk config
+curl -s "http://localhost:9007/config/risk"
+
+# Get active strategies
+curl -s "http://localhost:9007/strategies"
+```
+
+### 1b. Staleness Check — Trigger Fresh LLM Analysis If Needed
+
+After fetching the data above, check if the consensus data is stale or empty. The analysis is stale if ANY of these conditions are true:
+
+1. **Pattern summary `created_at` is older than 1 hour** — check `consensus/patterns` response `summary.created_at`
+2. **Trade analyses count is 0** — check `consensus/trade-analyses` response `total == 0`
+3. **Recommendations count is 0** — check `consensus/recommendations` response `total == 0`
+4. **Trade count in PnL summary exceeds pattern summary's `trades_analyzed`** — significant new data exists that hasn't been analyzed
+
+If stale, trigger a fresh LLM consensus analysis via the MCP tool:
+
+```bash
+# Trigger fresh LLM consensus analysis with recent trade data
+# This queries multiple LLMs (Claude, GPT-4, Llama) to analyze recent trades
+# and generate per-trade root causes, pattern summaries, and config recommendations
+curl -s -X POST "http://localhost:9007/mcp/call" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"engram_request_analysis","arguments":{"analysis_type":"trade_review","time_period":"24h"}}'
+```
+
+**IMPORTANT**: After triggering the analysis, wait 30-60 seconds for the LLMs to respond, then re-fetch the stale endpoints:
+
+```bash
+# Wait for LLM analysis to complete
+sleep 45
+
+# Re-fetch trade analyses (should now have data)
+curl -s "http://localhost:9007/consensus/trade-analyses?limit=50"
+
+# Re-fetch pattern summary (should be updated)
+curl -s "http://localhost:9007/consensus/patterns"
+
+# Re-fetch recommendations (should have new ones)
+curl -s "http://localhost:9007/consensus/recommendations?limit=50"
+
+# Re-fetch analysis summary
+curl -s "http://localhost:9007/consensus/analysis-summary"
+```
+
+If the re-fetched data is STILL empty after triggering analysis, this likely means:
+- The OpenRouter API key is not configured (`OPENROUTER_API_KEY` env var)
+- All LLM models failed (check arb-farm logs for errors)
+- The consensus engine is disabled
+
+In this case, proceed with the analysis using ONLY the raw trade data from engrams and PnL summary. Note in the report that LLM consensus was unavailable and the analysis is based on raw trade metrics only.
+
+Also check if the consensus scheduler is enabled. If it's paused, mention it in the report so the user can re-enable it:
+
+```bash
+# Check scheduler status
+curl -s "http://localhost:9007/consensus/scheduler"
+# Response: {"scheduler_enabled": true/false, "last_queried": "..."}
+
+# Re-enable if paused
+curl -s -X POST "http://localhost:9007/consensus/scheduler" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true}'
 ```
 
 ### 2. Analyze the Data
@@ -200,12 +271,16 @@ Present findings in this format:
 
 ### Data Summary
 - Trades analyzed: X
-- Trade analyses stored: X
-- Win rate: X%
+- Trade analyses stored: X (from LLM consensus)
+- Win rate: X% (from /positions/pnl-summary)
 - Total PnL: X SOL
+- Today PnL: X SOL
 - Errors recorded: X
 - Pending recommendations: X
 - Web research engrams: X
+- Pattern summary age: X minutes (stale if >1h)
+- Consensus scheduler: enabled/paused
+- LLM analysis triggered: yes/no (if data was stale)
 
 ### Engrams Retrieved
 
@@ -336,11 +411,26 @@ The following endpoints are available for learning analysis:
 | Endpoint | Description |
 |----------|-------------|
 | `GET /consensus/trade-analyses?limit=N` | Per-trade LLM root cause analyses |
-| `GET /consensus/patterns` | Pattern summary (losing/winning/config recs) |
+| `GET /consensus/patterns` | Pattern summary (losing/winning/config recs) — check `created_at` for staleness |
 | `GET /consensus/analysis-summary` | Combined view with config + recent analyses |
 | `GET /consensus/recommendations?status=&limit=` | LLM consensus recommendations (filter by status) |
 | `PUT /consensus/recommendations/:id/status` | Update recommendation status |
 | `GET /consensus/learning` | Learning summary stats |
+| `GET /consensus/scheduler` | Scheduler status (enabled/paused, last_queried timestamp) |
+| `POST /consensus/scheduler` | Toggle scheduler `{"enabled": true/false}` |
+| `GET /positions/pnl-summary` | Authoritative PnL stats from DB (total_sol, wins, losses, recent_trades) |
+| `GET /config/risk` | Current global risk config (SL, TP, position size, etc.) |
+| `GET /strategies` | Active DB strategies with risk params |
+
+**MCP Tools for Analysis:**
+
+| Tool | Description |
+|------|-------------|
+| `engram_request_analysis` | Trigger fresh LLM consensus analysis — args: `{"analysis_type":"trade_review","time_period":"24h"}` |
+| `engram_get_arbfarm_learning` | Fetch learning engrams (recommendations, conversations, patterns) |
+| `engram_get_trade_history` | Get trade history with PnL from engrams |
+| `engram_get_errors` | Get execution error history |
+| `engram_acknowledge_recommendation` | Update recommendation status |
 
 **Web Research MCP Tools:**
 
@@ -354,40 +444,53 @@ The following endpoints are available for learning analysis:
 ## Data Flow
 
 ```
-Scheduled Analysis (every 1-24h, default: hourly)
+/scrape-engrams invoked
         │
         ▼
 ┌─────────────────────────────────────────────┐
-│ Fetch Recent Closed Trades (15 max)         │
-│ Build trade table in analysis prompt        │
+│ Step 1: Fetch all learning data             │
+│ - /consensus/analysis-summary               │
+│ - /consensus/trade-analyses                 │
+│ - /consensus/patterns                       │
+│ - /consensus/recommendations                │
+│ - /positions/pnl-summary (authoritative)    │
+│ - engram_get_trade_history (engrams)        │
+│ - engram_get_errors                         │
 └─────────────────────────────────────────────┘
         │
         ▼
 ┌─────────────────────────────────────────────┐
-│ LLM Consensus Analysis                      │
-│ - Per-trade root cause identification       │
-│ - Pattern discovery across trades           │
-│ - Config recommendations with evidence      │
+│ Step 1b: Staleness Check                    │
+│ Is pattern_summary > 1h old?                │
+│ Are trade_analyses empty?                   │
+│ Are recommendations empty?                  │
+│ Are there more trades than analyzed?         │
+│                                             │
+│ IF STALE → trigger engram_request_analysis  │
+│   via MCP tool (queries Claude/GPT-4/Llama) │
+│   Wait ~45s, re-fetch updated data          │
 └─────────────────────────────────────────────┘
         │
         ▼
 ┌─────────────────────────────────────────────┐
-│ Save to Engrams                             │
-│ - TradeAnalysis (tag: arbFarm.tradeAnalysis)│
-│ - PatternSummary (tag: arbFarm.patternSummary)│
-│ - Recommendations (tag: arbFarm.recommendation│
-│   + category:{cat} + status:{status})       │
-└─────────────────────────────────────────────┘
-        │
-        ▼
-┌─────────────────────────────────────────────┐
-│ /scrape-engrams fetches and synthesizes     │
+│ Step 2-5: Analyze + cross-reference         │
 │ - Trade analyses with root causes           │
 │ - Pattern summaries                         │
+│ - Code context (risk.rs, strategies.md)     │
 │ - Recommendations with action items         │
-│ - Actionable implementation plan            │
+└─────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────┐
+│ Step 6: Generate optimization plan          │
+│ - Implementation steps with file references │
+│ - Evidence from trade data + LLM consensus  │
+│ - Expected impact estimates                 │
 └─────────────────────────────────────────────┘
 ```
+
+**Background: Scheduled Analysis**
+The consensus scheduler runs every 5 minutes (configurable). Each cycle it fetches the last 15 closed trades, builds an analysis prompt, queries multiple LLMs, and saves results as engrams. If the scheduler is paused or the OpenRouter API key is missing, no new analyses are generated — `/scrape-engrams` will detect this and trigger analysis on-demand.
 
 ## Notes
 
@@ -398,3 +501,6 @@ Scheduled Analysis (every 1-24h, default: hourly)
 - All changes should maintain the profit-maximization objective
 - Test thoroughly before deploying to production wallet
 - **Engram IDs** are always included so you can drill down with `/scrape-engrams uuid1,uuid2`
+- **Staleness detection**: The skill automatically detects when consensus data is stale (>1h or empty) and triggers fresh LLM analysis via `engram_request_analysis`. This ensures you always get up-to-date insights even if the scheduler was paused or crashed.
+- **Authoritative PnL source**: Use `/positions/pnl-summary` for accurate trade stats (total_sol, wins, losses, win_rate). The engrams trade history may lag behind the DB.
+- **Consensus scheduler**: Runs every 5 minutes by default. Check `GET /consensus/scheduler` to see if it's enabled. If paused, the skill triggers analysis on-demand instead.

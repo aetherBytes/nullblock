@@ -392,7 +392,7 @@ if let Some(my_db_strategy) = get_or_create_strategy(
         min_profit_bps: 50,
         max_slippage_bps: 150,
         auto_execute_enabled: true,
-        stop_loss_percent: Some(10.0),
+        stop_loss_percent: Some(13.0),
         take_profit_percent: Some(15.0),
         trailing_stop_percent: Some(8.0),
         time_limit_minutes: Some(5),
@@ -1042,7 +1042,7 @@ Strong Momentum:
 - 15% profit = ~11% after fees
 - Strong momentum can still run (targets extend significantly)
 - Quick exit on decay protects capital
-- Tight 10% stop loss prevents large drawdowns
+- 13% stop loss prevents large drawdowns (widened from 10% per LLM consensus to reduce premature exits)
 
 ### Legacy Exit Configs
 
