@@ -1,0 +1,28 @@
+#!/bin/bash
+# mcp-sync — Synchronizes Nullblock with all known MCP agents (local, clawhub, crossroads)
+
+set -e
+
+echo "🔍 Syncing MCP services..."
+
+# 1. Local services
+echo "1. Local MCP services:"
+curl -s http://localhost:3000/mcp/discover | jq -r '.[]' | while read uri; do
+  echo "   ✅ $uri"
+  curl -s "$uri/info" | jq '.name // "unknown" | "    └─ name: " + .' 2>/dev/null || echo "    ❌ $uri: no info"
+done
+
+# 2. ClawHub public registry
+echo "2. ClawHub public registry:"
+curl -s "https://clawhub.com/api/skills" | jq -r '.[].endpoint' | while read ep; do
+  echo "   ➤ $ep"
+  curl -s "$ep/info" 2>/dev/null | jq '.name // "unknown" | "      └─ name: " + .' || echo "      ❌ $ep: unreachable"
+done
+
+# 3. Crossroads-known agents (via local socket)
+if [ -f /tmp/crossroads.sock ]; then
+echo "3. Crossroads-connected agents:"
+cat /tmp/crossroads.sock | jq '.agents[] | .name + " at " + .endpoint'
+fi
+
+echo "✅ Sync complete."
