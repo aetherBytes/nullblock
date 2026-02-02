@@ -1,13 +1,13 @@
-use std::collections::{HashMap, HashSet};
 use async_trait::async_trait;
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, ORIGIN, USER_AGENT};
 use reqwest::Client;
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, USER_AGENT, ORIGIN};
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
-use crate::models::{Signal, SignalType, VenueType};
 use crate::events::Significance;
+use crate::models::{Signal, SignalType, VenueType};
 use crate::venues::{MevVenue, ProfitEstimate, Quote, QuoteParams, VenueTokenData};
 
 pub struct PumpFunVenue {
@@ -48,7 +48,9 @@ impl PumpFunVenue {
             .timeout(std::time::Duration::from_secs(10))
             .send()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("DexScreener token request failed: {}", e)))?;
+            .map_err(|e| {
+                AppError::ExternalApi(format!("DexScreener token request failed: {}", e))
+            })?;
 
         if !response.status().is_success() {
             return Err(AppError::ExternalApi(format!(
@@ -57,13 +59,13 @@ impl PumpFunVenue {
             )));
         }
 
-        let dex_response: DexScreenerTokenResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e)))?;
+        let dex_response: DexScreenerTokenResponse = response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e))
+        })?;
 
         // Find the pump.fun pair
-        let pair = dex_response.pairs
+        let pair = dex_response
+            .pairs
             .into_iter()
             .find(|p| p.dex_id == "pumpfun")
             .ok_or_else(|| AppError::NotFound(format!("No pump.fun pair found for {}", mint)))?;
@@ -101,10 +103,16 @@ impl PumpFunVenue {
                 }
             }
             Ok(response) => {
-                tracing::warn!("pump.fun API returned {}, falling back to DexScreener", response.status());
+                tracing::warn!(
+                    "pump.fun API returned {}, falling back to DexScreener",
+                    response.status()
+                );
             }
             Err(e) => {
-                tracing::warn!("pump.fun API request failed: {}, falling back to DexScreener", e);
+                tracing::warn!(
+                    "pump.fun API request failed: {}, falling back to DexScreener",
+                    e
+                );
             }
         }
 
@@ -124,12 +132,12 @@ impl PumpFunVenue {
             )));
         }
 
-        let dex_response: DexScreenerSearchResponse = response
-            .json()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e)))?;
+        let dex_response: DexScreenerSearchResponse = response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e))
+        })?;
 
-        let tokens: Vec<PumpFunToken> = dex_response.pairs
+        let tokens: Vec<PumpFunToken> = dex_response
+            .pairs
             .into_iter()
             .filter(|p| p.dex_id == "pumpfun" && p.chain_id == "solana")
             .take(limit as usize)
@@ -180,7 +188,9 @@ impl PumpFunVenue {
             .timeout(std::time::Duration::from_secs(10))
             .send()
             .await
-            .map_err(|e| AppError::ExternalApi(format!("pump.fun holders request failed: {}", e)))?;
+            .map_err(|e| {
+                AppError::ExternalApi(format!("pump.fun holders request failed: {}", e))
+            })?;
 
         if !response.status().is_success() {
             return Err(AppError::ExternalApi(format!(
@@ -210,16 +220,12 @@ impl PumpFunVenue {
         })
     }
 
-    pub async fn compute_buy_quote(
-        &self,
-        mint: &str,
-        sol_amount: f64,
-    ) -> AppResult<PumpFunQuote> {
+    pub async fn compute_buy_quote(&self, mint: &str, sol_amount: f64) -> AppResult<PumpFunQuote> {
         let token = self.get_token_info(mint).await?;
 
         if token.bonding_curve_complete {
             return Err(AppError::Internal(
-                "Token has graduated, use DEX for trading".to_string()
+                "Token has graduated, use DEX for trading".to_string(),
             ));
         }
 
@@ -249,7 +255,7 @@ impl PumpFunVenue {
 
         if token.bonding_curve_complete {
             return Err(AppError::Internal(
-                "Token has graduated, use DEX for trading".to_string()
+                "Token has graduated, use DEX for trading".to_string(),
             ));
         }
 
@@ -268,7 +274,10 @@ impl PumpFunVenue {
         })
     }
 
-    pub async fn fetch_volumes_dexscreener(&self, mints: &[String]) -> (HashMap<String, (f64, f64)>, HashSet<String>) {
+    pub async fn fetch_volumes_dexscreener(
+        &self,
+        mints: &[String],
+    ) -> (HashMap<String, (f64, f64)>, HashSet<String>) {
         let mut volumes: HashMap<String, (f64, f64)> = HashMap::new();
         let mut graduated_mints: HashSet<String> = HashSet::new();
 
@@ -291,7 +300,8 @@ impl PumpFunVenue {
                                 if pair.dex_id == "raydium" {
                                     graduated_mints.insert(mint.clone());
                                 }
-                                let vol_24h = pair.volume.as_ref().and_then(|v| v.h24).unwrap_or(0.0);
+                                let vol_24h =
+                                    pair.volume.as_ref().and_then(|v| v.h24).unwrap_or(0.0);
                                 let vol_1h = pair.volume.as_ref().and_then(|v| v.h1).unwrap_or(0.0);
                                 let entry = volumes.entry(mint).or_insert((0.0, 0.0));
                                 if vol_24h > entry.0 {
@@ -332,7 +342,10 @@ impl PumpFunVenue {
             Ok(response) if response.status().is_success() => {
                 match response.json::<Vec<PumpFunApiToken>>().await {
                     Ok(tokens) => {
-                        tracing::debug!("pump.fun contender fetch: {} tokens from API", tokens.len());
+                        tracing::debug!(
+                            "pump.fun contender fetch: {} tokens from API",
+                            tokens.len()
+                        );
                         tokens
                     }
                     Err(e) => {
@@ -372,7 +385,9 @@ impl PumpFunVenue {
                 if age_hours > 48.0 && progress >= 85.0 {
                     tracing::debug!(
                         "Skipping {} — stale token ({}h old, {:.1}% progress)",
-                        &api_token.symbol, age_hours as u32, progress
+                        &api_token.symbol,
+                        age_hours as u32,
+                        progress
                     );
                     continue;
                 }
@@ -389,7 +404,8 @@ impl PumpFunVenue {
             None
         };
 
-        let volume_map = graduated_info.as_ref()
+        let volume_map = graduated_info
+            .as_ref()
             .map(|(v, _)| v.clone())
             .unwrap_or_default();
 
@@ -423,7 +439,8 @@ impl PumpFunVenue {
                 if graduated_mints.contains(&api_token.mint) {
                     tracing::debug!(
                         "Skipping {} ({}) — already on Raydium/PumpSwap (graduated)",
-                        &api_token.symbol, &api_token.mint[..12]
+                        &api_token.symbol,
+                        &api_token.mint[..12]
                     );
                     continue;
                 }
@@ -546,7 +563,9 @@ impl MevVenue for PumpFunVenue {
         let profit_estimate = match signal.signal_type {
             SignalType::CurveGraduation => {
                 // Estimate profit from buying pre-graduation and selling post-graduation
-                let progress = signal.metadata.get("progress_percent")
+                let progress = signal
+                    .metadata
+                    .get("progress_percent")
                     .and_then(|v| v.as_f64())
                     .unwrap_or(0.0);
 
@@ -588,7 +607,9 @@ impl MevVenue for PumpFunVenue {
 
     async fn get_quote(&self, params: &QuoteParams) -> AppResult<Quote> {
         // For bonding curves, we treat the curve token as output_mint
-        let quote = self.compute_buy_quote(&params.output_mint, params.amount_lamports as f64 / 1e9).await?;
+        let quote = self
+            .compute_buy_quote(&params.output_mint, params.amount_lamports as f64 / 1e9)
+            .await?;
 
         Ok(Quote {
             input_mint: params.input_mint.clone(),
@@ -606,8 +627,12 @@ impl MevVenue for PumpFunVenue {
     }
 
     async fn is_healthy(&self) -> bool {
-        let url = format!("{}/coins?offset=0&limit=1&sort=market_cap&order=DESC", self.pump_api_url);
-        match self.client
+        let url = format!(
+            "{}/coins?offset=0&limit=1&sort=market_cap&order=DESC",
+            self.pump_api_url
+        );
+        match self
+            .client
             .get(&url)
             .timeout(std::time::Duration::from_secs(5))
             .send()
@@ -726,7 +751,8 @@ impl PumpFunToken {
         let usd_market_cap = api_token.usd_market_cap.unwrap_or(0.0);
         let sol_market_cap = api_token.market_cap.unwrap_or(0.0);
         let graduation_threshold = 69000.0;
-        let bonding_curve_complete = api_token.complete.unwrap_or(false) || usd_market_cap >= graduation_threshold;
+        let bonding_curve_complete =
+            api_token.complete.unwrap_or(false) || usd_market_cap >= graduation_threshold;
 
         Self {
             mint: api_token.mint,
@@ -769,7 +795,11 @@ impl PumpFunToken {
             volume_24h,
             price_change_24h,
             bonding_curve_complete,
-            raydium_pool: if bonding_curve_complete { Some(pair.pair_address.clone()) } else { None },
+            raydium_pool: if bonding_curve_complete {
+                Some(pair.pair_address.clone())
+            } else {
+                None
+            },
             graduation_threshold: Some(graduation_threshold),
         }
     }

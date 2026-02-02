@@ -76,7 +76,7 @@ impl ApiKeyService {
         let (key_prefix, key_suffix) = EncryptionService::extract_prefix_suffix(&request.api_key);
 
         let existing_key = sqlx::query_as::<_, (Uuid,)>(
-            "SELECT id FROM user_api_keys WHERE user_id = $1 AND provider = $2"
+            "SELECT id FROM user_api_keys WHERE user_id = $1 AND provider = $2",
         )
         .bind(&user_id)
         .bind(provider.as_str())
@@ -160,7 +160,7 @@ impl ApiKeyService {
                 id, user_id, provider, encrypted_key, encryption_iv, encryption_tag,
                 key_prefix, key_suffix, key_name, last_used_at, usage_count, is_active,
                 created_at, updated_at
-            "#
+            "#,
         )
         .bind(&encrypted.ciphertext)
         .bind(&encrypted.iv)
@@ -186,16 +186,14 @@ impl ApiKeyService {
             FROM user_api_keys
             WHERE user_id = $1 AND is_active = true
             ORDER BY created_at DESC
-            "#
+            "#,
         )
         .bind(&user_id)
         .fetch_all(&*self.pool)
         .await
         .map_err(|e| format!("Failed to list API keys: {}", e))?;
 
-        rows.into_iter()
-            .map(|row| row.try_into())
-            .collect()
+        rows.into_iter().map(|row| row.try_into()).collect()
     }
 
     pub async fn revoke_api_key(&self, user_id: Uuid, key_id: Uuid) -> Result<(), String> {
@@ -224,7 +222,7 @@ impl ApiKeyService {
                 created_at, updated_at
             FROM user_api_keys
             WHERE user_id = $1 AND is_active = true
-            "#
+            "#,
         )
         .bind(&user_id)
         .fetch_all(&*self.pool)
@@ -282,7 +280,7 @@ impl ApiKeyService {
 
         // Check if key exists for this agent+provider
         let existing = sqlx::query_as::<_, (Uuid,)>(
-            "SELECT id FROM agent_api_keys WHERE agent_name = $1 AND provider = $2"
+            "SELECT id FROM agent_api_keys WHERE agent_name = $1 AND provider = $2",
         )
         .bind(&request.agent_name)
         .bind(&request.provider)
@@ -300,7 +298,7 @@ impl ApiKeyService {
                     is_active = true, updated_at = NOW()
                 WHERE id = $7
                 RETURNING *
-                "#
+                "#,
             )
             .bind(&encrypted.ciphertext)
             .bind(&encrypted.iv)
@@ -349,7 +347,7 @@ impl ApiKeyService {
             r#"
             SELECT * FROM agent_api_keys
             WHERE agent_name = $1 AND provider = $2 AND is_active = true
-            "#
+            "#,
         )
         .bind(agent_name)
         .bind(provider)
@@ -411,7 +409,7 @@ impl ApiKeyService {
                 END,
                 updated_at = NOW()
             RETURNING *
-            "#
+            "#,
         )
         .bind(&user_id)
         .bind(agent_name)
@@ -459,7 +457,7 @@ impl ApiKeyService {
                 END,
                 updated_at = NOW()
             RETURNING *
-            "#
+            "#,
         )
         .bind(&user_id)
         .bind(agent_name)

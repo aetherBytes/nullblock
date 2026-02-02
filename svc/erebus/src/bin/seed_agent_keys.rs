@@ -79,10 +79,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let encryption_key = env::var("ENCRYPTION_MASTER_KEY")
         .expect("ENCRYPTION_MASTER_KEY must be set in environment");
 
-    let database_url = env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus".to_string());
+    let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgresql://postgres:REDACTED_DB_PASS@localhost:5440/erebus".to_string()
+    });
 
-    println!("Database URL: {}", database_url.replace("REDACTED_DB_PASS", "***"));
+    println!(
+        "Database URL: {}",
+        database_url.replace("REDACTED_DB_PASS", "***")
+    );
 
     // Verify encryption key format
     let key_bytes = hex::decode(&encryption_key)
@@ -92,7 +96,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err(format!(
             "ENCRYPTION_MASTER_KEY must be 32 bytes (64 hex chars), got {} bytes",
             key_bytes.len()
-        ).into());
+        )
+        .into());
     }
 
     let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
@@ -112,9 +117,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Agent keys to seed (OpenRouter only for now)
     let agent_keys = vec![
-        ("hecate", "openrouter", "REDACTED_OPENROUTER_KEY_1", "HECATE Primary Key"),
-        ("siren", "openrouter", "REDACTED_OPENROUTER_KEY_2", "Siren Primary Key"),
-        ("arb-farm", "openrouter", "REDACTED_OPENROUTER_KEY_3", "ArbFarm Consensus Key"),
+        (
+            "hecate",
+            "openrouter",
+            "REDACTED_OPENROUTER_KEY_1",
+            "HECATE Primary Key",
+        ),
+        (
+            "siren",
+            "openrouter",
+            "REDACTED_OPENROUTER_KEY_2",
+            "Siren Primary Key",
+        ),
+        (
+            "arb-farm",
+            "openrouter",
+            "REDACTED_OPENROUTER_KEY_3",
+            "ArbFarm Consensus Key",
+        ),
     ];
 
     for (agent_name, provider, api_key, key_name) in agent_keys {

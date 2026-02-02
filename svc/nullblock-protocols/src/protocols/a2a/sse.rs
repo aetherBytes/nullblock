@@ -1,21 +1,21 @@
 use axum::{
-    response::{Sse, sse::Event},
-    extract::{State, Path},
+    extract::{Path, State},
     http::StatusCode,
+    response::{sse::Event, Sse},
 };
 use futures::stream::{Stream, StreamExt};
 use rdkafka::{
-    consumer::{Consumer, StreamConsumer},
     config::ClientConfig,
+    consumer::{Consumer, StreamConsumer},
     message::Message,
 };
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio_stream::wrappers::BroadcastStream;
 use tokio::sync::broadcast;
-use tracing::{info, warn, error};
+use tokio_stream::wrappers::BroadcastStream;
+use tracing::{error, info, warn};
 
 use crate::server::AppState;
 
@@ -65,7 +65,10 @@ impl KafkaSSEBridge {
                         if let Some(payload) = message.payload() {
                             match serde_json::from_slice::<TaskLifecycleEvent>(payload) {
                                 Ok(event) => {
-                                    info!("📨 Forwarding task event: {} → {}", event.task_id, event.state);
+                                    info!(
+                                        "📨 Forwarding task event: {} → {}",
+                                        event.task_id, event.state
+                                    );
                                     if let Err(e) = tx.send(event) {
                                         warn!("⚠️ No active SSE subscribers: {}", e);
                                     }
@@ -101,7 +104,9 @@ pub async fn task_subscribe_handler(
 ) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, StatusCode> {
     info!("🔌 SSE client subscribed to task: {}", task_id);
 
-    let bridge = state.kafka_bridge.as_ref()
+    let bridge = state
+        .kafka_bridge
+        .as_ref()
         .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
     let rx = bridge.subscribe_to_task(task_id.clone());
@@ -112,15 +117,13 @@ pub async fn task_subscribe_handler(
         let task_id = task_id_filter.clone();
         async move {
             match result {
-                Ok(event) if event.task_id == task_id => {
-                    match serde_json::to_string(&event) {
-                        Ok(json) => Some(Ok(Event::default().data(json))),
-                        Err(e) => {
-                            error!("❌ Failed to serialize event: {}", e);
-                            None
-                        }
+                Ok(event) if event.task_id == task_id => match serde_json::to_string(&event) {
+                    Ok(json) => Some(Ok(Event::default().data(json))),
+                    Err(e) => {
+                        error!("❌ Failed to serialize event: {}", e);
+                        None
                     }
-                }
+                },
                 Ok(_) => None,
                 Err(e) => {
                     warn!("⚠️ Broadcast stream error: {}", e);
@@ -130,14 +133,13 @@ pub async fn task_subscribe_handler(
         }
     });
 
-    let keep_alive_stream = tokio_stream::StreamExt::timeout(
-        filtered_stream,
-        Duration::from_secs(30),
-    )
-    .map(|result| match result {
-        Ok(event) => event,
-        Err(_) => Ok(Event::default().comment("keep-alive")),
-    });
+    let keep_alive_stream =
+        tokio_stream::StreamExt::timeout(filtered_stream, Duration::from_secs(30)).map(|result| {
+            match result {
+                Ok(event) => event,
+                Err(_) => Ok(Event::default().comment("keep-alive")),
+            }
+        });
 
     Ok(Sse::new(keep_alive_stream).keep_alive(
         axum::response::sse::KeepAlive::new()
@@ -151,7 +153,9 @@ pub async fn message_stream_handler(
 ) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, StatusCode> {
     info!("🔌 SSE client subscribed to message stream");
 
-    let bridge = state.kafka_bridge.as_ref()
+    let bridge = state
+        .kafka_bridge
+        .as_ref()
         .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
     let rx = bridge.subscribe();
@@ -159,15 +163,13 @@ pub async fn message_stream_handler(
 
     let event_stream = stream.filter_map(|result| async move {
         match result {
-            Ok(event) => {
-                match serde_json::to_string(&event) {
-                    Ok(json) => Some(Ok(Event::default().data(json))),
-                    Err(e) => {
-                        error!("❌ Failed to serialize event: {}", e);
-                        None
-                    }
+            Ok(event) => match serde_json::to_string(&event) {
+                Ok(json) => Some(Ok(Event::default().data(json))),
+                Err(e) => {
+                    error!("❌ Failed to serialize event: {}", e);
+                    None
                 }
-            }
+            },
             Err(e) => {
                 warn!("⚠️ Broadcast stream error: {}", e);
                 None
@@ -175,14 +177,11 @@ pub async fn message_stream_handler(
         }
     });
 
-    let keep_alive_stream = tokio_stream::StreamExt::timeout(
-        event_stream,
-        Duration::from_secs(30),
-    )
-    .map(|result| match result {
-        Ok(event) => event,
-        Err(_) => Ok(Event::default().comment("keep-alive")),
-    });
+    let keep_alive_stream = tokio_stream::StreamExt::timeout(event_stream, Duration::from_secs(30))
+        .map(|result| match result {
+            Ok(event) => event,
+            Err(_) => Ok(Event::default().comment("keep-alive")),
+        });
 
     Ok(Sse::new(keep_alive_stream).keep_alive(
         axum::response::sse::KeepAlive::new()

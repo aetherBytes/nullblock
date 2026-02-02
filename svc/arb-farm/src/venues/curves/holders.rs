@@ -128,7 +128,8 @@ impl HolderAnalyzer {
         mint: &str,
         creator_address: Option<&str>,
     ) -> AppResult<HolderDistribution> {
-        self.analyze_holders_with_count(mint, creator_address, None).await
+        self.analyze_holders_with_count(mint, creator_address, None)
+            .await
     }
 
     pub async fn analyze_holders_with_count(
@@ -157,9 +158,7 @@ impl HolderAnalyzer {
                 } else {
                     0.0
                 };
-                let is_creator = creator_address
-                    .map(|c| c == h.address)
-                    .unwrap_or(false);
+                let is_creator = creator_address.map(|c| c == h.address).unwrap_or(false);
                 let is_suspicious = suspicious_wallets.contains(&h.address);
 
                 TokenHolder {
@@ -263,9 +262,7 @@ impl HolderAnalyzer {
             score += 0.1;
         }
 
-        let very_small_holders = holders.iter()
-            .filter(|h| h.balance_percent < 0.01)
-            .count();
+        let very_small_holders = holders.iter().filter(|h| h.balance_percent < 0.01).count();
 
         if very_small_holders > holders.len() / 2 {
             score += 0.15;
@@ -310,8 +307,14 @@ impl HolderAnalyzer {
         cache.get(mint).cloned()
     }
 
-    pub async fn get_or_analyze(&self, mint: &str, creator: Option<&str>, max_age_seconds: i64) -> AppResult<HolderDistribution> {
-        self.get_or_analyze_with_count(mint, creator, max_age_seconds, None).await
+    pub async fn get_or_analyze(
+        &self,
+        mint: &str,
+        creator: Option<&str>,
+        max_age_seconds: i64,
+    ) -> AppResult<HolderDistribution> {
+        self.get_or_analyze_with_count(mint, creator, max_age_seconds, None)
+            .await
     }
 
     pub async fn get_or_analyze_with_count(
@@ -328,7 +331,8 @@ impl HolderAnalyzer {
             }
         }
 
-        self.analyze_holders_with_count(mint, creator, venue_holder_count).await
+        self.analyze_holders_with_count(mint, creator, venue_holder_count)
+            .await
     }
 
     pub async fn analyze_wash_trading_detailed(&self, mint: &str) -> AppResult<WashTradeAnalysis> {

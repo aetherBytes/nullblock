@@ -205,9 +205,10 @@ impl ConsensusEngine {
         prompt: &str,
         system_prompt: Option<&str>,
     ) -> AppResult<AnalysisModelVote> {
-        let mcp_client = self.mcp_client.as_ref().ok_or_else(|| {
-            AppError::Internal("MCP client not configured".to_string())
-        })?;
+        let mcp_client = self
+            .mcp_client
+            .as_ref()
+            .ok_or_else(|| AppError::Internal("MCP client not configured".to_string()))?;
 
         let agentic_system_prompt = format!(
             "{}\n\nYou have access to MCP tools for gathering additional data. Use them when you need more context about trades, errors, or learning recommendations. Available tools: {}",
@@ -290,7 +291,9 @@ impl ConsensusEngine {
                             &call.arguments,
                         ));
 
-                        let result = mcp_client.call_tool_json(&call.name, call.arguments.clone()).await;
+                        let result = mcp_client
+                            .call_tool_json(&call.name, call.arguments.clone())
+                            .await;
 
                         let result_text = match result {
                             Ok(tool_result) => {
@@ -363,7 +366,8 @@ impl ConsensusEngine {
 
         let result = tokio::time::timeout(
             timeout,
-            self.openrouter.query_model(model, prompt, system_prompt, 2048),
+            self.openrouter
+                .query_model(model, prompt, system_prompt, 2048),
         )
         .await
         .map_err(|_| AppError::Timeout(format!("Analysis model {} timed out", model)))?;
@@ -497,15 +501,18 @@ impl ConsensusEngine {
         }
 
         if let Some(ref tx) = self.event_tx {
-            let _ = tx.send(ArbEvent::new(
-                "consensus.requested",
-                EventSource::Agent(AgentType::StrategyEngine),
-                "arb.consensus.requested",
-                serde_json::json!({
-                    "edge_id": edge_id,
-                    "timestamp": Utc::now(),
-                }),
-            ).with_correlation(edge_id));
+            let _ = tx.send(
+                ArbEvent::new(
+                    "consensus.requested",
+                    EventSource::Agent(AgentType::StrategyEngine),
+                    "arb.consensus.requested",
+                    serde_json::json!({
+                        "edge_id": edge_id,
+                        "timestamp": Utc::now(),
+                    }),
+                )
+                .with_correlation(edge_id),
+            );
         }
 
         let models_to_query = models.unwrap_or_else(|| self.default_models.clone());
@@ -526,16 +533,19 @@ impl ConsensusEngine {
 
         if votes.is_empty() {
             if let Some(ref tx) = self.event_tx {
-                let _ = tx.send(ArbEvent::new(
-                    "consensus.failed",
-                    EventSource::Agent(AgentType::StrategyEngine),
-                    "arb.consensus.failed",
-                    serde_json::json!({
-                        "edge_id": edge_id,
-                        "reason": "All model queries failed",
-                        "timestamp": Utc::now(),
-                    }),
-                ).with_correlation(edge_id));
+                let _ = tx.send(
+                    ArbEvent::new(
+                        "consensus.failed",
+                        EventSource::Agent(AgentType::StrategyEngine),
+                        "arb.consensus.failed",
+                        serde_json::json!({
+                            "edge_id": edge_id,
+                            "reason": "All model queries failed",
+                            "timestamp": Utc::now(),
+                        }),
+                    )
+                    .with_correlation(edge_id),
+                );
             }
             return Err(AppError::ConsensusFailed(
                 "All model queries failed".to_string(),
@@ -545,18 +555,21 @@ impl ConsensusEngine {
         let consensus = self.voting_engine.calculate_consensus(votes);
 
         if let Some(ref tx) = self.event_tx {
-            let _ = tx.send(ArbEvent::new(
-                "consensus.completed",
-                EventSource::Agent(AgentType::StrategyEngine),
-                "arb.consensus.completed",
-                serde_json::json!({
-                    "edge_id": edge_id,
-                    "approved": consensus.approved,
-                    "agreement_score": consensus.agreement_score,
-                    "models_responded": consensus.model_votes.len(),
-                    "timestamp": Utc::now(),
-                }),
-            ).with_correlation(edge_id));
+            let _ = tx.send(
+                ArbEvent::new(
+                    "consensus.completed",
+                    EventSource::Agent(AgentType::StrategyEngine),
+                    "arb.consensus.completed",
+                    serde_json::json!({
+                        "edge_id": edge_id,
+                        "approved": consensus.approved,
+                        "agreement_score": consensus.agreement_score,
+                        "models_responded": consensus.model_votes.len(),
+                        "timestamp": Utc::now(),
+                    }),
+                )
+                .with_correlation(edge_id),
+            );
         }
 
         tracing::info!(
@@ -580,7 +593,8 @@ impl ConsensusEngine {
 
         let result = tokio::time::timeout(
             timeout,
-            self.openrouter.query_model(model, prompt, system_prompt, 1024),
+            self.openrouter
+                .query_model(model, prompt, system_prompt, 1024),
         )
         .await
         .map_err(|_| AppError::Timeout(format!("Model {} timed out", model)))?;

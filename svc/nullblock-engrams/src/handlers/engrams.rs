@@ -120,7 +120,10 @@ pub async fn get_engram_by_wallet_key(
     State(state): State<AppState>,
     Path((wallet, key)): Path<(String, String)>,
 ) -> AppResult<Json<EngramResponse>> {
-    let engram = state.engram_repo.get_by_wallet_and_key(&wallet, &key).await?;
+    let engram = state
+        .engram_repo
+        .get_by_wallet_and_key(&wallet, &key)
+        .await?;
 
     Ok(Json(EngramResponse {
         success: true,

@@ -9,16 +9,16 @@ use std::sync::RwLock;
 use std::time::{Duration, Instant};
 
 use crate::agents::{
-    DetailedCurveMetrics, OpportunityScore, Recommendation, ScoringWeights, ScoringThresholds,
+    DetailedCurveMetrics, OpportunityScore, Recommendation, ScoringThresholds, ScoringWeights,
 };
 use crate::error::{AppError, AppResult};
 use crate::execution::{CurveBuildResult, CurveBuyParams, CurveSellParams, SimulatedTrade};
 use crate::server::AppState;
 use crate::venues::curves::{
-    derive_pump_fun_bonding_curve, GraduationStatus, OnChainCurveState, RaydiumPoolInfo,
-    HolderDistribution,
-    moonshot::{MoonshotGraduationProgress, MoonshotHolderStats, MoonshotQuote, CurveParameters},
+    derive_pump_fun_bonding_curve,
+    moonshot::{CurveParameters, MoonshotGraduationProgress, MoonshotHolderStats, MoonshotQuote},
     pump_fun::{GraduationProgress, HolderStats, PumpFunQuote},
+    GraduationStatus, HolderDistribution, OnChainCurveState, RaydiumPoolInfo,
 };
 use crate::venues::MevVenue;
 
@@ -179,7 +179,8 @@ pub async fn list_curve_tokens(
     if venue.is_none() || venue == Some("pump_fun") || venue == Some("pumpfun") {
         let pump_tokens = state.pump_fun_venue.get_new_tokens(limit).await?;
         for token in pump_tokens {
-            let progress = (token.market_cap / token.graduation_threshold.unwrap_or(69000.0)) * 100.0;
+            let progress =
+                (token.market_cap / token.graduation_threshold.unwrap_or(69000.0)) * 100.0;
             all_tokens.push(CurveToken {
                 mint: token.mint,
                 name: token.name,
@@ -401,8 +402,13 @@ pub async fn list_graduation_candidates(
                 let estimated_holders = estimate_holder_count(token.market_cap, token.volume_24h);
 
                 // Calculate scores using available data
-                let momentum_score = calculate_momentum_score(progress, velocity, estimated_holders);
-                let risk_score = calculate_risk_score_from_volume(token.volume_24h, token.market_cap, estimated_holders);
+                let momentum_score =
+                    calculate_momentum_score(progress, velocity, estimated_holders);
+                let risk_score = calculate_risk_score_from_volume(
+                    token.volume_24h,
+                    token.market_cap,
+                    estimated_holders,
+                );
 
                 // Convert timestamp to RFC3339
                 let created_at = chrono::DateTime::from_timestamp(token.created_timestamp, 0)
@@ -454,9 +460,15 @@ pub async fn list_graduation_candidates(
                     None
                 };
 
-                let estimated_holders = estimate_holder_count(token.market_cap_usd, token.volume_24h_usd);
-                let momentum_score = calculate_momentum_score(progress, velocity, estimated_holders);
-                let risk_score = calculate_risk_score_from_volume(token.volume_24h_usd, token.market_cap_usd, estimated_holders);
+                let estimated_holders =
+                    estimate_holder_count(token.market_cap_usd, token.volume_24h_usd);
+                let momentum_score =
+                    calculate_momentum_score(progress, velocity, estimated_holders);
+                let risk_score = calculate_risk_score_from_volume(
+                    token.volume_24h_usd,
+                    token.market_cap_usd,
+                    estimated_holders,
+                );
 
                 let created_at = chrono::DateTime::from_timestamp(token.created_at, 0)
                     .map(|t| t.to_rfc3339())
@@ -488,7 +500,8 @@ pub async fn list_graduation_candidates(
     }
 
     candidates.sort_by(|a, b| {
-        b.token.graduation_progress
+        b.token
+            .graduation_progress
             .partial_cmp(&a.token.graduation_progress)
             .unwrap_or(std::cmp::Ordering::Equal)
     });
@@ -528,7 +541,11 @@ fn calculate_risk_score_from_volume(volume_24h: f64, market_cap: f64, holder_cou
     let mut risk: f64 = 20.0; // Base risk for bonding curves
 
     // Low volume relative to market cap = higher risk
-    let volume_ratio = if market_cap > 0.0 { volume_24h / market_cap } else { 0.0 };
+    let volume_ratio = if market_cap > 0.0 {
+        volume_24h / market_cap
+    } else {
+        0.0
+    };
     if volume_ratio < 0.1 {
         risk += 20.0 * (1.0 - volume_ratio / 0.1);
     }
@@ -760,9 +777,7 @@ pub async fn get_post_graduation_pool(
         GraduationStatus::NearGraduation { progress } => {
             ("near_graduation".to_string(), None, *progress)
         }
-        GraduationStatus::Graduating => {
-            ("graduating".to_string(), None, 99.0)
-        }
+        GraduationStatus::Graduating => ("graduating".to_string(), None, 99.0),
         GraduationStatus::Graduated { raydium_pool, .. } => {
             let pool_info = if raydium_pool.is_some() {
                 state.on_chain_fetcher.find_raydium_pool(&mint).await?
@@ -903,10 +918,15 @@ pub async fn get_curve_metrics(
 
             match (token_result, holder_result) {
                 (Ok(token), Ok(holder_stats)) => {
-                    state.metrics_collector.populate_from_pump_fun(&mint, &token, &holder_stats)
+                    state
+                        .metrics_collector
+                        .populate_from_pump_fun(&mint, &token, &holder_stats)
                 }
                 _ => {
-                    state.metrics_collector.get_or_calculate_metrics(&mint, venue, max_age).await?
+                    state
+                        .metrics_collector
+                        .get_or_calculate_metrics(&mint, venue, max_age)
+                        .await?
                 }
             }
         }
@@ -915,21 +935,25 @@ pub async fn get_curve_metrics(
             let holder_result = state.moonshot_venue.get_holder_stats(&mint).await;
 
             match (token_result, holder_result) {
-                (Ok(token), Ok(holder_stats)) => {
-                    state.metrics_collector.populate_from_moonshot(
-                        &mint,
-                        &token,
-                        holder_stats.total_holders,
-                        holder_stats.top_10_concentration,
-                    )
-                }
+                (Ok(token), Ok(holder_stats)) => state.metrics_collector.populate_from_moonshot(
+                    &mint,
+                    &token,
+                    holder_stats.total_holders,
+                    holder_stats.top_10_concentration,
+                ),
                 _ => {
-                    state.metrics_collector.get_or_calculate_metrics(&mint, venue, max_age).await?
+                    state
+                        .metrics_collector
+                        .get_or_calculate_metrics(&mint, venue, max_age)
+                        .await?
                 }
             }
         }
         _ => {
-            state.metrics_collector.get_or_calculate_metrics(&mint, venue, max_age).await?
+            state
+                .metrics_collector
+                .get_or_calculate_metrics(&mint, venue, max_age)
+                .await?
         }
     };
 
@@ -939,7 +963,10 @@ pub async fn get_curve_metrics(
         metrics.liquidity_depth_sol = on_chain.real_sol_reserves as f64 / 1e9;
     }
 
-    state.metrics_collector.cache_metrics(&mint, metrics.clone()).await;
+    state
+        .metrics_collector
+        .cache_metrics(&mint, metrics.clone())
+        .await;
 
     Ok(Json(metrics.into()))
 }
@@ -983,13 +1010,17 @@ impl From<HolderDistribution> for HolderAnalysisResponse {
             total_holders: h.total_holders,
             total_supply: h.total_supply,
             circulating_supply: h.circulating_supply,
-            top_10_holders: h.top_10_holders.into_iter().map(|holder| TopHolderInfo {
-                address: holder.address,
-                balance: holder.balance,
-                balance_percent: holder.balance_percent,
-                is_creator: holder.is_creator,
-                is_suspicious: holder.is_suspicious,
-            }).collect(),
+            top_10_holders: h
+                .top_10_holders
+                .into_iter()
+                .map(|holder| TopHolderInfo {
+                    address: holder.address,
+                    balance: holder.balance,
+                    balance_percent: holder.balance_percent,
+                    is_creator: holder.is_creator,
+                    is_suspicious: holder.is_suspicious,
+                })
+                .collect(),
             top_10_concentration: h.top_10_concentration,
             top_20_concentration: h.top_20_concentration,
             top_50_concentration: h.top_50_concentration,
@@ -1022,12 +1053,18 @@ pub async fn get_holder_analysis(
     let venue = query.venue.as_deref().unwrap_or("pump_fun");
 
     let venue_holder_count = match venue {
-        "pump_fun" | "pumpfun" => {
-            state.pump_fun_venue.get_holder_stats(&mint).await.ok().map(|s| s.total_holders)
-        }
-        "moonshot" => {
-            state.moonshot_venue.get_holder_stats(&mint).await.ok().map(|s| s.total_holders)
-        }
+        "pump_fun" | "pumpfun" => state
+            .pump_fun_venue
+            .get_holder_stats(&mint)
+            .await
+            .ok()
+            .map(|s| s.total_holders),
+        "moonshot" => state
+            .moonshot_venue
+            .get_holder_stats(&mint)
+            .await
+            .ok()
+            .map(|s| s.total_holders),
         _ => None,
     };
 
@@ -1088,10 +1125,7 @@ pub async fn get_opportunity_score(
 ) -> AppResult<Json<OpportunityScoreResponse>> {
     let venue = query.venue.as_deref().unwrap_or("pump_fun");
 
-    let score = state
-        .curve_scorer
-        .score_opportunity(&mint, venue)
-        .await?;
+    let score = state.curve_scorer.score_opportunity(&mint, venue).await?;
 
     Ok(Json(score.into()))
 }
@@ -1149,7 +1183,8 @@ pub async fn get_top_opportunities(
 
     let mut candidates: Vec<(String, String, String, String)> = Vec::new();
 
-    if venue_filter.is_none() || venue_filter == Some("pump_fun") || venue_filter == Some("pumpfun") {
+    if venue_filter.is_none() || venue_filter == Some("pump_fun") || venue_filter == Some("pumpfun")
+    {
         let tokens = state.pump_fun_venue.get_new_tokens(100).await?;
         for token in tokens {
             if token.bonding_curve_complete {
@@ -1452,18 +1487,17 @@ struct CachedMarketData {
 }
 
 lazy_static! {
-    static ref MARKET_DATA_CACHE: RwLock<HashMap<String, CachedMarketData>> = RwLock::new(HashMap::new());
+    static ref MARKET_DATA_CACHE: RwLock<HashMap<String, CachedMarketData>> =
+        RwLock::new(HashMap::new());
 }
 
-pub async fn get_market_data(
-    Path(mint): Path<String>,
-) -> AppResult<Json<MarketDataResponse>> {
+pub async fn get_market_data(Path(mint): Path<String>) -> AppResult<Json<MarketDataResponse>> {
     let cache_ttl = Duration::from_secs(MARKET_DATA_CACHE_TTL_SECS);
 
     {
-        let cache = MARKET_DATA_CACHE.read().map_err(|_| {
-            AppError::Internal("Cache lock poisoned".to_string())
-        })?;
+        let cache = MARKET_DATA_CACHE
+            .read()
+            .map_err(|_| AppError::Internal("Cache lock poisoned".to_string()))?;
 
         if let Some(cached) = cache.get(&mint) {
             if cached.fetched_at.elapsed() < cache_ttl {
@@ -1492,12 +1526,12 @@ pub async fn get_market_data(
         )));
     }
 
-    let dex_response: DexScreenerResponse = response
-        .json()
-        .await
-        .map_err(|e| AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e)))?;
+    let dex_response: DexScreenerResponse = response.json().await.map_err(|e| {
+        AppError::ExternalApi(format!("Failed to parse DexScreener response: {}", e))
+    })?;
 
-    let pair = dex_response.pairs
+    let pair = dex_response
+        .pairs
         .and_then(|pairs| pairs.into_iter().next())
         .ok_or_else(|| AppError::NotFound(format!("No pair found for {}", mint)))?;
 
@@ -1510,8 +1544,16 @@ pub async fn get_market_data(
         mint: mint.clone(),
         symbol: pair.base_token.as_ref().and_then(|t| t.symbol.clone()),
         name: pair.base_token.as_ref().and_then(|t| t.name.clone()),
-        price_usd: pair.price_usd.as_ref().and_then(|p| p.parse().ok()).unwrap_or(0.0),
-        price_native: pair.price_native.as_ref().and_then(|p| p.parse().ok()).unwrap_or(0.0),
+        price_usd: pair
+            .price_usd
+            .as_ref()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(0.0),
+        price_native: pair
+            .price_native
+            .as_ref()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(0.0),
         market_cap: pair.market_cap.unwrap_or(0.0),
         fdv: pair.fdv.unwrap_or(0.0),
         liquidity: MarketDataLiquidity {
@@ -1529,24 +1571,68 @@ pub async fn get_market_data(
             m5: pair.price_change.as_ref().and_then(|p| p.m5).unwrap_or(0.0),
             h1: pair.price_change.as_ref().and_then(|p| p.h1).unwrap_or(0.0),
             h6: pair.price_change.as_ref().and_then(|p| p.h6).unwrap_or(0.0),
-            h24: pair.price_change.as_ref().and_then(|p| p.h24).unwrap_or(0.0),
+            h24: pair
+                .price_change
+                .as_ref()
+                .and_then(|p| p.h24)
+                .unwrap_or(0.0),
         },
         txns: MarketDataTxns {
             m5: MarketDataTxnPeriod {
-                buys: pair.txns.as_ref().and_then(|t| t.m5.as_ref()).and_then(|p| p.buys).unwrap_or(0),
-                sells: pair.txns.as_ref().and_then(|t| t.m5.as_ref()).and_then(|p| p.sells).unwrap_or(0),
+                buys: pair
+                    .txns
+                    .as_ref()
+                    .and_then(|t| t.m5.as_ref())
+                    .and_then(|p| p.buys)
+                    .unwrap_or(0),
+                sells: pair
+                    .txns
+                    .as_ref()
+                    .and_then(|t| t.m5.as_ref())
+                    .and_then(|p| p.sells)
+                    .unwrap_or(0),
             },
             h1: MarketDataTxnPeriod {
-                buys: pair.txns.as_ref().and_then(|t| t.h1.as_ref()).and_then(|p| p.buys).unwrap_or(0),
-                sells: pair.txns.as_ref().and_then(|t| t.h1.as_ref()).and_then(|p| p.sells).unwrap_or(0),
+                buys: pair
+                    .txns
+                    .as_ref()
+                    .and_then(|t| t.h1.as_ref())
+                    .and_then(|p| p.buys)
+                    .unwrap_or(0),
+                sells: pair
+                    .txns
+                    .as_ref()
+                    .and_then(|t| t.h1.as_ref())
+                    .and_then(|p| p.sells)
+                    .unwrap_or(0),
             },
             h6: MarketDataTxnPeriod {
-                buys: pair.txns.as_ref().and_then(|t| t.h6.as_ref()).and_then(|p| p.buys).unwrap_or(0),
-                sells: pair.txns.as_ref().and_then(|t| t.h6.as_ref()).and_then(|p| p.sells).unwrap_or(0),
+                buys: pair
+                    .txns
+                    .as_ref()
+                    .and_then(|t| t.h6.as_ref())
+                    .and_then(|p| p.buys)
+                    .unwrap_or(0),
+                sells: pair
+                    .txns
+                    .as_ref()
+                    .and_then(|t| t.h6.as_ref())
+                    .and_then(|p| p.sells)
+                    .unwrap_or(0),
             },
             h24: MarketDataTxnPeriod {
-                buys: pair.txns.as_ref().and_then(|t| t.h24.as_ref()).and_then(|p| p.buys).unwrap_or(0),
-                sells: pair.txns.as_ref().and_then(|t| t.h24.as_ref()).and_then(|p| p.sells).unwrap_or(0),
+                buys: pair
+                    .txns
+                    .as_ref()
+                    .and_then(|t| t.h24.as_ref())
+                    .and_then(|p| p.buys)
+                    .unwrap_or(0),
+                sells: pair
+                    .txns
+                    .as_ref()
+                    .and_then(|t| t.h24.as_ref())
+                    .and_then(|p| p.sells)
+                    .unwrap_or(0),
             },
         },
         pair_created_at: pair.pair_created_at,
@@ -1557,14 +1643,17 @@ pub async fn get_market_data(
     };
 
     {
-        let mut cache = MARKET_DATA_CACHE.write().map_err(|_| {
-            AppError::Internal("Cache lock poisoned".to_string())
-        })?;
+        let mut cache = MARKET_DATA_CACHE
+            .write()
+            .map_err(|_| AppError::Internal("Cache lock poisoned".to_string()))?;
 
-        cache.insert(mint.clone(), CachedMarketData {
-            data: market_data.clone(),
-            fetched_at: Instant::now(),
-        });
+        cache.insert(
+            mint.clone(),
+            CachedMarketData {
+                data: market_data.clone(),
+                fetched_at: Instant::now(),
+            },
+        );
 
         let expired_keys: Vec<String> = cache
             .iter()

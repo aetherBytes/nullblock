@@ -75,7 +75,11 @@ impl From<ScannerStatus> for ScannerStatusResponse {
                 healthy_venues: status.stats.healthy_venues,
                 total_venues: status.stats.total_venues,
             },
-            venues: status.venue_statuses.into_iter().map(VenueStatusResponse::from).collect(),
+            venues: status
+                .venue_statuses
+                .into_iter()
+                .map(VenueStatusResponse::from)
+                .collect(),
         }
     }
 }
@@ -91,37 +95,37 @@ impl From<VenueStatus> for VenueStatusResponse {
     }
 }
 
-pub async fn get_scanner_status(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_scanner_status(State(state): State<AppState>) -> impl IntoResponse {
     let status = state.scanner.get_status().await;
     Json(ScannerStatusResponse::from(status))
 }
 
-pub async fn start_scanner(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn start_scanner(State(state): State<AppState>) -> impl IntoResponse {
     state.scanner.start().await;
     if let Err(e) = state.settings_repo.set_bool("scanner_running", true).await {
         tracing::warn!("Failed to persist scanner start to DB: {}", e);
     }
-    (StatusCode::OK, Json(serde_json::json!({
-        "status": "started",
-        "message": "Scanner started successfully"
-    })))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "status": "started",
+            "message": "Scanner started successfully"
+        })),
+    )
 }
 
-pub async fn stop_scanner(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn stop_scanner(State(state): State<AppState>) -> impl IntoResponse {
     state.scanner.stop().await;
     if let Err(e) = state.settings_repo.set_bool("scanner_running", false).await {
         tracing::warn!("Failed to persist scanner stop to DB: {}", e);
     }
-    (StatusCode::OK, Json(serde_json::json!({
-        "status": "stopped",
-        "message": "Scanner stopped successfully"
-    })))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "status": "stopped",
+            "message": "Scanner stopped successfully"
+        })),
+    )
 }
 
 pub async fn get_signals(
@@ -136,13 +140,25 @@ pub async fn get_signals(
             "curve" | "bonding_curve" => VenueType::BondingCurve,
             "lending" => VenueType::Lending,
             "orderbook" => VenueType::Orderbook,
-            _ => return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
-                "error": format!("Unknown venue type: {}", venue_type_str)
-            }))).into_response(),
+            _ => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "error": format!("Unknown venue type: {}", venue_type_str)
+                    })),
+                )
+                    .into_response()
+            }
         };
-        state.scanner.get_cached_signals_by_venue(venue_type, Some(limit)).await
+        state
+            .scanner
+            .get_cached_signals_by_venue(venue_type, Some(limit))
+            .await
     } else if let Some(min_confidence) = query.min_confidence {
-        state.scanner.get_cached_high_confidence(min_confidence, Some(limit)).await
+        state
+            .scanner
+            .get_cached_high_confidence(min_confidence, Some(limit))
+            .await
     } else {
         state.scanner.get_recent_signals(Some(limit)).await
     };
@@ -173,7 +189,8 @@ pub async fn get_signals(
     Json(serde_json::json!({
         "signals": responses,
         "count": responses.len()
-    })).into_response()
+    }))
+    .into_response()
 }
 
 #[derive(Debug, Serialize)]
@@ -185,9 +202,7 @@ pub struct ProcessSignalsResponse {
     pub rejection_reasons: Vec<String>,
 }
 
-pub async fn process_signals(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn process_signals(State(state): State<AppState>) -> impl IntoResponse {
     let signals_result = state.scanner.scan_once().await;
 
     match signals_result {
@@ -227,18 +242,24 @@ pub async fn process_signals(
 
                                         // Capture edge as engram for learning/sharing
                                         if state.engrams_client.is_configured() {
-                                            let wallet = state.config.wallet_address.clone()
+                                            let wallet = state
+                                                .config
+                                                .wallet_address
+                                                .clone()
                                                 .unwrap_or_else(|| "default".to_string());
                                             let token_mint = signal.token_mint.as_deref();
-                                            let _ = state.engrams_client.save_edge(
-                                                &wallet,
-                                                &record.id.to_string(),
-                                                &record.edge_type,
-                                                token_mint,
-                                                record.estimated_profit_lamports.unwrap_or(0),
-                                                record.risk_score.unwrap_or(50),
-                                                &signal.metadata,
-                                            ).await;
+                                            let _ = state
+                                                .engrams_client
+                                                .save_edge(
+                                                    &wallet,
+                                                    &record.id.to_string(),
+                                                    &record.edge_type,
+                                                    token_mint,
+                                                    record.estimated_profit_lamports.unwrap_or(0),
+                                                    record.risk_score.unwrap_or(50),
+                                                    &signal.metadata,
+                                                )
+                                                .await;
                                         }
                                     }
                                     Err(e) => {
@@ -267,11 +288,16 @@ pub async fn process_signals(
                 edges_rejected,
                 created_edge_ids,
                 rejection_reasons,
-            }).into_response()
+            })
+            .into_response()
         }
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-            "error": e.to_string()
-        }))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": e.to_string()
+            })),
+        )
+            .into_response(),
     }
 }
 
@@ -355,9 +381,7 @@ pub struct BehavioralStrategiesListResponse {
     pub active_count: usize,
 }
 
-pub async fn list_behavioral_strategies(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn list_behavioral_strategies(State(state): State<AppState>) -> impl IntoResponse {
     let registry = state.scanner.get_strategy_registry();
     let strategies = registry.list().await;
     let active_count = registry.active_count().await;
@@ -368,7 +392,9 @@ pub async fn list_behavioral_strategies(
         .iter()
         .map(|s| {
             let status_detail = match s.strategy_type() {
-                "raydium_snipe" => Some("Standby — awaiting Helius webhooks (requires public URL)".to_string()),
+                "raydium_snipe" => {
+                    Some("Standby — awaiting Helius webhooks (requires public URL)".to_string())
+                }
                 "copy_trade" => {
                     if webhook_token_set {
                         Some("Webhook connected".to_string())
@@ -382,7 +408,11 @@ pub async fn list_behavioral_strategies(
                 name: s.name().to_string(),
                 strategy_type: s.strategy_type().to_string(),
                 is_active: s.is_active(),
-                supported_venues: s.supported_venues().iter().map(|v| format!("{:?}", v)).collect(),
+                supported_venues: s
+                    .supported_venues()
+                    .iter()
+                    .map(|v| format!("{:?}", v))
+                    .collect(),
                 status_detail,
             }
         })
@@ -412,9 +442,13 @@ pub async fn get_behavioral_strategy(
             "supported_venues": strategy.supported_venues().iter().map(|v| format!("{:?}", v)).collect::<Vec<_>>(),
         })).into_response()
     } else {
-        (StatusCode::NOT_FOUND, Json(serde_json::json!({
-            "error": format!("Behavioral strategy '{}' not found", name)
-        }))).into_response()
+        (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "error": format!("Behavioral strategy '{}' not found", name)
+            })),
+        )
+            .into_response()
     }
 }
 
@@ -443,9 +477,13 @@ pub async fn toggle_behavioral_strategy(
             "message": format!("Behavioral strategy '{}' is now {}", name, if body.active { "active" } else { "inactive" })
         })).into_response()
     } else {
-        (StatusCode::NOT_FOUND, Json(serde_json::json!({
-            "error": format!("Behavioral strategy '{}' not found", name)
-        }))).into_response()
+        (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "error": format!("Behavioral strategy '{}' not found", name)
+            })),
+        )
+            .into_response()
     }
 }
 

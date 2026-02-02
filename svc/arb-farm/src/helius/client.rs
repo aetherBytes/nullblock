@@ -7,10 +7,10 @@ use serde_json::json;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
+use super::types::{HeliusConfig, HeliusStatus};
 use crate::config::Config;
 use crate::error::{AppError, AppResult};
 use crate::events::{ArbEvent, EventBus, EventSource};
-use super::types::{HeliusConfig, HeliusStatus};
 
 pub struct HeliusClient {
     http_client: Client,
@@ -145,10 +145,9 @@ impl HeliusClient {
             )));
         }
 
-        let rpc_response: RpcResponse<T> = response
-            .json()
-            .await
-            .map_err(|e| AppError::Serialization(format!("Failed to parse Helius response: {}", e)))?;
+        let rpc_response: RpcResponse<T> = response.json().await.map_err(|e| {
+            AppError::Serialization(format!("Failed to parse Helius response: {}", e))
+        })?;
 
         match rpc_response.result {
             Some(result) => Ok(result),
@@ -214,7 +213,10 @@ impl HeliusClient {
         Ok(slot)
     }
 
-    pub async fn get_token_largest_accounts(&self, mint: &str) -> AppResult<TokenLargestAccountsResponse> {
+    pub async fn get_token_largest_accounts(
+        &self,
+        mint: &str,
+    ) -> AppResult<TokenLargestAccountsResponse> {
         let response: TokenLargestAccountsResponse = self
             .rpc_call("getTokenLargestAccounts", json!([mint]))
             .await?;

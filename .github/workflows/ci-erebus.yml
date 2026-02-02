@@ -1,0 +1,23 @@
+name: CI - Erebus
+
+on:
+  pull_request:
+    paths:
+      - 'svc/erebus/**'
+      - 'lib/nullblock-mcp-client/**'
+  push:
+    branches: [main]
+    paths:
+      - 'svc/erebus/**'
+      - 'lib/nullblock-mcp-client/**'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/rust-service.yml
+    with:
+      service-name: erebus
+      service-path: svc/erebus
+      service-port: 3000
+      ecs-service: erebus
+      run-deploy: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    secrets: inherit

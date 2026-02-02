@@ -1,6 +1,4 @@
-pub const DEV_WALLETS: &[&str] = &[
-    "5wrmi85pTPmB4NDv7rUYncEMi1KqVo93bZn3XtXSbjYT",
-];
+pub const DEV_WALLETS: &[&str] = &["5wrmi85pTPmB4NDv7rUYncEMi1KqVo93bZn3XtXSbjYT"];
 
 pub fn is_dev_wallet(wallet: &str) -> bool {
     let is_match = DEV_WALLETS.contains(&wallet);

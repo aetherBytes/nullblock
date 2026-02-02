@@ -139,9 +139,8 @@ fn default_true() -> bool {
 
 impl McpServicesConfig {
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> McpResult<Self> {
-        let content = std::fs::read_to_string(path.as_ref()).map_err(|e| {
-            McpError::ConfigError(format!("Failed to read config file: {}", e))
-        })?;
+        let content = std::fs::read_to_string(path.as_ref())
+            .map_err(|e| McpError::ConfigError(format!("Failed to read config file: {}", e)))?;
 
         Self::load_from_str(&content)
     }
@@ -174,7 +173,10 @@ impl McpServicesConfig {
         if let Ok(services_json) = env::var("MCP_SERVICES") {
             match serde_json::from_str::<HashMap<String, ServiceConfig>>(&services_json) {
                 Ok(env_services) => {
-                    info!(count = env_services.len(), "Loaded MCP services from MCP_SERVICES env");
+                    info!(
+                        count = env_services.len(),
+                        "Loaded MCP services from MCP_SERVICES env"
+                    );
                     self.services.extend(env_services);
                 }
                 Err(e) => {
@@ -396,12 +398,18 @@ bearer_token_env = "ANOTHER_TOKEN"
 
         let external = config.services.get("external").unwrap();
         assert_eq!(external.auth.api_key.as_deref(), Some("my-secret-key"));
-        assert_eq!(external.auth.api_key_header.as_deref(), Some("X-Custom-Key"));
+        assert_eq!(
+            external.auth.api_key_header.as_deref(),
+            Some("X-Custom-Key")
+        );
         assert_eq!(external.description.as_deref(), Some("External MCP server"));
         assert_eq!(external.tags.len(), 2);
 
         let another = config.services.get("another").unwrap();
-        assert_eq!(another.auth.bearer_token_env.as_deref(), Some("ANOTHER_TOKEN"));
+        assert_eq!(
+            another.auth.bearer_token_env.as_deref(),
+            Some("ANOTHER_TOKEN")
+        );
 
         assert_eq!(config.defaults.timeout_secs, 60);
         assert_eq!(config.defaults.cache_ttl_secs, 600);

@@ -8,10 +8,10 @@ use serde_json::json;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
-use crate::error::{AppError, AppResult};
-use crate::events::{topics, ArbEvent, EventBus, EventSource};
 use super::client::HeliusClient;
 use super::types::PriorityFeeEvent;
+use crate::error::{AppError, AppResult};
+use crate::events::{topics, ArbEvent, EventBus, EventSource};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]

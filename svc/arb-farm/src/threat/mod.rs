@@ -6,14 +6,14 @@ use uuid::Uuid;
 
 use crate::error::AppResult;
 use crate::models::{
-    AlertSeverity, BlockedEntity, ThreatAlert, ThreatAlertType, ThreatCategory,
-    ThreatEntityType, ThreatFactors, ThreatScore, ThreatStats, WalletAnalysis,
-    WatchedWallet, WhitelistedEntity, ScamAssociation,
+    AlertSeverity, BlockedEntity, ScamAssociation, ThreatAlert, ThreatAlertType, ThreatCategory,
+    ThreatEntityType, ThreatFactors, ThreatScore, ThreatStats, WalletAnalysis, WatchedWallet,
+    WhitelistedEntity,
 };
 
 pub use external::{
-    BirdeyeClient, GoPlusClient, RugCheckClient,
-    HolderAnalysis, GoPlusAnalysis, RugCheckAnalysis, WashTradingAnalysis,
+    BirdeyeClient, GoPlusAnalysis, GoPlusClient, HolderAnalysis, RugCheckAnalysis, RugCheckClient,
+    WashTradingAnalysis,
 };
 
 lazy_static::lazy_static! {
@@ -46,20 +46,32 @@ impl ThreatDetector {
     }
 
     pub async fn check_token(&self, mint: &str) -> AppResult<ThreatScore> {
-        if let Some(cached) = SCORE_CACHE.read().unwrap_or_else(|e| e.into_inner()).get(mint) {
+        if let Some(cached) = SCORE_CACHE
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(mint)
+        {
             let age = chrono::Utc::now() - cached.created_at;
             if age.num_minutes() < 5 {
                 return Ok(cached.clone());
             }
         }
 
-        if WHITELIST_STORE.read().unwrap_or_else(|e| e.into_inner()).contains_key(mint) {
+        if WHITELIST_STORE
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .contains_key(mint)
+        {
             let factors = ThreatFactors::default();
             let score = ThreatScore::calculate(mint.to_string(), factors);
             return Ok(score);
         }
 
-        if let Some(blocked) = BLOCKED_STORE.read().unwrap_or_else(|e| e.into_inner()).get(mint) {
+        if let Some(blocked) = BLOCKED_STORE
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(mint)
+        {
             let mut factors = ThreatFactors::default();
             factors.rugcheck_score = Some(0.0);
             factors.goplus_honeypot = Some(blocked.threat_category == ThreatCategory::Honeypot);
@@ -100,20 +112,25 @@ impl ThreatDetector {
                 if factors.top_10_concentration == 0.0 {
                     factors.top_10_concentration = holder_analysis.top_10_concentration / 100.0;
                 }
-                external_data["holder_analysis"] = serde_json::to_value(&holder_analysis).unwrap_or_default();
+                external_data["holder_analysis"] =
+                    serde_json::to_value(&holder_analysis).unwrap_or_default();
             }
 
             if let Ok(trades) = self.birdeye.get_recent_trades(mint, 100).await {
                 let wash_analysis = self.birdeye.detect_wash_trading(&trades);
                 factors.wash_trade_likelihood = wash_analysis.wash_trading_likelihood;
-                external_data["wash_trading"] = serde_json::to_value(&wash_analysis).unwrap_or_default();
+                external_data["wash_trading"] =
+                    serde_json::to_value(&wash_analysis).unwrap_or_default();
             }
         }
 
         let mut score = ThreatScore::calculate(mint.to_string(), factors);
         score.external_data = external_data;
 
-        SCORE_CACHE.write().unwrap_or_else(|e| e.into_inner()).insert(mint.to_string(), score.clone());
+        SCORE_CACHE
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(mint.to_string(), score.clone());
 
         if score.overall_score >= 0.7 {
             self.create_alert(
@@ -133,11 +150,19 @@ impl ThreatDetector {
     }
 
     pub async fn check_wallet(&self, address: &str) -> AppResult<WalletAnalysis> {
-        if let Some(cached) = WALLET_ANALYSIS_CACHE.read().unwrap_or_else(|e| e.into_inner()).get(address) {
+        if let Some(cached) = WALLET_ANALYSIS_CACHE
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(address)
+        {
             return Ok(cached.clone());
         }
 
-        let is_blocked = BLOCKED_STORE.read().unwrap_or_else(|e| e.into_inner()).get(address).is_some();
+        let is_blocked = BLOCKED_STORE
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(address)
+            .is_some();
 
         let mut analysis = WalletAnalysis {
             wallet_address: address.to_string(),
@@ -152,7 +177,11 @@ impl ThreatDetector {
         };
 
         if is_blocked {
-            if let Some(blocked) = BLOCKED_STORE.read().unwrap_or_else(|e| e.into_inner()).get(address) {
+            if let Some(blocked) = BLOCKED_STORE
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .get(address)
+            {
                 analysis.scam_associations.push(ScamAssociation {
                     token_mint: "N/A".to_string(),
                     token_name: None,
@@ -163,7 +192,10 @@ impl ThreatDetector {
             }
         }
 
-        WALLET_ANALYSIS_CACHE.write().unwrap_or_else(|e| e.into_inner()).insert(address.to_string(), analysis.clone());
+        WALLET_ANALYSIS_CACHE
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(address.to_string(), analysis.clone());
 
         Ok(analysis)
     }
@@ -184,11 +216,18 @@ impl ThreatDetector {
             reported_by,
         );
 
-        if let Some(cached) = SCORE_CACHE.read().unwrap_or_else(|e| e.into_inner()).get(&address) {
+        if let Some(cached) = SCORE_CACHE
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(&address)
+        {
             entity.threat_score = Some(cached.overall_score);
         }
 
-        BLOCKED_STORE.write().unwrap_or_else(|e| e.into_inner()).insert(address.clone(), entity.clone());
+        BLOCKED_STORE
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(address.clone(), entity.clone());
 
         self.create_alert(
             ThreatAlertType::SuspiciousActivity,
@@ -210,20 +249,34 @@ impl ThreatDetector {
         whitelisted_by: String,
     ) -> WhitelistedEntity {
         let entity = WhitelistedEntity::new(entity_type, address.clone(), reason, whitelisted_by);
-        WHITELIST_STORE.write().unwrap_or_else(|e| e.into_inner()).insert(address.clone(), entity.clone());
-        BLOCKED_STORE.write().unwrap_or_else(|e| e.into_inner()).remove(&address);
+        WHITELIST_STORE
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(address.clone(), entity.clone());
+        BLOCKED_STORE
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(&address);
         entity
     }
 
     pub fn add_watched_wallet(&self, wallet: WatchedWallet) -> WatchedWallet {
         let id = wallet.id;
-        WATCHED_STORE.write().unwrap_or_else(|e| e.into_inner()).insert(id, wallet.clone());
+        WATCHED_STORE
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(id, wallet.clone());
         wallet
     }
 
-    pub fn get_blocked(&self, category: Option<ThreatCategory>, limit: usize) -> Vec<BlockedEntity> {
+    pub fn get_blocked(
+        &self,
+        category: Option<ThreatCategory>,
+        limit: usize,
+    ) -> Vec<BlockedEntity> {
         let store = BLOCKED_STORE.read().unwrap_or_else(|e| e.into_inner());
-        let mut entities: Vec<_> = store.values()
+        let mut entities: Vec<_> = store
+            .values()
             .filter(|e| {
                 if let Some(ref cat) = category {
                     return &e.threat_category == cat;
@@ -248,10 +301,7 @@ impl ThreatDetector {
 
     pub fn get_watched(&self, limit: usize) -> Vec<WatchedWallet> {
         let store = WATCHED_STORE.read().unwrap_or_else(|e| e.into_inner());
-        let mut wallets: Vec<_> = store.values()
-            .filter(|w| w.is_active)
-            .cloned()
-            .collect();
+        let mut wallets: Vec<_> = store.values().filter(|w| w.is_active).cloned().collect();
         wallets.sort_by(|a, b| b.created_at.cmp(&a.created_at));
         wallets.truncate(limit);
         wallets
@@ -259,7 +309,8 @@ impl ThreatDetector {
 
     pub fn get_alerts(&self, severity: Option<AlertSeverity>, limit: usize) -> Vec<ThreatAlert> {
         let store = ALERTS_STORE.read().unwrap_or_else(|e| e.into_inner());
-        let mut alerts: Vec<_> = store.iter()
+        let mut alerts: Vec<_> = store
+            .iter()
             .filter(|a| {
                 if let Some(ref sev) = severity {
                     return &a.severity == sev;
@@ -275,7 +326,11 @@ impl ThreatDetector {
     }
 
     pub fn get_score_history(&self, mint: &str) -> Option<ThreatScore> {
-        SCORE_CACHE.read().unwrap_or_else(|e| e.into_inner()).get(mint).cloned()
+        SCORE_CACHE
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(mint)
+            .cloned()
     }
 
     pub fn create_alert(
@@ -316,21 +371,19 @@ impl ThreatDetector {
         let now = chrono::Utc::now();
         let day_ago = now - chrono::Duration::hours(24);
 
-        let alerts_last_24h = alerts.iter()
-            .filter(|a| a.created_at > day_ago)
-            .count() as u64;
+        let alerts_last_24h = alerts.iter().filter(|a| a.created_at > day_ago).count() as u64;
 
-        let blocked_tokens = blocked.values()
+        let blocked_tokens = blocked
+            .values()
             .filter(|e| e.entity_type == ThreatEntityType::Token)
             .count() as u64;
 
-        let blocked_wallets = blocked.values()
+        let blocked_wallets = blocked
+            .values()
             .filter(|e| e.entity_type == ThreatEntityType::Wallet)
             .count() as u64;
 
-        let threats_detected = cache.values()
-            .filter(|s| s.overall_score >= 0.5)
-            .count() as u64;
+        let threats_detected = cache.values().filter(|s| s.overall_score >= 0.5).count() as u64;
 
         ThreatStats {
             total_tokens_checked: cache.len() as u64,
@@ -345,19 +398,33 @@ impl ThreatDetector {
     }
 
     pub fn is_blocked(&self, address: &str) -> bool {
-        BLOCKED_STORE.read().unwrap_or_else(|e| e.into_inner()).contains_key(address)
+        BLOCKED_STORE
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .contains_key(address)
     }
 
     pub fn is_whitelisted(&self, address: &str) -> bool {
-        WHITELIST_STORE.read().unwrap_or_else(|e| e.into_inner()).contains_key(address)
+        WHITELIST_STORE
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .contains_key(address)
     }
 
     pub fn remove_from_blocklist(&self, address: &str) -> bool {
-        BLOCKED_STORE.write().unwrap_or_else(|e| e.into_inner()).remove(address).is_some()
+        BLOCKED_STORE
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(address)
+            .is_some()
     }
 
     pub fn remove_from_whitelist(&self, address: &str) -> bool {
-        WHITELIST_STORE.write().unwrap_or_else(|e| e.into_inner()).remove(address).is_some()
+        WHITELIST_STORE
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(address)
+            .is_some()
     }
 }
 

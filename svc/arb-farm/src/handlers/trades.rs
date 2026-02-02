@@ -53,11 +53,17 @@ pub async fn list_trades(
         state.trade_repo.list(limit, offset).await?
     };
 
-    let strategy_map = state.strategy_repo.get_strategy_type_map().await.unwrap_or_default();
+    let strategy_map = state
+        .strategy_repo
+        .get_strategy_type_map()
+        .await
+        .unwrap_or_default();
 
     let mut trades: Vec<TradeResponse> = Vec::with_capacity(records.len());
     for r in &records {
-        let strategy_type = r.strategy_id.and_then(|sid| strategy_map.get(&sid).cloned());
+        let strategy_type = r
+            .strategy_id
+            .and_then(|sid| strategy_map.get(&sid).cloned());
         let (token_mint, token_symbol) = if let Some(eid) = r.edge_id {
             match state.position_repo.get_by_edge_id(eid).await {
                 Ok(Some(pos)) => (Some(pos.token_mint), pos.token_symbol),
@@ -91,14 +97,16 @@ pub async fn get_trade(
     State(state): State<AppState>,
     Path(trade_id): Path<Uuid>,
 ) -> AppResult<Json<TradeResponse>> {
-    let record = state
-        .trade_repo
-        .get_by_id(trade_id)
-        .await?
-        .ok_or_else(|| crate::error::AppError::NotFound(format!("Trade {} not found", trade_id)))?;
+    let record =
+        state.trade_repo.get_by_id(trade_id).await?.ok_or_else(|| {
+            crate::error::AppError::NotFound(format!("Trade {} not found", trade_id))
+        })?;
 
     let strategy_type = if let Some(sid) = record.strategy_id {
-        state.strategy_repo.get_strategy_type_map().await
+        state
+            .strategy_repo
+            .get_strategy_type_map()
+            .await
             .ok()
             .and_then(|m| m.get(&sid).cloned())
     } else {

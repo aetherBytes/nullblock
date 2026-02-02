@@ -1,14 +1,14 @@
+use chrono::Utc;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
-use chrono::Utc;
 
 use crate::error::{AppError, AppResult};
-use crate::events::{ArbEvent, AgentType, EventSource, approval as approval_topics};
+use crate::events::{approval as approval_topics, AgentType, ArbEvent, EventSource};
 use crate::models::{
-    ApprovalStatus, ApprovalType, GlobalExecutionConfig, HecateRecommendation,
-    PendingApproval, UpdateExecutionConfigRequest,
+    ApprovalStatus, ApprovalType, GlobalExecutionConfig, HecateRecommendation, PendingApproval,
+    UpdateExecutionConfigRequest,
 };
 
 pub struct ApprovalManager {
@@ -30,7 +30,10 @@ impl ApprovalManager {
         self.config.read().await.clone()
     }
 
-    pub async fn update_config(&self, request: UpdateExecutionConfigRequest) -> GlobalExecutionConfig {
+    pub async fn update_config(
+        &self,
+        request: UpdateExecutionConfigRequest,
+    ) -> GlobalExecutionConfig {
         let mut config = self.config.write().await;
 
         if let Some(v) = request.auto_execution_enabled {
@@ -72,18 +75,21 @@ impl ApprovalManager {
 
         config.updated_at = Utc::now();
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            "execution_config_updated",
-            EventSource::Agent(AgentType::ApprovalManager),
-            approval_topics::CONFIG_UPDATED,
-            serde_json::json!({
-                "auto_execution_enabled": config.auto_execution_enabled,
-                "notify_hecate": config.notify_hecate_on_pending,
-                "auto_min_confidence": config.auto_min_confidence,
-                "auto_max_position_sol": config.auto_max_position_sol,
-                "require_simulation": config.require_simulation,
-            }),
-        ));
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                "execution_config_updated",
+                EventSource::Agent(AgentType::ApprovalManager),
+                approval_topics::CONFIG_UPDATED,
+                serde_json::json!({
+                    "auto_execution_enabled": config.auto_execution_enabled,
+                    "notify_hecate": config.notify_hecate_on_pending,
+                    "auto_min_confidence": config.auto_min_confidence,
+                    "auto_max_position_sol": config.auto_max_position_sol,
+                    "require_simulation": config.require_simulation,
+                }),
+            ),
+        );
 
         config.clone()
     }
@@ -99,14 +105,21 @@ impl ApprovalManager {
             approval_topics::EXECUTION_DISABLED
         };
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            if enabled { "execution_enabled" } else { "execution_disabled" },
-            EventSource::Agent(AgentType::ApprovalManager),
-            topic,
-            serde_json::json!({
-                "enabled": enabled,
-            }),
-        ));
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                if enabled {
+                    "execution_enabled"
+                } else {
+                    "execution_disabled"
+                },
+                EventSource::Agent(AgentType::ApprovalManager),
+                topic,
+                serde_json::json!({
+                    "enabled": enabled,
+                }),
+            ),
+        );
 
         config.clone()
     }
@@ -159,35 +172,49 @@ impl ApprovalManager {
             approval_topics::CREATED
         };
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            if should_auto_approve { "approval_auto_approved" } else { "approval_created" },
-            EventSource::Agent(AgentType::ApprovalManager),
-            topic,
-            serde_json::json!({
-                "approval_id": approval_id,
-                "approval_type": format!("{}", approval_type),
-                "auto_approved": should_auto_approve,
-                "expires_at": approval.expires_at.to_rfc3339(),
-            }),
-        ));
-
-        if config.notify_hecate_on_pending && !should_auto_approve {
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "approval_pending_hecate_notification",
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                if should_auto_approve {
+                    "approval_auto_approved"
+                } else {
+                    "approval_created"
+                },
                 EventSource::Agent(AgentType::ApprovalManager),
-                approval_topics::HECATE_NOTIFIED,
+                topic,
                 serde_json::json!({
                     "approval_id": approval_id,
                     "approval_type": format!("{}", approval_type),
-                    "context": approval.context,
+                    "auto_approved": should_auto_approve,
+                    "expires_at": approval.expires_at.to_rfc3339(),
                 }),
-            ));
+            ),
+        );
+
+        if config.notify_hecate_on_pending && !should_auto_approve {
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "approval_pending_hecate_notification",
+                    EventSource::Agent(AgentType::ApprovalManager),
+                    approval_topics::HECATE_NOTIFIED,
+                    serde_json::json!({
+                        "approval_id": approval_id,
+                        "approval_type": format!("{}", approval_type),
+                        "context": approval.context,
+                    }),
+                ),
+            );
         }
 
         Ok(approval)
     }
 
-    fn should_auto_approve(&self, approval: &PendingApproval, config: &GlobalExecutionConfig) -> bool {
+    fn should_auto_approve(
+        &self,
+        approval: &PendingApproval,
+        config: &GlobalExecutionConfig,
+    ) -> bool {
         if !config.auto_execution_enabled {
             return false;
         }
@@ -226,10 +253,15 @@ impl ApprovalManager {
         false
     }
 
-    pub async fn approve(&self, approval_id: Uuid, notes: Option<String>) -> AppResult<PendingApproval> {
+    pub async fn approve(
+        &self,
+        approval_id: Uuid,
+        notes: Option<String>,
+    ) -> AppResult<PendingApproval> {
         let mut pending = self.pending.write().await;
 
-        let approval = pending.get_mut(&approval_id)
+        let approval = pending
+            .get_mut(&approval_id)
             .ok_or_else(|| AppError::NotFound(format!("Approval {} not found", approval_id)))?;
 
         if approval.is_expired() {
@@ -254,16 +286,19 @@ impl ApprovalManager {
             }
         }
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            "approval_approved",
-            EventSource::Agent(AgentType::ApprovalManager),
-            approval_topics::APPROVED,
-            serde_json::json!({
-                "approval_id": approval_id,
-                "edge_id": approval.edge_id,
-                "position_id": approval.position_id,
-            }),
-        ));
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                "approval_approved",
+                EventSource::Agent(AgentType::ApprovalManager),
+                approval_topics::APPROVED,
+                serde_json::json!({
+                    "approval_id": approval_id,
+                    "edge_id": approval.edge_id,
+                    "position_id": approval.position_id,
+                }),
+            ),
+        );
 
         Ok(approval.clone())
     }
@@ -271,7 +306,8 @@ impl ApprovalManager {
     pub async fn reject(&self, approval_id: Uuid, reason: String) -> AppResult<PendingApproval> {
         let mut pending = self.pending.write().await;
 
-        let approval = pending.get_mut(&approval_id)
+        let approval = pending
+            .get_mut(&approval_id)
             .ok_or_else(|| AppError::NotFound(format!("Approval {} not found", approval_id)))?;
 
         if approval.status != ApprovalStatus::Pending {
@@ -286,44 +322,59 @@ impl ApprovalManager {
         approval.user_decided_at = Some(Utc::now());
 
         if let Some(obj) = approval.context.as_object_mut() {
-            obj.insert("rejection_reason".to_string(), serde_json::json!(reason.clone()));
+            obj.insert(
+                "rejection_reason".to_string(),
+                serde_json::json!(reason.clone()),
+            );
         }
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            "approval_rejected",
-            EventSource::Agent(AgentType::ApprovalManager),
-            approval_topics::REJECTED,
-            serde_json::json!({
-                "approval_id": approval_id,
-                "edge_id": approval.edge_id,
-                "position_id": approval.position_id,
-                "reason": reason,
-            }),
-        ));
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                "approval_rejected",
+                EventSource::Agent(AgentType::ApprovalManager),
+                approval_topics::REJECTED,
+                serde_json::json!({
+                    "approval_id": approval_id,
+                    "edge_id": approval.edge_id,
+                    "position_id": approval.position_id,
+                    "reason": reason,
+                }),
+            ),
+        );
 
         Ok(approval.clone())
     }
 
-    pub async fn add_hecate_recommendation(&self, recommendation: HecateRecommendation) -> AppResult<PendingApproval> {
+    pub async fn add_hecate_recommendation(
+        &self,
+        recommendation: HecateRecommendation,
+    ) -> AppResult<PendingApproval> {
         let mut pending = self.pending.write().await;
 
-        let approval = pending.get_mut(&recommendation.approval_id)
-            .ok_or_else(|| AppError::NotFound(format!("Approval {} not found", recommendation.approval_id)))?;
+        let approval = pending
+            .get_mut(&recommendation.approval_id)
+            .ok_or_else(|| {
+                AppError::NotFound(format!("Approval {} not found", recommendation.approval_id))
+            })?;
 
         approval.hecate_decision = Some(recommendation.decision);
         approval.hecate_reasoning = Some(recommendation.reasoning.clone());
         approval.hecate_confidence = Some(recommendation.confidence);
 
-        crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-            "hecate_recommendation_received",
-            EventSource::Agent(AgentType::ApprovalManager),
-            approval_topics::HECATE_RECOMMENDED,
-            serde_json::json!({
-                "approval_id": recommendation.approval_id,
-                "decision": recommendation.decision,
-                "confidence": recommendation.confidence,
-            }),
-        ));
+        crate::events::broadcast_event(
+            &self.event_tx,
+            ArbEvent::new(
+                "hecate_recommendation_received",
+                EventSource::Agent(AgentType::ApprovalManager),
+                approval_topics::HECATE_RECOMMENDED,
+                serde_json::json!({
+                    "approval_id": recommendation.approval_id,
+                    "decision": recommendation.decision,
+                    "confidence": recommendation.confidence,
+                }),
+            ),
+        );
 
         Ok(approval.clone())
     }
@@ -359,14 +410,17 @@ impl ApprovalManager {
         }
 
         for id in &expired_ids {
-            crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                "approval_expired",
-                EventSource::Agent(AgentType::ApprovalManager),
-                approval_topics::EXPIRED,
-                serde_json::json!({
-                    "approval_id": id,
-                }),
-            ));
+            crate::events::broadcast_event(
+                &self.event_tx,
+                ArbEvent::new(
+                    "approval_expired",
+                    EventSource::Agent(AgentType::ApprovalManager),
+                    approval_topics::EXPIRED,
+                    serde_json::json!({
+                        "approval_id": id,
+                    }),
+                ),
+            );
         }
 
         expired_ids
@@ -387,7 +441,9 @@ impl ApprovalManager {
         let mut cancelled_ids = Vec::new();
 
         for (id, approval) in pending.iter_mut() {
-            if approval.strategy_id == Some(strategy_id) && approval.status == ApprovalStatus::Pending {
+            if approval.strategy_id == Some(strategy_id)
+                && approval.status == ApprovalStatus::Pending
+            {
                 approval.status = ApprovalStatus::Rejected;
                 approval.user_decision = Some(false);
                 approval.user_decided_at = Some(Utc::now());
@@ -401,16 +457,19 @@ impl ApprovalManager {
 
                 cancelled_ids.push(*id);
 
-                crate::events::broadcast_event(&self.event_tx, ArbEvent::new(
-                    "approval_cancelled_by_kill",
-                    EventSource::Agent(AgentType::ApprovalManager),
-                    approval_topics::REJECTED,
-                    serde_json::json!({
-                        "approval_id": id,
-                        "strategy_id": strategy_id,
-                        "reason": "strategy_killed",
-                    }),
-                ));
+                crate::events::broadcast_event(
+                    &self.event_tx,
+                    ArbEvent::new(
+                        "approval_cancelled_by_kill",
+                        EventSource::Agent(AgentType::ApprovalManager),
+                        approval_topics::REJECTED,
+                        serde_json::json!({
+                            "approval_id": id,
+                            "strategy_id": strategy_id,
+                            "reason": "strategy_killed",
+                        }),
+                    ),
+                );
             }
         }
 

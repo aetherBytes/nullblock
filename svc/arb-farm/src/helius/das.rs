@@ -5,10 +5,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tracing::{debug, error, info, warn};
 
-use crate::error::{AppError, AppResult};
-use crate::events::{topics, ArbEvent, EventBus, EventSource};
 use super::client::HeliusClient;
 use super::types::{Collection, Creator, TokenMetadata};
+use crate::error::{AppError, AppResult};
+use crate::events::{topics, ArbEvent, EventBus, EventSource};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenAccountInfo {
@@ -226,23 +226,21 @@ impl DasClient {
             .collect();
 
         let collection: Option<Collection> = asset.grouping.and_then(|groups| {
-            groups.into_iter().find(|g| g.group_key == "collection").map(|g| {
-                Collection {
+            groups
+                .into_iter()
+                .find(|g| g.group_key == "collection")
+                .map(|g| Collection {
                     address: g.group_value,
                     name: g.collection_metadata.and_then(|m| m.name),
                     verified: g.verified.unwrap_or(false),
-                }
-            })
+                })
         });
 
         let image_uri = content
             .and_then(|c| c.links.as_ref())
             .and_then(|l| l.image.clone());
 
-        let supply = asset
-            .supply
-            .and_then(|s| s.print_max_supply)
-            .unwrap_or(1);
+        let supply = asset.supply.and_then(|s| s.print_max_supply).unwrap_or(1);
 
         let token_metadata = TokenMetadata {
             mint: mint.to_string(),
@@ -329,10 +327,7 @@ impl DasClient {
             params.insert("creatorAddress".to_string(), json!(creator));
         }
         if let Some(collection) = query.collection_address {
-            params.insert("grouping".to_string(), json!([
-                "collection",
-                collection
-            ]));
+            params.insert("grouping".to_string(), json!(["collection", collection]));
         }
         if let Some(frozen) = query.frozen {
             params.insert("frozen".to_string(), json!(frozen));
@@ -381,7 +376,10 @@ impl DasClient {
         }
     }
 
-    pub async fn get_token_accounts_by_owner(&self, owner: &str) -> AppResult<Vec<TokenAccountInfo>> {
+    pub async fn get_token_accounts_by_owner(
+        &self,
+        owner: &str,
+    ) -> AppResult<Vec<TokenAccountInfo>> {
         let mut all_accounts = Vec::new();
 
         // Query standard SPL Token program
@@ -414,7 +412,10 @@ impl DasClient {
         {
             Ok(token2022_response) => {
                 let token2022_accounts = self.parse_token_accounts(token2022_response);
-                info!("Found {} Token-2022 accounts with balance", token2022_accounts.len());
+                info!(
+                    "Found {} Token-2022 accounts with balance",
+                    token2022_accounts.len()
+                );
                 all_accounts.extend(token2022_accounts);
             }
             Err(e) => {

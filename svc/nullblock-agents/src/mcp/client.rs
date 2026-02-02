@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 const MCP_CACHE_TTL_SECS: u64 = 300;
 
@@ -71,7 +71,11 @@ impl McpClient {
         self.request_id.fetch_add(1, Ordering::SeqCst)
     }
 
-    async fn send_request(&self, method: &str, params: Option<serde_json::Value>) -> AppResult<serde_json::Value> {
+    async fn send_request(
+        &self,
+        method: &str,
+        params: Option<serde_json::Value>,
+    ) -> AppResult<serde_json::Value> {
         let id = self.next_request_id();
         let mcp_url = format!("{}/mcp/jsonrpc", self.erebus_url);
 
@@ -85,7 +89,8 @@ impl McpClient {
             request_body["params"] = params;
         }
 
-        let response = self.http_client
+        let response = self
+            .http_client
             .post(&mcp_url)
             .json(&request_body)
             .send()
@@ -95,7 +100,8 @@ impl McpClient {
         if !response.status().is_success() {
             return Err(AppError::InternalError(format!(
                 "MCP {} failed with status: {}",
-                method, response.status()
+                method,
+                response.status()
             )));
         }
 
@@ -106,7 +112,10 @@ impl McpClient {
 
         if let Some(error) = data.get("error") {
             let code = error.get("code").and_then(|c| c.as_i64()).unwrap_or(-1);
-            let message = error.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown error");
+            let message = error
+                .get("message")
+                .and_then(|m| m.as_str())
+                .unwrap_or("Unknown error");
             return Err(AppError::InternalError(format!(
                 "MCP error {}: {}",
                 code, message
@@ -118,7 +127,11 @@ impl McpClient {
             .ok_or_else(|| AppError::InternalError("MCP response missing result".to_string()))
     }
 
-    async fn send_notification(&self, method: &str, params: Option<serde_json::Value>) -> AppResult<()> {
+    async fn send_notification(
+        &self,
+        method: &str,
+        params: Option<serde_json::Value>,
+    ) -> AppResult<()> {
         let mcp_url = format!("{}/mcp/jsonrpc", self.erebus_url);
 
         let mut request_body = json!({
@@ -130,7 +143,8 @@ impl McpClient {
             request_body["params"] = params;
         }
 
-        let response = self.http_client
+        let response = self
+            .http_client
             .post(&mcp_url)
             .json(&request_body)
             .send()
@@ -138,7 +152,11 @@ impl McpClient {
             .map_err(|e| AppError::InternalError(format!("MCP notification failed: {}", e)))?;
 
         if !response.status().is_success() {
-            warn!("MCP notification {} returned status: {}", method, response.status());
+            warn!(
+                "MCP notification {} returned status: {}",
+                method,
+                response.status()
+            );
         }
 
         Ok(())
@@ -161,8 +179,9 @@ impl McpClient {
 
         let result = self.send_request("initialize", Some(init_params)).await?;
 
-        let init_result: InitializeResult = serde_json::from_value(result)
-            .map_err(|e| AppError::InternalError(format!("Failed to parse initialize result: {}", e)))?;
+        let init_result: InitializeResult = serde_json::from_value(result).map_err(|e| {
+            AppError::InternalError(format!("Failed to parse initialize result: {}", e))
+        })?;
 
         if init_result.protocol_version != MCP_PROTOCOL_VERSION {
             warn!(
@@ -184,7 +203,8 @@ impl McpClient {
             *version = Some(init_result.protocol_version);
         }
 
-        self.send_notification("initialized", Some(json!({}))).await?;
+        self.send_notification("initialized", Some(json!({})))
+            .await?;
 
         {
             let mut initialized = self.initialized.write().await;
@@ -248,7 +268,11 @@ impl McpClient {
         Ok(tools)
     }
 
-    pub async fn call_tool(&self, name: &str, arguments: HashMap<String, serde_json::Value>) -> AppResult<CallToolResult> {
+    pub async fn call_tool(
+        &self,
+        name: &str,
+        arguments: HashMap<String, serde_json::Value>,
+    ) -> AppResult<CallToolResult> {
         self.ensure_connected().await?;
 
         info!("🔧 Calling MCP tool: {}", name);
@@ -260,11 +284,14 @@ impl McpClient {
 
         let result = self.send_request("tools/call", Some(params)).await?;
 
-        let tool_result: CallToolResult = serde_json::from_value(result)
-            .map_err(|e| AppError::InternalError(format!("Failed to parse tools/call result: {}", e)))?;
+        let tool_result: CallToolResult = serde_json::from_value(result).map_err(|e| {
+            AppError::InternalError(format!("Failed to parse tools/call result: {}", e))
+        })?;
 
         if tool_result.is_error == Some(true) {
-            let error_text = tool_result.content.iter()
+            let error_text = tool_result
+                .content
+                .iter()
                 .filter_map(|block| {
                     if let ContentBlock::Text { text } = block {
                         Some(text.as_str())
@@ -298,7 +325,9 @@ impl McpClient {
         let resources_array = result
             .get("resources")
             .and_then(|r| r.as_array())
-            .ok_or_else(|| AppError::InternalError("Invalid resources/list response".to_string()))?;
+            .ok_or_else(|| {
+                AppError::InternalError("Invalid resources/list response".to_string())
+            })?;
 
         let resources: Vec<McpResource> = resources_array
             .iter()
@@ -329,7 +358,9 @@ impl McpClient {
         let contents_array = result
             .get("contents")
             .and_then(|c| c.as_array())
-            .ok_or_else(|| AppError::InternalError("Invalid resources/read response".to_string()))?;
+            .ok_or_else(|| {
+                AppError::InternalError("Invalid resources/read response".to_string())
+            })?;
 
         let contents: Vec<ResourceContents> = contents_array
             .iter()
@@ -373,7 +404,11 @@ impl McpClient {
         Ok(prompts)
     }
 
-    pub async fn get_prompt(&self, name: &str, arguments: Option<HashMap<String, String>>) -> AppResult<GetPromptResult> {
+    pub async fn get_prompt(
+        &self,
+        name: &str,
+        arguments: Option<HashMap<String, String>>,
+    ) -> AppResult<GetPromptResult> {
         self.ensure_connected().await?;
 
         info!("💬 Getting MCP prompt: {}", name);
@@ -388,10 +423,15 @@ impl McpClient {
 
         let result = self.send_request("prompts/get", Some(params)).await?;
 
-        let prompt_result: GetPromptResult = serde_json::from_value(result)
-            .map_err(|e| AppError::InternalError(format!("Failed to parse prompts/get result: {}", e)))?;
+        let prompt_result: GetPromptResult = serde_json::from_value(result).map_err(|e| {
+            AppError::InternalError(format!("Failed to parse prompts/get result: {}", e))
+        })?;
 
-        info!("✅ Retrieved prompt {} with {} messages", name, prompt_result.messages.len());
+        info!(
+            "✅ Retrieved prompt {} with {} messages",
+            name,
+            prompt_result.messages.len()
+        );
         Ok(prompt_result)
     }
 

@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
-use sqlx::PgPool;
-use uuid::Uuid;
 use anyhow::Result;
 use chrono::Utc;
+use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::database::models::TaskEntity;
 use crate::models::{CreateTaskRequest, UpdateTaskRequest};
@@ -17,7 +17,13 @@ impl TaskRepository {
         Self { pool }
     }
 
-    pub async fn create(&self, request: &CreateTaskRequest, user_id: Option<Uuid>, assigned_agent_id: Option<Uuid>, source_identifier: Option<String>) -> Result<TaskEntity> {
+    pub async fn create(
+        &self,
+        request: &CreateTaskRequest,
+        user_id: Option<Uuid>,
+        assigned_agent_id: Option<Uuid>,
+        source_identifier: Option<String>,
+    ) -> Result<TaskEntity> {
         let task_id = Uuid::new_v4();
         let context_id = Uuid::new_v4();
         let now = Utc::now();
@@ -51,18 +57,43 @@ impl TaskRepository {
                 $23, $24, $25, $26, $27, $28, $29
             )
             RETURNING *
-            "#
+            "#,
         )
         .bind(task_id)
         .bind(&request.name)
         .bind(&request.description)
-        .bind(serde_json::to_string(&request.task_type).unwrap().trim_matches('"').to_string())
-        .bind(serde_json::to_string(&request.category.as_ref().unwrap_or(&crate::models::TaskCategory::UserAssigned)).unwrap().trim_matches('"').to_string())
+        .bind(
+            serde_json::to_string(&request.task_type)
+                .unwrap()
+                .trim_matches('"')
+                .to_string(),
+        )
+        .bind(
+            serde_json::to_string(
+                &request
+                    .category
+                    .as_ref()
+                    .unwrap_or(&crate::models::TaskCategory::UserAssigned),
+            )
+            .unwrap()
+            .trim_matches('"')
+            .to_string(),
+        )
         .bind(context_id)
         .bind("task")
         .bind(status_str)
         .bind(now)
-        .bind(serde_json::to_string(&request.priority.as_ref().unwrap_or(&crate::models::TaskPriority::Medium)).unwrap().trim_matches('"').to_string())
+        .bind(
+            serde_json::to_string(
+                &request
+                    .priority
+                    .as_ref()
+                    .unwrap_or(&crate::models::TaskPriority::Medium),
+            )
+            .unwrap()
+            .trim_matches('"')
+            .to_string(),
+        )
         .bind(user_id)
         .bind(assigned_agent_id)
         .bind(now)
@@ -72,7 +103,15 @@ impl TaskRepository {
         .bind(serde_json::to_value(&request.sub_tasks.as_ref().unwrap_or(&vec![])).unwrap())
         .bind(serde_json::to_value(&request.dependencies.as_ref().unwrap_or(&vec![])).unwrap())
         .bind(serde_json::json!({}))
-        .bind(serde_json::to_value(&request.parameters.as_ref().unwrap_or(&std::collections::HashMap::new())).unwrap())
+        .bind(
+            serde_json::to_value(
+                &request
+                    .parameters
+                    .as_ref()
+                    .unwrap_or(&std::collections::HashMap::new()),
+            )
+            .unwrap(),
+        )
         .bind(serde_json::json!([]))
         .bind(serde_json::json!([]))
         .bind(serde_json::json!([]))
@@ -91,17 +130,21 @@ impl TaskRepository {
     pub async fn get_by_id(&self, task_id: &str) -> Result<Option<TaskEntity>> {
         let uuid = Uuid::parse_str(task_id)?;
 
-        let task = sqlx::query_as::<_, TaskEntity>(
-            "SELECT * FROM tasks WHERE id = $1"
-        )
-        .bind(uuid)
-        .fetch_optional(&self.pool)
-        .await?;
+        let task = sqlx::query_as::<_, TaskEntity>("SELECT * FROM tasks WHERE id = $1")
+            .bind(uuid)
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(task)
     }
 
-    pub async fn list(&self, user_id: Option<Uuid>, status_filter: Option<&str>, task_type_filter: Option<&str>, limit: Option<i64>) -> Result<Vec<TaskEntity>> {
+    pub async fn list(
+        &self,
+        user_id: Option<Uuid>,
+        status_filter: Option<&str>,
+        task_type_filter: Option<&str>,
+        limit: Option<i64>,
+    ) -> Result<Vec<TaskEntity>> {
         let mut query_builder = sqlx::QueryBuilder::new("SELECT * FROM tasks WHERE 1=1");
 
         if let Some(uid) = user_id {
@@ -132,7 +175,11 @@ impl TaskRepository {
         Ok(tasks)
     }
 
-    pub async fn update(&self, task_id: &str, request: &UpdateTaskRequest) -> Result<Option<TaskEntity>> {
+    pub async fn update(
+        &self,
+        task_id: &str,
+        request: &UpdateTaskRequest,
+    ) -> Result<Option<TaskEntity>> {
         let uuid = Uuid::parse_str(task_id)?;
         let now = Utc::now();
 
@@ -151,18 +198,38 @@ impl TaskRepository {
                 updated_at = $11
             WHERE id = $1
             RETURNING *
-            "#
+            "#,
         )
         .bind(uuid)
         .bind(request.name.as_ref())
         .bind(request.description.as_ref())
-        .bind(request.status.as_ref().map(|s| serde_json::to_string(s).unwrap().trim_matches('"').to_string()))
-        .bind(request.priority.as_ref().map(|p| serde_json::to_string(p).unwrap().trim_matches('"').to_string()))
+        .bind(request.status.as_ref().map(|s| {
+            serde_json::to_string(s)
+                .unwrap()
+                .trim_matches('"')
+                .to_string()
+        }))
+        .bind(request.priority.as_ref().map(|p| {
+            serde_json::to_string(p)
+                .unwrap()
+                .trim_matches('"')
+                .to_string()
+        }))
         .bind(request.progress.map(|p| p as i16))
-        .bind(request.parameters.as_ref().and_then(|p| serde_json::to_value(p).ok()))
+        .bind(
+            request
+                .parameters
+                .as_ref()
+                .and_then(|p| serde_json::to_value(p).ok()),
+        )
         .bind(request.started_at)
         .bind(request.completed_at)
-        .bind(request.outcome.as_ref().and_then(|o| serde_json::to_value(o).ok()))
+        .bind(
+            request
+                .outcome
+                .as_ref()
+                .and_then(|o| serde_json::to_value(o).ok()),
+        )
         .bind(now)
         .fetch_optional(&self.pool)
         .await?;
@@ -173,20 +240,25 @@ impl TaskRepository {
     pub async fn delete(&self, task_id: &str) -> Result<Option<TaskEntity>> {
         let uuid = Uuid::parse_str(task_id)?;
 
-        let task = sqlx::query_as::<_, TaskEntity>(
-            "DELETE FROM tasks WHERE id = $1 RETURNING *"
-        )
-        .bind(uuid)
-        .fetch_optional(&self.pool)
-        .await?;
+        let task = sqlx::query_as::<_, TaskEntity>("DELETE FROM tasks WHERE id = $1 RETURNING *")
+            .bind(uuid)
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(task)
     }
 
-    pub async fn update_status(&self, task_id: &str, status: crate::models::TaskState) -> Result<Option<TaskEntity>> {
+    pub async fn update_status(
+        &self,
+        task_id: &str,
+        status: crate::models::TaskState,
+    ) -> Result<Option<TaskEntity>> {
         let uuid = Uuid::parse_str(task_id)?;
         let now = Utc::now();
-        let status_str = serde_json::to_string(&status).unwrap().trim_matches('"').to_string();
+        let status_str = serde_json::to_string(&status)
+            .unwrap()
+            .trim_matches('"')
+            .to_string();
 
         let started_at = if status == crate::models::TaskState::Working {
             Some(now)
@@ -194,7 +266,12 @@ impl TaskRepository {
             None
         };
 
-        let completed_at = if matches!(status, crate::models::TaskState::Completed | crate::models::TaskState::Failed | crate::models::TaskState::Canceled) {
+        let completed_at = if matches!(
+            status,
+            crate::models::TaskState::Completed
+                | crate::models::TaskState::Failed
+                | crate::models::TaskState::Canceled
+        ) {
             Some(now)
         } else {
             None
@@ -210,7 +287,7 @@ impl TaskRepository {
                 updated_at = $6
             WHERE id = $1
             RETURNING *
-            "#
+            "#,
         )
         .bind(uuid)
         .bind(status_str)
@@ -225,7 +302,11 @@ impl TaskRepository {
     }
 
     // Action tracking methods
-    pub async fn mark_task_actioned(&self, task_id: &str, action_metadata: Option<serde_json::Value>) -> Result<Option<TaskEntity>> {
+    pub async fn mark_task_actioned(
+        &self,
+        task_id: &str,
+        action_metadata: Option<serde_json::Value>,
+    ) -> Result<Option<TaskEntity>> {
         let uuid = Uuid::parse_str(task_id)?;
         let now = Utc::now();
 
@@ -237,7 +318,7 @@ impl TaskRepository {
                 updated_at = $4
             WHERE id = $1 AND actioned_at IS NULL
             RETURNING *
-            "#
+            "#,
         )
         .bind(uuid)
         .bind(now)
@@ -249,7 +330,12 @@ impl TaskRepository {
         Ok(task)
     }
 
-    pub async fn update_action_result(&self, task_id: &str, action_result: &str, action_duration: Option<u64>) -> Result<Option<TaskEntity>> {
+    pub async fn update_action_result(
+        &self,
+        task_id: &str,
+        action_result: &str,
+        action_duration: Option<u64>,
+    ) -> Result<Option<TaskEntity>> {
         let uuid = Uuid::parse_str(task_id)?;
         let now = Utc::now();
 
@@ -261,7 +347,7 @@ impl TaskRepository {
                 updated_at = $4
             WHERE id = $1
             RETURNING *
-            "#
+            "#,
         )
         .bind(uuid)
         .bind(action_result)
@@ -273,9 +359,13 @@ impl TaskRepository {
         Ok(task)
     }
 
-    pub async fn get_unactioned_tasks(&self, agent_id: Option<Uuid>, limit: Option<i64>) -> Result<Vec<TaskEntity>> {
+    pub async fn get_unactioned_tasks(
+        &self,
+        agent_id: Option<Uuid>,
+        limit: Option<i64>,
+    ) -> Result<Vec<TaskEntity>> {
         let mut query_builder = sqlx::QueryBuilder::new(
-            "SELECT * FROM tasks WHERE status = 'working' AND actioned_at IS NULL"
+            "SELECT * FROM tasks WHERE status = 'working' AND actioned_at IS NULL",
         );
 
         if let Some(agent) = agent_id {
@@ -296,10 +386,13 @@ impl TaskRepository {
         Ok(tasks)
     }
 
-    pub async fn get_tasks_for_agent(&self, agent_id: Uuid, status_filter: Option<&str>) -> Result<Vec<TaskEntity>> {
-        let mut query_builder = sqlx::QueryBuilder::new(
-            "SELECT * FROM tasks WHERE assigned_agent_id = "
-        );
+    pub async fn get_tasks_for_agent(
+        &self,
+        agent_id: Uuid,
+        status_filter: Option<&str>,
+    ) -> Result<Vec<TaskEntity>> {
+        let mut query_builder =
+            sqlx::QueryBuilder::new("SELECT * FROM tasks WHERE assigned_agent_id = ");
         query_builder.push_bind(agent_id);
 
         if let Some(status) = status_filter {
@@ -318,7 +411,7 @@ impl TaskRepository {
     pub async fn add_message_to_history(
         &self,
         task_id: &str,
-        message: serde_json::Value
+        message: serde_json::Value,
     ) -> Result<Option<TaskEntity>> {
         let uuid = Uuid::parse_str(task_id)?;
         let task = sqlx::query_as::<_, TaskEntity>(
@@ -328,7 +421,7 @@ impl TaskRepository {
                 updated_at = $3
             WHERE id = $1
             RETURNING *
-            "#
+            "#,
         )
         .bind(uuid)
         .bind(message)
@@ -341,7 +434,7 @@ impl TaskRepository {
     pub async fn add_artifact(
         &self,
         task_id: &str,
-        artifact: serde_json::Value
+        artifact: serde_json::Value,
     ) -> Result<Option<TaskEntity>> {
         let uuid = Uuid::parse_str(task_id)?;
         let task = sqlx::query_as::<_, TaskEntity>(
@@ -351,7 +444,7 @@ impl TaskRepository {
                 updated_at = $3
             WHERE id = $1
             RETURNING *
-            "#
+            "#,
         )
         .bind(uuid)
         .bind(artifact)
@@ -365,11 +458,14 @@ impl TaskRepository {
         &self,
         task_id: &str,
         state: crate::models::TaskState,
-        message: Option<String>
+        message: Option<String>,
     ) -> Result<Option<TaskEntity>> {
         let uuid = Uuid::parse_str(task_id)?;
         let now = Utc::now();
-        let state_str = serde_json::to_string(&state).unwrap().trim_matches('"').to_string();
+        let state_str = serde_json::to_string(&state)
+            .unwrap()
+            .trim_matches('"')
+            .to_string();
 
         let started_at = if state == crate::models::TaskState::Working {
             Some(now)
@@ -377,7 +473,12 @@ impl TaskRepository {
             None
         };
 
-        let completed_at = if matches!(state, crate::models::TaskState::Completed | crate::models::TaskState::Failed | crate::models::TaskState::Canceled) {
+        let completed_at = if matches!(
+            state,
+            crate::models::TaskState::Completed
+                | crate::models::TaskState::Failed
+                | crate::models::TaskState::Canceled
+        ) {
             Some(now)
         } else {
             None
@@ -394,7 +495,7 @@ impl TaskRepository {
                 updated_at = $7
             WHERE id = $1
             RETURNING *
-            "#
+            "#,
         )
         .bind(uuid)
         .bind(state_str)

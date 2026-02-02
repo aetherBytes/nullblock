@@ -148,9 +148,10 @@ impl OpenRouterClient {
             .await
             .map_err(|e| AppError::ExternalApi(format!("Failed to parse response: {}", e)))?;
 
-        let choice = chat_response.choices.first().ok_or_else(|| {
-            AppError::ExternalApi("OpenRouter returned no choices".to_string())
-        })?;
+        let choice = chat_response
+            .choices
+            .first()
+            .ok_or_else(|| AppError::ExternalApi("OpenRouter returned no choices".to_string()))?;
 
         let response_type = if let Some(ref tool_calls) = choice.message.tool_calls {
             if !tool_calls.is_empty() {
@@ -188,9 +189,7 @@ impl OpenRouterClient {
         prompt: &str,
         system_prompt: Option<&str>,
     ) -> AppResult<(T, u64)> {
-        let response = self
-            .query_model(model, prompt, system_prompt, 2048)
-            .await?;
+        let response = self.query_model(model, prompt, system_prompt, 2048).await?;
 
         let json_start = response.content.find('{');
         let json_end = response.content.rfind('}');

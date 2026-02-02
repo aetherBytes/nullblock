@@ -1,6 +1,6 @@
+use crate::error::{AppError, AppResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::error::{AppError, AppResult};
 
 pub struct GoPlusClient {
     base_url: String,
@@ -63,12 +63,10 @@ impl GoPlusClient {
     }
 
     pub async fn check_token(&self, mint: &str) -> AppResult<GoPlusTokenInfo> {
-        let url = format!(
-            "{}/solana/token_security/{}",
-            self.base_url, mint
-        );
+        let url = format!("{}/solana/token_security/{}", self.base_url, mint);
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .header("Accept", "application/json")
             .send()
@@ -92,69 +90,80 @@ impl GoPlusClient {
             )));
         }
 
-        data.result.get(mint).cloned().ok_or_else(|| {
-            AppError::ExternalApi("Token not found in GoPlus response".to_string())
-        })
+        data.result
+            .get(mint)
+            .cloned()
+            .ok_or_else(|| AppError::ExternalApi("Token not found in GoPlus response".to_string()))
     }
 
     pub fn analyze(&self, info: &GoPlusTokenInfo) -> GoPlusAnalysis {
-        let is_honeypot = info.is_honeypot.as_ref()
+        let is_honeypot = info.is_honeypot.as_ref().map(|v| v == "1").unwrap_or(false);
+
+        let is_proxy = info.is_proxy.as_ref().map(|v| v == "1").unwrap_or(false);
+
+        let is_mintable = info.is_mintable.as_ref().map(|v| v == "1").unwrap_or(false);
+
+        let hidden_owner = info
+            .hidden_owner
+            .as_ref()
             .map(|v| v == "1")
             .unwrap_or(false);
 
-        let is_proxy = info.is_proxy.as_ref()
+        let can_take_back_ownership = info
+            .can_take_back_ownership
+            .as_ref()
             .map(|v| v == "1")
             .unwrap_or(false);
 
-        let is_mintable = info.is_mintable.as_ref()
+        let is_blacklisted = info
+            .is_blacklisted
+            .as_ref()
             .map(|v| v == "1")
             .unwrap_or(false);
 
-        let hidden_owner = info.hidden_owner.as_ref()
+        let transfer_pausable = info
+            .transfer_pausable
+            .as_ref()
             .map(|v| v == "1")
             .unwrap_or(false);
 
-        let can_take_back_ownership = info.can_take_back_ownership.as_ref()
+        let cannot_buy = info.cannot_buy.as_ref().map(|v| v == "1").unwrap_or(false);
+
+        let cannot_sell_all = info
+            .cannot_sell_all
+            .as_ref()
             .map(|v| v == "1")
             .unwrap_or(false);
 
-        let is_blacklisted = info.is_blacklisted.as_ref()
+        let is_airdrop_scam = info
+            .is_airdrop_scam
+            .as_ref()
             .map(|v| v == "1")
             .unwrap_or(false);
 
-        let transfer_pausable = info.transfer_pausable.as_ref()
-            .map(|v| v == "1")
-            .unwrap_or(false);
+        let fake_token = info.fake_token.as_ref().map(|v| v == "1").unwrap_or(false);
 
-        let cannot_buy = info.cannot_buy.as_ref()
-            .map(|v| v == "1")
-            .unwrap_or(false);
-
-        let cannot_sell_all = info.cannot_sell_all.as_ref()
-            .map(|v| v == "1")
-            .unwrap_or(false);
-
-        let is_airdrop_scam = info.is_airdrop_scam.as_ref()
-            .map(|v| v == "1")
-            .unwrap_or(false);
-
-        let fake_token = info.fake_token.as_ref()
-            .map(|v| v == "1")
-            .unwrap_or(false);
-
-        let buy_tax = info.buy_tax.as_ref()
+        let buy_tax = info
+            .buy_tax
+            .as_ref()
             .and_then(|v| v.parse::<f64>().ok())
             .unwrap_or(0.0);
 
-        let sell_tax = info.sell_tax.as_ref()
+        let sell_tax = info
+            .sell_tax
+            .as_ref()
             .and_then(|v| v.parse::<f64>().ok())
             .unwrap_or(0.0);
 
-        let creator_percent = info.creator_percent.as_ref()
+        let creator_percent = info
+            .creator_percent
+            .as_ref()
             .and_then(|v| v.parse::<f64>().ok())
             .unwrap_or(0.0);
 
-        let holder_count = info.holder_count.as_ref()
+        let holder_count = info
+            .holder_count
+            .as_ref()
             .and_then(|v| v.parse::<u64>().ok())
             .unwrap_or(0);
 

@@ -91,7 +91,8 @@ mod tests {
         assert!(!verifier.validate_address("742d35Cc6634C0532925a3b844Bc454e4438f44e")); // Missing 0x
         assert!(!verifier.validate_address("0x742d35Cc6634C0532925a3b844Bc454e4438f4")); // Too short
         assert!(!verifier.validate_address("0x742d35Cc6634C0532925a3b844Bc454e4438f44eFF")); // Too long
-        assert!(!verifier.validate_address("0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG")); // Invalid hex
+        assert!(!verifier.validate_address("0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG"));
+        // Invalid hex
     }
 
     #[test]
@@ -102,14 +103,20 @@ mod tests {
 
         // Valid signature format (132 chars = 0x + 130 hex)
         let valid_sig = format!("0x{}", "a".repeat(130));
-        assert!(verifier.verify_signature(message, &valid_sig, address).is_ok());
+        assert!(verifier
+            .verify_signature(message, &valid_sig, address)
+            .is_ok());
 
         // Invalid: missing 0x prefix
         let no_prefix = "a".repeat(130);
-        assert!(verifier.verify_signature(message, &no_prefix, address).is_err());
+        assert!(verifier
+            .verify_signature(message, &no_prefix, address)
+            .is_err());
 
         // Invalid: too short
         let short_sig = format!("0x{}", "a".repeat(50));
-        assert!(verifier.verify_signature(message, &short_sig, address).is_err());
+        assert!(verifier
+            .verify_signature(message, &short_sig, address)
+            .is_err());
     }
 }

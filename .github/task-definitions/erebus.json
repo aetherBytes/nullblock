@@ -1,0 +1,46 @@
+{
+  "family": "erebus",
+  "requiresCompatibilities": ["EC2"],
+  "networkMode": "bridge",
+  "memory": "512",
+  "cpu": "256",
+  "executionRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
+  "taskRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
+  "containerDefinitions": [
+    {
+      "name": "erebus",
+      "image": "ghcr.io/aetherbytes/nullblock/erebus:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "hostPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "repositoryCredentials": {
+        "credentialsParameter": "arn:aws:secretsmanager:us-east-1:058264371750:secret:github-docker-token-g5Hrtm"
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/nullblock/erebus",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "environment": [],
+      "secrets": [],
+      "mountPoints": [],
+      "volumesFrom": []
+    }
+  ],
+  "volumes": []
+}

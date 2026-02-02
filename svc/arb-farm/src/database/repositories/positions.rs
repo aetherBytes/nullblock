@@ -5,7 +5,9 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
-use crate::execution::position_manager::{ExitConfig, MomentumData, OpenPosition, PartialExit, PositionStatus, BaseCurrency, ExitMode};
+use crate::execution::position_manager::{
+    BaseCurrency, ExitConfig, ExitMode, MomentumData, OpenPosition, PartialExit, PositionStatus,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct PositionRow {
@@ -44,11 +46,11 @@ pub struct PositionRow {
 
 impl From<PositionRow> for OpenPosition {
     fn from(row: PositionRow) -> Self {
-        let exit_config: ExitConfig = serde_json::from_value(row.exit_config.clone())
-            .unwrap_or_default();
+        let exit_config: ExitConfig =
+            serde_json::from_value(row.exit_config.clone()).unwrap_or_default();
 
-        let partial_exits: Vec<PartialExit> = serde_json::from_value(row.partial_exits.clone())
-            .unwrap_or_default();
+        let partial_exits: Vec<PartialExit> =
+            serde_json::from_value(row.partial_exits.clone()).unwrap_or_default();
 
         let status = match row.status.as_str() {
             "open" => PositionStatus::Open,
@@ -63,10 +65,12 @@ impl From<PositionRow> for OpenPosition {
         let entry_amount_base = decimal_to_f64(row.entry_amount_base);
         let entry_token_amount = decimal_to_f64(row.entry_token_amount);
 
-        let remaining_amount_base = row.remaining_amount_base
+        let remaining_amount_base = row
+            .remaining_amount_base
             .map(decimal_to_f64)
             .unwrap_or(entry_amount_base);
-        let remaining_token_amount = row.remaining_token_amount
+        let remaining_token_amount = row
+            .remaining_token_amount
             .map(decimal_to_f64)
             .unwrap_or(entry_token_amount);
 
@@ -116,9 +120,8 @@ fn f64_to_decimal(f: f64) -> Decimal {
     use std::str::FromStr;
     // Try direct conversion first, then string parsing for edge cases (NaN, Inf)
     if f.is_finite() {
-        Decimal::from_f64(f).unwrap_or_else(|| {
-            Decimal::from_str(&format!("{:.18}", f)).unwrap_or(Decimal::ZERO)
-        })
+        Decimal::from_f64(f)
+            .unwrap_or_else(|| Decimal::from_str(&format!("{:.18}", f)).unwrap_or(Decimal::ZERO))
     } else {
         // Handle NaN/Inf gracefully - never panic, just log and return ZERO
         // This prevents crashing the trading loop on edge case calculations
@@ -231,7 +234,8 @@ impl PositionRepository {
         }
 
         // Use CAS-style update: only update if NOT already closed (prevents double-close race)
-        let result = sqlx::query(r#"
+        let result = sqlx::query(
+            r#"
             UPDATE arb_positions
             SET status = 'closed',
                 exit_price = $2,
@@ -243,17 +247,18 @@ impl PositionRepository {
                 momentum_at_exit = $7,
                 updated_at = NOW()
             WHERE id = $1 AND status != 'closed'
-        "#)
-            .bind(position_id)
-            .bind(f64_to_decimal(exit_price))
-            .bind(exit_tx_signature)
-            .bind(f64_to_decimal(realized_pnl))
-            .bind(exit_reason)
-            .bind(is_inferred)
-            .bind(momentum_at_exit.map(f64_to_decimal))
-            .execute(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        "#,
+        )
+        .bind(position_id)
+        .bind(f64_to_decimal(exit_price))
+        .bind(exit_tx_signature)
+        .bind(f64_to_decimal(realized_pnl))
+        .bind(exit_reason)
+        .bind(is_inferred)
+        .bind(momentum_at_exit.map(f64_to_decimal))
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         if result.rows_affected() == 0 {
             tracing::debug!(
@@ -289,33 +294,30 @@ impl PositionRepository {
     }
 
     pub async fn get_all_positions(&self, limit: i32) -> AppResult<Vec<PositionRow>> {
-        let rows: Vec<PositionRow> = sqlx::query_as(
-            "SELECT * FROM arb_positions ORDER BY created_at DESC LIMIT $1"
-        )
-            .bind(limit)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        let rows: Vec<PositionRow> =
+            sqlx::query_as("SELECT * FROM arb_positions ORDER BY created_at DESC LIMIT $1")
+                .bind(limit)
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(rows)
     }
 
     pub async fn get_by_edge_id(&self, edge_id: Uuid) -> AppResult<Option<PositionRow>> {
         let row: Option<PositionRow> = sqlx::query_as(
-            "SELECT * FROM arb_positions WHERE edge_id = $1 ORDER BY created_at DESC LIMIT 1"
+            "SELECT * FROM arb_positions WHERE edge_id = $1 ORDER BY created_at DESC LIMIT 1",
         )
-            .bind(edge_id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        .bind(edge_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(row)
     }
 
     pub async fn get_position(&self, position_id: Uuid) -> AppResult<Option<OpenPosition>> {
-        let row: Option<PositionRow> = sqlx::query_as(
-            "SELECT * FROM arb_positions WHERE id = $1"
-        )
+        let row: Option<PositionRow> = sqlx::query_as("SELECT * FROM arb_positions WHERE id = $1")
             .bind(position_id)
             .fetch_optional(&self.pool)
             .await
@@ -336,8 +338,16 @@ impl PositionRepository {
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
 
-    pub async fn update_price(&self, position_id: Uuid, current_price: f64, unrealized_pnl: f64, unrealized_pnl_percent: f64, high_water_mark: f64) -> AppResult<()> {
-        sqlx::query(r#"
+    pub async fn update_price(
+        &self,
+        position_id: Uuid,
+        current_price: f64,
+        unrealized_pnl: f64,
+        unrealized_pnl_percent: f64,
+        high_water_mark: f64,
+    ) -> AppResult<()> {
+        sqlx::query(
+            r#"
             UPDATE arb_positions
             SET current_price = $2,
                 unrealized_pnl = $3,
@@ -346,20 +356,24 @@ impl PositionRepository {
                 current_value_base = entry_amount_base * (1 + $4 / 100),
                 updated_at = NOW()
             WHERE id = $1
-        "#)
-            .bind(position_id)
-            .bind(f64_to_decimal(current_price))
-            .bind(f64_to_decimal(unrealized_pnl))
-            .bind(f64_to_decimal(unrealized_pnl_percent))
-            .bind(f64_to_decimal(high_water_mark))
-            .execute(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        "#,
+        )
+        .bind(position_id)
+        .bind(f64_to_decimal(current_price))
+        .bind(f64_to_decimal(unrealized_pnl))
+        .bind(f64_to_decimal(unrealized_pnl_percent))
+        .bind(f64_to_decimal(high_water_mark))
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(())
     }
 
-    pub async fn get_closed_positions_since(&self, since: DateTime<Utc>) -> AppResult<Vec<OpenPosition>> {
+    pub async fn get_closed_positions_since(
+        &self,
+        since: DateTime<Utc>,
+    ) -> AppResult<Vec<OpenPosition>> {
         let rows: Vec<PositionRow> = sqlx::query_as(
             "SELECT * FROM arb_positions WHERE status = 'closed' AND exit_time >= $1 ORDER BY exit_time DESC"
         )
@@ -372,33 +386,41 @@ impl PositionRepository {
     }
 
     pub async fn update_status(&self, position_id: Uuid, status: &str) -> AppResult<()> {
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             UPDATE arb_positions
             SET status = $2,
                 updated_at = NOW()
             WHERE id = $1
-        "#)
-            .bind(position_id)
-            .bind(status)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        "#,
+        )
+        .bind(position_id)
+        .bind(status)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(())
     }
 
-    pub async fn update_auto_exit_enabled(&self, position_id: Uuid, enabled: bool) -> AppResult<()> {
-        sqlx::query(r#"
+    pub async fn update_auto_exit_enabled(
+        &self,
+        position_id: Uuid,
+        enabled: bool,
+    ) -> AppResult<()> {
+        sqlx::query(
+            r#"
             UPDATE arb_positions
             SET auto_exit_enabled = $2,
                 updated_at = NOW()
             WHERE id = $1
-        "#)
-            .bind(position_id)
-            .bind(enabled)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        "#,
+        )
+        .bind(position_id)
+        .bind(enabled)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(())
     }
@@ -419,12 +441,12 @@ impl PositionRepository {
             r#"SELECT exit_reason, COUNT(*) as cnt, SUM(realized_pnl) as total_pnl
                FROM arb_positions
                WHERE status = 'closed' AND ($1::timestamptz IS NULL OR exit_time >= $1)
-               GROUP BY exit_reason"#
+               GROUP BY exit_reason"#,
         )
-            .bind(since)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        .bind(since)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         let mut stats = PnLStats::default();
         for row in rows {
@@ -448,7 +470,13 @@ impl PositionRepository {
             } else if reason.starts_with("TrailingStop") {
                 stats.trailing_stops += cnt;
                 stats.trailing_stop_pnl += pnl;
-            } else if reason.starts_with("MomentumDecay") || reason.starts_with("MomentumAdaptive") || reason.starts_with("Emergency") || reason.starts_with("AlreadySold") || reason.starts_with("Salvage") || reason.starts_with("DustBalance") {
+            } else if reason.starts_with("MomentumDecay")
+                || reason.starts_with("MomentumAdaptive")
+                || reason.starts_with("Emergency")
+                || reason.starts_with("AlreadySold")
+                || reason.starts_with("Salvage")
+                || reason.starts_with("DustBalance")
+            {
                 stats.stop_losses += cnt;
                 stats.stop_loss_pnl += pnl;
             }
@@ -462,7 +490,10 @@ impl PositionRepository {
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
-        stats.today_pnl = today_row.and_then(|r| r.0).map(decimal_to_f64).unwrap_or(0.0);
+        stats.today_pnl = today_row
+            .and_then(|r| r.0)
+            .map(decimal_to_f64)
+            .unwrap_or(0.0);
 
         let week_row: Option<(Option<Decimal>,)> = sqlx::query_as(
             r#"SELECT SUM(realized_pnl) FROM arb_positions
@@ -472,7 +503,10 @@ impl PositionRepository {
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
-        stats.week_pnl = week_row.and_then(|r| r.0).map(decimal_to_f64).unwrap_or(0.0);
+        stats.week_pnl = week_row
+            .and_then(|r| r.0)
+            .map(decimal_to_f64)
+            .unwrap_or(0.0);
 
         let best_row: Option<(Option<Decimal>, Option<String>)> = sqlx::query_as(
             r#"SELECT realized_pnl, token_symbol FROM arb_positions
@@ -550,33 +584,38 @@ impl PositionRepository {
                FROM arb_positions
                WHERE status = 'closed' AND exit_time IS NOT NULL
                ORDER BY exit_time DESC
-               LIMIT $1"#
+               LIMIT $1"#,
         )
-            .bind(limit)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
-        Ok(rows.into_iter().map(|r| {
-            let hold_mins = r.exit_time.map(|et| (et - r.entry_time).num_minutes());
-            RecentTrade {
-                id: r.id.to_string(),
-                symbol: r.token_symbol.unwrap_or_else(|| r.token_mint[..8].to_string()),
-                mint: r.token_mint.clone(),
-                venue: "pump_fun".to_string(),
-                pnl: decimal_to_f64(r.realized_pnl.unwrap_or(Decimal::ZERO)),
-                reason: r.exit_reason.unwrap_or_else(|| "Unknown".to_string()),
-                time: r.exit_time,
-                entry_sol: decimal_to_f64(r.entry_amount_base),
-                entry_price: r.entry_price.map(decimal_to_f64),
-                exit_price: r.exit_price.map(decimal_to_f64),
-                momentum_at_exit: r.momentum_at_exit.map(decimal_to_f64),
-                hold_duration_mins: hold_mins,
-                entry_time: Some(r.entry_time),
-                entry_tx_signature: r.entry_tx_signature,
-                exit_tx_signature: r.exit_tx_signature,
-            }
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| {
+                let hold_mins = r.exit_time.map(|et| (et - r.entry_time).num_minutes());
+                RecentTrade {
+                    id: r.id.to_string(),
+                    symbol: r
+                        .token_symbol
+                        .unwrap_or_else(|| r.token_mint[..8].to_string()),
+                    mint: r.token_mint.clone(),
+                    venue: "pump_fun".to_string(),
+                    pnl: decimal_to_f64(r.realized_pnl.unwrap_or(Decimal::ZERO)),
+                    reason: r.exit_reason.unwrap_or_else(|| "Unknown".to_string()),
+                    time: r.exit_time,
+                    entry_sol: decimal_to_f64(r.entry_amount_base),
+                    entry_price: r.entry_price.map(decimal_to_f64),
+                    exit_price: r.exit_price.map(decimal_to_f64),
+                    momentum_at_exit: r.momentum_at_exit.map(decimal_to_f64),
+                    hold_duration_mins: hold_mins,
+                    entry_time: Some(r.entry_time),
+                    entry_tx_signature: r.entry_tx_signature,
+                    exit_tx_signature: r.exit_tx_signature,
+                }
+            })
+            .collect())
     }
 
     pub async fn get_closed_positions_for_period(
@@ -596,7 +635,10 @@ impl PositionRepository {
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
 
-    pub async fn get_orphaned_position_by_mint(&self, token_mint: &str) -> AppResult<Option<OpenPosition>> {
+    pub async fn get_orphaned_position_by_mint(
+        &self,
+        token_mint: &str,
+    ) -> AppResult<Option<OpenPosition>> {
         let row: Option<PositionRow> = sqlx::query_as(
             "SELECT * FROM arb_positions WHERE token_mint = $1 AND status = 'orphaned' ORDER BY entry_time DESC LIMIT 1"
         )
@@ -610,17 +652,23 @@ impl PositionRepository {
 
     pub async fn get_all_orphaned_positions(&self) -> AppResult<Vec<OpenPosition>> {
         let rows: Vec<PositionRow> = sqlx::query_as(
-            "SELECT * FROM arb_positions WHERE status = 'orphaned' ORDER BY entry_time DESC"
+            "SELECT * FROM arb_positions WHERE status = 'orphaned' ORDER BY entry_time DESC",
         )
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
 
-    pub async fn reactivate_position(&self, position_id: Uuid, new_token_balance: f64, new_price: f64) -> AppResult<()> {
-        sqlx::query(r#"
+    pub async fn reactivate_position(
+        &self,
+        position_id: Uuid,
+        new_token_balance: f64,
+        new_price: f64,
+    ) -> AppResult<()> {
+        sqlx::query(
+            r#"
             UPDATE arb_positions
             SET status = 'open',
                 entry_token_amount = $2,
@@ -630,18 +678,22 @@ impl PositionRepository {
                 unrealized_pnl_percent = 0,
                 updated_at = NOW()
             WHERE id = $1
-        "#)
-            .bind(position_id)
-            .bind(f64_to_decimal(new_token_balance))
-            .bind(f64_to_decimal(new_price))
-            .execute(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        "#,
+        )
+        .bind(position_id)
+        .bind(f64_to_decimal(new_token_balance))
+        .bind(f64_to_decimal(new_price))
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(())
     }
 
-    pub async fn get_recent_closed_trades(&self, limit: i32) -> AppResult<Vec<DetailedClosedTrade>> {
+    pub async fn get_recent_closed_trades(
+        &self,
+        limit: i32,
+    ) -> AppResult<Vec<DetailedClosedTrade>> {
         #[derive(sqlx::FromRow)]
         struct TradeRow {
             id: Uuid,
@@ -662,61 +714,71 @@ impl PositionRepository {
                FROM arb_positions
                WHERE status = 'closed' AND exit_time IS NOT NULL
                ORDER BY exit_time DESC
-               LIMIT $1"#
+               LIMIT $1"#,
         )
-            .bind(limit)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
-        Ok(rows.into_iter().map(|r| {
-            let entry_sol = decimal_to_f64(r.entry_amount_base);
+        Ok(rows
+            .into_iter()
+            .map(|r| {
+                let entry_sol = decimal_to_f64(r.entry_amount_base);
 
-            // Handle P&L calculation - warn if realized_pnl is missing for closed position
-            let (pnl_sol, exit_sol, pnl_percent) = if let Some(realized_pnl) = r.realized_pnl {
-                let pnl = decimal_to_f64(realized_pnl);
-                let exit = entry_sol + pnl;
-                let pct = if entry_sol > 0.0 { (pnl / entry_sol) * 100.0 } else { 0.0 };
-                (pnl, exit, pct)
-            } else {
-                // realized_pnl is NULL - this shouldn't happen for properly closed positions
-                // Log warning for debugging (only in debug builds to avoid log spam)
-                #[cfg(debug_assertions)]
-                tracing::warn!(
-                    position_id = %r.id,
-                    "Closed position has NULL realized_pnl - P&L will show as 0"
-                );
-                (0.0, entry_sol, 0.0)
-            };
+                // Handle P&L calculation - warn if realized_pnl is missing for closed position
+                let (pnl_sol, exit_sol, pnl_percent) = if let Some(realized_pnl) = r.realized_pnl {
+                    let pnl = decimal_to_f64(realized_pnl);
+                    let exit = entry_sol + pnl;
+                    let pct = if entry_sol > 0.0 {
+                        (pnl / entry_sol) * 100.0
+                    } else {
+                        0.0
+                    };
+                    (pnl, exit, pct)
+                } else {
+                    // realized_pnl is NULL - this shouldn't happen for properly closed positions
+                    // Log warning for debugging (only in debug builds to avoid log spam)
+                    #[cfg(debug_assertions)]
+                    tracing::warn!(
+                        position_id = %r.id,
+                        "Closed position has NULL realized_pnl - P&L will show as 0"
+                    );
+                    (0.0, entry_sol, 0.0)
+                };
 
-            let exit_time = r.exit_time.unwrap_or_else(chrono::Utc::now);
-            let hold_minutes = (exit_time - r.entry_time).num_seconds() as f64 / 60.0;
+                let exit_time = r.exit_time.unwrap_or_else(chrono::Utc::now);
+                let hold_minutes = (exit_time - r.entry_time).num_seconds() as f64 / 60.0;
 
-            let exit_config: ExitConfig = serde_json::from_value(r.exit_config.clone())
-                .unwrap_or_default();
+                let exit_config: ExitConfig =
+                    serde_json::from_value(r.exit_config.clone()).unwrap_or_default();
 
-            DetailedClosedTrade {
-                position_id: r.id,
-                token_symbol: r.token_symbol.unwrap_or_else(|| r.token_mint[..8.min(r.token_mint.len())].to_string()),
-                venue: "pump.fun".to_string(),
-                entry_sol,
-                exit_sol,
-                pnl_sol,
-                pnl_percent,
-                hold_minutes,
-                exit_reason: r.exit_reason.unwrap_or_else(|| "Unknown".to_string()),
-                stop_loss_pct: exit_config.stop_loss_percent,
-                take_profit_pct: exit_config.take_profit_percent,
-                entry_time: r.entry_time,
-                exit_time,
-            }
-        }).collect())
+                DetailedClosedTrade {
+                    position_id: r.id,
+                    token_symbol: r
+                        .token_symbol
+                        .unwrap_or_else(|| r.token_mint[..8.min(r.token_mint.len())].to_string()),
+                    venue: "pump.fun".to_string(),
+                    entry_sol,
+                    exit_sol,
+                    pnl_sol,
+                    pnl_percent,
+                    hold_minutes,
+                    exit_reason: r.exit_reason.unwrap_or_else(|| "Unknown".to_string()),
+                    stop_loss_pct: exit_config.stop_loss_percent,
+                    take_profit_pct: exit_config.take_profit_percent,
+                    entry_time: r.entry_time,
+                    exit_time,
+                }
+            })
+            .collect())
     }
 
     // ========== PENDING EXIT SIGNALS PERSISTENCE ==========
 
     pub async fn save_pending_exit(&self, signal: &PendingExitSignalRow) -> AppResult<()> {
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             INSERT INTO pending_exit_signals (
                 position_id, reason, exit_percent, current_price, triggered_at,
                 urgency, failed_attempts, next_retry_at, is_rate_limited
@@ -731,19 +793,20 @@ impl PositionRepository {
                 next_retry_at = EXCLUDED.next_retry_at,
                 is_rate_limited = EXCLUDED.is_rate_limited,
                 updated_at = NOW()
-        "#)
-            .bind(signal.position_id)
-            .bind(&signal.reason)
-            .bind(f64_to_decimal(signal.exit_percent))
-            .bind(f64_to_decimal(signal.current_price))
-            .bind(signal.triggered_at)
-            .bind(&signal.urgency)
-            .bind(signal.failed_attempts as i32)
-            .bind(signal.next_retry_at)
-            .bind(signal.is_rate_limited)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        "#,
+        )
+        .bind(signal.position_id)
+        .bind(&signal.reason)
+        .bind(f64_to_decimal(signal.exit_percent))
+        .bind(f64_to_decimal(signal.current_price))
+        .bind(signal.triggered_at)
+        .bind(&signal.urgency)
+        .bind(signal.failed_attempts as i32)
+        .bind(signal.next_retry_at)
+        .bind(signal.is_rate_limited)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(())
     }
@@ -767,23 +830,26 @@ impl PositionRepository {
                       urgency, failed_attempts, next_retry_at, is_rate_limited
                FROM pending_exit_signals
                WHERE failed_attempts < 10
-               ORDER BY next_retry_at ASC"#
+               ORDER BY next_retry_at ASC"#,
         )
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
-        Ok(rows.into_iter().map(|r| PendingExitSignalRow {
-            position_id: r.position_id,
-            reason: r.reason,
-            exit_percent: decimal_to_f64(r.exit_percent),
-            current_price: decimal_to_f64(r.current_price),
-            triggered_at: r.triggered_at,
-            urgency: r.urgency,
-            failed_attempts: r.failed_attempts as u32,
-            next_retry_at: r.next_retry_at,
-            is_rate_limited: r.is_rate_limited,
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| PendingExitSignalRow {
+                position_id: r.position_id,
+                reason: r.reason,
+                exit_percent: decimal_to_f64(r.exit_percent),
+                current_price: decimal_to_f64(r.current_price),
+                triggered_at: r.triggered_at,
+                urgency: r.urgency,
+                failed_attempts: r.failed_attempts as u32,
+                next_retry_at: r.next_retry_at,
+                is_rate_limited: r.is_rate_limited,
+            })
+            .collect())
     }
 
     pub async fn remove_pending_exit(&self, position_id: Uuid) -> AppResult<()> {
@@ -796,22 +862,30 @@ impl PositionRepository {
         Ok(())
     }
 
-    pub async fn update_pending_exit_retry(&self, position_id: Uuid, failed_attempts: u32, next_retry_at: DateTime<Utc>, is_rate_limited: bool) -> AppResult<()> {
-        sqlx::query(r#"
+    pub async fn update_pending_exit_retry(
+        &self,
+        position_id: Uuid,
+        failed_attempts: u32,
+        next_retry_at: DateTime<Utc>,
+        is_rate_limited: bool,
+    ) -> AppResult<()> {
+        sqlx::query(
+            r#"
             UPDATE pending_exit_signals
             SET failed_attempts = $2,
                 next_retry_at = $3,
                 is_rate_limited = $4,
                 updated_at = NOW()
             WHERE position_id = $1
-        "#)
-            .bind(position_id)
-            .bind(failed_attempts as i32)
-            .bind(next_retry_at)
-            .bind(is_rate_limited)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        "#,
+        )
+        .bind(position_id)
+        .bind(failed_attempts as i32)
+        .bind(next_retry_at)
+        .bind(is_rate_limited)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(())
     }

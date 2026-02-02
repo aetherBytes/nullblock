@@ -59,8 +59,8 @@ impl TransactionParser {
 
         let dex_source = Self::extract_dex_source(swap_event);
 
-        let timestamp = chrono::DateTime::from_timestamp(event.timestamp, 0)
-            .unwrap_or_else(chrono::Utc::now);
+        let timestamp =
+            chrono::DateTime::from_timestamp(event.timestamp, 0).unwrap_or_else(chrono::Utc::now);
 
         Some(ParsedSwap {
             id: Uuid::new_v4(),
@@ -96,7 +96,11 @@ impl TransactionParser {
 
         // Check token inputs
         if let Some(token_input) = swap.token_inputs.first() {
-            let amount: u64 = token_input.raw_token_amount.token_amount.parse().unwrap_or(0);
+            let amount: u64 = token_input
+                .raw_token_amount
+                .token_amount
+                .parse()
+                .unwrap_or(0);
             return Some((
                 token_input.mint.clone(),
                 amount,
@@ -124,7 +128,11 @@ impl TransactionParser {
 
         // Check token outputs
         if let Some(token_output) = swap.token_outputs.first() {
-            let amount: u64 = token_output.raw_token_amount.token_amount.parse().unwrap_or(0);
+            let amount: u64 = token_output
+                .raw_token_amount
+                .token_amount
+                .parse()
+                .unwrap_or(0);
             return Some((
                 token_output.mint.clone(),
                 amount,

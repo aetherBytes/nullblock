@@ -98,13 +98,11 @@ impl EdgeRepository {
     }
 
     pub async fn get_by_id(&self, id: Uuid) -> AppResult<Option<EdgeRecord>> {
-        let record = sqlx::query_as::<_, EdgeRecord>(
-            r#"SELECT * FROM arb_edges WHERE id = $1"#,
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+        let record = sqlx::query_as::<_, EdgeRecord>(r#"SELECT * FROM arb_edges WHERE id = $1"#)
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(record)
     }
@@ -211,7 +209,11 @@ impl EdgeRepository {
         Ok(records)
     }
 
-    pub async fn list_atomic_opportunities(&self, min_profit: i64, limit: i64) -> AppResult<Vec<EdgeRecord>> {
+    pub async fn list_atomic_opportunities(
+        &self,
+        min_profit: i64,
+        limit: i64,
+    ) -> AppResult<Vec<EdgeRecord>> {
         let records = sqlx::query_as::<_, EdgeRecord>(
             r#"
             SELECT * FROM arb_edges

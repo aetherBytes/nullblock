@@ -60,10 +60,12 @@ fn get_circuit_breakers_clone() -> Result<CircuitBreakerRegistry, ErrorResponse>
     let guard = CIRCUIT_BREAKERS
         .read()
         .map_err(|_| json_error(StatusCode::INTERNAL_SERVER_ERROR, "Lock poisoned"))?;
-    guard
-        .as_ref()
-        .cloned()
-        .ok_or_else(|| json_error(StatusCode::SERVICE_UNAVAILABLE, "Circuit breakers not initialized"))
+    guard.as_ref().cloned().ok_or_else(|| {
+        json_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Circuit breakers not initialized",
+        )
+    })
 }
 
 #[derive(Debug, Serialize)]
@@ -187,7 +189,10 @@ pub async fn get_agent_status(
 
     match overseer.get_agent_status(id).await {
         Some(status) => Ok(Json(status.into())),
-        None => Err(json_error(StatusCode::NOT_FOUND, &format!("Agent not found: {}", agent_id))),
+        None => Err(json_error(
+            StatusCode::NOT_FOUND,
+            &format!("Agent not found: {}", agent_id),
+        )),
     }
 }
 
@@ -290,7 +295,10 @@ pub async fn reset_circuit_breaker(
             "message": format!("Circuit breaker '{}' reset", name)
         })))
     } else {
-        Err(json_error(StatusCode::NOT_FOUND, &format!("Circuit breaker not found: {}", name)))
+        Err(json_error(
+            StatusCode::NOT_FOUND,
+            &format!("Circuit breaker not found: {}", name),
+        ))
     }
 }
 

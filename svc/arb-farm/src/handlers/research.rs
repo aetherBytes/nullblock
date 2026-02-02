@@ -9,10 +9,12 @@ use uuid::Uuid;
 
 use crate::error::AppResult;
 use crate::research::{
-    url_ingest::{UrlIngester, IngestResult},
-    strategy_extract::{StrategyExtractor, ExtractedStrategy, TextStrategyExtractor},
-    backtest::{BacktestEngine, BacktestConfig, BacktestResult},
-    social_monitor::{SocialMonitor, MonitoredSource, SourceType, TrackType, SocialAlert, MonitorStats},
+    backtest::{BacktestConfig, BacktestEngine, BacktestResult},
+    social_monitor::{
+        MonitorStats, MonitoredSource, SocialAlert, SocialMonitor, SourceType, TrackType,
+    },
+    strategy_extract::{ExtractedStrategy, StrategyExtractor, TextStrategyExtractor},
+    url_ingest::{IngestResult, UrlIngester},
 };
 use crate::server::AppState;
 
@@ -43,7 +45,8 @@ pub async fn ingest_url(
                 Json(serde_json::json!({
                     "error": format!("Failed to ingest URL: {}", e)
                 })),
-            ).into_response();
+            )
+                .into_response();
         }
     };
 
@@ -67,7 +70,8 @@ pub async fn ingest_url(
             ingest_result,
             extracted_strategy,
         }),
-    ).into_response()
+    )
+        .into_response()
 }
 
 #[derive(Debug, Deserialize)]
@@ -95,7 +99,8 @@ pub async fn extract_strategy_from_text(
                 success: false,
                 error: Some("Description is required".to_string()),
             }),
-        ).into_response();
+        )
+            .into_response();
     }
 
     let extractor = TextStrategyExtractor::new(
@@ -304,7 +309,8 @@ pub async fn list_sources(
                 SourceType::Twitter,
                 handle.trim_start_matches('@').to_string(),
                 TrackType::Alpha,
-            ).with_display_name(name.to_string())
+            )
+            .with_display_name(name.to_string())
         })
         .chain(
             SocialMonitor::get_default_threat_accounts()
@@ -314,8 +320,9 @@ pub async fn list_sources(
                         SourceType::Twitter,
                         handle.trim_start_matches('@').to_string(),
                         TrackType::Threat,
-                    ).with_display_name(name.to_string())
-                })
+                    )
+                    .with_display_name(name.to_string())
+                }),
         )
         .collect();
 
@@ -394,17 +401,13 @@ pub async fn list_alerts(
     )
 }
 
-pub async fn get_monitor_stats(
-    State(_state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_monitor_stats(State(_state): State<AppState>) -> impl IntoResponse {
     let stats = MonitorStats {
         total_sources: 8,
         active_sources: 8,
         total_alerts: 0,
         alerts_last_24h: 0,
-        sources_by_type: std::collections::HashMap::from([
-            ("Twitter".to_string(), 8),
-        ]),
+        sources_by_type: std::collections::HashMap::from([("Twitter".to_string(), 8)]),
     };
 
     (StatusCode::OK, Json(stats))

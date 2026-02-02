@@ -11,9 +11,9 @@ use crate::models::{Edge, EdgeStatus, Strategy};
 use crate::wallet::turnkey::{SignRequest, TurnkeySigner};
 
 use super::jito::{BundleConfig, BundleState, JitoClient};
-use super::risk::{RiskManager, RiskCheck, ViolationSeverity};
+use super::risk::{RiskCheck, RiskManager, ViolationSeverity};
 use super::simulation::{SimulationConfig, SimulationResult, TransactionSimulator};
-use super::transaction_builder::{TransactionBuilder, BuildResult};
+use super::transaction_builder::{BuildResult, TransactionBuilder};
 
 pub struct ExecutorAgent {
     id: Uuid,
@@ -241,7 +241,10 @@ impl ExecutorAgent {
                 profit_lamports: None,
                 gas_cost_lamports: None,
                 execution_time_ms: 0,
-                error: Some(format!("Risk check failed: {}", blocking_violations.join("; "))),
+                error: Some(format!(
+                    "Risk check failed: {}",
+                    blocking_violations.join("; ")
+                )),
                 landed_slot: None,
             });
         }
@@ -294,10 +297,7 @@ impl ExecutorAgent {
 
         let tx_base58 = base64_to_base58(transaction_base64)?;
 
-        let bundle_result = self
-            .jito_client
-            .send_bundle(vec![tx_base58], tip)
-            .await?;
+        let bundle_result = self.jito_client.send_bundle(vec![tx_base58], tip).await?;
 
         let bundle_id = bundle_result.id.to_string();
         self.store_bundle_id(edge.id, &bundle_id).await;
@@ -322,7 +322,9 @@ impl ExecutorAgent {
                     success: true,
                     tx_signature: Some(bundle_id.clone()),
                     bundle_id: Some(bundle_id),
-                    profit_lamports: simulation.as_ref().and_then(|s| s.simulated_profit_lamports),
+                    profit_lamports: simulation
+                        .as_ref()
+                        .and_then(|s| s.simulated_profit_lamports),
                     gas_cost_lamports: simulation.as_ref().map(|s| s.simulated_gas_lamports),
                     execution_time_ms: 0,
                     error: None,
@@ -526,8 +528,8 @@ impl ExecutorAgent {
             );
 
             if let Err(e) = self.event_tx.send(event) {
-            tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
-        }
+                tracing::warn!("Event broadcast failed (channel full/closed): {}", e);
+            }
             return Ok(());
         }
         Err(AppError::NotFound(format!("Edge {} not found", edge_id)))
@@ -583,8 +585,12 @@ impl ExecutorAgent {
         };
 
         // Step 2: Build the transaction
-        self.update_execution_status(edge_id, ExecutionStatus::Simulating).await;
-        let build_result = match tx_builder.build_swap(edge, &user_wallet, slippage_bps).await {
+        self.update_execution_status(edge_id, ExecutionStatus::Simulating)
+            .await;
+        let build_result = match tx_builder
+            .build_swap(edge, &user_wallet, slippage_bps)
+            .await
+        {
             Ok(result) => result,
             Err(e) => {
                 return Ok(ExecutionResult {
@@ -603,8 +609,12 @@ impl ExecutorAgent {
         };
 
         // Step 3: Risk check
-        self.update_execution_status(edge_id, ExecutionStatus::RiskCheck).await;
-        let risk_check = self.risk_manager.check_edge(edge, &strategy.risk_params).await;
+        self.update_execution_status(edge_id, ExecutionStatus::RiskCheck)
+            .await;
+        let risk_check = self
+            .risk_manager
+            .check_edge(edge, &strategy.risk_params)
+            .await;
         self.store_risk_check(edge_id, &risk_check).await;
 
         if !risk_check.passed {
@@ -624,7 +634,10 @@ impl ExecutorAgent {
                 profit_lamports: None,
                 gas_cost_lamports: None,
                 execution_time_ms: start.elapsed().as_millis() as u64,
-                error: Some(format!("Risk check failed: {}", blocking_violations.join("; "))),
+                error: Some(format!(
+                    "Risk check failed: {}",
+                    blocking_violations.join("; ")
+                )),
                 landed_slot: None,
             });
         }
@@ -637,9 +650,7 @@ impl ExecutorAgent {
             edge_id: Some(edge_id),
             description: format!(
                 "Swap {} -> {} for edge {}",
-                build_result.route_info.input_mint,
-                build_result.route_info.output_mint,
-                edge_id
+                build_result.route_info.input_mint, build_result.route_info.output_mint, edge_id
             ),
         };
 
@@ -671,9 +682,9 @@ impl ExecutorAgent {
                 profit_lamports: None,
                 gas_cost_lamports: None,
                 execution_time_ms: start.elapsed().as_millis() as u64,
-                error: sign_result.error.or_else(|| {
-                    sign_result.policy_violation.map(|v| v.message)
-                }),
+                error: sign_result
+                    .error
+                    .or_else(|| sign_result.policy_violation.map(|v| v.message)),
                 landed_slot: None,
             });
         }
@@ -697,7 +708,8 @@ impl ExecutorAgent {
         };
 
         // Step 5: Submit to Jito
-        self.update_execution_status(edge_id, ExecutionStatus::Submitting).await;
+        self.update_execution_status(edge_id, ExecutionStatus::Submitting)
+            .await;
 
         let estimated_profit = edge.estimated_profit_lamports.unwrap_or(0);
         let tip = self.config.bundle.calculate_tip(estimated_profit);
@@ -726,9 +738,14 @@ impl ExecutorAgent {
         self.store_bundle_id(edge_id, &bundle_id).await;
 
         // Step 6: Wait for confirmation
-        self.update_execution_status(edge_id, ExecutionStatus::Confirming).await;
+        self.update_execution_status(edge_id, ExecutionStatus::Confirming)
+            .await;
 
-        let status = match self.jito_client.wait_for_bundle(&bundle_id, self.config.execution_timeout_secs).await {
+        let status = match self
+            .jito_client
+            .wait_for_bundle(&bundle_id, self.config.execution_timeout_secs)
+            .await
+        {
             Ok(status) => status,
             Err(e) => {
                 return Ok(ExecutionResult {
@@ -751,7 +768,11 @@ impl ExecutorAgent {
         match status.status {
             BundleState::Landed => {
                 self.risk_manager
-                    .open_position(edge_id, edge.token_mint.clone(), build_result.route_info.in_amount as f64 / 1e9)
+                    .open_position(
+                        edge_id,
+                        edge.token_mint.clone(),
+                        build_result.route_info.in_amount as f64 / 1e9,
+                    )
                     .await;
 
                 if let Some(profit) = edge.estimated_profit_lamports {

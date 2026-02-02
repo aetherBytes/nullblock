@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskLifecycleEvent {
@@ -111,17 +111,20 @@ impl TaskLifecycleEvent {
         // Map A2A protocol states to Kafka event types
         // Valid A2A states: submitted, working, input-required, completed, canceled, failed, rejected, auth-required, unknown
         let event_type = match new_status.as_str() {
-            "working" => TaskEventType::TaskStarted,           // A2A "working" = task is being processed
-            "input-required" => TaskEventType::TaskPaused,     // A2A "input-required" = waiting for user
-            "completed" => TaskEventType::TaskCompleted,       // A2A "completed" = task finished successfully
-            "failed" => TaskEventType::TaskFailed,             // A2A "failed" = task execution failed
-            "canceled" => TaskEventType::TaskCancelled,        // A2A "canceled" = task was cancelled
-            "rejected" => TaskEventType::TaskFailed,           // A2A "rejected" = task was rejected
-            _ => TaskEventType::TaskProgress,                  // Other states (submitted, auth-required, unknown)
+            "working" => TaskEventType::TaskStarted, // A2A "working" = task is being processed
+            "input-required" => TaskEventType::TaskPaused, // A2A "input-required" = waiting for user
+            "completed" => TaskEventType::TaskCompleted, // A2A "completed" = task finished successfully
+            "failed" => TaskEventType::TaskFailed,       // A2A "failed" = task execution failed
+            "canceled" => TaskEventType::TaskCancelled,  // A2A "canceled" = task was cancelled
+            "rejected" => TaskEventType::TaskFailed,     // A2A "rejected" = task was rejected
+            _ => TaskEventType::TaskProgress, // Other states (submitted, auth-required, unknown)
         };
 
         let mut metadata = HashMap::new();
-        metadata.insert("old_status".to_string(), serde_json::Value::String(old_status));
+        metadata.insert(
+            "old_status".to_string(),
+            serde_json::Value::String(old_status),
+        );
 
         Self {
             event_type,

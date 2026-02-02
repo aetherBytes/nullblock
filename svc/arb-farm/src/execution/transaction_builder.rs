@@ -1,15 +1,17 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use tokio::sync::{RwLock, Semaphore};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
+use super::blockhash::BlockhashCache;
+use super::position_manager::{
+    BaseCurrency, ExitSignal, OpenPosition, SOL_MINT, USDC_MINT, USDT_MINT,
+};
 use crate::error::{AppError, AppResult};
 use crate::models::Edge;
-use super::blockhash::BlockhashCache;
-use super::position_manager::{BaseCurrency, ExitSignal, OpenPosition, SOL_MINT, USDC_MINT, USDT_MINT};
 
 const PRICE_CACHE_TTL_SECS: u64 = 10;
 const JUPITER_RATE_LIMIT_RETRIES: u32 = 4;
@@ -83,8 +85,10 @@ impl TransactionBuilder {
     }
 
     async fn rate_limit_jupiter(&self) -> AppResult<()> {
-        let _permit = self.jupiter_semaphore.acquire().await
-            .map_err(|_| AppError::Internal("Jupiter rate limiter semaphore closed".to_string()))?;
+        let _permit =
+            self.jupiter_semaphore.acquire().await.map_err(|_| {
+                AppError::Internal("Jupiter rate limiter semaphore closed".to_string())
+            })?;
 
         let now_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -104,7 +108,7 @@ impl TransactionBuilder {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis() as u64,
-            Ordering::Relaxed
+            Ordering::Relaxed,
         );
         Ok(())
     }
@@ -138,7 +142,9 @@ impl TransactionBuilder {
         let quote = self.get_jupiter_quote(params).await?;
 
         // Step 2: Get swap transaction from Jupiter
-        let swap_response = self.get_jupiter_swap_transaction(&quote, &params.user_public_key).await?;
+        let swap_response = self
+            .get_jupiter_swap_transaction(&quote, &params.user_public_key)
+            .await?;
 
         // Step 3: Get recent blockhash for reference
         let blockhash = self.blockhash_cache.get_blockhash().await?;
@@ -160,7 +166,7 @@ impl TransactionBuilder {
         // Validate we're getting a reasonable output amount
         if out_amount == 0 {
             return Err(AppError::ExternalApi(
-                "Jupiter quote returned zero output amount - quote invalid".to_string()
+                "Jupiter quote returned zero output amount - quote invalid".to_string(),
             ));
         }
 
@@ -220,7 +226,9 @@ impl TransactionBuilder {
                 let backoff_ms = JUPITER_RATE_LIMIT_BACKOFF_MS * (1 << (attempt - 1));
                 warn!(
                     "Jupiter quote retry {}/{} after {}ms backoff",
-                    attempt + 1, JUPITER_RATE_LIMIT_RETRIES, backoff_ms
+                    attempt + 1,
+                    JUPITER_RATE_LIMIT_RETRIES,
+                    backoff_ms
                 );
                 tokio::time::sleep(tokio::time::Duration::from_millis(backoff_ms)).await;
             }
@@ -236,7 +244,11 @@ impl TransactionBuilder {
             let status = response.status();
             if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 last_error = "Jupiter rate limited (429)".to_string();
-                warn!("⚠️ Jupiter quote rate limited (429), attempt {}/{}", attempt + 1, JUPITER_RATE_LIMIT_RETRIES);
+                warn!(
+                    "⚠️ Jupiter quote rate limited (429), attempt {}/{}",
+                    attempt + 1,
+                    JUPITER_RATE_LIMIT_RETRIES
+                );
                 continue;
             }
 
@@ -244,16 +256,22 @@ impl TransactionBuilder {
                 let error_text = response.text().await.unwrap_or_default();
                 if error_text.contains("Rate limit") || error_text.contains("rate limit") {
                     last_error = format!("Jupiter quote rate limited: {}", error_text);
-                    warn!("⚠️ Jupiter quote rate limited, attempt {}/{}", attempt + 1, JUPITER_RATE_LIMIT_RETRIES);
+                    warn!(
+                        "⚠️ Jupiter quote rate limited, attempt {}/{}",
+                        attempt + 1,
+                        JUPITER_RATE_LIMIT_RETRIES
+                    );
                     continue;
                 }
-                return Err(AppError::ExternalApi(format!("Jupiter quote error: {}", error_text)));
+                return Err(AppError::ExternalApi(format!(
+                    "Jupiter quote error: {}",
+                    error_text
+                )));
             }
 
-            return response
-                .json::<JupiterQuoteResponse>()
-                .await
-                .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter quote: {}", e)));
+            return response.json::<JupiterQuoteResponse>().await.map_err(|e| {
+                AppError::ExternalApi(format!("Failed to parse Jupiter quote: {}", e))
+            });
         }
 
         Err(AppError::ExternalApi(format!(
@@ -295,7 +313,9 @@ impl TransactionBuilder {
                 let backoff_ms = JUPITER_RATE_LIMIT_BACKOFF_MS * (1 << (attempt - 1));
                 warn!(
                     "Jupiter swap retry {}/{} after {}ms backoff",
-                    attempt + 1, JUPITER_RATE_LIMIT_RETRIES, backoff_ms
+                    attempt + 1,
+                    JUPITER_RATE_LIMIT_RETRIES,
+                    backoff_ms
                 );
                 tokio::time::sleep(tokio::time::Duration::from_millis(backoff_ms)).await;
             }
@@ -311,7 +331,11 @@ impl TransactionBuilder {
             let status = response.status();
             if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 last_error = "Jupiter rate limited (429)".to_string();
-                warn!("⚠️ Jupiter swap rate limited (429), attempt {}/{}", attempt + 1, JUPITER_RATE_LIMIT_RETRIES);
+                warn!(
+                    "⚠️ Jupiter swap rate limited (429), attempt {}/{}",
+                    attempt + 1,
+                    JUPITER_RATE_LIMIT_RETRIES
+                );
                 continue;
             }
 
@@ -319,17 +343,30 @@ impl TransactionBuilder {
                 let error_text = response.text().await.unwrap_or_default();
                 if error_text.contains("Rate limit") || error_text.contains("rate limit") {
                     last_error = format!("Jupiter swap rate limited: {}", error_text);
-                    warn!("⚠️ Jupiter swap rate limited, attempt {}/{}", attempt + 1, JUPITER_RATE_LIMIT_RETRIES);
+                    warn!(
+                        "⚠️ Jupiter swap rate limited, attempt {}/{}",
+                        attempt + 1,
+                        JUPITER_RATE_LIMIT_RETRIES
+                    );
                     continue;
                 }
-                return Err(AppError::ExternalApi(format!("Jupiter swap error: {}", error_text)));
+                return Err(AppError::ExternalApi(format!(
+                    "Jupiter swap error: {}",
+                    error_text
+                )));
             }
 
-            let response_text = response.text().await
-                .map_err(|e| AppError::ExternalApi(format!("Failed to read Jupiter swap response: {}", e)))?;
+            let response_text = response.text().await.map_err(|e| {
+                AppError::ExternalApi(format!("Failed to read Jupiter swap response: {}", e))
+            })?;
 
-            return serde_json::from_str::<JupiterSwapResponse>(&response_text)
-                .map_err(|e| AppError::ExternalApi(format!("Failed to parse Jupiter swap: {} | Response: {}", e, &response_text[..response_text.len().min(500)])));
+            return serde_json::from_str::<JupiterSwapResponse>(&response_text).map_err(|e| {
+                AppError::ExternalApi(format!(
+                    "Failed to parse Jupiter swap: {} | Response: {}",
+                    e,
+                    &response_text[..response_text.len().min(500)]
+                ))
+            });
         }
 
         Err(AppError::ExternalApi(format!(
@@ -380,7 +417,7 @@ impl TransactionBuilder {
 
         // Fall back to estimated profit as a proxy (with 10x leverage for MEV)
         if let Some(profit) = edge.estimated_profit_lamports {
-            return Ok((profit.abs() as u64) * 10);
+            return Ok(profit.unsigned_abs() * 10);
         }
 
         Err(AppError::Execution(
@@ -399,7 +436,9 @@ impl TransactionBuilder {
         user_public_key: &str,
         slippage_bps: u16,
     ) -> AppResult<ExitBuildResult> {
-        let token_balance = self.get_token_balance(user_public_key, &position.token_mint).await?;
+        let token_balance = self
+            .get_token_balance(user_public_key, &position.token_mint)
+            .await?;
 
         if token_balance == 0 {
             return Err(AppError::Execution(format!(
@@ -412,7 +451,9 @@ impl TransactionBuilder {
             token_balance
         } else {
             // Round to nearest token, capped at actual balance
-            ((token_balance as f64) * (exit_signal.exit_percent / 100.0)).round().min(token_balance as f64) as u64
+            ((token_balance as f64) * (exit_signal.exit_percent / 100.0))
+                .round()
+                .min(token_balance as f64) as u64
         };
 
         let base_mint = position.exit_config.base_currency.mint().to_string();
@@ -420,7 +461,10 @@ impl TransactionBuilder {
         info!(
             "🔄 Building exit swap: {} {} → {} | Balance: {} | Exit: {:.1}%",
             exit_amount,
-            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+            position
+                .token_symbol
+                .as_deref()
+                .unwrap_or(&position.token_mint[..8]),
             position.exit_config.base_currency.symbol(),
             token_balance,
             exit_signal.exit_percent
@@ -487,15 +531,23 @@ impl TransactionBuilder {
                 if let Some(parsed) = account.account.data.get("parsed") {
                     if let Some(info) = parsed.get("info") {
                         if let Some(token_amount) = info.get("tokenAmount") {
-                            if let Some(amount_str) = token_amount.get("amount").and_then(|v| v.as_str()) {
+                            if let Some(amount_str) =
+                                token_amount.get("amount").and_then(|v| v.as_str())
+                            {
                                 return amount_str.parse().map_err(|e| {
-                                    AppError::Internal(format!("Failed to parse token amount: {}", e))
+                                    AppError::Internal(format!(
+                                        "Failed to parse token amount: {}",
+                                        e
+                                    ))
                                 });
                             } else {
                                 warn!("Token account missing 'amount' field for {}", token_mint);
                             }
                         } else {
-                            warn!("Token account missing 'tokenAmount' field for {}", token_mint);
+                            warn!(
+                                "Token account missing 'tokenAmount' field for {}",
+                                token_mint
+                            );
                         }
                     } else {
                         warn!("Token account missing 'info' field for {}", token_mint);
@@ -510,7 +562,10 @@ impl TransactionBuilder {
                 token_mint
             );
         } else {
-            debug!("RPC returned no result for token balance query: {}", token_mint);
+            debug!(
+                "RPC returned no result for token balance query: {}",
+                token_mint
+            );
         }
 
         Ok(0)
@@ -548,12 +603,10 @@ impl TransactionBuilder {
             base.mint()
         );
 
-        let response = self
-            .client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Jupiter price request failed: {}", e)))?;
+        let response =
+            self.client.get(&url).send().await.map_err(|e| {
+                AppError::ExternalApi(format!("Jupiter price request failed: {}", e))
+            })?;
 
         if !response.status().is_success() {
             return Err(AppError::ExternalApi(format!(
@@ -638,7 +691,11 @@ impl TransactionBuilder {
 
             let status = response.status();
             if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
-                warn!("Jupiter rate limited (429), attempt {}/{}", attempt + 1, JUPITER_RATE_LIMIT_RETRIES);
+                warn!(
+                    "Jupiter rate limited (429), attempt {}/{}",
+                    attempt + 1,
+                    JUPITER_RATE_LIMIT_RETRIES
+                );
                 last_error = "Jupiter rate limited (429)".to_string();
                 continue;
             }
@@ -660,10 +717,13 @@ impl TransactionBuilder {
             // Update cache and result
             let mut cache = self.price_cache.write().await;
             for (mint, price_info) in price_data.data {
-                cache.insert(mint.clone(), CachedPrice {
-                    price: price_info.price,
-                    cached_at: now,
-                });
+                cache.insert(
+                    mint.clone(),
+                    CachedPrice {
+                        price: price_info.price,
+                        cached_at: now,
+                    },
+                );
                 result.insert(mint, price_info.price);
             }
 
@@ -677,7 +737,10 @@ impl TransactionBuilder {
         }
 
         // Return partial results from cache
-        warn!("Jupiter price fetch failed after retries, using cached prices for {} tokens", result.len());
+        warn!(
+            "Jupiter price fetch failed after retries, using cached prices for {} tokens",
+            result.len()
+        );
         Ok(result)
     }
 }
@@ -692,7 +755,11 @@ pub struct JupiterQuoteResponse {
     pub other_amount_threshold: String,
     pub swap_mode: String,
     pub slippage_bps: u16,
-    #[serde(default, deserialize_with = "deserialize_price_impact_opt", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_price_impact_opt",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub price_impact_pct: Option<f64>,
     pub route_plan: Vec<JupiterRoutePlan>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

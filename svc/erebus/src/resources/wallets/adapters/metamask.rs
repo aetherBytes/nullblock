@@ -1,6 +1,6 @@
 use crate::resources::wallets::chains::{ChainSignatureVerifier, EvmSignatureVerifier};
 use crate::resources::wallets::traits::{
-    ChallengeContext, ChainType, WalletAdapter, WalletError, WalletInfo,
+    ChainType, ChallengeContext, WalletAdapter, WalletError, WalletInfo,
 };
 
 #[derive(Debug)]
@@ -70,9 +70,10 @@ impl WalletAdapter for MetaMaskAdapter {
         chain: &ChainType,
     ) -> Result<bool, WalletError> {
         match chain {
-            ChainType::Evm => self
-                .evm_verifier
-                .verify_signature(message, signature, wallet_address),
+            ChainType::Evm => {
+                self.evm_verifier
+                    .verify_signature(message, signature, wallet_address)
+            }
             _ => Err(WalletError::UnsupportedChain(chain.clone())),
         }
     }

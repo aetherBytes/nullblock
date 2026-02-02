@@ -1,5 +1,5 @@
-pub mod marginfi;
 pub mod kamino;
+pub mod marginfi;
 
-pub use marginfi::MarginfiVenue;
 pub use kamino::KaminoVenue;
+pub use marginfi::MarginfiVenue;

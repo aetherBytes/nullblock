@@ -1,10 +1,10 @@
-use sqlx::{PgPool, postgres::PgPoolOptions};
-use std::time::Duration;
 use anyhow::Result;
+use sqlx::{postgres::PgPoolOptions, PgPool};
+use std::time::Duration;
 
+pub mod migrations;
 pub mod models;
 pub mod repositories;
-pub mod migrations;
 
 #[derive(Clone)]
 pub struct Database {

@@ -2,8 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::events::Significance;
 use super::VenueType;
+use crate::events::Significance;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Signal {

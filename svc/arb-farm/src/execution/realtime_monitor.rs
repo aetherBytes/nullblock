@@ -1,13 +1,13 @@
+use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use solana_sdk::pubkey::Pubkey;
-use std::str::FromStr;
 
 use crate::error::AppResult;
-use crate::events::{ArbEvent, edge as edge_topics};
+use crate::events::{edge as edge_topics, ArbEvent};
 use crate::helius::laserstream::{AccountUpdate, LaserStreamClient, LaserStreamStatus};
 use crate::venues::curves::math::PUMP_FUN_PROGRAM_ID;
 
@@ -65,10 +65,7 @@ impl RealtimePositionMonitor {
             );
             for position in positions {
                 if let Err(e) = self.subscribe_position(&position).await {
-                    warn!(
-                        "Failed to subscribe to position {}: {}",
-                        position.id, e
-                    );
+                    warn!("Failed to subscribe to position {}: {}", position.id, e);
                 }
             }
         }
@@ -106,7 +103,8 @@ impl RealtimePositionMonitor {
                     }
                     LaserStreamStatus::Disconnected | LaserStreamStatus::Reconnecting => {
                         consecutive_disconnected_checks += 1;
-                        let disconnected_secs = consecutive_disconnected_checks as u64 * CHECK_INTERVAL_SECS;
+                        let disconnected_secs =
+                            consecutive_disconnected_checks as u64 * CHECK_INTERVAL_SECS;
 
                         if disconnected_secs >= DISCONNECT_WARNING_THRESHOLD_SECS {
                             warn!(
@@ -142,16 +140,17 @@ impl RealtimePositionMonitor {
         info!(
             "📡 Subscribing to bonding curve {} for {} ({})",
             &bonding_curve_address[..12],
-            position.token_symbol.as_deref().unwrap_or(&position.token_mint[..8]),
+            position
+                .token_symbol
+                .as_deref()
+                .unwrap_or(&position.token_mint[..8]),
             position.id
         );
 
         self.laserstream
             .subscribe_accounts(vec![bonding_curve_address.clone()])
             .await
-            .map_err(|e| {
-                crate::error::AppError::ExternalApi(format!("Subscribe failed: {}", e))
-            })?;
+            .map_err(|e| crate::error::AppError::ExternalApi(format!("Subscribe failed: {}", e)))?;
 
         let mut subs = self.subscribed_positions.write().await;
         subs.insert(
@@ -232,13 +231,10 @@ impl RealtimePositionMonitor {
                                     for signal in signals {
                                         info!(
                                             "🎯 Exit signal: {:?} for position {} ({}% exit)",
-                                            signal.reason,
-                                            signal.position_id,
-                                            signal.exit_percent
+                                            signal.reason, signal.position_id, signal.exit_percent
                                         );
-                                        if let Err(e) = position_monitor
-                                            .trigger_exit_with_reason(&signal)
-                                            .await
+                                        if let Err(e) =
+                                            position_monitor.trigger_exit_with_reason(&signal).await
                                         {
                                             error!(
                                                 "Failed to execute exit for position {}: {}",
@@ -274,7 +270,9 @@ impl RealtimePositionMonitor {
                 match event_rx.recv().await {
                     Ok(event) => {
                         if event.topic == edge_topics::EXECUTED {
-                            if let Some(mint) = event.payload.get("mint")
+                            if let Some(mint) = event
+                                .payload
+                                .get("mint")
                                 .or_else(|| event.payload.get("token_mint"))
                                 .and_then(|v| v.as_str())
                             {
@@ -294,9 +292,16 @@ impl RealtimePositionMonitor {
                                             .subscribe_accounts(vec![bonding_curve_address.clone()])
                                             .await
                                         {
-                                            warn!("Failed to auto-subscribe to {}: {}", &bonding_curve_address[..12], e);
+                                            warn!(
+                                                "Failed to auto-subscribe to {}: {}",
+                                                &bonding_curve_address[..12],
+                                                e
+                                            );
                                         } else {
-                                            if let Some(position) = position_manager.get_open_position_for_mint(mint).await {
+                                            if let Some(position) = position_manager
+                                                .get_open_position_for_mint(mint)
+                                                .await
+                                            {
                                                 let mut subs = subscribed_positions.write().await;
                                                 subs.insert(
                                                     bonding_curve_address.clone(),
@@ -312,8 +317,8 @@ impl RealtimePositionMonitor {
                                 }
                             }
                         } else if event.event_type == "position.exit_completed" {
-                            if let Some(mint) = event.payload.get("token_mint")
-                                .and_then(|v| v.as_str())
+                            if let Some(mint) =
+                                event.payload.get("token_mint").and_then(|v| v.as_str())
                             {
                                 if let Ok(bonding_curve_address) = derive_bonding_curve_pda(mint) {
                                     let has_subscription = {
@@ -322,7 +327,8 @@ impl RealtimePositionMonitor {
                                     };
 
                                     if has_subscription {
-                                        let has_other_positions = position_manager.has_open_position_for_mint(mint).await;
+                                        let has_other_positions =
+                                            position_manager.has_open_position_for_mint(mint).await;
 
                                         if !has_other_positions {
                                             info!(
@@ -331,10 +337,16 @@ impl RealtimePositionMonitor {
                                             );
 
                                             if let Err(e) = laserstream
-                                                .unsubscribe_accounts(vec![bonding_curve_address.clone()])
+                                                .unsubscribe_accounts(vec![
+                                                    bonding_curve_address.clone()
+                                                ])
                                                 .await
                                             {
-                                                warn!("Failed to auto-unsubscribe from {}: {}", &bonding_curve_address[..12], e);
+                                                warn!(
+                                                    "Failed to auto-unsubscribe from {}: {}",
+                                                    &bonding_curve_address[..12],
+                                                    e
+                                                );
                                             } else {
                                                 let mut subs = subscribed_positions.write().await;
                                                 subs.remove(&bonding_curve_address);
@@ -363,18 +375,14 @@ impl RealtimePositionMonitor {
 }
 
 fn derive_bonding_curve_pda(mint: &str) -> AppResult<String> {
-    let mint_pubkey = Pubkey::from_str(mint).map_err(|e| {
-        crate::error::AppError::Validation(format!("Invalid mint address: {}", e))
-    })?;
+    let mint_pubkey = Pubkey::from_str(mint)
+        .map_err(|e| crate::error::AppError::Validation(format!("Invalid mint address: {}", e)))?;
 
-    let program_id = Pubkey::from_str(PUMP_FUN_PROGRAM_ID).map_err(|e| {
-        crate::error::AppError::Internal(format!("Invalid program ID: {}", e))
-    })?;
+    let program_id = Pubkey::from_str(PUMP_FUN_PROGRAM_ID)
+        .map_err(|e| crate::error::AppError::Internal(format!("Invalid program ID: {}", e)))?;
 
-    let (bonding_curve_pda, _bump) = Pubkey::find_program_address(
-        &[b"bonding-curve", mint_pubkey.as_ref()],
-        &program_id,
-    );
+    let (bonding_curve_pda, _bump) =
+        Pubkey::find_program_address(&[b"bonding-curve", mint_pubkey.as_ref()], &program_id);
 
     Ok(bonding_curve_pda.to_string())
 }

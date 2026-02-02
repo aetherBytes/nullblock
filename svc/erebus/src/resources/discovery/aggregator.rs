@@ -11,10 +11,42 @@ use super::models::{
 
 pub trait DiscoveryProvider: Send + Sync {
     fn name(&self) -> &str;
-    fn discover_tools(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<DiscoveredTool>, Box<dyn std::error::Error + Send + Sync>>> + Send + '_>>;
-    fn discover_agents(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<DiscoveredAgent>, Box<dyn std::error::Error + Send + Sync>>> + Send + '_>>;
-    fn discover_protocols(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<DiscoveredProtocol>, Box<dyn std::error::Error + Send + Sync>>> + Send + '_>>;
-    fn health(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ProviderHealth> + Send + '_>>;
+    fn discover_tools(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<Vec<DiscoveredTool>, Box<dyn std::error::Error + Send + Sync>>,
+                > + Send
+                + '_,
+        >,
+    >;
+    fn discover_agents(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<Vec<DiscoveredAgent>, Box<dyn std::error::Error + Send + Sync>>,
+                > + Send
+                + '_,
+        >,
+    >;
+    fn discover_protocols(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<
+                        Vec<DiscoveredProtocol>,
+                        Box<dyn std::error::Error + Send + Sync>,
+                    >,
+                > + Send
+                + '_,
+        >,
+    >;
+    fn health(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ProviderHealth> + Send + '_>>;
 }
 
 struct CacheEntry<T> {
@@ -78,7 +110,10 @@ impl DiscoveryAggregator {
             }
         }
 
-        info!("🔍 Discovering tools from {} providers", self.providers.len());
+        info!(
+            "🔍 Discovering tools from {} providers",
+            self.providers.len()
+        );
         let mut all_tools = Vec::new();
 
         for provider in &self.providers {
@@ -92,7 +127,11 @@ impl DiscoveryAggregator {
                     all_tools.extend(tools);
                 }
                 Err(e) => {
-                    warn!("❌ Provider {} failed to discover tools: {}", provider.name(), e);
+                    warn!(
+                        "❌ Provider {} failed to discover tools: {}",
+                        provider.name(),
+                        e
+                    );
                 }
             }
         }
@@ -119,7 +158,10 @@ impl DiscoveryAggregator {
             }
         }
 
-        info!("🤖 Discovering agents from {} providers", self.providers.len());
+        info!(
+            "🤖 Discovering agents from {} providers",
+            self.providers.len()
+        );
         let mut all_agents = Vec::new();
 
         for provider in &self.providers {
@@ -133,7 +175,11 @@ impl DiscoveryAggregator {
                     all_agents.extend(agents);
                 }
                 Err(e) => {
-                    warn!("❌ Provider {} failed to discover agents: {}", provider.name(), e);
+                    warn!(
+                        "❌ Provider {} failed to discover agents: {}",
+                        provider.name(),
+                        e
+                    );
                 }
             }
         }
@@ -160,7 +206,10 @@ impl DiscoveryAggregator {
             }
         }
 
-        info!("🔌 Discovering protocols from {} providers", self.providers.len());
+        info!(
+            "🔌 Discovering protocols from {} providers",
+            self.providers.len()
+        );
         let mut all_protocols = Vec::new();
 
         for provider in &self.providers {

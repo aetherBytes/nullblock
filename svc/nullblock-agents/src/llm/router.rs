@@ -58,14 +58,17 @@ impl Default for TaskRequirements {
 impl TaskRequirements {
     pub fn for_image_generation() -> Self {
         Self {
-            required_capabilities: vec![ModelCapability::ImageGeneration, ModelCapability::Creative],
+            required_capabilities: vec![
+                ModelCapability::ImageGeneration,
+                ModelCapability::Creative,
+            ],
             optimization_goal: OptimizationGoal::Quality,
             priority: Priority::High,
             task_type: "image_generation".to_string(),
             allow_local_models: false,
             preferred_providers: vec!["openrouter".to_string()],
             min_quality_score: Some(0.8),
-            max_cost_per_1k_tokens: Some(5.0),  // Increased for better image models
+            max_cost_per_1k_tokens: Some(5.0), // Increased for better image models
             min_context_window: Some(1000),
         }
     }
@@ -96,23 +99,28 @@ impl ModelRouter {
         }
     }
 
-    pub async fn route_request(&self, requirements: &TaskRequirements) -> AppResult<RoutingDecision> {
+    pub async fn route_request(
+        &self,
+        requirements: &TaskRequirements,
+    ) -> AppResult<RoutingDecision> {
         let available_models = self.get_available_models(requirements)?;
 
         if available_models.is_empty() {
             return Err(AppError::ModelNotAvailable(
-                "No models available for the specified requirements".to_string()
+                "No models available for the specified requirements".to_string(),
             ));
         }
 
-        let (selected_model, confidence, reasoning) = self.select_optimal_model_with_confidence(&available_models, requirements)?;
+        let (selected_model, confidence, reasoning) =
+            self.select_optimal_model_with_confidence(&available_models, requirements)?;
 
         Ok(RoutingDecision {
             selected_model: selected_model.name.clone(),
             model_config: selected_model.clone(),
             confidence,
             reasoning,
-            alternatives: available_models.into_iter()
+            alternatives: available_models
+                .into_iter()
                 .map(|m| m.name)
                 .take(3)
                 .collect(),
@@ -136,12 +144,13 @@ impl ModelRouter {
 
     fn get_available_models(&self, requirements: &TaskRequirements) -> AppResult<Vec<ModelConfig>> {
         let mut available_models = Vec::new();
-        
+
         // Get static models (this would come from a models registry in a real implementation)
         let static_models = self.get_static_models();
-        
+
         for model in static_models {
-            if self.is_model_available(&model.name) && self.meets_requirements(&model, requirements) {
+            if self.is_model_available(&model.name) && self.meets_requirements(&model, requirements)
+            {
                 available_models.push(model);
             }
         }
@@ -190,9 +199,15 @@ impl ModelRouter {
         true
     }
 
-    fn select_optimal_model(&self, available_models: &[ModelConfig], requirements: &TaskRequirements) -> AppResult<ModelConfig> {
+    fn select_optimal_model(
+        &self,
+        available_models: &[ModelConfig],
+        requirements: &TaskRequirements,
+    ) -> AppResult<ModelConfig> {
         if available_models.is_empty() {
-            return Err(AppError::ModelNotAvailable("No available models".to_string()));
+            return Err(AppError::ModelNotAvailable(
+                "No available models".to_string(),
+            ));
         }
 
         let mut scored_models: Vec<(f64, &ModelConfig)> = available_models
@@ -207,9 +222,15 @@ impl ModelRouter {
         Ok(scored_models[0].1.clone())
     }
 
-    fn select_optimal_model_with_confidence(&self, available_models: &[ModelConfig], requirements: &TaskRequirements) -> AppResult<(ModelConfig, f64, Vec<String>)> {
+    fn select_optimal_model_with_confidence(
+        &self,
+        available_models: &[ModelConfig],
+        requirements: &TaskRequirements,
+    ) -> AppResult<(ModelConfig, f64, Vec<String>)> {
         if available_models.is_empty() {
-            return Err(AppError::ModelNotAvailable("No available models".to_string()));
+            return Err(AppError::ModelNotAvailable(
+                "No available models".to_string(),
+            ));
         }
 
         let mut scored_models: Vec<(f64, &ModelConfig)> = available_models
@@ -238,13 +259,22 @@ impl ModelRouter {
 
             if score_gap > 0.3 {
                 confidence += 0.3;
-                reasoning.push(format!("Strong lead over alternatives ({:.1}% better)", score_gap * 100.0));
+                reasoning.push(format!(
+                    "Strong lead over alternatives ({:.1}% better)",
+                    score_gap * 100.0
+                ));
             } else if score_gap > 0.15 {
                 confidence += 0.2;
-                reasoning.push(format!("Moderate lead over alternatives ({:.1}% better)", score_gap * 100.0));
+                reasoning.push(format!(
+                    "Moderate lead over alternatives ({:.1}% better)",
+                    score_gap * 100.0
+                ));
             } else {
                 confidence += 0.1;
-                reasoning.push(format!("Close competition with alternatives ({:.1}% better)", score_gap * 100.0));
+                reasoning.push(format!(
+                    "Close competition with alternatives ({:.1}% better)",
+                    score_gap * 100.0
+                ));
             }
         } else {
             confidence += 0.3;
@@ -254,7 +284,10 @@ impl ModelRouter {
         // Factor 2: Number of alternatives (0.0 - 0.1 confidence)
         if available_models.len() <= 3 {
             confidence += 0.1;
-            reasoning.push(format!("Limited alternatives ({} models)", available_models.len()));
+            reasoning.push(format!(
+                "Limited alternatives ({} models)",
+                available_models.len()
+            ));
         } else {
             confidence += 0.05;
         }
@@ -270,7 +303,10 @@ impl ModelRouter {
         // Cap confidence at 1.0
         confidence = confidence.min(1.0);
 
-        reasoning.insert(0, format!("Selected {} with score {:.1}", best_model.name, best_score));
+        reasoning.insert(
+            0,
+            format!("Selected {} with score {:.1}", best_model.name, best_score),
+        );
 
         Ok((best_model, confidence, reasoning))
     }
@@ -291,23 +327,23 @@ impl ModelRouter {
                 } else {
                     score += (1.0 / model.metrics.cost_per_1k_tokens.max(0.001)) * 30.0;
                 }
-            },
+            }
             OptimizationGoal::Quality => {
                 score += model.metrics.quality_score * 30.0;
-            },
+            }
             OptimizationGoal::Speed => {
                 score += (model.metrics.tokens_per_second / 100.0).min(30.0);
-            },
+            }
             OptimizationGoal::Balanced => {
                 // Already included quality and reliability above
                 if model.metrics.cost_per_1k_tokens == 0.0 {
                     score += 10.0;
                 }
                 score += (model.metrics.tokens_per_second / 200.0).min(10.0);
-            },
+            }
             OptimizationGoal::Reliability => {
                 score += model.metrics.reliability_score * 30.0;
-            },
+            }
         }
 
         // Tier bonuses
@@ -319,7 +355,10 @@ impl ModelRouter {
         }
 
         // Provider preferences
-        if requirements.preferred_providers.contains(&model.provider.as_str().to_string()) {
+        if requirements
+            .preferred_providers
+            .contains(&model.provider.as_str().to_string())
+        {
             score += 15.0;
         }
 
@@ -486,7 +525,10 @@ mod tests {
             .select_optimal_model_with_confidence(&models, &requirements)
             .unwrap();
 
-        assert!(confidence > 0.8, "High score gap should yield high confidence");
+        assert!(
+            confidence > 0.8,
+            "High score gap should yield high confidence"
+        );
         assert!(!reasoning.is_empty(), "Should have reasoning");
         assert!(
             reasoning.iter().any(|r| r.contains("Strong lead")),
@@ -599,10 +641,7 @@ mod tests {
             .select_optimal_model_with_confidence(&models, &requirements)
             .unwrap();
 
-        assert!(
-            !reasoning.is_empty(),
-            "Reasoning should always be provided"
-        );
+        assert!(!reasoning.is_empty(), "Reasoning should always be provided");
         assert!(
             reasoning[0].contains("Selected"),
             "First reasoning should mention selection"

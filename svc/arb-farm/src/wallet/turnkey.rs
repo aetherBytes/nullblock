@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::error::{AppError, AppResult};
 use super::policy::{ArbFarmPolicy, DailyUsage, PolicyViolation};
+use crate::error::{AppError, AppResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TurnkeyConfig {
@@ -234,26 +234,36 @@ impl TurnkeySigner {
         drop(status);
 
         // Call Turnkey API to sign
-        let sign_result = self.call_turnkey_sign(&wallet_id, &request.transaction_base64).await?;
+        let sign_result = self
+            .call_turnkey_sign(&wallet_id, &request.transaction_base64)
+            .await?;
 
         // Record the transaction in daily usage
         if sign_result.success {
             let mut status = self.wallet_status.write().await;
             status.daily_usage.reset_if_new_day();
-            status.daily_usage.record_transaction(request.estimated_amount_lamports);
+            status
+                .daily_usage
+                .record_transaction(request.estimated_amount_lamports);
         }
 
         Ok(sign_result)
     }
 
-    async fn call_turnkey_sign(&self, wallet_id: &str, transaction_base64: &str) -> AppResult<SignResult> {
+    async fn call_turnkey_sign(
+        &self,
+        wallet_id: &str,
+        transaction_base64: &str,
+    ) -> AppResult<SignResult> {
         // Check if API keys are configured
         let (api_public_key, api_private_key) = {
             match (&self.config.api_public_key, &self.config.api_private_key) {
                 (Some(pub_key), Some(priv_key)) => (pub_key.clone(), priv_key.clone()),
                 _ => {
                     // API keys not configured - return error instead of fake success
-                    tracing::error!("❌ CRITICAL: Turnkey API keys not configured - cannot sign transactions");
+                    tracing::error!(
+                        "❌ CRITICAL: Turnkey API keys not configured - cannot sign transactions"
+                    );
                     return Ok(SignResult {
                         success: false,
                         signed_transaction_base64: None,
@@ -284,8 +294,12 @@ impl TurnkeySigner {
 
         let stamp = self.create_turnkey_stamp(&request_body, &api_public_key, &api_private_key)?;
 
-        let response = self.client
-            .post(format!("{}/public/v1/submit/sign_raw_payload", self.config.api_url))
+        let response = self
+            .client
+            .post(format!(
+                "{}/public/v1/submit/sign_raw_payload",
+                self.config.api_url
+            ))
             .header("Content-Type", "application/json")
             .header("X-Stamp", stamp)
             .body(request_body)
@@ -295,34 +309,41 @@ impl TurnkeySigner {
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
-            return Ok(SignResult::error(format!("Turnkey API error: {}", error_text)));
+            return Ok(SignResult::error(format!(
+                "Turnkey API error: {}",
+                error_text
+            )));
         }
 
-        let result: TurnkeySignResponse = response.json().await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Turnkey response: {}", e)))?;
+        let result: TurnkeySignResponse = response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse Turnkey response: {}", e))
+        })?;
 
         match result.activity.status.as_str() {
             "ACTIVITY_STATUS_COMPLETED" => {
-                let signed_tx = result.activity.result
+                let signed_tx = result
+                    .activity
+                    .result
                     .and_then(|r| r.sign_raw_payload_result)
                     .map(|r| r.encoded_signature)
                     .unwrap_or_default();
 
-                Ok(SignResult::success(
-                    signed_tx.clone(),
-                    signed_tx,
-                ))
+                Ok(SignResult::success(signed_tx.clone(), signed_tx))
             }
-            "ACTIVITY_STATUS_FAILED" => {
-                Ok(SignResult::error("Turnkey signing failed"))
-            }
-            status => {
-                Ok(SignResult::error(format!("Unexpected Turnkey status: {}", status)))
-            }
+            "ACTIVITY_STATUS_FAILED" => Ok(SignResult::error("Turnkey signing failed")),
+            status => Ok(SignResult::error(format!(
+                "Unexpected Turnkey status: {}",
+                status
+            ))),
         }
     }
 
-    fn create_turnkey_stamp(&self, _body: &str, _public_key: &str, _private_key: &str) -> AppResult<String> {
+    fn create_turnkey_stamp(
+        &self,
+        _body: &str,
+        _public_key: &str,
+        _private_key: &str,
+    ) -> AppResult<String> {
         // Turnkey uses a specific stamping mechanism
         // For now, return a placeholder - full implementation requires their SDK
         // In production, this would use P-256 ECDSA signing
@@ -380,14 +401,18 @@ pub struct WalletSetupResponse {
 }
 
 impl TurnkeySigner {
-    pub async fn setup_wallet(&self, request: WalletSetupRequest) -> AppResult<WalletSetupResponse> {
+    pub async fn setup_wallet(
+        &self,
+        request: WalletSetupRequest,
+    ) -> AppResult<WalletSetupResponse> {
         // Check if keys are configured
         if self.config.api_public_key.is_none() || self.config.api_private_key.is_none() {
             // Mock response for development
             tracing::warn!("Turnkey API keys not configured - returning mock setup");
             let mock_wallet_id = format!("mock_wallet_{}", uuid::Uuid::new_v4());
 
-            self.set_wallet(request.user_wallet_address.clone(), mock_wallet_id.clone()).await?;
+            self.set_wallet(request.user_wallet_address.clone(), mock_wallet_id.clone())
+                .await?;
 
             return Ok(WalletSetupResponse {
                 success: true,
@@ -405,7 +430,8 @@ impl TurnkeySigner {
         // For now, placeholder implementation
         let mock_wallet_id = format!("tk_wallet_{}", uuid::Uuid::new_v4());
 
-        self.set_wallet(request.user_wallet_address.clone(), mock_wallet_id.clone()).await?;
+        self.set_wallet(request.user_wallet_address.clone(), mock_wallet_id.clone())
+            .await?;
 
         Ok(WalletSetupResponse {
             success: true,
@@ -431,10 +457,13 @@ mod tests {
     #[tokio::test]
     async fn test_set_wallet() {
         let signer = TurnkeySigner::new(TurnkeyConfig::default());
-        signer.set_wallet(
-            "So11111111111111111111111111111111111111112".to_string(),
-            "tk_wallet_123".to_string(),
-        ).await.unwrap();
+        signer
+            .set_wallet(
+                "So11111111111111111111111111111111111111112".to_string(),
+                "tk_wallet_123".to_string(),
+            )
+            .await
+            .unwrap();
 
         let status = signer.get_status().await;
         assert!(status.is_connected);
@@ -444,10 +473,13 @@ mod tests {
     #[tokio::test]
     async fn test_policy_validation() {
         let signer = TurnkeySigner::new(TurnkeyConfig::default());
-        signer.set_wallet(
-            "So11111111111111111111111111111111111111112".to_string(),
-            "tk_wallet_123".to_string(),
-        ).await.unwrap();
+        signer
+            .set_wallet(
+                "So11111111111111111111111111111111111111112".to_string(),
+                "tk_wallet_123".to_string(),
+            )
+            .await
+            .unwrap();
 
         // Valid request
         let valid_request = SignRequest {
@@ -467,6 +499,9 @@ mod tests {
             edge_id: None,
             description: "Test transaction".to_string(),
         };
-        assert!(signer.validate_transaction(&over_limit_request).await.is_err());
+        assert!(signer
+            .validate_transaction(&over_limit_request)
+            .await
+            .is_err());
     }
 }

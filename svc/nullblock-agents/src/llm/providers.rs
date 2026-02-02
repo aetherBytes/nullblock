@@ -47,7 +47,7 @@ impl Provider for OpenAIProvider {
         let start = Instant::now();
 
         let mut messages = Vec::new();
-        
+
         // Add system prompt if provided
         if let Some(system_prompt) = &request.system_prompt {
             messages.push(json!({
@@ -63,7 +63,7 @@ impl Provider for OpenAIProvider {
             }
         } else {
             messages.push(json!({
-                "role": "user", 
+                "role": "user",
                 "content": request.prompt
             }));
         }
@@ -84,7 +84,8 @@ impl Provider for OpenAIProvider {
             payload["stop"] = json!(stop_sequences);
         }
 
-        let response = self.client
+        let response = self
+            .client
             .post(&config.api_endpoint)
             .json(&payload)
             .send()
@@ -94,9 +95,8 @@ impl Provider for OpenAIProvider {
             let status = response.status();
             let error_text = response.text().await?;
             return Err(AppError::LLMRequestFailed(format!(
-                "OpenAI API error {}: {}", 
-                status, 
-                error_text
+                "OpenAI API error {}: {}",
+                status, error_text
             )));
         }
 
@@ -118,16 +118,22 @@ impl Provider for OpenAIProvider {
         let latency_ms = start.elapsed().as_millis() as f64;
 
         Ok(LLMResponse {
-            content: choice["message"]["content"].as_str().unwrap_or("").to_string(),
+            content: choice["message"]["content"]
+                .as_str()
+                .unwrap_or("")
+                .to_string(),
             model_used: config.name.clone(),
             usage: usage_map,
             latency_ms,
             cost_estimate,
-            finish_reason: choice["finish_reason"].as_str().unwrap_or("stop").to_string(),
+            finish_reason: choice["finish_reason"]
+                .as_str()
+                .unwrap_or("stop")
+                .to_string(),
             confidence_score: 1.0,
-            tool_calls: choice["message"]["tool_calls"].as_array().map(|calls| {
-                calls.iter().cloned().collect()
-            }),
+            tool_calls: choice["message"]["tool_calls"]
+                .as_array()
+                .map(|calls| calls.iter().cloned().collect()),
             metadata: Some({
                 let mut meta = HashMap::new();
                 meta.insert("provider".to_string(), json!("openai"));
@@ -145,7 +151,8 @@ impl Provider for OpenAIProvider {
 
     async fn health_check(&self) -> AppResult<bool> {
         // Simple health check - attempt to list models
-        let response = self.client
+        let response = self
+            .client
             .get("https://api.openai.com/v1/models")
             .send()
             .await?;
@@ -180,7 +187,7 @@ impl Provider for AnthropicProvider {
         let start = Instant::now();
 
         let mut messages = Vec::new();
-        
+
         // Handle conversation history, filtering out system messages
         if let Some(history) = &request.messages {
             for msg in history {
@@ -212,7 +219,8 @@ impl Provider for AnthropicProvider {
             payload["stop_sequences"] = json!(stop_sequences);
         }
 
-        let response = self.client
+        let response = self
+            .client
             .post(&config.api_endpoint)
             .json(&payload)
             .send()
@@ -222,15 +230,17 @@ impl Provider for AnthropicProvider {
             let status = response.status();
             let error_text = response.text().await?;
             return Err(AppError::LLMRequestFailed(format!(
-                "Anthropic API error {}: {}", 
-                status, 
-                error_text
+                "Anthropic API error {}: {}",
+                status, error_text
             )));
         }
 
         let data: Value = response.json().await?;
-        
-        let content = data["content"][0]["text"].as_str().unwrap_or("").to_string();
+
+        let content = data["content"][0]["text"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
         let usage = data.get("usage").cloned().unwrap_or_else(|| json!({}));
 
         let input_tokens = usage["input_tokens"].as_u64().unwrap_or(0) as u32;
@@ -252,7 +262,11 @@ impl Provider for AnthropicProvider {
             usage: usage_map,
             latency_ms,
             cost_estimate,
-            finish_reason: data.get("stop_reason").and_then(|v| v.as_str()).unwrap_or("stop").to_string(),
+            finish_reason: data
+                .get("stop_reason")
+                .and_then(|v| v.as_str())
+                .unwrap_or("stop")
+                .to_string(),
             confidence_score: 1.0,
             tool_calls: None,
             metadata: Some({
@@ -305,7 +319,7 @@ impl Provider for GroqProvider {
         let start = Instant::now();
 
         let mut messages = Vec::new();
-        
+
         if let Some(system_prompt) = &request.system_prompt {
             messages.push(json!({
                 "role": "system",
@@ -319,7 +333,7 @@ impl Provider for GroqProvider {
             }
         } else {
             messages.push(json!({
-                "role": "user", 
+                "role": "user",
                 "content": request.prompt
             }));
         }
@@ -331,7 +345,8 @@ impl Provider for GroqProvider {
             "temperature": request.temperature.unwrap_or(0.8)
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(&config.api_endpoint)
             .json(&payload)
             .send()
@@ -341,9 +356,8 @@ impl Provider for GroqProvider {
             let status = response.status();
             let error_text = response.text().await?;
             return Err(AppError::LLMRequestFailed(format!(
-                "Groq API error {}: {}", 
-                status, 
-                error_text
+                "Groq API error {}: {}",
+                status, error_text
             )));
         }
 
@@ -365,12 +379,18 @@ impl Provider for GroqProvider {
         let latency_ms = start.elapsed().as_millis() as f64;
 
         Ok(LLMResponse {
-            content: choice["message"]["content"].as_str().unwrap_or("").to_string(),
+            content: choice["message"]["content"]
+                .as_str()
+                .unwrap_or("")
+                .to_string(),
             model_used: config.name.clone(),
             usage: usage_map,
             latency_ms,
             cost_estimate,
-            finish_reason: choice["finish_reason"].as_str().unwrap_or("stop").to_string(),
+            finish_reason: choice["finish_reason"]
+                .as_str()
+                .unwrap_or("stop")
+                .to_string(),
             confidence_score: 1.0,
             tool_calls: None,
             metadata: Some({
@@ -389,7 +409,8 @@ impl Provider for GroqProvider {
     }
 
     async fn health_check(&self) -> AppResult<bool> {
-        let response = self.client
+        let response = self
+            .client
             .get("https://api.groq.com/openai/v1/models")
             .send()
             .await?;
@@ -439,19 +460,14 @@ impl Provider for OllamaProvider {
         }
 
         let url = format!("{}/api/generate", self.base_url);
-        let response = self.client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await?;
+        let response = self.client.post(&url).json(&payload).send().await?;
 
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await?;
             return Err(AppError::LLMRequestFailed(format!(
-                "Ollama API error {}: {}", 
-                status, 
-                error_text
+                "Ollama API error {}: {}",
+                status, error_text
             )));
         }
 
@@ -492,10 +508,7 @@ impl Provider for OllamaProvider {
 
     async fn health_check(&self) -> AppResult<bool> {
         let url = format!("{}/api/tags", self.base_url);
-        let response = self.client
-            .get(&url)
-            .send()
-            .await?;
+        let response = self.client.get(&url).send().await?;
         Ok(response.status().is_success())
     }
 }
@@ -530,7 +543,7 @@ impl Provider for OpenRouterProvider {
         let start = Instant::now();
 
         let mut messages = Vec::new();
-        
+
         if let Some(system_prompt) = &request.system_prompt {
             messages.push(json!({
                 "role": "system",
@@ -544,7 +557,7 @@ impl Provider for OpenRouterProvider {
             }
         } else {
             messages.push(json!({
-                "role": "user", 
+                "role": "user",
                 "content": request.prompt
             }));
         }
@@ -560,12 +573,22 @@ impl Provider for OpenRouterProvider {
         if config.name.contains("gemini-2.5-flash-image") {
             info!("🎨 Adding image+text modalities for Gemini image generation");
             payload["modalities"] = json!(["image", "text"]);
-            
+
             // Log token usage for debugging
-            let approx_input_tokens = messages.iter()
-                .map(|msg| msg.get("content").and_then(|c| c.as_str()).unwrap_or("").len() / 4)
+            let approx_input_tokens = messages
+                .iter()
+                .map(|msg| {
+                    msg.get("content")
+                        .and_then(|c| c.as_str())
+                        .unwrap_or("")
+                        .len()
+                        / 4
+                })
                 .sum::<usize>();
-            info!("📊 Approximate input tokens for image request: {}", approx_input_tokens);
+            info!(
+                "📊 Approximate input tokens for image request: {}",
+                approx_input_tokens
+            );
         }
 
         // Add reasoning configuration if supported and requested
@@ -589,7 +612,8 @@ impl Provider for OpenRouterProvider {
             }
         }
 
-        let response = self.client
+        let response = self
+            .client
             .post(&config.api_endpoint)
             .json(&payload)
             .send()
@@ -605,12 +629,16 @@ impl Provider for OpenRouterProvider {
                 if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
                     // Check if this is an upstream rate limit (from the model provider)
                     if let Some(error_obj) = error_json.get("error") {
-                        if let Some(metadata_raw) = error_obj.get("metadata")
+                        if let Some(metadata_raw) = error_obj
+                            .get("metadata")
                             .and_then(|m| m.get("raw"))
                             .and_then(|r| r.as_str())
                         {
                             if metadata_raw.contains("rate-limited upstream") {
-                                warn!("⚠️ Model {} is temporarily rate-limited at the provider level", config.name);
+                                warn!(
+                                    "⚠️ Model {} is temporarily rate-limited at the provider level",
+                                    config.name
+                                );
                                 return Err(AppError::ModelNotAvailable(format!(
                                     "Model '{}' is temporarily rate-limited at the provider level. Please try a different model or wait a moment.",
                                     config.name
@@ -630,7 +658,8 @@ impl Provider for OpenRouterProvider {
                 // Check for model not found errors
                 if status == reqwest::StatusCode::NOT_FOUND {
                     // Check for "model not found" in metadata.raw
-                    if let Some(metadata_raw) = error_json.get("error")
+                    if let Some(metadata_raw) = error_json
+                        .get("error")
                         .and_then(|e| e.get("metadata"))
                         .and_then(|m| m.get("raw"))
                         .and_then(|r| r.as_str())
@@ -646,7 +675,10 @@ impl Provider for OpenRouterProvider {
 
                     // Legacy check for "No endpoints found"
                     if error_text.contains("No endpoints found") {
-                        warn!("⚠️ Model {} has no endpoints, suggesting fallback", config.name);
+                        warn!(
+                            "⚠️ Model {} has no endpoints, suggesting fallback",
+                            config.name
+                        );
                         return Err(AppError::ModelNotAvailable(format!(
                             "Model '{}' is no longer available. Please use 'deepseek/deepseek-chat-v3.1:free' or 'cognitivecomputations/dolphin3.0-mistral-24b:free' instead",
                             config.name
@@ -658,8 +690,7 @@ impl Provider for OpenRouterProvider {
             // Generic error handling for other non-success responses
             return Err(AppError::LLMRequestFailed(format!(
                 "OpenRouter API error {}: {}",
-                status,
-                error_text
+                status, error_text
             )));
         }
 
@@ -681,11 +712,16 @@ impl Provider for OpenRouterProvider {
         let latency_ms = start.elapsed().as_millis() as f64;
 
         // Extract reasoning information if available
-        let reasoning = choice["message"]["reasoning"].as_str().map(|s| s.to_string());
+        let reasoning = choice["message"]["reasoning"]
+            .as_str()
+            .map(|s| s.to_string());
         let reasoning_details = choice["message"]["reasoning_details"].as_array().cloned();
 
         // Handle image generation responses differently
-        let content = if config.name.contains("gemini-2.5-flash-image") || config.name.contains("dall-e") || config.name.contains("stable-diffusion") {
+        let content = if config.name.contains("gemini-2.5-flash-image")
+            || config.name.contains("dall-e")
+            || config.name.contains("stable-diffusion")
+        {
             // For Gemini 2.5 Flash Image, check for inline_data with base64 images
             if config.name.contains("gemini-2.5-flash-image") {
                 info!("🎨 Processing Gemini image generation response");
@@ -708,7 +744,11 @@ impl Provider for OpenRouterProvider {
                     for (i, image) in images.iter().enumerate() {
                         if let Some(image_url_obj) = image.get("image_url") {
                             if let Some(url) = image_url_obj["url"].as_str() {
-                                info!("🖼️ Image {}: Found image URL ({}... bytes)", i, if url.len() > 100 { 100 } else { url.len() });
+                                info!(
+                                    "🖼️ Image {}: Found image URL ({}... bytes)",
+                                    i,
+                                    if url.len() > 100 { 100 } else { url.len() }
+                                );
                                 result.push_str(&format!("![Generated Image]({})\n\n", url));
                             }
                         }
@@ -720,102 +760,149 @@ impl Provider for OpenRouterProvider {
                 else {
                     let message_content = &choice["message"]["content"];
 
-                    info!("📊 Message content type: {}", if message_content.is_array() { "array" } else if message_content.is_string() { "string" } else if message_content.is_object() { "object" } else { "other" });
+                    info!(
+                        "📊 Message content type: {}",
+                        if message_content.is_array() {
+                            "array"
+                        } else if message_content.is_string() {
+                            "string"
+                        } else if message_content.is_object() {
+                            "object"
+                        } else {
+                            "other"
+                        }
+                    );
 
                     // Path 1: Check if content is an array with parts (native Gemini format)
                     if let Some(parts) = message_content.as_array() {
-                    info!("✅ Found parts array with {} elements", parts.len());
-                    let mut result = String::new();
-                    let mut found_images = 0;
-
-                    for (i, part) in parts.iter().enumerate() {
-                        info!("🔍 Part {}: keys = {:?}", i, part.as_object().map(|o| o.keys().collect::<Vec<_>>()));
-
-                        if let Some(text) = part["text"].as_str() {
-                            info!("📝 Found text part: {} chars", text.len());
-                            result.push_str(text);
-                            result.push_str("\n\n");
-                        }
-
-                        // Check for inline_data (base64 images)
-                        if let Some(inline_data) = part.get("inline_data") {
-                            if let Some(data) = inline_data["data"].as_str() {
-                                found_images += 1;
-                                let mime_type = inline_data["mime_type"].as_str().unwrap_or("image/png");
-                                let data_preview = if data.len() > 50 { &data[..50] } else { data };
-                                info!("🖼️ Found inline_data image: mime={}, size={} bytes, preview={}", mime_type, data.len(), data_preview);
-                                let image_url = format!("data:{};base64,{}", mime_type, data);
-                                result.push_str(&format!("![Generated Image]({})\n\n", image_url));
-                            }
-                        }
-                    }
-
-                    if found_images > 0 {
-                        info!("✅ Successfully extracted {} image(s) from response", found_images);
-                    } else {
-                        warn!("⚠️ No images found in parts array");
-                    }
-
-                    result.trim().to_string()
-                }
-                // Path 2: Check if content is a string (OpenRouter normalized format)
-                else if let Some(content_str) = message_content.as_str() {
-                    info!("📄 Content is string, length: {} chars", content_str.len());
-
-                    // Check if string contains base64 data URI
-                    if content_str.contains("data:image/") && content_str.contains("base64,") {
-                        info!("🖼️ Found base64 image data in string content");
-                        content_str.to_string()
-                    } else {
-                        warn!("⚠️ String content doesn't contain image data");
-                        content_str.to_string()
-                    }
-                }
-                // Path 3: Check alternate locations
-                else {
-                    warn!("⚠️ Unexpected content format, checking alternate locations");
-
-                    // Try checking message.parts directly
-                    if let Some(parts) = choice["message"].get("parts").and_then(|p| p.as_array()) {
-                        info!("🔍 Found message.parts array with {} elements", parts.len());
+                        info!("✅ Found parts array with {} elements", parts.len());
                         let mut result = String::new();
+                        let mut found_images = 0;
 
-                        for part in parts {
+                        for (i, part) in parts.iter().enumerate() {
+                            info!(
+                                "🔍 Part {}: keys = {:?}",
+                                i,
+                                part.as_object().map(|o| o.keys().collect::<Vec<_>>())
+                            );
+
                             if let Some(text) = part["text"].as_str() {
+                                info!("📝 Found text part: {} chars", text.len());
                                 result.push_str(text);
                                 result.push_str("\n\n");
                             }
+
+                            // Check for inline_data (base64 images)
                             if let Some(inline_data) = part.get("inline_data") {
                                 if let Some(data) = inline_data["data"].as_str() {
-                                    let mime_type = inline_data["mime_type"].as_str().unwrap_or("image/png");
-                                    info!("🖼️ Found image in message.parts: {}", mime_type);
+                                    found_images += 1;
+                                    let mime_type =
+                                        inline_data["mime_type"].as_str().unwrap_or("image/png");
+                                    let data_preview =
+                                        if data.len() > 50 { &data[..50] } else { data };
+                                    info!("🖼️ Found inline_data image: mime={}, size={} bytes, preview={}", mime_type, data.len(), data_preview);
                                     let image_url = format!("data:{};base64,{}", mime_type, data);
-                                    result.push_str(&format!("![Generated Image]({})\n\n", image_url));
+                                    result.push_str(&format!(
+                                        "![Generated Image]({})\n\n",
+                                        image_url
+                                    ));
                                 }
                             }
                         }
 
+                        if found_images > 0 {
+                            info!(
+                                "✅ Successfully extracted {} image(s) from response",
+                                found_images
+                            );
+                        } else {
+                            warn!("⚠️ No images found in parts array");
+                        }
+
                         result.trim().to_string()
-                    } else {
-                        // Log full response structure for debugging
-                        warn!("❌ Could not find images in any expected location");
-                        warn!("🔍 Full choice structure: {}", serde_json::to_string_pretty(&choice).unwrap_or_else(|_| "Could not serialize".to_string()));
-                        message_content.as_str().unwrap_or("").to_string()
                     }
-                }
+                    // Path 2: Check if content is a string (OpenRouter normalized format)
+                    else if let Some(content_str) = message_content.as_str() {
+                        info!("📄 Content is string, length: {} chars", content_str.len());
+
+                        // Check if string contains base64 data URI
+                        if content_str.contains("data:image/") && content_str.contains("base64,") {
+                            info!("🖼️ Found base64 image data in string content");
+                            content_str.to_string()
+                        } else {
+                            warn!("⚠️ String content doesn't contain image data");
+                            content_str.to_string()
+                        }
+                    }
+                    // Path 3: Check alternate locations
+                    else {
+                        warn!("⚠️ Unexpected content format, checking alternate locations");
+
+                        // Try checking message.parts directly
+                        if let Some(parts) =
+                            choice["message"].get("parts").and_then(|p| p.as_array())
+                        {
+                            info!("🔍 Found message.parts array with {} elements", parts.len());
+                            let mut result = String::new();
+
+                            for part in parts {
+                                if let Some(text) = part["text"].as_str() {
+                                    result.push_str(text);
+                                    result.push_str("\n\n");
+                                }
+                                if let Some(inline_data) = part.get("inline_data") {
+                                    if let Some(data) = inline_data["data"].as_str() {
+                                        let mime_type = inline_data["mime_type"]
+                                            .as_str()
+                                            .unwrap_or("image/png");
+                                        info!("🖼️ Found image in message.parts: {}", mime_type);
+                                        let image_url =
+                                            format!("data:{};base64,{}", mime_type, data);
+                                        result.push_str(&format!(
+                                            "![Generated Image]({})\n\n",
+                                            image_url
+                                        ));
+                                    }
+                                }
+                            }
+
+                            result.trim().to_string()
+                        } else {
+                            // Log full response structure for debugging
+                            warn!("❌ Could not find images in any expected location");
+                            warn!(
+                                "🔍 Full choice structure: {}",
+                                serde_json::to_string_pretty(&choice)
+                                    .unwrap_or_else(|_| "Could not serialize".to_string())
+                            );
+                            message_content.as_str().unwrap_or("").to_string()
+                        }
+                    }
                 }
             } else {
                 // For DALL-E and Stable Diffusion, look for image URLs
                 let message_content = choice["message"]["content"].as_str().unwrap_or("");
 
-                if message_content.contains("http") && (message_content.contains(".jpg") || message_content.contains(".png") || message_content.contains(".jpeg") || message_content.contains(".webp")) {
+                if message_content.contains("http")
+                    && (message_content.contains(".jpg")
+                        || message_content.contains(".png")
+                        || message_content.contains(".jpeg")
+                        || message_content.contains(".webp"))
+                {
                     let image_urls: Vec<&str> = message_content
                         .split_whitespace()
-                        .filter(|word| word.starts_with("http") && (word.contains(".jpg") || word.contains(".png") || word.contains(".jpeg") || word.contains(".webp")))
+                        .filter(|word| {
+                            word.starts_with("http")
+                                && (word.contains(".jpg")
+                                    || word.contains(".png")
+                                    || word.contains(".jpeg")
+                                    || word.contains(".webp"))
+                        })
                         .collect();
 
                     if !image_urls.is_empty() {
-                        image_urls.iter()
+                        image_urls
+                            .iter()
                             .map(|url| format!("![Generated Image]({})", url))
                             .collect::<Vec<String>>()
                             .join("\n\n")
@@ -827,7 +914,10 @@ impl Provider for OpenRouterProvider {
                 }
             }
         } else {
-            choice["message"]["content"].as_str().unwrap_or("").to_string()
+            choice["message"]["content"]
+                .as_str()
+                .unwrap_or("")
+                .to_string()
         };
 
         Ok(LLMResponse {
@@ -836,11 +926,14 @@ impl Provider for OpenRouterProvider {
             usage: usage_map,
             latency_ms,
             cost_estimate,
-            finish_reason: choice["finish_reason"].as_str().unwrap_or("stop").to_string(),
+            finish_reason: choice["finish_reason"]
+                .as_str()
+                .unwrap_or("stop")
+                .to_string(),
             confidence_score: 1.0,
-            tool_calls: choice["message"]["tool_calls"].as_array().map(|calls| {
-                calls.iter().cloned().collect()
-            }),
+            tool_calls: choice["message"]["tool_calls"]
+                .as_array()
+                .map(|calls| calls.iter().cloned().collect()),
             metadata: Some({
                 let mut meta = HashMap::new();
                 meta.insert("provider".to_string(), json!("openrouter"));
@@ -857,7 +950,8 @@ impl Provider for OpenRouterProvider {
     }
 
     async fn health_check(&self) -> AppResult<bool> {
-        let response = self.client
+        let response = self
+            .client
             .get("https://openrouter.ai/api/v1/models")
             .send()
             .await?;

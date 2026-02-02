@@ -169,7 +169,15 @@ impl McpClient {
     pub fn new(endpoint_url: impl Into<String>) -> Self {
         let url: String = endpoint_url.into();
         let is_remote = url.starts_with("https://") || !url.contains("localhost");
-        Self::with_full_config(url, "unnamed".to_string(), ClientInfo::default(), AuthConfig::default(), DEFAULT_CACHE_TTL_SECS, DEFAULT_TIMEOUT_SECS, is_remote)
+        Self::with_full_config(
+            url,
+            "unnamed".to_string(),
+            ClientInfo::default(),
+            AuthConfig::default(),
+            DEFAULT_CACHE_TTL_SECS,
+            DEFAULT_TIMEOUT_SECS,
+            is_remote,
+        )
     }
 
     pub fn with_config(
@@ -179,7 +187,15 @@ impl McpClient {
     ) -> Self {
         let url: String = endpoint_url.into();
         let is_remote = url.starts_with("https://") || !url.contains("localhost");
-        Self::with_full_config(url, "unnamed".to_string(), client_info, AuthConfig::default(), cache_ttl_secs, DEFAULT_TIMEOUT_SECS, is_remote)
+        Self::with_full_config(
+            url,
+            "unnamed".to_string(),
+            client_info,
+            AuthConfig::default(),
+            cache_ttl_secs,
+            DEFAULT_TIMEOUT_SECS,
+            is_remote,
+        )
     }
 
     pub fn from_server_config(config: &McpServerConfig, client_info: ClientInfo) -> Self {
@@ -306,10 +322,7 @@ impl McpClient {
 
         debug!(method = method, id = id, endpoint = %self.endpoint_url, "Sending MCP request");
 
-        let response = self
-            .build_request(&request_body)
-            .send()
-            .await?;
+        let response = self.build_request(&request_body).send().await?;
 
         if !response.status().is_success() {
             return Err(McpError::ProtocolError(format!(
@@ -352,10 +365,7 @@ impl McpClient {
 
         debug!(method = method, "Sending MCP notification");
 
-        let response = self
-            .build_request(&request_body)
-            .send()
-            .await?;
+        let response = self.build_request(&request_body).send().await?;
 
         if !response.status().is_success() {
             warn!(
@@ -558,7 +568,10 @@ impl McpClient {
     }
 
     pub fn get_tools_for_prompt_sync(&self) -> String {
-        match futures::executor::block_on(self.tools_cache.read()).tools.as_slice() {
+        match futures::executor::block_on(self.tools_cache.read())
+            .tools
+            .as_slice()
+        {
             [] => "No tools currently available.".to_string(),
             tools => tools
                 .iter()
@@ -648,8 +661,7 @@ mod tests {
 
     #[test]
     fn test_client_with_auth() {
-        let client = McpClient::new("https://api.example.com/mcp")
-            .with_api_key("test-key");
+        let client = McpClient::new("https://api.example.com/mcp").with_api_key("test-key");
         assert!(client.has_auth());
     }
 

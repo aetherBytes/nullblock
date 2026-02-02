@@ -1,0 +1,46 @@
+{
+  "family": "arb-farm",
+  "requiresCompatibilities": ["EC2"],
+  "networkMode": "bridge",
+  "memory": "1024",
+  "cpu": "512",
+  "executionRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
+  "taskRoleArn": "arn:aws:iam::058264371750:role/ECSTaskDefinitionRole",
+  "containerDefinitions": [
+    {
+      "name": "arb-farm",
+      "image": "ghcr.io/aetherbytes/nullblock/arb-farm:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 9007,
+          "hostPort": 9007,
+          "protocol": "tcp"
+        }
+      ],
+      "repositoryCredentials": {
+        "credentialsParameter": "arn:aws:secretsmanager:us-east-1:058264371750:secret:github-docker-token-g5Hrtm"
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:9007/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/nullblock/arb-farm",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "environment": [],
+      "secrets": [],
+      "mountPoints": [],
+      "volumesFrom": []
+    }
+  ],
+  "volumes": []
+}

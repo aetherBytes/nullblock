@@ -77,7 +77,10 @@ impl ModelValidator {
                 }
             }
             Err(_) => {
-                warn!("⏱️ Model {} validation timed out after {} seconds", model_name, VALIDATION_TIMEOUT_SECS);
+                warn!(
+                    "⏱️ Model {} validation timed out after {} seconds",
+                    model_name, VALIDATION_TIMEOUT_SECS
+                );
                 Ok(false)
             }
         }
@@ -149,8 +152,5 @@ pub async fn sort_models_by_context_length(models: Vec<serde_json::Value>) -> Ve
 
     model_with_context.sort_by(|a, b| b.1.cmp(&a.1));
 
-    model_with_context
-        .into_iter()
-        .map(|(id, _)| id)
-        .collect()
+    model_with_context.into_iter().map(|(id, _)| id).collect()
 }

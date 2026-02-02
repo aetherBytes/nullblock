@@ -32,7 +32,8 @@ impl McpWorkerFactory {
     pub fn new() -> Self {
         Self {
             workers: std::sync::Arc::new(std::sync::Mutex::new(HashMap::new())),
-            nullblock_mcp_url: std::env::var("NULLBLOCK_MCP_URL").unwrap_or_else(|_| "http://localhost:8000".to_string()),
+            nullblock_mcp_url: std::env::var("NULLBLOCK_MCP_URL")
+                .unwrap_or_else(|_| "http://localhost:8000".to_string()),
         }
     }
 
@@ -40,7 +41,7 @@ impl McpWorkerFactory {
     pub fn create_worker(&self, operation: &str, params: Value) -> McpWorker {
         let worker_id = uuid::Uuid::new_v4().to_string();
         let now = chrono::Utc::now();
-        
+
         let worker = McpWorker {
             worker_id: worker_id.clone(),
             operation: operation.to_string(),
@@ -58,11 +59,12 @@ impl McpWorkerFactory {
             workers.insert(worker_id.clone(), worker.clone());
         }
 
-        println!("🏭 Created MCP worker {} for operation '{}'", worker_id, operation);
+        println!(
+            "🏭 Created MCP worker {} for operation '{}'",
+            worker_id, operation
+        );
         worker
     }
-
-
 
     /// Get worker status
     pub fn get_worker_status(&self, worker_id: &str) -> Option<McpWorker> {
@@ -76,8 +78,6 @@ impl McpWorkerFactory {
         workers.values().cloned().collect()
     }
 
-
-
     /// Get worker statistics
     pub fn get_worker_stats(&self) -> Value {
         let workers = self.workers.lock().unwrap();
@@ -85,7 +85,9 @@ impl McpWorkerFactory {
         let mut status_counts = HashMap::new();
 
         for worker in workers.values() {
-            *status_counts.entry(format!("{:?}", worker.status)).or_insert(0) += 1;
+            *status_counts
+                .entry(format!("{:?}", worker.status))
+                .or_insert(0) += 1;
         }
 
         serde_json::json!({

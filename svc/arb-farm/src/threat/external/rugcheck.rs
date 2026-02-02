@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::error::{AppError, AppResult};
+use serde::{Deserialize, Serialize};
 
 pub struct RugCheckClient {
     base_url: String,
@@ -61,7 +61,8 @@ impl RugCheckClient {
     pub async fn check_token(&self, mint: &str) -> AppResult<RugCheckResponse> {
         let url = format!("{}/tokens/{}/report", self.base_url, mint);
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .header("Accept", "application/json")
             .send()
@@ -110,13 +111,15 @@ impl RugCheckClient {
             }
         }
 
-        let top_10_concentration: f64 = response.top_holders
+        let top_10_concentration: f64 = response
+            .top_holders
             .iter()
             .take(10)
             .map(|h| h.percentage)
             .sum();
 
-        let insider_concentration: f64 = response.top_holders
+        let insider_concentration: f64 = response
+            .top_holders
             .iter()
             .filter(|h| h.insider)
             .map(|h| h.percentage)

@@ -1,0 +1,23 @@
+name: CI - Protocols
+
+on:
+  pull_request:
+    paths:
+      - 'svc/nullblock-protocols/**'
+      - 'lib/**'
+  push:
+    branches: [main]
+    paths:
+      - 'svc/nullblock-protocols/**'
+      - 'lib/**'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/rust-service.yml
+    with:
+      service-name: nullblock-protocols
+      service-path: svc/nullblock-protocols
+      service-port: 8001
+      ecs-service: nullblock-protocols
+      run-deploy: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    secrets: inherit

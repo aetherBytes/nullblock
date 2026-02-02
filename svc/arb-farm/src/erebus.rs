@@ -24,15 +24,23 @@ impl ErebusClient {
         }
     }
 
-    pub async fn get_agent_api_key(&self, agent_name: &str, provider: &str) -> Result<Option<String>, String> {
+    pub async fn get_agent_api_key(
+        &self,
+        agent_name: &str,
+        provider: &str,
+    ) -> Result<Option<String>, String> {
         let url = format!(
             "{}/internal/agents/{}/api-keys/{}/decrypted",
             self.base_url, agent_name, provider
         );
 
-        info!("🔑 Fetching API key for agent '{}' provider '{}' from Erebus", agent_name, provider);
+        info!(
+            "🔑 Fetching API key for agent '{}' provider '{}' from Erebus",
+            agent_name, provider
+        );
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .timeout(std::time::Duration::from_secs(10))
             .send()
@@ -40,7 +48,10 @@ impl ErebusClient {
             .map_err(|e| format!("Failed to connect to Erebus: {}", e))?;
 
         if response.status() == reqwest::StatusCode::NOT_FOUND {
-            warn!("⚠️ No API key found for agent '{}' provider '{}'", agent_name, provider);
+            warn!(
+                "⚠️ No API key found for agent '{}' provider '{}'",
+                agent_name, provider
+            );
             return Ok(None);
         }
 
@@ -57,9 +68,20 @@ impl ErebusClient {
 
         if data.success {
             if let Some(api_key) = data.api_key {
-                let prefix = if api_key.len() > 10 { &api_key[..10] } else { &api_key };
-                let suffix = if api_key.len() > 10 { &api_key[api_key.len()-4..] } else { "" };
-                info!("✅ Retrieved API key for agent '{}' ({}...{})", agent_name, prefix, suffix);
+                let prefix = if api_key.len() > 10 {
+                    &api_key[..10]
+                } else {
+                    &api_key
+                };
+                let suffix = if api_key.len() > 10 {
+                    &api_key[api_key.len() - 4..]
+                } else {
+                    ""
+                };
+                info!(
+                    "✅ Retrieved API key for agent '{}' ({}...{})",
+                    agent_name, prefix, suffix
+                );
                 return Ok(Some(api_key));
             }
         }

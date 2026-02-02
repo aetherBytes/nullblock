@@ -166,9 +166,7 @@ pub struct CallToolResult {
 #[serde(tag = "type")]
 pub enum ContentBlock {
     #[serde(rename = "text")]
-    Text {
-        text: String,
-    },
+    Text { text: String },
 }
 
 pub mod error_codes {
@@ -206,12 +204,18 @@ impl JsonRpcResponse {
 impl From<&crate::mcp::tools::McpTool> for Tool {
     fn from(tool: &crate::mcp::tools::McpTool) -> Self {
         let schema = &tool.input_schema;
-        let properties = schema.get("properties")
+        let properties = schema
+            .get("properties")
             .and_then(|p| p.as_object())
             .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
-        let required = schema.get("required")
+        let required = schema
+            .get("required")
             .and_then(|r| r.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            });
 
         let annotations = tool.annotations.as_ref().map(|ann| ToolAnnotations {
             read_only_hint: ann.read_only_hint,

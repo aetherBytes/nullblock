@@ -55,18 +55,22 @@ pub async fn add_snipe_position(
     State(state): State<AppState>,
     Json(request): Json<AddPositionRequest>,
 ) -> AppResult<Json<AddPositionResponse>> {
-    let strategy_id = request.strategy_id
+    let strategy_id = request
+        .strategy_id
         .as_ref()
         .and_then(|s| Uuid::parse_str(s).ok())
         .unwrap_or(Uuid::nil());
 
-    state.graduation_sniper.add_position(
-        &request.mint,
-        &request.symbol,
-        strategy_id,
-        request.entry_tokens,
-        request.entry_price_sol,
-    ).await;
+    state
+        .graduation_sniper
+        .add_position(
+            &request.mint,
+            &request.symbol,
+            strategy_id,
+            request.entry_tokens,
+            request.entry_price_sol,
+        )
+        .await;
 
     Ok(Json(AddPositionResponse {
         success: true,
@@ -136,9 +140,7 @@ pub struct SniperControlResponse {
     pub is_running: bool,
 }
 
-pub async fn start_sniper(
-    State(state): State<AppState>,
-) -> AppResult<Json<SniperControlResponse>> {
+pub async fn start_sniper(State(state): State<AppState>) -> AppResult<Json<SniperControlResponse>> {
     state.graduation_sniper.start().await;
     let stats = state.graduation_sniper.get_stats().await;
 
@@ -149,9 +151,7 @@ pub async fn start_sniper(
     }))
 }
 
-pub async fn stop_sniper(
-    State(state): State<AppState>,
-) -> AppResult<Json<SniperControlResponse>> {
+pub async fn stop_sniper(State(state): State<AppState>) -> AppResult<Json<SniperControlResponse>> {
     state.graduation_sniper.stop().await;
     let stats = state.graduation_sniper.get_stats().await;
 

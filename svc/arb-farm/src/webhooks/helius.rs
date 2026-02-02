@@ -134,13 +134,11 @@ impl HeliusWebhookClient {
         self.api_key.is_some()
     }
 
-    pub async fn create_webhook(
-        &self,
-        config: &WebhookConfig,
-    ) -> AppResult<WebhookRegistration> {
-        let api_key = self.api_key.as_ref().ok_or_else(|| {
-            AppError::Configuration("Helius API key not configured".to_string())
-        })?;
+    pub async fn create_webhook(&self, config: &WebhookConfig) -> AppResult<WebhookRegistration> {
+        let api_key = self
+            .api_key
+            .as_ref()
+            .ok_or_else(|| AppError::Configuration("Helius API key not configured".to_string()))?;
 
         let request = CreateWebhookRequest {
             webhook_url: config.webhook_url.clone(),
@@ -168,12 +166,17 @@ impl HeliusWebhookClient {
             )));
         }
 
-        let result: CreateWebhookResponse = response.json().await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Helius response: {}", e)))?;
+        let result: CreateWebhookResponse = response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse Helius response: {}", e))
+        })?;
 
         Ok(WebhookRegistration {
             webhook_id: result.webhook_id,
-            wallet_address: config.account_addresses.first().cloned().unwrap_or_default(),
+            wallet_address: config
+                .account_addresses
+                .first()
+                .cloned()
+                .unwrap_or_default(),
             webhook_url: config.webhook_url.clone(),
             webhook_type: config.webhook_type,
             transaction_types: config.transaction_types.clone(),
@@ -183,18 +186,20 @@ impl HeliusWebhookClient {
     }
 
     pub async fn delete_webhook(&self, webhook_id: &str) -> AppResult<()> {
-        let api_key = self.api_key.as_ref().ok_or_else(|| {
-            AppError::Configuration("Helius API key not configured".to_string())
-        })?;
+        let api_key = self
+            .api_key
+            .as_ref()
+            .ok_or_else(|| AppError::Configuration("Helius API key not configured".to_string()))?;
 
-        let url = format!("{}/webhooks/{}?api-key={}", self.api_url, webhook_id, api_key);
+        let url = format!(
+            "{}/webhooks/{}?api-key={}",
+            self.api_url, webhook_id, api_key
+        );
 
-        let response = self
-            .client
-            .delete(&url)
-            .send()
-            .await
-            .map_err(|e| AppError::ExternalApi(format!("Helius webhook deletion failed: {}", e)))?;
+        let response =
+            self.client.delete(&url).send().await.map_err(|e| {
+                AppError::ExternalApi(format!("Helius webhook deletion failed: {}", e))
+            })?;
 
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
@@ -208,9 +213,10 @@ impl HeliusWebhookClient {
     }
 
     pub async fn list_webhooks(&self) -> AppResult<Vec<WebhookRegistration>> {
-        let api_key = self.api_key.as_ref().ok_or_else(|| {
-            AppError::Configuration("Helius API key not configured".to_string())
-        })?;
+        let api_key = self
+            .api_key
+            .as_ref()
+            .ok_or_else(|| AppError::Configuration("Helius API key not configured".to_string()))?;
 
         let url = format!("{}/webhooks?api-key={}", self.api_url, api_key);
 
@@ -229,8 +235,9 @@ impl HeliusWebhookClient {
             )));
         }
 
-        let result: Vec<HeliusWebhook> = response.json().await
-            .map_err(|e| AppError::ExternalApi(format!("Failed to parse Helius response: {}", e)))?;
+        let result: Vec<HeliusWebhook> = response.json().await.map_err(|e| {
+            AppError::ExternalApi(format!("Failed to parse Helius response: {}", e))
+        })?;
 
         let registrations = result
             .into_iter()
@@ -258,9 +265,10 @@ impl HeliusWebhookClient {
         }
 
         // Also check the raw webhook list for multiple addresses per webhook
-        let api_key = self.api_key.as_ref().ok_or_else(|| {
-            AppError::Configuration("Helius API key not configured".to_string())
-        })?;
+        let api_key = self
+            .api_key
+            .as_ref()
+            .ok_or_else(|| AppError::Configuration("Helius API key not configured".to_string()))?;
 
         let url = format!("{}/webhooks?api-key={}", self.api_url, api_key);
 
@@ -291,11 +299,15 @@ impl HeliusWebhookClient {
         webhook_id: &str,
         addresses: Vec<String>,
     ) -> AppResult<()> {
-        let api_key = self.api_key.as_ref().ok_or_else(|| {
-            AppError::Configuration("Helius API key not configured".to_string())
-        })?;
+        let api_key = self
+            .api_key
+            .as_ref()
+            .ok_or_else(|| AppError::Configuration("Helius API key not configured".to_string()))?;
 
-        let url = format!("{}/webhooks/{}?api-key={}", self.api_url, webhook_id, api_key);
+        let url = format!(
+            "{}/webhooks/{}?api-key={}",
+            self.api_url, webhook_id, api_key
+        );
 
         let request = serde_json::json!({
             "accountAddresses": addresses

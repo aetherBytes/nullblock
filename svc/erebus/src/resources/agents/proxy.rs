@@ -1,7 +1,7 @@
 // Agent proxy service for routing requests to agent backends
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{info, error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AgentRequest {
@@ -53,12 +53,15 @@ impl AgentProxy {
     }
 
     /// Proxy chat request to Hecate agent backend
-    pub async fn proxy_chat(&self, request: AgentRequest) -> Result<AgentResponse, AgentErrorResponse> {
+    pub async fn proxy_chat(
+        &self,
+        request: AgentRequest,
+    ) -> Result<AgentResponse, AgentErrorResponse> {
         let client = reqwest::Client::new();
         let url = format!("{}/hecate/chat", self.agent_base_url);
-        
+
         info!("🤖 Proxying chat request to agent: {}", url);
-        
+
         match client
             .post(&url)
             .json(&request)
@@ -70,7 +73,10 @@ impl AgentProxy {
                 if response.status().is_success() {
                     match response.json::<AgentResponse>().await {
                         Ok(agent_response) => {
-                            info!("✅ Agent response received: {} chars", agent_response.content.len());
+                            info!(
+                                "✅ Agent response received: {} chars",
+                                agent_response.content.len()
+                            );
                             Ok(agent_response)
                         }
                         Err(e) => {
@@ -91,11 +97,13 @@ impl AgentProxy {
                     match response.json::<serde_json::Value>().await {
                         Ok(error_json) => {
                             // Extract the error message from the JSON response
-                            let error_message = error_json.get("message")
+                            let error_message = error_json
+                                .get("message")
                                 .and_then(|m| m.as_str())
                                 .unwrap_or_else(|| "Agent returned an error");
 
-                            let error_type = error_json.get("error")
+                            let error_type = error_json
+                                .get("error")
                                 .and_then(|e| e.as_str())
                                 .unwrap_or("agent_error");
 
@@ -154,7 +162,10 @@ impl AgentProxy {
     }
 
     /// Proxy chat request to Siren agent backend
-    pub async fn proxy_siren_chat(&self, request: AgentRequest) -> Result<AgentResponse, AgentErrorResponse> {
+    pub async fn proxy_siren_chat(
+        &self,
+        request: AgentRequest,
+    ) -> Result<AgentResponse, AgentErrorResponse> {
         let client = reqwest::Client::new();
         let url = format!("{}/siren/chat", self.agent_base_url);
 
@@ -171,7 +182,10 @@ impl AgentProxy {
                 if response.status().is_success() {
                     match response.json::<AgentResponse>().await {
                         Ok(agent_response) => {
-                            info!("✅ Marketing agent response received: {} chars", agent_response.content.len());
+                            info!(
+                                "✅ Marketing agent response received: {} chars",
+                                agent_response.content.len()
+                            );
                             Ok(agent_response)
                         }
                         Err(e) => {
@@ -192,11 +206,13 @@ impl AgentProxy {
                     match response.json::<serde_json::Value>().await {
                         Ok(error_json) => {
                             // Extract the error message from the JSON response
-                            let error_message = error_json.get("message")
+                            let error_message = error_json
+                                .get("message")
                                 .and_then(|m| m.as_str())
                                 .unwrap_or_else(|| "Marketing agent returned an error");
 
-                            let error_type = error_json.get("error")
+                            let error_type = error_json
+                                .get("error")
                                 .and_then(|e| e.as_str())
                                 .unwrap_or("agent_error");
 
@@ -336,7 +352,10 @@ impl AgentProxy {
                         }
                     }
                 } else {
-                    warn!("⚠️ Siren agent status endpoint error: {}", response.status());
+                    warn!(
+                        "⚠️ Siren agent status endpoint error: {}",
+                        response.status()
+                    );
                     Err(AgentErrorResponse {
                         error: "status_error".to_string(),
                         code: "STATUS_HTTP_ERROR".to_string(),
@@ -361,7 +380,7 @@ impl AgentProxy {
     pub async fn health_check(&self) -> bool {
         let client = reqwest::Client::new();
         let url = format!("{}/hecate/health", self.agent_base_url);
-        
+
         match client
             .get(&url)
             .timeout(std::time::Duration::from_secs(5))
@@ -373,7 +392,11 @@ impl AgentProxy {
                 if is_healthy {
                     info!("✅ Agent health check passed: {}", url);
                 } else {
-                    warn!("⚠️ Agent health check failed: {} -> {}", url, response.status());
+                    warn!(
+                        "⚠️ Agent health check failed: {} -> {}",
+                        url,
+                        response.status()
+                    );
                 }
                 is_healthy
             }
@@ -385,7 +408,13 @@ impl AgentProxy {
     }
 
     /// Proxy generic request to agent
-    pub async fn proxy_request(&self, endpoint: &str, method: &str, body: Option<serde_json::Value>, headers: Option<&axum::http::HeaderMap>) -> Result<serde_json::Value, AgentErrorResponse> {
+    pub async fn proxy_request(
+        &self,
+        endpoint: &str,
+        method: &str,
+        body: Option<serde_json::Value>,
+        headers: Option<&axum::http::HeaderMap>,
+    ) -> Result<serde_json::Value, AgentErrorResponse> {
         let client = reqwest::Client::new();
         // Task endpoints are at root level, Hecate-specific endpoints are under /hecate
         let url = if endpoint.starts_with("tasks") {
@@ -401,12 +430,14 @@ impl AgentProxy {
             "POST" => client.post(&url),
             "PUT" => client.put(&url),
             "DELETE" => client.delete(&url),
-            _ => return Err(AgentErrorResponse {
-                error: "invalid_method".to_string(),
-                code: "INVALID_HTTP_METHOD".to_string(),
-                message: format!("Unsupported HTTP method: {}", method),
-                agent_available: false,
-            }),
+            _ => {
+                return Err(AgentErrorResponse {
+                    error: "invalid_method".to_string(),
+                    code: "INVALID_HTTP_METHOD".to_string(),
+                    message: format!("Unsupported HTTP method: {}", method),
+                    agent_available: false,
+                })
+            }
         };
 
         if let Some(json_body) = body {
@@ -452,7 +483,10 @@ impl AgentProxy {
                         }
                     }
                 } else {
-                    warn!("⚠️ Agent proxy returned error status: {}", response.status());
+                    warn!(
+                        "⚠️ Agent proxy returned error status: {}",
+                        response.status()
+                    );
                     Err(AgentErrorResponse {
                         error: "agent_error".to_string(),
                         code: "AGENT_HTTP_ERROR".to_string(),

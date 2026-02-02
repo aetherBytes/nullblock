@@ -85,8 +85,8 @@ pub async fn list_consensus_history(
 /// Convert a database ConsensusRecord to the API's ConsensusHistoryEntry
 fn consensus_record_to_history_entry(record: ConsensusRecord) -> ConsensusHistoryEntry {
     // Reconstruct model votes from stored JSON
-    let model_votes: Vec<ModelVote> = serde_json::from_value(record.model_votes.clone())
-        .unwrap_or_default();
+    let model_votes: Vec<ModelVote> =
+        serde_json::from_value(record.model_votes.clone()).unwrap_or_default();
 
     ConsensusHistoryEntry {
         id: record.id,
@@ -124,8 +124,8 @@ pub async fn get_consensus_detail(
 ) -> impl IntoResponse {
     match state.consensus_repo.get_by_id(consensus_id).await {
         Ok(Some(record)) => {
-            let model_votes: Vec<ModelVote> = serde_json::from_value(record.model_votes.clone())
-                .unwrap_or_default();
+            let model_votes: Vec<ModelVote> =
+                serde_json::from_value(record.model_votes.clone()).unwrap_or_default();
 
             (
                 StatusCode::OK,
@@ -240,7 +240,9 @@ pub async fn request_consensus(
         }
     };
 
-    let event = state.consensus_engine.create_consensus_event(edge_id, &result);
+    let event = state
+        .consensus_engine
+        .create_consensus_event(edge_id, &result);
     crate::events::broadcast_event(&state.event_tx, event);
 
     // Persist consensus decision to database
@@ -486,9 +488,17 @@ pub async fn list_conversations(
     State(state): State<AppState>,
     Query(query): Query<ListConversationsQuery>,
 ) -> impl IntoResponse {
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
 
-    match state.engrams_client.get_conversations(&wallet, query.limit.map(|l| l as i64)).await {
+    match state
+        .engrams_client
+        .get_conversations(&wallet, query.limit.map(|l| l as i64))
+        .await
+    {
         Ok(mut conversations) => {
             if let Some(topic) = query.topic {
                 conversations.retain(|c| {
@@ -508,13 +518,17 @@ pub async fn list_conversations(
                     conversations,
                     total,
                 }),
-            ).into_response()
+            )
+                .into_response()
         }
         Err(e) => {
             let in_memory = CONVERSATION_HISTORY.read().await.clone();
             let total = in_memory.len();
 
-            tracing::warn!("Failed to fetch conversations from engrams, using in-memory: {}", e);
+            tracing::warn!(
+                "Failed to fetch conversations from engrams, using in-memory: {}",
+                e
+            );
 
             (
                 StatusCode::OK,
@@ -522,7 +536,8 @@ pub async fn list_conversations(
                     conversations: in_memory,
                     total,
                 }),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }
@@ -531,11 +546,22 @@ pub async fn get_conversation_detail(
     State(state): State<AppState>,
     Path(session_id): Path<Uuid>,
 ) -> impl IntoResponse {
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
 
-    match state.engrams_client.get_conversations(&wallet, Some(100)).await {
+    match state
+        .engrams_client
+        .get_conversations(&wallet, Some(100))
+        .await
+    {
         Ok(conversations) => {
-            if let Some(conv) = conversations.into_iter().find(|c| c.session_id == session_id) {
+            if let Some(conv) = conversations
+                .into_iter()
+                .find(|c| c.session_id == session_id)
+            {
                 (StatusCode::OK, Json(serde_json::json!(conv))).into_response()
             } else {
                 (
@@ -544,7 +570,8 @@ pub async fn get_conversation_detail(
                         "error": "Conversation not found",
                         "session_id": session_id
                     })),
-                ).into_response()
+                )
+                    .into_response()
             }
         }
         Err(e) => {
@@ -558,7 +585,8 @@ pub async fn get_conversation_detail(
                         "error": format!("Conversation not found: {}", e),
                         "session_id": session_id
                     })),
-                ).into_response()
+                )
+                    .into_response()
             }
         }
     }
@@ -580,23 +608,32 @@ pub async fn list_recommendations(
     State(state): State<AppState>,
     Query(query): Query<ListRecommendationsQuery>,
 ) -> impl IntoResponse {
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
 
-    let status_filter = query.status.as_ref().and_then(|s| {
-        match s.to_lowercase().as_str() {
+    let status_filter = query
+        .status
+        .as_ref()
+        .and_then(|s| match s.to_lowercase().as_str() {
             "pending" => Some(crate::engrams::RecommendationStatus::Pending),
             "acknowledged" => Some(crate::engrams::RecommendationStatus::Acknowledged),
             "applied" => Some(crate::engrams::RecommendationStatus::Applied),
             "rejected" => Some(crate::engrams::RecommendationStatus::Rejected),
             _ => None,
-        }
-    });
+        });
 
-    match state.engrams_client.get_recommendations(
-        &wallet,
-        status_filter.as_ref(),
-        query.limit.map(|l| l as i64),
-    ).await {
+    match state
+        .engrams_client
+        .get_recommendations(
+            &wallet,
+            status_filter.as_ref(),
+            query.limit.map(|l| l as i64),
+        )
+        .await
+    {
         Ok(recommendations) => {
             let total = recommendations.len();
             (
@@ -630,7 +667,11 @@ pub async fn update_recommendation_status(
     Path(recommendation_id): Path<Uuid>,
     Json(request): Json<UpdateRecommendationStatusRequest>,
 ) -> impl IntoResponse {
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
 
     let new_status = match request.status.to_lowercase().as_str() {
         "pending" => crate::engrams::RecommendationStatus::Pending,
@@ -643,29 +684,32 @@ pub async fn update_recommendation_status(
                 Json(serde_json::json!({
                     "error": "Invalid status. Must be: pending, acknowledged, applied, or rejected"
                 })),
-            ).into_response();
+            )
+                .into_response();
         }
     };
 
-    match state.engrams_client.update_recommendation_status(&wallet, &recommendation_id, new_status).await {
-        Ok(engram) => {
-            (
-                StatusCode::OK,
-                Json(serde_json::json!({
-                    "success": true,
-                    "engram_id": engram.id,
-                    "recommendation_id": recommendation_id
-                })),
-            ).into_response()
-        }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "error": format!("Failed to update recommendation: {}", e)
-                })),
-            ).into_response()
-        }
+    match state
+        .engrams_client
+        .update_recommendation_status(&wallet, &recommendation_id, new_status)
+        .await
+    {
+        Ok(engram) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "engram_id": engram.id,
+                "recommendation_id": recommendation_id
+            })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": format!("Failed to update recommendation: {}", e)
+            })),
+        )
+            .into_response(),
     }
 }
 
@@ -687,7 +731,11 @@ pub async fn list_engrams(
     State(state): State<AppState>,
     Query(query): Query<ListEngramsQuery>,
 ) -> impl IntoResponse {
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
 
     let tags = query.tags.map(|t| {
         t.split(',')
@@ -707,10 +755,7 @@ pub async fn list_engrams(
     match state.engrams_client.search_engrams(search).await {
         Ok(engrams) => {
             let total = engrams.len();
-            (
-                StatusCode::OK,
-                Json(EngramListResponse { engrams, total }),
-            )
+            (StatusCode::OK, Json(EngramListResponse { engrams, total }))
         }
         Err(e) => {
             tracing::error!("Failed to fetch engrams: {}", e);
@@ -729,43 +774,61 @@ pub async fn get_engram_detail(
     State(state): State<AppState>,
     Path(engram_key): Path<String>,
 ) -> impl IntoResponse {
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
 
-    match state.engrams_client.get_engram_by_wallet_key(&wallet, &engram_key).await {
-        Ok(Some(engram)) => {
-            (StatusCode::OK, Json(serde_json::json!(engram))).into_response()
-        }
-        Ok(None) => {
-            (
-                StatusCode::NOT_FOUND,
-                Json(serde_json::json!({
-                    "error": "Engram not found",
-                    "key": engram_key
-                })),
-            ).into_response()
-        }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "error": format!("Failed to fetch engram: {}", e)
-                })),
-            ).into_response()
-        }
+    match state
+        .engrams_client
+        .get_engram_by_wallet_key(&wallet, &engram_key)
+        .await
+    {
+        Ok(Some(engram)) => (StatusCode::OK, Json(serde_json::json!(engram))).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "error": "Engram not found",
+                "key": engram_key
+            })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "error": format!("Failed to fetch engram: {}", e)
+            })),
+        )
+            .into_response(),
     }
 }
 
 pub async fn get_learning_summary(State(state): State<AppState>) -> impl IntoResponse {
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
 
-    let recommendations = state.engrams_client.get_recommendations(&wallet, None, Some(100)).await.unwrap_or_default();
-    let conversations = state.engrams_client.get_conversations(&wallet, Some(20)).await.unwrap_or_default();
+    let recommendations = state
+        .engrams_client
+        .get_recommendations(&wallet, None, Some(100))
+        .await
+        .unwrap_or_default();
+    let conversations = state
+        .engrams_client
+        .get_conversations(&wallet, Some(20))
+        .await
+        .unwrap_or_default();
 
-    let pending_recommendations = recommendations.iter()
+    let pending_recommendations = recommendations
+        .iter()
         .filter(|r| r.status == crate::engrams::RecommendationStatus::Pending)
         .count();
 
-    let applied_recommendations = recommendations.iter()
+    let applied_recommendations = recommendations
+        .iter()
         .filter(|r| r.status == crate::engrams::RecommendationStatus::Applied)
         .count();
 
@@ -799,7 +862,9 @@ pub struct ConsensusSchedulerStatusResponse {
 }
 
 pub async fn get_consensus_scheduler_status(State(state): State<AppState>) -> impl IntoResponse {
-    let paused = state.consensus_scheduler_paused.load(std::sync::atomic::Ordering::Relaxed);
+    let paused = state
+        .consensus_scheduler_paused
+        .load(std::sync::atomic::Ordering::Relaxed);
     let last_queried = state.consensus_last_queried.read().await.clone();
 
     (
@@ -820,14 +885,23 @@ pub async fn toggle_consensus_scheduler(
     State(state): State<AppState>,
     Json(request): Json<ToggleConsensusSchedulerRequest>,
 ) -> impl IntoResponse {
-    state.consensus_scheduler_paused.store(!request.enabled, std::sync::atomic::Ordering::Relaxed);
+    state
+        .consensus_scheduler_paused
+        .store(!request.enabled, std::sync::atomic::Ordering::Relaxed);
     let last_queried = state.consensus_last_queried.read().await.clone();
 
-    if let Err(e) = state.settings_repo.set_bool("consensus_scheduler_enabled", request.enabled).await {
+    if let Err(e) = state
+        .settings_repo
+        .set_bool("consensus_scheduler_enabled", request.enabled)
+        .await
+    {
         tracing::warn!("Failed to persist consensus scheduler toggle to DB: {}", e);
     }
 
-    tracing::info!("[Consensus] Scheduler {}", if request.enabled { "resumed" } else { "paused" });
+    tracing::info!(
+        "[Consensus] Scheduler {}",
+        if request.enabled { "resumed" } else { "paused" }
+    );
 
     (
         StatusCode::OK,
@@ -857,14 +931,16 @@ pub async fn refresh_models(State(state): State<AppState>) -> impl IntoResponse 
                 "models_discovered": models.len(),
                 "models": models,
             })),
-        ).into_response()
+        )
+            .into_response()
     } else {
         (
             StatusCode::SERVICE_UNAVAILABLE,
             Json(serde_json::json!({
                 "error": "OpenRouter API key not configured"
             })),
-        ).into_response()
+        )
+            .into_response()
     }
 }
 
@@ -894,9 +970,17 @@ pub async fn list_trade_analyses(
     State(state): State<AppState>,
     Query(query): Query<ListTradeAnalysesQuery>,
 ) -> impl IntoResponse {
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
 
-    match state.engrams_client.get_trade_analyses(&wallet, query.limit).await {
+    match state
+        .engrams_client
+        .get_trade_analyses(&wallet, query.limit)
+        .await
+    {
         Ok(analyses) => {
             let total = analyses.len();
             (
@@ -924,9 +1008,17 @@ pub struct PatternSummaryResponse {
 }
 
 pub async fn get_pattern_summary(State(state): State<AppState>) -> impl IntoResponse {
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
 
-    match state.engrams_client.get_latest_pattern_summary(&wallet).await {
+    match state
+        .engrams_client
+        .get_latest_pattern_summary(&wallet)
+        .await
+    {
         Ok(summary) => {
             let has_data = summary.is_some();
             (
@@ -957,13 +1049,31 @@ pub struct AnalysisSummaryResponse {
 }
 
 pub async fn get_analysis_summary(State(state): State<AppState>) -> impl IntoResponse {
-    let wallet = state.config.wallet_address.clone().unwrap_or_else(|| "default".to_string());
+    let wallet = state
+        .config
+        .wallet_address
+        .clone()
+        .unwrap_or_else(|| "default".to_string());
     let is_dev = crate::consensus::is_dev_wallet(&wallet);
     let config = CONSENSUS_CONFIG.read().await.clone();
 
-    let trade_analyses = state.engrams_client.get_trade_analyses(&wallet, Some(10)).await.unwrap_or_default();
-    let pattern_summary = state.engrams_client.get_latest_pattern_summary(&wallet).await.ok().flatten();
-    let total_analyses = state.engrams_client.get_trade_analyses(&wallet, Some(1000)).await.map(|a| a.len()).unwrap_or(0);
+    let trade_analyses = state
+        .engrams_client
+        .get_trade_analyses(&wallet, Some(10))
+        .await
+        .unwrap_or_default();
+    let pattern_summary = state
+        .engrams_client
+        .get_latest_pattern_summary(&wallet)
+        .await
+        .ok()
+        .flatten();
+    let total_analyses = state
+        .engrams_client
+        .get_trade_analyses(&wallet, Some(1000))
+        .await
+        .map(|a| a.len())
+        .unwrap_or(0);
 
     (
         StatusCode::OK,
