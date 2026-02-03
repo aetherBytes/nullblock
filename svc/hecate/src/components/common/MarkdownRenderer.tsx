@@ -298,9 +298,14 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
         components={{
           // Custom styling for code blocks with syntax highlighting
           code: ({ node, className, children, ...props }: any) => {
-            const inline = !(props as any)?.['data-sourcepos'];
+            const codeString = String(children).replace(/\n$/, '');
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
+
+            // Detect if this is a block code (has newlines or is substantial)
+            const hasNewlines = codeString.includes('\n');
+            const isSubstantial = codeString.length > 80;
+            const isBlockCode = hasNewlines || isSubstantial || language;
 
             // Language mapping for common aliases
             const languageMap: { [key: string]: string } = {
@@ -318,9 +323,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
 
             const normalizedLanguage = languageMap[language] || language;
 
-            if (!inline && normalizedLanguage) {
-              const codeString = String(children).replace(/\n$/, '');
-
+            // Block code with language - use syntax highlighter
+            if (isBlockCode && normalizedLanguage) {
               return (
                 <div className={styles.codeBlockWrapper}>
                   <CopyButton code={codeString} />
@@ -349,6 +353,19 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = React.memo(
               );
             }
 
+            // Block code without language - plain styled block
+            if (isBlockCode) {
+              return (
+                <div className={styles.codeBlockWrapper}>
+                  <CopyButton code={codeString} />
+                  <pre className={styles.plainCodeBlock}>
+                    <code>{codeString}</code>
+                  </pre>
+                </div>
+              );
+            }
+
+            // Inline code
             return (
               <code className={styles.inlineCode} {...props}>
                 {children}

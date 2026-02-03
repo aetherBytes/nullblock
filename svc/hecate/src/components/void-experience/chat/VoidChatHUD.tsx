@@ -331,6 +331,8 @@ const VoidChatHUD: React.FC<VoidChatHUDProps> = ({
       setIsProcessing(false);
       setEnergyState('idle');
       pendingMessageRef.current = null;
+      // Restore focus to input after response completes
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [onAgentResponseReceived, hasAcknowledgedFirst, activeAgent, publicKey]);
 

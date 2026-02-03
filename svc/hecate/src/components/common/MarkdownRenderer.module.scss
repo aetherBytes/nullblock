@@ -115,6 +115,31 @@ $text-color: #c8c8d0;
     font-size: 0.9em;
     border: 1px solid rgba($echo-purple, 0.2);
   }
+
+  // Plain code block (no language specified)
+  .plainCodeBlock {
+    background: rgba($echo-purple, 0.1);
+    border: 1px solid rgba($echo-purple, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    overflow-x: auto;
+    font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    text-align: left;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+
+    code {
+      background: transparent;
+      padding: 0;
+      border: none;
+      color: $text-color;
+      font-size: inherit;
+      font-family: inherit;
+    }
+  }
   
   // Pre wrapper for code blocks
   .preWrapper {
