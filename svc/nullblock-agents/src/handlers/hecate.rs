@@ -46,6 +46,15 @@ pub async fn chat(
         info!("🔥 DEV WALLET DETECTED - bypassing all limits");
     }
 
+    // Lazy-init default engrams for this wallet (non-blocking, idempotent)
+    if let Some(wallet) = wallet_address {
+        let engrams_client = state.engrams_client.clone();
+        let wallet_owned = wallet.to_string();
+        tokio::spawn(async move {
+            ensure_default_engrams(&engrams_client, &wallet_owned).await;
+        });
+    }
+
     // Extract user_id from user_context if available
     let user_id = request
         .user_context
@@ -58,15 +67,17 @@ pub async fn chat(
     let mut is_free_tier = false;
     let mut rate_limit_info = None;
 
-    // Dev wallets are NEVER free tier - they use agent's API keys with no limits
+    let mut user_api_keys: Vec<crate::services::erebus_client::DecryptedApiKey> = Vec::new();
+
     if !is_dev {
         if let Some(ref uid) = user_id {
-            // Check if user has their own OpenRouter API key
-            let has_own_key = state
+            user_api_keys = state
                 .erebus_client
-                .user_has_api_key(uid, "openrouter")
+                .get_user_decrypted_keys(uid)
                 .await
-                .unwrap_or(false);
+                .unwrap_or_default();
+
+            let has_own_key = !user_api_keys.is_empty();
 
             if !has_own_key {
                 is_free_tier = true;
@@ -108,9 +119,7 @@ pub async fn chat(
         )));
     }
 
-    // Build user context with constraints based on user type
     let user_context = if is_dev {
-        // Dev wallet: mark as dev, no limits
         let mut ctx = request.user_context.unwrap_or_default();
         ctx.insert("is_dev_wallet".to_string(), json!(true));
         info!("🔥 Dev wallet: no output limits applied");
@@ -128,7 +137,15 @@ pub async fn chat(
         );
         Some(ctx)
     } else {
-        request.user_context
+        let mut ctx = request.user_context.unwrap_or_default();
+        for key in &user_api_keys {
+            ctx.insert(format!("user_api_key_{}", key.provider), json!(key.api_key));
+        }
+        if !user_api_keys.is_empty() {
+            let providers: Vec<&str> = user_api_keys.iter().map(|k| k.provider.as_str()).collect();
+            info!("🔑 Injected user API keys for providers: {:?}", providers);
+        }
+        Some(ctx)
     };
 
     // For free-tier users, validate the current model is allowed (SKIP for dev wallets)
@@ -153,7 +170,23 @@ pub async fn chat(
 
     // Execute the chat
     let mut agent = state.hecate_agent.write().await;
-    let response = agent.chat(request.message, user_context).await?;
+    let response = agent.chat(request.message, user_context.clone()).await?;
+
+    let msg_count = agent.get_conversation_history().await.len();
+    if msg_count > 0 && msg_count % 10 == 0 {
+        if let Some(wallet) = user_context
+            .as_ref()
+            .and_then(|ctx| ctx.get("wallet_address"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+        {
+            let agent_ref = state.hecate_agent.clone();
+            tokio::spawn(async move {
+                let agent = agent_ref.read().await;
+                agent.save_session_to_engrams(&wallet).await;
+            });
+        }
+    }
 
     // Increment rate limit after successful chat (only for free tier users)
     if let (Some(ref uid), Some(_)) = (&user_id, &rate_limit_info) {
@@ -542,6 +575,8 @@ async fn fetch_openrouter_models(api_key: &str) -> Result<Vec<serde_json::Value>
                 .cloned()
                 .unwrap_or(json!({}));
 
+            let supports_tools = supported_parameters.contains(&"tools");
+
             // Build comprehensive model object with all OpenRouter data
             let processed_model = json!({
                 // Core identification
@@ -571,6 +606,7 @@ async fn fetch_openrouter_models(api_key: &str) -> Result<Vec<serde_json::Value>
                 "supports_reasoning": supports_reasoning,
                 "supports_vision": supports_vision,
                 "supports_audio": supports_audio,
+                "supports_function_calling": supports_tools,
                 "is_moderated": is_moderated,
                 "supported_parameters": supported_parameters,
                 "per_request_limits": per_request_limits,
@@ -925,17 +961,16 @@ pub async fn set_model(
 
     let is_dev = wallet_address.map(is_dev_wallet).unwrap_or(false);
 
-    // Dev wallets can select ANY model
     let is_free_tier = if is_dev {
         info!("🔥 DEV WALLET - allowing any model selection");
         false
     } else if let Some(ref user_id) = request.user_id {
-        let has_own_key = state
+        let keys = state
             .erebus_client
-            .user_has_api_key(user_id, "openrouter")
+            .get_user_decrypted_keys(user_id)
             .await
-            .unwrap_or(false);
-        !has_own_key
+            .unwrap_or_default();
+        keys.is_empty()
     } else {
         // No user_id means treat as free tier (conservative approach)
         true
@@ -1024,10 +1059,23 @@ pub async fn set_personality(
 
 pub async fn clear_conversation(
     State(state): State<AppState>,
+    body: Option<Json<serde_json::Value>>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let mut agent = state.hecate_agent.write().await;
+    let agent = state.hecate_agent.read().await;
     let conversation_length = agent.get_conversation_history().await.len();
 
+    if conversation_length >= 2 {
+        if let Some(wallet) = body
+            .as_ref()
+            .and_then(|b| b.get("wallet_address"))
+            .and_then(|v| v.as_str())
+        {
+            agent.save_session_to_engrams(wallet).await;
+        }
+    }
+    drop(agent);
+
+    let mut agent = state.hecate_agent.write().await;
     agent.clear_conversation().await;
 
     Ok(Json(json!({
@@ -1104,6 +1152,12 @@ pub async fn get_model_info(
         _ => (model_name.as_str(), "🤖", "AI model"),
     };
 
+    let supports_function_calling = model_name.contains("dolphin")
+        || model_name.contains("claude")
+        || model_name.contains("gpt")
+        || model_name.contains("gemini")
+        || model_name.contains("grok");
+
     let model_info = json!({
         "name": model_name,
         "display_name": display_name,
@@ -1120,7 +1174,7 @@ pub async fn get_model_info(
         "capabilities": ["conversation", "reasoning", "creative"],
         "supports_reasoning": true,
         "supports_vision": false,
-        "supports_function_calling": false,
+        "supports_function_calling": supports_function_calling,
         "cost_per_1k_tokens": 0.0,
         "cost_per_1m_tokens": 0.0,
         "performance_stats": {},
@@ -1128,4 +1182,76 @@ pub async fn get_model_info(
     });
 
     Ok(Json(model_info))
+}
+
+async fn ensure_default_engrams(client: &crate::engrams::EngramsClient, wallet_address: &str) {
+    use crate::engrams::CreateEngramRequest;
+
+    let base_key = "user.profile.base";
+
+    match client
+        .get_engram_by_wallet_key(wallet_address, base_key)
+        .await
+    {
+        Ok(Some(_)) => return,
+        Ok(None) => {}
+        Err(e) => {
+            warn!(
+                "Could not check default engrams (engrams service may be down): {}",
+                e
+            );
+            return;
+        }
+    }
+
+    let base_profile = CreateEngramRequest {
+        wallet_address: wallet_address.to_string(),
+        engram_type: "persona".to_string(),
+        key: base_key.to_string(),
+        content: serde_json::json!({
+            "display_name": null,
+            "bio": null,
+            "avatar_url": null,
+            "title": "Visitor"
+        })
+        .to_string(),
+        metadata: None,
+        tags: Some(vec![
+            "user".to_string(),
+            "profile".to_string(),
+            "default".to_string(),
+        ]),
+        is_public: Some(false),
+    };
+
+    if let Err(e) = client.create_engram(base_profile).await {
+        warn!("Failed to create default profile engram: {}", e);
+    }
+
+    let prefs = CreateEngramRequest {
+        wallet_address: wallet_address.to_string(),
+        engram_type: "preference".to_string(),
+        key: "user.preferences.hecate".to_string(),
+        content: serde_json::json!({
+            "response_style": "concise",
+            "theme": null
+        })
+        .to_string(),
+        metadata: None,
+        tags: Some(vec![
+            "user".to_string(),
+            "profile".to_string(),
+            "default".to_string(),
+        ]),
+        is_public: Some(false),
+    };
+
+    if let Err(e) = client.create_engram(prefs).await {
+        warn!("Failed to create default preferences engram: {}", e);
+    }
+
+    info!(
+        "🧠 Default engrams created for wallet {}",
+        &wallet_address[..8]
+    );
 }

@@ -378,6 +378,38 @@ impl LLMServiceFactory {
         }
     }
 
+    pub async fn generate_with_key(
+        &self,
+        request: &LLMRequest,
+        provider_type: ModelProvider,
+        api_key: &str,
+    ) -> AppResult<LLMResponse> {
+        use super::providers::*;
+
+        let temp_provider: Arc<dyn Provider> = match provider_type {
+            ModelProvider::OpenRouter => Arc::new(OpenRouterProvider::new(api_key.to_string())),
+            ModelProvider::Anthropic => Arc::new(AnthropicProvider::new(api_key.to_string())),
+            ModelProvider::OpenAI => Arc::new(OpenAIProvider::new(api_key.to_string())),
+            ModelProvider::Groq => Arc::new(GroqProvider::new(api_key.to_string())),
+            _ => {
+                return Err(AppError::ModelNotAvailable(format!(
+                    "Provider {} does not support custom API keys",
+                    provider_type.as_str()
+                )))
+            }
+        };
+
+        let model_name = request.model_override.as_deref().unwrap_or("default");
+        let config = self.create_model_config_for_override(model_name);
+
+        let adjusted_config = ModelConfig {
+            provider: provider_type,
+            ..config
+        };
+
+        temp_provider.generate(request, &adjusted_config).await
+    }
+
     pub async fn quick_generate(&self, prompt: &str, concise: bool) -> AppResult<String> {
         let request = LLMRequest {
             prompt: prompt.to_string(),

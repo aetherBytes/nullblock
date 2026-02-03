@@ -169,7 +169,7 @@ impl AnthropicProvider {
     pub fn new(api_key: String) -> Self {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("x-api-key", api_key.parse().unwrap());
-        headers.insert("anthropic-version", "2023-06-01".parse().unwrap());
+        headers.insert("anthropic-version", "2024-04-04".parse().unwrap());
 
         let client = Client::builder()
             .default_headers(headers)
@@ -215,6 +215,23 @@ impl Provider for AnthropicProvider {
             payload["system"] = json!(system_prompt);
         }
 
+        if let Some(tools) = &request.tools {
+            let anthropic_tools: Vec<Value> = tools
+                .iter()
+                .filter_map(|tool| {
+                    let func = tool.get("function")?;
+                    Some(json!({
+                        "name": func["name"],
+                        "description": func["description"],
+                        "input_schema": func["parameters"]
+                    }))
+                })
+                .collect();
+            if !anthropic_tools.is_empty() {
+                payload["tools"] = json!(anthropic_tools);
+            }
+        }
+
         if let Some(stop_sequences) = &request.stop_sequences {
             payload["stop_sequences"] = json!(stop_sequences);
         }
@@ -237,10 +254,34 @@ impl Provider for AnthropicProvider {
 
         let data: Value = response.json().await?;
 
-        let content = data["content"][0]["text"]
-            .as_str()
-            .unwrap_or("")
-            .to_string();
+        let content = data["content"]
+            .as_array()
+            .and_then(|blocks| {
+                blocks
+                    .iter()
+                    .find(|b| b["type"] == "text")
+                    .and_then(|b| b["text"].as_str())
+                    .map(|s| s.to_string())
+            })
+            .unwrap_or_default();
+
+        let tool_calls: Option<Vec<Value>> =
+            data["content"]
+                .as_array()
+                .map(|blocks| {
+                    blocks.iter().filter(|b| b["type"] == "tool_use").map(|b| {
+                json!({
+                    "id": b["id"],
+                    "type": "function",
+                    "function": {
+                        "name": b["name"],
+                        "arguments": serde_json::to_string(&b["input"]).unwrap_or_default()
+                    }
+                })
+            }).collect()
+                })
+                .and_then(|v: Vec<Value>| if v.is_empty() { None } else { Some(v) });
+
         let usage = data.get("usage").cloned().unwrap_or_else(|| json!({}));
 
         let input_tokens = usage["input_tokens"].as_u64().unwrap_or(0) as u32;
@@ -268,7 +309,7 @@ impl Provider for AnthropicProvider {
                 .unwrap_or("stop")
                 .to_string(),
             confidence_score: 1.0,
-            tool_calls: None,
+            tool_calls,
             metadata: Some({
                 let mut meta = HashMap::new();
                 meta.insert("provider".to_string(), json!("anthropic"));
@@ -338,12 +379,17 @@ impl Provider for GroqProvider {
             }));
         }
 
-        let payload = json!({
+        let mut payload = json!({
             "model": config.name,
             "messages": messages,
             "max_tokens": request.max_tokens.unwrap_or(config.metrics.max_output_tokens),
             "temperature": request.temperature.unwrap_or(0.8)
         });
+
+        if let Some(tools) = &request.tools {
+            payload["tools"] = json!(tools);
+            payload["tool_choice"] = json!("auto");
+        }
 
         let response = self
             .client
@@ -392,7 +438,9 @@ impl Provider for GroqProvider {
                 .unwrap_or("stop")
                 .to_string(),
             confidence_score: 1.0,
-            tool_calls: None,
+            tool_calls: choice["message"]["tool_calls"]
+                .as_array()
+                .map(|calls| calls.iter().cloned().collect()),
             metadata: Some({
                 let mut meta = HashMap::new();
                 meta.insert("provider".to_string(), json!("groq"));
@@ -568,6 +616,11 @@ impl Provider for OpenRouterProvider {
             "max_tokens": request.max_tokens.unwrap_or(config.metrics.max_output_tokens),
             "temperature": request.temperature.unwrap_or(0.8)
         });
+
+        if let Some(tools) = &request.tools {
+            payload["tools"] = json!(tools);
+            payload["tool_choice"] = json!("auto");
+        }
 
         // Add modalities for Gemini image generation models
         if config.name.contains("gemini-2.5-flash-image") {

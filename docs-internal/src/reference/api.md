@@ -295,14 +295,43 @@ GET /api/tools       # Alias for /mcp/tools
 | `get_engram` | Get engram by ID |
 | `create_engram` | Create new engram |
 | `update_engram` | Update engram |
-| `delete_engram` | Delete engram |
+| `delete_engram` | Delete engram (respects pin protection) |
 | `search_engrams` | Search engrams |
+| `user_profile_get` | Get user profile by wallet |
+| `user_profile_update` | Update user profile field |
+| `hecate_remember` | Save context to memory (auto-tagged) |
+| `hecate_cleanup` | Compact old conversation sessions |
+| `hecate_pin_engram` | Pin engram (protect from deletion) |
+| `hecate_unpin_engram` | Remove pin protection |
+| `hecate_set_model` | Switch LLM model conversationally |
 
 ### Hecate Tools Endpoint
 
 ```bash
 GET /hecate/tools    # Returns MCP tools via Hecate agent
 ```
+
+## User API Keys
+
+Per-user API key management for bypassing free-tier LLM limits. Keys are encrypted at rest via AES-256-GCM in Erebus.
+
+```bash
+# List user's API keys (masked)
+GET /api/users/:user_id/api-keys
+
+# Add API key
+POST /api/users/:user_id/api-keys
+{
+  "provider": "anthropic",
+  "api_key": "sk-ant-...",
+  "key_name": "My Anthropic Key"
+}
+
+# Delete API key
+DELETE /api/users/:user_id/api-keys/:key_id
+```
+
+Supported providers: `openrouter`, `anthropic`, `openai`, `groq`
 
 ## A2A Protocol
 

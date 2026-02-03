@@ -133,7 +133,7 @@ impl ModelValidator {
 }
 
 pub async fn sort_models_by_context_length(models: Vec<serde_json::Value>) -> Vec<String> {
-    let mut model_with_context: Vec<(String, u64)> = models
+    let mut model_with_context: Vec<(String, bool, u64)> = models
         .into_iter()
         .filter_map(|model| {
             let id = model
@@ -146,11 +146,20 @@ pub async fn sort_models_by_context_length(models: Vec<serde_json::Value>) -> Ve
                 .and_then(|c| c.as_u64())
                 .unwrap_or(0);
 
-            Some((id, context))
+            let supports_tools = model
+                .get("supported_parameters")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().any(|p| p.as_str() == Some("tools")))
+                .unwrap_or(false);
+
+            Some((id, supports_tools, context))
         })
         .collect();
 
-    model_with_context.sort_by(|a, b| b.1.cmp(&a.1));
+    model_with_context.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| b.2.cmp(&a.2)));
 
-    model_with_context.into_iter().map(|(id, _)| id).collect()
+    model_with_context
+        .into_iter()
+        .map(|(id, _, _)| id)
+        .collect()
 }

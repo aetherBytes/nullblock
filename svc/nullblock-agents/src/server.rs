@@ -1,7 +1,8 @@
 use crate::{
-    agents::{siren_marketing::MarketingAgent, HecateAgent},
+    agents::{siren_marketing::MarketingAgent, HecateAgent, MorosAgent},
     config::{ApiKeys, Config},
     database::{repositories::AgentRepository, Database},
+    engrams::EngramsClient,
     error::AppResult,
     kafka::{KafkaConfig, KafkaProducer},
     services::ErebusClient,
@@ -16,10 +17,12 @@ pub struct AppState {
     pub config: Config,
     pub api_keys: ApiKeys,
     pub hecate_agent: Arc<RwLock<HecateAgent>>,
+    pub moros_agent: Arc<RwLock<MorosAgent>>,
     pub marketing_agent: Arc<RwLock<MarketingAgent>>,
     pub database: Option<Arc<Database>>,
     pub kafka_producer: Option<Arc<KafkaProducer>>,
     pub erebus_client: Arc<ErebusClient>,
+    pub engrams_client: Arc<EngramsClient>,
 }
 
 impl AppState {
@@ -47,10 +50,21 @@ impl AppState {
             None
         };
 
+        let engrams_base_url = std::env::var("ENGRAMS_BASE_URL")
+            .unwrap_or_else(|_| "http://localhost:9004".to_string());
+        info!("🧠 Connecting to Engrams at {}", engrams_base_url);
+        let engrams_client = Arc::new(EngramsClient::new(engrams_base_url));
+
         // Initialize Hecate agent with default model from config
         let default_model = config.llm.default_model.clone();
         let mut hecate_agent = HecateAgent::new(None);
         hecate_agent.preferred_model = default_model.clone();
+        hecate_agent.set_engrams_client(engrams_client.clone());
+
+        // Initialize Moros agent with default model from config
+        let mut moros_agent = MorosAgent::new(None);
+        moros_agent.preferred_model = default_model.clone();
+        moros_agent.set_engrams_client(engrams_client.clone());
 
         // Initialize Marketing agent with default model from config
         let mut marketing_agent = MarketingAgent::new(None);
@@ -61,6 +75,7 @@ impl AppState {
 
         // Start the agents
         hecate_agent.start(&api_keys).await?;
+        moros_agent.start(&api_keys).await?;
         marketing_agent.start(&api_keys).await?;
 
         // Register agents in database if available
@@ -68,6 +83,9 @@ impl AppState {
             let agent_repo = AgentRepository::new(db.pool().clone());
             if let Err(e) = hecate_agent.register_agent(&agent_repo).await {
                 tracing::warn!("⚠️ Failed to register Hecate agent: {}", e);
+            }
+            if let Err(e) = moros_agent.register_agent(&agent_repo).await {
+                tracing::warn!("⚠️ Failed to register Moros agent: {}", e);
             }
             if let Err(e) = marketing_agent.register_agent(&agent_repo).await {
                 tracing::warn!("⚠️ Failed to register Marketing agent: {}", e);
@@ -92,14 +110,27 @@ impl AppState {
             None
         };
 
+        // Seed First Encounter engrams in background (non-blocking)
+        let seed_client = engrams_client.clone();
+        tokio::spawn(async move {
+            seed_first_encounter_engram(&seed_client).await;
+        });
+
+        let seed_moros_client = engrams_client.clone();
+        tokio::spawn(async move {
+            seed_moros_first_encounter_engram(&seed_moros_client).await;
+        });
+
         Ok(Self {
             config,
             api_keys,
             hecate_agent: Arc::new(RwLock::new(hecate_agent)),
+            moros_agent: Arc::new(RwLock::new(moros_agent)),
             marketing_agent: Arc::new(RwLock::new(marketing_agent)),
             database,
             kafka_producer,
             erebus_client,
+            engrams_client,
         })
     }
 
@@ -157,6 +188,118 @@ impl AppState {
             groq: env_keys.groq,
             huggingface: env_keys.huggingface,
             openrouter: openrouter_key.or(env_keys.openrouter),
+        }
+    }
+}
+
+async fn seed_first_encounter_engram(client: &EngramsClient) {
+    use crate::config::dev_wallet::DEV_WALLETS;
+    use crate::engrams::CreateEngramRequest;
+
+    let wallet = DEV_WALLETS[0];
+    let key = "hecate.persona.architect";
+
+    match client.get_engram_by_wallet_key(wallet, key).await {
+        Ok(Some(_)) => {
+            info!("🧠 First Encounter engram already exists, skipping seed");
+            return;
+        }
+        Ok(None) => {}
+        Err(e) => {
+            warn!(
+                "⚠️ Could not check First Encounter engram (engrams service may be down): {}",
+                e
+            );
+            return;
+        }
+    }
+
+    let content = include_str!("agents/hecate_sage_fist_encounter.md");
+
+    let request = CreateEngramRequest {
+        wallet_address: wallet.to_string(),
+        engram_type: "persona".to_string(),
+        key: key.to_string(),
+        content: content.to_string(),
+        metadata: Some(serde_json::json!({
+            "type": "architect_persona",
+            "source": "first_encounter",
+            "relationship": "architect"
+        })),
+        tags: Some(vec![
+            "persona".to_string(),
+            "architect".to_string(),
+            "first_encounter".to_string(),
+            "hecate".to_string(),
+        ]),
+        is_public: Some(false),
+    };
+
+    match client.create_engram(request).await {
+        Ok(engram) => {
+            info!(
+                "🧠 First Encounter engram seeded: {} ({})",
+                engram.key, engram.id
+            );
+        }
+        Err(e) => {
+            warn!("⚠️ Failed to seed First Encounter engram: {}", e);
+        }
+    }
+}
+
+async fn seed_moros_first_encounter_engram(client: &EngramsClient) {
+    use crate::config::dev_wallet::DEV_WALLETS;
+    use crate::engrams::CreateEngramRequest;
+
+    let wallet = DEV_WALLETS[0];
+    let key = "moros.persona.architect";
+
+    match client.get_engram_by_wallet_key(wallet, key).await {
+        Ok(Some(_)) => {
+            info!("🌑 Moros First Encounter engram already exists, skipping seed");
+            return;
+        }
+        Ok(None) => {}
+        Err(e) => {
+            warn!(
+                "⚠️ Could not check Moros First Encounter engram (engrams service may be down): {}",
+                e
+            );
+            return;
+        }
+    }
+
+    let content = include_str!("agents/moros_first_encounter.md");
+
+    let request = CreateEngramRequest {
+        wallet_address: wallet.to_string(),
+        engram_type: "persona".to_string(),
+        key: key.to_string(),
+        content: content.to_string(),
+        metadata: Some(serde_json::json!({
+            "type": "architect_persona",
+            "source": "first_encounter",
+            "relationship": "architect"
+        })),
+        tags: Some(vec![
+            "persona".to_string(),
+            "architect".to_string(),
+            "first_encounter".to_string(),
+            "moros".to_string(),
+        ]),
+        is_public: Some(false),
+    };
+
+    match client.create_engram(request).await {
+        Ok(engram) => {
+            info!(
+                "🌑 Moros First Encounter engram seeded: {} ({})",
+                engram.key, engram.id
+            );
+        }
+        Err(e) => {
+            warn!("⚠️ Failed to seed Moros First Encounter engram: {}", e);
         }
     }
 }

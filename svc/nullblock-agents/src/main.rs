@@ -11,6 +11,7 @@ use tracing::{info, warn};
 mod agents;
 mod config;
 mod database;
+mod engrams;
 mod error;
 mod handlers;
 mod kafka;
@@ -23,7 +24,7 @@ mod services;
 mod utils;
 
 use crate::config::Config;
-use crate::handlers::{health, hecate, siren_marketing, tasks, user_references};
+use crate::handlers::{health, hecate, moros, siren_marketing, tasks, user_references};
 use crate::logging::setup_logging;
 
 #[tokio::main]
@@ -65,6 +66,7 @@ async fn main() -> anyhow::Result<()> {
     info!("📡 Server will bind to: {}", addr);
     info!("🏥 Health check: {}/health", agents_base_url);
     info!("🤖 Hecate agent: {}/hecate", agents_base_url);
+    info!("🌑 Moros agent: {}/moros", agents_base_url);
     info!("📱 Siren agent: {}/siren", agents_base_url);
     info!("📚 API docs: {}/docs (future)", agents_base_url);
 
@@ -95,6 +97,15 @@ fn create_router(state: server::AppState) -> Router {
         .route("/hecate/history", get(hecate::get_history))
         .route("/hecate/model-info", get(hecate::get_model_info))
         .route("/hecate/tools", get(hecate::get_tools))
+        // Moros agent endpoints
+        .route("/moros/chat", post(moros::chat))
+        .route("/moros/health", get(moros::health))
+        .route("/moros/model-status", get(moros::model_status))
+        .route("/moros/available-models", get(moros::available_models))
+        .route("/moros/set-model", post(moros::set_model))
+        .route("/moros/clear", post(moros::clear_conversation))
+        .route("/moros/history", get(moros::get_history))
+        .route("/moros/tools", get(moros::get_tools))
         // Task management endpoints
         .route("/tasks", post(tasks::create_task_handler))
         .route("/tasks", get(tasks::get_tasks_handler))
@@ -125,6 +136,8 @@ fn create_router(state: server::AppState) -> Router {
         .route("/siren/model-status", get(siren_marketing::model_status))
         .route("/siren/themes", get(siren_marketing::get_content_themes))
         .route("/siren/set-model", post(siren_marketing::set_model))
+        // MCP JSON-RPC endpoint
+        .route("/mcp/jsonrpc", post(mcp::jsonrpc::handle_jsonrpc))
         // User reference endpoints
         .route(
             "/user-references",

@@ -135,6 +135,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "REDACTED_OPENROUTER_KEY_3",
             "ArbFarm Consensus Key",
         ),
+        (
+            "moros",
+            "openrouter",
+            "REDACTED_OPENROUTER_KEY_4",
+            "Moros Primary Key",
+        ),
     ];
 
     for (agent_name, provider, api_key, key_name) in agent_keys {

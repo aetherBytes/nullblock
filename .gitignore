@@ -69,3 +69,7 @@ build/
 
 .pytest_cache/
 .coverage
+
+# Terraform
+**/.terraform/
+*.terraform.lock.hcl

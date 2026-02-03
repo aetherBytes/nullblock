@@ -109,6 +109,15 @@ just docs       # Serve internal docs at :3001
 - Keys stored in Erebus DB (`agent_api_keys` table)
 - Seed with: `cd svc/erebus && cargo run --bin seed_agent_keys`
 
+### Primitive-First Tool Architecture (Dog Food Everything)
+- **ALL** tools start as generic base primitives — same CRUD operations everywhere
+- Build primitives ourselves where absent; never skip straight to specialized tools
+- COWs are composed from base primitives — they are strung-together suites of more basic tools
+- Iterate on primitives to build sophisticated tool suites (e.g., ArbFarm's 97 MCP tools all build on the same engram CRUD base)
+- Tags, metadata, and content differentiate use cases — not separate codepaths
+- When adding a new COW or service, first check if existing primitives cover the need
+- **We dog food everything** — NullBlock services consume the same tools we expose to users
+
 ### Code Standards
 - **NEVER** add comments unless requested
 - **ALWAYS** prefer editing over creating new files
