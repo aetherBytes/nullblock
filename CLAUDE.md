@@ -205,11 +205,11 @@ These issues are acceptable for local development but MUST be resolved before de
 | P8 | Migrations not fully idempotent (ALTER TABLE without guards) | MEDIUM | Wrap in IF EXISTS checks |
 | P9 | No auto migration runner at startup | MEDIUM | Add sqlx::migrate!() or document manual step |
 
-## NullBlock Content Service (NEW - Phase 1+2)
+## NullBlock Content Service
 
-**Purpose**: Social media content generation + posting service for Nullblock brand  
-**Status**: Architecture planned, Phase 1+2 core implementation in progress  
-**Port**: 8002 (routes through Erebus at 3000)  
+**Purpose**: Social media content generation + posting service for Nullblock brand
+**Status**: ✅ Phase 1-2 COMPLETE (core infrastructure + content engine)
+**Port**: 8002 (routes through Erebus at 3000)
 **Database**: PostgreSQL (separate from Erebus/Agents)
 
 **Agent Framework**: N.E.X.U.S.
@@ -233,10 +233,35 @@ These issues are acceptable for local development but MUST be resolved before de
 - **Tone**: Corporate dystopia + dark humor, cheerfully inevitable, professionally apocalyptic
 - **Voice**: Original Nullblock (not Vault-Tec/Fallout lingo) - internal docs can reference the vibe, but posted content is pure Nullblock
 
+### Implementation Status
+
+**Phase 1 - Core Infrastructure ✓ Complete:**
+- Database connection pool (20 connections, 5s timeout)
+- ContentError enum with thiserror
+- ContentRepository (14 CRUD methods)
+- 3 SQL migrations (content_queue, content_metrics, content_templates)
+
+**Phase 2 - Content Engine ✓ Complete:**
+- 5 themes with content pools (MorningInsight, ProgressUpdate, Educational, EerieFun, Community)
+- Template loader with JSON config + fallback defaults
+- ContentGenerator with placeholder replacement
+- Image prompt generation (retro-futuristic propaganda style)
+- templates.json with 13 variants, 40+ unique content pieces
+
+**Phase 3 - API Layer (Next):**
+- Routes and handlers
+- Axum server setup (main.rs)
+- Integration with Erebus
+
+**Phase 4 - Integration (Future):**
+- Kafka event publishing
+- MCP tool definitions
+- Crossroads listing
+
 ### Database Tables
-- `content_queue` - Generated content pending review/posting
-- `content_metrics` - Engagement stats (likes, retweets, impressions)
-- `content_templates` - Theme definitions with variants
+- `content_queue` - Generated content pending review/posting (UUID, theme, text, tags, status, metadata)
+- `content_metrics` - Engagement stats (likes, retweets, impressions, engagement_rate)
+- `content_templates` - Theme definitions with JSONB variants
 
 ### API Routes (via Erebus)
 - `POST /api/content/generate` - Generate content from theme
